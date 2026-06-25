@@ -13,9 +13,9 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
   :root {
-    --accent: #0d9488;
-    --accent-dark: #0f766e;
-    --bg: #f8fafc;
+    --accent: #00b8b0;
+    --accent-dark: #009890;
+    --bg: #f4f6f8;
     --card: #ffffff;
     --border: #e2e8f0;
     --text: #0f172a;
@@ -514,30 +514,30 @@
 <body class="min-h-screen">
 
 <!-- Top bar -->
-<header class="no-print bg-white border-b border-slate-200 sticky top-0 z-30">
+<header class="no-print sticky top-0 z-30" style="background:#0d0d0d;border-bottom:1px solid #222;">
   <div class="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between">
     <div class="flex items-center gap-3">
-      <div class="w-9 h-9 rounded-lg bg-teal-600 text-white flex items-center justify-center font-bold">S</div>
+      <div class="w-9 h-9 rounded-lg text-white flex items-center justify-center font-bold" style="background:#00b8b0;">S</div>
       <div>
-        <h1 class="font-semibold text-slate-900">Dashboard Staffing</h1>
-        <p class="text-xs text-slate-500">Pipeline commerciale &middot; gap risorse &middot; raccomandazioni</p>
+        <h1 class="font-semibold text-white">Dashboard Staffing</h1>
+        <p class="text-xs" style="color:#9ca3af;">Pipeline commerciale &middot; gap risorse &middot; raccomandazioni</p>
       </div>
       <!-- Navigazione schermata principale -->
       <div class="flex ml-4 border border-slate-200 rounded-lg overflow-hidden">
-        <button id="nav-dashboard" class="px-3 py-1.5 text-sm font-medium bg-teal-600 text-white">📊 Dashboard</button>
-        <button id="nav-weekly" class="px-3 py-1.5 text-sm font-medium text-slate-600 hover:bg-slate-50">📅 Pianificazione settimanale</button>
+        <button id="nav-dashboard" class="px-3 py-1.5 text-sm font-medium text-white" style="background:#00b8b0;">📊 Dashboard</button>
+        <button id="nav-weekly" class="px-3 py-1.5 text-sm font-medium hover:bg-white/10" style="color:#d1d5db;">📅 Pianificazione settimanale</button>
       </div>
     </div>
     <div class="flex items-center gap-2">
-      <button id="btn-presentation" class="px-3 py-1.5 text-sm rounded border border-slate-300 hover:bg-slate-50">📊 Modalità presentazione</button>
-      <button id="btn-export-xlsx" class="px-3 py-1.5 text-sm rounded bg-emerald-600 text-white hover:bg-emerald-700" title="Scarica una copia aggiornata del file Excel di partenza">📥 Esporta XLSX</button>
-      <button id="btn-print" class="px-3 py-1.5 text-sm rounded bg-teal-600 text-white hover:bg-teal-700">🖨 Esporta PDF</button>
-      <div class="flex items-center gap-1 border border-slate-200 rounded px-2 py-1 bg-white">
-        <span class="text-xs text-slate-500">Anno:</span>
-        <select id="anno-selector" class="text-sm border-none bg-transparent font-semibold text-slate-700 focus:outline-none cursor-pointer"></select>
+      <button id="btn-presentation" class="px-3 py-1.5 text-sm rounded hover:bg-white/10" style="border:1px solid #444;color:#d1d5db;">📊 Modalità presentazione</button>
+      <button id="btn-export-xlsx" class="px-3 py-1.5 text-sm rounded text-white" style="background:#00b8b0;" title="Scarica una copia aggiornata del file Excel di partenza">📥 Esporta XLSX</button>
+      <button id="btn-print" class="px-3 py-1.5 text-sm rounded text-white" style="background:#009890;">🖨 Esporta PDF</button>
+      <div class="flex items-center gap-1 rounded px-2 py-1" style="border:1px solid #444;">
+        <span class="text-xs" style="color:#9ca3af;">Anno:</span>
+        <select id="anno-selector" class="text-sm border-none bg-transparent font-semibold focus:outline-none cursor-pointer" style="color:#f9fafb;background:transparent;"></select>
       </div>
-      <div class="text-xs text-slate-400 pl-2 border-l border-slate-200">
-        <span class="font-medium text-slate-500">v18.1.0</span> · Michele Marchetti
+      <div class="text-xs pl-2" style="border-left:1px solid #444;color:#9ca3af;">
+        <span class="font-medium" style="color:#00b8b0;">v18.2.0</span> · Michele Marchetti
       </div>
     </div>
   </div>
@@ -575,10 +575,10 @@
 </div>
 
 <!-- Banner Supabase Sync -->
-<div id="sb-banner" class="no-print bg-slate-50 border-b border-slate-200 px-4 py-2 flex items-center justify-between gap-3 text-sm" style="display:none;">
+<div id="sb-banner" class="no-print px-4 py-2 flex items-center justify-between gap-3 text-sm" style="display:none;background:#111;border-bottom:1px solid #222;">
   <div class="flex items-center gap-2">
     <span id="sb-status-dot" style="width:8px;height:8px;border-radius:50%;background:#94a3b8;display:inline-block;flex-shrink:0;"></span>
-    <span id="sb-status-text" class="text-xs text-slate-500">Sync: in attesa…</span>
+    <span id="sb-status-text" class="text-xs" style="color:#9ca3af;">Sync: in attesa…</span>
     <span id="sb-last-sync" class="text-xs text-slate-400 hidden"></span>
   </div>
   <div class="flex items-center gap-2">
