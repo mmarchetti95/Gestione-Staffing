@@ -16,7 +16,8 @@ Applicazione web per la gestione dello staffing e della pipeline commerciale del
 - 📈 **Gantt** — timeline visiva pipeline e commesse attive
 - ☁️ **Sync automatico** — ogni modifica viene salvata su database cloud (Supabase) in tempo reale
 - 🔑 **Cambio password** — ogni utente può cambiare la propria password dal banner sync
-- 📋 **Log attività** — pannello admin con storico di tutte le modifiche (visibile solo agli amministratori)
+- 📋 **Log attività** — pannello admin con storico di tutte le modifiche (solo amministratori)
+- 🔒 **Riconciliazione nomi** — sezione debug visibile solo agli amministratori
 
 ---
 
@@ -29,9 +30,9 @@ Per richiedere un account contattare l'amministratore.
 | Ruolo | Accesso |
 |---|---|
 | Utente standard | Dashboard completo, modifica dati, cambio password |
-| Admin | Come sopra + pannello log attività |
+| Admin | Come sopra + log attività + sezione riconciliazione nomi |
 
-Per assegnare il ruolo admin: Supabase → Authentication → Users → SQL Editor:
+Per assegnare il ruolo admin — SQL Editor su Supabase:
 ```sql
 UPDATE auth.users SET raw_user_meta_data = raw_user_meta_data || '{"role": "admin"}'::jsonb WHERE email = 'email@esempio.it';
 ```
@@ -64,13 +65,15 @@ UPDATE auth.users SET raw_user_meta_data = raw_user_meta_data || '{"role": "admi
 
 | Versione | Data | Modifiche |
 |---|---|---|
+| `v18.6.0` | 2026-06-25 | Riconciliazione nomi visibile solo admin, modalità presentazione solo in Dashboard |
+| `v18.5.1` | 2026-06-25 | Fix log admin (rilettura sessione), fix colore select anno |
 | `v18.5.0` | 2026-06-25 | Log attività admin — pannello con storico modifiche, tracciamento commesse e operatori |
 | `v18.4.0` | 2026-06-25 | Cambio password utente dal banner sync |
 | `v18.3.0` | 2026-06-25 | Card con ombra morbida, tabelle più ariose, input con focus accent cyan |
 | `v18.2.0` | 2026-06-25 | Restyling palette Eagleprojects — header scuro, accent cyan #00b8b0 |
 | `v18.1.0` | 2026-06-25 | Selettore anno dinamico — si aggiorna automaticamente ogni anno |
-| `v18.0.0` | 2026-06-25 | Migrazione a Supabase + GitHub Pages, login utenti, rimozione pulsanti Reset/Salva HTML/Importa XLSX, versione e autore nell'header |
+| `v18.0.0` | 2026-06-25 | Migrazione a Supabase + GitHub Pages, login utenti, rimozione pulsanti Reset/Salva HTML/Importa XLSX |
 
 ---
 
-*Versione attuale: **v18.5.0** — Michele Marchetti*
+*Versione attuale: **v18.6.0** — Michele Marchetti*
