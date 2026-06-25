@@ -49,7 +49,17 @@ Le modifiche al codice vengono deployate automaticamente su GitHub Pages entro ~
 | `index.html` | Applicazione completa (single-file) |
 | `SETUP_SUPABASE_GITHUB.md` | Guida setup iniziale Supabase + GitHub Pages |
 | `README.md` | Questo file |
+| `backups/` | Backup versioni precedenti |
 
 ---
 
-*Versione attuale: v18 — Giugno 2026*
+## Changelog
+
+| Versione | Data | Modifiche |
+|---|---|---|
+| `v18.1.0` | 2026-06-25 | Selettore anno dinamico — si aggiorna automaticamente ogni anno |
+| `v18.0.0` | 2026-06-25 | Migrazione a Supabase + GitHub Pages, login utenti, rimozione pulsanti Reset/Salva HTML/Importa XLSX, versione e autore nell'header |
+
+---
+
+*Versione attuale: **v18.1.0** — Michele Marchetti*
