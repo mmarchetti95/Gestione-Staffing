@@ -589,7 +589,7 @@
       </div>
     </div>
     <div class="flex items-center gap-2">
-      <button id="btn-presentation" class="px-3 py-1.5 text-sm rounded hover:bg-white/10" style="border:1px solid #444;color:#d1d5db;">📊 Modalità presentazione</button>
+      <button id="btn-presentation" class="px-3 py-1.5 text-sm rounded hover:bg-white/10" style="border:1px solid #444;color:#d1d5db;visibility:visible;">📊 Modalità presentazione</button>
       <button id="btn-export-xlsx" class="px-3 py-1.5 text-sm rounded text-white" style="background:#00b8b0;" title="Scarica una copia aggiornata del file Excel di partenza">📥 Esporta XLSX</button>
       <button id="btn-print" class="px-3 py-1.5 text-sm rounded text-white" style="background:#009890;">🖨 Esporta PDF</button>
       <div class="flex items-center gap-1 rounded px-2 py-1" style="border:1px solid #444;">
@@ -597,7 +597,7 @@
         <select id="anno-selector" class="text-sm border-none font-semibold focus:outline-none cursor-pointer" style="color:#f9fafb;background:#1a1a1a;border-radius:4px;padding:1px 4px;"></select>
       </div>
       <div class="text-xs pl-2" style="border-left:1px solid #444;color:#9ca3af;">
-        <span class="font-medium" style="color:#00b8b0;">v18.6.0</span> · Michele Marchetti
+        <span class="font-medium" style="color:#00b8b0;">v18.6.1</span> · Michele Marchetti
       </div>
     </div>
   </div>
@@ -646,7 +646,7 @@
     <button onclick="sbSync()" class="text-xs px-3 py-1 bg-teal-600 text-white rounded hover:bg-teal-700">
       ↺ Sincronizza
     </button>
-    <button id="sb-btn-log" onclick="sbShowLog()" class="text-xs px-2 py-1 text-slate-400 hover:text-slate-200 hidden">
+    <button id="sb-btn-log" onclick="sbShowLog()" class="text-xs px-2 py-1 text-slate-400 hover:text-slate-200" style="visibility:hidden;">
       📋 Log attività
     </button>
     <button onclick="sbShowChangePwd()" class="text-xs px-2 py-1 text-slate-400 hover:text-slate-200">
@@ -1100,8 +1100,11 @@ async function sbOnLoggedIn() {
   const btnLog = document.getElementById('sb-btn-log');
   const secRecon = document.getElementById('section-riconciliazione');
   if (sbIsAdmin()) {
-    if (btnLog) btnLog.classList.remove('hidden');
+    if (btnLog) btnLog.style.visibility = 'visible';
     if (secRecon) secRecon.style.display = '';
+  } else {
+    if (btnLog) btnLog.style.visibility = 'hidden';
+    if (secRecon) secRecon.style.display = 'none';
   }
   sbUpdateUI('syncing', 'Sync: caricamento dati…');
   await sbPull();
@@ -4736,7 +4739,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       navDash.className   = 'px-3 py-1.5 text-sm font-medium text-slate-600 hover:bg-slate-50';
       navWeekly.className = 'px-3 py-1.5 text-sm font-medium bg-teal-600 text-white';
       // Nascondi modalità presentazione nella pianificazione
-      if (btnPres) btnPres.style.display = 'none';
+      if (btnPres) btnPres.style.visibility = 'hidden';
       pwRender();
     } else {
       weeklyEl.classList.add('hidden');
@@ -4744,7 +4747,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       navDash.className   = 'px-3 py-1.5 text-sm font-medium bg-teal-600 text-white';
       navWeekly.className = 'px-3 py-1.5 text-sm font-medium text-slate-600 hover:bg-slate-50';
       // Mostra modalità presentazione nel dashboard
-      if (btnPres) btnPres.style.display = '';
+      if (btnPres) btnPres.style.visibility = 'visible';
     }
   }
   document.getElementById('nav-dashboard').onclick = () => switchScreen('dashboard');
