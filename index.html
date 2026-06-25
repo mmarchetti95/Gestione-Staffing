@@ -597,7 +597,7 @@
         <select id="anno-selector" class="text-sm border-none bg-transparent font-semibold focus:outline-none cursor-pointer" style="color:#f9fafb;background:transparent;"></select>
       </div>
       <div class="text-xs pl-2" style="border-left:1px solid #444;color:#9ca3af;">
-        <span class="font-medium" style="color:#00b8b0;">v18.4.0</span> · Michele Marchetti
+        <span class="font-medium" style="color:#00b8b0;">v18.5.0</span> · Michele Marchetti
       </div>
     </div>
   </div>
@@ -646,6 +646,9 @@
     <button onclick="sbSync()" class="text-xs px-3 py-1 bg-teal-600 text-white rounded hover:bg-teal-700">
       ↺ Sincronizza
     </button>
+    <button id="sb-btn-log" onclick="sbShowLog()" class="text-xs px-2 py-1 text-slate-400 hover:text-slate-200 hidden">
+      📋 Log attività
+    </button>
     <button onclick="sbShowChangePwd()" class="text-xs px-2 py-1 text-slate-400 hover:text-slate-200">
       🔑 Cambia password
     </button>
@@ -677,6 +680,37 @@
     <div style="display:flex;gap:8px;justify-content:flex-end;">
       <button onclick="sbClosePwdModal()" style="padding:8px 16px;font-size:13px;border:1px solid #e2e8f0;border-radius:8px;background:white;cursor:pointer;color:#475569;">Annulla</button>
       <button id="sb-pwd-btn" onclick="sbChangePwd()" style="padding:8px 18px;font-size:13px;background:#00b8b0;color:white;border:none;border-radius:8px;cursor:pointer;font-weight:600;">Salva</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Log Attività (solo admin) -->
+<div id="sb-log-modal" style="display:none;position:fixed;inset:0;z-index:99999;background:rgba(0,0,0,.5);align-items:center;justify-content:center;">
+  <div style="background:white;border-radius:16px;padding:28px 32px;width:780px;max-width:96vw;max-height:85vh;box-shadow:0 20px 60px rgba(0,0,0,.2);display:flex;flex-direction:column;">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
+      <div>
+        <div style="font-weight:700;font-size:16px;color:#0f172a;">📋 Log attività</div>
+        <div style="font-size:11px;color:#94a3b8;margin-top:2px;">Ultime modifiche effettuate dagli utenti</div>
+      </div>
+      <div style="display:flex;gap:8px;align-items:center;">
+        <button onclick="sbLoadLog()" style="padding:5px 12px;font-size:12px;background:#00b8b0;color:white;border:none;border-radius:6px;cursor:pointer;">↺ Aggiorna</button>
+        <button onclick="sbCloseLog()" style="padding:5px 12px;font-size:12px;border:1px solid #e2e8f0;border-radius:6px;background:white;cursor:pointer;color:#475569;">Chiudi</button>
+      </div>
+    </div>
+    <div style="overflow-y:auto;flex:1;">
+      <table style="width:100%;border-collapse:collapse;font-size:12px;">
+        <thead>
+          <tr style="background:#f8fafc;position:sticky;top:0;">
+            <th style="text-align:left;padding:8px 12px;border-bottom:1px solid #e2e8f0;color:#64748b;font-weight:600;white-space:nowrap;">Data/Ora</th>
+            <th style="text-align:left;padding:8px 12px;border-bottom:1px solid #e2e8f0;color:#64748b;font-weight:600;">Utente</th>
+            <th style="text-align:left;padding:8px 12px;border-bottom:1px solid #e2e8f0;color:#64748b;font-weight:600;">Azione</th>
+            <th style="text-align:left;padding:8px 12px;border-bottom:1px solid #e2e8f0;color:#64748b;font-weight:600;">Dettagli</th>
+          </tr>
+        </thead>
+        <tbody id="sb-log-tbody">
+          <tr><td colspan="4" style="padding:20px;text-align:center;color:#94a3b8;">Caricamento…</td></tr>
+        </tbody>
+      </table>
     </div>
   </div>
 </div>
@@ -939,6 +973,63 @@ let state = {
   searchCommesse: '',
 };
 
+/* ===================== ACTIVITY LOG ===================== */
+function sbIsAdmin() {
+  return _sbUser?.user_metadata?.role === 'admin';
+}
+
+async function sbLogActivity(action, details = {}) {
+  if (!_sbClient || !_sbUser) return;
+  try {
+    await _sbClient.from('activity_log').insert({
+      user_email: _sbUser.email,
+      action,
+      details
+    });
+  } catch(e) {
+    console.warn('Log error:', e);
+  }
+}
+
+async function sbShowLog() {
+  document.getElementById('sb-log-modal').style.display = 'flex';
+  await sbLoadLog();
+}
+
+function sbCloseLog() {
+  document.getElementById('sb-log-modal').style.display = 'none';
+}
+
+async function sbLoadLog() {
+  const tbody = document.getElementById('sb-log-tbody');
+  tbody.innerHTML = '<tr><td colspan="4" style="padding:20px;text-align:center;color:#94a3b8;">Caricamento…</td></tr>';
+  try {
+    const { data, error } = await _sbClient
+      .from('activity_log')
+      .select('*')
+      .order('created_at', { ascending: false })
+      .limit(200);
+    if (error) throw error;
+    if (!data || data.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="4" style="padding:20px;text-align:center;color:#94a3b8;">Nessuna attività registrata.</td></tr>';
+      return;
+    }
+    tbody.innerHTML = data.map(row => {
+      const dt = new Date(row.created_at);
+      const dateStr = dt.toLocaleDateString('it-IT') + ' ' + dt.toLocaleTimeString('it-IT', {hour:'2-digit', minute:'2-digit'});
+      const details = row.details ? Object.entries(row.details).map(([k,v]) => k+': '+v).join(', ') : '';
+      return '<tr style="border-bottom:1px solid #f1f5f9;">' +
+        '<td style="padding:7px 12px;white-space:nowrap;color:#64748b;">' + dateStr + '</td>' +
+        '<td style="padding:7px 12px;color:#374151;">' + (row.user_email||'') + '</td>' +
+        '<td style="padding:7px 12px;font-weight:500;color:#0f172a;">' + (row.action||'') + '</td>' +
+        '<td style="padding:7px 12px;color:#64748b;font-size:11px;">' + details + '</td>' +
+        '</tr>';
+    }).join('');
+  } catch(e) {
+    tbody.innerHTML = '<tr><td colspan="4" style="padding:20px;text-align:center;color:#ef4444;">Errore: ' + e.message + '</td></tr>';
+  }
+}
+
 /* ===================== SUPABASE SYNC ===================== */
 // ⚠️  DA CONFIGURARE: inserisci qui i tuoi valori dal progetto Supabase
 const SB_URL = 'https://ypbuleyropgoqalwioqb.supabase.co';
@@ -1000,8 +1091,12 @@ async function sbOnLoggedIn() {
   document.getElementById('sb-login-screen').style.display = 'none';
   const emailEl = document.getElementById('sb-user-email');
   if (emailEl) emailEl.textContent = _sbUser.email;
+  // Mostra pulsante log solo agli admin
+  const btnLog = document.getElementById('sb-btn-log');
+  if (btnLog && sbIsAdmin()) btnLog.classList.remove('hidden');
   sbUpdateUI('syncing', 'Sync: caricamento dati…');
   await sbPull();
+  sbLogActivity('Login', { email: _sbUser.email });
 }
 
 async function sbLogout() {
@@ -1185,7 +1280,7 @@ async function loadState() {
   state.commesse_attive_meta = cam || INITIAL_DATA._meta || {};
   ricalcolaAllocOperatori();
 }
-async function saveState() {
+async function saveState(logAction, logDetails) {
   await Promise.all([
     sset('commesse_pipeline', state.pipeline),
     sset('operatori', state.operatori),
@@ -1194,6 +1289,8 @@ async function saveState() {
     sset('commesse_chiuse', state.commesse_chiuse),
     sset('commesse_attive_meta', state.commesse_attive_meta),
   ]);
+  // Log attività se specificata
+  if (logAction) sbLogActivity(logAction, logDetails || {});
   // Auto-push su Supabase con debounce 3s
   sbScheduleAutoPush();
 }
@@ -2715,9 +2812,9 @@ function openCommessaModal(id) {
       attestati_richiesti: [...document.querySelectorAll('.m-att:checked')].map(x => x.value),
     };
     if (!newC.progetto || !newC.cliente) { alert('Cliente e Progetto sono obbligatori.'); return; }
-    if (id) Object.assign(state.pipeline.find(p => p.id === id), newC);
-    else state.pipeline.push(newC);
-    await saveState(); renderAll(); closeModal();
+    if (id) { Object.assign(state.pipeline.find(p => p.id === id), newC); await saveState('Modifica commessa pipeline', {commessa: newC.progetto, cliente: newC.cliente}); }
+    else { state.pipeline.push(newC); await saveState('Nuova commessa pipeline', {commessa: newC.progetto, cliente: newC.cliente}); }
+    renderAll(); closeModal();
   };
 }
 
@@ -2889,9 +2986,10 @@ function openFabbisognoModal(commessaId, commessaNome) {
 
 async function deleteCommessa(id) {
   if (!confirm('Eliminare la commessa? Le assegnazioni verranno rimosse.')) return;
+  const delC = state.pipeline.find(p => p.id === id);
   state.pipeline = state.pipeline.filter(p => p.id !== id);
   state.assegnazioni = state.assegnazioni.filter(a => a.commessa_id !== id);
-  await saveState(); renderAll();
+  await saveState('Eliminazione commessa pipeline', {commessa: delC?.progetto||id}); renderAll();
 }
 
 async function promuoviCommessa(id) {
@@ -2967,17 +3065,18 @@ function openOperatoreModal(id) {
     if (!nomeEsteso) { alert('Nome obbligatorio.'); return; }
     const skills = [...document.querySelectorAll('.mo-skill:checked')].map(x => x.value);
     const attestati = [...document.querySelectorAll('.mo-att:checked')].map(x => x.value);
-    if (id) { Object.assign(op, { nome_esteso: nomeEsteso, skills, attestati }); }
-    else state.operatori.push({ ...op, nome_esteso: nomeEsteso, nome_breve: nomeEsteso, skills, attestati });
-    await saveState(); renderAll(); closeModal();
+    if (id) { Object.assign(op, { nome_esteso: nomeEsteso, skills, attestati }); await saveState('Modifica operatore', {operatore: nomeEsteso}); }
+    else { state.operatori.push({ ...op, nome_esteso: nomeEsteso, nome_breve: nomeEsteso, skills, attestati }); await saveState('Nuovo operatore', {operatore: nomeEsteso}); }
+    renderAll(); closeModal();
   };
 }
 
 async function deleteOperatore(id) {
   if (!confirm('Eliminare l\'operatore? Le sue assegnazioni saranno rimosse.')) return;
+  const delOp = state.operatori.find(o => o.id === id);
   state.operatori = state.operatori.filter(o => o.id !== id);
   state.assegnazioni = state.assegnazioni.filter(a => a.operatore_id !== id);
-  await saveState(); renderAll();
+  await saveState('Eliminazione operatore', {operatore: delOp?.nome_esteso||id}); renderAll();
 }
 
 /* ===================== GAP & RACCOMANDAZIONI ===================== */
