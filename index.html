@@ -4463,6 +4463,11 @@ document.addEventListener('DOMContentLoaded', async () => {
   document.getElementById('btn-export-xlsx').onclick = exportXlsx;
   // btn-save-html, btn-reset, btn-import-xlsx rimossi in v18.0.0
   });
+  document.getElementById('file-import-xlsx') && document.getElementById('file-import-xlsx').addEventListener('change', async e => {
+    const file = e.target.files[0];
+    if (file) await importXlsx(file);
+    e.target.value = '';
+  });
   document.getElementById('btn-print').onclick = () => window.print();
   document.getElementById('btn-presentation').onclick = () => {
     document.body.classList.toggle('present-mode');
