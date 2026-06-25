@@ -36,12 +36,6 @@ Per richiedere un account contattare l'amministratore.
 
 ---
 
-## Aggiornare il dashboard
-
-Le modifiche al codice vengono deployate automaticamente su GitHub Pages entro ~2 minuti dal push su `main`.
-
----
-
 ## File nella repo
 
 | File | Descrizione |
@@ -57,10 +51,11 @@ Le modifiche al codice vengono deployate automaticamente su GitHub Pages entro ~
 
 | Versione | Data | Modifiche |
 |---|---|---|
+| `v18.3.0` | 2026-06-25 | Card con ombra morbida, tabelle più ariose, input con focus accent cyan |
 | `v18.2.0` | 2026-06-25 | Restyling palette Eagleprojects — header scuro, accent cyan #00b8b0 |
 | `v18.1.0` | 2026-06-25 | Selettore anno dinamico — si aggiorna automaticamente ogni anno |
 | `v18.0.0` | 2026-06-25 | Migrazione a Supabase + GitHub Pages, login utenti, rimozione pulsanti Reset/Salva HTML/Importa XLSX, versione e autore nell'header |
 
 ---
 
-*Versione attuale: **v18.2.0** — Michele Marchetti*
+*Versione attuale: **v18.3.0** — Michele Marchetti*
