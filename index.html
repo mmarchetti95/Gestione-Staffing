@@ -530,8 +530,6 @@
     </div>
     <div class="flex items-center gap-2">
       <button id="btn-presentation" class="px-3 py-1.5 text-sm rounded border border-slate-300 hover:bg-slate-50">📊 Modalità presentazione</button>
-      <button id="btn-import-xlsx" class="px-3 py-1.5 text-sm rounded bg-blue-600 text-white hover:bg-blue-700" title="Carica un file Excel con lo stesso formato del Pipeline_Commerciale">📤 Importa XLSX</button>
-      <input id="file-import-xlsx" type="file" accept=".xlsx,.xls,.xlsm" class="hidden">
       <button id="btn-export-xlsx" class="px-3 py-1.5 text-sm rounded bg-emerald-600 text-white hover:bg-emerald-700" title="Scarica una copia aggiornata del file Excel di partenza">📥 Esporta XLSX</button>
       <button id="btn-print" class="px-3 py-1.5 text-sm rounded bg-teal-600 text-white hover:bg-teal-700">🖨 Esporta PDF</button>
       <div class="flex items-center gap-1 border border-slate-200 rounded px-2 py-1 bg-white">
@@ -543,8 +541,9 @@
           <option value="2028">2028</option>
         </select>
       </div>
-      <button id="btn-save-html" class="px-3 py-1.5 text-sm rounded bg-indigo-600 text-white hover:bg-indigo-700" title="Scarica questo file con i dati correnti incorporati">💾 Salva HTML</button>
-      <button id="btn-reset" class="px-3 py-1.5 text-sm rounded border border-red-300 text-red-700 hover:bg-red-50" title="Resetta dati ai valori del file Excel">↺ Reset</button>
+      <div class="text-xs text-slate-400 pl-2 border-l border-slate-200">
+        <span class="font-medium text-slate-500">v18.0.0</span> · Michele Marchetti
+      </div>
     </div>
   </div>
 </header>
@@ -4461,14 +4460,8 @@ document.addEventListener('DOMContentLoaded', async () => {
       renderAll();
     });
   }
-  document.getElementById('btn-save-html').onclick = salvaHTML;
-  document.getElementById('btn-reset').onclick = resetAll;
   document.getElementById('btn-export-xlsx').onclick = exportXlsx;
-  document.getElementById('btn-import-xlsx').onclick = () => document.getElementById('file-import-xlsx').click();
-  document.getElementById('file-import-xlsx').addEventListener('change', async e => {
-    const file = e.target.files[0];
-    if (file) await importXlsx(file);
-    e.target.value = ''; // reset per permettere ri-upload dello stesso file
+  // btn-save-html, btn-reset, btn-import-xlsx rimossi in v18.0.0
   });
   document.getElementById('btn-print').onclick = () => window.print();
   document.getElementById('btn-presentation').onclick = () => {
