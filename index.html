@@ -534,15 +534,10 @@
       <button id="btn-print" class="px-3 py-1.5 text-sm rounded bg-teal-600 text-white hover:bg-teal-700">🖨 Esporta PDF</button>
       <div class="flex items-center gap-1 border border-slate-200 rounded px-2 py-1 bg-white">
         <span class="text-xs text-slate-500">Anno:</span>
-        <select id="anno-selector" class="text-sm border-none bg-transparent font-semibold text-slate-700 focus:outline-none cursor-pointer">
-          <option value="2025">2025</option>
-          <option value="2026">2026</option>
-          <option value="2027">2027</option>
-          <option value="2028">2028</option>
-        </select>
+        <select id="anno-selector" class="text-sm border-none bg-transparent font-semibold text-slate-700 focus:outline-none cursor-pointer"></select>
       </div>
       <div class="text-xs text-slate-400 pl-2 border-l border-slate-200">
-        <span class="font-medium text-slate-500">v18.0.0</span> · Michele Marchetti
+        <span class="font-medium text-slate-500">v18.1.0</span> · Michele Marchetti
       </div>
     </div>
   </div>
@@ -829,7 +824,7 @@ let ATTESTATI = INITIAL_DATA.attestati_disponibili || [];
 const MESI = ['Gen','Feb','Mar','Apr','Mag','Giu','Lug','Ago','Set','Ott','Nov','Dic'];
 const MESI_LONG = ['Gennaio','Febbraio','Marzo','Aprile','Maggio','Giugno','Luglio','Agosto','Settembre','Ottobre','Novembre','Dicembre'];
 const INDUSTRIES = ['Altre infrastrutture','Telco','Energy','Water','Robotica e AI','Trasporti','Altro'];
-let ANNO = parseInt(localStorage.getItem('dashboard_anno') || '2026');
+let ANNO = parseInt(localStorage.getItem('dashboard_anno') || String(new Date().getFullYear()));
 
 /* Indice 0-11 del mese corrente di riferimento.
    Mesi precedenti = storici: NON contano per saturazione, gap analysis, suggerimenti. */
@@ -4453,7 +4448,18 @@ document.addEventListener('DOMContentLoaded', async () => {
   // Anno selector
   const annoSel = document.getElementById('anno-selector');
   if (annoSel) {
+    // Genera opzioni dinamicamente: anno corrente -1 fino a +3
+    const annoBase = new Date().getFullYear();
+    annoSel.innerHTML = '';
+    for (let a = annoBase - 1; a <= annoBase + 3; a++) {
+      const opt = document.createElement('option');
+      opt.value = a;
+      opt.textContent = a;
+      annoSel.appendChild(opt);
+    }
     annoSel.value = String(ANNO);
+    // Se l'anno salvato non è più nelle opzioni, usa l'anno corrente
+    if (!annoSel.value) { ANNO = annoBase; annoSel.value = String(annoBase); }
     annoSel.addEventListener('change', () => {
       ANNO = parseInt(annoSel.value);
       localStorage.setItem('dashboard_anno', ANNO);
