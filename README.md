@@ -15,6 +15,7 @@ Applicazione web per la gestione dello staffing e della pipeline commerciale del
 - 🗺️ **Mappa cantieri** — visualizzazione geografica delle commesse attive
 - 📈 **Gantt** — timeline visiva pipeline e commesse attive
 - ☁️ **Sync automatico** — ogni modifica viene salvata su database cloud (Supabase) in tempo reale
+- 🔑 **Cambio password** — ogni utente può cambiare la propria password dal banner sync
 
 ---
 
@@ -51,6 +52,7 @@ Per richiedere un account contattare l'amministratore.
 
 | Versione | Data | Modifiche |
 |---|---|---|
+| `v18.4.0` | 2026-06-25 | Cambio password utente dal banner sync |
 | `v18.3.0` | 2026-06-25 | Card con ombra morbida, tabelle più ariose, input con focus accent cyan |
 | `v18.2.0` | 2026-06-25 | Restyling palette Eagleprojects — header scuro, accent cyan #00b8b0 |
 | `v18.1.0` | 2026-06-25 | Selettore anno dinamico — si aggiorna automaticamente ogni anno |
@@ -58,4 +60,4 @@ Per richiedere un account contattare l'amministratore.
 
 ---
 
-*Versione attuale: **v18.3.0** — Michele Marchetti*
+*Versione attuale: **v18.4.0** — Michele Marchetti*
