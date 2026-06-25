@@ -594,10 +594,10 @@
       <button id="btn-print" class="px-3 py-1.5 text-sm rounded text-white" style="background:#009890;">🖨 Esporta PDF</button>
       <div class="flex items-center gap-1 rounded px-2 py-1" style="border:1px solid #444;">
         <span class="text-xs" style="color:#9ca3af;">Anno:</span>
-        <select id="anno-selector" class="text-sm border-none bg-transparent font-semibold focus:outline-none cursor-pointer" style="color:#f9fafb;background:transparent;"></select>
+        <select id="anno-selector" class="text-sm border-none font-semibold focus:outline-none cursor-pointer" style="color:#f9fafb;background:#1a1a1a;border-radius:4px;padding:1px 4px;"></select>
       </div>
       <div class="text-xs pl-2" style="border-left:1px solid #444;color:#9ca3af;">
-        <span class="font-medium" style="color:#00b8b0;">v18.5.0</span> · Michele Marchetti
+        <span class="font-medium" style="color:#00b8b0;">v18.5.1</span> · Michele Marchetti
       </div>
     </div>
   </div>
@@ -1091,6 +1091,11 @@ async function sbOnLoggedIn() {
   document.getElementById('sb-login-screen').style.display = 'none';
   const emailEl = document.getElementById('sb-user-email');
   if (emailEl) emailEl.textContent = _sbUser.email;
+  // Rilegge utente da Supabase per avere user_metadata aggiornati
+  try {
+    const { data: { user } } = await _sbClient.auth.getUser();
+    if (user) _sbUser = user;
+  } catch(e) { console.warn('getUser error:', e); }
   // Mostra pulsante log solo agli admin
   const btnLog = document.getElementById('sb-btn-log');
   if (btnLog && sbIsAdmin()) btnLog.classList.remove('hidden');
@@ -4691,6 +4696,8 @@ document.addEventListener('DOMContentLoaded', async () => {
       const opt = document.createElement('option');
       opt.value = a;
       opt.textContent = a;
+      opt.style.background = '#1a1a1a';
+      opt.style.color = '#f9fafb';
       annoSel.appendChild(opt);
     }
     annoSel.value = String(ANNO);
