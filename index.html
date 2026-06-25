@@ -26,6 +26,66 @@
     --red: #ef4444;
   }
   html, body { font-family: 'Inter', system-ui, -apple-system, sans-serif; background: var(--bg); color: var(--text); }
+
+  /* === CARD & SEZIONI === */
+  .bg-white.rounded-lg.border.border-slate-200 {
+    border-color: #e8edf2 !important;
+    box-shadow: 0 1px 4px rgba(0,0,0,.06), 0 0 0 1px rgba(0,0,0,.04);
+    border-radius: 12px !important;
+  }
+  section.bg-white {
+    border-radius: 12px !important;
+    box-shadow: 0 1px 4px rgba(0,0,0,.06), 0 0 0 1px rgba(0,0,0,.04);
+    border-color: #e8edf2 !important;
+  }
+
+  /* === TABELLE === */
+  table { border-collapse: separate; border-spacing: 0; }
+  thead th {
+    background: #f8fafc;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: .04em;
+    text-transform: uppercase;
+    color: #64748b;
+    padding: 10px 14px !important;
+    border-bottom: 1px solid #e8edf2;
+  }
+  tbody tr { transition: background .1s; }
+  tbody tr:hover { background: #f8fafc; }
+  tbody td { padding: 9px 14px !important; border-bottom: 1px solid #f1f5f9; }
+  tbody tr:last-child td { border-bottom: none; }
+
+  /* === INPUT & SELECT === */
+  input[type="text"], input[type="email"], input[type="number"],
+  input[type="password"], input[type="date"], select, textarea {
+    border-radius: 8px !important;
+    border-color: #dde3ea !important;
+    transition: border-color .15s, box-shadow .15s;
+  }
+  input[type="text"]:focus, input[type="email"]:focus, input[type="number"]:focus,
+  input[type="password"]:focus, input[type="date"]:focus, select:focus, textarea:focus {
+    outline: none !important;
+    border-color: var(--accent) !important;
+    box-shadow: 0 0 0 3px rgba(0,184,176,.12) !important;
+  }
+
+  /* === PULSANTI PRIMARI === */
+  button.bg-teal-600, button[style*="background:#00b8b0"], button[style*="background:#009890"] {
+    border-radius: 8px !important;
+    font-weight: 500;
+  }
+
+  /* === SPAZIO TRA SEZIONI === */
+  .space-y-6 > * + * { margin-top: 1.75rem !important; }
+
+  /* === KPI CARD === */
+  #kpi-grid > div {
+    border-radius: 12px !important;
+    box-shadow: 0 1px 4px rgba(0,0,0,.06);
+    border-color: #e8edf2 !important;
+    padding: 14px 16px !important;
+  }
   .kpi-num { font-variant-numeric: tabular-nums; font-feature-settings: "tnum"; }
   .skill-badge {
     display: inline-block; padding: 1px 6px; border-radius: 4px;
@@ -537,7 +597,7 @@
         <select id="anno-selector" class="text-sm border-none bg-transparent font-semibold focus:outline-none cursor-pointer" style="color:#f9fafb;background:transparent;"></select>
       </div>
       <div class="text-xs pl-2" style="border-left:1px solid #444;color:#9ca3af;">
-        <span class="font-medium" style="color:#00b8b0;">v18.2.0</span> · Michele Marchetti
+        <span class="font-medium" style="color:#00b8b0;">v18.3.0</span> · Michele Marchetti
       </div>
     </div>
   </div>
@@ -602,7 +662,7 @@
   <div id="alert-box"></div>
 
   <!-- Vista mensile commesse -->
-  <section class="bg-white rounded-lg border border-slate-200 p-4">
+  <section class="bg-white rounded-lg border border-slate-200 p-5">
     <div class="flex items-center justify-between mb-3 flex-wrap gap-2">
       <div>
         <h2 class="font-semibold text-slate-900">Vista mensile commesse</h2>
@@ -680,7 +740,7 @@
   </section>
 
   <!-- 4. Suggerimenti & Gap -->
-  <section class="bg-white rounded-lg border border-slate-200 p-4">
+  <section class="bg-white rounded-lg border border-slate-200 p-5">
     <h2 class="font-semibold text-slate-900 mb-1">Gap risorse &amp; raccomandazioni assunzione</h2>
     <p class="text-xs text-slate-500 mb-4">Analisi automatica: per ogni commessa in pipeline confronta fabbisogno vs operatori interni disponibili. Le raccomandazioni di assunzione sono aggregate per skill mancante.</p>
     <div id="gap-detail" class="space-y-2 mb-6"></div>
