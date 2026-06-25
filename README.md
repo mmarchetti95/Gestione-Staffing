@@ -1,0 +1,55 @@
+# Dashboard Staffing — Eagleprojects
+
+Applicazione web per la gestione dello staffing e della pipeline commerciale del dipartimento rilievi.
+
+🔗 **[Apri il Dashboard](https://mmarchetti95.github.io/Gestione-Staffing/)**
+
+---
+
+## Funzionalità
+
+- 📊 **Pipeline commerciale** — gestione commesse in fase di offerta con probabilità e valore
+- 👷 **Operatori** — anagrafica con skill badge (WO, MMS, LIXEL, DRONE, GPS, LASER, ROBOT, GRD)
+- 📅 **Staffing mensile** — allocazione gg-uomo per commessa, saturazione e gap analysis
+- 🗓️ **Pianificazione settimanale** — composizione squadre, assegnazione cantieri, gestione ferie
+- 🗺️ **Mappa cantieri** — visualizzazione geografica delle commesse attive
+- 📈 **Gantt** — timeline visiva pipeline e commesse attive
+- ☁️ **Sync automatico** — ogni modifica viene salvata su database cloud (Supabase) in tempo reale
+
+---
+
+## Accesso
+
+Il dashboard è protetto da login con credenziali personali.  
+Per richiedere un account contattare l'amministratore.
+
+---
+
+## Stack tecnico
+
+| Componente | Tecnologia |
+|---|---|
+| Frontend | HTML + Tailwind CSS + Chart.js + Leaflet.js |
+| Hosting | GitHub Pages |
+| Database / Auth | Supabase (PostgreSQL) |
+| Aggiornamento | Push su branch `main` → deploy automatico |
+
+---
+
+## Aggiornare il dashboard
+
+Le modifiche al codice vengono deployate automaticamente su GitHub Pages entro ~2 minuti dal push su `main`.
+
+---
+
+## File nella repo
+
+| File | Descrizione |
+|---|---|
+| `index.html` | Applicazione completa (single-file) |
+| `SETUP_SUPABASE_GITHUB.md` | Guida setup iniziale Supabase + GitHub Pages |
+| `README.md` | Questo file |
+
+---
+
+*Versione attuale: v18 — Giugno 2026*
