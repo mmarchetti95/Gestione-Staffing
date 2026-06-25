@@ -16,6 +16,7 @@ Applicazione web per la gestione dello staffing e della pipeline commerciale del
 - 📈 **Gantt** — timeline visiva pipeline e commesse attive
 - ☁️ **Sync automatico** — ogni modifica viene salvata su database cloud (Supabase) in tempo reale
 - 🔑 **Cambio password** — ogni utente può cambiare la propria password dal banner sync
+- 📋 **Log attività** — pannello admin con storico di tutte le modifiche (visibile solo agli amministratori)
 
 ---
 
@@ -23,6 +24,17 @@ Applicazione web per la gestione dello staffing e della pipeline commerciale del
 
 Il dashboard è protetto da login con credenziali personali.  
 Per richiedere un account contattare l'amministratore.
+
+### Ruoli utente
+| Ruolo | Accesso |
+|---|---|
+| Utente standard | Dashboard completo, modifica dati, cambio password |
+| Admin | Come sopra + pannello log attività |
+
+Per assegnare il ruolo admin: Supabase → Authentication → Users → SQL Editor:
+```sql
+UPDATE auth.users SET raw_user_meta_data = raw_user_meta_data || '{"role": "admin"}'::jsonb WHERE email = 'email@esempio.it';
+```
 
 ---
 
@@ -52,6 +64,7 @@ Per richiedere un account contattare l'amministratore.
 
 | Versione | Data | Modifiche |
 |---|---|---|
+| `v18.5.0` | 2026-06-25 | Log attività admin — pannello con storico modifiche, tracciamento commesse e operatori |
 | `v18.4.0` | 2026-06-25 | Cambio password utente dal banner sync |
 | `v18.3.0` | 2026-06-25 | Card con ombra morbida, tabelle più ariose, input con focus accent cyan |
 | `v18.2.0` | 2026-06-25 | Restyling palette Eagleprojects — header scuro, accent cyan #00b8b0 |
@@ -60,4 +73,4 @@ Per richiedere un account contattare l'amministratore.
 
 ---
 
-*Versione attuale: **v18.4.0** — Michele Marchetti*
+*Versione attuale: **v18.5.0** — Michele Marchetti*
