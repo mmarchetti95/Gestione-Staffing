@@ -597,7 +597,7 @@
         <select id="anno-selector" class="text-sm border-none font-semibold focus:outline-none cursor-pointer" style="color:#f9fafb;background:#1a1a1a;border-radius:4px;padding:1px 4px;"></select>
       </div>
       <div class="text-xs pl-2" style="border-left:1px solid #444;color:#9ca3af;">
-        <span class="font-medium" style="color:#00b8b0;">v18.6.2</span> · Michele Marchetti
+        <span class="font-medium" style="color:#00b8b0;">v18.6.3</span> · Michele Marchetti
       </div>
     </div>
   </div>
@@ -1188,6 +1188,11 @@ async function sbPull() {
       renderAll();
       if (snap.pw_ferie) pwFerie = snap.pw_ferie;
       if (snap.pw_data)  pwData  = snap.pw_data;
+      // Se la schermata pianificazione è visibile, ridisegna la tab attiva
+      const weeklyEl = document.getElementById('screen-weekly');
+      if (weeklyEl && !weeklyEl.classList.contains('hidden')) {
+        pwSwitchTab(typeof _pwActiveTab !== 'undefined' ? _pwActiveTab : 'griglia');
+      }
     }
     const ora = new Date().toLocaleTimeString('it-IT', { hour:'2-digit', minute:'2-digit' });
     sbUpdateUI('ok', 'Sync: aggiornato ✓', 'Ultimo sync: ' + ora);
@@ -5988,7 +5993,7 @@ function switchScreen(screen) {
     weeklyEl.classList.remove('hidden');
     navDash.className = 'px-3 py-1.5 text-sm font-medium text-slate-600 hover:bg-slate-50';
     navWk.className   = 'px-3 py-1.5 text-sm font-medium bg-teal-600 text-white';
-    pwRender();
+    pwLoad().then(() => pwSwitchTab(typeof _pwActiveTab !== 'undefined' ? _pwActiveTab : 'griglia'));
   } else {
     weeklyEl.classList.add('hidden');
     mainEl.classList.remove('hidden');
@@ -6016,7 +6021,18 @@ function pwSwitchTab(tab) {
   if (tab === 'mappa') {
     tm.classList.add('active');
     vm.classList.remove('hidden');
-    setTimeout(pwMapInit, 60);
+    // Forza reinit così pwMapRender legge sempre pwWeek aggiornato
+    setTimeout(() => {
+      if (!_map) {
+        _map = L.map('pw-map', { preferCanvas: true }).setView([42.5, 12.5], 6);
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+          attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
+          maxZoom: 19
+        }).addTo(_map);
+        setTimeout(() => _map.invalidateSize(), 200);
+      }
+      pwMapRender(_mapDay);
+    }, 60);
   } else if (tab === 'ferie') {
     tf.classList.add('active');
     vf.classList.remove('hidden');
