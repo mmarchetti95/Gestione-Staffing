@@ -65,8 +65,15 @@ UPDATE auth.users SET raw_user_meta_data = raw_user_meta_data || '{"role": "admi
 
 | Versione | Data | Modifiche |
 |---|---|---|
+| `v18.6.7` | 2026-06-26 | Fix selettore Week/Anno non si aggiornava nelle tab Ferie e Mappa |
+| `v18.6.6` | 2026-06-26 | Fix header dates aggiornato in tutte le tab al cambio settimana |
+| `v18.6.5` | 2026-06-26 | Fix persistenza dati pwData/pwFerie (push 500ms), fix griglia prev/next, label week in mappa |
+| `v18.6.4` | 2026-06-26 | Fix perdita dati pw al refresh, fix tasto Oggi, fix prev/next aggiornano tab attiva |
+| `v18.6.3` | 2026-06-26 | Fix persistenza pwData/pwFerie, fix cambio week su ferie/mappa, fix switchScreen con pwLoad |
+| `v18.6.2` | 2026-06-26 | Fix cambio settimana aggiorna tab attiva (ferie/mappa/griglia) |
+| `v18.6.1` | 2026-06-25 | Fix visibilità log/riconciliazione non-admin, fix header con visibility invece di display |
 | `v18.6.0` | 2026-06-25 | Riconciliazione nomi visibile solo admin, modalità presentazione solo in Dashboard |
-| `v18.5.1` | 2026-06-25 | Fix log admin (rilettura sessione), fix colore select anno |
+| `v18.5.1` | 2026-06-25 | Fix log admin (rilettura sessione getUser), fix colore select anno |
 | `v18.5.0` | 2026-06-25 | Log attività admin — pannello con storico modifiche, tracciamento commesse e operatori |
 | `v18.4.0` | 2026-06-25 | Cambio password utente dal banner sync |
 | `v18.3.0` | 2026-06-25 | Card con ombra morbida, tabelle più ariose, input con focus accent cyan |
@@ -76,4 +83,15 @@ UPDATE auth.users SET raw_user_meta_data = raw_user_meta_data || '{"role": "admi
 
 ---
 
-*Versione attuale: **v18.6.0** — Michele Marchetti*
+## Note tecniche per sviluppo futuro
+
+- Sempre scaricare `index.html` via GitHub API prima di modificare (per avere SHA aggiornato)
+- Workflow per ogni modifica: backup in `backups/` → modifica → push `index.html` → aggiorna README
+- Credenziali Supabase: URL e anon key già inserite nel file `index.html`
+- Admin role: assegnato via SQL su `auth.users.raw_user_meta_data`, letto con `auth.jwt() -> 'user_metadata' ->> 'role'`
+- `window.confirm()` non funziona in iframe — usare sempre `showConfirm()` custom
+- Nested template literals causano errori JS — usare concatenazione + attributi `data-`
+
+---
+
+*Versione attuale: **v18.6.7** — Michele Marchetti*
