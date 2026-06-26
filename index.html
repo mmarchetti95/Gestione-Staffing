@@ -597,7 +597,7 @@
         <select id="anno-selector" class="text-sm border-none font-semibold focus:outline-none cursor-pointer" style="color:#f9fafb;background:#1a1a1a;border-radius:4px;padding:1px 4px;"></select>
       </div>
       <div class="text-xs pl-2" style="border-left:1px solid #444;color:#9ca3af;">
-        <span class="font-medium" style="color:#00b8b0;">v18.6.4</span> · Michele Marchetti
+        <span class="font-medium" style="color:#00b8b0;">v18.6.5</span> · Michele Marchetti
       </div>
     </div>
   </div>
@@ -908,10 +908,13 @@
   <!-- Vista Mappa -->
   <div id="pw-view-mappa" class="hidden">
     <div class="bg-white border border-slate-200 rounded-lg p-3 mb-4 no-print">
-      <div class="flex items-center gap-2 flex-wrap">
-        <span class="text-xs font-semibold text-slate-600">Giorno:</span>
-        <div id="pw-map-days" class="flex gap-1 flex-wrap"></div>
-        <span class="text-xs text-slate-400 ml-2" id="pw-map-geocoding-status"></span>
+      <div class="flex items-center gap-2 flex-wrap justify-between">
+        <div class="flex items-center gap-2 flex-wrap">
+          <span class="text-xs font-semibold text-slate-600">Giorno:</span>
+          <div id="pw-map-days" class="flex gap-1 flex-wrap"></div>
+          <span class="text-xs text-slate-400 ml-2" id="pw-map-geocoding-status"></span>
+        </div>
+        <span class="text-xs font-semibold text-slate-500" id="pw-map-week-label"></span>
       </div>
     </div>
     <div class="grid grid-cols-1 lg:grid-cols-4 gap-4">
@@ -1039,6 +1042,7 @@ let _sbClient = null;
 let _sbUser   = null;
 let _sbSyncing = false;
 let _sbAutoPushTimer = null;
+let _sbPwPushTimer = null; // timer dedicato per pwData/pwFerie
 
 const SB_TABLE = 'staffing_state';
 const SB_ROW_ID = 1; // riga unica condivisa da tutto il team
@@ -5163,6 +5167,11 @@ async function pwFerieLoad() {
 
 async function pwFerieSave() {
   try { await sset('pw_ferie', pwFerie); } catch(e) { console.warn('pwFerieSave error', e); }
+  // Push immediato su Supabase con debounce breve (500ms) per evitare perdita dati al refresh
+  if (typeof _sbUser !== 'undefined' && _sbUser) {
+    clearTimeout(_sbPwPushTimer);
+    _sbPwPushTimer = setTimeout(() => sbPush(), 500);
+  }
 }
 
 function pwGetFerieWeek() {
@@ -5330,6 +5339,11 @@ async function pwLoad() {
 
 async function pwSave() {
   try { await sset('pw_data', pwData); } catch(e) { console.warn('pwSave error', e); }
+  // Push immediato su Supabase con debounce breve (500ms) per evitare perdita dati al refresh
+  if (typeof _sbUser !== 'undefined' && _sbUser) {
+    clearTimeout(_sbPwPushTimer);
+    _sbPwPushTimer = setTimeout(() => sbPush(), 500);
+  }
 }
 
 function pwGetWeekData() {
@@ -6048,6 +6062,7 @@ function pwSwitchTab(tab) {
   } else {
     tg.classList.add('active');
     vg.classList.remove('hidden');
+    pwRender(); // ridisegna griglia con settimana aggiornata
   }
 }
 
@@ -6124,6 +6139,10 @@ async function pwMapRender(dayIdx) {
   }
   const DAY_SHORT = ['Lun', 'Mar', 'Mer', 'Gio', 'Ven', 'Sab'];
   const todayStr = new Date().toISOString().slice(0, 10);
+
+  /* Aggiorna label settimana */
+  const mapWeekLabel = document.getElementById('pw-map-week-label');
+  if (mapWeekLabel) mapWeekLabel.textContent = `WEEK ${pwWeek} · ${formatDate(days[0])} — ${formatDate(days[5])} ${pwAnno}`;
 
   /* Aggiorna bottoni giorni */
   const daysEl = document.getElementById('pw-map-days');
