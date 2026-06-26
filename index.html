@@ -597,7 +597,7 @@
         <select id="anno-selector" class="text-sm border-none font-semibold focus:outline-none cursor-pointer" style="color:#f9fafb;background:#1a1a1a;border-radius:4px;padding:1px 4px;"></select>
       </div>
       <div class="text-xs pl-2" style="border-left:1px solid #444;color:#9ca3af;">
-        <span class="font-medium" style="color:#00b8b0;">v18.6.3</span> · Michele Marchetti
+        <span class="font-medium" style="color:#00b8b0;">v18.6.4</span> · Michele Marchetti
       </div>
     </div>
   </div>
@@ -1209,9 +1209,12 @@ async function sbPush() {
   if (!_sbUser) return;
   try {
     const keys = ['commesse_pipeline','operatori','assegnazioni','commesse_attive_extra',
-                  'staffing_modificato','commesse_chiuse','commesse_attive_meta','pw_data','pw_ferie'];
+                  'staffing_modificato','commesse_chiuse','commesse_attive_meta'];
     const snap = { _savedAt: new Date().toISOString(), _version: '18', _savedBy: _sbUser.email };
     for (const k of keys) { try { snap[k] = await sget(k); } catch{} }
+    // pw_data e pw_ferie letti direttamente dalla memoria (non da sessionStorage)
+    if (typeof pwData !== 'undefined') snap['pw_data'] = pwData;
+    if (typeof pwFerie !== 'undefined') snap['pw_ferie'] = pwFerie;
 
     const { error } = await _sbClient
       .from(SB_TABLE)
@@ -5937,7 +5940,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       // Correggi se week > weeksInYear
       const maxW = weeksInYear(pwAnno);
       if (pwWeek > maxW) pwWeek = maxW;
-      pwRender();
+      pwSwitchTab(_pwActiveTab || 'griglia');
     };
   }
   if (weekSel) {
@@ -5947,17 +5950,22 @@ document.addEventListener('DOMContentLoaded', async () => {
   document.getElementById('pw-prev').onclick = () => {
     pwWeek--;
     if (pwWeek < 1) { pwAnno--; pwWeek = weeksInYear(pwAnno); }
-    pwRender();
+    pwSwitchTab(_pwActiveTab || 'griglia');
   };
   document.getElementById('pw-next').onclick = () => {
     pwWeek++;
     const maxW = weeksInYear(pwAnno);
     if (pwWeek > maxW) { pwAnno++; pwWeek = 1; }
-    pwRender();
+    pwSwitchTab(_pwActiveTab || 'griglia');
   };
   document.getElementById('pw-today').onclick = () => {
     const { week, year } = isoWeekYear(new Date());
-    pwAnno = year; pwWeek = week; pwSwitchTab(_pwActiveTab || 'griglia');
+    pwAnno = year;
+    pwWeek = week;
+    // Aggiorna anche il selettore anno se presente
+    const aS = document.getElementById('pw-anno');
+    if (aS) aS.value = String(pwAnno);
+    pwSwitchTab(_pwActiveTab || 'griglia');
   };
   document.getElementById('pw-add-commessa').onclick = async () => {
     const data = pwGetWeekData();
