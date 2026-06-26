@@ -138,9 +138,11 @@
   .tab-btn {
     padding: 8px 16px; font-size: 13px; font-weight: 500;
     border-bottom: 2px solid transparent; cursor: pointer;
-    color: var(--muted);
+    color: var(--muted); transition: color .15s;
   }
+  .tab-btn:hover { color: #334155; }
   .tab-btn.active { color: var(--accent); border-color: var(--accent); }
+  .tab-btn.active:hover { color: var(--accent); }
   .modal-backdrop {
     position: fixed; inset: 0; background: rgba(0,0,0,.4);
     display: flex; align-items: center; justify-content: center; z-index: 50;
@@ -597,7 +599,7 @@
         <select id="anno-selector" class="text-sm border-none font-semibold focus:outline-none cursor-pointer" style="color:#f9fafb;background:#1a1a1a;border-radius:4px;padding:1px 4px;"></select>
       </div>
       <div class="text-xs pl-2" style="border-left:1px solid #444;color:#9ca3af;">
-        <span class="font-medium" style="color:#00b8b0;">v18.6.7</span> · Michele Marchetti
+        <span class="font-medium" style="color:#00b8b0;">v18.6.8</span> · Michele Marchetti
       </div>
     </div>
   </div>
@@ -1787,9 +1789,11 @@ function renderCommesse() {
 
   if (state.activeTab === 'pipeline') {
     const q = state.searchCommesse.toLowerCase();
+    const nomiChiusePl = new Set((state.commesse_chiuse || []).map(cc => cc.progetto || cc.nome || '').filter(Boolean));
+    const pipelineVisibile = state.pipeline.filter(c => !nomiChiusePl.has(c.progetto || c.nome || ''));
     const filtered = q
-      ? state.pipeline.filter(c => ((c.cliente||'') + ' ' + (c.progetto||'') + ' ' + (c.industry||'')).toLowerCase().includes(q))
-      : state.pipeline;
+      ? pipelineVisibile.filter(c => ((c.cliente||'') + ' ' + (c.progetto||'') + ' ' + (c.industry||'')).toLowerCase().includes(q))
+      : pipelineVisibile;
     list.innerHTML = filtered.map(c => renderCommessaPipelineCard(c)).join('') ||
       `<div class="text-center text-sm text-slate-400 py-6">${q ? 'Nessuna commessa corrisponde alla ricerca.' : 'Nessuna commessa in pipeline.'}</div>`;
   } else {
@@ -2003,7 +2007,10 @@ function renderCommesseAttive() {
     if (!grouped[nome]) grouped[nome] = [];
   });
 
-  let keys = Object.keys(grouped).sort((a,b) => {
+  // nomi commesse chiuse/eliminate — escluse sempre dalla vista e dalla ricerca
+  const nomiChiuse = new Set((state.commesse_chiuse || []).map(cc => cc.progetto || cc.nome || '').filter(Boolean));
+
+  let keys = Object.keys(grouped).filter(k => !nomiChiuse.has(k)).sort((a,b) => {
     if (a === 'ORE NON LAVORATE') return 1;
     if (b === 'ORE NON LAVORATE') return -1;
     return a.localeCompare(b);
