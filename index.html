@@ -600,7 +600,7 @@
         <select id="anno-selector" class="text-sm border-none font-semibold focus:outline-none cursor-pointer" style="color:#f9fafb;background:#1a1a1a;border-radius:4px;padding:1px 4px;"></select>
       </div>
       <div class="text-xs pl-2" style="border-left:1px solid #444;color:#9ca3af;">
-        <span class="font-medium" style="color:#00b8b0;">v18.6.10</span> · Michele Marchetti
+        <span class="font-medium" style="color:#00b8b0;">v18.6.11</span> · Michele Marchetti
       </div>
     </div>
   </div>
@@ -781,6 +781,7 @@
             </label>
           </div>
         </div>
+        <div id="op-coerenza-banner" class="hidden"></div>
         <div class="p-3 scrollbox space-y-2" id="op-list"></div>
         <div class="p-3 scrollbox hidden" id="op-vista-container"></div>
       </div>
@@ -1512,6 +1513,27 @@ function updateAttestatiSummary() {
   sum.textContent = n === 0 ? 'Tutti' : `${n} selezionato/i`;
 }
 
+function checkCoerenzaOperatori() {
+  const mc = meseCorrente();
+  const nomiPool = new Set(state.operatori.map(o => o.nome_esteso));
+  const fantasmi = new Set();
+  state.staffing.forEach(r => {
+    if (!r.risorsa || r.commessa === 'ORE NON LAVORATE') return;
+    if (nomiPool.has(r.risorsa)) return;
+    if (r.mesi.slice(mc).some(v => (Number(v)||0) > 0)) fantasmi.add(r.risorsa);
+  });
+  const banner = document.getElementById('op-coerenza-banner');
+  if (!banner) return;
+  if (fantasmi.size === 0) {
+    banner.className = 'hidden';
+    banner.innerHTML = '';
+    return;
+  }
+  const nomi = [...fantasmi].sort().join(', ');
+  banner.className = 'mx-3 mt-2 mb-1 text-xs bg-amber-50 border border-amber-300 text-amber-800 rounded px-3 py-2';
+  banner.innerHTML = '<span class="font-semibold">&#9888; ' + fantasmi.size + ' operatore/i con impegni futuri non nel pool:</span> ' + nomi + '. <span class="text-amber-600">Aggiungili al pool o verifica i dati.</span>';
+}
+
 function renderOperatori() {
   const list = document.getElementById('op-list');
   const mese0 = meseCorrente();
@@ -1532,6 +1554,7 @@ function renderOperatori() {
   ops.sort((a,b) => operatoreSatPeriodo(a, [mese0, meseProx]) - operatoreSatPeriodo(b, [mese0, meseProx]));
 
   document.getElementById('op-count').textContent = `(${ops.length}/${state.operatori.length})`;
+  checkCoerenzaOperatori();
 
   list.innerHTML = ops.map(op => {
     const sat3 = operatoreSatPeriodo(op, [mese0, meseProx, Math.min(11,mese0+2)]);
