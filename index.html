@@ -600,7 +600,7 @@
         <select id="anno-selector" class="text-sm border-none font-semibold focus:outline-none cursor-pointer" style="color:#f9fafb;background:#1a1a1a;border-radius:4px;padding:1px 4px;"></select>
       </div>
       <div class="text-xs pl-2" style="border-left:1px solid #444;color:#9ca3af;">
-        <span class="font-medium" style="color:#00b8b0;">v18.6.11</span> · Michele Marchetti
+        <span class="font-medium" style="color:#00b8b0;">v18.6.12</span> · Michele Marchetti
       </div>
     </div>
   </div>
@@ -5463,7 +5463,11 @@ function pwGetCommesseValide() {
     }
   });
 
-  return [...commesseConStaffing].sort();
+  // Escludi commesse chiuse/eliminate — non devono apparire nel selettore
+  const nomiChiuse = new Set(
+    (state.commesse_chiuse || []).map(cc => cc.progetto || cc.nome || '').filter(Boolean)
+  );
+  return [...commesseConStaffing].filter(n => !nomiChiuse.has(n)).sort();
 }
 
 function pwGetOperatoriPerCommessa(commessaNome) {
