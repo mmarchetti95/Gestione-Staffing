@@ -600,7 +600,7 @@
         <select id="anno-selector" class="text-sm border-none font-semibold focus:outline-none cursor-pointer" style="color:#f9fafb;background:#1a1a1a;border-radius:4px;padding:1px 4px;"></select>
       </div>
       <div class="text-xs pl-2" style="border-left:1px solid #444;color:#9ca3af;">
-        <span class="font-medium" style="color:#00b8b0;">v18.6.10</span> · Michele Marchetti
+        <span class="font-medium" style="color:#00b8b0;">v18.6.9</span> · Michele Marchetti
       </div>
     </div>
   </div>
@@ -781,7 +781,6 @@
             </label>
           </div>
         </div>
-        <div id="op-coerenza-banner" class="hidden mx-3 mt-2"></div>
         <div class="p-3 scrollbox space-y-2" id="op-list"></div>
         <div class="p-3 scrollbox hidden" id="op-vista-container"></div>
       </div>
@@ -1513,24 +1512,6 @@ function updateAttestatiSummary() {
   sum.textContent = n === 0 ? 'Tutti' : `${n} selezionato/i`;
 }
 
-
-function checkCoerenzaOperatori() {
-  const mc = meseCorrente();
-  const nomiPool = new Set(state.operatori.map(o => o.nome_esteso));
-  const fantasmi = new Set();
-  state.staffing.forEach(r => {
-    if (!r.risorsa || r.commessa === 'ORE NON LAVORATE') return;
-    if (nomiPool.has(r.risorsa)) return;
-    if (r.mesi.slice(mc).some(v => (Number(v)||0) > 0)) fantasmi.add(r.risorsa);
-  });
-  const banner = document.getElementById('op-coerenza-banner');
-  if (!banner) return;
-  if (fantasmi.size === 0) { banner.className = 'hidden'; banner.innerHTML = ''; return; }
-  const nomi = [...fantasmi].sort().join(', ');
-  banner.className = 'mx-3 mt-2 mb-1 text-xs bg-amber-50 border border-amber-300 text-amber-800 rounded px-3 py-2';
-  banner.innerHTML = '<span class="font-semibold">⚠ ' + fantasmi.size + ' operatore/i con impegni futuri non trovato/i nel pool:</span> ' + nomi + '.<span class="text-amber-600"> Aggiungili al pool o verifica i dati.</span>';
-}
-
 function renderOperatori() {
   const list = document.getElementById('op-list');
   const mese0 = meseCorrente();
@@ -1551,7 +1532,6 @@ function renderOperatori() {
   ops.sort((a,b) => operatoreSatPeriodo(a, [mese0, meseProx]) - operatoreSatPeriodo(b, [mese0, meseProx]));
 
   document.getElementById('op-count').textContent = `(${ops.length}/${state.operatori.length})`;
-  checkCoerenzaOperatori();
 
   list.innerHTML = ops.map(op => {
     const sat3 = operatoreSatPeriodo(op, [mese0, meseProx, Math.min(11,mese0+2)]);
@@ -3127,68 +3107,12 @@ function openOperatoreModal(id) {
   };
 }
 
-/* ===================== MODALE CONFERMA PERSONALIZZATA ===================== */
-function showConfirm(htmlMsg, onConfirm) {
-  const root = document.getElementById('modal-root');
-  root.innerHTML = \`<div class="modal-backdrop">
-    <div class="bg-white rounded-lg shadow-xl w-full max-w-md mx-4 p-5">
-      <div class="mb-4">\${htmlMsg}</div>
-      <div class="flex justify-end gap-2">
-        <button id="sc-cancel" class="px-3 py-1.5 text-sm border border-slate-300 rounded hover:bg-slate-50">Annulla</button>
-        <button id="sc-confirm" class="px-3 py-1.5 text-sm bg-red-600 text-white rounded hover:bg-red-700">Conferma eliminazione</button>
-      </div>
-    </div>
-  </div>\`;
-  document.getElementById('sc-cancel').onclick = () => closeModal();
-  document.getElementById('sc-confirm').onclick = () => { closeModal(); onConfirm(); };
-  root.querySelector('.modal-backdrop').addEventListener('click', e => { if (e.target.classList.contains('modal-backdrop')) closeModal(); });
-}
-
 async function deleteOperatore(id) {
-  const op = state.operatori.find(o => o.id === id);
-  if (!op) return;
-  const mc = meseCorrente();
-
-  // Impegni futuri: righe staffing con gg > 0 in mesi >= mc
-  const righeOp = state.staffing.filter(r => r.risorsa === op.nome_esteso);
-  const impegniFuturi = righeOp
-    .map(r => ({ commessa: r.commessa, gg: r.mesi.slice(mc).reduce((s,v)=>s+(Number(v)||0),0) }))
-    .filter(x => x.gg > 0 && x.commessa !== 'ORE NON LAVORATE');
-  const impegniPassati = righeOp.some(r => r.mesi.slice(0,mc).some(v => (Number(v)||0) > 0));
-  const assegnazioniPipeline = state.assegnazioni
-    .filter(a => a.operatore_id === id)
-    .map(a => state.pipeline.find(p => p.id === a.commessa_id))
-    .filter(Boolean);
-
-  // Costruisci messaggio
-  let msg = '<div class="text-sm font-semibold text-slate-900 mb-2">Eliminare <span class="text-red-600">' + op.nome_esteso + '</span> dal pool operatori?</div>';
-  if (impegniFuturi.length > 0 || assegnazioniPipeline.length > 0) {
-    msg += '<div class="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded p-2 mb-2">';
-    msg += '<div class="font-semibold mb-1">⚠ Impegni futuri che verranno rimossi:</div>';
-    impegniFuturi.forEach(x => { msg += '<div class="ml-2">• ' + x.commessa + ' — <b>' + x.gg + ' gg-uomo</b> futuri</div>'; });
-    assegnazioniPipeline.forEach(c => { msg += '<div class="ml-2">• ' + (c.progetto||c.nome) + ' <span class=\'text-purple-600\'>(pipeline)</span></div>'; });
-    msg += '</div>';
-    msg += '<div class="text-xs text-slate-600 bg-slate-50 border border-slate-200 rounded p-2 mb-2">✓ Le allocazioni già lavorate (mesi precedenti) verranno mantenute nelle commesse.<br>✗ Le allocazioni future verranno azzerate.</div>';
-  } else if (impegniPassati) {
-    msg += '<div class="text-xs text-slate-600 bg-slate-50 border border-slate-200 rounded p-2 mb-2">L'operatore non ha impegni futuri. Lo storico allocazioni rimarrà nelle commesse.</div>';
-  }
-
-  showConfirm(msg, async () => {
-    // Azzera mesi futuri, mantieni passati
-    state.staffing = state.staffing.map(r => {
-      if (r.risorsa !== op.nome_esteso) return r;
-      const nuoviMesi = r.mesi.map((v, i) => i < mc ? v : 0);
-      return { ...r, mesi: nuoviMesi };
-    }).filter(r => {
-      if (r.risorsa !== op.nome_esteso) return true;
-      return r.mesi.some(v => (Number(v)||0) > 0); // rimuovi righe totalmente vuote
-    });
-    state.operatori = state.operatori.filter(o => o.id !== id);
-    state.assegnazioni = state.assegnazioni.filter(a => a.operatore_id !== id);
-    ricalcolaAllocOperatori();
-    await saveState('Eliminazione operatore', {operatore: op.nome_esteso});
-    renderAll();
-  });
+  if (!confirm('Eliminare l\'operatore? Le sue assegnazioni saranno rimosse.')) return;
+  const delOp = state.operatori.find(o => o.id === id);
+  state.operatori = state.operatori.filter(o => o.id !== id);
+  state.assegnazioni = state.assegnazioni.filter(a => a.operatore_id !== id);
+  await saveState('Eliminazione operatore', {operatore: delOp?.nome_esteso||id}); renderAll();
 }
 
 /* ===================== GAP & RACCOMANDAZIONI ===================== */
@@ -5468,9 +5392,7 @@ function pwGetCommesseValide() {
     }
   });
 
-  // Escludi commesse chiuse/eliminate
-  const nomiChiusePw = new Set((state.commesse_chiuse || []).map(cc => cc.progetto || cc.nome || '').filter(Boolean));
-  return [...commesseConStaffing].filter(n => !nomiChiusePw.has(n)).sort();
+  return [...commesseConStaffing].sort();
 }
 
 function pwGetOperatoriPerCommessa(commessaNome) {
