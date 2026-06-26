@@ -597,7 +597,7 @@
         <select id="anno-selector" class="text-sm border-none font-semibold focus:outline-none cursor-pointer" style="color:#f9fafb;background:#1a1a1a;border-radius:4px;padding:1px 4px;"></select>
       </div>
       <div class="text-xs pl-2" style="border-left:1px solid #444;color:#9ca3af;">
-        <span class="font-medium" style="color:#00b8b0;">v18.6.1</span> · Michele Marchetti
+        <span class="font-medium" style="color:#00b8b0;">v18.6.2</span> · Michele Marchetti
       </div>
     </div>
   </div>
@@ -5936,7 +5936,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     };
   }
   if (weekSel) {
-    weekSel.onchange = () => { pwWeek = parseInt(weekSel.value); pwRender(); };
+    weekSel.onchange = () => { pwWeek = parseInt(weekSel.value); pwSwitchTab(_pwActiveTab || 'griglia'); };
   }
 
   document.getElementById('pw-prev').onclick = () => {
@@ -5952,7 +5952,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   };
   document.getElementById('pw-today').onclick = () => {
     const { week, year } = isoWeekYear(new Date());
-    pwAnno = year; pwWeek = week; pwRender();
+    pwAnno = year; pwWeek = week; pwSwitchTab(_pwActiveTab || 'griglia');
   };
   document.getElementById('pw-add-commessa').onclick = async () => {
     const data = pwGetWeekData();
