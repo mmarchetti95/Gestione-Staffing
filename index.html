@@ -137,12 +137,13 @@
   .sat-bar > div:last-child { border-right: none; }
   .tab-btn {
     padding: 8px 16px; font-size: 13px; font-weight: 500;
-    border-bottom: 2px solid transparent; cursor: pointer;
+    border-bottom: 2px solid transparent; cursor: pointer !important;
     color: var(--muted); transition: color .15s;
+    user-select: none; -webkit-user-select: none;
   }
-  .tab-btn:hover { color: #334155; }
+  .tab-btn:hover { color: #64748b; cursor: pointer !important; }
   .tab-btn.active { color: var(--accent); border-color: var(--accent); }
-  .tab-btn.active:hover { color: var(--accent); }
+  .tab-btn.active:hover { color: var(--accent); cursor: pointer !important; }
   .modal-backdrop {
     position: fixed; inset: 0; background: rgba(0,0,0,.4);
     display: flex; align-items: center; justify-content: center; z-index: 50;
@@ -599,7 +600,7 @@
         <select id="anno-selector" class="text-sm border-none font-semibold focus:outline-none cursor-pointer" style="color:#f9fafb;background:#1a1a1a;border-radius:4px;padding:1px 4px;"></select>
       </div>
       <div class="text-xs pl-2" style="border-left:1px solid #444;color:#9ca3af;">
-        <span class="font-medium" style="color:#00b8b0;">v18.6.8</span> · Michele Marchetti
+        <span class="font-medium" style="color:#00b8b0;">v18.6.9</span> · Michele Marchetti
       </div>
     </div>
   </div>
@@ -2193,8 +2194,12 @@ async function spostaAssegnazione(cidFrom, oid, cidTo) {
 async function eliminaCommessaChiusa(idx) {
   const cc = state.commesse_chiuse[idx];
   if (!cc) return;
-  if (!confirm(`Eliminare definitivamente "${cc.progetto}" dall'archivio?\n\nL'operazione è irreversibile (le righe staffing non potranno più essere ripristinate).`)) return;
+  if (!confirm(`Eliminare definitivamente "${cc.progetto}" dall'archivio?\n\nL'operazione è irreversibile.`)) return;
+  const nome = cc.progetto;
   state.commesse_chiuse.splice(idx, 1);
+  // pulizia residua: rimuovi da commesse_attive e meta se ancora presenti
+  state.commesse_attive = (state.commesse_attive || []).filter(ca => (ca.progetto||ca.nome) !== nome);
+  if (state.commesse_attive_meta && state.commesse_attive_meta[nome]) delete state.commesse_attive_meta[nome];
   await saveState();
   renderAll();
 }
@@ -4094,19 +4099,24 @@ function openCommessaAttivaModal(nome) {
 /* ===================== CHIUDI / RIPRISTINA COMMESSA ===================== */
 async function chiudiCommessa(nome) {
   const righe = state.staffing.filter(r => r.commessa===nome);
-  if (!righe.length) { alert('Nessuna allocazione trovata.'); return; }
   const risorse = [...new Set(righe.map(r=>r.risorsa))];
   const tot = righe.reduce((s,r) => s+r.mesi.reduce((a,b)=>a+(Number(b)||0),0), 0);
-  if (!confirm(`Chiudere "${nome}"?\n• ${risorse.length} risorse liberate\n• ${righe.length} righe archiviate (${tot} gg-uomo)\n\nRipristinabile dall'archivio.`)) return;
+  const msg = righe.length
+    ? `Chiudere "${nome}"?\n\u2022 ${risorse.length} risorse liberate\n\u2022 ${righe.length} righe archiviate (${tot} gg-uomo)\n\nRipristinabile dall'archivio.`
+    : `Chiudere "${nome}"?\n(Nessuna allocazione staffing)\n\nRipristinabile dall'archivio.`;
+  if (!confirm(msg)) return;
   state.commesse_chiuse.push({
     progetto: nome,
     dataChiusura: new Date().toISOString().slice(0,10),
     staffingArchiviato: JSON.parse(JSON.stringify(righe)),
   });
-  state.staffing = state.staffing.filter(r => r.commessa!==nome);
+  state.staffing = state.staffing.filter(r => r.commessa !== nome);
+  state.commesse_attive = (state.commesse_attive || []).filter(ca => (ca.progetto||ca.nome) !== nome);
+  if (state.commesse_attive_meta && state.commesse_attive_meta[nome]) delete state.commesse_attive_meta[nome];
   ricalcolaAllocOperatori();
   await saveState(); renderAll();
 }
+
 async function ripristinaCommessa(idx) {
   const cc = state.commesse_chiuse[idx];
   if (!cc) return;
@@ -4116,12 +4126,6 @@ async function ripristinaCommessa(idx) {
   ricalcolaAllocOperatori();
   await saveState(); renderAll();
 }
-async function eliminaCommessaChiusa(idx) {
-  if (!confirm("Eliminare definitivamente dall'archivio? Non reversibile.")) return;
-  state.commesse_chiuse.splice(idx,1);
-  await saveState(); renderAll();
-}
-
 function renderArchivioCommesseChiuse() {
   if (!state.commesse_chiuse || !state.commesse_chiuse.length) return '';
   const q = (state.searchCommesse||'').toLowerCase();
