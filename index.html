@@ -597,7 +597,7 @@
         <select id="anno-selector" class="text-sm border-none font-semibold focus:outline-none cursor-pointer" style="color:#f9fafb;background:#1a1a1a;border-radius:4px;padding:1px 4px;"></select>
       </div>
       <div class="text-xs pl-2" style="border-left:1px solid #444;color:#9ca3af;">
-        <span class="font-medium" style="color:#00b8b0;">v18.6.5</span> · Michele Marchetti
+        <span class="font-medium" style="color:#00b8b0;">v18.6.6</span> · Michele Marchetti
       </div>
     </div>
   </div>
@@ -6029,6 +6029,13 @@ let _pwActiveTab = 'griglia';
 
 function pwSwitchTab(tab) {
   _pwActiveTab = tab;
+  // Aggiorna sempre l'header centrale con la settimana corrente
+  const headerDates = document.getElementById('pw-header-dates');
+  if (headerDates) {
+    const _mon = isoWeekToMonday(pwAnno, pwWeek);
+    const _sat = new Date(_mon); _sat.setUTCDate(_mon.getUTCDate() + 5);
+    headerDates.textContent = `WEEK ${pwWeek} · ${formatDate(_mon)} — ${formatDate(_sat)} ${pwAnno}`;
+  }
   const tg = document.getElementById('pw-tab-griglia');
   const tf = document.getElementById('pw-tab-ferie');
   const tm = document.getElementById('pw-tab-mappa');
