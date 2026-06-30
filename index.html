@@ -600,7 +600,7 @@
         <select id="anno-selector" class="text-sm border-none font-semibold focus:outline-none cursor-pointer" style="color:#f9fafb;background:#1a1a1a;border-radius:4px;padding:1px 4px;"></select>
       </div>
       <div class="text-xs pl-2" style="border-left:1px solid #444;color:#9ca3af;">
-        <span class="font-medium" style="color:#00b8b0;">v18.6.12</span> · Michele Marchetti
+        <span class="font-medium" style="color:#00b8b0;">v18.6.13</span> · Michele Marchetti
       </div>
     </div>
   </div>
@@ -1047,6 +1047,7 @@ let _sbUser   = null;
 let _sbSyncing = false;
 let _sbAutoPushTimer = null;
 let _sbPwPushTimer = null; // timer dedicato per pwData/pwFerie
+let _sbLastRemoteUpdatedAt = null; // timestamp dell'ultimo payload scaricato, per rilevare conflitti
 
 const SB_TABLE = 'staffing_state';
 const SB_ROW_ID = 1; // riga unica condivisa da tutto il team
@@ -1065,7 +1066,7 @@ function sbUpdateUI(stato, msg, extra) {
   const last = document.getElementById('sb-last-sync');
   const banner = document.getElementById('sb-banner');
   if (!dot) return;
-  const colors = { ok:'#22c55e', error:'#ef4444', idle:'#94a3b8', syncing:'#3b82f6' };
+  const colors = { ok:'#22c55e', error:'#ef4444', idle:'#94a3b8', syncing:'#3b82f6', conflict:'#f59e0b' };
   dot.style.background = colors[stato] || colors.idle;
   text.textContent = msg || '';
   if (extra && last) { last.textContent = extra; last.classList.remove('hidden'); }
@@ -1181,7 +1182,7 @@ async function sbPull() {
   try {
     const { data, error } = await _sbClient
       .from(SB_TABLE)
-      .select('payload')
+      .select('payload, updated_at')
       .eq('id', SB_ROW_ID)
       .single();
 
@@ -1202,6 +1203,7 @@ async function sbPull() {
         pwSwitchTab(typeof _pwActiveTab !== 'undefined' ? _pwActiveTab : 'griglia');
       }
     }
+    if (data && data.updated_at) _sbLastRemoteUpdatedAt = data.updated_at;
     const ora = new Date().toLocaleTimeString('it-IT', { hour:'2-digit', minute:'2-digit' });
     sbUpdateUI('ok', 'Sync: aggiornato ✓', 'Ultimo sync: ' + ora);
   } catch(e) {
@@ -1214,8 +1216,27 @@ async function sbPull() {
 async function sbSync() { await sbPull(); }
 
 async function sbPush() {
-  if (!_sbUser) return;
+  if (!_sbUser) return false;
   try {
+    // 1. Controllo conflitto: qualcuno ha scritto dopo il nostro ultimo pull?
+    const { data: remote, error: checkErr } = await _sbClient
+      .from(SB_TABLE)
+      .select('updated_at')
+      .eq('id', SB_ROW_ID)
+      .single();
+    if (checkErr && checkErr.code !== 'PGRST116') throw checkErr;
+
+    if (remote && remote.updated_at && _sbLastRemoteUpdatedAt && remote.updated_at !== _sbLastRemoteUpdatedAt) {
+      // Conflitto rilevato: un altro utente ha salvato nel frattempo.
+      // Non sovrascriviamo: ricarichiamo i dati freschi e segnaliamo.
+      console.warn('sbPush: conflitto rilevato, remote più recente del previsto. Annullo push e ricarico.');
+      sbUpdateUI('conflict', 'Sync: conflitto — dati aggiornati da un altro utente, ricarico…');
+      await sbPull();
+      sbUpdateUI('conflict', '⚠ Dati ricaricati: un altro utente ha salvato nel frattempo. Riprova l\'operazione.');
+      return false;
+    }
+
+    // 2. Nessun conflitto: procedi con il salvataggio
     const keys = ['commesse_pipeline','operatori','assegnazioni','commesse_attive_extra',
                   'staffing_modificato','commesse_chiuse','commesse_attive_meta'];
     const snap = { _savedAt: new Date().toISOString(), _version: '18', _savedBy: _sbUser.email };
@@ -1224,16 +1245,21 @@ async function sbPush() {
     if (typeof pwData !== 'undefined') snap['pw_data'] = pwData;
     if (typeof pwFerie !== 'undefined') snap['pw_ferie'] = pwFerie;
 
+    const nuovoUpdatedAt = new Date().toISOString();
     const { error } = await _sbClient
       .from(SB_TABLE)
-      .upsert({ id: SB_ROW_ID, payload: snap, updated_at: new Date().toISOString() });
+      .upsert({ id: SB_ROW_ID, payload: snap, updated_at: nuovoUpdatedAt });
     if (error) throw error;
+
+    _sbLastRemoteUpdatedAt = nuovoUpdatedAt; // il nostro salvataggio è ora la versione più recente
 
     const ora = new Date().toLocaleTimeString('it-IT', { hour:'2-digit', minute:'2-digit' });
     sbUpdateUI('ok', 'Sync: salvato ✓', 'Ultimo salvataggio: ' + ora);
+    return true;
   } catch(e) {
     console.error('sbPush error:', e);
     sbUpdateUI('error', 'Sync: errore salvataggio — ' + e.message);
+    return false;
   }
 }
 
@@ -1308,7 +1334,7 @@ async function loadState() {
   state.commesse_attive_meta = cam || INITIAL_DATA._meta || {};
   ricalcolaAllocOperatori();
 }
-async function saveState(logAction, logDetails) {
+async function saveState(logAction, logDetails, immediate) {
   await Promise.all([
     sset('commesse_pipeline', state.pipeline),
     sset('operatori', state.operatori),
@@ -1319,8 +1345,14 @@ async function saveState(logAction, logDetails) {
   ]);
   // Log attività se specificata
   if (logAction) sbLogActivity(logAction, logDetails || {});
-  // Auto-push su Supabase con debounce 3s
-  sbScheduleAutoPush();
+  if (immediate) {
+    // Operazione critica/distruttiva: push immediato, bypassa il debounce
+    clearTimeout(_sbAutoPushTimer);
+    await sbPush();
+  } else {
+    // Auto-push su Supabase con debounce 3s
+    sbScheduleAutoPush();
+  }
 }
 async function resetAll() {
   if (!confirm('Reset completo: tutte le modifiche manuali andranno perse. Procedere?')) return;
@@ -2223,7 +2255,7 @@ async function eliminaCommessaChiusa(idx) {
   // pulizia residua: rimuovi da commesse_attive e meta se ancora presenti
   state.commesse_attive = (state.commesse_attive || []).filter(ca => (ca.progetto||ca.nome) !== nome);
   if (state.commesse_attive_meta && state.commesse_attive_meta[nome]) delete state.commesse_attive_meta[nome];
-  await saveState();
+  await saveState(null, null, true);
   renderAll();
 }
 
@@ -3181,7 +3213,7 @@ async function deleteOperatore(id) {
     state.operatori = state.operatori.filter(o => o.id !== id);
     state.assegnazioni = state.assegnazioni.filter(a => a.operatore_id !== id);
     ricalcolaAllocOperatori();
-    await saveState('Eliminazione operatore', {operatore: op.nome_esteso});
+    await saveState('Eliminazione operatore', {operatore: op.nome_esteso}, true);
     renderAll();
   });
 }
@@ -4185,7 +4217,7 @@ async function chiudiCommessa(nome) {
   state.commesse_attive = (state.commesse_attive || []).filter(ca => (ca.progetto||ca.nome) !== nome);
   if (state.commesse_attive_meta && state.commesse_attive_meta[nome]) delete state.commesse_attive_meta[nome];
   ricalcolaAllocOperatori();
-  await saveState(); renderAll();
+  await saveState('Chiusura commessa', {commessa: nome}, true); renderAll();
 }
 
 async function ripristinaCommessa(idx) {
@@ -4195,7 +4227,7 @@ async function ripristinaCommessa(idx) {
   cc.staffingArchiviato.forEach(r => state.staffing.push(JSON.parse(JSON.stringify(r))));
   state.commesse_chiuse.splice(idx,1);
   ricalcolaAllocOperatori();
-  await saveState(); renderAll();
+  await saveState(null, null, true); renderAll();
 }
 function renderArchivioCommesseChiuse() {
   if (!state.commesse_chiuse || !state.commesse_chiuse.length) return '';
