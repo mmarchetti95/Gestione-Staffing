@@ -600,7 +600,7 @@
         <select id="anno-selector" class="text-sm border-none font-semibold focus:outline-none cursor-pointer" style="color:#f9fafb;background:#1a1a1a;border-radius:4px;padding:1px 4px;"></select>
       </div>
       <div class="text-xs pl-2" style="border-left:1px solid #444;color:#9ca3af;">
-        <span class="font-medium" style="color:#00b8b0;">v18.6.18</span> · Michele Marchetti
+        <span class="font-medium" style="color:#00b8b0;">v18.6.19</span> · Michele Marchetti
       </div>
     </div>
   </div>
@@ -1082,7 +1082,26 @@ function sbGenerateSessionId() {
 
 async function sbStartHeartbeat() {
   if (!_sbUser || !_sbClient) return;
-  _sbSessionId = sbGenerateSessionId();
+  // Riusa lo stesso session_id se già presente in sessionStorage (stessa tab,
+  // anche dopo un refresh) — solo l'apertura di una tab/dispositivo realmente
+  // nuovo genera un session_id diverso, e quindi una riga distinta in tabella.
+  try {
+    _sbSessionId = sessionStorage.getItem('dashboard_session_id');
+    if (!_sbSessionId) {
+      _sbSessionId = sbGenerateSessionId();
+      sessionStorage.setItem('dashboard_session_id', _sbSessionId);
+    }
+  } catch(e) {
+    _sbSessionId = sbGenerateSessionId();
+  }
+
+  // Pulizia: rimuove sessioni "morte" (nessun heartbeat da 5+ minuti) — evita
+  // che vecchie tab/refresh senza logout esplicito si accumulino per sempre.
+  try {
+    const sogliaStale = new Date(Date.now() - 5*60*1000).toISOString();
+    await _sbClient.from('active_sessions').delete().lt('last_seen', sogliaStale);
+  } catch(e) { console.warn('sbStartHeartbeat cleanup error:', e); }
+
   try {
     await _sbClient.from('active_sessions').upsert({
       session_id: _sbSessionId,
@@ -1111,6 +1130,7 @@ async function sbStopHeartbeat() {
     catch(e) { console.warn('sbStopHeartbeat delete error:', e); }
   }
   _sbSessionId = null;
+  try { sessionStorage.removeItem('dashboard_session_id'); } catch(e) {}
 }
 
 async function sbShowSessions() {
@@ -1125,6 +1145,11 @@ function sbCloseSessions() {
 async function sbLoadSessions() {
   const tbody = document.getElementById('sb-sessions-tbody');
   tbody.innerHTML = '<tr><td colspan="4" style="padding:20px;text-align:center;color:#94a3b8;">Caricamento…</td></tr>';
+  try {
+    // Pulizia sessioni morte anche all'apertura del pannello, per un effetto immediato
+    const sogliaStale = new Date(Date.now() - 5*60*1000).toISOString();
+    await _sbClient.from('active_sessions').delete().lt('last_seen', sogliaStale);
+  } catch(e) { console.warn('sbLoadSessions cleanup error:', e); }
   try {
     const { data, error } = await _sbClient
       .from('active_sessions')
