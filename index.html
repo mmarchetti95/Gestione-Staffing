@@ -600,7 +600,7 @@
         <select id="anno-selector" class="text-sm border-none font-semibold focus:outline-none cursor-pointer" style="color:#f9fafb;background:#1a1a1a;border-radius:4px;padding:1px 4px;"></select>
       </div>
       <div class="text-xs pl-2" style="border-left:1px solid #444;color:#9ca3af;">
-        <span class="font-medium" style="color:#00b8b0;">v18.6.16</span> · Michele Marchetti
+        <span class="font-medium" style="color:#00b8b0;">v18.6.17</span> · Michele Marchetti
       </div>
     </div>
   </div>
@@ -973,6 +973,7 @@ let state = {
   staffing: [],
   commesse_attive: [],
   commesse_chiuse: [],
+  commesse_escluse: [], // lista permanente: nomi esclusi per sempre dai dati attivi, anche se rimossi dall'archivio
   commesse_attive_meta: {}, // {[nome]: {cliente,industry,inizio,fine,note,skills,attestati_richiesti}}
   assegnazioni: [],
   activeTab: 'pipeline',
@@ -1191,7 +1192,7 @@ async function sbPull() {
     if (data && data.payload) {
       const snap = data.payload;
       const keys = ['commesse_pipeline','operatori','assegnazioni','commesse_attive_extra',
-                    'staffing_modificato','commesse_chiuse','commesse_attive_meta','pw_data','pw_ferie'];
+                    'staffing_modificato','commesse_chiuse','commesse_attive_meta','commesse_escluse','pw_data','pw_ferie'];
       keys.forEach(k => { if (snap[k] !== undefined) sbSetLocal(k, snap[k]); });
       await loadState();
       renderAll();
@@ -1238,7 +1239,7 @@ async function sbPush() {
 
     // 2. Nessun conflitto: procedi con il salvataggio
     const keys = ['commesse_pipeline','operatori','assegnazioni','commesse_attive_extra',
-                  'staffing_modificato','commesse_chiuse','commesse_attive_meta'];
+                  'staffing_modificato','commesse_chiuse','commesse_attive_meta','commesse_escluse'];
     const snap = { _savedAt: new Date().toISOString(), _version: '18', _savedBy: _sbUser.email };
     for (const k of keys) { try { snap[k] = await sget(k); } catch{} }
     // pw_data e pw_ferie letti direttamente dalla memoria (non da sessionStorage)
@@ -1328,24 +1329,28 @@ async function sget(k) {
 }
 
 async function loadState() {
-  const keys = ['commesse_pipeline','operatori','assegnazioni','commesse_attive_extra','staffing_modificato','commesse_chiuse','commesse_attive_meta'];
-  const [p, o, a, ce, sm, cc, cam] = await Promise.all(keys.map(sget));
+  const keys = ['commesse_pipeline','operatori','assegnazioni','commesse_attive_extra','staffing_modificato','commesse_chiuse','commesse_attive_meta','commesse_escluse'];
+  const [p, o, a, ce, sm, cc, cam, cesc] = await Promise.all(keys.map(sget));
   state.pipeline = p || JSON.parse(JSON.stringify(INITIAL_DATA.pipeline));
   state.operatori = o || JSON.parse(JSON.stringify(INITIAL_DATA.operatori));
   state.commesse_chiuse = cc || INITIAL_DATA._chiuse || [];
+  state.commesse_escluse = cesc || INITIAL_DATA._escluse || [];
 
   // FIX RADICE: il blob statico INITIAL_DATA (import originale da Excel) viene
   // ricaricato integralmente ad ogni avvio — senza questo filtro, una commessa
   // chiusa/eliminata che esisteva nei dati originali tornerebbe SEMPRE visibile
   // dopo un refresh, indipendentemente da qualsiasi pulizia fatta a runtime.
-  const nomiChiuse = new Set(
-    (state.commesse_chiuse || []).map(c => (c.progetto || c.nome || '').trim()).filter(Boolean)
+  // IMPORTANTE: si usa "commesse_escluse" (lista permanente), NON "commesse_chiuse"
+  // (archivio restaurabile) — eliminare una voce dall'archivio NON deve farla
+  // rivivere: l'esclusione resta finché non viene esplicitamente ripristinata.
+  const nomiEsclusi = new Set(
+    (state.commesse_escluse || []).map(n => (n || '').trim()).filter(Boolean)
   );
   const tuttiAttivi = INITIAL_DATA.commesse_attive.concat(ce || []);
-  state.commesse_attive = tuttiAttivi.filter(ca => !nomiChiuse.has(((ca.progetto||ca.nome||'')).trim()));
+  state.commesse_attive = tuttiAttivi.filter(ca => !nomiEsclusi.has(((ca.progetto||ca.nome||'')).trim()));
 
   const staffingBase = sm || JSON.parse(JSON.stringify(INITIAL_DATA.staffing));
-  state.staffing = staffingBase.filter(r => !nomiChiuse.has((r.commessa||'').trim()));
+  state.staffing = staffingBase.filter(r => !nomiEsclusi.has((r.commessa||'').trim()));
 
   state.assegnazioni = a || INITIAL_DATA._assegnazioni || [];
   state.commesse_attive_meta = cam || INITIAL_DATA._meta || {};
@@ -1359,6 +1364,7 @@ async function saveState(logAction, logDetails, immediate) {
     sset('staffing_modificato', state.staffing),
     sset('commesse_chiuse', state.commesse_chiuse),
     sset('commesse_attive_meta', state.commesse_attive_meta),
+    sset('commesse_escluse', state.commesse_escluse),
   ]);
   // Log attività se specificata
   if (logAction) sbLogActivity(logAction, logDetails || {});
@@ -1374,7 +1380,7 @@ async function saveState(logAction, logDetails, immediate) {
 async function resetAll() {
   if (!confirm('Reset completo: tutte le modifiche manuali andranno perse. Procedere?')) return;
   if (hasStorage) {
-    for (const k of ['commesse_pipeline','operatori','assegnazioni','commesse_attive_extra','staffing_modificato','commesse_chiuse','commesse_attive_meta']) {
+    for (const k of ['commesse_pipeline','operatori','assegnazioni','commesse_attive_extra','staffing_modificato','commesse_chiuse','commesse_attive_meta','commesse_escluse']) {
       try { await window.storage.delete(k); } catch{}
     }
   } else {
@@ -1862,8 +1868,8 @@ function renderCommesse() {
 
   if (state.activeTab === 'pipeline') {
     const q = state.searchCommesse.toLowerCase();
-    const nomiChiusePl = new Set((state.commesse_chiuse || []).map(cc => cc.progetto || cc.nome || '').filter(Boolean));
-    const pipelineVisibile = state.pipeline.filter(c => !nomiChiusePl.has(c.progetto || c.nome || ''));
+    const nomiChiusePl = new Set((state.commesse_escluse || []).map(n => (n||'').trim()).filter(Boolean));
+    const pipelineVisibile = state.pipeline.filter(c => !nomiChiusePl.has((c.progetto || c.nome || '').trim()));
     const filtered = q
       ? pipelineVisibile.filter(c => ((c.cliente||'') + ' ' + (c.progetto||'') + ' ' + (c.industry||'')).toLowerCase().includes(q))
       : pipelineVisibile;
@@ -2080,10 +2086,10 @@ function renderCommesseAttive() {
     if (!grouped[nome]) grouped[nome] = [];
   });
 
-  // nomi commesse chiuse/eliminate — escluse sempre dalla vista e dalla ricerca
-  const nomiChiuse = new Set((state.commesse_chiuse || []).map(cc => cc.progetto || cc.nome || '').filter(Boolean));
+  // nomi commesse escluse permanentemente — escluse sempre dalla vista e dalla ricerca
+  const nomiChiuse = new Set((state.commesse_escluse || []).map(n => (n||'').trim()).filter(Boolean));
 
-  let keys = Object.keys(grouped).filter(k => !nomiChiuse.has(k)).sort((a,b) => {
+  let keys = Object.keys(grouped).filter(k => !nomiChiuse.has(k.trim())).sort((a,b) => {
     if (a === 'ORE NON LAVORATE') return 1;
     if (b === 'ORE NON LAVORATE') return -1;
     return a.localeCompare(b);
@@ -2269,6 +2275,15 @@ async function eliminaCommessaChiusa(idx) {
   if (!confirm(`Eliminare definitivamente "${cc.progetto}" dall'archivio?\n\nL'operazione è irreversibile.`)) return;
   const nome = cc.progetto;
   state.commesse_chiuse.splice(idx, 1);
+  // NOTA: non si tocca state.commesse_escluse qui — l'eliminazione dall'archivio
+  // rimuove solo il record restaurabile, NON l'esclusione permanente. Come rete
+  // di sicurezza per commesse chiuse prima di questo fix, assicuriamoci che il
+  // nome sia comunque presente nella lista di esclusione permanente.
+  if (!state.commesse_escluse) state.commesse_escluse = [];
+  const nomeTrim = (nome || '').trim();
+  if (!state.commesse_escluse.some(n => (n||'').trim() === nomeTrim)) {
+    state.commesse_escluse.push(nome);
+  }
   // pulizia residua: rimuovi da commesse_attive e meta se ancora presenti
   state.commesse_attive = (state.commesse_attive || []).filter(ca => (ca.progetto||ca.nome) !== nome);
   if (state.commesse_attive_meta && state.commesse_attive_meta[nome]) delete state.commesse_attive_meta[nome];
@@ -4238,6 +4253,15 @@ async function chiudiCommessa(nome) {
   state.staffing = state.staffing.filter(r => r.commessa !== nome);
   state.commesse_attive = (state.commesse_attive || []).filter(ca => (ca.progetto||ca.nome) !== nome);
   if (state.commesse_attive_meta && state.commesse_attive_meta[nome]) delete state.commesse_attive_meta[nome];
+  // Esclusione PERMANENTE: a differenza di commesse_chiuse (archivio restaurabile,
+  // può essere svuotato dall'utente), questa lista non si svuota mai automaticamente.
+  // Garantisce che la commessa non torni mai a comparire, anche se in futuro
+  // l'utente elimina la voce corrispondente dall'archivio visivo.
+  if (!state.commesse_escluse) state.commesse_escluse = [];
+  const nomeTrim = (nome || '').trim();
+  if (!state.commesse_escluse.some(n => (n||'').trim() === nomeTrim)) {
+    state.commesse_escluse.push(nome);
+  }
   // Pulizia fondamentale: rimuove anche dalla chiave di storage "commesse_attive_extra",
   // altrimenti la commessa promossa da pipeline torna a comparire al prossimo loadState()
   const extra = (await sget('commesse_attive_extra')) || [];
@@ -4253,6 +4277,10 @@ async function ripristinaCommessa(idx) {
   if (!confirm(`Ripristinare "${cc.progetto}"?\n${cc.staffingArchiviato.length} righe staffing reinserite.`)) return;
   cc.staffingArchiviato.forEach(r => state.staffing.push(JSON.parse(JSON.stringify(r))));
   state.commesse_chiuse.splice(idx,1);
+  // Rimuove anche dalla lista di esclusione permanente: ripristinare significa
+  // farla tornare visibile esattamente come prima della chiusura.
+  const nomeTrim = (cc.progetto || '').trim();
+  state.commesse_escluse = (state.commesse_escluse || []).filter(n => (n||'').trim() !== nomeTrim);
   ricalcolaAllocOperatori();
   await saveState(null, null, true); renderAll();
 }
@@ -5522,11 +5550,11 @@ function pwGetCommesseValide() {
     }
   });
 
-  // Escludi commesse chiuse/eliminate — non devono apparire nel selettore
+  // Escludi commesse escluse permanentemente — non devono apparire nel selettore
   const nomiChiuse = new Set(
-    (state.commesse_chiuse || []).map(cc => cc.progetto || cc.nome || '').filter(Boolean)
+    (state.commesse_escluse || []).map(n => (n||'').trim()).filter(Boolean)
   );
-  return [...commesseConStaffing].filter(n => !nomiChiuse.has(n)).sort();
+  return [...commesseConStaffing].filter(n => !nomiChiuse.has((n||'').trim())).sort();
 }
 
 function pwGetOperatoriPerCommessa(commessaNome) {
