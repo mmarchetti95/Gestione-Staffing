@@ -144,6 +144,11 @@
   .tab-btn:hover { color: #64748b; cursor: pointer !important; }
   .tab-btn.active { color: var(--accent); border-color: var(--accent); }
   .tab-btn.active:hover { color: var(--accent); cursor: pointer !important; }
+  .commessa-card summary { outline: none; }
+  .commessa-card summary::-webkit-details-marker { display: none; }
+  .commessa-card summary::marker { display: none; content: ''; }
+  .commessa-card[open] > summary .chevron { transform: rotate(90deg); }
+  .commessa-card summary:hover { background: rgba(0,184,176,.04); border-radius: 4px; }
   .modal-backdrop {
     position: fixed; inset: 0; background: rgba(0,0,0,.4);
     display: flex; align-items: center; justify-content: center; z-index: 50;
@@ -600,7 +605,7 @@
         <select id="anno-selector" class="text-sm border-none font-semibold focus:outline-none cursor-pointer" style="color:#f9fafb;background:#1a1a1a;border-radius:4px;padding:1px 4px;"></select>
       </div>
       <div class="text-xs pl-2" style="border-left:1px solid #444;color:#9ca3af;">
-        <span class="font-medium" style="color:#00b8b0;">v18.6.19</span> · Michele Marchetti
+        <span class="font-medium" style="color:#00b8b0;">v18.6.20</span> · Michele Marchetti
       </div>
     </div>
   </div>
@@ -829,8 +834,10 @@
             </div>
             <button id="btn-add-commessa" class="text-xs px-2 py-1 bg-teal-50 text-teal-700 rounded border border-teal-200 hover:bg-teal-100">+ Nuova commessa</button>
           </div>
-          <div class="pb-3 mt-2">
-            <input id="commesse-search" type="text" placeholder="Cerca commessa per cliente o progetto…" class="w-full px-2 py-1.5 text-sm border border-slate-300 rounded">
+          <div class="pb-3 mt-2 flex items-center gap-2">
+            <input id="commesse-search" type="text" placeholder="Cerca commessa per cliente o progetto…" class="flex-1 px-2 py-1.5 text-sm border border-slate-300 rounded">
+            <button id="btn-expand-all-commesse" class="text-[11px] px-2 py-1.5 border border-slate-300 rounded text-slate-600 hover:bg-slate-50 whitespace-nowrap" title="Espandi tutte le commesse">⇕ Espandi tutte</button>
+            <button id="btn-collapse-all-commesse" class="text-[11px] px-2 py-1.5 border border-slate-300 rounded text-slate-600 hover:bg-slate-50 whitespace-nowrap" title="Comprimi tutte le commesse">⇕ Comprimi tutte</button>
           </div>
         </div>
         <div class="p-3 scrollbox space-y-3" id="commesse-list"></div>
@@ -2089,7 +2096,8 @@ function renderCommesse() {
     openAddAllocazioneModal(c.progetto, { mesiSuggeriti: mesi, commessaPipeline: c, skillRichieste: c.skills, attestatiRichiesti: c.attestati_richiesti || [] });
   });
   // aggiungi risorsa su commessa attiva
-  list.querySelectorAll('.add-risorsa-attiva').forEach(b => b.onclick = () => {
+  list.querySelectorAll('.add-risorsa-attiva').forEach(b => b.onclick = (e) => {
+    e.preventDefault(); e.stopPropagation();
     const commessa = decodeURIComponent(b.dataset.commessa);
     // determina i mesi in cui ci sono già allocazioni come "suggeriti"
     const mesiAttivi = new Set();
@@ -2099,11 +2107,13 @@ function renderCommesse() {
     openAddAllocazioneModal(commessa, { mesiSuggeriti: [...mesiAttivi].sort((a,b)=>a-b) });
   });
   // modifica dettagli commessa attiva
-  list.querySelectorAll('.edit-attiva').forEach(b => b.onclick = () => {
+  list.querySelectorAll('.edit-attiva').forEach(b => b.onclick = (e) => {
+    e.preventDefault(); e.stopPropagation();
     openCommessaAttivaModal(decodeURIComponent(b.dataset.commessa));
   });
   // chiudi commessa attiva
-  list.querySelectorAll('.close-commessa').forEach(b => b.onclick = () => {
+  list.querySelectorAll('.close-commessa').forEach(b => b.onclick = (e) => {
+    e.preventDefault(); e.stopPropagation();
     chiudiCommessa(decodeURIComponent(b.dataset.commessa));
   });
   // ripristina commessa chiusa
@@ -2336,11 +2346,14 @@ function renderCommesseAttive() {
     }
     const meta = state.commesse_attive_meta[k] || {};
     return `
-      <div class="bg-white border ${isOreNonLav?'border-slate-300 bg-slate-50':'border-slate-200'} rounded-md p-3">
-        <div class="flex items-start justify-between mb-2 gap-2">
-          <div>
-            <div class="font-medium text-sm text-slate-900">${k}</div>
-            <div class="text-[11px] text-slate-500">${risorse.length} risorse · ${ass.length} righe · ${totGG} gg-uomo totali</div>
+      <details class="commessa-card bg-white border ${isOreNonLav?'border-slate-300 bg-slate-50':'border-slate-200'} rounded-md p-3">
+        <summary class="flex items-start justify-between mb-0 gap-2 cursor-pointer list-none">
+          <div class="flex items-start gap-2">
+            <span class="chevron text-slate-400 text-xs mt-0.5 transition-transform">▸</span>
+            <div>
+              <div class="font-medium text-sm text-slate-900">${k}</div>
+              <div class="text-[11px] text-slate-500">${risorse.length} risorse · ${ass.length} righe · ${totGG} gg-uomo totali</div>
+            </div>
           </div>
           ${isOreNonLav ? '' : `
             <div class="flex items-center gap-1 flex-shrink-0">
@@ -2349,22 +2362,24 @@ function renderCommesseAttive() {
               <button class="close-commessa text-xs px-2 py-1 bg-emerald-50 text-emerald-700 rounded border border-emerald-200 hover:bg-emerald-100" data-commessa="${encodeURIComponent(k)}" title="Chiudi commessa e libera personale">✓ Chiudi</button>
             </div>
           `}
+        </summary>
+        <div class="mt-2">
+          ${fabbisognoBox}
+          <div class="overflow-x-auto">
+            <table class="w-full text-[10px]">
+              <thead class="bg-slate-50">
+                <tr>
+                  <th class="text-left text-xs font-semibold text-slate-600 p-1 sticky left-0 bg-slate-50">Risorsa</th>
+                  ${MESI.map((m,i)=>`<th class="text-center text-[8px] font-medium ${i<mc?'text-slate-300':'text-slate-500'} px-0.5">${m}</th>`).join('')}
+                  <th class="text-center text-[8px] font-medium text-slate-500 px-1">TOT</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody>${rows}</tbody>
+            </table>
+          </div>
         </div>
-        ${fabbisognoBox}
-        <div class="overflow-x-auto">
-          <table class="w-full text-[10px]">
-            <thead class="bg-slate-50">
-              <tr>
-                <th class="text-left text-xs font-semibold text-slate-600 p-1 sticky left-0 bg-slate-50">Risorsa</th>
-                ${MESI.map((m,i)=>`<th class="text-center text-[8px] font-medium ${i<mc?'text-slate-300':'text-slate-500'} px-0.5">${m}</th>`).join('')}
-                <th class="text-center text-[8px] font-medium text-slate-500 px-1">TOT</th>
-                <th></th>
-              </tr>
-            </thead>
-            <tbody>${rows}</tbody>
-          </table>
-        </div>
-      </div>`;
+      </details>`;
   }).join('');
 
   // Archivio commesse chiuse in fondo
@@ -5021,6 +5036,10 @@ document.addEventListener('DOMContentLoaded', async () => {
   });
 
   document.getElementById('btn-add-commessa').onclick = () => openCommessaModal(null);
+  const btnExpandAll = document.getElementById('btn-expand-all-commesse');
+  const btnCollapseAll = document.getElementById('btn-collapse-all-commesse');
+  if (btnExpandAll) btnExpandAll.onclick = () => document.querySelectorAll('.commessa-card').forEach(d => d.open = true);
+  if (btnCollapseAll) btnCollapseAll.onclick = () => document.querySelectorAll('.commessa-card').forEach(d => d.open = false);
   document.getElementById('btn-add-op').onclick = () => openOperatoreModal(null);
   document.getElementById('op-tab-pool').onclick = () => switchOpTab('pool');
   document.getElementById('op-tab-vista').onclick = () => { if (_vistaOpId) switchOpTab('vista'); };
