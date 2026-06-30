@@ -600,7 +600,7 @@
         <select id="anno-selector" class="text-sm border-none font-semibold focus:outline-none cursor-pointer" style="color:#f9fafb;background:#1a1a1a;border-radius:4px;padding:1px 4px;"></select>
       </div>
       <div class="text-xs pl-2" style="border-left:1px solid #444;color:#9ca3af;">
-        <span class="font-medium" style="color:#00b8b0;">v18.6.13</span> · Michele Marchetti
+        <span class="font-medium" style="color:#00b8b0;">v18.6.14</span> · Michele Marchetti
       </div>
     </div>
   </div>
@@ -2255,6 +2255,11 @@ async function eliminaCommessaChiusa(idx) {
   // pulizia residua: rimuovi da commesse_attive e meta se ancora presenti
   state.commesse_attive = (state.commesse_attive || []).filter(ca => (ca.progetto||ca.nome) !== nome);
   if (state.commesse_attive_meta && state.commesse_attive_meta[nome]) delete state.commesse_attive_meta[nome];
+  // Rete di sicurezza: rimuovi anche da commesse_attive_extra (caso commesse promosse da pipeline
+  // chiuse prima del fix che già puliva questa chiave)
+  const extra = (await sget('commesse_attive_extra')) || [];
+  const extraFiltrato = extra.filter(e => (e.progetto||e.nome) !== nome);
+  await sset('commesse_attive_extra', extraFiltrato);
   await saveState(null, null, true);
   renderAll();
 }
@@ -4216,6 +4221,11 @@ async function chiudiCommessa(nome) {
   state.staffing = state.staffing.filter(r => r.commessa !== nome);
   state.commesse_attive = (state.commesse_attive || []).filter(ca => (ca.progetto||ca.nome) !== nome);
   if (state.commesse_attive_meta && state.commesse_attive_meta[nome]) delete state.commesse_attive_meta[nome];
+  // Pulizia fondamentale: rimuove anche dalla chiave di storage "commesse_attive_extra",
+  // altrimenti la commessa promossa da pipeline torna a comparire al prossimo loadState()
+  const extra = (await sget('commesse_attive_extra')) || [];
+  const extraFiltrato = extra.filter(e => (e.progetto||e.nome) !== nome);
+  await sset('commesse_attive_extra', extraFiltrato);
   ricalcolaAllocOperatori();
   await saveState('Chiusura commessa', {commessa: nome}, true); renderAll();
 }
