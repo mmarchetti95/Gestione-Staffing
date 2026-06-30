@@ -600,7 +600,7 @@
         <select id="anno-selector" class="text-sm border-none font-semibold focus:outline-none cursor-pointer" style="color:#f9fafb;background:#1a1a1a;border-radius:4px;padding:1px 4px;"></select>
       </div>
       <div class="text-xs pl-2" style="border-left:1px solid #444;color:#9ca3af;">
-        <span class="font-medium" style="color:#00b8b0;">v18.6.14</span> · Michele Marchetti
+        <span class="font-medium" style="color:#00b8b0;">v18.6.15</span> · Michele Marchetti
       </div>
     </div>
   </div>
@@ -1327,10 +1327,22 @@ async function loadState() {
   const [p, o, a, ce, sm, cc, cam] = await Promise.all(keys.map(sget));
   state.pipeline = p || JSON.parse(JSON.stringify(INITIAL_DATA.pipeline));
   state.operatori = o || JSON.parse(JSON.stringify(INITIAL_DATA.operatori));
-  state.commesse_attive = INITIAL_DATA.commesse_attive.concat(ce || []);
-  state.staffing = sm || JSON.parse(JSON.stringify(INITIAL_DATA.staffing));
-  state.assegnazioni = a || INITIAL_DATA._assegnazioni || [];
   state.commesse_chiuse = cc || INITIAL_DATA._chiuse || [];
+
+  // FIX RADICE: il blob statico INITIAL_DATA (import originale da Excel) viene
+  // ricaricato integralmente ad ogni avvio — senza questo filtro, una commessa
+  // chiusa/eliminata che esisteva nei dati originali tornerebbe SEMPRE visibile
+  // dopo un refresh, indipendentemente da qualsiasi pulizia fatta a runtime.
+  const nomiChiuse = new Set(
+    (state.commesse_chiuse || []).map(c => (c.progetto || c.nome || '').trim()).filter(Boolean)
+  );
+  const tuttiAttivi = INITIAL_DATA.commesse_attive.concat(ce || []);
+  state.commesse_attive = tuttiAttivi.filter(ca => !nomiChiuse.has(((ca.progetto||ca.nome||'')).trim()));
+
+  const staffingBase = sm || JSON.parse(JSON.stringify(INITIAL_DATA.staffing));
+  state.staffing = staffingBase.filter(r => !nomiChiuse.has((r.commessa||'').trim()));
+
+  state.assegnazioni = a || INITIAL_DATA._assegnazioni || [];
   state.commesse_attive_meta = cam || INITIAL_DATA._meta || {};
   ricalcolaAllocOperatori();
 }
