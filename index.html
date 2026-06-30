@@ -600,7 +600,7 @@
         <select id="anno-selector" class="text-sm border-none font-semibold focus:outline-none cursor-pointer" style="color:#f9fafb;background:#1a1a1a;border-radius:4px;padding:1px 4px;"></select>
       </div>
       <div class="text-xs pl-2" style="border-left:1px solid #444;color:#9ca3af;">
-        <span class="font-medium" style="color:#00b8b0;">v18.6.17</span> · Michele Marchetti
+        <span class="font-medium" style="color:#00b8b0;">v18.6.18</span> · Michele Marchetti
       </div>
     </div>
   </div>
@@ -651,6 +651,9 @@
     </button>
     <button id="sb-btn-log" onclick="sbShowLog()" class="text-xs px-2 py-1 text-slate-400 hover:text-slate-200" style="visibility:hidden;">
       📋 Log attività
+    </button>
+    <button id="sb-btn-sessions" onclick="sbShowSessions()" class="text-xs px-2 py-1 text-slate-400 hover:text-slate-200" style="visibility:hidden;">
+      🟢 Sessioni attive
     </button>
     <button onclick="sbShowChangePwd()" class="text-xs px-2 py-1 text-slate-400 hover:text-slate-200">
       🔑 Cambia password
@@ -711,6 +714,36 @@
           </tr>
         </thead>
         <tbody id="sb-log-tbody">
+          <tr><td colspan="4" style="padding:20px;text-align:center;color:#94a3b8;">Caricamento…</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<div id="sb-sessions-modal" style="display:none;position:fixed;inset:0;z-index:99999;background:rgba(0,0,0,.5);align-items:center;justify-content:center;">
+  <div style="background:white;border-radius:16px;padding:28px 32px;width:640px;max-width:96vw;max-height:85vh;box-shadow:0 20px 60px rgba(0,0,0,.2);display:flex;flex-direction:column;">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
+      <div>
+        <div style="font-weight:700;font-size:16px;color:#0f172a;">🟢 Sessioni attive</div>
+        <div style="font-size:11px;color:#94a3b8;margin-top:2px;">Utenti collegati alla dashboard in questo momento</div>
+      </div>
+      <div style="display:flex;gap:8px;align-items:center;">
+        <button onclick="sbLoadSessions()" style="padding:5px 12px;font-size:12px;background:#00b8b0;color:white;border:none;border-radius:6px;cursor:pointer;">↺ Aggiorna</button>
+        <button onclick="sbCloseSessions()" style="padding:5px 12px;font-size:12px;border:1px solid #e2e8f0;border-radius:6px;background:white;cursor:pointer;color:#475569;">Chiudi</button>
+      </div>
+    </div>
+    <div style="overflow-y:auto;flex:1;">
+      <table style="width:100%;border-collapse:collapse;font-size:12px;">
+        <thead>
+          <tr style="background:#f8fafc;position:sticky;top:0;">
+            <th style="text-align:left;padding:8px 12px;border-bottom:1px solid #e2e8f0;color:#64748b;font-weight:600;width:18px;"></th>
+            <th style="text-align:left;padding:8px 12px;border-bottom:1px solid #e2e8f0;color:#64748b;font-weight:600;">Utente</th>
+            <th style="text-align:left;padding:8px 12px;border-bottom:1px solid #e2e8f0;color:#64748b;font-weight:600;white-space:nowrap;">Login</th>
+            <th style="text-align:left;padding:8px 12px;border-bottom:1px solid #e2e8f0;color:#64748b;font-weight:600;white-space:nowrap;">Ultima attività</th>
+          </tr>
+        </thead>
+        <tbody id="sb-sessions-tbody">
           <tr><td colspan="4" style="padding:20px;text-align:center;color:#94a3b8;">Caricamento…</td></tr>
         </tbody>
       </table>
@@ -1038,8 +1071,95 @@ async function sbLoadLog() {
   }
 }
 
-/* ===================== SUPABASE SYNC ===================== */
-// ⚠️  DA CONFIGURARE: inserisci qui i tuoi valori dal progetto Supabase
+/* ===================== SESSIONI ATTIVE (admin) ===================== */
+let _sbSessionId = null;
+let _sbHeartbeatTimer = null;
+
+function sbGenerateSessionId() {
+  if (typeof crypto !== 'undefined' && crypto.randomUUID) return crypto.randomUUID();
+  return 'sess_' + Date.now() + '_' + Math.random().toString(36).slice(2);
+}
+
+async function sbStartHeartbeat() {
+  if (!_sbUser || !_sbClient) return;
+  _sbSessionId = sbGenerateSessionId();
+  try {
+    await _sbClient.from('active_sessions').upsert({
+      session_id: _sbSessionId,
+      user_email: _sbUser.email,
+      login_at: new Date().toISOString(),
+      last_seen: new Date().toISOString(),
+    });
+  } catch(e) { console.warn('sbStartHeartbeat insert error:', e); }
+
+  clearInterval(_sbHeartbeatTimer);
+  _sbHeartbeatTimer = setInterval(async () => {
+    if (!_sbUser || !_sbSessionId) return;
+    try {
+      await _sbClient.from('active_sessions')
+        .update({ last_seen: new Date().toISOString() })
+        .eq('session_id', _sbSessionId);
+    } catch(e) { console.warn('sbHeartbeat update error:', e); }
+  }, 45000);
+}
+
+async function sbStopHeartbeat() {
+  clearInterval(_sbHeartbeatTimer);
+  _sbHeartbeatTimer = null;
+  if (_sbSessionId && _sbClient) {
+    try { await _sbClient.from('active_sessions').delete().eq('session_id', _sbSessionId); }
+    catch(e) { console.warn('sbStopHeartbeat delete error:', e); }
+  }
+  _sbSessionId = null;
+}
+
+async function sbShowSessions() {
+  document.getElementById('sb-sessions-modal').style.display = 'flex';
+  await sbLoadSessions();
+}
+
+function sbCloseSessions() {
+  document.getElementById('sb-sessions-modal').style.display = 'none';
+}
+
+async function sbLoadSessions() {
+  const tbody = document.getElementById('sb-sessions-tbody');
+  tbody.innerHTML = '<tr><td colspan="4" style="padding:20px;text-align:center;color:#94a3b8;">Caricamento…</td></tr>';
+  try {
+    const { data, error } = await _sbClient
+      .from('active_sessions')
+      .select('*')
+      .order('last_seen', { ascending: false });
+    if (error) throw error;
+    if (!data || data.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="4" style="padding:20px;text-align:center;color:#94a3b8;">Nessuna sessione registrata.</td></tr>';
+      return;
+    }
+    const now = Date.now();
+    tbody.innerHTML = data.map(row => {
+      const login = new Date(row.login_at);
+      const lastSeen = new Date(row.last_seen);
+      const secondsAgo = (now - lastSeen.getTime()) / 1000;
+      const isOnline = secondsAgo < 90;
+      const dotColor = isOnline ? '#22c55e' : '#94a3b8';
+      const loginStr = login.toLocaleDateString('it-IT') + ' ' + login.toLocaleTimeString('it-IT', {hour:'2-digit', minute:'2-digit'});
+      let lastSeenStr;
+      if (secondsAgo < 60) lastSeenStr = 'pochi secondi fa';
+      else if (secondsAgo < 3600) lastSeenStr = Math.floor(secondsAgo/60) + ' min fa';
+      else lastSeenStr = lastSeen.toLocaleDateString('it-IT') + ' ' + lastSeen.toLocaleTimeString('it-IT', {hour:'2-digit', minute:'2-digit'});
+      return '<tr style="border-bottom:1px solid #f1f5f9;">' +
+        '<td style="padding:7px 12px;"><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:' + dotColor + ';"></span></td>' +
+        '<td style="padding:7px 12px;color:#374151;">' + (row.user_email||'') + '</td>' +
+        '<td style="padding:7px 12px;white-space:nowrap;color:#64748b;">' + loginStr + '</td>' +
+        '<td style="padding:7px 12px;white-space:nowrap;color:#64748b;">' + lastSeenStr + '</td>' +
+        '</tr>';
+    }).join('');
+  } catch(e) {
+    tbody.innerHTML = '<tr><td colspan="4" style="padding:20px;text-align:center;color:#ef4444;">Errore: ' + e.message + ' — verifica che la tabella active_sessions e le policy RLS siano state create.</td></tr>';
+  }
+}
+
+
 const SB_URL = 'https://ypbuleyropgoqalwioqb.supabase.co';
 const SB_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlwYnVsZXlyb3Bnb3FhbHdpb3FiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODIzNjYyNTAsImV4cCI6MjA5Nzk0MjI1MH0.FMcI8lvGcuEQEJJLPFBt4BloyTzLPOQ4UZGBGd5G7WM';
 
@@ -1106,22 +1226,27 @@ async function sbOnLoggedIn() {
     const { data: { user } } = await _sbClient.auth.getUser();
     if (user) _sbUser = user;
   } catch(e) { console.warn('getUser error:', e); }
-  // Mostra pulsante log e sezione riconciliazione solo agli admin
+  // Mostra pulsante log/sessioni e sezione riconciliazione solo agli admin
   const btnLog = document.getElementById('sb-btn-log');
+  const btnSessions = document.getElementById('sb-btn-sessions');
   const secRecon = document.getElementById('section-riconciliazione');
   if (sbIsAdmin()) {
     if (btnLog) btnLog.style.visibility = 'visible';
+    if (btnSessions) btnSessions.style.visibility = 'visible';
     if (secRecon) secRecon.style.display = '';
   } else {
     if (btnLog) btnLog.style.visibility = 'hidden';
+    if (btnSessions) btnSessions.style.visibility = 'hidden';
     if (secRecon) secRecon.style.display = 'none';
   }
   sbUpdateUI('syncing', 'Sync: caricamento dati…');
   await sbPull();
   sbLogActivity('Login', { email: _sbUser.email });
+  sbStartHeartbeat();
 }
 
 async function sbLogout() {
+  await sbStopHeartbeat();
   await _sbClient.auth.signOut();
   _sbUser = null;
   document.getElementById('sb-login-screen').style.display = 'flex';
