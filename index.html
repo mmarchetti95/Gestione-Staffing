@@ -600,7 +600,7 @@
         <select id="anno-selector" class="text-sm border-none font-semibold focus:outline-none cursor-pointer" style="color:#f9fafb;background:#1a1a1a;border-radius:4px;padding:1px 4px;"></select>
       </div>
       <div class="text-xs pl-2" style="border-left:1px solid #444;color:#9ca3af;">
-        <span class="font-medium" style="color:#00b8b0;">v18.6.15</span> · Michele Marchetti
+        <span class="font-medium" style="color:#00b8b0;">v18.6.16</span> · Michele Marchetti
       </div>
     </div>
   </div>
@@ -1246,12 +1246,17 @@ async function sbPush() {
     if (typeof pwFerie !== 'undefined') snap['pw_ferie'] = pwFerie;
 
     const nuovoUpdatedAt = new Date().toISOString();
-    const { error } = await _sbClient
+    const { data: pushedRow, error } = await _sbClient
       .from(SB_TABLE)
-      .upsert({ id: SB_ROW_ID, payload: snap, updated_at: nuovoUpdatedAt });
+      .upsert({ id: SB_ROW_ID, payload: snap, updated_at: nuovoUpdatedAt })
+      .select('updated_at')
+      .single();
     if (error) throw error;
 
-    _sbLastRemoteUpdatedAt = nuovoUpdatedAt; // il nostro salvataggio è ora la versione più recente
+    // Usa il valore CANONICO restituito da Postgres (non quello generato localmente):
+    // formati di timestamp leggermente diversi (precisione, fuso) causavano falsi conflitti
+    // alla 2ª operazione consecutiva, costringendo a ripetere ogni azione due volte.
+    _sbLastRemoteUpdatedAt = (pushedRow && pushedRow.updated_at) ? pushedRow.updated_at : nuovoUpdatedAt;
 
     const ora = new Date().toLocaleTimeString('it-IT', { hour:'2-digit', minute:'2-digit' });
     sbUpdateUI('ok', 'Sync: salvato ✓', 'Ultimo salvataggio: ' + ora);
