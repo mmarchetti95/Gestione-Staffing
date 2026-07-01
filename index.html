@@ -544,6 +544,8 @@
   .cp-table tr:nth-child(even) td:not(.cp-td-edit) { background:#f8fafc; }
   .cp-tr-commessa td { background:#e2e8f0 !important; font-weight:700; color:#334155; font-size:11px; text-transform:uppercase; letter-spacing:.04em; }
   .cp-tr-squadra  td { background:#f1f5f9 !important; font-weight:600; color:#475569; font-size:11px; }
+  .cp-tr-day      td { background:#f8fafc !important; color:#64748b; font-size:11px; font-style:italic; }
+  .cp-day-sep     td { border-top:2px solid #94a3b8 !important; }
   .cp-td-edit { background:#fefce8 !important; }
   .cp-input { border:none; background:transparent; width:100%; min-width:60px; font-size:12px; padding:2px 4px; border-radius:4px; outline:none; font-family:inherit; }
   .cp-input:focus { background:#fef9c3; box-shadow:0 0 0 2px #ca8a04; }
@@ -628,7 +630,7 @@
         <select id="anno-selector" class="text-sm border-none font-semibold focus:outline-none cursor-pointer" style="color:#f9fafb;background:#1a1a1a;border-radius:4px;padding:1px 4px;"></select>
       </div>
       <div class="text-xs pl-2" style="border-left:1px solid #444;color:#9ca3af;">
-        <span class="font-medium" style="color:#00b8b0;">v18.8.0</span> · Michele Marchetti
+        <span class="font-medium" style="color:#00b8b0;">v18.8.1</span> · Michele Marchetti
       </div>
     </div>
   </div>
@@ -6617,11 +6619,10 @@ async function pwControlloLoad() {
 function pwControlloRender() {
   const container = document.getElementById('cp-table-container');
   if (!container) return;
-  const data = pwGetWeekData();
-  const monday = isoWeekToMonday(pwAnno, pwWeek);
+  const data    = pwGetWeekData();
+  const monday  = isoWeekToMonday(pwAnno, pwWeek);
   const DAY_NAMES = ['Lun','Mar','Mer','Gio','Ven','Sab'];
 
-  // Costruisci date Lun–Sab
   const dates = [];
   for (let i = 0; i < 6; i++) {
     const d = new Date(monday);
@@ -6629,85 +6630,120 @@ function pwControlloRender() {
     dates.push(`${String(d.getUTCDate()).padStart(2,'0')}/${String(d.getUTCMonth()+1).padStart(2,'0')}`);
   }
 
-  // Raccogli tutte le righe
-  const rows = [];
+  // Struttura raggruppata: commessa → squadra → giorno → operatori
+  const blocks = [];
   data.forEach(bc => {
     if (!bc.commessa) return;
+    const sqList = [];
     (bc.squadre || []).forEach(sq => {
-      (sq.operatori || []).forEach(op => {
-        if (!op.nome || !op.nome.trim()) return;
-        for (let g = 0; g < 6; g++) {
-          const giorno = bc.giorni && bc.giorni[g] ? bc.giorni[g] : (op.giorni && op.giorni[g] ? op.giorni[g] : {});
-          // Cerca cantiere/attività nell'operatore
-          const opGiorno = op.giorni && op.giorni[g] ? op.giorni[g] : {};
-          rows.push({
-            commessa:  bc.commessa,
-            squadra:   sq.nome || 'Squadra',
-            operatore: op.nome,
-            giornoIdx: g,
-            giornoLbl: DAY_NAMES[g],
-            data:      dates[g],
-            cantiere:  opGiorno.cantiere || '',
-            attivita:  opGiorno.attivita || '',
-          });
-        }
-      });
+      const sqNome = sq.nome || 'Squadra';
+      const giorni = [];
+      for (let g = 0; g < 6; g++) {
+        const ops = [];
+        (sq.operatori || []).forEach(op => {
+          if (!op.nome || !op.nome.trim()) return;
+          const opG = op.giorni && op.giorni[g] ? op.giorni[g] : {};
+          ops.push({ nome: op.nome, cantiere: opG.cantiere || '', attivita: opG.attivita || '' });
+        });
+        if (ops.length > 0) giorni.push({ giornoIdx: g, ops });
+      }
+      if (giorni.length > 0) sqList.push({ nome: sqNome, giorni });
     });
+    if (sqList.length > 0) blocks.push({ commessa: bc.commessa, squadre: sqList });
   });
 
-  if (rows.length === 0) {
+  if (blocks.length === 0) {
     container.innerHTML = '<div class="text-center text-slate-400 py-10 text-sm">Nessun operatore pianificato questa settimana.</div>';
     return;
   }
+
+  const esc   = v => (v||'').replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;');
+  const jsesc = v => (v||'').replace(/\\/g,'\\\\').replace(/'/g,"\\'");
 
   let html = `<table class="cp-table">
     <thead><tr>
       <th>Commessa</th><th>Squadra</th><th>Operatore</th>
       <th>Giorno</th><th>Data</th><th>Cantiere</th><th>Attività</th>
-      <th>Ore Jira</th><th>Ore Report Prod.</th><th>Km / Cad</th><th>Note</th>
+      <th>Ore Jira</th><th>Ore Report Prod.</th>
+      <th style="min-width:54px;text-align:center">Δ Ore</th>
+      <th>Km / Cad</th><th>Note</th>
     </tr></thead><tbody>`;
 
-  let lastCommessa = null, lastSquadra = null;
-  rows.forEach(r => {
-    const k = `${r.commessa}|||${r.squadra}|||${r.operatore}|||${r.giornoIdx}`;
-    const saved = _cpData[k] || {};
+  let ri = 0;
 
-    if (r.commessa !== lastCommessa) {
-      html += `<tr class="cp-tr-commessa"><td colspan="11">📁 ${r.commessa}</td></tr>`;
-      lastCommessa = r.commessa;
-      lastSquadra  = null;
-    }
-    if (r.squadra !== lastSquadra) {
-      html += `<tr class="cp-tr-squadra"><td colspan="11">&nbsp;&nbsp;&nbsp;👥 ${r.squadra}</td></tr>`;
-      lastSquadra = r.squadra;
-    }
+  blocks.forEach(bl => {
+    html += `<tr class="cp-tr-commessa"><td colspan="12">📁 ${esc(bl.commessa)}</td></tr>`;
+    bl.squadre.forEach(sq => {
+      html += `<tr class="cp-tr-squadra"><td colspan="12">&nbsp;&nbsp;&nbsp;👥 ${esc(sq.nome)}</td></tr>`;
+      sq.giorni.forEach((gBlock, gIdx) => {
+        const g   = gBlock.giornoIdx;
+        const sep = gIdx > 0 ? ' cp-day-sep' : '';
+        html += `<tr class="cp-tr-day${sep}"><td colspan="12">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;📅 ${DAY_NAMES[g]} ${dates[g]}</td></tr>`;
 
-    const esc = v => (v||'').replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;');
-    html += `<tr>
-      <td>${esc(r.commessa)}</td>
-      <td>${esc(r.squadra)}</td>
-      <td><strong>${esc(r.operatore)}</strong></td>
-      <td>${r.giornoLbl}</td>
-      <td>${r.data}</td>
-      <td style="color:#64748b">${esc(r.cantiere)}</td>
-      <td style="color:#64748b">${esc(r.attivita)}</td>
-      <td class="cp-td-edit"><input class="cp-input" type="number" step="0.5" min="0" max="24"
-        value="${esc(String(saved.ore_jira ?? ''))}"
-        onblur="pwControlloSaveCell('${esc(r.commessa)}','${esc(r.squadra)}','${esc(r.operatore)}',${r.giornoIdx},r.data,'${esc(r.cantiere)}','${esc(r.attivita)}','ore_jira',this.value)"></td>
-      <td class="cp-td-edit"><input class="cp-input" type="number" step="0.5" min="0" max="24"
-        value="${esc(String(saved.ore_report ?? ''))}"
-        onblur="pwControlloSaveCell('${esc(r.commessa)}','${esc(r.squadra)}','${esc(r.operatore)}',${r.giornoIdx},r.data,'${esc(r.cantiere)}','${esc(r.attivita)}','ore_report',this.value)"></td>
+        gBlock.ops.forEach(op => {
+          const k     = `${bl.commessa}|||${sq.nome}|||${op.nome}|||${g}`;
+          const saved = _cpData[k] || {};
+          const jVal  = saved.ore_jira   != null ? saved.ore_jira   : '';
+          const rVal  = saved.ore_report != null ? saved.ore_report : '';
+          const kVal  = saved.km_cad     != null ? saved.km_cad     : '';
+          const nVal  = saved.note || '';
+
+          const jNum = parseFloat(String(jVal)), rNum = parseFloat(String(rVal));
+          let deltaHtml;
+          if (!isNaN(jNum) && !isNaN(rNum)) {
+            const dv  = jNum - rNum;
+            const col = dv >= 0 ? '#16a34a' : '#dc2626';
+            deltaHtml = `<span style="font-weight:700;color:${col}">${dv >= 0 ? '+' : ''}${dv.toFixed(1)}</span>`;
+          } else {
+            deltaHtml = `<span style="color:#cbd5e1">—</span>`;
+          }
+
+          const ci = jsesc(bl.commessa), si = jsesc(sq.nome), oi = jsesc(op.nome);
+          const ca = jsesc(op.cantiere), at = jsesc(op.attivita), dt = jsesc(dates[g]);
+
+          html += `<tr>
+      <td>${esc(bl.commessa)}</td>
+      <td>${esc(sq.nome)}</td>
+      <td><strong>${esc(op.nome)}</strong></td>
+      <td>${DAY_NAMES[g]}</td>
+      <td>${dates[g]}</td>
+      <td style="color:#64748b">${esc(op.cantiere)}</td>
+      <td style="color:#64748b">${esc(op.attivita)}</td>
+      <td class="cp-td-edit"><input id="cp-j-${ri}" class="cp-input" type="number" step="0.5" min="0" max="24"
+        value="${esc(String(jVal))}" oninput="cpDelta(${ri})"
+        onblur="pwControlloSaveCell('${ci}','${si}','${oi}',${g},'${dt}','${ca}','${at}','ore_jira',this.value)"></td>
+      <td class="cp-td-edit"><input id="cp-r-${ri}" class="cp-input" type="number" step="0.5" min="0" max="24"
+        value="${esc(String(rVal))}" oninput="cpDelta(${ri})"
+        onblur="pwControlloSaveCell('${ci}','${si}','${oi}',${g},'${dt}','${ca}','${at}','ore_report',this.value)"></td>
+      <td id="cp-d-${ri}" style="text-align:center">${deltaHtml}</td>
       <td class="cp-td-edit"><input class="cp-input" type="number" step="0.1" min="0"
-        value="${esc(String(saved.km_cad ?? ''))}"
-        onblur="pwControlloSaveCell('${esc(r.commessa)}','${esc(r.squadra)}','${esc(r.operatore)}',${r.giornoIdx},r.data,'${esc(r.cantiere)}','${esc(r.attivita)}','km_cad',this.value)"></td>
+        value="${esc(String(kVal))}"
+        onblur="pwControlloSaveCell('${ci}','${si}','${oi}',${g},'${dt}','${ca}','${at}','km_cad',this.value)"></td>
       <td class="cp-td-edit"><input class="cp-input note" type="text"
-        value="${esc(saved.note || '')}"
-        onblur="pwControlloSaveCell('${esc(r.commessa)}','${esc(r.squadra)}','${esc(r.operatore)}',${r.giornoIdx},r.data,'${esc(r.cantiere)}','${esc(r.attivita)}','note',this.value)"></td>
+        value="${esc(nVal)}"
+        onblur="pwControlloSaveCell('${ci}','${si}','${oi}',${g},'${dt}','${ca}','${at}','note',this.value)"></td>
     </tr>`;
+          ri++;
+        });
+      });
+    });
   });
 
   html += '</tbody></table>';
   container.innerHTML = html;
+}
+
+function cpDelta(ri) {
+  const jEl = document.getElementById('cp-j-' + ri);
+  const rEl = document.getElementById('cp-r-' + ri);
+  const dEl = document.getElementById('cp-d-' + ri);
+  if (!jEl || !rEl || !dEl) return;
+  const j = parseFloat(jEl.value);
+  const r = parseFloat(rEl.value);
+  if (isNaN(j) || isNaN(r)) { dEl.innerHTML = '<span style="color:#cbd5e1">—</span>'; return; }
+  const dv  = j - r;
+  const col = dv >= 0 ? '#16a34a' : '#dc2626';
+  dEl.innerHTML = `<span style="font-weight:700;color:${col}">${dv >= 0 ? '+' : ''}${dv.toFixed(1)}</span>`;
 }
 
 async function pwControlloSaveCell(commessa, squadra, operatore, giornoIdx, dataGiorno, cantiere, attivita, field, value) {
@@ -6763,8 +6799,8 @@ async function pwControlloSaveCell(commessa, squadra, operatore, giornoIdx, data
 
 function pwControlloExport() {
   if (typeof XLSX === 'undefined') { alert('Libreria XLSX non disponibile.'); return; }
-  const data = pwGetWeekData();
-  const monday = isoWeekToMonday(pwAnno, pwWeek);
+  const data    = pwGetWeekData();
+  const monday  = isoWeekToMonday(pwAnno, pwWeek);
   const DAY_NAMES = ['Lun','Mar','Mer','Gio','Ven','Sab'];
   const dates = [];
   for (let i = 0; i < 6; i++) {
@@ -6773,66 +6809,63 @@ function pwControlloExport() {
     dates.push(`${String(d.getUTCDate()).padStart(2,'0')}/${String(d.getUTCMonth()+1).padStart(2,'0')}`);
   }
 
-  const headers = ['Commessa','Squadra','Operatore','Giorno','Data','Cantiere','Attività','Ore Jira','Ore Report Prod.','Km / Cad','Note'];
-  const wsData  = [headers];
+  const headers = ['Commessa','Squadra','Operatore','Giorno','Data','Cantiere','Attività',
+                   'Ore Jira','Ore Report Prod.','Δ Ore','Km / Cad','Note'];
+  const wsData = [headers];
 
+  // Stesso ordine del render: commessa → squadra → giorno → operatori
   data.forEach(bc => {
     if (!bc.commessa) return;
     (bc.squadre || []).forEach(sq => {
-      (sq.operatori || []).forEach(op => {
-        if (!op.nome || !op.nome.trim()) return;
-        for (let g = 0; g < 6; g++) {
-          const opGiorno = op.giorni && op.giorni[g] ? op.giorni[g] : {};
-          const k = `${bc.commessa}|||${sq.nome||'Squadra'}|||${op.nome}|||${g}`;
+      const sqNome = sq.nome || 'Squadra';
+      for (let g = 0; g < 6; g++) {
+        (sq.operatori || []).forEach(op => {
+          if (!op.nome || !op.nome.trim()) return;
+          const opG   = op.giorni && op.giorni[g] ? op.giorni[g] : {};
+          const k     = `${bc.commessa}|||${sqNome}|||${op.nome}|||${g}`;
           const saved = _cpData[k] || {};
+          const jVal  = saved.ore_jira   != null ? saved.ore_jira   : '';
+          const rVal  = saved.ore_report != null ? saved.ore_report : '';
+          const jNum  = parseFloat(String(jVal)), rNum = parseFloat(String(rVal));
+          const delta = (!isNaN(jNum) && !isNaN(rNum)) ? jNum - rNum : '';
           wsData.push([
-            bc.commessa,
-            sq.nome || 'Squadra',
-            op.nome,
-            DAY_NAMES[g],
-            dates[g],
-            opGiorno.cantiere || '',
-            opGiorno.attivita || '',
-            saved.ore_jira   ?? '',
-            saved.ore_report ?? '',
-            saved.km_cad     ?? '',
-            saved.note       || '',
+            bc.commessa, sqNome, op.nome,
+            DAY_NAMES[g], dates[g],
+            opG.cantiere || '', opG.attivita || '',
+            jVal === '' ? '' : jVal,
+            rVal === '' ? '' : rVal,
+            delta === '' ? '' : delta,
+            saved.km_cad != null ? saved.km_cad : '',
+            saved.note || '',
           ]);
-        }
-      });
+        });
+      }
     });
   });
 
-  const wb  = XLSX.utils.book_new();
-  const ws  = XLSX.utils.aoa_to_sheet(wsData);
+  const wb = XLSX.utils.book_new();
+  const ws = XLSX.utils.aoa_to_sheet(wsData);
+  ws['!cols'] = [{wch:35},{wch:15},{wch:22},{wch:6},{wch:8},
+                 {wch:20},{wch:22},{wch:10},{wch:16},{wch:8},{wch:10},{wch:28}];
 
-  // Larghezze colonne
-  ws['!cols'] = [
-    {wch:35},{wch:15},{wch:22},{wch:6},{wch:8},
-    {wch:20},{wch:22},{wch:10},{wch:16},{wch:10},{wch:28}
-  ];
-
-  // Stile header (verde scuro)
-  const headerStyle = { font:{bold:true,color:{rgb:'FFFFFF'}}, fill:{fgColor:{rgb:'0F766E'}}, alignment:{horizontal:'center'} };
-  const editStyle   = { fill:{fgColor:{rgb:'FEFCE8'}} };
+  const hStyle = { font:{bold:true,color:{rgb:'FFFFFF'}}, fill:{fgColor:{rgb:'0F766E'}}, alignment:{horizontal:'center'} };
+  const eStyle = { fill:{fgColor:{rgb:'FEFCE8'}} };
   headers.forEach((_, ci) => {
-    const cellRef = XLSX.utils.encode_cell({r:0, c:ci});
-    if (!ws[cellRef]) ws[cellRef] = {};
-    ws[cellRef].s = headerStyle;
+    const ref = XLSX.utils.encode_cell({r:0, c:ci});
+    if (!ws[ref]) ws[ref] = {};
+    ws[ref].s = hStyle;
   });
-  // Stile celle editabili (col 7-10)
   for (let ri = 1; ri < wsData.length; ri++) {
-    for (let ci = 7; ci <= 10; ci++) {
-      const cellRef = XLSX.utils.encode_cell({r:ri, c:ci});
-      if (!ws[cellRef]) ws[cellRef] = {t:'z'};
-      ws[cellRef].s = editStyle;
-    }
+    [7,8,10,11].forEach(ci => {
+      const ref = XLSX.utils.encode_cell({r:ri, c:ci});
+      if (!ws[ref]) ws[ref] = {t:'z'};
+      ws[ref].s = eStyle;
+    });
   }
 
   XLSX.utils.book_append_sheet(wb, ws, 'Controllo Produzione');
   XLSX.writeFile(wb, `Report_Controllo_W${pwWeek}_${pwAnno}.xlsx`);
 }
-
 /* ==================== MAPPA LEAFLET + NOMINATIM ==================== */
 const MAP_COLORS = ['#0d9488','#6366f1','#f59e0b','#ef4444','#10b981','#8b5cf6','#ec4899','#0ea5e9','#f97316','#84cc16'];
 let _mapColors = {};
