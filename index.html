@@ -537,6 +537,18 @@
   .psp-tag.verde  { background:#f0fdf4; color:#16a34a; }
   .psp-tag.rosso  { background:#fff1f2; color:#dc2626; }
   .psp-tag.giallo { background:#fefce8; color:#ca8a04; }
+  /* ---- Controllo Produzione ---- */
+  .cp-table { width:100%; border-collapse:collapse; font-size:12px; }
+  .cp-table th { background:#0f766e; color:#fff; font-weight:700; padding:7px 10px; text-align:left; white-space:nowrap; position:sticky; top:0; z-index:2; }
+  .cp-table td { padding:5px 8px; border-bottom:1px solid #f1f5f9; vertical-align:middle; white-space:nowrap; }
+  .cp-table tr:nth-child(even) td:not(.cp-td-edit) { background:#f8fafc; }
+  .cp-tr-commessa td { background:#e2e8f0 !important; font-weight:700; color:#334155; font-size:11px; text-transform:uppercase; letter-spacing:.04em; }
+  .cp-tr-squadra  td { background:#f1f5f9 !important; font-weight:600; color:#475569; font-size:11px; }
+  .cp-td-edit { background:#fefce8 !important; }
+  .cp-input { border:none; background:transparent; width:100%; min-width:60px; font-size:12px; padding:2px 4px; border-radius:4px; outline:none; font-family:inherit; }
+  .cp-input:focus { background:#fef9c3; box-shadow:0 0 0 2px #ca8a04; }
+  .cp-input.note { min-width:140px; }
+  .cp-saving { color:#ca8a04; font-size:10px; margin-left:6px; }
 
   /* ===== CELLE FERIE NELLA GRIGLIA ===== */
   .pw-day-cell.in-ferie {
@@ -616,7 +628,7 @@
         <select id="anno-selector" class="text-sm border-none font-semibold focus:outline-none cursor-pointer" style="color:#f9fafb;background:#1a1a1a;border-radius:4px;padding:1px 4px;"></select>
       </div>
       <div class="text-xs pl-2" style="border-left:1px solid #444;color:#9ca3af;">
-        <span class="font-medium" style="color:#00b8b0;">v18.7.0</span> · Michele Marchetti
+        <span class="font-medium" style="color:#00b8b0;">v18.8.0</span> · Michele Marchetti
       </div>
     </div>
   </div>
@@ -920,6 +932,7 @@
     <button id="pw-tab-griglia" class="tab-btn active text-sm py-3">📋 Griglia settimanale</button>
     <button id="pw-tab-ferie" class="tab-btn text-sm py-3">🏖 Ferie / Permessi</button>
     <button id="pw-tab-mappa" class="tab-btn text-sm py-3">🗺 Mappa squadre</button>
+    <button id="pw-tab-controllo" class="tab-btn text-sm py-3">📊 Controllo produzione</button>
   </div>
 
   <!-- Vista Griglia -->
@@ -987,6 +1000,24 @@
           <div class="text-xs font-semibold text-slate-700 mb-2 uppercase tracking-wide">Squadre & spostamenti</div>
           <div id="pw-map-summary" class="space-y-2"></div>
         </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- CONTROLLO PRODUZIONE -->
+  <div id="pw-view-controllo" class="hidden">
+    <div class="flex items-center justify-between mb-3 no-print">
+      <div class="flex items-center gap-2">
+        <span class="text-xs font-semibold text-slate-600">Controllo produzione settimanale</span>
+        <span class="text-xs text-slate-400" id="cp-status"></span>
+      </div>
+      <button onclick="pwControlloExport()" class="px-3 py-1.5 text-sm font-medium bg-teal-600 text-white rounded-lg hover:bg-teal-700 flex items-center gap-1.5 no-print">
+        ⬇ Esporta Excel
+      </button>
+    </div>
+    <div class="bg-white border border-slate-200 rounded-lg overflow-auto shadow-sm">
+      <div id="cp-table-container" style="max-height:600px;overflow-y:auto;">
+        <div class="text-center text-slate-400 py-10 text-sm">Seleziona la tab per caricare i dati.</div>
       </div>
     </div>
   </div>
@@ -5049,8 +5080,8 @@ document.addEventListener('DOMContentLoaded', async () => {
   if (gHistoric) gHistoric.addEventListener('change', e => { _ganttCfg.historic = e.target.checked; renderGantt(); });
   if (gSort) gSort.addEventListener('change', e => { _ganttCfg.sort = e.target.value; renderGantt(); });
 
-  const _dashTabBtns = '#pw-tab-griglia, #pw-tab-ferie, #pw-tab-mappa';
-  document.querySelectorAll(`.tab-btn:not(#pw-tab-griglia):not(#pw-tab-ferie):not(#pw-tab-mappa)`).forEach(b => {
+  const _dashTabBtns = '#pw-tab-griglia, #pw-tab-ferie, #pw-tab-mappa, #pw-tab-controllo';
+  document.querySelectorAll(`.tab-btn:not(#pw-tab-griglia):not(#pw-tab-ferie):not(#pw-tab-mappa):not(#pw-tab-controllo)`).forEach(b => {
     b.onclick = () => {
       document.querySelectorAll(`.tab-btn:not(#pw-tab-griglia):not(#pw-tab-ferie):not(#pw-tab-mappa)`).forEach(x => x.classList.remove('active'));
       b.classList.add('active');
@@ -5131,6 +5162,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   document.getElementById('pw-tab-griglia').onclick = () => pwSwitchTab('griglia');
   document.getElementById('pw-tab-ferie').onclick   = () => pwSwitchTab('ferie');
   document.getElementById('pw-tab-mappa').onclick   = () => pwSwitchTab('mappa');
+  document.getElementById('pw-tab-controllo').onclick = () => pwSwitchTab('controllo');
 
   // Carica rubrica geocoding
   _geoCacheLoad();
@@ -6490,14 +6522,12 @@ let _pwActiveTab = 'griglia';
 
 function pwSwitchTab(tab) {
   _pwActiveTab = tab;
-  // Aggiorna sempre header e selettori con la settimana corrente
   const headerDates = document.getElementById('pw-header-dates');
   if (headerDates) {
     const _mon = isoWeekToMonday(pwAnno, pwWeek);
     const _sat = new Date(_mon); _sat.setUTCDate(_mon.getUTCDate() + 5);
     headerDates.textContent = `WEEK ${pwWeek} · ${formatDate(_mon)} — ${formatDate(_sat)} ${pwAnno}`;
   }
-  // Aggiorna anche i selettori Anno e Week visualmente
   const _annoSel = document.getElementById('pw-anno');
   const _weekSel = document.getElementById('pw-week');
   if (_annoSel) _annoSel.value = String(pwAnno);
@@ -6505,18 +6535,18 @@ function pwSwitchTab(tab) {
   const tg = document.getElementById('pw-tab-griglia');
   const tf = document.getElementById('pw-tab-ferie');
   const tm = document.getElementById('pw-tab-mappa');
+  const tc = document.getElementById('pw-tab-controllo');
   const vg = document.getElementById('pw-view-griglia');
   const vf = document.getElementById('pw-view-ferie');
   const vm = document.getElementById('pw-view-mappa');
+  const vc = document.getElementById('pw-view-controllo');
 
-  // Reset tutti
-  [tg, tf, tm].forEach(t => t && t.classList.remove('active'));
-  [vg, vf, vm].forEach(v => v && v.classList.add('hidden'));
+  [tg, tf, tm, tc].forEach(t => t && t.classList.remove('active'));
+  [vg, vf, vm, vc].forEach(v => v && v.classList.add('hidden'));
 
   if (tab === 'mappa') {
     tm.classList.add('active');
     vm.classList.remove('hidden');
-    // Forza reinit così pwMapRender legge sempre pwWeek aggiornato
     setTimeout(() => {
       if (!_map) {
         _map = L.map('pw-map', { preferCanvas: true }).setView([42.5, 12.5], 6);
@@ -6532,11 +6562,275 @@ function pwSwitchTab(tab) {
     tf.classList.add('active');
     vf.classList.remove('hidden');
     pwFerieRender();
+  } else if (tab === 'controllo') {
+    tc.classList.add('active');
+    vc.classList.remove('hidden');
+    pwControlloLoad();
   } else {
     tg.classList.add('active');
     vg.classList.remove('hidden');
-    pwRender(); // ridisegna griglia con settimana aggiornata
+    pwRender();
   }
+}
+
+/* ==================== CONTROLLO PRODUZIONE ==================== */
+let _cpData = {}; // chiave: "commessa|||squadra|||operatore|||giorno" → { ore_jira, ore_report, km_cad, note }
+let _cpLoading = false;
+
+async function pwControlloLoad() {
+  const container = document.getElementById('cp-table-container');
+  const status    = document.getElementById('cp-status');
+  if (!container) return;
+  if (_cpLoading) return;
+  _cpLoading = true;
+
+  container.innerHTML = '<div class="text-center text-slate-400 py-10 text-sm">⏳ Caricamento dati...</div>';
+  if (status) status.textContent = '';
+
+  try {
+    if (_sbClient && _sbUser) {
+      const { data, error } = await _sbClient
+        .from('controllo_produzione')
+        .select('commessa,squadra,operatore,giorno,ore_jira,ore_report,km_cad,note')
+        .eq('anno', pwAnno)
+        .eq('week', pwWeek);
+      if (error) throw error;
+      _cpData = {};
+      (data || []).forEach(r => {
+        const k = `${r.commessa}|||${r.squadra}|||${r.operatore}|||${r.giorno}`;
+        _cpData[k] = { ore_jira: r.ore_jira, ore_report: r.ore_report, km_cad: r.km_cad, note: r.note };
+      });
+      if (status) status.textContent = `${(data||[]).length} record caricati`;
+    } else {
+      _cpData = {};
+      if (status) status.textContent = 'Modalità offline — i dati non verranno salvati';
+    }
+  } catch(e) {
+    console.error('pwControlloLoad error:', e);
+    if (status) status.textContent = '⚠ Errore caricamento';
+  }
+
+  _cpLoading = false;
+  pwControlloRender();
+}
+
+function pwControlloRender() {
+  const container = document.getElementById('cp-table-container');
+  if (!container) return;
+  const data = pwGetWeekData();
+  const monday = isoWeekToMonday(pwAnno, pwWeek);
+  const DAY_NAMES = ['Lun','Mar','Mer','Gio','Ven','Sab'];
+
+  // Costruisci date Lun–Sab
+  const dates = [];
+  for (let i = 0; i < 6; i++) {
+    const d = new Date(monday);
+    d.setUTCDate(monday.getUTCDate() + i);
+    dates.push(`${String(d.getUTCDate()).padStart(2,'0')}/${String(d.getUTCMonth()+1).padStart(2,'0')}`);
+  }
+
+  // Raccogli tutte le righe
+  const rows = [];
+  data.forEach(bc => {
+    if (!bc.commessa) return;
+    (bc.squadre || []).forEach(sq => {
+      (sq.operatori || []).forEach(op => {
+        if (!op.nome || !op.nome.trim()) return;
+        for (let g = 0; g < 6; g++) {
+          const giorno = bc.giorni && bc.giorni[g] ? bc.giorni[g] : (op.giorni && op.giorni[g] ? op.giorni[g] : {});
+          // Cerca cantiere/attività nell'operatore
+          const opGiorno = op.giorni && op.giorni[g] ? op.giorni[g] : {};
+          rows.push({
+            commessa:  bc.commessa,
+            squadra:   sq.nome || 'Squadra',
+            operatore: op.nome,
+            giornoIdx: g,
+            giornoLbl: DAY_NAMES[g],
+            data:      dates[g],
+            cantiere:  opGiorno.cantiere || '',
+            attivita:  opGiorno.attivita || '',
+          });
+        }
+      });
+    });
+  });
+
+  if (rows.length === 0) {
+    container.innerHTML = '<div class="text-center text-slate-400 py-10 text-sm">Nessun operatore pianificato questa settimana.</div>';
+    return;
+  }
+
+  let html = `<table class="cp-table">
+    <thead><tr>
+      <th>Commessa</th><th>Squadra</th><th>Operatore</th>
+      <th>Giorno</th><th>Data</th><th>Cantiere</th><th>Attività</th>
+      <th>Ore Jira</th><th>Ore Report Prod.</th><th>Km / Cad</th><th>Note</th>
+    </tr></thead><tbody>`;
+
+  let lastCommessa = null, lastSquadra = null;
+  rows.forEach(r => {
+    const k = `${r.commessa}|||${r.squadra}|||${r.operatore}|||${r.giornoIdx}`;
+    const saved = _cpData[k] || {};
+
+    if (r.commessa !== lastCommessa) {
+      html += `<tr class="cp-tr-commessa"><td colspan="11">📁 ${r.commessa}</td></tr>`;
+      lastCommessa = r.commessa;
+      lastSquadra  = null;
+    }
+    if (r.squadra !== lastSquadra) {
+      html += `<tr class="cp-tr-squadra"><td colspan="11">&nbsp;&nbsp;&nbsp;👥 ${r.squadra}</td></tr>`;
+      lastSquadra = r.squadra;
+    }
+
+    const esc = v => (v||'').replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;');
+    html += `<tr>
+      <td>${esc(r.commessa)}</td>
+      <td>${esc(r.squadra)}</td>
+      <td><strong>${esc(r.operatore)}</strong></td>
+      <td>${r.giornoLbl}</td>
+      <td>${r.data}</td>
+      <td style="color:#64748b">${esc(r.cantiere)}</td>
+      <td style="color:#64748b">${esc(r.attivita)}</td>
+      <td class="cp-td-edit"><input class="cp-input" type="number" step="0.5" min="0" max="24"
+        value="${esc(String(saved.ore_jira ?? ''))}"
+        onblur="pwControlloSaveCell('${esc(r.commessa)}','${esc(r.squadra)}','${esc(r.operatore)}',${r.giornoIdx},r.data,'${esc(r.cantiere)}','${esc(r.attivita)}','ore_jira',this.value)"></td>
+      <td class="cp-td-edit"><input class="cp-input" type="number" step="0.5" min="0" max="24"
+        value="${esc(String(saved.ore_report ?? ''))}"
+        onblur="pwControlloSaveCell('${esc(r.commessa)}','${esc(r.squadra)}','${esc(r.operatore)}',${r.giornoIdx},r.data,'${esc(r.cantiere)}','${esc(r.attivita)}','ore_report',this.value)"></td>
+      <td class="cp-td-edit"><input class="cp-input" type="number" step="0.1" min="0"
+        value="${esc(String(saved.km_cad ?? ''))}"
+        onblur="pwControlloSaveCell('${esc(r.commessa)}','${esc(r.squadra)}','${esc(r.operatore)}',${r.giornoIdx},r.data,'${esc(r.cantiere)}','${esc(r.attivita)}','km_cad',this.value)"></td>
+      <td class="cp-td-edit"><input class="cp-input note" type="text"
+        value="${esc(saved.note || '')}"
+        onblur="pwControlloSaveCell('${esc(r.commessa)}','${esc(r.squadra)}','${esc(r.operatore)}',${r.giornoIdx},r.data,'${esc(r.cantiere)}','${esc(r.attivita)}','note',this.value)"></td>
+    </tr>`;
+  });
+
+  html += '</tbody></table>';
+  container.innerHTML = html;
+}
+
+async function pwControlloSaveCell(commessa, squadra, operatore, giornoIdx, dataGiorno, cantiere, attivita, field, value) {
+  const k = `${commessa}|||${squadra}|||${operatore}|||${giornoIdx}`;
+  if (!_cpData[k]) _cpData[k] = {};
+
+  // Aggiorna cache locale
+  const numFields = ['ore_jira','ore_report','km_cad'];
+  if (numFields.includes(field)) {
+    _cpData[k][field] = value === '' ? null : parseFloat(value);
+  } else {
+    _cpData[k][field] = value === '' ? null : value;
+  }
+
+  if (!_sbClient || !_sbUser) return; // offline, solo cache locale
+
+  // Calcola data_giorno ISO da dataGiorno "DD/MM"
+  let dataISO = null;
+  try {
+    const [dd, mm] = dataGiorno.split('/');
+    dataISO = `${pwAnno}-${mm.padStart(2,'0')}-${dd.padStart(2,'0')}`;
+  } catch(e) {}
+
+  const record = {
+    anno:        pwAnno,
+    week:        pwWeek,
+    commessa,
+    squadra,
+    operatore,
+    giorno:      giornoIdx,
+    data_giorno: dataISO,
+    cantiere:    cantiere || null,
+    attivita:    attivita || null,
+    ore_jira:    _cpData[k].ore_jira   ?? null,
+    ore_report:  _cpData[k].ore_report ?? null,
+    km_cad:      _cpData[k].km_cad    ?? null,
+    note:        _cpData[k].note      ?? null,
+    updated_at:  new Date().toISOString(),
+    updated_by:  _sbUser?.email || null,
+  };
+
+  try {
+    const { error } = await _sbClient
+      .from('controllo_produzione')
+      .upsert(record, { onConflict: 'anno,week,commessa,squadra,operatore,giorno' });
+    if (error) throw error;
+  } catch(e) {
+    console.error('pwControlloSaveCell error:', e);
+    const st = document.getElementById('cp-status');
+    if (st) { st.textContent = '⚠ Errore salvataggio'; setTimeout(() => { st.textContent = ''; }, 3000); }
+  }
+}
+
+function pwControlloExport() {
+  if (typeof XLSX === 'undefined') { alert('Libreria XLSX non disponibile.'); return; }
+  const data = pwGetWeekData();
+  const monday = isoWeekToMonday(pwAnno, pwWeek);
+  const DAY_NAMES = ['Lun','Mar','Mer','Gio','Ven','Sab'];
+  const dates = [];
+  for (let i = 0; i < 6; i++) {
+    const d = new Date(monday);
+    d.setUTCDate(monday.getUTCDate() + i);
+    dates.push(`${String(d.getUTCDate()).padStart(2,'0')}/${String(d.getUTCMonth()+1).padStart(2,'0')}`);
+  }
+
+  const headers = ['Commessa','Squadra','Operatore','Giorno','Data','Cantiere','Attività','Ore Jira','Ore Report Prod.','Km / Cad','Note'];
+  const wsData  = [headers];
+
+  data.forEach(bc => {
+    if (!bc.commessa) return;
+    (bc.squadre || []).forEach(sq => {
+      (sq.operatori || []).forEach(op => {
+        if (!op.nome || !op.nome.trim()) return;
+        for (let g = 0; g < 6; g++) {
+          const opGiorno = op.giorni && op.giorni[g] ? op.giorni[g] : {};
+          const k = `${bc.commessa}|||${sq.nome||'Squadra'}|||${op.nome}|||${g}`;
+          const saved = _cpData[k] || {};
+          wsData.push([
+            bc.commessa,
+            sq.nome || 'Squadra',
+            op.nome,
+            DAY_NAMES[g],
+            dates[g],
+            opGiorno.cantiere || '',
+            opGiorno.attivita || '',
+            saved.ore_jira   ?? '',
+            saved.ore_report ?? '',
+            saved.km_cad     ?? '',
+            saved.note       || '',
+          ]);
+        }
+      });
+    });
+  });
+
+  const wb  = XLSX.utils.book_new();
+  const ws  = XLSX.utils.aoa_to_sheet(wsData);
+
+  // Larghezze colonne
+  ws['!cols'] = [
+    {wch:35},{wch:15},{wch:22},{wch:6},{wch:8},
+    {wch:20},{wch:22},{wch:10},{wch:16},{wch:10},{wch:28}
+  ];
+
+  // Stile header (verde scuro)
+  const headerStyle = { font:{bold:true,color:{rgb:'FFFFFF'}}, fill:{fgColor:{rgb:'0F766E'}}, alignment:{horizontal:'center'} };
+  const editStyle   = { fill:{fgColor:{rgb:'FEFCE8'}} };
+  headers.forEach((_, ci) => {
+    const cellRef = XLSX.utils.encode_cell({r:0, c:ci});
+    if (!ws[cellRef]) ws[cellRef] = {};
+    ws[cellRef].s = headerStyle;
+  });
+  // Stile celle editabili (col 7-10)
+  for (let ri = 1; ri < wsData.length; ri++) {
+    for (let ci = 7; ci <= 10; ci++) {
+      const cellRef = XLSX.utils.encode_cell({r:ri, c:ci});
+      if (!ws[cellRef]) ws[cellRef] = {t:'z'};
+      ws[cellRef].s = editStyle;
+    }
+  }
+
+  XLSX.utils.book_append_sheet(wb, ws, 'Controllo Produzione');
+  XLSX.writeFile(wb, `Report_Controllo_W${pwWeek}_${pwAnno}.xlsx`);
 }
 
 /* ==================== MAPPA LEAFLET + NOMINATIM ==================== */
