@@ -526,6 +526,17 @@
   .pw-stat-card.rosso  .pw-stat-num { color: #dc2626; }
   .pw-stat-card.giallo { border-color: #fde047; background: #fefce8; }
   .pw-stat-card.giallo .pw-stat-num { color: #ca8a04; }
+  .pw-stat-card { cursor: pointer; transition: box-shadow .15s, transform .1s; }
+  .pw-stat-card:hover { box-shadow: 0 4px 12px rgba(0,0,0,0.10); transform: translateY(-1px); }
+  .psp-row { display:flex; align-items:flex-start; gap:8px; padding:6px 14px; font-size:12px; border-bottom:1px solid #f8fafc; }
+  .psp-row:last-child { border-bottom:none; }
+  .psp-nome { flex-shrink:0; font-weight:500; color:#334155; min-width:130px; }
+  .psp-tags { display:flex; flex-wrap:wrap; gap:4px; }
+  .psp-tag { padding:2px 8px; border-radius:9999px; font-size:10px; font-weight:600; max-width:170px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .psp-tag.blu    { background:#eff6ff; color:#1d4ed8; }
+  .psp-tag.verde  { background:#f0fdf4; color:#16a34a; }
+  .psp-tag.rosso  { background:#fff1f2; color:#dc2626; }
+  .psp-tag.giallo { background:#fefce8; color:#ca8a04; }
 
   /* ===== CELLE FERIE NELLA GRIGLIA ===== */
   .pw-day-cell.in-ferie {
@@ -605,7 +616,7 @@
         <select id="anno-selector" class="text-sm border-none font-semibold focus:outline-none cursor-pointer" style="color:#f9fafb;background:#1a1a1a;border-radius:4px;padding:1px 4px;"></select>
       </div>
       <div class="text-xs pl-2" style="border-left:1px solid #444;color:#9ca3af;">
-        <span class="font-medium" style="color:#00b8b0;">v18.6.22</span> · Michele Marchetti
+        <span class="font-medium" style="color:#00b8b0;">v18.7.0</span> · Michele Marchetti
       </div>
     </div>
   </div>
@@ -6110,16 +6121,19 @@ function pwRenderStats() {
   const fw     = pwGetFerieWeek();
   const allOps = state.operatori.map(o => o.nome_esteso || o.nome).filter(Boolean);
 
-  // Operatori in ferie (almeno 1 giorno)
-  const inFerie = new Set(
-    Object.entries(fw)
-      .filter(([, giorni]) => Object.values(giorni).some(v => v === true))
-      .map(([nome]) => nome)
-  );
+  // Operatori in ferie (almeno 1 giorno) + giorni
+  const DAY_ABBR = ['Lun','Mar','Mer','Gio','Ven','Sab'];
+  const inFerie     = new Set();
+  const ferieGiorni = {};
+  Object.entries(fw).forEach(([nome, giorni]) => {
+    const gg = Object.entries(giorni).filter(([,v]) => v === true).map(([k]) => DAY_ABBR[parseInt(k)] || k);
+    if (gg.length) { inFerie.add(nome); ferieGiorni[nome] = gg; }
+  });
 
   // Operatori pianificati + mappa commesse per operatore
-  const pianificati    = new Set();
-  const commessePerOp  = {};
+  const pianificati       = new Set();
+  const commessePerOp     = {};
+  const commessaNomiPerOp = {};
   data.forEach((bc, ci) => {
     if (!bc.commessa) return;
     (bc.squadre || []).forEach(sq => {
@@ -6128,31 +6142,119 @@ function pwRenderStats() {
         pianificati.add(op.nome);
         if (!commessePerOp[op.nome]) commessePerOp[op.nome] = new Set();
         commessePerOp[op.nome].add(ci);
+        if (!commessaNomiPerOp[op.nome]) commessaNomiPerOp[op.nome] = new Set();
+        commessaNomiPerOp[op.nome].add(bc.commessa);
       });
     });
   });
 
   // Su più commesse diverse
-  const suPiuCommesse = Object.values(commessePerOp).filter(s => s.size > 1).length;
+  const suPiuCommesseLista = Object.entries(commessePerOp)
+    .filter(([, s]) => s.size > 1)
+    .map(([nome]) => ({ nome, commesse: [...commessaNomiPerOp[nome]] }));
 
   // Liberi = non pianificati e non in ferie
-  const liberi = allOps.filter(n => !pianificati.has(n) && !inFerie.has(n)).length;
+  const liberiList = allOps.filter(n => !pianificati.has(n) && !inFerie.has(n));
+
+  // Salva dati per i popover sul banner
+  banner._statsData = {
+    pianificati:   [...pianificati].sort().map(nome => ({ nome, commesse: [...(commessaNomiPerOp[nome] || [])] })),
+    liberi:        liberiList.sort().map(nome => ({ nome })),
+    inFerie:       [...inFerie].sort().map(nome => ({ nome, giorni: ferieGiorni[nome] || [] })),
+    suPiuCommesse: suPiuCommesseLista.sort((a,b) => a.nome.localeCompare(b.nome)),
+  };
 
   const cards = [
-    { icon: '👷', num: pianificati.size, lbl: 'Pianificati questa settimana', cls: 'blu'    },
-    { icon: '✅', num: liberi,            lbl: 'Liberi / disponibili',         cls: 'verde'  },
-    { icon: '🏖', num: inFerie.size,      lbl: 'In ferie o permesso',          cls: 'rosso'  },
-    { icon: '⚠️', num: suPiuCommesse,     lbl: 'Su più commesse',              cls: 'giallo' },
+    { icon: '👷', num: pianificati.size,        lbl: 'Pianificati questa settimana', cls: 'blu',    key: 'pianificati'   },
+    { icon: '✅', num: liberiList.length,         lbl: 'Liberi / disponibili',         cls: 'verde',  key: 'liberi'        },
+    { icon: '🏖', num: inFerie.size,             lbl: 'In ferie o permesso',          cls: 'rosso',  key: 'inFerie'       },
+    { icon: '⚠️', num: suPiuCommesseLista.length, lbl: 'Su più commesse',              cls: 'giallo', key: 'suPiuCommesse' },
   ];
 
   banner.innerHTML = cards.map(c => `
-    <div class="pw-stat-card ${c.cls}">
+    <div class="pw-stat-card ${c.cls}" data-stat-key="${c.key}" onclick="pwToggleStatPopover('${c.key}', this)">
       <div class="pw-stat-icon">${c.icon}</div>
       <div>
         <div class="pw-stat-num">${c.num}</div>
         <div class="pw-stat-lbl">${c.lbl}</div>
       </div>
     </div>`).join('');
+}
+
+/* ===== POPOVER STATISTICHE PIANIFICAZIONE ===== */
+function pwToggleStatPopover(key, cardEl) {
+  const existing = document.getElementById('pw-stat-popover');
+
+  // Stesso popover già aperto → chiudi
+  if (existing && existing.dataset.key === key) { existing.remove(); return; }
+  if (existing) existing.remove();
+
+  const banner    = document.getElementById('pw-stats-banner');
+  const statsData = banner && banner._statsData;
+  if (!statsData) return;
+
+  const cfgMap = {
+    pianificati:   { title: 'Pianificati questa settimana', cls: 'blu'    },
+    liberi:        { title: 'Liberi / disponibili',         cls: 'verde'  },
+    inFerie:       { title: 'In ferie o permesso',          cls: 'rosso'  },
+    suPiuCommesse: { title: 'Su più commesse',              cls: 'giallo' },
+  };
+  const cfg   = cfgMap[key];
+  const items = statsData[key] || [];
+
+  function renderRow(it) {
+    const tags = (it.commesse || []).map(c =>
+      `<span class="psp-tag ${cfg.cls}" title="${c}">${c}</span>`).join('');
+    const giorni = (it.giorni || []).map(g =>
+      `<span class="psp-tag rosso">${g}</span>`).join('');
+    const extra = tags || giorni;
+    return `<div class="psp-row">
+      <span class="psp-nome">${it.nome}</span>
+      ${extra ? `<span class="psp-tags">${extra}</span>` : ''}
+    </div>`;
+  }
+
+  const rect = cardEl.getBoundingClientRect();
+  const pop  = document.createElement('div');
+  pop.id = 'pw-stat-popover';
+  pop.dataset.key = key;
+  pop.style.cssText = [
+    'position:fixed',
+    `top:${rect.bottom + 6}px`,
+    `left:${Math.min(rect.left, window.innerWidth - 430)}px`,
+    'z-index:9999',
+    'background:#fff',
+    'border:1px solid #e2e8f0',
+    'border-radius:10px',
+    'box-shadow:0 8px 24px rgba(0,0,0,0.13)',
+    'min-width:280px',
+    'max-width:420px',
+    'max-height:340px',
+    'overflow-y:auto',
+  ].join(';');
+
+  pop.innerHTML = `
+    <div style="padding:10px 14px;border-bottom:1px solid #f1f5f9;display:flex;justify-content:space-between;align-items:center;position:sticky;top:0;background:#fff;z-index:1;">
+      <span style="font-weight:700;font-size:13px;color:#1e293b;">${cfg.title}</span>
+      <span style="font-size:12px;color:#64748b;font-weight:600;">${items.length}</span>
+    </div>
+    <div style="padding:6px 0;">
+      ${items.length === 0
+        ? '<div style="padding:14px;color:#94a3b8;font-size:13px;text-align:center;">Nessun operatore</div>'
+        : items.map(renderRow).join('')}
+    </div>`;
+
+  document.body.appendChild(pop);
+
+  // Chiudi cliccando fuori
+  setTimeout(() => {
+    document.addEventListener('click', function _pspClose(e) {
+      if (!pop.contains(e.target) && e.target !== cardEl && !cardEl.contains(e.target)) {
+        pop.remove();
+        document.removeEventListener('click', _pspClose);
+      }
+    });
+  }, 0);
 }
 
 /* ----- Ricerca operatore nella griglia ----- */
