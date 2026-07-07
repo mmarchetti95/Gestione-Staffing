@@ -1668,13 +1668,13 @@ function calcKPI() {
   state.staffing.forEach(r => { if (r.commessa && r.commessa !== 'ORE NON LAVORATE') commesseFromStaffing.add(r.commessa); });
   const nAttive = commesseFromStaffing.size;
   const nPipeline = state.pipeline.length;
-  const nOperatori = state.operatori.length;
+  const nOperatori = getOperatoriAttivi().length;
 
   // saturazione media prox 3 mesi (mese corrente + 2) — solo mesi futuri
   const mese0 = meseCorrente();
   const mesi3 = [mese0, mese0+1, mese0+2].filter(m => m>=0 && m<12);
   let totSat = 0, count = 0;
-  state.operatori.forEach(op => {
+  getOperatoriAttivi().forEach(op => {
     const s = operatoreSatPeriodo(op, mesi3);
     if (s > 0) { totSat += s; count++; }
   });
@@ -1692,7 +1692,7 @@ function calcKPI() {
       const giorni = p.inizio ? (new Date(p.inizio) - today) / 86400000 : 999;
       if (giorni <= 60) alertCritici++;
       else {
-        const haInternoConSkill = state.operatori.some(op => p.skills.every(s => op.skills.includes(s)));
+        const haInternoConSkill = getOperatoriAttivi().some(op => p.skills.every(s => op.skills.includes(s)));
         if (!haInternoConSkill && p.skills.length > 0) alertCritici++;
       }
     }
@@ -1825,7 +1825,7 @@ function showKpiModal(type) {
   else if (type === 'operatori') {
     title = '👷 Operatori';
     headerBg = '#4f46e5';
-    const ops = state.operatori.map(op => ({ op, sat: operatoreSatPeriodo(op, mesi3) }))
+    const ops = getOperatoriAttivi().map(op => ({ op, sat: operatoreSatPeriodo(op, mesi3) }))
                                .sort((a,b) => b.sat - a.sat);
     bodyHtml = `<div style="font-size:12px;color:#64748b;margin-bottom:12px;">${ops.length} operatori · mesi ${mesi3.map(m=>MESI[m]).join(', ')}</div>
     <table style="width:100%;border-collapse:collapse;font-size:13px;">
@@ -1849,7 +1849,7 @@ function showKpiModal(type) {
     // Per mese
     const perMese = mesi3.map(m => {
       let tot2 = 0, cnt = 0;
-      state.operatori.forEach(op => { const s = operatoreSatPeriodo(op,[m]); if(s>0){tot2+=s;cnt++;} });
+      getOperatoriAttivi().forEach(op => { const s = operatoreSatPeriodo(op,[m]); if(s>0){tot2+=s;cnt++;} });
       return { mese: m, sat: cnt>0?tot2/cnt:0 };
     });
     const mesiHtml = perMese.map(({mese,sat}) => {
@@ -1864,7 +1864,7 @@ function showKpiModal(type) {
       </div>`;
     }).join('');
     // Per operatore
-    const opsSat = state.operatori.map(op => ({ op, sat: operatoreSatPeriodo(op,mesi3) })).sort((a,b)=>b.sat-a.sat);
+    const opsSat = getOperatoriAttivi().map(op => ({ op, sat: operatoreSatPeriodo(op,mesi3) })).sort((a,b)=>b.sat-a.sat);
     const sopra  = opsSat.filter(x => x.sat > 0.95);
     const norma  = opsSat.filter(x => x.sat <= 0.95);
     const opRow  = ({op,sat},i,bg) => `<tr style="background:${bg};">
@@ -1938,7 +1938,7 @@ function showKpiModal(type) {
       if (giorni <= 60) {
         motivo = `⏰ Inizio tra ${Math.max(0,Math.round(giorni))} giorni (${p.inizio ? fmtDate(p.inizio) : '—'})`;
       } else {
-        const haInterno = state.operatori.some(op => (p.skills||[]).every(s => (op.skills||[]).includes(s)));
+        const haInterno = getOperatoriAttivi().some(op => (p.skills||[]).every(s => (op.skills||[]).includes(s)));
         if (!haInterno && (p.skills||[]).length > 0) {
           motivo = '🔴 Nessun operatore interno con le skill richieste';
         }
@@ -2047,7 +2047,7 @@ function renderOperatori() {
   const mese0 = meseCorrente();
   const meseProx = Math.min(11, mese0+1);
 
-  let ops = state.operatori.filter(op => {
+  let ops = state.operatori.filter(op => !op.licenziato).filter(op => {
     if (state.filters.search && !op.nome_esteso.toLowerCase().includes(state.filters.search.toLowerCase())) return false;
     if (state.filters.skills.size > 0 && ![...state.filters.skills].every(s => op.skills.includes(s))) return false;
     if (state.filters.attestati.size > 0 && ![...state.filters.attestati].every(a => (op.attestati||[]).includes(a))) return false;
@@ -2061,7 +2061,7 @@ function renderOperatori() {
   // ordina: liberi prima, saturi dopo
   ops.sort((a,b) => operatoreSatPeriodo(a, [mese0, meseProx]) - operatoreSatPeriodo(b, [mese0, meseProx]));
 
-  document.getElementById('op-count').textContent = `(${ops.length}/${state.operatori.length})`;
+  document.getElementById('op-count').textContent = `(${ops.length}/${getOperatoriAttivi().length})`;
   checkCoerenzaOperatori();
 
   list.innerHTML = ops.map(op => {
@@ -2118,7 +2118,7 @@ function renderOperatori() {
   });
   list.querySelectorAll('.view-op').forEach(b => b.onclick = () => apriVistaOperatore(b.dataset.id));
   list.querySelectorAll('.edit-op').forEach(b => b.onclick = () => openOperatoreModal(b.dataset.id));
-  list.querySelectorAll('.del-op').forEach(b => b.onclick = () => deleteOperatore(b.dataset.id));
+  list.querySelectorAll('.del-op').forEach(b => b.onclick = () => openLicenziaModal(b.dataset.id));
 }
 
 /* ===================== VISTA OPERATORE ===================== */
@@ -2459,7 +2459,7 @@ function renderCommessaPipelineCard(c) {
       }).join('');
       return `
         <tr class="border-b border-slate-100 hover:bg-slate-50">
-          <td class="p-0.5 text-[10px]">${r.risorsa}</td>
+          <td class="p-0.5 text-[10px]">${r.risorsa}${isOperatoreLicenziato(r.risorsa) ? '<span class="text-[9px] font-semibold bg-red-100 text-red-400 rounded px-1 ml-1">ex</span>' : ''}</td>
           ${mesiHtml}
           <td class="text-center text-[10px] font-medium text-slate-600 px-0.5">${ggTot}</td>
           <td class="p-0.5 text-right">
@@ -2605,7 +2605,7 @@ function renderCommesseAttive() {
       }).join('');
       return `
         <tr class="border-b border-slate-100 staffing-row" data-idx="${a._idx}">
-          <td class="p-1 text-xs font-medium text-slate-800 sticky left-0 bg-white">${a.risorsa}</td>
+          <td class="p-1 text-xs font-medium text-slate-800 sticky left-0 bg-white">${a.risorsa}${isOperatoreLicenziato(a.risorsa) ? '<span class="text-[9px] font-semibold bg-red-100 text-red-400 rounded px-1 ml-1">ex</span>' : ''}</td>
           ${mesiHtml}
           <td class="text-center text-xs font-semibold text-slate-700 px-1 row-total" data-idx="${a._idx}">${ggTot || '—'}</td>
           <td class="p-1 text-right">
@@ -2873,7 +2873,7 @@ function openAddAllocazioneModal(commessaNome, opts = {}) {
   const attReq = opts.attestatiRichiesti || [];
 
   // ordinamento operatori: chi ha skill+attestati richiesti prima, poi per saturazione crescente
-  const ops = [...state.operatori].sort((a, b) => {
+  const ops = [...getOperatoriAttivi()].sort((a, b) => {
     const hasSkillA = skillReq.length === 0 || skillReq.every(s => a.skills.includes(s));
     const hasSkillB = skillReq.length === 0 || skillReq.every(s => b.skills.includes(s));
     const hasAttA = attReq.length === 0 || attReq.every(s => (a.attestati||[]).includes(s));
@@ -3444,7 +3444,7 @@ function openFabbisognoModal(commessaId, commessaNome) {
 
   function suggestOperatoriPerRiga(riga) {
     const mesiC = inizio && fine ? monthsBetween(inizio, fine) : [];
-    return state.operatori.map(op => {
+    return getOperatoriAttivi().map(op => {
       const matchSkill = riga.skills.length === 0 || riga.skills.every(s => op.skills.includes(s));
       const sat = mesiC.length ? operatoreSatPeriodo(op, mesiC) : 0;
       const skillMancanti = riga.skills.filter(s => !op.skills.includes(s));
@@ -3681,6 +3681,15 @@ function showConfirm(htmlMsg, onConfirm) {
   root.querySelector('.modal-backdrop').addEventListener('click', e => { if (e.target.classList.contains('modal-backdrop')) closeModal(); });
 }
 
+function getOperatoriAttivi() {
+  return (state.operatori || []).filter(o => !o.licenziato);
+}
+
+function isOperatoreLicenziato(nome) {
+  if (!nome) return false;
+  return (state.operatori || []).some(o => (o.nome_esteso || o.nome) === nome && o.licenziato);
+}
+
 async function deleteOperatore(id) {
   const op = state.operatori.find(o => o.id === id);
   if (!op) return;
@@ -3729,6 +3738,42 @@ async function deleteOperatore(id) {
   });
 }
 
+function openLicenziaModal(id) {
+  const op = state.operatori.find(o => o.id === id);
+  if (!op) return;
+  const root = document.getElementById('modal-root');
+  root.innerHTML = '<div class="modal-backdrop">' +
+    '<div class="bg-white rounded-lg shadow-xl w-full max-w-sm mx-4 p-5">' +
+      '<div class="text-sm font-semibold text-slate-900 mb-1">Gestisci operatore</div>' +
+      '<div class="text-xs text-slate-500 mb-4">Cosa vuoi fare con <span class="font-semibold text-slate-800">' + op.nome_esteso + '</span>?</div>' +
+      '<div class="flex flex-col gap-2">' +
+        '<button id="lic-ex" class="flex items-start gap-3 text-left px-3 py-2.5 border border-slate-200 rounded-md hover:bg-amber-50 hover:border-amber-300 transition-colors">' +
+          '<span class="text-lg leading-none mt-0.5">\u{1F6AA}</span>' +
+          '<div><div class="text-sm font-semibold text-slate-800">Segna come Ex Collega</div><div class="text-[11px] text-slate-500 mt-0.5">Rimosso dai nuovi incarichi \u00b7 Lo storico viene preservato con badge <span class=\'font-semibold text-red-500\'>ex</span></div></div>' +
+        '</button>' +
+        '<button id="lic-del" class="flex items-start gap-3 text-left px-3 py-2.5 border border-slate-200 rounded-md hover:bg-red-50 hover:border-red-300 transition-colors">' +
+          '<span class="text-lg leading-none mt-0.5">\u{1F5D1}</span>' +
+          '<div><div class="text-sm font-semibold text-red-700">Elimina definitivamente</div><div class="text-[11px] text-slate-500 mt-0.5">Rimozione completa dal sistema (es. utenti di test)</div></div>' +
+        '</button>' +
+        '<button id="lic-cancel" class="text-sm text-slate-500 hover:text-slate-700 text-center py-1.5 mt-1">Annulla</button>' +
+      '</div>' +
+    '</div>' +
+  '</div>';
+  document.getElementById('lic-ex').onclick = () => { closeModal(); licenziaOperatore(id); };
+  document.getElementById('lic-del').onclick = () => { closeModal(); deleteOperatore(id); };
+  document.getElementById('lic-cancel').onclick = () => closeModal();
+  root.querySelector('.modal-backdrop').addEventListener('click', e => { if (e.target.classList.contains('modal-backdrop')) closeModal(); });
+}
+
+async function licenziaOperatore(id) {
+  const op = state.operatori.find(o => o.id === id);
+  if (!op) return;
+  op.licenziato = true;
+  ricalcolaAllocOperatori();
+  await saveState('Licenziamento operatore', {operatore: op.nome_esteso}, true);
+  renderAll();
+}
+
 /* ===================== GAP & RACCOMANDAZIONI ===================== */
 function renderGap() {
   const today = new Date();
@@ -3750,7 +3795,7 @@ function renderGap() {
     const attReq = c.attestati_richiesti || [];
 
     // disponibili: skill OK + attestati OK + saturazione < 0.85
-    const disponibili = state.operatori.filter(op => {
+    const disponibili = getOperatoriAttivi().filter(op => {
       if (c.skills.length>0 && !c.skills.every(s => op.skills.includes(s))) return false;
       if (attReq.length>0 && !attReq.every(a => (op.attestati||[]).includes(a))) return false;
       if (state.assegnazioni.some(a => a.operatore_id === op.id && a.commessa_id === c.id)) return false;
@@ -3761,7 +3806,7 @@ function renderGap() {
     // candidati alla formazione: skill OK + sat < 0.85 ma manca uno o più attestati
     const candidatiFormazione = [];
     if (attReq.length > 0) {
-      state.operatori.forEach(op => {
+      getOperatoriAttivi().forEach(op => {
         if (c.skills.length>0 && !c.skills.every(s => op.skills.includes(s))) return;
         if (state.assegnazioni.some(a => a.operatore_id === op.id && a.commessa_id === c.id)) return;
         if (operatoreSatPeriodo(op, mesiC) >= 0.85) return;
@@ -3916,7 +3961,7 @@ function exportXlsx() {
 
   // --- Foglio 2: OPERATORI ---
   const headerOp = ['OPERATORE', ...SKILLS];
-  const rowsOp = state.operatori
+  const rowsOp = getOperatoriAttivi()
     .filter(op => !op.orphan) // le 4 risorse "orphan" non erano nel foglio OPERATORI originale
     .map(op => {
       const row = [op.nome_breve || op.nome_esteso];
@@ -3931,7 +3976,7 @@ function exportXlsx() {
   // ricalcolo saturazione per riga 3
   const allocByMese = new Array(12).fill(0);
   state.staffing.forEach(r => r.mesi.forEach((v, i) => { allocByMese[i] += Number(v) || 0; }));
-  const nOp = state.operatori.length;
+  const nOp = getOperatoriAttivi().length;
   const satRow = allocByMese.map((v, i) => {
     const gl = INITIAL_DATA.giorni_lavorativi[i] || 20;
     return nOp > 0 && gl > 0 ? v / (gl * nOp) : 0;
@@ -5064,7 +5109,7 @@ function apriDettaglioMeseCommessa(ev, commessaEnc, meseIdx) {
       candidati.push({ nome, sat, ggDisp, tipo: 'già_su_commessa', skills, matchSkill, skillMancanti });
     });
     // Dal pool, non sulla commessa
-    state.operatori
+    getOperatoriAttivi()
       .filter(op => !state.staffing.some(r => r.commessa === commessaNome && r.risorsa === op.nome_esteso))
       .filter(op => satOpMese(op.nome_esteso) < 0.9)
       .forEach(op => {
@@ -5248,7 +5293,7 @@ function renderAlerts() {
   const errori = [];
 
   // Operatori sovra-allocati (mesi futuri)
-  state.operatori.forEach(op => {
+  getOperatoriAttivi().forEach(op => {
     const mesiKO = [];
     for (let i = mc; i < 12; i++) {
       const gl = INITIAL_DATA.giorni_lavorativi[i] || 20;
@@ -5882,7 +5927,7 @@ function pwFerieRender() {
   const gridEl = document.getElementById('pw-ferie-grid');
   if (!gridEl) return;
 
-  const allOps = state.operatori.map(o => o.nome_esteso || o.nome).filter(Boolean).sort();
+  const allOps = getOperatoriAttivi().map(o => o.nome_esteso || o.nome).filter(Boolean).sort();
   const cols = `150px repeat(6, 1fr)`;
 
   // Header
@@ -5968,7 +6013,7 @@ async function pwToggleFeria(cb) {
   }
   await pwFerieSave();
   // Aggiorna summary senza re-render completo
-  const allOps = state.operatori.map(o => o.nome_esteso || o.nome).filter(Boolean).sort();
+  const allOps = getOperatoriAttivi().map(o => o.nome_esteso || o.nome).filter(Boolean).sort();
   const monday = isoWeekToMonday(pwAnno, pwWeek);
   const days = [];
   for (let i = 0; i < 6; i++) {
@@ -6049,7 +6094,7 @@ function pwGetOperatoriPerCommessa(commessaNome) {
   // Se la commessa non ha righe staffing (es. promossa da pipeline o creata manualmente)
   // restituisci tutti gli operatori del sistema come fallback
   if (nomi.size === 0) {
-    state.operatori
+    getOperatoriAttivi()
       .map(o => o.nome_esteso || o.nome)
       .filter(Boolean)
       .forEach(n => nomi.add(n));
@@ -6081,8 +6126,8 @@ function pwOpenOpModal(cidx, sidx, oidx) {
   state.staffing.filter(r => r.commessa === commessa && (Number(r.mesi[mese]) || 0) > 0)
     .forEach(r => fromStaffing.add(r.risorsa));
 
-  // Tutti gli operatori registrati nel sistema (nome_esteso o nome)
-  const fromOperatori = state.operatori.map(o => o.nome_esteso || o.nome).filter(Boolean);
+  // Tutti gli operatori attivi nel sistema (nome_esteso o nome)
+  const fromOperatori = getOperatoriAttivi().map(o => o.nome_esteso || o.nome).filter(Boolean);
 
   // Lista finale: prima quelli della commessa, poi gli altri — tutti deduplicati
   const tuttiNomi = [...new Set([...fromStaffing, ...fromOperatori])].sort();
@@ -6207,9 +6252,12 @@ function pwRenderOpDropdown(cidx, sidx, oidx, nomeCorrente) {
   const stato      = nomeCorrente ? pwStatoOperatore(nomeCorrente, cidx) : '';
   const statoClass = nomeCorrente ? `stato-${stato}` : '';
   const label      = nomeCorrente || '— scegli —';
+  const exBadge    = nomeCorrente && isOperatoreLicenziato(nomeCorrente)
+    ? '<span style="font-size:9px;font-weight:700;background:#fee2e2;color:#ef4444;border-radius:3px;padding:1px 4px;margin-left:4px;">ex</span>'
+    : '';
   return `<button class="op-trigger-btn ${statoClass}"
     onclick="pwOpenOpModal(${cidx}, ${sidx}, ${oidx})">
-    <span class="op-trigger-label">${label}</span>
+    <span class="op-trigger-label">${label}${exBadge}</span>
     <span class="op-trigger-arrow">▾</span>
   </button>`;
 }
@@ -6405,7 +6453,7 @@ function pwRenderStats() {
 
   const data   = pwGetWeekData();
   const fw     = pwGetFerieWeek();
-  const allOps = state.operatori.map(o => o.nome_esteso || o.nome).filter(Boolean);
+  const allOps = getOperatoriAttivi().map(o => o.nome_esteso || o.nome).filter(Boolean);
 
   // Operatori in ferie (almeno 1 giorno) + giorni
   const DAY_ABBR = ['Lun','Mar','Mer','Gio','Ven','Sab'];
@@ -6956,7 +7004,7 @@ function pwControlloRender() {
           html += `<tr>
       <td>${esc(bl.commessa)}</td>
       <td>${esc(sq.nome)}</td>
-      <td><strong>${esc(op.nome)}</strong></td>
+      <td><strong>${esc(op.nome)}</strong>${isOperatoreLicenziato(op.nome) ? '<span style="font-size:9px;font-weight:700;background:#fee2e2;color:#ef4444;border-radius:3px;padding:1px 4px;margin-left:4px;">ex</span>' : ''}</td>
       <td>${DAY_NAMES[g]}</td>
       <td>${dates[g]}</td>
       <td style="color:#64748b">${esc(op.cantiere)}</td>
