@@ -65,6 +65,7 @@ UPDATE auth.users SET raw_user_meta_data = raw_user_meta_data || '{"role": "admi
 
 | Versione | Data | Modifiche |
 |---|---|---|
+| `v18.12.0` | 2026-07-09 | Controllo Produzione: esclusi operatori senza cantiere o in ferie per quel giorno |
 | `v18.6.7` | 2026-06-26 | Fix selettore Week/Anno non si aggiornava nelle tab Ferie e Mappa |
 | `v18.6.6` | 2026-06-26 | Fix header dates aggiornato in tutte le tab al cambio settimana |
 | `v18.6.5` | 2026-06-26 | Fix persistenza dati pwData/pwFerie (push 500ms), fix griglia prev/next, label week in mappa |
@@ -94,4 +95,4 @@ UPDATE auth.users SET raw_user_meta_data = raw_user_meta_data || '{"role": "admi
 
 ---
 
-*Versione attuale: **v18.6.7** — Michele Marchetti*
+*Versione attuale: **v18.12.0** — Michele Marchetti*
