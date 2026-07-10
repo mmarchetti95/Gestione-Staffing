@@ -636,7 +636,7 @@
         <select id="anno-selector" class="text-sm border-none font-semibold focus:outline-none cursor-pointer" style="color:#f9fafb;background:#1a1a1a;border-radius:4px;padding:1px 4px;"></select>
       </div>
       <div class="text-xs pl-2" style="border-left:1px solid #444;color:#9ca3af;">
-        <span class="font-medium" style="color:#00b8b0;">v18.13.0</span> · Michele Marchetti
+        <span class="font-medium" style="color:#00b8b0;">v18.14.0</span> · Michele Marchetti
       </div>
     </div>
   </div>
@@ -5456,27 +5456,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   const mainEl   = document.querySelector('main');
   const weeklyEl = document.getElementById('screen-weekly');
 
-  function switchScreen(screen) {
-    const navDash   = document.getElementById('nav-dashboard');
-    const navWeekly = document.getElementById('nav-weekly');
-    const btnPres   = document.getElementById('btn-presentation');
-    if (screen === 'weekly') {
-      mainEl.classList.add('hidden');
-      weeklyEl.classList.remove('hidden');
-      navDash.className   = 'px-3 py-1.5 text-sm font-medium text-slate-600 hover:bg-slate-50';
-      navWeekly.className = 'px-3 py-1.5 text-sm font-medium bg-teal-600 text-white';
-      // Nascondi modalità presentazione nella pianificazione
-      if (btnPres) btnPres.style.visibility = 'hidden';
-      pwRender();
-    } else {
-      weeklyEl.classList.add('hidden');
-      mainEl.classList.remove('hidden');
-      navDash.className   = 'px-3 py-1.5 text-sm font-medium bg-teal-600 text-white';
-      navWeekly.className = 'px-3 py-1.5 text-sm font-medium text-slate-600 hover:bg-slate-50';
-      // Mostra modalità presentazione nel dashboard
-      if (btnPres) btnPres.style.visibility = 'visible';
-    }
-  }
+  // switchScreen è definita globalmente più avanti
   document.getElementById('nav-dashboard').onclick = () => switchScreen('dashboard');
   document.getElementById('nav-weekly').onclick = () => switchScreen('weekly');
 
@@ -6832,17 +6812,20 @@ function switchScreen(screen) {
   const weeklyEl = document.getElementById('screen-weekly');
   const navDash  = document.getElementById('nav-dashboard');
   const navWk    = document.getElementById('nav-weekly');
+  const btnPres  = document.getElementById('btn-presentation');
   if (screen === 'weekly') {
     mainEl.classList.add('hidden');
     weeklyEl.classList.remove('hidden');
     navDash.className = 'px-3 py-1.5 text-sm font-medium text-slate-600 hover:bg-slate-50';
     navWk.className   = 'px-3 py-1.5 text-sm font-medium bg-teal-600 text-white';
+    if (btnPres) btnPres.style.visibility = 'hidden';
     pwLoad().then(() => pwSwitchTab(typeof _pwActiveTab !== 'undefined' ? _pwActiveTab : 'griglia'));
   } else {
     weeklyEl.classList.add('hidden');
     mainEl.classList.remove('hidden');
     navDash.className = 'px-3 py-1.5 text-sm font-medium bg-teal-600 text-white';
     navWk.className   = 'px-3 py-1.5 text-sm font-medium text-slate-600 hover:bg-slate-50';
+    if (btnPres) btnPres.style.visibility = 'visible';
   }
 }
 
