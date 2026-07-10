@@ -65,6 +65,7 @@ UPDATE auth.users SET raw_user_meta_data = raw_user_meta_data || '{"role": "admi
 
 | Versione | Data | Modifiche |
 |---|---|---|
+| `v18.17.0` | 2026-07-10 | Rimosso INITIAL_DATA hardcoded (52KB→0.5KB): fallback minimale, dati reali da Supabase |
 | `v18.16.0` | 2026-07-10 | Supabase Realtime: auto-pull in tempo reale quando un altro utente salva |
 | `v18.15.0` | 2026-07-10 | Sync multi-dominio: stato suddiviso in core/planning/ferie con conflict detection granulare + migrazione automatica |
 | `v18.14.0` | 2026-07-10 | Rimossa switchScreen duplicata; unificata funzione globale con gestione btn-presentation |
