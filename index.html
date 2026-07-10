@@ -636,7 +636,7 @@
         <select id="anno-selector" class="text-sm border-none font-semibold focus:outline-none cursor-pointer" style="color:#f9fafb;background:#1a1a1a;border-radius:4px;padding:1px 4px;"></select>
       </div>
       <div class="text-xs pl-2" style="border-left:1px solid #444;color:#9ca3af;">
-        <span class="font-medium" style="color:#00b8b0;">v18.12.0</span> · Michele Marchetti
+        <span class="font-medium" style="color:#00b8b0;">v18.13.0</span> · Michele Marchetti
       </div>
     </div>
   </div>
@@ -1589,7 +1589,7 @@ async function saveState(logAction, logDetails, immediate) {
   }
 }
 async function resetAll() {
-  if (!confirm('Reset completo: tutte le modifiche manuali andranno perse. Procedere?')) return;
+  if (!await showConfirmAsync('Reset completo: tutte le modifiche manuali andranno perse. Procedere?', 'Reset')) return;
   if (hasStorage) {
     for (const k of ['commesse_pipeline','operatori','assegnazioni','commesse_attive_extra','staffing_modificato','commesse_chiuse','commesse_attive_meta','commesse_escluse']) {
       try { await window.storage.delete(k); } catch{}
@@ -2701,7 +2701,7 @@ async function assegnaOperatore(commessaId, operatoreId) {
   if (!c || !op) return;
   // già assegnato?
   if (state.assegnazioni.some(a => a.commessa_id === commessaId && a.operatore_id === operatoreId)) {
-    alert('Operatore già assegnato a questa commessa.');
+    showAlertModal('Operatore già assegnato a questa commessa.');
     return;
   }
   // verifica skill
@@ -2724,7 +2724,7 @@ async function assegnaOperatore(commessaId, operatoreId) {
     // flash
     const card = document.querySelector(`[data-cid="${commessaId}"]`);
     if (card) { card.classList.add('flash-red'); setTimeout(()=>card.classList.remove('flash-red'),1200); }
-    if (!confirm(msg.join('\n'))) return;
+    if (!await showConfirmAsync(msg.join('\n'))) return;
     forzata = true;
   }
 
@@ -2747,7 +2747,7 @@ async function spostaAssegnazione(cidFrom, oid, cidTo) {
 async function eliminaCommessaChiusa(idx) {
   const cc = state.commesse_chiuse[idx];
   if (!cc) return;
-  if (!confirm(`Eliminare definitivamente "${cc.progetto}" dall'archivio?\n\nL'operazione è irreversibile.`)) return;
+  if (!await showConfirmAsync(`Eliminare definitivamente "${cc.progetto}" dall'archivio?\n\nL'operazione è irreversibile.`, 'Elimina definitivamente')) return;
   const nome = cc.progetto;
   state.commesse_chiuse.splice(idx, 1);
   // NOTA: non si tocca state.commesse_escluse qui — l'eliminazione dall'archivio
@@ -2857,7 +2857,7 @@ async function rimuoviRigaStaffing(idx) {
   const r = state.staffing[idx];
   if (!r) return;
   const tot = r.mesi.reduce((s,v) => s + (Number(v)||0), 0);
-  if (!confirm(`Rimuovere l'allocazione di "${r.risorsa}" su "${r.commessa}" (${tot} gg-uomo totali)?\n\nL'operatore tornerà disponibile per i mesi interessati.`)) return;
+  if (!await showConfirmAsync(`Rimuovere l'allocazione di "${r.risorsa}" su "${r.commessa}" (${tot} gg-uomo totali)?\n\nL'operatore tornerà disponibile per i mesi interessati.`, 'Rimuovi allocazione')) return;
   state.staffing.splice(idx, 1);
   ricalcolaAllocOperatori();
   await saveState();
@@ -3028,7 +3028,7 @@ function openAddAllocazioneModal(commessaNome, opts = {}) {
     const da = parseInt(qfDaEl.value);
     const a  = parseInt(qfAEl.value);
     const gg = parseFloat(document.getElementById('qf-gg').value) || 0;
-    if (da > a) { alert('Il mese di inizio deve essere prima del mese di fine.'); return; }
+    if (da > a) { showAlertModal('Il mese di inizio deve essere prima del mese di fine.'); return; }
     inputs.forEach(inp => {
       const i = parseInt(inp.dataset.mese);
       if (i >= da && i <= a) inp.value = gg;
@@ -3038,7 +3038,7 @@ function openAddAllocazioneModal(commessaNome, opts = {}) {
   document.getElementById('qf-full').onclick = () => {
     const da = parseInt(qfDaEl.value);
     const a  = parseInt(qfAEl.value);
-    if (da > a) { alert('Il mese di inizio deve essere prima del mese di fine.'); return; }
+    if (da > a) { showAlertModal('Il mese di inizio deve essere prima del mese di fine.'); return; }
     inputs.forEach(inp => {
       const i = parseInt(inp.dataset.mese);
       if (i >= da && i <= a) inp.value = INITIAL_DATA.giorni_lavorativi[i] || 20;
@@ -3051,7 +3051,7 @@ function openAddAllocazioneModal(commessaNome, opts = {}) {
     if (!op) return;
     const mesi = new Array(12).fill(0);
     inputs.forEach(inp => { mesi[parseInt(inp.dataset.mese)] = parseFloat(inp.value) || 0; });
-    if (mesi.every(v => v === 0)) { alert('Specifica almeno un giorno-uomo in un mese.'); return; }
+    if (mesi.every(v => v === 0)) { showAlertModal('Specifica almeno un giorno-uomo in un mese.'); return; }
     // warning skill e attestati mancanti
     const skillMancanti = skillReq.filter(s => !op.skills.includes(s));
     const attMancanti = attReq.filter(s => !(op.attestati||[]).includes(s));
@@ -3060,7 +3060,7 @@ function openAddAllocazioneModal(commessaNome, opts = {}) {
       if (skillMancanti.length > 0) msg.push(`⚠ Skill mancanti: ${skillMancanti.join(', ')}`);
       if (attMancanti.length > 0) msg.push(`⚠ Attestati mancanti: ${attMancanti.join(', ')}`);
       msg.push('\nConfermare comunque l\'allocazione?');
-      if (!confirm(msg.join('\n'))) return;
+      if (!await showConfirmAsync(msg.join('\n'))) return;
     }
     // warning saturazione: controlla che nessun mese vada oltre giorni lavorativi
     const overload = [];
@@ -3072,7 +3072,7 @@ function openAddAllocazioneModal(commessaNome, opts = {}) {
       }
     }
     if (overload.length > 0) {
-      if (!confirm(`⚠ L'operatore risulterà sovrallocato in:\n\n${overload.join('\n')}\n\nConfermare comunque?`)) return;
+      if (!await showConfirmAsync(`⚠ L'operatore risulterà sovrallocato in:\n\n${overload.join('\n')}\n\nConfermare comunque?`)) return;
     }
 
     // Inserisco la riga in state.staffing. Se esiste già una riga per questa coppia (risorsa, commessa) la mergio
@@ -3414,7 +3414,7 @@ function openCommessaModal(id) {
       skills: [...document.querySelectorAll('.m-skill:checked')].map(x => x.value),
       attestati_richiesti: [...document.querySelectorAll('.m-att:checked')].map(x => x.value),
     };
-    if (!newC.progetto || !newC.cliente) { alert('Cliente e Progetto sono obbligatori.'); return; }
+    if (!newC.progetto || !newC.cliente) { showAlertModal('Cliente e Progetto sono obbligatori.'); return; }
     if (id) { Object.assign(state.pipeline.find(p => p.id === id), newC); await saveState('Modifica commessa pipeline', {commessa: newC.progetto, cliente: newC.cliente}); }
     else { state.pipeline.push(newC); await saveState('Nuova commessa pipeline', {commessa: newC.progetto, cliente: newC.cliente}); }
     renderAll(); closeModal();
@@ -3597,7 +3597,7 @@ function openFabbisognoModal(commessaId, commessaNome) {
 }
 
 async function deleteCommessa(id) {
-  if (!confirm('Eliminare la commessa? Le assegnazioni verranno rimosse.')) return;
+  if (!await showConfirmAsync('Eliminare la commessa? Le assegnazioni verranno rimosse.', 'Elimina commessa')) return;
   const delC = state.pipeline.find(p => p.id === id);
   state.pipeline = state.pipeline.filter(p => p.id !== id);
   state.assegnazioni = state.assegnazioni.filter(a => a.commessa_id !== id);
@@ -3607,7 +3607,7 @@ async function deleteCommessa(id) {
 async function promuoviCommessa(id) {
   const c = state.pipeline.find(p => p.id === id);
   if (!c) return;
-  if (!confirm(`Promuovere "${c.progetto}" a commessa attiva?`)) return;
+  if (!await showConfirmAsync(`Promuovere "${c.progetto}" a commessa attiva?`, 'Promuovi')) return;
 
   const nuovaAttiva = { id: 'ca_'+Date.now(), progetto: c.progetto, cliente: c.cliente };
   state.commesse_attive.push(nuovaAttiva);
@@ -3674,7 +3674,7 @@ function openOperatoreModal(id) {
 
   document.getElementById('mo-save').onclick = async () => {
     const nomeEsteso = document.getElementById('mo-esteso').value.trim();
-    if (!nomeEsteso) { alert('Nome obbligatorio.'); return; }
+    if (!nomeEsteso) { showAlertModal('Nome obbligatorio.'); return; }
     const skills = [...document.querySelectorAll('.mo-skill:checked')].map(x => x.value);
     const attestati = [...document.querySelectorAll('.mo-att:checked')].map(x => x.value);
     if (id) { Object.assign(op, { nome_esteso: nomeEsteso, skills, attestati }); await saveState('Modifica operatore', {operatore: nomeEsteso}); }
@@ -3689,6 +3689,26 @@ function showConfirm(htmlMsg, onConfirm) {
   document.getElementById('sc-cancel').onclick = () => closeModal();
   document.getElementById('sc-confirm').onclick = () => { closeModal(); onConfirm(); };
   root.querySelector('.modal-backdrop').addEventListener('click', e => { if (e.target.classList.contains('modal-backdrop')) closeModal(); });
+}
+
+function showAlertModal(msg) {
+  const root = document.getElementById('modal-root');
+  const safeMsg = typeof msg === 'string' ? esc(msg).replace(/\n/g, '<br>') : String(msg);
+  root.innerHTML = '<div class="modal-backdrop"><div class="bg-white rounded-lg shadow-xl w-full max-w-md mx-4 p-5"><div class="mb-4 whitespace-pre-line">' + safeMsg + '</div><div class="flex justify-end"><button id="sa-ok" class="px-4 py-1.5 text-sm bg-teal-600 text-white rounded hover:bg-teal-700">OK</button></div></div></div>';
+  document.getElementById('sa-ok').onclick = () => closeModal();
+  root.querySelector('.modal-backdrop').addEventListener('click', e => { if (e.target.classList.contains('modal-backdrop')) closeModal(); });
+}
+
+function showConfirmAsync(msg, btnLabel) {
+  return new Promise(resolve => {
+    const root = document.getElementById('modal-root');
+    const safeMsg = typeof msg === 'string' ? esc(msg).replace(/\n/g, '<br>') : String(msg);
+    const label = btnLabel || 'Conferma';
+    root.innerHTML = '<div class="modal-backdrop"><div class="bg-white rounded-lg shadow-xl w-full max-w-md mx-4 p-5"><div class="mb-4 whitespace-pre-line">' + safeMsg + '</div><div class="flex justify-end gap-2"><button id="sca-cancel" class="px-3 py-1.5 text-sm border border-slate-300 rounded hover:bg-slate-50">Annulla</button><button id="sca-confirm" class="px-3 py-1.5 text-sm bg-red-600 text-white rounded hover:bg-red-700">' + esc(label) + '</button></div></div></div>';
+    document.getElementById('sca-cancel').onclick = () => { closeModal(); resolve(false); };
+    document.getElementById('sca-confirm').onclick = () => { closeModal(); resolve(true); };
+    root.querySelector('.modal-backdrop').addEventListener('click', e => { if (e.target.classList.contains('modal-backdrop')) { closeModal(); resolve(false); } });
+  });
 }
 
 function getOperatoriAttivi() {
@@ -3953,7 +3973,7 @@ function renderRiconciliazione() {
 
 /* ===================== EXPORT XLSX ===================== */
 function exportXlsx() {
-  if (typeof XLSX === 'undefined') { alert('Libreria XLSX non caricata. Verifica la connessione internet e ricarica la pagina.'); return; }
+  if (typeof XLSX === 'undefined') { showAlertModal('Libreria XLSX non caricata. Verifica la connessione internet e ricarica la pagina.'); return; }
 
   const wb = XLSX.utils.book_new();
 
@@ -4367,8 +4387,8 @@ function parseDateCell(v) {
 }
 
 async function importXlsx(file) {
-  if (typeof XLSX === 'undefined') { alert('Libreria XLSX non caricata. Verifica la connessione internet e ricarica la pagina.'); return; }
-  if (!confirm(`Importare "${file.name}"?\n\nLo stato corrente (commesse, operatori, assegnazioni manuali, modifiche allo staffing) verrà sostituito con i dati del file.`)) return;
+  if (typeof XLSX === 'undefined') { showAlertModal('Libreria XLSX non caricata. Verifica la connessione internet e ricarica la pagina.'); return; }
+  if (!await showConfirmAsync(`Importare "${file.name}"?\n\nLo stato corrente (commesse, operatori, assegnazioni manuali, modifiche allo staffing) verrà sostituito con i dati del file.`, 'Importa')) return;
 
   try {
     const buf = await file.arrayBuffer();
@@ -4418,10 +4438,10 @@ async function importXlsx(file) {
     msg += `• ${parsed.staffing.length} righe staffing\n`;
     msg += `• ${parsed.commesse_attive.length} commesse attive (dallo staffing)\n`;
     if (reconWarn > 0) msg += `\n⚠ ${reconWarn} riconciliazioni nomi da verificare nella sezione "Riconciliazione nomi operatori"`;
-    alert(msg);
+    showAlertModal(msg);
   } catch (err) {
     console.error(err);
-    alert(`Errore durante l'importazione:\n\n${err.message}\n\nVerifica che il file abbia la stessa struttura del Pipeline_Commerciale (fogli "Elenco commesse NEW", "OPERATORI", "Staffing attuale").`);
+    showAlertModal(`Errore durante l'importazione:\n\n${err.message}\n\nVerifica che il file abbia la stessa struttura del Pipeline_Commerciale (fogli "Elenco commesse NEW", "OPERATORI", "Staffing attuale").`);
   }
 }
 
@@ -4623,7 +4643,7 @@ function renderGantt() {
         const righe = state.staffing.filter(r => r.commessa === nome && Number(r.mesi[mIdx]) > 0);
         if (!righe.length) return;
         const txt = nome + ' — ' + MESI_LONG[mIdx] + '\n\n' + righe.map(r => '• ' + r.risorsa + ': ' + r.mesi[mIdx] + ' gg').join('\n');
-        alert(txt);
+        showAlertModal(txt);
       }
     });
   });
@@ -4740,7 +4760,7 @@ function openCommessaAttivaModal(nome) {
     setTimeout(() => openFabbisognoModal(null, n), 50);
   };
   document.getElementById('ma-reset').onclick = async () => {
-    if(!confirm('Rimuovere i metadati salvati?')) return;
+    if(!await showConfirmAsync('Rimuovere i metadati salvati?', 'Rimuovi')) return;
     delete state.commesse_attive_meta[nome]; await saveState(); renderAll(); closeModal();
   };
   document.getElementById('ma-save').onclick = async () => {
@@ -4748,7 +4768,7 @@ function openCommessaAttivaModal(nome) {
     const risDichiarate = risRaw !== '' ? parseInt(risRaw) : null;
     // Validazione: se specificato deve essere >= 0
     if (risDichiarate !== null && (isNaN(risDichiarate) || risDichiarate < 0)) {
-      alert('Il numero di risorse necessarie deve essere un numero intero ≥ 0, oppure lascialo vuoto per la stima automatica.');
+      showAlertModal('Il numero di risorse necessarie deve essere un numero intero ≥ 0, oppure lascialo vuoto per la stima automatica.');
       return;
     }
     state.commesse_attive_meta[nome] = {
@@ -4773,7 +4793,7 @@ async function chiudiCommessa(nome) {
   const msg = righe.length
     ? `Chiudere "${nome}"?\n\u2022 ${risorse.length} risorse liberate\n\u2022 ${righe.length} righe archiviate (${tot} gg-uomo)\n\nRipristinabile dall'archivio.`
     : `Chiudere "${nome}"?\n(Nessuna allocazione staffing)\n\nRipristinabile dall'archivio.`;
-  if (!confirm(msg)) return;
+  if (!await showConfirmAsync(msg)) return;
   state.commesse_chiuse.push({
     progetto: nome,
     dataChiusura: new Date().toISOString().slice(0,10),
@@ -4803,7 +4823,7 @@ async function chiudiCommessa(nome) {
 async function ripristinaCommessa(idx) {
   const cc = state.commesse_chiuse[idx];
   if (!cc) return;
-  if (!confirm(`Ripristinare "${cc.progetto}"?\n${cc.staffingArchiviato.length} righe staffing reinserite.`)) return;
+  if (!await showConfirmAsync(`Ripristinare "${cc.progetto}"?\n${cc.staffingArchiviato.length} righe staffing reinserite.`, 'Ripristina')) return;
   cc.staffingArchiviato.forEach(r => state.staffing.push(JSON.parse(JSON.stringify(r))));
   state.commesse_chiuse.splice(idx,1);
   // Rimuove anche dalla lista di esclusione permanente: ripristinare significa
@@ -4867,15 +4887,8 @@ async function _commitInlineCell(inp) {
 
   // Validazione: > giorni lavorativi = alert ma si può forzare
   if (nuovoValore > gl) {
-    const conferma = confirm(
-      `⚠ Attenzione
-
-${nuovoValore} giorni-uomo supera i ${gl} giorni lavorativi di ${MESI_LONG[meseIdx]}.
-
-` +
-      `Questo porterà l'operatore oltre il 100% di saturazione per quel mese.
-
-Confermare comunque?`
+    const conferma = await showConfirmAsync(
+      `⚠ Attenzione\n${nuovoValore} giorni-uomo supera i ${gl} giorni lavorativi di ${MESI_LONG[meseIdx]}.\nQuesto porterà l'operatore oltre il 100% di saturazione per quel mese.\nConfermare comunque?`
     );
     if (!conferma) {
       // ripristina il valore precedente
@@ -4899,7 +4912,7 @@ Confermare comunque?`
 
   // Se tutta la riga è a zero, la rimuovo
   if (r.mesi.every(v => !v)) {
-    const confDel = confirm(`Tutti i giorni di "${r.risorsa}" su "${r.commessa}" sono ora 0.\nRimuovere l'intera riga?`);
+    const confDel = await showConfirmAsync(`Tutti i giorni di "${r.risorsa}" su "${r.commessa}" sono ora 0.\nRimuovere l'intera riga?`, 'Rimuovi riga');
     if (confDel) {
       state.staffing.splice(staffingIdx, 1);
       ricalcolaAllocOperatori();
@@ -5813,7 +5826,7 @@ function pwGeneraMail() {
       const ta = document.getElementById('mail-testo');
       ta.select();
       document.execCommand('copy');
-      alert('Testo selezionato — premi Ctrl+C per copiare.');
+      showAlertModal('Testo selezionato — premi Ctrl+C per copiare.');
     }
   };
 }
@@ -6713,7 +6726,7 @@ async function pwRemoveSquadra(btn) {
   const data = pwGetWeekData();
   if (!data[cidx]) return;
   if (data[cidx].squadre.length <= 1) {
-    if (!confirm('Rimuovere l\'unica squadra? La commessa rimarrà senza squadre.')) return;
+    if (!await showConfirmAsync('Rimuovere l\'unica squadra? La commessa rimarrà senza squadre.', 'Rimuovi squadra')) return;
   }
   data[cidx].squadre.splice(parseInt(sidx), 1);
   await pwSave(); pwRender();
@@ -6731,14 +6744,14 @@ async function pwRemoveOp(btn) {
   const data = pwGetWeekData();
   const sq = data[cidx]?.squadre[sidx];
   if (!sq) return;
-  if (sq.operatori.length <= 1) { alert('Ogni squadra deve avere almeno un operatore.'); return; }
+  if (sq.operatori.length <= 1) { showAlertModal('Ogni squadra deve avere almeno un operatore.'); return; }
   sq.operatori.splice(parseInt(oidx), 1);
   await pwSave(); pwRender();
 }
 
 async function pwRemoveCommessa(btn) {
   const cidx = parseInt(btn.dataset.cidx);
-  if (!confirm('Rimuovere questa commessa dalla pianificazione della settimana?')) return;
+  if (!await showConfirmAsync('Rimuovere questa commessa dalla pianificazione della settimana?', 'Rimuovi commessa')) return;
   const data = pwGetWeekData();
   data.splice(cidx, 1);
   await pwSave(); pwRender();
@@ -7222,7 +7235,7 @@ async function pwControlloSaveCell(commessa, squadra, operatore, giornoIdx, data
 }
 
 function pwControlloExport() {
-  if (typeof XLSX === 'undefined') { alert('Libreria XLSX non disponibile.'); return; }
+  if (typeof XLSX === 'undefined') { showAlertModal('Libreria XLSX non disponibile.'); return; }
   const data    = pwGetWeekData();
   const monday  = isoWeekToMonday(pwAnno, pwWeek);
   const DAY_NAMES = ['Lun','Mar','Mer','Gio','Ven','Sab'];
