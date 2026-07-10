@@ -636,7 +636,7 @@
         <select id="anno-selector" class="text-sm border-none font-semibold focus:outline-none cursor-pointer" style="color:#f9fafb;background:#1a1a1a;border-radius:4px;padding:1px 4px;"></select>
       </div>
       <div class="text-xs pl-2" style="border-left:1px solid #444;color:#9ca3af;">
-        <span class="font-medium" style="color:#00b8b0;">v18.17.0</span> · Michele Marchetti
+        <span class="font-medium" style="color:#00b8b0;">v18.18.0</span> · Michele Marchetti
       </div>
     </div>
   </div>
@@ -2174,7 +2174,7 @@ function renderOperatori() {
       <div class="op-card bg-white border border-slate-200 rounded-md p-2 ${isSaturo?'saturo':''}" data-op-id="${op.id}" draggable="true">
         <div class="flex items-center justify-between mb-1">
           <div class="flex items-center gap-2">
-            <div class="font-medium text-sm text-slate-900">${op.nome_esteso}</div>
+            <div class="font-medium text-sm text-slate-900">${esc(op.nome_esteso)}</div>
             ${isSaturo ? '<span class="text-[9px] bg-red-100 text-red-700 px-1 rounded">SATURO</span>' : ''}
             ${op.orphan ? '<span class="text-[9px] bg-slate-100 text-slate-600 px-1 rounded" title="Non presente nel foglio OPERATORI">no skill matrix</span>' : ''}
           </div>
@@ -2298,8 +2298,8 @@ function renderVistaOperatore(opId) {
         }).join('');
         return `<div class="border border-slate-200 rounded p-2 mb-2">
           <div class="flex items-center justify-between mb-1">
-            <div class="font-medium text-xs text-slate-800">${ca.nome}</div>
-            <div class="text-[10px] text-slate-500">${ca.totGG} gg-uomo${meta.cliente?' · '+meta.cliente:''}</div>
+            <div class="font-medium text-xs text-slate-800">${esc(ca.nome)}</div>
+            <div class="text-[10px] text-slate-500">${ca.totGG} gg-uomo${meta.cliente?' · '+esc(meta.cliente):''}</div>
           </div>
           <div class="overflow-x-auto">
             <table class="w-full text-[9px]">
@@ -2322,8 +2322,8 @@ function renderVistaOperatore(opId) {
         const mesiC = monthsBetween(c.inizio, c.fine);
         return `<div class="border border-teal-100 bg-teal-50 rounded p-2 mb-1.5">
           <div class="flex items-center justify-between">
-            <div class="font-medium text-xs text-slate-800">${c.progetto}</div>
-            <div class="text-[10px] text-slate-500">${c.cliente} · ${fmtDate(c.inizio)}→${fmtDate(c.fine)}</div>
+            <div class="font-medium text-xs text-slate-800">${esc(c.progetto)}</div>
+            <div class="text-[10px] text-slate-500">${esc(c.cliente)} · ${fmtDate(c.inizio)}→${fmtDate(c.fine)}</div>
           </div>
           <div class="flex flex-wrap gap-0.5 mt-1">
             ${mesiC.map(i => `<span class="text-[9px] bg-teal-100 text-teal-700 px-1.5 py-0.5 rounded">${MESI[i]}</span>`).join('')}
@@ -2339,7 +2339,7 @@ function renderVistaOperatore(opId) {
       <!-- Header operatore -->
       <div class="flex items-start justify-between">
         <div>
-          <div class="font-semibold text-slate-900 text-sm">${op.nome_esteso}</div>
+          <div class="font-semibold text-slate-900 text-sm">${esc(op.nome_esteso)}</div>
           <div class="mt-0.5">${op.skills.map(s=>`<span class="skill-badge">${s}</span>`).join('') || '<span class="text-[10px] text-slate-400">nessuna skill</span>'}</div>
           <div class="text-[10px] text-slate-500 mt-0.5">Sat. 3 mesi: <b>${(sat3*100).toFixed(0)}%</b></div>
         </div>
@@ -2543,7 +2543,7 @@ function renderCommessaPipelineCard(c) {
       }).join('');
       return `
         <tr class="border-b border-slate-100 hover:bg-slate-50">
-          <td class="p-0.5 text-[10px]">${r.risorsa}${isOperatoreLicenziato(r.risorsa) ? '<span class="text-[9px] font-semibold bg-red-100 text-red-400 rounded px-1 ml-1">ex</span>' : ''}</td>
+          <td class="p-0.5 text-[10px]">${esc(r.risorsa)}${isOperatoreLicenziato(r.risorsa) ? '<span class="text-[9px] font-semibold bg-red-100 text-red-400 rounded px-1 ml-1">ex</span>' : ''}</td>
           ${mesiHtml}
           <td class="text-center text-[10px] font-medium text-slate-600 px-0.5">${ggTot}</td>
           <td class="p-0.5 text-right">
@@ -2573,11 +2573,11 @@ function renderCommessaPipelineCard(c) {
       <div class="flex items-start justify-between gap-2 mb-2">
         <div class="flex-1 min-w-0">
           <div class="flex items-center gap-2 mb-1">
-            <span class="industry-pill">${c.industry || '—'}</span>
+            <span class="industry-pill">${esc(c.industry || '—')}</span>
             ${pct >= 100 ? '<span class="text-[10px] bg-emerald-100 text-emerald-700 px-1.5 py-0.5 rounded">✓ coperta</span>':''}
           </div>
-          <div class="font-medium text-sm text-slate-900 truncate" title="${c.progetto}">${c.progetto}</div>
-          <div class="text-xs text-slate-500">${c.cliente}</div>
+          <div class="font-medium text-sm text-slate-900 truncate" title="${c.progetto}">${esc(c.progetto)}</div>
+          <div class="text-xs text-slate-500">${esc(c.cliente)}</div>
           <div class="text-[11px] text-slate-500 mt-1">📅 ${fmtDate(c.inizio)} → ${fmtDate(c.fine)}</div>
         </div>
         <div class="flex items-center gap-1">
@@ -2654,7 +2654,7 @@ function renderCommesseAttive() {
           <div class="flex items-start justify-between mb-1 gap-2">
             <div>
               <div class="font-medium text-sm text-slate-900">${k}</div>
-              <div class="text-[11px] text-slate-400">${meta.cliente || ''} · Nessuna risorsa allocata ancora</div>
+              <div class="text-[11px] text-slate-400">${esc(meta.cliente || '')} · Nessuna risorsa allocata ancora</div>
             </div>
             <div class="flex items-center gap-1 flex-shrink-0">
               <button class="edit-attiva text-xs px-2 py-1 bg-white text-slate-700 rounded border border-slate-300 hover:bg-slate-50" data-commessa="${encodeURIComponent(k)}" title="Modifica dettagli">✎</button>
@@ -2689,7 +2689,7 @@ function renderCommesseAttive() {
       }).join('');
       return `
         <tr class="border-b border-slate-100 staffing-row" data-idx="${a._idx}">
-          <td class="p-1 text-xs font-medium text-slate-800 sticky left-0 bg-white">${a.risorsa}${isOperatoreLicenziato(a.risorsa) ? '<span class="text-[9px] font-semibold bg-red-100 text-red-400 rounded px-1 ml-1">ex</span>' : ''}</td>
+          <td class="p-1 text-xs font-medium text-slate-800 sticky left-0 bg-white">${esc(a.risorsa)}${isOperatoreLicenziato(a.risorsa) ? '<span class="text-[9px] font-semibold bg-red-100 text-red-400 rounded px-1 ml-1">ex</span>' : ''}</td>
           ${mesiHtml}
           <td class="text-center text-xs font-semibold text-slate-700 px-1 row-total" data-idx="${a._idx}">${ggTot || '—'}</td>
           <td class="p-1 text-right">
@@ -3183,7 +3183,7 @@ function openEditCellModal(staffingIdx, meseIdx) {
   openModal(`
     <h3 class="font-semibold text-slate-900 mb-2">Modifica allocazione</h3>
     <div class="text-xs text-slate-600 mb-3">
-      <b>${r.risorsa}</b> su <b>${r.commessa}</b><br>
+      <b>${esc(r.risorsa)}</b> su <b>${r.commessa}</b><br>
       ${MESI_LONG[meseIdx]} · Giorni lavorativi disponibili: ${gl}
     </div>
     <label class="block text-xs">
@@ -3269,7 +3269,7 @@ function openOperatoreImpegniModal(opId) {
     const a = state.assegnazioni.find(x => x.operatore_id === op.id && x.commessa_id === c.id);
     return `
       <tr class="border-b border-slate-100 hover:bg-slate-50">
-        <td class="p-1 text-xs"><span class="industry-pill mr-1">pipeline</span>${c.cliente} — ${c.progetto}</td>
+        <td class="p-1 text-xs"><span class="industry-pill mr-1">pipeline</span>${esc(c.cliente)} — ${c.progetto}</td>
         <td class="p-1 text-[10px] text-slate-500">${fmtDate(c.inizio)} → ${fmtDate(c.fine)}</td>
         <td class="p-1 text-[10px] text-slate-500">${c.skills.join(', ')||'—'}</td>
         <td class="p-1 text-[10px] ${a.forzata?'text-red-600 font-medium':'text-slate-500'}">${a.forzata?'forzata':'ok'}</td>
@@ -3567,7 +3567,7 @@ function openFabbisognoModal(commessaId, commessaNome) {
               ? `<span class="text-[9px] bg-purple-100 text-purple-700 px-1 rounded" title="Attestati richiesti dalla commessa">manca attestato: ${attestatiMancanti.join(', ')}</span>`
               : '';
             return `<div class="flex items-center justify-between px-2 py-1 bg-white rounded border border-slate-100 text-[10px]">
-              <span class="font-medium text-slate-800">${op.nome_esteso}</span>
+              <span class="font-medium text-slate-800">${esc(op.nome_esteso)}</span>
               <span class="flex items-center gap-1 flex-wrap justify-end">${skillBadge} ${attBadge} <span class="${satCls} font-medium">${satPct}% sat</span></span>
             </div>`;
           }).join('');
@@ -3937,16 +3937,16 @@ function renderGap() {
         <div class="flex items-start gap-2">
           <div class="text-lg leading-none mt-0.5">${icon}</div>
           <div class="flex-1">
-            <div class="font-medium text-sm text-slate-900">${c.cliente} — ${c.progetto}</div>
+            <div class="font-medium text-sm text-slate-900">${esc(c.cliente)} — ${c.progetto}</div>
             <div class="text-[11px] text-slate-500">${fmtDate(c.inizio)} → ${fmtDate(c.fine)} · gap <b>${gap}</b> risorse · skill: ${skillReqHtml}${attReqHtml}</div>
             <div class="text-[12px] mt-1 text-slate-700">
               ${disponibili.length>0
-                ? `<b>Disponibili</b> (skill+attestati OK, sat &lt;85%): ${disponibili.map(o=>o.nome_esteso).join(', ')}`
+                ? `<b>Disponibili</b> (skill+attestati OK, sat &lt;85%): ${disponibili.map(o=>esc(o.nome_esteso)).join(', ')}`
                 : `<span class="text-red-600">Nessun operatore interno copre completamente i requisiti.</span>`}
             </div>
             ${candidatiFormazione.length > 0 ? `
               <div class="text-[12px] mt-1 text-purple-700">
-                <b>Da formare</b> (skill OK ma mancano attestati): ${candidatiFormazione.map(cf => `${cf.op.nome_esteso} <span class="text-[10px]">(manca: ${cf.mancanti.join(', ')})</span>`).join('; ')}
+                <b>Da formare</b> (skill OK ma mancano attestati): ${candidatiFormazione.map(cf => `${esc(cf.op.nome_esteso)} <span class="text-[10px]">(manca: ${cf.mancanti.join(', ')})</span>`).join('; ')}
               </div>` : ''}
             ${disponibili.length < gap ? `<div class="text-[12px] mt-1 text-amber-700">→ <b>Manca personale: ${gap - disponibili.length}</b> risorsa/e. Priorità ${priorita}.</div>` : ''}
           </div>
@@ -4023,7 +4023,7 @@ function renderGap() {
           <span class="text-xs font-bold px-2 py-0.5 rounded ${r.priorita==='ALTA'?'bg-red-600 text-white':'bg-amber-600 text-white'}">${r.priorita} · ASSUMI</span>
           <div class="flex-1">
             <div class="font-medium text-sm text-slate-900"><b>+${r.persone}</b> persona/e con skill <span class="skill-badge req">${r.skill}</span></div>
-            <div class="text-[11px] text-slate-600 mt-1">Commesse impattate (${r.impatto}): ${r.commesse.map(c => `<i>${c.progetto}</i>`).join(', ')}</div>
+            <div class="text-[11px] text-slate-600 mt-1">Commesse impattate (${r.impatto}): ${r.commesse.map(c => `<i>${esc(c.progetto)}</i>`).join(', ')}</div>
           </div>
         </div>
       </div>`;
@@ -5235,7 +5235,7 @@ function apriDettaglioMeseCommessa(ev, commessaEnc, meseIdx) {
     const skillsHtml = c.skills.length ? c.skills.map(s => `<span class="skill-badge">${s}</span>`).join('') : '';
     return `<div class="p-2 bg-red-50 border border-red-200 rounded text-xs">
       <div class="flex items-center justify-between mb-0.5">
-        <span class="font-medium text-slate-800">${c.nome} ${tipoTag} ${matchTag}</span>
+        <span class="font-medium text-slate-800">${esc(c.nome)} ${tipoTag} ${matchTag}</span>
         <span class="text-slate-500">${(c.sat*100).toFixed(0)}% sat · ~${c.ggDisp} gg</span>
       </div>
       ${skillsHtml ? `<div class="text-[10px] mt-0.5">${skillsHtml}</div>` : ''}
@@ -5259,7 +5259,7 @@ function apriDettaglioMeseCommessa(ev, commessaEnc, meseIdx) {
       <div class="space-y-1">
         ${liberabili.slice(0, diff + 1).map(c => `
           <div class="flex items-center justify-between p-2 bg-amber-50 border border-amber-200 rounded text-xs">
-            <span class="font-medium text-slate-800">${c.nome}</span>
+            <span class="font-medium text-slate-800">${esc(c.nome)}</span>
             <span class="text-slate-500">${c.gg} gg · sat ${(c.sat*100).toFixed(0)}%</span>
             <span class="text-amber-700 text-[10px]">→ valuta riallocazione</span>
           </div>`).join('')}
@@ -5578,7 +5578,7 @@ function pwGeneraMail() {
         return `
         <div class="mb-3 p-3 bg-slate-50 rounded-lg border border-slate-200">
           <div class="text-xs font-semibold text-slate-700 mb-2">
-            <span class="text-teal-700">${s.commessa}</span>
+            <span class="text-teal-700">${esc(s.commessa)}</span>
             <span class="text-slate-400 mx-1">/</span>
             <span class="text-amber-700">${s.squadraNome}</span>
           </div>
@@ -6626,7 +6626,7 @@ function pwToggleStatPopover(key, cardEl) {
       `<span class="psp-tag rosso">${g}</span>`).join('');
     const extra = tags || giorni;
     return `<div class="psp-row">
-      <span class="psp-nome">${it.nome}</span>
+      <span class="psp-nome">${esc(it.nome)}</span>
       ${extra ? `<span class="psp-tags">${extra}</span>` : ''}
     </div>`;
   }
@@ -7544,7 +7544,7 @@ async function pwMapRender(dayIdx) {
 
     const popup = `<div style="font-family:system-ui;min-width:170px;font-size:12px;">
       <div style="font-weight:700;margin-bottom:3px;">${item.squadra}</div>
-      <div style="color:#475569;font-size:11px;">📋 ${item.commessa}</div>
+      <div style="color:#475569;font-size:11px;">📋 ${esc(item.commessa)}</div>
       <div style="color:#0d9488;font-weight:600;margin:2px 0;">📍 ${item.cantiere}</div>
       <div style="color:#64748b;font-size:11px;">👷 ${item.operatori.join(', ')}</div>
       ${item.attivita ? `<div style="color:#64748b;font-style:italic;font-size:10px;">${item.attivita}</div>` : ''}
