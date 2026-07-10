@@ -636,7 +636,7 @@
         <select id="anno-selector" class="text-sm border-none font-semibold focus:outline-none cursor-pointer" style="color:#f9fafb;background:#1a1a1a;border-radius:4px;padding:1px 4px;"></select>
       </div>
       <div class="text-xs pl-2" style="border-left:1px solid #444;color:#9ca3af;">
-        <span class="font-medium" style="color:#00b8b0;">v18.18.0</span> · Michele Marchetti
+        <span class="font-medium" style="color:#00b8b0;">v18.18.1</span> · Michele Marchetti
       </div>
     </div>
   </div>
@@ -3756,6 +3756,9 @@ function openOperatoreModal(id) {
     renderAll(); closeModal();
   };
 }
+
+// esc() globale per HTML escaping — usata da showAlertModal, showConfirmAsync e tutti i render
+const esc = v => (v||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 
 function showConfirm(htmlMsg, onConfirm) {
   const root = document.getElementById('modal-root');
