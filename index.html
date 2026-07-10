@@ -636,7 +636,7 @@
         <select id="anno-selector" class="text-sm border-none font-semibold focus:outline-none cursor-pointer" style="color:#f9fafb;background:#1a1a1a;border-radius:4px;padding:1px 4px;"></select>
       </div>
       <div class="text-xs pl-2" style="border-left:1px solid #444;color:#9ca3af;">
-        <span class="font-medium" style="color:#00b8b0;">v18.14.0</span> · Michele Marchetti
+        <span class="font-medium" style="color:#00b8b0;">v18.15.0</span> · Michele Marchetti
       </div>
     </div>
   </div>
@@ -1254,10 +1254,15 @@ let _sbUser   = null;
 let _sbSyncing = false;
 let _sbAutoPushTimer = null;
 let _sbPwPushTimer = null; // timer dedicato per pwData/pwFerie
-let _sbLastRemoteUpdatedAt = null; // timestamp dell'ultimo payload scaricato, per rilevare conflitti
+// _sbLastRemoteUpdatedAt rimosso: sostituito da _sbRemoteTs per dominio // timestamp dell'ultimo payload scaricato, per rilevare conflitti
 
 const SB_TABLE = 'staffing_state';
-const SB_ROW_ID = 1; // riga unica condivisa da tutto il team
+const SB_ROW_ID = 1;
+const SB_ROW_CORE = 1;
+const SB_ROW_PLANNING = 2;
+const SB_ROW_FERIE = 3;
+const _sbRemoteTs = { 1: null, 2: null, 3: null };
+const _sbDirty = { core: false, planning: false, ferie: false };
 
 function sbInit() {
   try {
@@ -1394,30 +1399,67 @@ async function sbPull() {
   try {
     const { data, error } = await _sbClient
       .from(SB_TABLE)
-      .select('payload, updated_at')
-      .eq('id', SB_ROW_ID)
-      .single();
+      .select('id, payload, updated_at')
+      .in('id', [SB_ROW_CORE, SB_ROW_PLANNING, SB_ROW_FERIE]);
 
-    if (error && error.code !== 'PGRST116') throw error; // PGRST116 = row not found
+    if (error) throw error;
 
-    if (data && data.payload) {
-      const snap = data.payload;
+    const rows = {};
+    (data || []).forEach(r => { rows[r.id] = r; });
+
+    // Migrazione: se row 1 contiene ancora pw_data/pw_ferie (formato pre-v18.15)
+    let needsMigration = false;
+    if (rows[SB_ROW_CORE] && rows[SB_ROW_CORE].payload) {
+      const p = rows[SB_ROW_CORE].payload;
+      if (p.pw_data && !rows[SB_ROW_PLANNING]) {
+        rows[SB_ROW_PLANNING] = { payload: { pw_data: p.pw_data }, updated_at: rows[SB_ROW_CORE].updated_at };
+        delete p.pw_data;
+        needsMigration = true;
+      }
+      if (p.pw_ferie && !rows[SB_ROW_FERIE]) {
+        rows[SB_ROW_FERIE] = { payload: { pw_ferie: p.pw_ferie }, updated_at: rows[SB_ROW_CORE].updated_at };
+        delete p.pw_ferie;
+        needsMigration = true;
+      }
+    }
+
+    // Applica core
+    if (rows[SB_ROW_CORE] && rows[SB_ROW_CORE].payload) {
+      const snap = rows[SB_ROW_CORE].payload;
       const keys = ['commesse_pipeline','operatori','assegnazioni','commesse_attive_extra',
-                    'staffing_modificato','commesse_chiuse','commesse_attive_meta','commesse_escluse','pw_data','pw_ferie'];
+                    'staffing_modificato','commesse_chiuse','commesse_attive_meta','commesse_escluse'];
       keys.forEach(k => { if (snap[k] !== undefined) sbSetLocal(k, snap[k]); });
       await loadState();
       renderAll();
-      if (snap.pw_ferie) pwFerie = snap.pw_ferie;
-      if (snap.pw_data)  pwData  = snap.pw_data;
-      // Se la schermata pianificazione è visibile, ridisegna la tab attiva
-      const weeklyEl = document.getElementById('screen-weekly');
-      if (weeklyEl && !weeklyEl.classList.contains('hidden')) {
-        pwSwitchTab(typeof _pwActiveTab !== 'undefined' ? _pwActiveTab : 'griglia');
-      }
     }
-    if (data && data.updated_at) _sbLastRemoteUpdatedAt = data.updated_at;
+
+    // Applica planning
+    if (rows[SB_ROW_PLANNING] && rows[SB_ROW_PLANNING].payload && rows[SB_ROW_PLANNING].payload.pw_data) {
+      pwData = rows[SB_ROW_PLANNING].payload.pw_data;
+    }
+    // Applica ferie
+    if (rows[SB_ROW_FERIE] && rows[SB_ROW_FERIE].payload && rows[SB_ROW_FERIE].payload.pw_ferie) {
+      pwFerie = rows[SB_ROW_FERIE].payload.pw_ferie;
+    }
+
+    // Aggiorna timestamp per dominio
+    [SB_ROW_CORE, SB_ROW_PLANNING, SB_ROW_FERIE].forEach(id => {
+      if (rows[id] && rows[id].updated_at) _sbRemoteTs[id] = rows[id].updated_at;
+    });
+
+    const weeklyEl = document.getElementById('screen-weekly');
+    if (weeklyEl && !weeklyEl.classList.contains('hidden')) {
+      pwSwitchTab(typeof _pwActiveTab !== 'undefined' ? _pwActiveTab : 'griglia');
+    }
+
     const ora = new Date().toLocaleTimeString('it-IT', { hour:'2-digit', minute:'2-digit' });
     sbUpdateUI('ok', 'Sync: aggiornato ✓', 'Ultimo sync: ' + ora);
+
+    // Migrazione automatica
+    if (needsMigration) {
+      _sbDirty.core = true; _sbDirty.planning = true; _sbDirty.ferie = true;
+      setTimeout(() => sbPush(), 1500);
+    }
   } catch(e) {
     console.error('sbPull error:', e);
     sbUpdateUI('error', 'Sync: errore — ' + e.message);
@@ -1430,45 +1472,48 @@ async function sbSync() { await sbPull(); }
 async function sbPush() {
   if (!_sbUser) return false;
   try {
-    // 1. Controllo conflitto: qualcuno ha scritto dopo il nostro ultimo pull?
-    const { data: remote, error: checkErr } = await _sbClient
-      .from(SB_TABLE)
-      .select('updated_at')
-      .eq('id', SB_ROW_ID)
-      .single();
-    if (checkErr && checkErr.code !== 'PGRST116') throw checkErr;
+    const domains = [];
+    if (_sbDirty.core) {
+      const keys = ['commesse_pipeline','operatori','assegnazioni','commesse_attive_extra',
+                    'staffing_modificato','commesse_chiuse','commesse_attive_meta','commesse_escluse'];
+      const snap = { _savedAt: new Date().toISOString(), _version: '18', _savedBy: _sbUser.email };
+      for (const k of keys) { try { snap[k] = await sget(k); } catch{} }
+      domains.push({ id: SB_ROW_CORE, payload: snap, key: 'core' });
+    }
+    if (_sbDirty.planning) {
+      domains.push({ id: SB_ROW_PLANNING, payload: { pw_data: pwData, _savedBy: _sbUser.email }, key: 'planning' });
+    }
+    if (_sbDirty.ferie) {
+      domains.push({ id: SB_ROW_FERIE, payload: { pw_ferie: pwFerie, _savedBy: _sbUser.email }, key: 'ferie' });
+    }
+    if (domains.length === 0) return true;
 
-    if (remote && remote.updated_at && _sbLastRemoteUpdatedAt && remote.updated_at !== _sbLastRemoteUpdatedAt) {
-      // Conflitto rilevato: un altro utente ha salvato nel frattempo.
-      // Non sovrascriviamo: ricarichiamo i dati freschi e segnaliamo.
-      console.warn('sbPush: conflitto rilevato, remote più recente del previsto. Annullo push e ricarico.');
-      sbUpdateUI('conflict', 'Sync: conflitto — dati aggiornati da un altro utente, ricarico…');
-      await sbPull();
-      sbUpdateUI('conflict', '⚠ Dati ricaricati: un altro utente ha salvato nel frattempo. Riprova l\'operazione.');
-      return false;
+    // Controllo conflitti per dominio
+    for (const d of domains) {
+      const { data: remote, error: checkErr } = await _sbClient
+        .from(SB_TABLE).select('updated_at').eq('id', d.id).single();
+      if (checkErr && checkErr.code !== 'PGRST116') throw checkErr;
+      if (remote && remote.updated_at && _sbRemoteTs[d.id] && remote.updated_at !== _sbRemoteTs[d.id]) {
+        console.warn('sbPush: conflitto su dominio ' + d.key);
+        sbUpdateUI('conflict', 'Sync: conflitto su ' + d.key + ' — ricarico…');
+        await sbPull();
+        sbUpdateUI('conflict', '⚠ Dati ricaricati: un altro utente ha modificato ' + d.key + '. Riprova.');
+        return false;
+      }
     }
 
-    // 2. Nessun conflitto: procedi con il salvataggio
-    const keys = ['commesse_pipeline','operatori','assegnazioni','commesse_attive_extra',
-                  'staffing_modificato','commesse_chiuse','commesse_attive_meta','commesse_escluse'];
-    const snap = { _savedAt: new Date().toISOString(), _version: '18', _savedBy: _sbUser.email };
-    for (const k of keys) { try { snap[k] = await sget(k); } catch{} }
-    // pw_data e pw_ferie letti direttamente dalla memoria (non da sessionStorage)
-    if (typeof pwData !== 'undefined') snap['pw_data'] = pwData;
-    if (typeof pwFerie !== 'undefined') snap['pw_ferie'] = pwFerie;
-
-    const nuovoUpdatedAt = new Date().toISOString();
-    const { data: pushedRow, error } = await _sbClient
-      .from(SB_TABLE)
-      .upsert({ id: SB_ROW_ID, payload: snap, updated_at: nuovoUpdatedAt })
-      .select('updated_at')
-      .single();
-    if (error) throw error;
-
-    // Usa il valore CANONICO restituito da Postgres (non quello generato localmente):
-    // formati di timestamp leggermente diversi (precisione, fuso) causavano falsi conflitti
-    // alla 2ª operazione consecutiva, costringendo a ripetere ogni azione due volte.
-    _sbLastRemoteUpdatedAt = (pushedRow && pushedRow.updated_at) ? pushedRow.updated_at : nuovoUpdatedAt;
+    // Scrittura domini dirty
+    for (const d of domains) {
+      const ts = new Date().toISOString();
+      const { data: pushed, error } = await _sbClient
+        .from(SB_TABLE)
+        .upsert({ id: d.id, payload: d.payload, updated_at: ts })
+        .select('updated_at')
+        .single();
+      if (error) throw error;
+      _sbRemoteTs[d.id] = (pushed && pushed.updated_at) ? pushed.updated_at : ts;
+      _sbDirty[d.key] = false;
+    }
 
     const ora = new Date().toLocaleTimeString('it-IT', { hour:'2-digit', minute:'2-digit' });
     sbUpdateUI('ok', 'Sync: salvato ✓', 'Ultimo salvataggio: ' + ora);
@@ -1568,6 +1613,7 @@ async function loadState() {
   ricalcolaAllocOperatori();
 }
 async function saveState(logAction, logDetails, immediate) {
+  _sbDirty.core = true;
   await Promise.all([
     sset('commesse_pipeline', state.pipeline),
     sset('operatori', state.operatori),
@@ -5862,6 +5908,7 @@ async function pwFerieLoad() {
 }
 
 async function pwFerieSave() {
+  _sbDirty.ferie = true;
   try { await sset('pw_ferie', pwFerie); } catch(e) { console.warn('pwFerieSave error', e); }
   // Push immediato su Supabase con debounce breve (500ms) per evitare perdita dati al refresh
   if (typeof _sbUser !== 'undefined' && _sbUser) {
@@ -6034,6 +6081,7 @@ async function pwLoad() {
 }
 
 async function pwSave() {
+  _sbDirty.planning = true;
   try { await sset('pw_data', pwData); } catch(e) { console.warn('pwSave error', e); }
   // Push immediato su Supabase con debounce breve (500ms) per evitare perdita dati al refresh
   if (typeof _sbUser !== 'undefined' && _sbUser) {
