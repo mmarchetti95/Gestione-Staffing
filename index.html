@@ -636,7 +636,7 @@
         <select id="anno-selector" class="text-sm border-none font-semibold focus:outline-none cursor-pointer" style="color:#f9fafb;background:#1a1a1a;border-radius:4px;padding:1px 4px;"></select>
       </div>
       <div class="text-xs pl-2" style="border-left:1px solid #444;color:#9ca3af;">
-        <span class="font-medium" style="color:#00b8b0;">v18.15.0</span> · Michele Marchetti
+        <span class="font-medium" style="color:#00b8b0;">v18.16.0</span> · Michele Marchetti
       </div>
     </div>
   </div>
@@ -1252,6 +1252,7 @@ const SB_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS
 let _sbClient = null;
 let _sbUser   = null;
 let _sbSyncing = false;
+let _sbRealtimeChannel = null;
 let _sbAutoPushTimer = null;
 let _sbPwPushTimer = null; // timer dedicato per pwData/pwFerie
 // _sbLastRemoteUpdatedAt rimosso: sostituito da _sbRemoteTs per dominio // timestamp dell'ultimo payload scaricato, per rilevare conflitti
@@ -1334,9 +1335,37 @@ async function sbOnLoggedIn() {
   await sbPull();
   sbLogActivity('Login', { email: _sbUser.email });
   sbStartHeartbeat();
+  sbSubscribeRealtime();
+}
+
+function sbSubscribeRealtime() {
+  if (_sbRealtimeChannel) return; // già sottoscritto
+  try {
+    _sbRealtimeChannel = _sbClient
+      .channel('staffing-sync')
+      .on('postgres_changes',
+        { event: 'UPDATE', schema: 'public', table: SB_TABLE },
+        (payload) => {
+          // Ignora i propri salvataggi (stesso utente)
+          const changedRow = payload.new;
+          if (changedRow && changedRow.payload && changedRow.payload._savedBy === _sbUser?.email) return;
+          console.log('Realtime: aggiornamento da altro utente, pull…');
+          sbUpdateUI('syncing', 'Sync: aggiornamento ricevuto…');
+          sbPull();
+        }
+      )
+      .subscribe((status) => {
+        if (status === 'SUBSCRIBED') console.log('Realtime: connesso');
+        if (status === 'CHANNEL_ERROR') console.warn('Realtime: errore canale');
+      });
+  } catch(e) { console.warn('Realtime subscribe error:', e); }
 }
 
 async function sbLogout() {
+  if (_sbRealtimeChannel) {
+    try { _sbClient.removeChannel(_sbRealtimeChannel); } catch(e) {}
+    _sbRealtimeChannel = null;
+  }
   await sbStopHeartbeat();
   await _sbClient.auth.signOut();
   _sbUser = null;
