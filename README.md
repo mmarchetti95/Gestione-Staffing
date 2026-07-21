@@ -65,6 +65,7 @@ UPDATE auth.users SET raw_user_meta_data = raw_user_meta_data || '{"role": "admi
 
 | Versione | Data | Modifiche |
 |---|---|---|
+| `v18.19.0` | 2026-07-21 | Griglia settimanale: celle giorno colorate in verde quando la produzione è già in Controllo Produzione (aggiornamento in tempo reale) |
 | `v18.18.1` | 2026-07-10 | **HOTFIX** esc() globale mancante — fix crash showAlertModal/showConfirmAsync (ReferenceError) |
 | `v18.18.0` | 2026-07-10 | Escaping HTML completo: esc() su 25+ template literals con dati utente in contesto innerHTML |
 | `v18.17.0` | 2026-07-10 | Rimosso INITIAL_DATA hardcoded (52KB→0.5KB): fallback minimale, dati reali da Supabase |
