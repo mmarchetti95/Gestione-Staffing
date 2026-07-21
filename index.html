@@ -582,6 +582,22 @@
     color: #fda4af;
   }
 
+  /* ===== CELLE CON PRODUZIONE GIA' INSERITA (Controllo Produzione) ===== */
+  .pw-day-cell.produzione-ok {
+    background: #dcfce7 !important;
+    position: relative;
+  }
+  .pw-day-cell.produzione-ok::after {
+    content: '✓';
+    position: absolute;
+    top: 2px; right: 3px;
+    font-size: 10px;
+    font-weight: 700;
+    color: #16a34a;
+    pointer-events: none;
+    opacity: .85;
+  }
+
   /* ===== MAPPA SQUADRE ===== */
   .pw-map-day-btn {
     padding: 4px 12px; border-radius: 6px; font-size: 12px; font-weight: 600;
@@ -636,7 +652,7 @@
         <select id="anno-selector" class="text-sm border-none font-semibold focus:outline-none cursor-pointer" style="color:#f9fafb;background:#1a1a1a;border-radius:4px;padding:1px 4px;"></select>
       </div>
       <div class="text-xs pl-2" style="border-left:1px solid #444;color:#9ca3af;">
-        <span class="font-medium" style="color:#00b8b0;">v18.18.1</span> · Michele Marchetti
+        <span class="font-medium" style="color:#00b8b0;">v18.19.0</span> · Michele Marchetti
       </div>
     </div>
   </div>
@@ -6435,7 +6451,7 @@ function pwRender() {
           const ferieClass = isInFerie ? ' in-ferie' : '';
           const cantierePlaceholder = isInFerie ? '🏖 ferie' : 'cantiere…';
           const attivitaPlaceholder = isInFerie ? '' : 'attività (facolt.)';
-          return `<div class="pw-day-cell${isSab ? ' sabato' : ''}${ferieClass}">
+          return `<div class="pw-day-cell${isSab ? ' sabato' : ''}${ferieClass}" data-cidx="${cIdx}" data-sidx="${sIdx}" data-oidx="${oIdx}" data-day="${dKey}">
             <input class="pw-cantiere-input" type="text" placeholder="${cantierePlaceholder}"
               value="${cantiere.replace(/"/g, '&quot;')}"
               data-cidx="${cIdx}" data-sidx="${sIdx}" data-oidx="${oIdx}" data-day="${dKey}" data-field="cantiere"
@@ -6517,6 +6533,7 @@ function pwRender() {
         <div class="pw-op-legenda-item"><span class="op-stato-badge libero">LIBERO</span> disponibile</div>
         <div class="pw-op-legenda-item"><span class="op-stato-badge assegnato">ASSEGNATO</span> già in un'altra commessa questa settimana</div>
         <div class="pw-op-legenda-item"><span class="op-stato-badge ferie">FERIE</span> in ferie/permesso questa settimana</div>
+        <div class="pw-op-legenda-item"><span style="display:inline-block;width:10px;height:10px;border-radius:3px;background:#dcfce7;border:1px solid #86efac;vertical-align:middle;margin-right:3px;"></span>✓ produzione già inserita in Controllo Produzione</div>
       </div>
     </div>`;
   }).join('');
@@ -6530,6 +6547,8 @@ function pwRender() {
   if (_pwSearchTerm) pwSearchOp(_pwSearchTerm);
   // Re-applica stato collassa/espandi
   pwApplyCollapseState();
+  // Colora le celle con produzione già inserita (Controllo Produzione)
+  pwSyncCpDataForGrid();
 }
 
 /* ----- Statistiche settimana ----- */
@@ -7067,6 +7086,55 @@ function cpCollapseAllToggle() {
 
 /* ==================== CONTROLLO PRODUZIONE ==================== */
 let _cpData = {}; // chiave: "commessa|||squadra|||operatore|||giorno" → { ore_jira, ore_report, km_cad, note }
+
+/* ----- Colorazione celle Griglia settimanale con produzione già inserita ----- */
+function pwHasProduzione(commessa, squadra, operatore, giornoIdx) {
+  const k = `${commessa}|||${squadra}|||${operatore}|||${giornoIdx}`;
+  const r = _cpData[k];
+  if (!r) return false;
+  return (r.ore_jira != null && r.ore_jira !== '') ||
+         (r.ore_report != null && r.ore_report !== '') ||
+         (r.km_cad != null && r.km_cad !== '') ||
+         (r.note != null && String(r.note).trim() !== '');
+}
+
+function pwApplyProduzioneColors() {
+  const grid = document.getElementById('pw-grid');
+  if (!grid) return;
+  const data = pwGetWeekData();
+  grid.querySelectorAll('.pw-day-cell[data-cidx]').forEach(cell => {
+    if (cell.classList.contains('in-ferie')) return; // priorità visiva alla ferie
+    const cidx = parseInt(cell.dataset.cidx, 10);
+    const sidx = parseInt(cell.dataset.sidx, 10);
+    const oidx = parseInt(cell.dataset.oidx, 10);
+    const day  = parseInt(cell.dataset.day, 10);
+    const bc = data[cidx];
+    const sq = bc && bc.squadre && bc.squadre[sidx];
+    const op = sq && sq.operatori && sq.operatori[oidx];
+    const has = (op && op.nome) ? pwHasProduzione(bc.commessa, sq.nome, op.nome, day) : false;
+    cell.classList.toggle('produzione-ok', has);
+  });
+}
+
+async function pwSyncCpDataForGrid() {
+  if (!_sbClient || !_sbUser) { pwApplyProduzioneColors(); return; }
+  try {
+    const { data, error } = await _sbClient
+      .from('controllo_produzione')
+      .select('commessa,squadra,operatore,giorno,ore_jira,ore_report,km_cad,note')
+      .eq('anno', pwAnno)
+      .eq('week', pwWeek);
+    if (error) throw error;
+    _cpData = {};
+    (data || []).forEach(r => {
+      const k = `${r.commessa}|||${r.squadra}|||${r.operatore}|||${r.giorno}`;
+      _cpData[k] = { ore_jira: r.ore_jira, ore_report: r.ore_report, km_cad: r.km_cad, note: r.note };
+    });
+  } catch(e) {
+    console.error('pwSyncCpDataForGrid error:', e);
+  }
+  pwApplyProduzioneColors();
+}
 let _pwCollapsedComm = new Set(); // indici commessa collassati nella griglia
 let _pwCollapsedSq   = new Set(); // chiavi "cidx-sidx" squadre collassate nella griglia
 let _cpCollapsedComm = new Set(); // blIdx commesse collassate nel controllo produzione
@@ -7256,6 +7324,9 @@ async function pwControlloSaveCell(commessa, squadra, operatore, giornoIdx, data
   } else {
     _cpData[k][field] = value === '' ? null : value;
   }
+
+  // Aggiorna subito la colorazione nella Griglia settimanale (anche se non è la tab attiva)
+  pwApplyProduzioneColors();
 
   if (!_sbClient || !_sbUser) return; // offline, solo cache locale
 
