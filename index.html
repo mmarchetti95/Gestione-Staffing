@@ -652,7 +652,7 @@
         <select id="anno-selector" class="text-sm border-none font-semibold focus:outline-none cursor-pointer" style="color:#f9fafb;background:#1a1a1a;border-radius:4px;padding:1px 4px;"></select>
       </div>
       <div class="text-xs pl-2" style="border-left:1px solid #444;color:#9ca3af;">
-        <span class="font-medium" style="color:#00b8b0;">v18.22.0</span> · Michele Marchetti
+        <span class="font-medium" style="color:#00b8b0;">v18.23.0</span> · Michele Marchetti
       </div>
     </div>
   </div>
@@ -7347,7 +7347,7 @@ function pwControlloRender() {
     <thead><tr>
       <th>Commessa</th><th>Squadra</th><th>Operatore</th>
       <th>Giorno</th><th>Data</th><th>Cantiere</th><th>Attività</th>
-      <th style="text-align:center">Ore Jira</th><th style="min-width:90px">Ticket</th><th>Ore Report Prod.</th>
+      <th style="text-align:center">Ore Jira</th><th style="min-width:90px">Ticket</th><th style="min-width:120px">Epic</th><th>Ore Report Prod.</th>
       <th style="min-width:54px;text-align:center">Δ Ore</th>
       <th>Km / Cad</th><th>Note</th>
     </tr></thead><tbody>`;
@@ -7355,14 +7355,14 @@ function pwControlloRender() {
   let ri = 0;
 
   blocks.forEach((bl, blIdx) => {
-    html += `<tr class="cp-tr-commessa" data-comm-idx="${blIdx}"><td colspan="13"><span class="cp-carr" style="cursor:pointer;user-select:none;margin-right:5px;font-size:11px;display:inline-block;width:10px;text-align:center;" onclick="cpToggleComm(${blIdx})">▼</span>📁 ${esc(bl.commessa)}</td></tr>`;
+    html += `<tr class="cp-tr-commessa" data-comm-idx="${blIdx}"><td colspan="14"><span class="cp-carr" style="cursor:pointer;user-select:none;margin-right:5px;font-size:11px;display:inline-block;width:10px;text-align:center;" onclick="cpToggleComm(${blIdx})">▼</span>📁 ${esc(bl.commessa)}</td></tr>`;
     bl.squadre.forEach((sq, sqIdx) => {
       const sqKey = blIdx + '-' + sqIdx;
-      html += `<tr class="cp-tr-squadra" data-comm-idx="${blIdx}" data-sq-idx="${sqKey}"><td colspan="13">&nbsp;&nbsp;&nbsp;<span class="cp-sarr" style="cursor:pointer;user-select:none;margin-right:5px;font-size:11px;display:inline-block;width:10px;text-align:center;" onclick="cpToggleSq('${sqKey}')">▼</span>👥 ${esc(sq.nome)}</td></tr>`;
+      html += `<tr class="cp-tr-squadra" data-comm-idx="${blIdx}" data-sq-idx="${sqKey}"><td colspan="14">&nbsp;&nbsp;&nbsp;<span class="cp-sarr" style="cursor:pointer;user-select:none;margin-right:5px;font-size:11px;display:inline-block;width:10px;text-align:center;" onclick="cpToggleSq('${sqKey}')">▼</span>👥 ${esc(sq.nome)}</td></tr>`;
       sq.giorni.forEach((gBlock, gIdx) => {
         const g   = gBlock.giornoIdx;
         const sep = gIdx > 0 ? ' cp-day-sep' : '';
-        html += `<tr class="cp-tr-day${sep}" data-comm-idx="${blIdx}" data-sq-idx="${sqKey}"><td colspan="13">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;📅 ${DAY_NAMES[g]} ${dates[g]}</td></tr>`;
+        html += `<tr class="cp-tr-day${sep}" data-comm-idx="${blIdx}" data-sq-idx="${sqKey}"><td colspan="14">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;📅 ${DAY_NAMES[g]} ${dates[g]}</td></tr>`;
 
         gBlock.ops.forEach(op => {
           const k     = `${bl.commessa}|||${sq.nome}|||${op.nome}|||${g}`;
@@ -7375,6 +7375,13 @@ function pwControlloRender() {
           const ticketHtml = tickets.length === 0
             ? '<span style="color:#cbd5e1">—</span>'
             : tickets.map(t => `<a href="${esc(t.url||'')}" target="_blank" rel="noopener" title="${esc(t.key||'')}${t.hours!=null?(' — '+t.hours+'h'):''}" style="display:block;color:#2563eb;text-decoration:none;font-size:11px;white-space:nowrap;line-height:1.5;">• ${esc(t.key||'')}</a>`).join('');
+          // Epic distinti fra i ticket del giorno (dedup per key)
+          const epicMap = {};
+          tickets.forEach(t => { if (t.epic && t.epic.key) epicMap[t.epic.key] = t.epic; });
+          const epicList = Object.values(epicMap);
+          const epicHtml = epicList.length === 0
+            ? '<span style="color:#cbd5e1">—</span>'
+            : epicList.map(ep => `<a href="${esc(ep.url||'')}" target="_blank" rel="noopener" title="${esc(ep.key||'')}" style="display:block;color:#7c3aed;text-decoration:none;font-size:11px;line-height:1.5;">🟣 ${esc(ep.name||ep.key||'')}</a>`).join('');
           const jDisplay = (jVal === '' || jVal == null)
             ? '<span style="color:#cbd5e1">—</span>'
             : esc(String(jVal));
@@ -7402,6 +7409,7 @@ function pwControlloRender() {
       <td style="color:#64748b">${esc(op.attivita)}</td>
       <td style="${cpOreJiraStyle(jVal, g)}"><span id="cp-j-${ri}" data-jval="${esc(String(jVal))}">${jDisplay}</span></td>
       <td style="vertical-align:top;padding-top:4px;">${ticketHtml}</td>
+      <td style="vertical-align:top;padding-top:4px;">${epicHtml}</td>
       <td class="cp-td-edit"><input id="cp-r-${ri}" class="cp-input" type="number" step="0.5" min="0" max="24"
         value="${esc(String(rVal))}" oninput="cpDelta(${ri})"
         onblur="pwControlloSaveCell('${ci}','${si}','${oi}',${g},'${dt}','${ca}','${at}','ore_report',this.value)"></td>
@@ -7666,7 +7674,7 @@ function pwControlloExport() {
   }
 
   const headers = ['Commessa','Squadra','Operatore','Giorno','Data','Cantiere','Attività',
-                   'Ore Jira','Ticket','Ore Report Prod.','Δ Ore','Km / Cad','Note'];
+                   'Ore Jira','Ticket','Epic','Ore Report Prod.','Δ Ore','Km / Cad','Note'];
   const wsData = [headers];
 
   // Stesso ordine del render: commessa → squadra → giorno → operatori
@@ -7686,12 +7694,15 @@ function pwControlloExport() {
           const delta = (!isNaN(jNum) && !isNaN(rNum)) ? jNum - rNum : '';
           const ticketStr = Array.isArray(saved.jira_tickets)
             ? saved.jira_tickets.map(t => t.key).join(', ') : '';
+          const epicStr = Array.isArray(saved.jira_tickets)
+            ? [...new Set(saved.jira_tickets.filter(t => t.epic && t.epic.name).map(t => t.epic.name))].join(', ') : '';
           wsData.push([
             bc.commessa, sqNome, op.nome,
             DAY_NAMES[g], dates[g],
             opG.cantiere || '', opG.attivita || '',
             jVal === '' ? '' : jVal,
             ticketStr,
+            epicStr,
             rVal === '' ? '' : rVal,
             delta === '' ? '' : delta,
             saved.km_cad != null ? saved.km_cad : '',
@@ -7705,7 +7716,7 @@ function pwControlloExport() {
   const wb = XLSX.utils.book_new();
   const ws = XLSX.utils.aoa_to_sheet(wsData);
   ws['!cols'] = [{wch:35},{wch:15},{wch:22},{wch:6},{wch:8},
-                 {wch:20},{wch:22},{wch:10},{wch:22},{wch:16},{wch:8},{wch:10},{wch:28}];
+                 {wch:20},{wch:22},{wch:10},{wch:22},{wch:30},{wch:16},{wch:8},{wch:10},{wch:28}];
 
   const hStyle = { font:{bold:true,color:{rgb:'FFFFFF'}}, fill:{fgColor:{rgb:'0F766E'}}, alignment:{horizontal:'center'} };
   const eStyle = { fill:{fgColor:{rgb:'FEFCE8'}} };
@@ -7715,7 +7726,7 @@ function pwControlloExport() {
     ws[ref].s = hStyle;
   });
   for (let ri = 1; ri < wsData.length; ri++) {
-    [7,9,11,12].forEach(ci => {
+    [7,10,12,13].forEach(ci => {
       const ref = XLSX.utils.encode_cell({r:ri, c:ci});
       if (!ws[ref]) ws[ref] = {t:'z'};
       ws[ref].s = eStyle;
