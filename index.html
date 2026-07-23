@@ -652,7 +652,7 @@
         <select id="anno-selector" class="text-sm border-none font-semibold focus:outline-none cursor-pointer" style="color:#f9fafb;background:#1a1a1a;border-radius:4px;padding:1px 4px;"></select>
       </div>
       <div class="text-xs pl-2" style="border-left:1px solid #444;color:#9ca3af;">
-        <span class="font-medium" style="color:#00b8b0;">v18.19.0</span> · Michele Marchetti
+        <span class="font-medium" style="color:#00b8b0;">v18.20.0</span> · Michele Marchetti
       </div>
     </div>
   </div>
@@ -842,6 +842,7 @@
           <!-- Tab pool / vista operatore -->
           <div class="flex border-b border-slate-200 mb-3 -mx-4 px-4">
             <button id="op-tab-pool" class="tab-btn active text-sm">Pool operatori <span id="op-count" class="text-slate-400 text-xs font-normal"></span></button>
+            <button id="op-tab-email" class="tab-btn text-sm">✉ Email/operatore</button>
             <button id="op-tab-vista" class="tab-btn text-sm hidden">📋 <span id="op-tab-vista-nome">—</span></button>
           </div>
           <!-- Filtri pool (nascosti nella vista operatore) -->
@@ -868,6 +869,7 @@
         </div>
         <div id="op-coerenza-banner" class="hidden"></div>
         <div class="p-3 scrollbox space-y-2" id="op-list"></div>
+        <div class="p-3 scrollbox hidden" id="op-email-container"></div>
         <div class="p-3 scrollbox hidden" id="op-vista-container"></div>
       </div>
 
@@ -1655,6 +1657,11 @@ async function loadState() {
   state.assegnazioni = a || INITIAL_DATA._assegnazioni || [];
   state.commesse_attive_meta = cam || INITIAL_DATA._meta || {};
   ricalcolaAllocOperatori();
+
+  // Seed email operatori una-tantum (solo su quelli ancora senza email)
+  if (seedEmailOperatori()) {
+    try { await sset('operatori', state.operatori); _sbDirty.core = true; } catch(e) { console.warn('seed email save', e); }
+  }
 }
 async function saveState(logAction, logDetails, immediate) {
   _sbDirty.core = true;
@@ -2226,20 +2233,125 @@ let _vistaOpId = null;
 
 function switchOpTab(tab) {
   const tabPool = document.getElementById('op-tab-pool');
+  const tabEmail = document.getElementById('op-tab-email');
   const tabVista = document.getElementById('op-tab-vista');
   const opList = document.getElementById('op-list');
+  const opEmail = document.getElementById('op-email-container');
   const opVista = document.getElementById('op-vista-container');
   const opFilters = document.getElementById('op-pool-filters');
+  // Reset comune
+  [tabPool, tabEmail, tabVista].forEach(t => t && t.classList.remove('active'));
+  [opList, opEmail, opVista].forEach(c => c && c.classList.add('hidden'));
   if (tab === 'pool') {
-    tabPool.classList.add('active'); tabVista.classList.remove('active');
-    opList.classList.remove('hidden'); opVista.classList.add('hidden');
+    tabPool.classList.add('active');
+    opList.classList.remove('hidden');
     opFilters.classList.remove('hidden');
+  } else if (tab === 'email') {
+    tabEmail.classList.add('active');
+    opEmail.classList.remove('hidden');
+    opFilters.classList.add('hidden');
+    renderEmailOperatori();
   } else {
-    tabVista.classList.add('active'); tabPool.classList.remove('active');
-    opList.classList.add('hidden'); opVista.classList.remove('hidden');
+    tabVista.classList.add('active');
+    opVista.classList.remove('hidden');
     opFilters.classList.add('hidden');
     renderVistaOperatore(_vistaOpId);
   }
+}
+
+/* ===================== EMAIL / OPERATORE ===================== */
+/* Mappa seed esplicita: email → nome esteso come compare in state.operatori.
+   Match esplicito (non euristico) per evitare ambiguita' su nomi multipli/invertiti. */
+const EMAIL_SEED = {
+  'Fiore Davide':                     'dfiore@eagleprojects.it',
+  'Di Pierro Gianluigi':              'gdipierro@eagleprojects.it',
+  'Morazzini Stefano':                'smorazzini@eagleprojects.it',
+  'Perelli Quartilio':                'qperelli@eagleprojects.it',
+  'Caronti Lorenzo':                  'lcaronti@eagleprojects.it',
+  'Ballestra Giandomenico':           'gballestra@eagleprojects.it',
+  'Dominici Laerte':                  'ldominici@eagleprojects.it',
+  'Contini Fabio':                    'fcontini@eagleprojects.it',
+  'Angeluzzi Fabio':                  'fangeluzzi@eagleprojects.it',
+  'Arduini Giacomo':                  'garduini@eagleprojects.it',
+  'Semry Hazem Said Mohamed':         'hsmsemry@eagleprojects.it',
+  "Bertoglio Nicolo'":               'nbertoglio@eagleprojects.it',
+  'Benosmane Aymen Mohamed Zaki':     'amzbenosmane@eagleprojects.it',
+  'Fernandez Begazo Julio Cesar':     'jfernandez@eagleprojects.it',
+  'Cozzari Samuele':                  'scozzari@eagleprojects.it',
+  'Terrasi Nicola':                   'nterrasi@eagleprojects.it',
+  'De Nicola Stefano':                'sdenicola@eagleprojects.it',
+  'Ienachescu Cristian Laurentiu':    'cienachescu@eagleprojects.it',
+  'Petrolati Michele':                'mpetrolati@eagleprojects.it',
+  'Marchetti Michele':                'mmarchetti@eagleprojects.it',
+};
+
+/* Applica il seed una-tantum: solo agli operatori senza email valorizzata.
+   Ritorna true se ha modificato lo stato (per decidere se salvare). */
+function seedEmailOperatori() {
+  let changed = false;
+  (state.operatori || []).forEach(op => {
+    const nome = op.nome_esteso || op.nome_breve || op.nome || '';
+    if ((!op.email || !op.email.trim()) && EMAIL_SEED[nome]) {
+      op.email = EMAIL_SEED[nome];
+      changed = true;
+    }
+  });
+  return changed;
+}
+
+function renderEmailOperatori() {
+  const container = document.getElementById('op-email-container');
+  if (!container) return;
+  const ops = [...(state.operatori || [])].sort((a, b) =>
+    (a.nome_esteso || '').localeCompare(b.nome_esteso || ''));
+  if (ops.length === 0) {
+    container.innerHTML = '<div class="text-sm text-slate-400 text-center py-4">Nessun operatore.</div>';
+    return;
+  }
+  const nMiss = ops.filter(o => !o.email || !o.email.trim()).length;
+  let html = `<div class="text-[11px] text-slate-500 mb-2">Email aziendale usata per la sincronizzazione dei worklog da Jira. ${nMiss > 0 ? `<span style="color:#dc2626;font-weight:600;">${nMiss} mancanti.</span>` : '<span style="color:#16a34a;font-weight:600;">Tutte assegnate.</span>'}</div>`;
+  html += `<table style="width:100%;border-collapse:collapse;font-size:13px;">
+    <thead><tr style="text-align:left;border-bottom:1px solid #e2e8f0;">
+      <th style="padding:6px 8px;color:#64748b;font-weight:600;">Operatore</th>
+      <th style="padding:6px 8px;color:#64748b;font-weight:600;">Email</th>
+      <th style="padding:6px 8px;color:#64748b;font-weight:600;width:90px;">Stato</th>
+    </tr></thead><tbody>`;
+  ops.forEach(op => {
+    const nome = op.nome_esteso || op.nome_breve || op.nome || '';
+    const email = op.email || '';
+    const missing = !email.trim();
+    const badge = missing
+      ? '<span style="font-size:10px;font-weight:700;background:#fee2e2;color:#dc2626;border-radius:3px;padding:2px 6px;">⚠ mancante</span>'
+      : '<span style="font-size:10px;font-weight:700;background:#dcfce7;color:#16a34a;border-radius:3px;padding:2px 6px;">✓ ok</span>';
+    const exTag = (typeof isOperatoreLicenziato === 'function' && isOperatoreLicenziato(nome))
+      ? '<span style="font-size:9px;font-weight:700;background:#fee2e2;color:#ef4444;border-radius:3px;padding:1px 4px;margin-left:4px;">ex</span>' : '';
+    html += `<tr style="border-bottom:1px solid #f1f5f9;">
+      <td style="padding:5px 8px;font-weight:600;color:#1e293b;">${esc(nome)}${exTag}</td>
+      <td style="padding:5px 8px;"><input type="email" value="${esc(email)}" placeholder="nome@eagleprojects.it"
+        data-op-id="${esc(op.id)}"
+        style="width:100%;border:1px solid #cbd5e1;border-radius:4px;padding:3px 6px;font-size:12px;"
+        onblur="saveEmailOperatore('${String(op.id).replace(/'/g, "\\'")}', this.value)"></td>
+      <td style="padding:5px 8px;" id="op-email-badge-${esc(op.id)}">${badge}</td>
+    </tr>`;
+  });
+  html += '</tbody></table>';
+  container.innerHTML = html;
+}
+
+async function saveEmailOperatore(opId, value) {
+  const op = (state.operatori || []).find(o => o.id === opId);
+  if (!op) return;
+  const val = (value || '').trim();
+  if (op.email === val) return; // nessun cambiamento
+  op.email = val;
+  // Aggiorna il badge senza re-render completo
+  const badgeCell = document.getElementById('op-email-badge-' + opId);
+  if (badgeCell) {
+    badgeCell.innerHTML = val
+      ? '<span style="font-size:10px;font-weight:700;background:#dcfce7;color:#16a34a;border-radius:3px;padding:2px 6px;">✓ ok</span>'
+      : '<span style="font-size:10px;font-weight:700;background:#fee2e2;color:#dc2626;border-radius:3px;padding:2px 6px;">⚠ mancante</span>';
+  }
+  await saveState('Email operatore', { operatore: op.nome_esteso || op.id });
 }
 
 function apriVistaOperatore(opId) {
@@ -3726,13 +3838,14 @@ async function promuoviCommessa(id) {
 }
 
 function openOperatoreModal(id) {
-  const op = id ? state.operatori.find(o => o.id === id) : { id:'op_new_'+Date.now(), nome_breve:'', nome_esteso:'', skills:[], attestati:[], alloc_mensile:new Array(12).fill(0) };
+  const op = id ? state.operatori.find(o => o.id === id) : { id:'op_new_'+Date.now(), nome_breve:'', nome_esteso:'', email:'', skills:[], attestati:[], alloc_mensile:new Array(12).fill(0) };
   const opAtt = op.attestati || [];
   const root = document.getElementById('modal-root');
   root.innerHTML = `<div class="modal-backdrop"><div class="bg-white rounded-lg shadow-xl w-full max-w-2xl mx-4 my-8 p-5 max-h-[90vh] overflow-y-auto">
     <h3 class="font-semibold text-slate-900 mb-3">${id?'Modifica':'Nuovo'} operatore</h3>
     <div class="space-y-3">
       <label class="block text-xs"><span class="text-slate-600">Nome esteso</span><input id="mo-esteso" class="mt-0.5 w-full border border-slate-300 rounded px-2 py-1.5 text-sm" value="${(op.nome_esteso||'').replace(/"/g, '&quot;')}"></label>
+      <label class="block text-xs"><span class="text-slate-600">Email aziendale</span><input id="mo-email" type="email" placeholder="nome@eagleprojects.it" class="mt-0.5 w-full border border-slate-300 rounded px-2 py-1.5 text-sm" value="${(op.email||'').replace(/"/g, '&quot;')}"></label>
       <div>
         <div class="text-xs text-slate-600 mb-1 font-medium">Skill</div>
         <div class="grid grid-cols-3 gap-1 p-2 bg-slate-50 rounded border border-slate-200">
@@ -3767,8 +3880,9 @@ function openOperatoreModal(id) {
     if (!nomeEsteso) { showAlertModal('Nome obbligatorio.'); return; }
     const skills = [...document.querySelectorAll('.mo-skill:checked')].map(x => x.value);
     const attestati = [...document.querySelectorAll('.mo-att:checked')].map(x => x.value);
-    if (id) { Object.assign(op, { nome_esteso: nomeEsteso, skills, attestati }); await saveState('Modifica operatore', {operatore: nomeEsteso}); }
-    else { state.operatori.push({ ...op, nome_esteso: nomeEsteso, nome_breve: nomeEsteso, skills, attestati }); await saveState('Nuovo operatore', {operatore: nomeEsteso}); }
+    const email = (document.getElementById('mo-email')?.value || '').trim();
+    if (id) { Object.assign(op, { nome_esteso: nomeEsteso, email, skills, attestati }); await saveState('Modifica operatore', {operatore: nomeEsteso}); }
+    else { state.operatori.push({ ...op, nome_esteso: nomeEsteso, nome_breve: nomeEsteso, email, skills, attestati }); await saveState('Nuovo operatore', {operatore: nomeEsteso}); }
     renderAll(); closeModal();
   };
 }
@@ -5512,6 +5626,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   if (btnCollapseAll) btnCollapseAll.onclick = () => document.querySelectorAll('.commessa-card').forEach(d => d.open = false);
   document.getElementById('btn-add-op').onclick = () => openOperatoreModal(null);
   document.getElementById('op-tab-pool').onclick = () => switchOpTab('pool');
+  document.getElementById('op-tab-email').onclick = () => switchOpTab('email');
   document.getElementById('op-tab-vista').onclick = () => { if (_vistaOpId) switchOpTab('vista'); };
   // Anno selector
   const annoSel = document.getElementById('anno-selector');
