@@ -65,6 +65,7 @@ UPDATE auth.users SET raw_user_meta_data = raw_user_meta_data || '{"role": "admi
 
 | Versione | Data | Modifiche |
 |---|---|---|
+| `v18.20.0` | 2026-07-23 | Nuova tab **Email/operatore** nella sezione Dashboard: gestione email aziendale per operatore (campo nel modale + tabella editabile + seed iniziale) — fondamento per il sync worklog Jira |
 | `v18.19.0` | 2026-07-21 | Griglia settimanale: celle giorno colorate in verde quando la produzione è già in Controllo Produzione (aggiornamento in tempo reale) |
 | `v18.18.1` | 2026-07-10 | **HOTFIX** esc() globale mancante — fix crash showAlertModal/showConfirmAsync (ReferenceError) |
 | `v18.18.0` | 2026-07-10 | Escaping HTML completo: esc() su 25+ template literals con dati utente in contesto innerHTML |
