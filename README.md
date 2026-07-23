@@ -65,6 +65,7 @@ UPDATE auth.users SET raw_user_meta_data = raw_user_meta_data || '{"role": "admi
 
 | Versione | Data | Modifiche |
 |---|---|---|
+| `v18.23.0` | 2026-07-23 | Controllo Produzione: nuova colonna **Epic** accanto a Ticket (nome + link all'epic di riferimento, risalendo la catena sottotask→story→epic via Edge Function aggiornata) |
 | `v18.22.0` | 2026-07-23 | Controllo Produzione: la cella "Ore Jira" si colora automaticamente (🟢 ok / 🟠 poche / 🔴 troppo poche / 🟡 troppe) in base alle ore e al giorno (Lun/Ven soglie ridotte) |
 | `v18.21.0` | 2026-07-23 | **Integrazione Jira**: Controllo Produzione ora sincronizza le ore reali dai worklog. Colonna "Ore Jira" read-only (popolata dal sync), nuova colonna "Ticket" con link cliccabili, bottone "🔄 Sincronizza da Jira" (via Edge Function jira-sync-worklogs) |
 | `v18.20.0` | 2026-07-23 | Nuova tab **Email/operatore** nella sezione Dashboard: gestione email aziendale per operatore (campo nel modale + tabella editabile + seed iniziale) — fondamento per il sync worklog Jira |
