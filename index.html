@@ -652,7 +652,7 @@
         <select id="anno-selector" class="text-sm border-none font-semibold focus:outline-none cursor-pointer" style="color:#f9fafb;background:#1a1a1a;border-radius:4px;padding:1px 4px;"></select>
       </div>
       <div class="text-xs pl-2" style="border-left:1px solid #444;color:#9ca3af;">
-        <span class="font-medium" style="color:#00b8b0;">v18.21.0</span> · Michele Marchetti
+        <span class="font-medium" style="color:#00b8b0;">v18.22.0</span> · Michele Marchetti
       </div>
     </div>
   </div>
@@ -7400,7 +7400,7 @@ function pwControlloRender() {
       <td>${dates[g]}</td>
       <td style="color:#64748b">${esc(op.cantiere)}</td>
       <td style="color:#64748b">${esc(op.attivita)}</td>
-      <td style="text-align:center;background:#f8fafc;color:#0f766e;font-weight:600;"><span id="cp-j-${ri}" data-jval="${esc(String(jVal))}">${jDisplay}</span></td>
+      <td style="${cpOreJiraStyle(jVal, g)}"><span id="cp-j-${ri}" data-jval="${esc(String(jVal))}">${jDisplay}</span></td>
       <td style="vertical-align:top;padding-top:4px;">${ticketHtml}</td>
       <td class="cp-td-edit"><input id="cp-r-${ri}" class="cp-input" type="number" step="0.5" min="0" max="24"
         value="${esc(String(rVal))}" oninput="cpDelta(${ri})"
@@ -7436,6 +7436,31 @@ function cpDelta(ri) {
   const dv  = j - r;
   const col = dv >= 0 ? '#16a34a' : '#dc2626';
   dEl.innerHTML = `<span style="font-weight:700;color:${col}">${dv >= 0 ? '+' : ''}${dv.toFixed(1)}</span>`;
+}
+
+/* ----- Colore cella "Ore Jira" in base a ore + giorno della settimana -----
+   giornoIdx: 0=Lun 1=Mar 2=Mer 3=Gio 4=Ven 5=Sab
+   Lun/Ven (giornate corte): <5 arancione, 5..8,5 verde, >8,5 giallo
+   Altri giorni: <5 rosso, 5..<7 arancione, 7..8,5 verde, >8,5 giallo
+   0 o vuoto: default. */
+function cpOreJiraStyle(jVal, giornoIdx) {
+  const base = 'text-align:center;font-weight:600;';
+  const h = parseFloat(String(jVal));
+  // 0 o vuoto/non numerico -> default
+  if (isNaN(h) || h === 0) return base + 'background:#f8fafc;color:#0f766e;';
+  const isLunVen = (giornoIdx === 0 || giornoIdx === 4);
+  let bg, fg;
+  if (h > 8.5) {                       // troppe ore
+    bg = '#fef9c3'; fg = '#854d0e';    // giallo
+  } else if (isLunVen) {
+    if (h < 5)      { bg = '#ffedd5'; fg = '#9a3412'; } // arancione
+    else            { bg = '#dcfce7'; fg = '#166534'; } // verde (5..8,5)
+  } else {
+    if (h < 5)      { bg = '#fee2e2'; fg = '#991b1b'; } // rosso
+    else if (h < 7) { bg = '#ffedd5'; fg = '#9a3412'; } // arancione
+    else            { bg = '#dcfce7'; fg = '#166534'; } // verde (7..8,5)
+  }
+  return base + `background:${bg};color:${fg};`;
 }
 
 /* ----- Sincronizzazione worklog da Jira (Edge Function) ----- */
