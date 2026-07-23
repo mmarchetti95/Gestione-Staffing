@@ -652,7 +652,7 @@
         <select id="anno-selector" class="text-sm border-none font-semibold focus:outline-none cursor-pointer" style="color:#f9fafb;background:#1a1a1a;border-radius:4px;padding:1px 4px;"></select>
       </div>
       <div class="text-xs pl-2" style="border-left:1px solid #444;color:#9ca3af;">
-        <span class="font-medium" style="color:#00b8b0;">v18.23.0</span> · Michele Marchetti
+        <span class="font-medium" style="color:#00b8b0;">v18.24.0</span> · Michele Marchetti
       </div>
     </div>
   </div>
@@ -6651,7 +6651,7 @@ function pwRender() {
         <div class="pw-op-legenda-item"><span class="op-stato-badge libero">LIBERO</span> disponibile</div>
         <div class="pw-op-legenda-item"><span class="op-stato-badge assegnato">ASSEGNATO</span> già in un'altra commessa questa settimana</div>
         <div class="pw-op-legenda-item"><span class="op-stato-badge ferie">FERIE</span> in ferie/permesso questa settimana</div>
-        <div class="pw-op-legenda-item"><span style="display:inline-block;width:10px;height:10px;border-radius:3px;background:#dcfce7;border:1px solid #86efac;vertical-align:middle;margin-right:3px;"></span>✓ produzione già inserita in Controllo Produzione</div>
+        <div class="pw-op-legenda-item"><span style="display:inline-block;width:10px;height:10px;border-radius:3px;background:#dcfce7;border:1px solid #86efac;vertical-align:middle;margin-right:3px;"></span>✓ verificato in Controllo Produzione</div>
       </div>
     </div>`;
   }).join('');
@@ -7205,15 +7205,12 @@ function cpCollapseAllToggle() {
 /* ==================== CONTROLLO PRODUZIONE ==================== */
 let _cpData = {}; // chiave: "commessa|||squadra|||operatore|||giorno" → { ore_jira, ore_report, km_cad, note }
 
-/* ----- Colorazione celle Griglia settimanale con produzione già inserita ----- */
-function pwHasProduzione(commessa, squadra, operatore, giornoIdx) {
+/* ----- Colorazione celle Griglia settimanale: SOLO se cella verificata ----- */
+function pwCellaVerificata(commessa, squadra, operatore, giornoIdx) {
   const k = `${commessa}|||${squadra}|||${operatore}|||${giornoIdx}`;
   const r = _cpData[k];
   if (!r) return false;
-  return (r.ore_jira != null && r.ore_jira !== '') ||
-         (r.ore_report != null && r.ore_report !== '') ||
-         (r.km_cad != null && r.km_cad !== '') ||
-         (r.note != null && String(r.note).trim() !== '');
+  return r.verificato === true;
 }
 
 function pwApplyProduzioneColors() {
@@ -7229,7 +7226,7 @@ function pwApplyProduzioneColors() {
     const bc = data[cidx];
     const sq = bc && bc.squadre && bc.squadre[sidx];
     const op = sq && sq.operatori && sq.operatori[oidx];
-    const has = (op && op.nome) ? pwHasProduzione(bc.commessa, sq.nome, op.nome, day) : false;
+    const has = (op && op.nome) ? pwCellaVerificata(bc.commessa, sq.nome, op.nome, day) : false;
     cell.classList.toggle('produzione-ok', has);
   });
 }
@@ -7239,14 +7236,14 @@ async function pwSyncCpDataForGrid() {
   try {
     const { data, error } = await _sbClient
       .from('controllo_produzione')
-      .select('commessa,squadra,operatore,giorno,ore_jira,ore_report,km_cad,note,jira_tickets')
+      .select('commessa,squadra,operatore,giorno,ore_jira,ore_report,km_cad,note,jira_tickets,verificato')
       .eq('anno', pwAnno)
       .eq('week', pwWeek);
     if (error) throw error;
     _cpData = {};
     (data || []).forEach(r => {
       const k = `${r.commessa}|||${r.squadra}|||${r.operatore}|||${r.giorno}`;
-      _cpData[k] = { ore_jira: r.ore_jira, ore_report: r.ore_report, km_cad: r.km_cad, note: r.note, jira_tickets: r.jira_tickets };
+      _cpData[k] = { ore_jira: r.ore_jira, ore_report: r.ore_report, km_cad: r.km_cad, note: r.note, jira_tickets: r.jira_tickets, verificato: r.verificato };
     });
   } catch(e) {
     console.error('pwSyncCpDataForGrid error:', e);
@@ -7273,14 +7270,14 @@ async function pwControlloLoad() {
     if (_sbClient && _sbUser) {
       const { data, error } = await _sbClient
         .from('controllo_produzione')
-        .select('commessa,squadra,operatore,giorno,ore_jira,ore_report,km_cad,note,jira_tickets')
+        .select('commessa,squadra,operatore,giorno,ore_jira,ore_report,km_cad,note,jira_tickets,verificato')
         .eq('anno', pwAnno)
         .eq('week', pwWeek);
       if (error) throw error;
       _cpData = {};
       (data || []).forEach(r => {
         const k = `${r.commessa}|||${r.squadra}|||${r.operatore}|||${r.giorno}`;
-        _cpData[k] = { ore_jira: r.ore_jira, ore_report: r.ore_report, km_cad: r.km_cad, note: r.note, jira_tickets: r.jira_tickets };
+        _cpData[k] = { ore_jira: r.ore_jira, ore_report: r.ore_report, km_cad: r.km_cad, note: r.note, jira_tickets: r.jira_tickets, verificato: r.verificato };
       });
       if (status) status.textContent = `${(data||[]).length} record caricati`;
     } else {
@@ -7346,6 +7343,7 @@ function pwControlloRender() {
   let html = `<table class="cp-table">
     <thead><tr>
       <th>Commessa</th><th>Squadra</th><th>Operatore</th>
+      <th style="text-align:center;min-width:70px">Verificato</th>
       <th>Giorno</th><th>Data</th><th>Cantiere</th><th>Attività</th>
       <th style="text-align:center">Ore Jira</th><th style="min-width:90px">Ticket</th><th style="min-width:120px">Epic</th><th>Ore Report Prod.</th>
       <th style="min-width:54px;text-align:center">Δ Ore</th>
@@ -7355,14 +7353,14 @@ function pwControlloRender() {
   let ri = 0;
 
   blocks.forEach((bl, blIdx) => {
-    html += `<tr class="cp-tr-commessa" data-comm-idx="${blIdx}"><td colspan="14"><span class="cp-carr" style="cursor:pointer;user-select:none;margin-right:5px;font-size:11px;display:inline-block;width:10px;text-align:center;" onclick="cpToggleComm(${blIdx})">▼</span>📁 ${esc(bl.commessa)}</td></tr>`;
+    html += `<tr class="cp-tr-commessa" data-comm-idx="${blIdx}"><td colspan="15"><span class="cp-carr" style="cursor:pointer;user-select:none;margin-right:5px;font-size:11px;display:inline-block;width:10px;text-align:center;" onclick="cpToggleComm(${blIdx})">▼</span>📁 ${esc(bl.commessa)}</td></tr>`;
     bl.squadre.forEach((sq, sqIdx) => {
       const sqKey = blIdx + '-' + sqIdx;
-      html += `<tr class="cp-tr-squadra" data-comm-idx="${blIdx}" data-sq-idx="${sqKey}"><td colspan="14">&nbsp;&nbsp;&nbsp;<span class="cp-sarr" style="cursor:pointer;user-select:none;margin-right:5px;font-size:11px;display:inline-block;width:10px;text-align:center;" onclick="cpToggleSq('${sqKey}')">▼</span>👥 ${esc(sq.nome)}</td></tr>`;
+      html += `<tr class="cp-tr-squadra" data-comm-idx="${blIdx}" data-sq-idx="${sqKey}"><td colspan="15">&nbsp;&nbsp;&nbsp;<span class="cp-sarr" style="cursor:pointer;user-select:none;margin-right:5px;font-size:11px;display:inline-block;width:10px;text-align:center;" onclick="cpToggleSq('${sqKey}')">▼</span>👥 ${esc(sq.nome)}</td></tr>`;
       sq.giorni.forEach((gBlock, gIdx) => {
         const g   = gBlock.giornoIdx;
         const sep = gIdx > 0 ? ' cp-day-sep' : '';
-        html += `<tr class="cp-tr-day${sep}" data-comm-idx="${blIdx}" data-sq-idx="${sqKey}"><td colspan="14">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;📅 ${DAY_NAMES[g]} ${dates[g]}</td></tr>`;
+        html += `<tr class="cp-tr-day${sep}" data-comm-idx="${blIdx}" data-sq-idx="${sqKey}"><td colspan="15">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;📅 ${DAY_NAMES[g]} ${dates[g]}</td></tr>`;
 
         gBlock.ops.forEach(op => {
           const k     = `${bl.commessa}|||${sq.nome}|||${op.nome}|||${g}`;
@@ -7385,6 +7383,7 @@ function pwControlloRender() {
           const jDisplay = (jVal === '' || jVal == null)
             ? '<span style="color:#cbd5e1">—</span>'
             : esc(String(jVal));
+          const verificato = saved.verificato === true;
 
           const jNum = parseFloat(String(jVal)), rNum = parseFloat(String(rVal));
           let deltaHtml;
@@ -7403,6 +7402,7 @@ function pwControlloRender() {
       <td>${esc(bl.commessa)}</td>
       <td>${esc(sq.nome)}</td>
       <td><strong>${esc(op.nome)}</strong>${isOperatoreLicenziato(op.nome) ? '<span style="font-size:9px;font-weight:700;background:#fee2e2;color:#ef4444;border-radius:3px;padding:1px 4px;margin-left:4px;">ex</span>' : ''}</td>
+      <td style="text-align:center"><input type="checkbox" ${verificato ? 'checked' : ''} title="Verificato" style="width:16px;height:16px;cursor:pointer;" onchange="pwControlloSaveCell('${ci}','${si}','${oi}',${g},'${dt}','${ca}','${at}','verificato',this.checked)"></td>
       <td>${DAY_NAMES[g]}</td>
       <td>${dates[g]}</td>
       <td style="color:#64748b">${esc(op.cantiere)}</td>
@@ -7570,6 +7570,7 @@ async function pwControlloSyncJira() {
         ore_report: _cpData[k].ore_report ?? null,
         km_cad:     _cpData[k].km_cad     ?? null,
         note:       _cpData[k].note       ?? null,
+        verificato: _cpData[k].verificato === true,
         updated_at: new Date().toISOString(),
         updated_by: _sbUser?.email || null,
       });
@@ -7612,8 +7613,11 @@ async function pwControlloSaveCell(commessa, squadra, operatore, giornoIdx, data
   if (!_cpData[k]) _cpData[k] = {};
 
   // Aggiorna cache locale
-  const numFields = ['ore_jira','ore_report','km_cad'];
-  if (numFields.includes(field)) {
+  const numFields  = ['ore_jira','ore_report','km_cad'];
+  const boolFields = ['verificato'];
+  if (boolFields.includes(field)) {
+    _cpData[k][field] = (value === true || value === 'true');
+  } else if (numFields.includes(field)) {
     _cpData[k][field] = value === '' ? null : parseFloat(value);
   } else {
     _cpData[k][field] = value === '' ? null : value;
@@ -7645,6 +7649,7 @@ async function pwControlloSaveCell(commessa, squadra, operatore, giornoIdx, data
     ore_report:  _cpData[k].ore_report ?? null,
     km_cad:      _cpData[k].km_cad    ?? null,
     note:        _cpData[k].note      ?? null,
+    verificato:  _cpData[k].verificato === true,
     updated_at:  new Date().toISOString(),
     updated_by:  _sbUser?.email || null,
   };
@@ -7673,7 +7678,7 @@ function pwControlloExport() {
     dates.push(`${String(d.getUTCDate()).padStart(2,'0')}/${String(d.getUTCMonth()+1).padStart(2,'0')}`);
   }
 
-  const headers = ['Commessa','Squadra','Operatore','Giorno','Data','Cantiere','Attività',
+  const headers = ['Commessa','Squadra','Operatore','Verificato','Giorno','Data','Cantiere','Attività',
                    'Ore Jira','Ticket','Epic','Ore Report Prod.','Δ Ore','Km / Cad','Note'];
   const wsData = [headers];
 
@@ -7698,6 +7703,7 @@ function pwControlloExport() {
             ? [...new Set(saved.jira_tickets.filter(t => t.epic && t.epic.name).map(t => t.epic.name))].join(', ') : '';
           wsData.push([
             bc.commessa, sqNome, op.nome,
+            saved.verificato === true ? 'Sì' : '',
             DAY_NAMES[g], dates[g],
             opG.cantiere || '', opG.attivita || '',
             jVal === '' ? '' : jVal,
@@ -7715,7 +7721,7 @@ function pwControlloExport() {
 
   const wb = XLSX.utils.book_new();
   const ws = XLSX.utils.aoa_to_sheet(wsData);
-  ws['!cols'] = [{wch:35},{wch:15},{wch:22},{wch:6},{wch:8},
+  ws['!cols'] = [{wch:35},{wch:15},{wch:22},{wch:10},{wch:6},{wch:8},
                  {wch:20},{wch:22},{wch:10},{wch:22},{wch:30},{wch:16},{wch:8},{wch:10},{wch:28}];
 
   const hStyle = { font:{bold:true,color:{rgb:'FFFFFF'}}, fill:{fgColor:{rgb:'0F766E'}}, alignment:{horizontal:'center'} };
@@ -7726,7 +7732,7 @@ function pwControlloExport() {
     ws[ref].s = hStyle;
   });
   for (let ri = 1; ri < wsData.length; ri++) {
-    [7,10,12,13].forEach(ci => {
+    [8,11,13,14].forEach(ci => {
       const ref = XLSX.utils.encode_cell({r:ri, c:ci});
       if (!ws[ref]) ws[ref] = {t:'z'};
       ws[ref].s = eStyle;
