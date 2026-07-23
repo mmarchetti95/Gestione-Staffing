@@ -65,6 +65,7 @@ UPDATE auth.users SET raw_user_meta_data = raw_user_meta_data || '{"role": "admi
 
 | Versione | Data | Modifiche |
 |---|---|---|
+| `v18.25.0` | 2026-07-23 | Controllo Produzione: nuovo bottone **Report PDF** — report visivo per giornata (Giorno/Data → Operatore, Cantiere, Ore Jira colorate, Ticket, Epic) impaginato con jsPDF+autotable, pensato per l'invio al PM |
 | `v18.24.0` | 2026-07-23 | Controllo Produzione: nuova colonna **Verificato** (checkbox, tra Operatore e Giorno). La cella verde nella Griglia settimanale ora dipende dalla spunta "Verificato" e non più dalla semplice presenza di dati. Stato preservato dal sync Jira ed esportato in Excel |
 | `v18.23.0` | 2026-07-23 | Controllo Produzione: nuova colonna **Epic** accanto a Ticket (nome + link all'epic di riferimento, risalendo la catena sottotask→story→epic via Edge Function aggiornata) |
 | `v18.22.0` | 2026-07-23 | Controllo Produzione: la cella "Ore Jira" si colora automaticamente (🟢 ok / 🟠 poche / 🔴 troppo poche / 🟡 troppe) in base alle ore e al giorno (Lun/Ven soglie ridotte) |
