@@ -8,6 +8,8 @@
 <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.2/Sortable.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.2/dist/jspdf.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/jspdf-autotable@3.8.4/dist/jspdf.plugin.autotable.min.js"></script>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -652,7 +654,7 @@
         <select id="anno-selector" class="text-sm border-none font-semibold focus:outline-none cursor-pointer" style="color:#f9fafb;background:#1a1a1a;border-radius:4px;padding:1px 4px;"></select>
       </div>
       <div class="text-xs pl-2" style="border-left:1px solid #444;color:#9ca3af;">
-        <span class="font-medium" style="color:#00b8b0;">v18.24.0</span> · Michele Marchetti
+        <span class="font-medium" style="color:#00b8b0;">v18.25.0</span> · Michele Marchetti
       </div>
     </div>
   </div>
@@ -1045,6 +1047,9 @@
         </button>
         <button onclick="pwControlloExport()" class="px-3 py-1.5 text-sm font-medium bg-teal-600 text-white rounded-lg hover:bg-teal-700 flex items-center gap-1.5 no-print">
           ⬇ Esporta Excel
+        </button>
+        <button onclick="pwControlloExportPDF()" class="px-3 py-1.5 text-sm font-medium bg-rose-600 text-white rounded-lg hover:bg-rose-700 flex items-center gap-1.5 no-print">
+          📄 Report PDF
         </button>
       </div>
     </div>
@@ -7741,6 +7746,138 @@ function pwControlloExport() {
 
   XLSX.utils.book_append_sheet(wb, ws, 'Controllo Produzione');
   XLSX.writeFile(wb, `Report_Controllo_W${pwWeek}_${pwAnno}.xlsx`);
+}
+
+/* ----- Colore RGB (per PDF) della cella Ore Jira, stessa metrica dell'app.
+   Ritorna [r,g,b] oppure null (nessun colore) per 0/vuoto. ----- */
+function cpOreJiraRGB(jVal, giornoIdx) {
+  const h = parseFloat(String(jVal));
+  if (isNaN(h) || h === 0) return null;
+  const isLunVen = (giornoIdx === 0 || giornoIdx === 4);
+  if (h > 8.5) return [254, 249, 195];            // giallo
+  if (isLunVen) return h < 5 ? [255, 237, 213]    // arancione
+                             : [220, 252, 231];   // verde
+  if (h < 5) return [254, 226, 226];              // rosso
+  if (h < 7) return [255, 237, 213];              // arancione
+  return [220, 252, 231];                         // verde
+}
+
+/* ----- Export PDF: report per giornata (da inviare al PM) ----- */
+function pwControlloExportPDF() {
+  if (!window.jspdf || !window.jspdf.jsPDF) { showAlertModal('Libreria PDF non disponibile.'); return; }
+  const { jsPDF } = window.jspdf;
+
+  const data      = pwGetWeekData();
+  const monday    = isoWeekToMonday(pwAnno, pwWeek);
+  const DAY_NAMES = ['Lunedì','Martedì','Mercoledì','Giovedì','Venerdì','Sabato'];
+  const dates = [];
+  for (let i = 0; i < 6; i++) {
+    const d = new Date(monday);
+    d.setUTCDate(monday.getUTCDate() + i);
+    dates.push(`${String(d.getUTCDate()).padStart(2,'0')}/${String(d.getUTCMonth()+1).padStart(2,'0')}/${d.getUTCFullYear()}`);
+  }
+
+  // Raggruppa per giorno -> operatori (tutti i pianificati, anche 0 ore)
+  const fw = pwGetFerieWeek();
+  const rowsByDay = [[],[],[],[],[],[]];
+  data.forEach(bc => {
+    if (!bc.commessa) return;
+    (bc.squadre || []).forEach(sq => {
+      const sqNome = sq.nome || 'Squadra';
+      for (let g = 0; g < 6; g++) {
+        (sq.operatori || []).forEach(op => {
+          if (!op.nome || !op.nome.trim()) return;
+          const opG = op.giorni && op.giorni[g] ? op.giorni[g] : {};
+          if (!opG.cantiere || !opG.cantiere.trim()) return;
+          if (fw[op.nome] && fw[op.nome][g] === true) return;
+          const k = `${bc.commessa}|||${sqNome}|||${op.nome}|||${g}`;
+          const saved = _cpData[k] || {};
+          const tickets = Array.isArray(saved.jira_tickets) ? saved.jira_tickets : [];
+          const ticketStr = tickets.length ? tickets.map(t => t.key).join('\n') : '—';
+          const epicStr = tickets.length
+            ? ([...new Set(tickets.filter(t => t.epic && t.epic.name).map(t => t.epic.name))].join('\n') || '—')
+            : '—';
+          rowsByDay[g].push({
+            operatore: op.nome,
+            cantiere:  opG.cantiere || '',
+            oreJira:   saved.ore_jira != null ? saved.ore_jira : null,
+            ticketStr, epicStr,
+          });
+        });
+      }
+    });
+  });
+
+  if (rowsByDay.every(r => r.length === 0)) {
+    showAlertModal('Nessun operatore pianificato da esportare per questa settimana.');
+    return;
+  }
+
+  const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
+  const pageW = doc.internal.pageSize.getWidth();
+  const pageH = doc.internal.pageSize.getHeight();
+
+  // Intestazione documento
+  doc.setFontSize(15); doc.setFont(undefined, 'bold'); doc.setTextColor(15, 118, 110);
+  doc.text(`Report Controllo Produzione — Settimana ${pwWeek} / ${pwAnno}`, 14, 14);
+  doc.setFontSize(9); doc.setFont(undefined, 'normal'); doc.setTextColor(100, 116, 139);
+  doc.text(`Periodo: ${dates[0]} – ${dates[5]}   ·   Generato il ${new Date().toLocaleDateString('it-IT')}`, 14, 20);
+  doc.setTextColor(0, 0, 0);
+
+  let y = 27;
+
+  DAY_NAMES.forEach((dn, g) => {
+    const rows = rowsByDay[g];
+    if (!rows.length) return;
+
+    // Titolo giornata (con controllo spazio residuo)
+    if (y > pageH - 30) { doc.addPage(); y = 15; }
+    doc.setFontSize(12); doc.setFont(undefined, 'bold'); doc.setTextColor(30, 41, 59);
+    doc.text(`${dn.toUpperCase()}  ${dates[g]}`, 14, y);
+    doc.setTextColor(0, 0, 0);
+
+    doc.autoTable({
+      startY: y + 2,
+      head: [['Operatore', 'Cantiere', 'Ore Jira', 'Ticket', 'Epic']],
+      body: rows.map(r => [
+        r.operatore,
+        r.cantiere,
+        (r.oreJira != null ? String(r.oreJira) : '—'),
+        r.ticketStr,
+        r.epicStr,
+      ]),
+      styles: { fontSize: 8, cellPadding: 1.6, overflow: 'linebreak', valign: 'top' },
+      headStyles: { fillColor: [15, 118, 110], textColor: 255, fontStyle: 'bold', halign: 'left' },
+      alternateRowStyles: { fillColor: [248, 250, 252] },
+      columnStyles: {
+        0: { cellWidth: 50 },
+        1: { cellWidth: 60 },
+        2: { cellWidth: 22, halign: 'center', fontStyle: 'bold' },
+        3: { cellWidth: 55 },
+        4: { cellWidth: 'auto' },
+      },
+      margin: { left: 14, right: 14 },
+      didParseCell: function (hookData) {
+        if (hookData.section === 'body' && hookData.column.index === 2) {
+          const rec = rows[hookData.row.index];
+          const rgb = rec ? cpOreJiraRGB(rec.oreJira, g) : null;
+          if (rgb) hookData.cell.styles.fillColor = rgb;
+        }
+      },
+    });
+
+    y = doc.lastAutoTable.finalY + 8;
+  });
+
+  // Numeri di pagina
+  const pages = doc.internal.getNumberOfPages();
+  for (let p = 1; p <= pages; p++) {
+    doc.setPage(p);
+    doc.setFontSize(8); doc.setTextColor(148, 163, 184);
+    doc.text(`Pagina ${p} / ${pages}`, pageW - 14, pageH - 8, { align: 'right' });
+  }
+
+  doc.save(`Report_Produzione_W${pwWeek}_${pwAnno}.pdf`);
 }
 /* ==================== MAPPA LEAFLET + NOMINATIM ==================== */
 const MAP_COLORS = ['#0d9488','#6366f1','#f59e0b','#ef4444','#10b981','#8b5cf6','#ec4899','#0ea5e9','#f97316','#84cc16'];
