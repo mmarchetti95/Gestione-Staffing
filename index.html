@@ -652,7 +652,7 @@
         <select id="anno-selector" class="text-sm border-none font-semibold focus:outline-none cursor-pointer" style="color:#f9fafb;background:#1a1a1a;border-radius:4px;padding:1px 4px;"></select>
       </div>
       <div class="text-xs pl-2" style="border-left:1px solid #444;color:#9ca3af;">
-        <span class="font-medium" style="color:#00b8b0;">v18.20.0</span> · Michele Marchetti
+        <span class="font-medium" style="color:#00b8b0;">v18.21.0</span> · Michele Marchetti
       </div>
     </div>
   </div>
@@ -1040,6 +1040,9 @@
       </div>
       <div class="flex items-center gap-2">
         <button id="cp-collapse-all" class="px-3 py-1.5 text-sm border border-slate-300 rounded hover:bg-slate-50 no-print" onclick="cpCollapseAllToggle()">≡ Collassa</button>
+        <button id="cp-sync-jira" onclick="pwControlloSyncJira()" class="px-3 py-1.5 text-sm font-medium bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 flex items-center gap-1.5 no-print">
+          🔄 Sincronizza da Jira
+        </button>
         <button onclick="pwControlloExport()" class="px-3 py-1.5 text-sm font-medium bg-teal-600 text-white rounded-lg hover:bg-teal-700 flex items-center gap-1.5 no-print">
           ⬇ Esporta Excel
         </button>
@@ -7236,14 +7239,14 @@ async function pwSyncCpDataForGrid() {
   try {
     const { data, error } = await _sbClient
       .from('controllo_produzione')
-      .select('commessa,squadra,operatore,giorno,ore_jira,ore_report,km_cad,note')
+      .select('commessa,squadra,operatore,giorno,ore_jira,ore_report,km_cad,note,jira_tickets')
       .eq('anno', pwAnno)
       .eq('week', pwWeek);
     if (error) throw error;
     _cpData = {};
     (data || []).forEach(r => {
       const k = `${r.commessa}|||${r.squadra}|||${r.operatore}|||${r.giorno}`;
-      _cpData[k] = { ore_jira: r.ore_jira, ore_report: r.ore_report, km_cad: r.km_cad, note: r.note };
+      _cpData[k] = { ore_jira: r.ore_jira, ore_report: r.ore_report, km_cad: r.km_cad, note: r.note, jira_tickets: r.jira_tickets };
     });
   } catch(e) {
     console.error('pwSyncCpDataForGrid error:', e);
@@ -7270,14 +7273,14 @@ async function pwControlloLoad() {
     if (_sbClient && _sbUser) {
       const { data, error } = await _sbClient
         .from('controllo_produzione')
-        .select('commessa,squadra,operatore,giorno,ore_jira,ore_report,km_cad,note')
+        .select('commessa,squadra,operatore,giorno,ore_jira,ore_report,km_cad,note,jira_tickets')
         .eq('anno', pwAnno)
         .eq('week', pwWeek);
       if (error) throw error;
       _cpData = {};
       (data || []).forEach(r => {
         const k = `${r.commessa}|||${r.squadra}|||${r.operatore}|||${r.giorno}`;
-        _cpData[k] = { ore_jira: r.ore_jira, ore_report: r.ore_report, km_cad: r.km_cad, note: r.note };
+        _cpData[k] = { ore_jira: r.ore_jira, ore_report: r.ore_report, km_cad: r.km_cad, note: r.note, jira_tickets: r.jira_tickets };
       });
       if (status) status.textContent = `${(data||[]).length} record caricati`;
     } else {
@@ -7344,7 +7347,7 @@ function pwControlloRender() {
     <thead><tr>
       <th>Commessa</th><th>Squadra</th><th>Operatore</th>
       <th>Giorno</th><th>Data</th><th>Cantiere</th><th>Attività</th>
-      <th>Ore Jira</th><th>Ore Report Prod.</th>
+      <th style="text-align:center">Ore Jira</th><th style="min-width:90px">Ticket</th><th>Ore Report Prod.</th>
       <th style="min-width:54px;text-align:center">Δ Ore</th>
       <th>Km / Cad</th><th>Note</th>
     </tr></thead><tbody>`;
@@ -7352,14 +7355,14 @@ function pwControlloRender() {
   let ri = 0;
 
   blocks.forEach((bl, blIdx) => {
-    html += `<tr class="cp-tr-commessa" data-comm-idx="${blIdx}"><td colspan="12"><span class="cp-carr" style="cursor:pointer;user-select:none;margin-right:5px;font-size:11px;display:inline-block;width:10px;text-align:center;" onclick="cpToggleComm(${blIdx})">▼</span>📁 ${esc(bl.commessa)}</td></tr>`;
+    html += `<tr class="cp-tr-commessa" data-comm-idx="${blIdx}"><td colspan="13"><span class="cp-carr" style="cursor:pointer;user-select:none;margin-right:5px;font-size:11px;display:inline-block;width:10px;text-align:center;" onclick="cpToggleComm(${blIdx})">▼</span>📁 ${esc(bl.commessa)}</td></tr>`;
     bl.squadre.forEach((sq, sqIdx) => {
       const sqKey = blIdx + '-' + sqIdx;
-      html += `<tr class="cp-tr-squadra" data-comm-idx="${blIdx}" data-sq-idx="${sqKey}"><td colspan="12">&nbsp;&nbsp;&nbsp;<span class="cp-sarr" style="cursor:pointer;user-select:none;margin-right:5px;font-size:11px;display:inline-block;width:10px;text-align:center;" onclick="cpToggleSq('${sqKey}')">▼</span>👥 ${esc(sq.nome)}</td></tr>`;
+      html += `<tr class="cp-tr-squadra" data-comm-idx="${blIdx}" data-sq-idx="${sqKey}"><td colspan="13">&nbsp;&nbsp;&nbsp;<span class="cp-sarr" style="cursor:pointer;user-select:none;margin-right:5px;font-size:11px;display:inline-block;width:10px;text-align:center;" onclick="cpToggleSq('${sqKey}')">▼</span>👥 ${esc(sq.nome)}</td></tr>`;
       sq.giorni.forEach((gBlock, gIdx) => {
         const g   = gBlock.giornoIdx;
         const sep = gIdx > 0 ? ' cp-day-sep' : '';
-        html += `<tr class="cp-tr-day${sep}" data-comm-idx="${blIdx}" data-sq-idx="${sqKey}"><td colspan="12">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;📅 ${DAY_NAMES[g]} ${dates[g]}</td></tr>`;
+        html += `<tr class="cp-tr-day${sep}" data-comm-idx="${blIdx}" data-sq-idx="${sqKey}"><td colspan="13">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;📅 ${DAY_NAMES[g]} ${dates[g]}</td></tr>`;
 
         gBlock.ops.forEach(op => {
           const k     = `${bl.commessa}|||${sq.nome}|||${op.nome}|||${g}`;
@@ -7368,6 +7371,13 @@ function pwControlloRender() {
           const rVal  = saved.ore_report != null ? saved.ore_report : '';
           const kVal  = saved.km_cad     != null ? saved.km_cad     : '';
           const nVal  = saved.note || '';
+          const tickets = Array.isArray(saved.jira_tickets) ? saved.jira_tickets : [];
+          const ticketHtml = tickets.length === 0
+            ? '<span style="color:#cbd5e1">—</span>'
+            : tickets.map(t => `<a href="${esc(t.url||'')}" target="_blank" rel="noopener" title="${esc(t.key||'')}${t.hours!=null?(' — '+t.hours+'h'):''}" style="display:block;color:#2563eb;text-decoration:none;font-size:11px;white-space:nowrap;line-height:1.5;">• ${esc(t.key||'')}</a>`).join('');
+          const jDisplay = (jVal === '' || jVal == null)
+            ? '<span style="color:#cbd5e1">—</span>'
+            : esc(String(jVal));
 
           const jNum = parseFloat(String(jVal)), rNum = parseFloat(String(rVal));
           let deltaHtml;
@@ -7390,9 +7400,8 @@ function pwControlloRender() {
       <td>${dates[g]}</td>
       <td style="color:#64748b">${esc(op.cantiere)}</td>
       <td style="color:#64748b">${esc(op.attivita)}</td>
-      <td class="cp-td-edit"><input id="cp-j-${ri}" class="cp-input" type="number" step="0.5" min="0" max="24"
-        value="${esc(String(jVal))}" oninput="cpDelta(${ri})"
-        onblur="pwControlloSaveCell('${ci}','${si}','${oi}',${g},'${dt}','${ca}','${at}','ore_jira',this.value)"></td>
+      <td style="text-align:center;background:#f8fafc;color:#0f766e;font-weight:600;"><span id="cp-j-${ri}" data-jval="${esc(String(jVal))}">${jDisplay}</span></td>
+      <td style="vertical-align:top;padding-top:4px;">${ticketHtml}</td>
       <td class="cp-td-edit"><input id="cp-r-${ri}" class="cp-input" type="number" step="0.5" min="0" max="24"
         value="${esc(String(rVal))}" oninput="cpDelta(${ri})"
         onblur="pwControlloSaveCell('${ci}','${si}','${oi}',${g},'${dt}','${ca}','${at}','ore_report',this.value)"></td>
@@ -7420,12 +7429,149 @@ function cpDelta(ri) {
   const rEl = document.getElementById('cp-r-' + ri);
   const dEl = document.getElementById('cp-d-' + ri);
   if (!jEl || !rEl || !dEl) return;
-  const j = parseFloat(jEl.value);
+  // Ore Jira ora e' una cella read-only: valore letto da data-jval
+  const j = parseFloat(jEl.dataset ? jEl.dataset.jval : '');
   const r = parseFloat(rEl.value);
   if (isNaN(j) || isNaN(r)) { dEl.innerHTML = '<span style="color:#cbd5e1">—</span>'; return; }
   const dv  = j - r;
   const col = dv >= 0 ? '#16a34a' : '#dc2626';
   dEl.innerHTML = `<span style="font-weight:700;color:${col}">${dv >= 0 ? '+' : ''}${dv.toFixed(1)}</span>`;
+}
+
+/* ----- Sincronizzazione worklog da Jira (Edge Function) ----- */
+async function pwControlloSyncJira() {
+  if (!_sbClient || !_sbUser) { showAlertModal('Sincronizzazione non disponibile in modalità offline.'); return; }
+
+  // (Decisione A) conferma sovrascrittura
+  const ok = await showConfirmAsync(
+    'I valori "Ore Jira" e "Ticket" di questa settimana verranno sovrascritti con i dati reali da Jira. Procedere?',
+    'Sincronizza da Jira');
+  if (!ok) return;
+
+  const status = document.getElementById('cp-status');
+  const btn = document.getElementById('cp-sync-jira');
+  if (status) status.textContent = '⏳ Sincronizzazione in corso…';
+  if (btn) { btn.disabled = true; btn.style.opacity = '0.6'; }
+
+  try {
+    // Date ISO Lun..Sab della settimana corrente
+    const monday = isoWeekToMonday(pwAnno, pwWeek);
+    const isoDates = [];
+    for (let i = 0; i < 6; i++) {
+      const d = new Date(monday);
+      d.setUTCDate(monday.getUTCDate() + i);
+      isoDates.push(`${d.getUTCFullYear()}-${String(d.getUTCMonth()+1).padStart(2,'0')}-${String(d.getUTCDate()).padStart(2,'0')}`);
+    }
+    const startDate = isoDates[0], endDate = isoDates[5];
+
+    // Mappa nome operatore -> email
+    const emailByNome = {};
+    (state.operatori || []).forEach(o => {
+      const n = o.nome_esteso || o.nome_breve || o.nome;
+      if (n && o.email && o.email.trim()) emailByNome[n] = o.email.trim();
+    });
+
+    // Raccogli le celle pianificate (stessa logica di inclusione del render)
+    const data = pwGetWeekData();
+    const fw = pwGetFerieWeek();
+    const cells = [];
+    data.forEach(bc => {
+      if (!bc.commessa) return;
+      (bc.squadre || []).forEach(sq => {
+        const sqNome = sq.nome || 'Squadra';
+        for (let g = 0; g < 6; g++) {
+          (sq.operatori || []).forEach(op => {
+            if (!op.nome || !op.nome.trim()) return;
+            const opG = op.giorni && op.giorni[g] ? op.giorni[g] : {};
+            if (!opG.cantiere || !opG.cantiere.trim()) return;
+            if (fw[op.nome] && fw[op.nome][g] === true) return;
+            cells.push({
+              commessa: bc.commessa, squadra: sqNome, operatore: op.nome, giorno: g,
+              dataISO: isoDates[g], cantiere: opG.cantiere || '', attivita: opG.attivita || '',
+              email: emailByNome[op.nome] || '',
+            });
+          });
+        }
+      });
+    });
+
+    const emails = [...new Set(cells.map(c => c.email).filter(Boolean))];
+    const noEmailOps = [...new Set(cells.filter(c => !c.email).map(c => c.operatore))];
+
+    if (emails.length === 0) {
+      showAlertModal('Nessun operatore con email assegnata questa settimana. Assegna le email dalla tab "Email/operatore".');
+      if (status) status.textContent = '';
+      return;
+    }
+
+    // Chiamata Edge Function
+    const { data: fnData, error } = await _sbClient.functions.invoke('jira-sync-worklogs', {
+      body: { emails, startDate, endDate },
+    });
+    if (error) throw new Error(error.message || 'Errore Edge Function');
+
+    const results = (fnData && fnData.results) || {};
+    const errs    = (fnData && fnData.errors)  || {};
+
+    // Costruisci i record da upsertare (Decisione B: operatori senza email saltati)
+    const records = [];
+    let updated = 0;
+    cells.forEach(c => {
+      if (!c.email) return;
+      const dayData = (results[c.email.toLowerCase()] || {})[c.dataISO];
+      // (Decisione C) giorno senza worklog -> 0 ore, nessun ticket
+      const hours   = dayData ? dayData.hours   : 0;
+      const tickets = dayData ? dayData.tickets : [];
+
+      const k = `${c.commessa}|||${c.squadra}|||${c.operatore}|||${c.giorno}`;
+      if (!_cpData[k]) _cpData[k] = {};
+      _cpData[k].ore_jira     = hours;
+      _cpData[k].jira_tickets = tickets;
+
+      records.push({
+        anno: pwAnno, week: pwWeek,
+        commessa: c.commessa, squadra: c.squadra, operatore: c.operatore, giorno: c.giorno,
+        data_giorno: c.dataISO,
+        cantiere: c.cantiere || null, attivita: c.attivita || null,
+        ore_jira: hours, jira_tickets: tickets,
+        ore_report: _cpData[k].ore_report ?? null,
+        km_cad:     _cpData[k].km_cad     ?? null,
+        note:       _cpData[k].note       ?? null,
+        updated_at: new Date().toISOString(),
+        updated_by: _sbUser?.email || null,
+      });
+      updated++;
+    });
+
+    if (records.length > 0) {
+      const { error: upErr } = await _sbClient
+        .from('controllo_produzione')
+        .upsert(records, { onConflict: 'anno,week,commessa,squadra,operatore,giorno' });
+      if (upErr) throw new Error(upErr.message || 'Errore salvataggio');
+    }
+
+    pwControlloRender();
+    pwApplyProduzioneColors();
+
+    // Riepilogo (Decisione B)
+    let msg = `✅ Sincronizzati ${updated} record da Jira.`;
+    if (noEmailOps.length) {
+      msg += `\n\n⚠ ${noEmailOps.length} operator${noEmailOps.length>1?'i':'e'} senza email (saltati): ${noEmailOps.join(', ')}.`;
+    }
+    const errKeys = Object.keys(errs);
+    if (errKeys.length) {
+      msg += `\n\n⚠ ${errKeys.length} error${errKeys.length>1?'i':'e'} Jira: ` +
+             errKeys.map(e => `${e} (${errs[e]})`).join('; ') + '.';
+    }
+    if (status) status.textContent = `${updated} record sincronizzati`;
+    showAlertModal(msg);
+  } catch (e) {
+    console.error('pwControlloSyncJira error:', e);
+    if (status) status.textContent = '⚠ Errore sincronizzazione';
+    showAlertModal('Errore durante la sincronizzazione: ' + (e.message || e));
+  } finally {
+    if (btn) { btn.disabled = false; btn.style.opacity = '1'; }
+  }
 }
 
 async function pwControlloSaveCell(commessa, squadra, operatore, giornoIdx, dataGiorno, cantiere, attivita, field, value) {
@@ -7495,7 +7641,7 @@ function pwControlloExport() {
   }
 
   const headers = ['Commessa','Squadra','Operatore','Giorno','Data','Cantiere','Attività',
-                   'Ore Jira','Ore Report Prod.','Δ Ore','Km / Cad','Note'];
+                   'Ore Jira','Ticket','Ore Report Prod.','Δ Ore','Km / Cad','Note'];
   const wsData = [headers];
 
   // Stesso ordine del render: commessa → squadra → giorno → operatori
@@ -7513,11 +7659,14 @@ function pwControlloExport() {
           const rVal  = saved.ore_report != null ? saved.ore_report : '';
           const jNum  = parseFloat(String(jVal)), rNum = parseFloat(String(rVal));
           const delta = (!isNaN(jNum) && !isNaN(rNum)) ? jNum - rNum : '';
+          const ticketStr = Array.isArray(saved.jira_tickets)
+            ? saved.jira_tickets.map(t => t.key).join(', ') : '';
           wsData.push([
             bc.commessa, sqNome, op.nome,
             DAY_NAMES[g], dates[g],
             opG.cantiere || '', opG.attivita || '',
             jVal === '' ? '' : jVal,
+            ticketStr,
             rVal === '' ? '' : rVal,
             delta === '' ? '' : delta,
             saved.km_cad != null ? saved.km_cad : '',
@@ -7531,7 +7680,7 @@ function pwControlloExport() {
   const wb = XLSX.utils.book_new();
   const ws = XLSX.utils.aoa_to_sheet(wsData);
   ws['!cols'] = [{wch:35},{wch:15},{wch:22},{wch:6},{wch:8},
-                 {wch:20},{wch:22},{wch:10},{wch:16},{wch:8},{wch:10},{wch:28}];
+                 {wch:20},{wch:22},{wch:10},{wch:22},{wch:16},{wch:8},{wch:10},{wch:28}];
 
   const hStyle = { font:{bold:true,color:{rgb:'FFFFFF'}}, fill:{fgColor:{rgb:'0F766E'}}, alignment:{horizontal:'center'} };
   const eStyle = { fill:{fgColor:{rgb:'FEFCE8'}} };
@@ -7541,7 +7690,7 @@ function pwControlloExport() {
     ws[ref].s = hStyle;
   });
   for (let ri = 1; ri < wsData.length; ri++) {
-    [7,8,10,11].forEach(ci => {
+    [7,9,11,12].forEach(ci => {
       const ref = XLSX.utils.encode_cell({r:ri, c:ci});
       if (!ws[ref]) ws[ref] = {t:'z'};
       ws[ref].s = eStyle;
