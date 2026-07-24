@@ -654,7 +654,7 @@
         <select id="anno-selector" class="text-sm border-none font-semibold focus:outline-none cursor-pointer" style="color:#f9fafb;background:#1a1a1a;border-radius:4px;padding:1px 4px;"></select>
       </div>
       <div class="text-xs pl-2" style="border-left:1px solid #444;color:#9ca3af;">
-        <span class="font-medium" style="color:#00b8b0;">v18.25.0</span> · Michele Marchetti
+        <span class="font-medium" style="color:#00b8b0;">v18.26.0</span> · Michele Marchetti
       </div>
     </div>
   </div>
@@ -7777,9 +7777,15 @@ function pwControlloExportPDF() {
     dates.push(`${String(d.getUTCDate()).padStart(2,'0')}/${String(d.getUTCMonth()+1).padStart(2,'0')}/${d.getUTCFullYear()}`);
   }
 
-  // Raggruppa per giorno -> operatori (tutti i pianificati, anche 0 ore)
+  // Raggruppa per giorno -> operatori.
+  // Righe normali: operatori con cantiere assegnato (non in ferie).
+  // Righe speciali: operatori SENZA cantiere quel giorno ma in ferie o con attività
+  //   -> compaiono con le sole "Altre informazioni" compilate.
   const fw = pwGetFerieWeek();
   const rowsByDay = [[],[],[],[],[],[]];
+  const anyCantiereByDay = [new Set(), new Set(), new Set(), new Set(), new Set(), new Set()];
+
+  // FASE 1: righe normali + traccia chi ha un cantiere quel giorno
   data.forEach(bc => {
     if (!bc.commessa) return;
     (bc.squadre || []).forEach(sq => {
@@ -7788,8 +7794,10 @@ function pwControlloExportPDF() {
         (sq.operatori || []).forEach(op => {
           if (!op.nome || !op.nome.trim()) return;
           const opG = op.giorni && op.giorni[g] ? op.giorni[g] : {};
-          if (!opG.cantiere || !opG.cantiere.trim()) return;
-          if (fw[op.nome] && fw[op.nome][g] === true) return;
+          const cant = (opG.cantiere || '').trim();
+          if (cant) anyCantiereByDay[g].add(op.nome);
+          const isFerie = fw[op.nome] && fw[op.nome][g] === true;
+          if (!cant || isFerie) return; // righa normale solo se cantiere e non ferie
           const k = `${bc.commessa}|||${sqNome}|||${op.nome}|||${g}`;
           const saved = _cpData[k] || {};
           const tickets = Array.isArray(saved.jira_tickets) ? saved.jira_tickets : [];
@@ -7799,9 +7807,40 @@ function pwControlloExportPDF() {
             : '—';
           rowsByDay[g].push({
             operatore: op.nome,
-            cantiere:  opG.cantiere || '',
+            cantiere:  cant,
             oreJira:   saved.ore_jira != null ? saved.ore_jira : null,
             ticketStr, epicStr,
+            altre: '',
+          });
+        });
+      }
+    });
+  });
+
+  // FASE 2: righe speciali (ferie / solo attività), senza cantiere quel giorno, dedup per operatore
+  const specialSeen = [new Set(), new Set(), new Set(), new Set(), new Set(), new Set()];
+  data.forEach(bc => {
+    if (!bc.commessa) return;
+    (bc.squadre || []).forEach(sq => {
+      for (let g = 0; g < 6; g++) {
+        (sq.operatori || []).forEach(op => {
+          if (!op.nome || !op.nome.trim()) return;
+          const opG = op.giorni && op.giorni[g] ? op.giorni[g] : {};
+          const cant = (opG.cantiere || '').trim();
+          const att  = (opG.attivita || '').trim();
+          const isFerie = fw[op.nome] && fw[op.nome][g] === true;
+          if (cant) return;                              // questa cella ha cantiere -> non speciale
+          if (anyCantiereByDay[g].has(op.nome)) return;  // ha cantiere altrove quel giorno
+          if (!isFerie && !att) return;                  // niente da mostrare
+          if (specialSeen[g].has(op.nome)) return;       // dedup per operatore/giorno
+          specialSeen[g].add(op.nome);
+          const altre = isFerie ? ('🌴 Ferie' + (att ? ' · ' + att : '')) : att;
+          rowsByDay[g].push({
+            operatore: op.nome,
+            cantiere:  '—',
+            oreJira:   null,
+            ticketStr: '—', epicStr: '—',
+            altre,
           });
         });
       }
@@ -7838,23 +7877,25 @@ function pwControlloExportPDF() {
 
     doc.autoTable({
       startY: y + 2,
-      head: [['Operatore', 'Cantiere', 'Ore Jira', 'Ticket', 'Epic']],
+      head: [['Operatore', 'Cantiere', 'Ore Jira', 'Ticket', 'Epic', 'Altre informazioni']],
       body: rows.map(r => [
         r.operatore,
-        r.cantiere,
+        r.cantiere || '—',
         (r.oreJira != null ? String(r.oreJira) : '—'),
         r.ticketStr,
         r.epicStr,
+        r.altre || '',
       ]),
       styles: { fontSize: 8, cellPadding: 1.6, overflow: 'linebreak', valign: 'top' },
       headStyles: { fillColor: [15, 118, 110], textColor: 255, fontStyle: 'bold', halign: 'left' },
       alternateRowStyles: { fillColor: [248, 250, 252] },
       columnStyles: {
-        0: { cellWidth: 50 },
-        1: { cellWidth: 60 },
-        2: { cellWidth: 22, halign: 'center', fontStyle: 'bold' },
-        3: { cellWidth: 55 },
-        4: { cellWidth: 'auto' },
+        0: { cellWidth: 46 },
+        1: { cellWidth: 48 },
+        2: { cellWidth: 18, halign: 'center', fontStyle: 'bold' },
+        3: { cellWidth: 42 },
+        4: { cellWidth: 50 },
+        5: { cellWidth: 'auto' },
       },
       margin: { left: 14, right: 14 },
       didParseCell: function (hookData) {
