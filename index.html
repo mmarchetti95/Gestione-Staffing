@@ -654,7 +654,7 @@
         <select id="anno-selector" class="text-sm border-none font-semibold focus:outline-none cursor-pointer" style="color:#f9fafb;background:#1a1a1a;border-radius:4px;padding:1px 4px;"></select>
       </div>
       <div class="text-xs pl-2" style="border-left:1px solid #444;color:#9ca3af;">
-        <span class="font-medium" style="color:#00b8b0;">v18.28.0</span> · Michele Marchetti
+        <span class="font-medium" style="color:#00b8b0;">v18.28.1</span> · Michele Marchetti
       </div>
     </div>
   </div>
@@ -7700,54 +7700,93 @@ function cpHmToMin(hm) {
   return parseInt(mm[1], 10) * 60 + parseInt(mm[2], 10);
 }
 
-// Parsa il CSV del report produzione. Ritorna una mappa aggregata per
-// (username, dataISO) con: { startMin (prima entrata), endMin (ultima uscita),
-// lenM (somma lunghezze in metri su tutti i layer/righe di quel giorno) }.
+// Divide una riga CSV rispettando le virgolette (gestisce "" come virgoletta
+// letterale). Ritorna i campi già trimmati.
+function cpSplitCsvLine(line, delim) {
+  const out = [];
+  let cur = '', inq = false;
+  for (let i = 0; i < line.length; i++) {
+    const ch = line[i];
+    if (inq) {
+      if (ch === '"') {
+        if (line[i + 1] === '"') { cur += '"'; i++; }
+        else inq = false;
+      } else cur += ch;
+    } else {
+      if (ch === '"') inq = true;
+      else if (ch === delim) { out.push(cur); cur = ''; }
+      else cur += ch;
+    }
+  }
+  out.push(cur);
+  return out.map(s => s.trim());
+}
+
+// Parsa il CSV del report produzione. Rileva il delimitatore (; o ,), mappa le
+// colonne dall'intestazione (con fallback posizionale) e aggrega per
+// (username, dataISO): { startMin, endMin, lenM (somma metri su tutti i layer) }.
 function cpParseReportCsv(text) {
   const MESI = {
     gennaio:1, febbraio:2, marzo:3, aprile:4, maggio:5, giugno:6,
     luglio:7, agosto:8, settembre:9, ottobre:10, novembre:11, dicembre:12,
   };
   text = String(text || '').replace(/^\ufeff/, '');
-  const lines = text.split(/\r?\n/);
+  const lines = text.split(/\r?\n/).filter(l => l.trim() !== '');
+  if (lines.length === 0) return { agg: {}, rows: 0 };
+
+  // Delimitatore: quello più frequente nella prima riga tra ; e ,
+  const h0 = lines[0];
+  const delim = ((h0.match(/;/g) || []).length >= (h0.match(/,/g) || []).length) ? ';' : ',';
+
+  // Intestazione → indici colonna (per nome, robusto al riordino)
+  const header = cpSplitCsvLine(lines[0], delim).map(s => s.toLowerCase());
+  const findCol = (...names) => {
+    for (const n of names) {
+      const idx = header.findIndex(h => h.includes(n));
+      if (idx >= 0) return idx;
+    }
+    return -1;
+  };
+  let iAnno = findCol('anno'), iMese = findCol('mese'), iGiorno = findCol('giorno');
+  let iOp = findCol('operatore', 'utente'), iIn = findCol('inizio'), iFin = findCol('fine');
+  let iLen = findCol('lunghezza', 'lungh');
+  const hasHeader = (iAnno >= 0 && iMese >= 0 && iGiorno >= 0 && iOp >= 0);
+  // Fallback posizionale (formato noto: Layer;Anno;Mese;Giorno;Operatore;Inizio;Fine;Prod;Ore;Lunghezza;Attivita)
+  if (!hasHeader) { iAnno=1; iMese=2; iGiorno=3; iOp=4; iIn=5; iFin=6; iLen=9; }
+
   const agg = {};
-  for (const line of lines) {
-    if (!line.trim()) continue;
-    // Campi tutti racchiusi tra virgolette e separati da ';'
-    const f = [];
-    const re = /"([^"]*)"/g;
-    let m;
-    while ((m = re.exec(line)) !== null) f.push(m[1]);
-    if (f.length < 10) continue;
-    // 0 Layer, 1 Anno, 2 Mese, 3 Giorno, 4 Operatore, 5 Inizio, 6 Fine,
-    // 7 Produzione(punti), 8 Ore, 9 Lunghezza(m), 10 Attivita
-    const anno = String(f[1] || '').trim();
-    if (!/^\d{4}$/.test(anno)) continue; // salta header o righe malformate
-    const meseNum = MESI[String(f[2] || '').trim().toLowerCase()];
+  let rows = 0;
+  const startRow = hasHeader ? 1 : 0;
+  for (let li = startRow; li < lines.length; li++) {
+    const f = cpSplitCsvLine(lines[li], delim);
+    if (f.length <= Math.max(iAnno, iMese, iGiorno, iOp, iLen)) continue;
+    const anno = String(f[iAnno] || '').trim();
+    if (!/^\d{4}$/.test(anno)) continue;
+    const meseNum = MESI[String(f[iMese] || '').trim().toLowerCase()];
     if (!meseNum) continue;
-    const gg   = String(f[3] || '').trim().padStart(2, '0');
-    const user = String(f[4] || '').trim().toLowerCase();
+    const gg   = String(f[iGiorno] || '').trim().padStart(2, '0');
+    const user = String(f[iOp] || '').trim().toLowerCase();
     if (!user) continue;
     const dateISO = `${anno}-${String(meseNum).padStart(2, '0')}-${gg}`;
-    const startMin = cpHmToMin(f[5]);
-    const endMin   = cpHmToMin(f[6]);
-    const lenM = parseFloat(String(f[9] || '').replace(',', '.')) || 0;
+    const startMin = iIn  >= 0 ? cpHmToMin(f[iIn])  : null;
+    const endMin   = iFin >= 0 ? cpHmToMin(f[iFin]) : null;
+    const lenM = iLen >= 0 ? (parseFloat(String(f[iLen] || '').replace(',', '.')) || 0) : 0;
     const key = `${user}|||${dateISO}`;
     if (!agg[key]) agg[key] = { startMin: Infinity, endMin: -Infinity, lenM: 0 };
     if (startMin != null && startMin < agg[key].startMin) agg[key].startMin = startMin;
     if (endMin   != null && endMin   > agg[key].endMin)   agg[key].endMin   = endMin;
     agg[key].lenM += lenM;
+    rows++;
   }
   Object.values(agg).forEach(a => {
     if (a.startMin === Infinity)  a.startMin = 0;
     if (a.endMin   === -Infinity) a.endMin   = 0;
   });
-  return agg;
+  return { agg, rows };
 }
 
 // Ritorna, per la commessa+squadra indicate, gli operatori pianificati per giorno
 // (stessa logica di inclusione del render: cantiere assegnato e non in ferie).
-// perDay[g] = [{ nome, cantiere, attivita }, ...]
 function cpGetSquadraOpsByDay(commessa, squadra) {
   const data = pwGetWeekData();
   const fw = pwGetFerieWeek();
@@ -7777,26 +7816,43 @@ function cpGetSquadraOpsByDay(commessa, squadra) {
 async function cpCaricaReportSquadra(commessa, squadra) {
   const inp = document.createElement('input');
   inp.type = 'file';
-  inp.accept = '.csv,text/csv';
+  inp.accept = '.csv,text/csv,text/plain';
   inp.style.display = 'none';
   document.body.appendChild(inp);
   inp.onchange = async () => {
     const file = inp.files && inp.files[0];
     if (inp.parentNode) inp.parentNode.removeChild(inp);
     if (!file) return;
-    let text;
-    try { text = await file.text(); }
-    catch (e) { showAlertModal('Impossibile leggere il file selezionato.'); return; }
-    await cpProcessReport(text, commessa, squadra);
+    const st = document.getElementById('cp-status');
+    if (st) st.textContent = '⏳ Lettura report…';
+    try {
+      let text;
+      if (typeof file.text === 'function') {
+        text = await file.text();
+      } else {
+        text = await new Promise((res, rej) => {
+          const fr = new FileReader();
+          fr.onload = () => res(fr.result);
+          fr.onerror = () => rej(new Error('lettura fallita'));
+          fr.readAsText(file);
+        });
+      }
+      await cpProcessReport(text, commessa, squadra);
+    } catch (e) {
+      console.error('cpCaricaReportSquadra error:', e);
+      showAlertModal('Errore durante il caricamento del report:\n' + (e && e.message ? e.message : String(e)));
+    } finally {
+      if (st) st.textContent = '';
+    }
   };
   inp.click();
 }
 
 // Elabora il CSV e compila Ore Report Prod. + KM/Cad per la squadra/settimana.
 async function cpProcessReport(csvText, commessa, squadra) {
-  const parsed = cpParseReportCsv(csvText);
-  if (Object.keys(parsed).length === 0) {
-    showAlertModal('Il file non contiene righe valide (formato CSV report produzione atteso).');
+  const { agg: parsed, rows } = cpParseReportCsv(csvText);
+  if (rows === 0) {
+    showAlertModal('Il file non contiene righe valide.\nAtteso un CSV report produzione con colonne Anno, Mese, Giorno, Operatore, Inizio, Fine, Lunghezza.');
     return;
   }
 
@@ -7826,6 +7882,7 @@ async function cpProcessReport(csvText, commessa, squadra) {
   // Costruisci l'elenco delle celle da aggiornare
   const updates = [];
   const opsNoEmail = new Set();
+  const matchedUsers = new Set();
   let daysWithData = 0, daysZero = 0;
 
   for (const g of days) {
@@ -7833,24 +7890,24 @@ async function cpProcessReport(csvText, commessa, squadra) {
     const N = ops.length;
     const dateISO = isoDates[g];
 
-    // Individua l'operatore-fonte: quello della squadra presente nel report quel
-    // giorno. Normalmente uno solo; in caso di più, prende quello con lunghezza
-    // maggiore (il "tracker principale").
     let source = null;
     ops.forEach(op => {
       const email = emailByNome[op.nome];
       if (!email) { opsNoEmail.add(op.nome); return; }
       const user = email.split('@')[0].toLowerCase();
       const rec = parsed[`${user}|||${dateISO}`];
-      if (rec && (!source || rec.lenM > source.lenM)) source = rec;
+      if (rec) {
+        matchedUsers.add(user);
+        if (!source || rec.lenM > source.lenM) source = rec;
+      }
     });
 
     let oreVal = 0, kmVal = 0;
     if (source) {
       daysWithData++;
       const oreSpan = Math.max(0, source.endMin - source.startMin) / 60;
-      oreVal = Math.round(oreSpan * 100) / 100;               // ore = span, 2 decimali
-      kmVal  = Math.round(((source.lenM / 1000) / N) * 1000) / 1000; // km per operatore, 3 decimali
+      oreVal = Math.round(oreSpan * 100) / 100;
+      kmVal  = Math.round(((source.lenM / 1000) / N) * 1000) / 1000;
     } else {
       daysZero++;
     }
@@ -7864,13 +7921,28 @@ async function cpProcessReport(csvText, commessa, squadra) {
     });
   }
 
-  const ok = await showConfirmAsync(
-    `Verranno compilati "Ore Report Prod." e "KM/Cad" per la squadra "${squadra}": ` +
-    `${updates.length} celle su ${days.length} giorni pianificati ` +
-    `(${daysWithData} con dati, ${daysZero} a zero). ` +
-    `I valori esistenti saranno sovrascritti. Procedere?`,
-    'Carica Report');
-  if (!ok) return;
+  // Se nessun giorno ha dati, avvisa con dettaglio (spesso la settimana è fuori dal range del report)
+  if (daysWithData === 0) {
+    const range = (() => {
+      const ds = Object.keys(parsed).map(k => k.split('|||')[1]).sort();
+      return ds.length ? `${ds[0]} … ${ds[ds.length-1]}` : '—';
+    })();
+    const ok0 = await showConfirmAsync(
+      `Nessun dato trovato nel report per gli operatori di "${squadra}" in questa settimana ` +
+      `(${isoDates[days[0]]} … ${isoDates[days[days.length-1]]}).\n\n` +
+      `Il report copre il periodo ${range}.\n\n` +
+      `Vuoi comunque azzerare (0) "Ore Report Prod." e "KM/Cad" per questi giorni?`,
+      'Azzera comunque');
+    if (!ok0) return;
+  } else {
+    const ok = await showConfirmAsync(
+      `Verranno compilati "Ore Report Prod." e "KM/Cad" per la squadra "${squadra}": ` +
+      `${updates.length} celle su ${days.length} giorni pianificati ` +
+      `(${daysWithData} con dati, ${daysZero} a zero). ` +
+      `I valori esistenti saranno sovrascritti. Procedere?`,
+      'Carica Report');
+    if (!ok) return;
+  }
 
   // Applica: aggiorna cache locale e prepara i record per Supabase
   const records = [];
