@@ -654,7 +654,7 @@
         <select id="anno-selector" class="text-sm border-none font-semibold focus:outline-none cursor-pointer" style="color:#f9fafb;background:#1a1a1a;border-radius:4px;padding:1px 4px;"></select>
       </div>
       <div class="text-xs pl-2" style="border-left:1px solid #444;color:#9ca3af;">
-        <span class="font-medium" style="color:#00b8b0;">v18.26.0</span> · Michele Marchetti
+        <span class="font-medium" style="color:#00b8b0;">v18.27.0</span> · Michele Marchetti
       </div>
     </div>
   </div>
@@ -7052,8 +7052,19 @@ function switchScreen(screen) {
 
 /* ==================== TAB GRIGLIA / FERIE / MAPPA ==================== */
 let _pwActiveTab = 'griglia';
+// Ricorda la posizione di scroll di ciascun tab (Griglia/Ferie/Mappa = scroll pagina,
+// Controllo Produzione = scroll interno alla tabella) finché non si fa il refresh.
+let _pwScrollY = { griglia: 0, ferie: 0, mappa: 0, controllo: 0 };
+let _cpTableScrollTop = 0;
 
 function pwSwitchTab(tab) {
+  // Salva la posizione di scroll del tab che si stava lasciando, per ripristinarla al ritorno
+  const _leavingTab = _pwActiveTab;
+  _pwScrollY[_leavingTab] = window.scrollY;
+  if (_leavingTab === 'controllo') {
+    const _cpc = document.getElementById('cp-table-container');
+    if (_cpc) _cpTableScrollTop = _cpc.scrollTop;
+  }
   _pwActiveTab = tab;
   const headerDates = document.getElementById('pw-header-dates');
   if (headerDates) {
@@ -7080,6 +7091,7 @@ function pwSwitchTab(tab) {
   if (tab === 'mappa') {
     tm.classList.add('active');
     vm.classList.remove('hidden');
+    window.scrollTo(0, _pwScrollY.mappa || 0);
     setTimeout(() => {
       if (!_map) {
         _map = L.map('pw-map', { preferCanvas: true }).setView([42.5, 12.5], 6);
@@ -7095,16 +7107,24 @@ function pwSwitchTab(tab) {
     tf.classList.add('active');
     vf.classList.remove('hidden');
     pwFerieRender();
+    window.scrollTo(0, _pwScrollY.ferie || 0);
   } else if (tab === 'controllo') {
     tc.classList.add('active');
     vc.classList.remove('hidden');
-    _cpCollapsedComm = new Set(); _cpCollapsedSq = new Set();
-    pwControlloLoad();
+    // Nota: NON azzerare _cpCollapsedComm/_cpCollapsedSq qui — devono restare
+    // come l'utente le ha lasciate finché non fa il refresh della pagina.
+    pwControlloLoad().then(() => {
+      const _cpc = document.getElementById('cp-table-container');
+      if (_cpc) _cpc.scrollTop = _cpTableScrollTop;
+      window.scrollTo(0, _pwScrollY.controllo || 0);
+    });
   } else {
     tg.classList.add('active');
     vg.classList.remove('hidden');
-    _pwCollapsedComm = new Set(); _pwCollapsedSq = new Set();
+    // Nota: NON azzerare _pwCollapsedComm/_pwCollapsedSq qui — devono restare
+    // come l'utente le ha lasciate finché non fa il refresh della pagina.
     pwRender();
+    window.scrollTo(0, _pwScrollY.griglia || 0);
   }
 }
 
