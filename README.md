@@ -1,3 +1,6 @@
+## v18.28.0
+- feat: aggiunto bottone "📄 Carica Report" a fianco di ogni squadra nel tab Controllo Produzione. Carica un CSV del report produzione e compila automaticamente "Ore Report Prod." e "KM/Cad" per gli operatori pianificati della squadra nella settimana corrente. Abbinamento operatore report<->app tramite email (parte locale prima della @). Ore = span della giornata (prima entrata -> ultima uscita) dell'operatore-fonte, uguale per tutta la squadra. Produzione = lunghezza totale (m) dell'operatore-fonte convertita in km e divisa per il numero di operatori della squadra, assegnata a tutti. Giorni senza dati nel report -> 0. Sovrascrittura con conferma.
+
 ## v18.27.0
 - fix: mantenuti stato di espansione/collasso (commesse/squadre) e posizione di scroll per ciascun tab (Griglia settimanale, Ferie/Permessi, Mappa squadre, Controllo produzione) quando si passa da un tab all'altro nella Pianificazione Settimanale. Prima ogni switch di tab azzerava collapse e scroll; ora restano invariati finché non si fa il refresh della pagina.
 
