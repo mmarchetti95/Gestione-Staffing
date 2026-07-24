@@ -1,3 +1,6 @@
+## v18.28.1
+- fix: "Carica Report" ora ha un parser CSV robusto (rileva delimitatore ; o , e mappa le colonne dall'intestazione), legge il file con fallback FileReader, e mostra a schermo eventuali errori invece di fallire in silenzio. Aggiunto avviso esplicito quando la settimana selezionata e' fuori dal periodo coperto dal report (con indicazione del range disponibile) e opzione per azzerare comunque.
+
 ## v18.28.0
 - feat: aggiunto bottone "📄 Carica Report" a fianco di ogni squadra nel tab Controllo Produzione. Carica un CSV del report produzione e compila automaticamente "Ore Report Prod." e "KM/Cad" per gli operatori pianificati della squadra nella settimana corrente. Abbinamento operatore report<->app tramite email (parte locale prima della @). Ore = span della giornata (prima entrata -> ultima uscita) dell'operatore-fonte, uguale per tutta la squadra. Produzione = lunghezza totale (m) dell'operatore-fonte convertita in km e divisa per il numero di operatori della squadra, assegnata a tutti. Giorni senza dati nel report -> 0. Sovrascrittura con conferma.
 
