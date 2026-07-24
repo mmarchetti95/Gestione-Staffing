@@ -1,3 +1,6 @@
+## v18.28.2
+- fix: corretto `ReferenceError: dataISO is not defined` in "Carica Report" (refuso variabile dateISO/dataISO) che impediva la compilazione delle celle.
+
 ## v18.28.1
 - fix: "Carica Report" ora ha un parser CSV robusto (rileva delimitatore ; o , e mappa le colonne dall'intestazione), legge il file con fallback FileReader, e mostra a schermo eventuali errori invece di fallire in silenzio. Aggiunto avviso esplicito quando la settimana selezionata e' fuori dal periodo coperto dal report (con indicazione del range disponibile) e opzione per azzerare comunque.
 
