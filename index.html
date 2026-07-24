@@ -654,7 +654,7 @@
         <select id="anno-selector" class="text-sm border-none font-semibold focus:outline-none cursor-pointer" style="color:#f9fafb;background:#1a1a1a;border-radius:4px;padding:1px 4px;"></select>
       </div>
       <div class="text-xs pl-2" style="border-left:1px solid #444;color:#9ca3af;">
-        <span class="font-medium" style="color:#00b8b0;">v18.27.0</span> · Michele Marchetti
+        <span class="font-medium" style="color:#00b8b0;">v18.28.0</span> · Michele Marchetti
       </div>
     </div>
   </div>
@@ -7381,7 +7381,7 @@ function pwControlloRender() {
     html += `<tr class="cp-tr-commessa" data-comm-idx="${blIdx}"><td colspan="15"><span class="cp-carr" style="cursor:pointer;user-select:none;margin-right:5px;font-size:11px;display:inline-block;width:10px;text-align:center;" onclick="cpToggleComm(${blIdx})">▼</span>📁 ${esc(bl.commessa)}</td></tr>`;
     bl.squadre.forEach((sq, sqIdx) => {
       const sqKey = blIdx + '-' + sqIdx;
-      html += `<tr class="cp-tr-squadra" data-comm-idx="${blIdx}" data-sq-idx="${sqKey}"><td colspan="15">&nbsp;&nbsp;&nbsp;<span class="cp-sarr" style="cursor:pointer;user-select:none;margin-right:5px;font-size:11px;display:inline-block;width:10px;text-align:center;" onclick="cpToggleSq('${sqKey}')">▼</span>👥 ${esc(sq.nome)}</td></tr>`;
+      html += `<tr class="cp-tr-squadra" data-comm-idx="${blIdx}" data-sq-idx="${sqKey}"><td colspan="15">&nbsp;&nbsp;&nbsp;<span class="cp-sarr" style="cursor:pointer;user-select:none;margin-right:5px;font-size:11px;display:inline-block;width:10px;text-align:center;" onclick="cpToggleSq('${sqKey}')">▼</span>👥 ${esc(sq.nome)}<button class="no-print" style="margin-left:10px;font-size:11px;font-weight:600;background:#0ea5e9;color:#fff;border:none;border-radius:5px;padding:2px 8px;cursor:pointer;" onclick="event.stopPropagation();cpCaricaReportSquadra('${jsesc(bl.commessa)}','${jsesc(sq.nome)}')">📄 Carica Report</button></td></tr>`;
       sq.giorni.forEach((gBlock, gIdx) => {
         const g   = gBlock.giornoIdx;
         const sep = gIdx > 0 ? ' cp-day-sep' : '';
@@ -7689,6 +7689,234 @@ async function pwControlloSaveCell(commessa, squadra, operatore, giornoIdx, data
     const st = document.getElementById('cp-status');
     if (st) { st.textContent = '⚠ Errore salvataggio'; setTimeout(() => { st.textContent = ''; }, 3000); }
   }
+}
+
+/* ==================== CARICA REPORT PRODUZIONE (per squadra) ==================== */
+
+// Converte "HH:MM" in minuti dall'inizio giornata. Null se non valido.
+function cpHmToMin(hm) {
+  const mm = String(hm || '').trim().match(/^(\d{1,2}):(\d{2})$/);
+  if (!mm) return null;
+  return parseInt(mm[1], 10) * 60 + parseInt(mm[2], 10);
+}
+
+// Parsa il CSV del report produzione. Ritorna una mappa aggregata per
+// (username, dataISO) con: { startMin (prima entrata), endMin (ultima uscita),
+// lenM (somma lunghezze in metri su tutti i layer/righe di quel giorno) }.
+function cpParseReportCsv(text) {
+  const MESI = {
+    gennaio:1, febbraio:2, marzo:3, aprile:4, maggio:5, giugno:6,
+    luglio:7, agosto:8, settembre:9, ottobre:10, novembre:11, dicembre:12,
+  };
+  text = String(text || '').replace(/^\ufeff/, '');
+  const lines = text.split(/\r?\n/);
+  const agg = {};
+  for (const line of lines) {
+    if (!line.trim()) continue;
+    // Campi tutti racchiusi tra virgolette e separati da ';'
+    const f = [];
+    const re = /"([^"]*)"/g;
+    let m;
+    while ((m = re.exec(line)) !== null) f.push(m[1]);
+    if (f.length < 10) continue;
+    // 0 Layer, 1 Anno, 2 Mese, 3 Giorno, 4 Operatore, 5 Inizio, 6 Fine,
+    // 7 Produzione(punti), 8 Ore, 9 Lunghezza(m), 10 Attivita
+    const anno = String(f[1] || '').trim();
+    if (!/^\d{4}$/.test(anno)) continue; // salta header o righe malformate
+    const meseNum = MESI[String(f[2] || '').trim().toLowerCase()];
+    if (!meseNum) continue;
+    const gg   = String(f[3] || '').trim().padStart(2, '0');
+    const user = String(f[4] || '').trim().toLowerCase();
+    if (!user) continue;
+    const dateISO = `${anno}-${String(meseNum).padStart(2, '0')}-${gg}`;
+    const startMin = cpHmToMin(f[5]);
+    const endMin   = cpHmToMin(f[6]);
+    const lenM = parseFloat(String(f[9] || '').replace(',', '.')) || 0;
+    const key = `${user}|||${dateISO}`;
+    if (!agg[key]) agg[key] = { startMin: Infinity, endMin: -Infinity, lenM: 0 };
+    if (startMin != null && startMin < agg[key].startMin) agg[key].startMin = startMin;
+    if (endMin   != null && endMin   > agg[key].endMin)   agg[key].endMin   = endMin;
+    agg[key].lenM += lenM;
+  }
+  Object.values(agg).forEach(a => {
+    if (a.startMin === Infinity)  a.startMin = 0;
+    if (a.endMin   === -Infinity) a.endMin   = 0;
+  });
+  return agg;
+}
+
+// Ritorna, per la commessa+squadra indicate, gli operatori pianificati per giorno
+// (stessa logica di inclusione del render: cantiere assegnato e non in ferie).
+// perDay[g] = [{ nome, cantiere, attivita }, ...]
+function cpGetSquadraOpsByDay(commessa, squadra) {
+  const data = pwGetWeekData();
+  const fw = pwGetFerieWeek();
+  const perDay = {};
+  data.forEach(bc => {
+    if (bc.commessa !== commessa) return;
+    (bc.squadre || []).forEach(sq => {
+      const sqNome = sq.nome || 'Squadra';
+      if (sqNome !== squadra) return;
+      for (let g = 0; g < 6; g++) {
+        const ops = [];
+        (sq.operatori || []).forEach(op => {
+          if (!op.nome || !op.nome.trim()) return;
+          const opG = op.giorni && op.giorni[g] ? op.giorni[g] : {};
+          if (!opG.cantiere || !opG.cantiere.trim()) return;
+          if (fw[op.nome] && fw[op.nome][g] === true) return;
+          ops.push({ nome: op.nome, cantiere: opG.cantiere || '', attivita: opG.attivita || '' });
+        });
+        if (ops.length > 0) perDay[g] = ops;
+      }
+    });
+  });
+  return perDay;
+}
+
+// Handler del bottone: apre il selettore file (CSV) per la squadra indicata.
+async function cpCaricaReportSquadra(commessa, squadra) {
+  const inp = document.createElement('input');
+  inp.type = 'file';
+  inp.accept = '.csv,text/csv';
+  inp.style.display = 'none';
+  document.body.appendChild(inp);
+  inp.onchange = async () => {
+    const file = inp.files && inp.files[0];
+    if (inp.parentNode) inp.parentNode.removeChild(inp);
+    if (!file) return;
+    let text;
+    try { text = await file.text(); }
+    catch (e) { showAlertModal('Impossibile leggere il file selezionato.'); return; }
+    await cpProcessReport(text, commessa, squadra);
+  };
+  inp.click();
+}
+
+// Elabora il CSV e compila Ore Report Prod. + KM/Cad per la squadra/settimana.
+async function cpProcessReport(csvText, commessa, squadra) {
+  const parsed = cpParseReportCsv(csvText);
+  if (Object.keys(parsed).length === 0) {
+    showAlertModal('Il file non contiene righe valide (formato CSV report produzione atteso).');
+    return;
+  }
+
+  const opsByDay = cpGetSquadraOpsByDay(commessa, squadra);
+  const days = Object.keys(opsByDay).map(Number).sort((a, b) => a - b);
+  if (days.length === 0) {
+    showAlertModal(`La squadra "${squadra}" non ha operatori pianificati questa settimana.`);
+    return;
+  }
+
+  // Date ISO Lun..Sab della settimana corrente
+  const monday = isoWeekToMonday(pwAnno, pwWeek);
+  const isoDates = [];
+  for (let i = 0; i < 6; i++) {
+    const d = new Date(monday);
+    d.setUTCDate(monday.getUTCDate() + i);
+    isoDates.push(`${d.getUTCFullYear()}-${String(d.getUTCMonth()+1).padStart(2,'0')}-${String(d.getUTCDate()).padStart(2,'0')}`);
+  }
+
+  // Mappa nome operatore -> email (stessa logica del sync Jira)
+  const emailByNome = {};
+  (state.operatori || []).forEach(o => {
+    const n = o.nome_esteso || o.nome_breve || o.nome;
+    if (n && o.email && o.email.trim()) emailByNome[n] = o.email.trim();
+  });
+
+  // Costruisci l'elenco delle celle da aggiornare
+  const updates = [];
+  const opsNoEmail = new Set();
+  let daysWithData = 0, daysZero = 0;
+
+  for (const g of days) {
+    const ops = opsByDay[g];
+    const N = ops.length;
+    const dateISO = isoDates[g];
+
+    // Individua l'operatore-fonte: quello della squadra presente nel report quel
+    // giorno. Normalmente uno solo; in caso di più, prende quello con lunghezza
+    // maggiore (il "tracker principale").
+    let source = null;
+    ops.forEach(op => {
+      const email = emailByNome[op.nome];
+      if (!email) { opsNoEmail.add(op.nome); return; }
+      const user = email.split('@')[0].toLowerCase();
+      const rec = parsed[`${user}|||${dateISO}`];
+      if (rec && (!source || rec.lenM > source.lenM)) source = rec;
+    });
+
+    let oreVal = 0, kmVal = 0;
+    if (source) {
+      daysWithData++;
+      const oreSpan = Math.max(0, source.endMin - source.startMin) / 60;
+      oreVal = Math.round(oreSpan * 100) / 100;               // ore = span, 2 decimali
+      kmVal  = Math.round(((source.lenM / 1000) / N) * 1000) / 1000; // km per operatore, 3 decimali
+    } else {
+      daysZero++;
+    }
+
+    ops.forEach(op => {
+      updates.push({
+        operatore: op.nome, giorno: g, dataISO,
+        cantiere: op.cantiere, attivita: op.attivita,
+        ore: oreVal, km: kmVal,
+      });
+    });
+  }
+
+  const ok = await showConfirmAsync(
+    `Verranno compilati "Ore Report Prod." e "KM/Cad" per la squadra "${squadra}": ` +
+    `${updates.length} celle su ${days.length} giorni pianificati ` +
+    `(${daysWithData} con dati, ${daysZero} a zero). ` +
+    `I valori esistenti saranno sovrascritti. Procedere?`,
+    'Carica Report');
+  if (!ok) return;
+
+  // Applica: aggiorna cache locale e prepara i record per Supabase
+  const records = [];
+  updates.forEach(u => {
+    const k = `${commessa}|||${squadra}|||${u.operatore}|||${u.giorno}`;
+    if (!_cpData[k]) _cpData[k] = {};
+    _cpData[k].ore_report = u.ore;
+    _cpData[k].km_cad     = u.km;
+    records.push({
+      anno: pwAnno, week: pwWeek,
+      commessa, squadra, operatore: u.operatore, giorno: u.giorno,
+      data_giorno: u.dataISO,
+      cantiere: u.cantiere || null, attivita: u.attivita || null,
+      ore_jira:   _cpData[k].ore_jira ?? null,
+      ore_report: u.ore,
+      km_cad:     u.km,
+      note:       _cpData[k].note ?? null,
+      verificato: _cpData[k].verificato === true,
+      updated_at: new Date().toISOString(),
+      updated_by: _sbUser?.email || null,
+    });
+  });
+
+  if (_sbClient && _sbUser && records.length > 0) {
+    try {
+      const { error } = await _sbClient
+        .from('controllo_produzione')
+        .upsert(records, { onConflict: 'anno,week,commessa,squadra,operatore,giorno' });
+      if (error) throw error;
+    } catch (e) {
+      console.error('cpProcessReport upsert error:', e);
+      showAlertModal('Errore durante il salvataggio: ' + (e.message || e));
+      return;
+    }
+  }
+
+  pwControlloRender();
+  pwApplyProduzioneColors();
+
+  let msg = `✅ Squadra "${squadra}": aggiornate ${records.length} celle ` +
+            `(${daysWithData} giorni con dati, ${daysZero} a zero).`;
+  if (opsNoEmail.size > 0) {
+    msg += `\n\n⚠ Operatori senza email assegnata (non abbinabili al report): ` +
+           `${[...opsNoEmail].join(', ')}. Assegna le email dalla tab "Email/operatore".`;
+  }
+  showAlertModal(msg);
 }
 
 function pwControlloExport() {
