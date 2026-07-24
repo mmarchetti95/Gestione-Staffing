@@ -1,3 +1,6 @@
+## v18.27.0
+- fix: mantenuti stato di espansione/collasso (commesse/squadre) e posizione di scroll per ciascun tab (Griglia settimanale, Ferie/Permessi, Mappa squadre, Controllo produzione) quando si passa da un tab all'altro nella Pianificazione Settimanale. Prima ogni switch di tab azzerava collapse e scroll; ora restano invariati finché non si fa il refresh della pagina.
+
 # Dashboard Staffing — Eagleprojects
 
 Applicazione web per la gestione dello staffing e della pipeline commerciale del dipartimento rilievi.
