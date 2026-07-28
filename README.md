@@ -1,3 +1,6 @@
+## v18.30.0
+- feat: alla "Sincronizza con Jira", passo intermedio prima dell'upload KM: per le celle con "Km/Cad" VUOTO e un solo ticket, legge il valore attuale di "Actual Production" dal ticket e lo scrive in "Km/Cad" (solo se >0). Le celle cosi' recuperate vengono marcate come gia' caricate (flag Su Jira), per non ri-sommarle. Le celle con valore gia' presente non vengono toccate. Richiede la Edge Function jira-update-production aggiornata (supporto modalita' 'reads').
+
 ## v18.29.0
 - feat: alla "Sincronizza con Jira", dopo il recupero worklog, il valore KM/CAD di ogni cella idonea viene SOMMATO al campo custom "Actual Production" del relativo sottotask (via Edge Function jira-update-production). Idonee: KM/CAD > 0, esattamente 1 ticket, flag "caricato" non ancora attivo. Celle con piu' ticket o senza ticket vengono saltate. Nuova colonna "Su Jira" con checkbox flag (km_jira_uploaded): si spunta automaticamente dopo il caricamento, non e' attivabile a mano, e si puo' rimuovere solo con conferma esplicita (riabilita il ricaricamento). Conferma richiesta prima di scrivere su Jira. Richiede la colonna Supabase km_jira_uploaded e la Edge Function jira-update-production.
 
