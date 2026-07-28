@@ -654,7 +654,7 @@
         <select id="anno-selector" class="text-sm border-none font-semibold focus:outline-none cursor-pointer" style="color:#f9fafb;background:#1a1a1a;border-radius:4px;padding:1px 4px;"></select>
       </div>
       <div class="text-xs pl-2" style="border-left:1px solid #444;color:#9ca3af;">
-        <span class="font-medium" style="color:#00b8b0;">v18.30.1</span> · Michele Marchetti
+        <span class="font-medium" style="color:#00b8b0;">v18.31.0</span> · Michele Marchetti
       </div>
     </div>
   </div>
@@ -7295,14 +7295,14 @@ async function pwControlloLoad() {
     if (_sbClient && _sbUser) {
       const { data, error } = await _sbClient
         .from('controllo_produzione')
-        .select('commessa,squadra,operatore,giorno,ore_jira,ore_report,km_cad,note,jira_tickets,verificato,km_jira_uploaded')
+        .select('commessa,squadra,operatore,giorno,ore_jira,ore_report,km_cad,note,jira_tickets,verificato,km_jira_uploaded,km_jira_last')
         .eq('anno', pwAnno)
         .eq('week', pwWeek);
       if (error) throw error;
       _cpData = {};
       (data || []).forEach(r => {
         const k = `${r.commessa}|||${r.squadra}|||${r.operatore}|||${r.giorno}`;
-        _cpData[k] = { ore_jira: r.ore_jira, ore_report: r.ore_report, km_cad: r.km_cad, note: r.note, jira_tickets: r.jira_tickets, verificato: r.verificato, km_jira_uploaded: r.km_jira_uploaded === true };
+        _cpData[k] = { ore_jira: r.ore_jira, ore_report: r.ore_report, km_cad: r.km_cad, note: r.note, jira_tickets: r.jira_tickets, verificato: r.verificato, km_jira_uploaded: r.km_jira_uploaded === true, km_jira_last: (r.km_jira_last == null ? null : Number(r.km_jira_last)) };
       });
       if (status) status.textContent = `${(data||[]).length} record caricati`;
     } else {
@@ -7442,7 +7442,7 @@ function pwControlloRender() {
       <td class="cp-td-edit"><input class="cp-input" type="number" step="0.1" min="0"
         value="${esc(String(kVal))}"
         onblur="pwControlloSaveCell('${ci}','${si}','${oi}',${g},'${dt}','${ca}','${at}','km_cad',this.value)"></td>
-      <td style="text-align:center"><input type="checkbox" ${saved.km_jira_uploaded === true ? 'checked' : ''} title="${saved.km_jira_uploaded === true ? 'KM/CAD caricato su Jira — clicca per rimuovere il flag (con conferma)' : 'Si spunta automaticamente dopo il caricamento su Jira'}" style="width:16px;height:16px;cursor:pointer;" onclick="cpJiraFlagClick(event,'${ci}','${si}','${oi}',${g})"></td>
+      <td style="text-align:center"><input type="checkbox" ${saved.km_jira_last != null ? 'checked' : ''} title="${saved.km_jira_last != null ? ('Ultimo valore scritto su Jira: ' + saved.km_jira_last + ' — clicca per azzerare lo storico (con conferma)') : 'Si spunta automaticamente dopo la scrittura su Jira'}" style="width:16px;height:16px;cursor:pointer;" onclick="cpJiraFlagClick(event,'${ci}','${si}','${oi}',${g})"></td>
       <td class="cp-td-edit"><input class="cp-input note" type="text"
         value="${esc(nVal)}"
         onblur="pwControlloSaveCell('${ci}','${si}','${oi}',${g},'${dt}','${ca}','${at}','note',this.value)"></td>
@@ -7613,7 +7613,8 @@ async function pwControlloSyncJira() {
         km_cad:     _cpData[k].km_cad     ?? null,
         note:       _cpData[k].note       ?? null,
         verificato: _cpData[k].verificato === true,
-        km_jira_uploaded: _cpData[k].km_jira_uploaded === true,
+        km_jira_uploaded: _cpData[k].km_jira_last != null,
+        km_jira_last: _cpData[k].km_jira_last ?? null,
         updated_at: new Date().toISOString(),
         updated_by: _sbUser?.email || null,
       });
@@ -7667,7 +7668,8 @@ async function pwControlloSyncJira() {
           if (v == null || !isFinite(Number(v)) || Number(v) <= 0) return; // niente da recuperare
           const val = Math.round(Number(v) * 1000) / 1000;
           _cpData[u.k].km_cad = val;
-          _cpData[u.k].km_jira_uploaded = true; // valore già presente su Jira: non ri-caricare
+          _cpData[u.k].km_jira_last = val;       // adottiamo il valore letto come "ultimo scritto": delta futuro = km_cad - val
+          _cpData[u.k].km_jira_uploaded = true;  // mirror per compatibilità/visualizzazione
           readRecords.push({
             anno: pwAnno, week: pwWeek,
             commessa: u.commessa, squadra: u.squadra, operatore: u.operatore, giorno: u.giorno,
@@ -7680,6 +7682,7 @@ async function pwControlloSyncJira() {
             note:       _cpData[u.k].note       ?? null,
             verificato: _cpData[u.k].verificato === true,
             km_jira_uploaded: true,
+            km_jira_last: val,
             updated_at: new Date().toISOString(),
             updated_by: _sbUser?.email || null,
           });
@@ -7698,44 +7701,53 @@ async function pwControlloSyncJira() {
       }
     }
 
-    // === Upload KM/CAD -> Jira "Actual Production" ===
-    // Celle candidate: km_cad valorizzato (>0), esattamente 1 ticket, flag non ancora spuntato.
+    // === Upload KM/CAD -> Jira "Actual Production" (modello delta) ===
+    // Per ogni cella con km_cad numerico e 1 solo ticket, si scrive su Jira solo
+    // la DIFFERENZA rispetto all'ultimo valore scritto (km_jira_last), così la
+    // nostra quota viene sostituita invece che risommata. delta può essere
+    // negativo (correzione al ribasso). Celle con delta 0 vengono saltate.
     let kmMsg = '';
     const kmUpdates = [];
     cells.forEach(c => {
       if (!c.email) return;
       const k = `${c.commessa}|||${c.squadra}|||${c.operatore}|||${c.giorno}`;
       const cell = _cpData[k] || {};
+      if (cell.km_cad == null || cell.km_cad === '') return;          // cella vuota: non tocchiamo Jira
       const km = Number(cell.km_cad);
-      if (cell.km_cad == null || !isFinite(km) || km === 0) return; // niente da caricare
-      if (cell.km_jira_uploaded === true) return;                   // già caricato
+      if (!isFinite(km)) return;
       const tks = Array.isArray(cell.jira_tickets) ? cell.jira_tickets : [];
-      if (tks.length !== 1) return;                                 // solo celle con 1 ticket (per ora)
+      if (tks.length !== 1) return;                                   // solo celle con 1 ticket (per ora)
       const issueKey = tks[0] && tks[0].key;
       if (!issueKey) return;
+      const last = (cell.km_jira_last == null) ? 0 : Number(cell.km_jira_last);
+      const delta = Math.round((km - last) * 1000) / 1000;
+      if (delta === 0) return;                                        // nulla di nuovo da scrivere
       kmUpdates.push({
-        k, issueKey, add: km,
+        k, issueKey, add: delta, newLast: km, isFirst: (cell.km_jira_last == null),
         commessa: c.commessa, squadra: c.squadra, operatore: c.operatore, giorno: c.giorno,
         dataISO: c.dataISO, cantiere: c.cantiere, attivita: c.attivita,
       });
     });
 
     if (kmUpdates.length > 0) {
+      const nNew = kmUpdates.filter(u => u.isFirst).length;
+      const nUpd = kmUpdates.length - nNew;
       const okKm = await showConfirmAsync(
-        `Trovate ${kmUpdates.length} cell${kmUpdates.length>1?'e':'a'} con KM/CAD da caricare su Jira (campo "Actual Production"). ` +
-        `Il valore verrà SOMMATO a quello già presente sul ticket, e la cella verrà marcata come "caricata". Procedere?`,
-        'Carica KM su Jira');
+        `Aggiornamento "Actual Production" su Jira per ${kmUpdates.length} cell${kmUpdates.length>1?'e':'a'} ` +
+        `(${nNew} nuov${nNew===1?'a':'e'}, ${nUpd} corrett${nUpd===1?'a':'e'}).\n\n` +
+        `Verrà applicata la differenza rispetto all'ultimo valore già scritto (la tua quota viene sostituita, non risommata). Procedere?`,
+        'Aggiorna Jira');
       if (!okKm) {
-        kmMsg = `\n\n(Upload KM su Jira annullato — nessuna modifica ai ticket.)`;
+        kmMsg = `\n\n(Aggiornamento KM su Jira annullato — nessuna modifica ai ticket.)`;
       } else {
         if (status) status.textContent = '⏳ Aggiornamento Actual Production su Jira…';
         const { data: pData, error: pErr } = await _sbClient.functions.invoke('jira-update-production', {
           body: { updates: kmUpdates.map(u => ({ issueKey: u.issueKey, add: u.add })) },
         });
         if (pErr) {
-          kmMsg = `\n\n⚠ Errore upload KM su Jira: ${await _cpEdgeErr(pErr, 'jira-update-production')}. Nessun flag modificato.`;
+          kmMsg = `\n\n⚠ Errore upload KM su Jira: ${await _cpEdgeErr(pErr, 'jira-update-production')}. Nessuno storico modificato.`;
         } else if (pData && pData.error) {
-          kmMsg = `\n\n⚠ Upload KM su Jira non riuscito: ${pData.error}. Nessun flag modificato.`;
+          kmMsg = `\n\n⚠ Upload KM su Jira non riuscito: ${pData.error}. Nessuno storico modificato.`;
         } else {
           const pres = (pData && pData.results) || {};
           const perr = (pData && pData.errors)  || {};
@@ -7744,7 +7756,8 @@ async function pwControlloSyncJira() {
           kmUpdates.forEach(u => {
             const r = pres[u.issueKey];
             if (r && r.ok) {
-              _cpData[u.k].km_jira_uploaded = true;
+              _cpData[u.k].km_jira_last = u.newLast;   // memorizza cosa abbiamo scritto
+              _cpData[u.k].km_jira_uploaded = true;    // mirror
               flagRecords.push({
                 anno: pwAnno, week: pwWeek,
                 commessa: u.commessa, squadra: u.squadra, operatore: u.operatore, giorno: u.giorno,
@@ -7757,6 +7770,7 @@ async function pwControlloSyncJira() {
                 note:       _cpData[u.k].note       ?? null,
                 verificato: _cpData[u.k].verificato === true,
                 km_jira_uploaded: true,
+                km_jira_last: u.newLast,
                 updated_at: new Date().toISOString(),
                 updated_by: _sbUser?.email || null,
               });
@@ -7768,12 +7782,12 @@ async function pwControlloSyncJira() {
               .from('controllo_produzione')
               .upsert(flagRecords, { onConflict: 'anno,week,commessa,squadra,operatore,giorno' });
             if (fErr) {
-              kmMsg = `\n\n⚠ KM caricati su Jira (${uploaded}) ma ERRORE nel salvare i flag: ${fErr.message||fErr}. ` +
-                      `Attenzione: una nuova sincronizzazione potrebbe ri-sommare i valori. Contatta lo sviluppatore.`;
+              kmMsg = `\n\n⚠ Jira aggiornato (${uploaded}) ma ERRORE nel salvare lo storico: ${fErr.message||fErr}. ` +
+                      `Attenzione: una nuova sincronizzazione potrebbe riapplicare i valori. Contatta lo sviluppatore.`;
             }
           }
           if (!kmMsg) {
-            kmMsg = `\n\n✅ KM caricati su Jira: ${uploaded}/${kmUpdates.length}` +
+            kmMsg = `\n\n✅ Actual Production aggiornata su Jira: ${uploaded}/${kmUpdates.length}` +
                     (pData.fieldId ? ` (campo ${pData.fieldId})` : '') + '.';
             const perrKeys = Object.keys(perr);
             if (perrKeys.length) {
@@ -7868,40 +7882,45 @@ async function pwControlloSaveCell(commessa, squadra, operatore, giornoIdx, data
   }
 }
 
-// Gestisce il click sulla checkbox "Su Jira" (flag km_jira_uploaded).
-// - Non è spuntabile manualmente (si spunta solo dopo il caricamento su Jira).
-// - Se già spuntata, la si può rimuovere ma solo con conferma esplicita.
+// Gestisce il click sulla checkbox "Su Jira".
+// - Riflette km_jira_last (l'ultimo valore scritto su Jira da questa app).
+// - Non è spuntabile manualmente (si spunta solo dopo una scrittura su Jira).
+// - Se spuntata, la si può azzerare (dimentica lo storico) solo con conferma:
+//   alla sync successiva l'intero KM/CAD verrà nuovamente sommato all'Actual
+//   Production. Usare solo se il campo su Jira è stato azzerato a mano.
 async function cpJiraFlagClick(ev, commessa, squadra, operatore, giorno) {
-  if (ev && ev.preventDefault) ev.preventDefault(); // decidiamo noi lo stato, niente toggle automatico
+  if (ev && ev.preventDefault) ev.preventDefault();
   const k = `${commessa}|||${squadra}|||${operatore}|||${giorno}`;
-  const cur = _cpData[k] && _cpData[k].km_jira_uploaded === true;
+  const cur = _cpData[k] && _cpData[k].km_jira_last != null;
 
   if (!cur) {
-    showAlertModal('Questo flag si spunta automaticamente dopo il caricamento del KM/CAD su Jira. Non può essere attivato manualmente.');
+    showAlertModal('Questo indicatore si spunta automaticamente dopo la scrittura del KM/CAD su Jira. Non può essere attivato manualmente.');
     return;
   }
 
   const ok = await showConfirmAsync(
-    'Vuoi rimuovere il flag "caricato su Jira" per questa cella?\n\n' +
-    'Alla prossima sincronizzazione il valore KM/CAD verrà nuovamente SOMMATO all\'Actual Production del ticket.',
-    'Rimuovi flag');
+    'Vuoi azzerare lo storico di scrittura su Jira per questa cella?\n\n' +
+    'Alla prossima sincronizzazione l\'INTERO valore KM/CAD verrà nuovamente SOMMATO all\'Actual Production del ticket ' +
+    '(non solo la differenza). Usa questa opzione solo se hai azzerato il campo su Jira manualmente.',
+    'Azzera storico');
   if (!ok) return;
 
   if (!_cpData[k]) _cpData[k] = {};
+  _cpData[k].km_jira_last = null;
   _cpData[k].km_jira_uploaded = false;
 
   if (_sbClient && _sbUser) {
     try {
       const { error } = await _sbClient
         .from('controllo_produzione')
-        .update({ km_jira_uploaded: false, updated_at: new Date().toISOString(), updated_by: _sbUser?.email || null })
+        .update({ km_jira_last: null, km_jira_uploaded: false, updated_at: new Date().toISOString(), updated_by: _sbUser?.email || null })
         .eq('anno', pwAnno).eq('week', pwWeek)
         .eq('commessa', commessa).eq('squadra', squadra)
         .eq('operatore', operatore).eq('giorno', giorno);
       if (error) throw error;
     } catch (e) {
       console.error('cpJiraFlagClick update error:', e);
-      showAlertModal('Errore nel rimuovere il flag: ' + (e.message || e));
+      showAlertModal('Errore nell\'azzerare lo storico: ' + (e.message || e));
       return;
     }
   }
