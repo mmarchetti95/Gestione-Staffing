@@ -1,3 +1,6 @@
+## v18.32.0
+- feat: modello KM/Cad **per singolo ticket** (un operatore può avere produzione su più comuni lo stesso giorno). Le colonne "Km/Cad" e "Su Jira" diventano impilate e allineate ai ticket. "Carica Report": chiede con una tendina il **comune** a cui si riferisce il report e scrive il Km/Cad sul ticket di quel comune. Lettura/adozione da Jira e upload (modello delta) ora operano **per ticket**: si scrive su ogni sottotask solo la differenza rispetto all'ultimo valore scritto per quel ticket. Migrazione automatica dal modello a cella singola. Richiede le colonne Supabase km_by_ticket e km_last_by_ticket (jsonb). Nota workflow: prima "Sincronizza con Jira" (porta i ticket), poi "Carica Report".
+
 ## v18.31.1
 - fix: pwSyncCpDataForGrid (chiamata a ogni render della Griglia settimanale) ora include km_jira_uploaded e km_jira_last nella select e nella cache _cpData. Prima li azzerava, col rischio che una sync successiva ricalcolasse un delta errato.
 
