@@ -654,7 +654,7 @@
         <select id="anno-selector" class="text-sm border-none font-semibold focus:outline-none cursor-pointer" style="color:#f9fafb;background:#1a1a1a;border-radius:4px;padding:1px 4px;"></select>
       </div>
       <div class="text-xs pl-2" style="border-left:1px solid #444;color:#9ca3af;">
-        <span class="font-medium" style="color:#00b8b0;">v18.29.0</span> · Michele Marchetti
+        <span class="font-medium" style="color:#00b8b0;">v18.30.0</span> · Michele Marchetti
       </div>
     </div>
   </div>
@@ -7611,6 +7611,77 @@ async function pwControlloSyncJira() {
       if (upErr) throw new Error(upErr.message || 'Errore salvataggio');
     }
 
+    // === Recupero KM/CAD da Jira (Actual Production) per celle VUOTE con 1 ticket ===
+    // Se "Km/Cad" è vuoto e c'è un solo ticket, leggo il valore attuale di Actual
+    // Production e lo scrivo nella cella. Il valore proviene da Jira, quindi la
+    // cella viene marcata come già caricata (km_jira_uploaded=true) per non ri-sommarla.
+    let kmReadMsg = '';
+    const readCandidates = [];
+    cells.forEach(c => {
+      if (!c.email) return;
+      const k = `${c.commessa}|||${c.squadra}|||${c.operatore}|||${c.giorno}`;
+      const cell = _cpData[k] || {};
+      if (!(cell.km_cad == null || cell.km_cad === '')) return; // solo se Km/Cad vuoto
+      const tks = Array.isArray(cell.jira_tickets) ? cell.jira_tickets : [];
+      if (tks.length !== 1) return;
+      const issueKey = tks[0] && tks[0].key;
+      if (!issueKey) return;
+      readCandidates.push({
+        k, issueKey,
+        commessa: c.commessa, squadra: c.squadra, operatore: c.operatore, giorno: c.giorno,
+        dataISO: c.dataISO, cantiere: c.cantiere, attivita: c.attivita,
+      });
+    });
+
+    if (readCandidates.length > 0) {
+      if (status) status.textContent = '⏳ Recupero Actual Production da Jira…';
+      const { data: rData, error: rErr } = await _sbClient.functions.invoke('jira-update-production', {
+        body: { reads: [...new Set(readCandidates.map(u => u.issueKey))] },
+      });
+      if (rErr) {
+        kmReadMsg = `\n\n⚠ Errore lettura Actual Production da Jira: ${rErr.message || rErr}.`;
+      } else if (rData && rData.error) {
+        kmReadMsg = `\n\n⚠ Lettura Actual Production non riuscita: ${rData.error}.`;
+      } else {
+        const rvalues = (rData && rData.values) || {};
+        const readRecords = [];
+        let filled = 0;
+        readCandidates.forEach(u => {
+          const v = rvalues[u.issueKey];
+          if (v == null || !isFinite(Number(v)) || Number(v) <= 0) return; // niente da recuperare
+          const val = Math.round(Number(v) * 1000) / 1000;
+          _cpData[u.k].km_cad = val;
+          _cpData[u.k].km_jira_uploaded = true; // valore già presente su Jira: non ri-caricare
+          readRecords.push({
+            anno: pwAnno, week: pwWeek,
+            commessa: u.commessa, squadra: u.squadra, operatore: u.operatore, giorno: u.giorno,
+            data_giorno: u.dataISO,
+            cantiere: u.cantiere || null, attivita: u.attivita || null,
+            ore_jira:   _cpData[u.k].ore_jira   ?? null,
+            jira_tickets: _cpData[u.k].jira_tickets ?? null,
+            ore_report: _cpData[u.k].ore_report ?? null,
+            km_cad:     val,
+            note:       _cpData[u.k].note       ?? null,
+            verificato: _cpData[u.k].verificato === true,
+            km_jira_uploaded: true,
+            updated_at: new Date().toISOString(),
+            updated_by: _sbUser?.email || null,
+          });
+          filled++;
+        });
+        if (readRecords.length > 0) {
+          const { error: rUpErr } = await _sbClient
+            .from('controllo_produzione')
+            .upsert(readRecords, { onConflict: 'anno,week,commessa,squadra,operatore,giorno' });
+          if (rUpErr) {
+            kmReadMsg = `\n\n⚠ Valori KM recuperati da Jira ma errore nel salvataggio: ${rUpErr.message || rUpErr}.`;
+          } else {
+            kmReadMsg = `\n\nℹ ${filled} cell${filled>1?'e':'a'} "Km/Cad" recuperat${filled>1?'e':'a'} da Jira (Actual Production).`;
+          }
+        }
+      }
+    }
+
     // === Upload KM/CAD -> Jira "Actual Production" ===
     // Celle candidate: km_cad valorizzato (>0), esattamente 1 ticket, flag non ancora spuntato.
     let kmMsg = '';
@@ -7710,6 +7781,7 @@ async function pwControlloSyncJira() {
       msg += `\n\n⚠ ${errKeys.length} error${errKeys.length>1?'i':'e'} Jira: ` +
              errKeys.map(e => `${e} (${errs[e]})`).join('; ') + '.';
     }
+    msg += kmReadMsg;
     msg += kmMsg;
     if (status) status.textContent = `${updated} record sincronizzati`;
     showAlertModal(msg);
