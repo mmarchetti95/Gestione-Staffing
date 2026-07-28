@@ -654,7 +654,7 @@
         <select id="anno-selector" class="text-sm border-none font-semibold focus:outline-none cursor-pointer" style="color:#f9fafb;background:#1a1a1a;border-radius:4px;padding:1px 4px;"></select>
       </div>
       <div class="text-xs pl-2" style="border-left:1px solid #444;color:#9ca3af;">
-        <span class="font-medium" style="color:#00b8b0;">v18.31.0</span> · Michele Marchetti
+        <span class="font-medium" style="color:#00b8b0;">v18.31.1</span> · Michele Marchetti
       </div>
     </div>
   </div>
@@ -7261,14 +7261,14 @@ async function pwSyncCpDataForGrid() {
   try {
     const { data, error } = await _sbClient
       .from('controllo_produzione')
-      .select('commessa,squadra,operatore,giorno,ore_jira,ore_report,km_cad,note,jira_tickets,verificato')
+      .select('commessa,squadra,operatore,giorno,ore_jira,ore_report,km_cad,note,jira_tickets,verificato,km_jira_uploaded,km_jira_last')
       .eq('anno', pwAnno)
       .eq('week', pwWeek);
     if (error) throw error;
     _cpData = {};
     (data || []).forEach(r => {
       const k = `${r.commessa}|||${r.squadra}|||${r.operatore}|||${r.giorno}`;
-      _cpData[k] = { ore_jira: r.ore_jira, ore_report: r.ore_report, km_cad: r.km_cad, note: r.note, jira_tickets: r.jira_tickets, verificato: r.verificato };
+      _cpData[k] = { ore_jira: r.ore_jira, ore_report: r.ore_report, km_cad: r.km_cad, note: r.note, jira_tickets: r.jira_tickets, verificato: r.verificato, km_jira_uploaded: r.km_jira_uploaded === true, km_jira_last: (r.km_jira_last == null ? null : Number(r.km_jira_last)) };
     });
   } catch(e) {
     console.error('pwSyncCpDataForGrid error:', e);
