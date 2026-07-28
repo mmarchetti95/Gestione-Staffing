@@ -1,3 +1,6 @@
+## v18.29.0
+- feat: alla "Sincronizza con Jira", dopo il recupero worklog, il valore KM/CAD di ogni cella idonea viene SOMMATO al campo custom "Actual Production" del relativo sottotask (via Edge Function jira-update-production). Idonee: KM/CAD > 0, esattamente 1 ticket, flag "caricato" non ancora attivo. Celle con piu' ticket o senza ticket vengono saltate. Nuova colonna "Su Jira" con checkbox flag (km_jira_uploaded): si spunta automaticamente dopo il caricamento, non e' attivabile a mano, e si puo' rimuovere solo con conferma esplicita (riabilita il ricaricamento). Conferma richiesta prima di scrivere su Jira. Richiede la colonna Supabase km_jira_uploaded e la Edge Function jira-update-production.
+
 ## v18.28.2
 - fix: corretto `ReferenceError: dataISO is not defined` in "Carica Report" (refuso variabile dateISO/dataISO) che impediva la compilazione delle celle.
 
