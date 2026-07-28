@@ -1,3 +1,6 @@
+## v18.30.1
+- fix: la sincronizzazione ora mostra il messaggio d'errore reale restituito dalle Edge Function (legge il corpo della risposta invece del generico "non-2xx"), indicando anche quale funzione ha fallito.
+
 ## v18.30.0
 - feat: alla "Sincronizza con Jira", passo intermedio prima dell'upload KM: per le celle con "Km/Cad" VUOTO e un solo ticket, legge il valore attuale di "Actual Production" dal ticket e lo scrive in "Km/Cad" (solo se >0). Le celle cosi' recuperate vengono marcate come gia' caricate (flag Su Jira), per non ri-sommarle. Le celle con valore gia' presente non vengono toccate. Richiede la Edge Function jira-update-production aggiornata (supporto modalita' 'reads').
 
