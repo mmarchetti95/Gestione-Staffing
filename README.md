@@ -1,3 +1,6 @@
+## v18.31.0
+- feat: introdotto il modello "delta" per l'aggiornamento di Actual Production su Jira. Ogni cella memorizza l'ultimo valore scritto (km_jira_last) e alla sync viene applicata a Jira solo la DIFFERENZA (km_cad - km_jira_last), che puo' essere negativa. Cosi' la quota di questa app viene sostituita e non risommata, mentre eventuali valori di altra provenienza restano preservati. Lo Step 2 (lettura) adotta il valore letto come km_jira_last (delta 0). La checkbox "Su Jira" ora riflette km_jira_last valorizzato; azzerarla (con conferma) dimentica lo storico e alla sync successiva riapplica il valore pieno. Richiede la colonna Supabase km_jira_last (con migrazione dai record gia' caricati).
+
 ## v18.30.1
 - fix: la sincronizzazione ora mostra il messaggio d'errore reale restituito dalle Edge Function (legge il corpo della risposta invece del generico "non-2xx"), indicando anche quale funzione ha fallito.
 
