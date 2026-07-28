@@ -654,7 +654,7 @@
         <select id="anno-selector" class="text-sm border-none font-semibold focus:outline-none cursor-pointer" style="color:#f9fafb;background:#1a1a1a;border-radius:4px;padding:1px 4px;"></select>
       </div>
       <div class="text-xs pl-2" style="border-left:1px solid #444;color:#9ca3af;">
-        <span class="font-medium" style="color:#00b8b0;">v18.31.1</span> · Michele Marchetti
+        <span class="font-medium" style="color:#00b8b0;">v18.32.0</span> · Michele Marchetti
       </div>
     </div>
   </div>
@@ -3928,6 +3928,24 @@ function showConfirmAsync(msg, btnLabel) {
 
 function getOperatoriAttivi() {
   return (state.operatori || []).filter(o => !o.licenziato);
+}
+
+// Modale di selezione: mostra una tendina di opzioni e risolve col valore scelto (o null).
+// options: array di { value, label }.
+function cpSelectModal(title, message, options) {
+  return new Promise(resolve => {
+    const root = document.getElementById('modal-root');
+    const opts = (options || []).map(o => `<option value="${esc(String(o.value))}">${esc(String(o.label))}</option>`).join('');
+    const safeMsg = message ? ('<div class="mb-3 text-sm whitespace-pre-line">' + esc(message).replace(/\n/g,'<br>') + '</div>') : '';
+    root.innerHTML = '<div class="modal-backdrop"><div class="bg-white rounded-lg shadow-xl w-full max-w-md mx-4 p-5">' +
+      '<div class="mb-3 font-semibold">' + esc(title || 'Seleziona') + '</div>' + safeMsg +
+      '<select id="csm-sel" class="w-full border border-slate-300 rounded px-2 py-1.5 text-sm mb-4">' + opts + '</select>' +
+      '<div class="flex justify-end gap-2"><button id="csm-cancel" class="px-3 py-1.5 text-sm border border-slate-300 rounded hover:bg-slate-50">Annulla</button>' +
+      '<button id="csm-ok" class="px-3 py-1.5 text-sm bg-teal-600 text-white rounded hover:bg-teal-700">Conferma</button></div></div></div>';
+    document.getElementById('csm-cancel').onclick = () => { closeModal(); resolve(null); };
+    document.getElementById('csm-ok').onclick = () => { const v = document.getElementById('csm-sel').value; closeModal(); resolve(v); };
+    root.querySelector('.modal-backdrop').addEventListener('click', e => { if (e.target.classList.contains('modal-backdrop')) { closeModal(); resolve(null); } });
+  });
 }
 
 function isOperatoreLicenziato(nome) {
@@ -7261,14 +7279,14 @@ async function pwSyncCpDataForGrid() {
   try {
     const { data, error } = await _sbClient
       .from('controllo_produzione')
-      .select('commessa,squadra,operatore,giorno,ore_jira,ore_report,km_cad,note,jira_tickets,verificato,km_jira_uploaded,km_jira_last')
+      .select('commessa,squadra,operatore,giorno,ore_jira,ore_report,km_cad,note,jira_tickets,verificato,km_jira_uploaded,km_jira_last,km_by_ticket,km_last_by_ticket')
       .eq('anno', pwAnno)
       .eq('week', pwWeek);
     if (error) throw error;
     _cpData = {};
     (data || []).forEach(r => {
       const k = `${r.commessa}|||${r.squadra}|||${r.operatore}|||${r.giorno}`;
-      _cpData[k] = { ore_jira: r.ore_jira, ore_report: r.ore_report, km_cad: r.km_cad, note: r.note, jira_tickets: r.jira_tickets, verificato: r.verificato, km_jira_uploaded: r.km_jira_uploaded === true, km_jira_last: (r.km_jira_last == null ? null : Number(r.km_jira_last)) };
+      _cpData[k] = cpRowToCell(r);
     });
   } catch(e) {
     console.error('pwSyncCpDataForGrid error:', e);
@@ -7280,6 +7298,69 @@ let _pwCollapsedSq   = new Set(); // chiavi "cidx-sidx" squadre collassate nella
 let _cpCollapsedComm = new Set(); // blIdx commesse collassate nel controllo produzione
 let _cpCollapsedSq   = new Set(); // chiavi "blIdx-sqIdx" squadre collassate nel controllo produzione
 let _cpLoading = false;
+
+// Somma i valori di una mappa {ticket: km}. Ritorna null se vuota.
+function cpSumKm(map) {
+  if (!map || typeof map !== 'object') return null;
+  const vals = Object.values(map).map(Number).filter(v => isFinite(v));
+  if (vals.length === 0) return null;
+  return Math.round(vals.reduce((a, b) => a + b, 0) * 1000) / 1000;
+}
+
+// Converte una data "DD/MM" nella settimana corrente in ISO YYYY-MM-DD.
+function cpDataISO(dataGiorno) {
+  try {
+    const [dd, mm] = String(dataGiorno).split('/');
+    return `${pwAnno}-${mm.padStart(2,'0')}-${dd.padStart(2,'0')}`;
+  } catch (_) { return null; }
+}
+
+// Costruisce l'oggetto cella (_cpData) da una riga Supabase, con migrazione lazy
+// dal vecchio modello (km_cad/km_jira_last) alla mappa per-ticket quando la cella
+// ha un solo ticket e non ha ancora dati per-ticket.
+function cpRowToCell(r) {
+  const cell = {
+    ore_jira: r.ore_jira, ore_report: r.ore_report, km_cad: r.km_cad,
+    note: r.note, jira_tickets: r.jira_tickets, verificato: r.verificato,
+    km_jira_uploaded: r.km_jira_uploaded === true,
+    km_jira_last: (r.km_jira_last == null ? null : Number(r.km_jira_last)),
+    km_by_ticket: (r.km_by_ticket && typeof r.km_by_ticket === 'object') ? { ...r.km_by_ticket } : {},
+    km_last_by_ticket: (r.km_last_by_ticket && typeof r.km_last_by_ticket === 'object') ? { ...r.km_last_by_ticket } : {},
+  };
+  const tks = Array.isArray(cell.jira_tickets) ? cell.jira_tickets : [];
+  if (Object.keys(cell.km_by_ticket).length === 0 && cell.km_cad != null && tks.length === 1 && tks[0] && tks[0].key) {
+    cell.km_by_ticket = { [tks[0].key]: Number(cell.km_cad) };
+    if (cell.km_jira_last != null) cell.km_last_by_ticket = { [tks[0].key]: Number(cell.km_jira_last) };
+  }
+  return cell;
+}
+
+// Costruisce il record da upsertare a partire dallo stato corrente di _cpData[k].
+function cpBuildRecord(commessa, squadra, operatore, giorno, dataISO, cantiere, attivita) {
+  const k = `${commessa}|||${squadra}|||${operatore}|||${giorno}`;
+  const cell = _cpData[k] || {};
+  const byTicket = (cell.km_by_ticket && typeof cell.km_by_ticket === 'object') ? cell.km_by_ticket : {};
+  const lastByTicket = (cell.km_last_by_ticket && typeof cell.km_last_by_ticket === 'object') ? cell.km_last_by_ticket : {};
+  const kmSum = cpSumKm(byTicket);
+  const lastSum = cpSumKm(lastByTicket);
+  return {
+    anno: pwAnno, week: pwWeek, commessa, squadra, operatore, giorno,
+    data_giorno: dataISO || null,
+    cantiere: cantiere || null, attivita: attivita || null,
+    ore_jira: cell.ore_jira ?? null,
+    jira_tickets: cell.jira_tickets ?? null,
+    ore_report: cell.ore_report ?? null,
+    km_cad: kmSum,                       // specchio derivato (somma per-ticket) per compatibilità
+    km_jira_last: lastSum,               // idem
+    km_jira_uploaded: lastSum != null,
+    km_by_ticket: byTicket,
+    km_last_by_ticket: lastByTicket,
+    note: cell.note ?? null,
+    verificato: cell.verificato === true,
+    updated_at: new Date().toISOString(),
+    updated_by: _sbUser?.email || null,
+  };
+}
 
 async function pwControlloLoad() {
   const container = document.getElementById('cp-table-container');
@@ -7295,14 +7376,14 @@ async function pwControlloLoad() {
     if (_sbClient && _sbUser) {
       const { data, error } = await _sbClient
         .from('controllo_produzione')
-        .select('commessa,squadra,operatore,giorno,ore_jira,ore_report,km_cad,note,jira_tickets,verificato,km_jira_uploaded,km_jira_last')
+        .select('commessa,squadra,operatore,giorno,ore_jira,ore_report,km_cad,note,jira_tickets,verificato,km_jira_uploaded,km_jira_last,km_by_ticket,km_last_by_ticket')
         .eq('anno', pwAnno)
         .eq('week', pwWeek);
       if (error) throw error;
       _cpData = {};
       (data || []).forEach(r => {
         const k = `${r.commessa}|||${r.squadra}|||${r.operatore}|||${r.giorno}`;
-        _cpData[k] = { ore_jira: r.ore_jira, ore_report: r.ore_report, km_cad: r.km_cad, note: r.note, jira_tickets: r.jira_tickets, verificato: r.verificato, km_jira_uploaded: r.km_jira_uploaded === true, km_jira_last: (r.km_jira_last == null ? null : Number(r.km_jira_last)) };
+        _cpData[k] = cpRowToCell(r);
       });
       if (status) status.textContent = `${(data||[]).length} record caricati`;
     } else {
@@ -7395,16 +7476,32 @@ function pwControlloRender() {
           const kVal  = saved.km_cad     != null ? saved.km_cad     : '';
           const nVal  = saved.note || '';
           const tickets = Array.isArray(saved.jira_tickets) ? saved.jira_tickets : [];
+          const byTicket     = (saved.km_by_ticket      && typeof saved.km_by_ticket      === 'object') ? saved.km_by_ticket      : {};
+          const lastByTicket = (saved.km_last_by_ticket && typeof saved.km_last_by_ticket === 'object') ? saved.km_last_by_ticket : {};
           const ticketHtml = tickets.length === 0
             ? '<span style="color:#cbd5e1">—</span>'
-            : tickets.map(t => `<a href="${esc(t.url||'')}" target="_blank" rel="noopener" title="${esc(t.key||'')}${t.hours!=null?(' — '+t.hours+'h'):''}" style="display:block;color:#2563eb;text-decoration:none;font-size:11px;white-space:nowrap;line-height:1.5;">• ${esc(t.key||'')}</a>`).join('');
+            : tickets.map(t => `<a href="${esc(t.url||'')}" target="_blank" rel="noopener" title="${esc(t.key||'')}${t.hours!=null?(' — '+t.hours+'h'):''}" style="display:block;height:24px;line-height:24px;color:#2563eb;text-decoration:none;font-size:11px;white-space:nowrap;">• ${esc(t.key||'')}</a>`).join('');
           // Epic distinti fra i ticket del giorno (dedup per key)
           const epicMap = {};
           tickets.forEach(t => { if (t.epic && t.epic.key) epicMap[t.epic.key] = t.epic; });
           const epicList = Object.values(epicMap);
           const epicHtml = epicList.length === 0
             ? '<span style="color:#cbd5e1">—</span>'
-            : epicList.map(ep => `<a href="${esc(ep.url||'')}" target="_blank" rel="noopener" title="${esc(ep.key||'')}" style="display:block;color:#7c3aed;text-decoration:none;font-size:11px;line-height:1.5;">🟣 ${esc(ep.name||ep.key||'')}</a>`).join('');
+            : epicList.map(ep => `<a href="${esc(ep.url||'')}" target="_blank" rel="noopener" title="${esc(ep.key||'')}" style="display:block;height:24px;line-height:24px;color:#7c3aed;text-decoration:none;font-size:11px;">🟣 ${esc(ep.name||ep.key||'')}</a>`).join('');
+          // Km/Cad e "Su Jira" per singolo ticket, allineati verticalmente ai ticket
+          const kmCellHtml = tickets.length === 0
+            ? '<span style="color:#cbd5e1">—</span>'
+            : tickets.map(t => {
+                const kv = byTicket[t.key];
+                return `<input class="cp-input" type="number" step="0.1" min="0" style="width:64px;height:22px;display:block;margin:1px 0;box-sizing:border-box;" value="${kv==null?'':esc(String(kv))}" title="${esc(t.key||'')}" onblur="cpSaveKmTicket('${jsesc(bl.commessa)}','${jsesc(sq.nome)}','${jsesc(op.nome)}',${g},'${jsesc(dates[g])}','${jsesc(op.cantiere)}','${jsesc(op.attivita)}','${jsesc(t.key||'')}',this.value)">`;
+              }).join('');
+          const suJiraHtml = tickets.length === 0
+            ? '<span style="color:#cbd5e1">—</span>'
+            : tickets.map(t => {
+                const wrote = lastByTicket[t.key] != null;
+                const ttl = wrote ? ('Ultimo scritto su Jira: ' + lastByTicket[t.key] + ' — clicca per azzerare lo storico (con conferma)') : 'Si spunta dopo la scrittura su Jira';
+                return `<div style="height:24px;display:flex;align-items:center;justify-content:center;"><input type="checkbox" ${wrote?'checked':''} title="${esc(ttl)}" style="width:15px;height:15px;cursor:pointer;" onclick="cpJiraFlagTicketClick(event,'${jsesc(bl.commessa)}','${jsesc(sq.nome)}','${jsesc(op.nome)}',${g},'${jsesc(t.key||'')}')"></div>`;
+              }).join('');
           const jDisplay = (jVal === '' || jVal == null)
             ? '<span style="color:#cbd5e1">—</span>'
             : esc(String(jVal));
@@ -7439,10 +7536,8 @@ function pwControlloRender() {
         value="${esc(String(rVal))}" oninput="cpDelta(${ri})"
         onblur="pwControlloSaveCell('${ci}','${si}','${oi}',${g},'${dt}','${ca}','${at}','ore_report',this.value)"></td>
       <td id="cp-d-${ri}" style="text-align:center">${deltaHtml}</td>
-      <td class="cp-td-edit"><input class="cp-input" type="number" step="0.1" min="0"
-        value="${esc(String(kVal))}"
-        onblur="pwControlloSaveCell('${ci}','${si}','${oi}',${g},'${dt}','${ca}','${at}','km_cad',this.value)"></td>
-      <td style="text-align:center"><input type="checkbox" ${saved.km_jira_last != null ? 'checked' : ''} title="${saved.km_jira_last != null ? ('Ultimo valore scritto su Jira: ' + saved.km_jira_last + ' — clicca per azzerare lo storico (con conferma)') : 'Si spunta automaticamente dopo la scrittura su Jira'}" style="width:16px;height:16px;cursor:pointer;" onclick="cpJiraFlagClick(event,'${ci}','${si}','${oi}',${g})"></td>
+      <td class="cp-td-edit" style="vertical-align:top;padding-top:4px;">${kmCellHtml}</td>
+      <td style="vertical-align:top;padding-top:4px;">${suJiraHtml}</td>
       <td class="cp-td-edit"><input class="cp-input note" type="text"
         value="${esc(nVal)}"
         onblur="pwControlloSaveCell('${ci}','${si}','${oi}',${g},'${dt}','${ca}','${at}','note',this.value)"></td>
@@ -7603,21 +7698,7 @@ async function pwControlloSyncJira() {
       _cpData[k].ore_jira     = hours;
       _cpData[k].jira_tickets = tickets;
 
-      records.push({
-        anno: pwAnno, week: pwWeek,
-        commessa: c.commessa, squadra: c.squadra, operatore: c.operatore, giorno: c.giorno,
-        data_giorno: c.dataISO,
-        cantiere: c.cantiere || null, attivita: c.attivita || null,
-        ore_jira: hours, jira_tickets: tickets,
-        ore_report: _cpData[k].ore_report ?? null,
-        km_cad:     _cpData[k].km_cad     ?? null,
-        note:       _cpData[k].note       ?? null,
-        verificato: _cpData[k].verificato === true,
-        km_jira_uploaded: _cpData[k].km_jira_last != null,
-        km_jira_last: _cpData[k].km_jira_last ?? null,
-        updated_at: new Date().toISOString(),
-        updated_by: _sbUser?.email || null,
-      });
+      records.push(cpBuildRecord(c.commessa, c.squadra, c.operatore, c.giorno, c.dataISO, c.cantiere, c.attivita));
       updated++;
     });
 
@@ -7628,32 +7709,31 @@ async function pwControlloSyncJira() {
       if (upErr) throw new Error(upErr.message || 'Errore salvataggio');
     }
 
-    // === Recupero KM/CAD da Jira (Actual Production) per celle VUOTE con 1 ticket ===
-    // Se "Km/Cad" è vuoto e c'è un solo ticket, leggo il valore attuale di Actual
-    // Production e lo scrivo nella cella. Il valore proviene da Jira, quindi la
-    // cella viene marcata come già caricata (km_jira_uploaded=true) per non ri-sommarla.
+    // === Recupero KM/CAD da Jira (Actual Production) per ticket non ancora valorizzati ===
+    // Per ogni ticket della cella che non ha ancora un valore locale, leggo l'Actual
+    // Production dal ticket e lo adotto (byTicket = lastByTicket = valore letto), così
+    // non verrà risommato ma potrà essere sostituito da un report successivo.
     let kmReadMsg = '';
-    const readCandidates = [];
+    const readSet = new Set();
+    const readCellByKey = [];
     cells.forEach(c => {
       if (!c.email) return;
       const k = `${c.commessa}|||${c.squadra}|||${c.operatore}|||${c.giorno}`;
       const cell = _cpData[k] || {};
-      if (!(cell.km_cad == null || cell.km_cad === '')) return; // solo se Km/Cad vuoto
       const tks = Array.isArray(cell.jira_tickets) ? cell.jira_tickets : [];
-      if (tks.length !== 1) return;
-      const issueKey = tks[0] && tks[0].key;
-      if (!issueKey) return;
-      readCandidates.push({
-        k, issueKey,
-        commessa: c.commessa, squadra: c.squadra, operatore: c.operatore, giorno: c.giorno,
-        dataISO: c.dataISO, cantiere: c.cantiere, attivita: c.attivita,
+      const byTicket = (cell.km_by_ticket && typeof cell.km_by_ticket === 'object') ? cell.km_by_ticket : {};
+      tks.forEach(t => {
+        if (!t.key) return;
+        if (byTicket[t.key] != null) return; // già valorizzato localmente
+        readSet.add(t.key);
+        readCellByKey.push({ k, issueKey: t.key, commessa: c.commessa, squadra: c.squadra, operatore: c.operatore, giorno: c.giorno, dataISO: c.dataISO, cantiere: c.cantiere, attivita: c.attivita });
       });
     });
 
-    if (readCandidates.length > 0) {
+    if (readSet.size > 0) {
       if (status) status.textContent = '⏳ Recupero Actual Production da Jira…';
       const { data: rData, error: rErr } = await _sbClient.functions.invoke('jira-update-production', {
-        body: { reads: [...new Set(readCandidates.map(u => u.issueKey))] },
+        body: { reads: [...readSet] },
       });
       if (rErr) {
         kmReadMsg = `\n\n⚠ Errore lettura Actual Production da Jira: ${await _cpEdgeErr(rErr, 'jira-update-production')}.`;
@@ -7661,71 +7741,60 @@ async function pwControlloSyncJira() {
         kmReadMsg = `\n\n⚠ Lettura Actual Production non riuscita: ${rData.error}.`;
       } else {
         const rvalues = (rData && rData.values) || {};
-        const readRecords = [];
+        const touchedCells = new Map();
         let filled = 0;
-        readCandidates.forEach(u => {
+        readCellByKey.forEach(u => {
           const v = rvalues[u.issueKey];
-          if (v == null || !isFinite(Number(v)) || Number(v) <= 0) return; // niente da recuperare
+          if (v == null || !isFinite(Number(v)) || Number(v) <= 0) return;
           const val = Math.round(Number(v) * 1000) / 1000;
-          _cpData[u.k].km_cad = val;
-          _cpData[u.k].km_jira_last = val;       // adottiamo il valore letto come "ultimo scritto": delta futuro = km_cad - val
-          _cpData[u.k].km_jira_uploaded = true;  // mirror per compatibilità/visualizzazione
-          readRecords.push({
-            anno: pwAnno, week: pwWeek,
-            commessa: u.commessa, squadra: u.squadra, operatore: u.operatore, giorno: u.giorno,
-            data_giorno: u.dataISO,
-            cantiere: u.cantiere || null, attivita: u.attivita || null,
-            ore_jira:   _cpData[u.k].ore_jira   ?? null,
-            jira_tickets: _cpData[u.k].jira_tickets ?? null,
-            ore_report: _cpData[u.k].ore_report ?? null,
-            km_cad:     val,
-            note:       _cpData[u.k].note       ?? null,
-            verificato: _cpData[u.k].verificato === true,
-            km_jira_uploaded: true,
-            km_jira_last: val,
-            updated_at: new Date().toISOString(),
-            updated_by: _sbUser?.email || null,
-          });
+          if (!_cpData[u.k].km_by_ticket || typeof _cpData[u.k].km_by_ticket !== 'object') _cpData[u.k].km_by_ticket = {};
+          if (!_cpData[u.k].km_last_by_ticket || typeof _cpData[u.k].km_last_by_ticket !== 'object') _cpData[u.k].km_last_by_ticket = {};
+          _cpData[u.k].km_by_ticket[u.issueKey] = val;
+          _cpData[u.k].km_last_by_ticket[u.issueKey] = val; // adottato: delta futuro = km - val
+          _cpData[u.k].km_cad = cpSumKm(_cpData[u.k].km_by_ticket);
+          touchedCells.set(u.k, u);
           filled++;
         });
-        if (readRecords.length > 0) {
+        if (touchedCells.size > 0) {
+          const readRecords = [...touchedCells.values()].map(u => cpBuildRecord(u.commessa, u.squadra, u.operatore, u.giorno, u.dataISO, u.cantiere, u.attivita));
           const { error: rUpErr } = await _sbClient
             .from('controllo_produzione')
             .upsert(readRecords, { onConflict: 'anno,week,commessa,squadra,operatore,giorno' });
           if (rUpErr) {
             kmReadMsg = `\n\n⚠ Valori KM recuperati da Jira ma errore nel salvataggio: ${rUpErr.message || rUpErr}.`;
           } else {
-            kmReadMsg = `\n\nℹ ${filled} cell${filled>1?'e':'a'} "Km/Cad" recuperat${filled>1?'e':'a'} da Jira (Actual Production).`;
+            kmReadMsg = `\n\nℹ ${filled} valore/i "Km/Cad" recuperati da Jira (Actual Production).`;
           }
         }
       }
     }
 
-    // === Upload KM/CAD -> Jira "Actual Production" (modello delta) ===
-    // Per ogni cella con km_cad numerico e 1 solo ticket, si scrive su Jira solo
-    // la DIFFERENZA rispetto all'ultimo valore scritto (km_jira_last), così la
-    // nostra quota viene sostituita invece che risommata. delta può essere
-    // negativo (correzione al ribasso). Celle con delta 0 vengono saltate.
+    // === Upload KM/CAD -> Jira "Actual Production" (modello delta, per ticket) ===
+    // Per ogni ticket con valore locale, si scrive su Jira solo la DIFFERENZA
+    // rispetto all'ultimo valore scritto per quel ticket (km_last_by_ticket).
+    // delta può essere negativo. I ticket con delta 0 vengono saltati.
     let kmMsg = '';
     const kmUpdates = [];
     cells.forEach(c => {
       if (!c.email) return;
       const k = `${c.commessa}|||${c.squadra}|||${c.operatore}|||${c.giorno}`;
       const cell = _cpData[k] || {};
-      if (cell.km_cad == null || cell.km_cad === '') return;          // cella vuota: non tocchiamo Jira
-      const km = Number(cell.km_cad);
-      if (!isFinite(km)) return;
       const tks = Array.isArray(cell.jira_tickets) ? cell.jira_tickets : [];
-      if (tks.length !== 1) return;                                   // solo celle con 1 ticket (per ora)
-      const issueKey = tks[0] && tks[0].key;
-      if (!issueKey) return;
-      const last = (cell.km_jira_last == null) ? 0 : Number(cell.km_jira_last);
-      const delta = Math.round((km - last) * 1000) / 1000;
-      if (delta === 0) return;                                        // nulla di nuovo da scrivere
-      kmUpdates.push({
-        k, issueKey, add: delta, newLast: km, isFirst: (cell.km_jira_last == null),
-        commessa: c.commessa, squadra: c.squadra, operatore: c.operatore, giorno: c.giorno,
-        dataISO: c.dataISO, cantiere: c.cantiere, attivita: c.attivita,
+      const byTicket = (cell.km_by_ticket && typeof cell.km_by_ticket === 'object') ? cell.km_by_ticket : {};
+      const lastByTicket = (cell.km_last_by_ticket && typeof cell.km_last_by_ticket === 'object') ? cell.km_last_by_ticket : {};
+      const ticketKeys = new Set(tks.map(t => t.key).filter(Boolean));
+      Object.keys(byTicket).forEach(issueKey => {
+        if (!ticketKeys.has(issueKey)) return; // ignora km orfani (ticket non più presente)
+        const km = Number(byTicket[issueKey]);
+        if (!isFinite(km)) return;
+        const last = (lastByTicket[issueKey] == null) ? 0 : Number(lastByTicket[issueKey]);
+        const delta = Math.round((km - last) * 1000) / 1000;
+        if (delta === 0) return;
+        kmUpdates.push({
+          k, issueKey, add: delta, newLast: km, isFirst: (lastByTicket[issueKey] == null),
+          commessa: c.commessa, squadra: c.squadra, operatore: c.operatore, giorno: c.giorno,
+          dataISO: c.dataISO, cantiere: c.cantiere, attivita: c.attivita,
+        });
       });
     });
 
@@ -7733,9 +7802,9 @@ async function pwControlloSyncJira() {
       const nNew = kmUpdates.filter(u => u.isFirst).length;
       const nUpd = kmUpdates.length - nNew;
       const okKm = await showConfirmAsync(
-        `Aggiornamento "Actual Production" su Jira per ${kmUpdates.length} cell${kmUpdates.length>1?'e':'a'} ` +
-        `(${nNew} nuov${nNew===1?'a':'e'}, ${nUpd} corrett${nUpd===1?'a':'e'}).\n\n` +
-        `Verrà applicata la differenza rispetto all'ultimo valore già scritto (la tua quota viene sostituita, non risommata). Procedere?`,
+        `Aggiornamento "Actual Production" su Jira per ${kmUpdates.length} ticket ` +
+        `(${nNew} nuovi, ${nUpd} corretti).\n\n` +
+        `Verrà applicata la differenza rispetto all'ultimo valore già scritto per ciascun ticket (la tua quota viene sostituita, non risommata). Procedere?`,
         'Aggiorna Jira');
       if (!okKm) {
         kmMsg = `\n\n(Aggiornamento KM su Jira annullato — nessuna modifica ai ticket.)`;
@@ -7751,33 +7820,19 @@ async function pwControlloSyncJira() {
         } else {
           const pres = (pData && pData.results) || {};
           const perr = (pData && pData.errors)  || {};
-          const flagRecords = [];
+          const touched = new Map();
           let uploaded = 0;
           kmUpdates.forEach(u => {
             const r = pres[u.issueKey];
             if (r && r.ok) {
-              _cpData[u.k].km_jira_last = u.newLast;   // memorizza cosa abbiamo scritto
-              _cpData[u.k].km_jira_uploaded = true;    // mirror
-              flagRecords.push({
-                anno: pwAnno, week: pwWeek,
-                commessa: u.commessa, squadra: u.squadra, operatore: u.operatore, giorno: u.giorno,
-                data_giorno: u.dataISO,
-                cantiere: u.cantiere || null, attivita: u.attivita || null,
-                ore_jira:   _cpData[u.k].ore_jira   ?? null,
-                jira_tickets: _cpData[u.k].jira_tickets ?? null,
-                ore_report: _cpData[u.k].ore_report ?? null,
-                km_cad:     _cpData[u.k].km_cad     ?? null,
-                note:       _cpData[u.k].note       ?? null,
-                verificato: _cpData[u.k].verificato === true,
-                km_jira_uploaded: true,
-                km_jira_last: u.newLast,
-                updated_at: new Date().toISOString(),
-                updated_by: _sbUser?.email || null,
-              });
+              if (!_cpData[u.k].km_last_by_ticket || typeof _cpData[u.k].km_last_by_ticket !== 'object') _cpData[u.k].km_last_by_ticket = {};
+              _cpData[u.k].km_last_by_ticket[u.issueKey] = u.newLast;
+              touched.set(u.k, u);
               uploaded++;
             }
           });
-          if (flagRecords.length > 0) {
+          if (touched.size > 0) {
+            const flagRecords = [...touched.values()].map(u => cpBuildRecord(u.commessa, u.squadra, u.operatore, u.giorno, u.dataISO, u.cantiere, u.attivita));
             const { error: fErr } = await _sbClient
               .from('controllo_produzione')
               .upsert(flagRecords, { onConflict: 'anno,week,commessa,squadra,operatore,giorno' });
@@ -7787,7 +7842,7 @@ async function pwControlloSyncJira() {
             }
           }
           if (!kmMsg) {
-            kmMsg = `\n\n✅ Actual Production aggiornata su Jira: ${uploaded}/${kmUpdates.length}` +
+            kmMsg = `\n\n✅ Actual Production aggiornata su Jira: ${uploaded}/${kmUpdates.length} ticket` +
                     (pData.fieldId ? ` (campo ${pData.fieldId})` : '') + '.';
             const perrKeys = Object.keys(perr);
             if (perrKeys.length) {
@@ -7920,6 +7975,87 @@ async function cpJiraFlagClick(ev, commessa, squadra, operatore, giorno) {
       if (error) throw error;
     } catch (e) {
       console.error('cpJiraFlagClick update error:', e);
+      showAlertModal('Errore nell\'azzerare lo storico: ' + (e.message || e));
+      return;
+    }
+  }
+
+  pwControlloRender();
+  pwApplyProduzioneColors();
+}
+
+// Salva il KM/Cad di un singolo ticket dentro la mappa per-ticket della cella.
+async function cpSaveKmTicket(commessa, squadra, operatore, giorno, dataGiorno, cantiere, attivita, ticketKey, value) {
+  const k = `${commessa}|||${squadra}|||${operatore}|||${giorno}`;
+  if (!_cpData[k]) _cpData[k] = {};
+  if (!_cpData[k].km_by_ticket || typeof _cpData[k].km_by_ticket !== 'object') _cpData[k].km_by_ticket = {};
+
+  const v = (value === '' || value == null) ? null : parseFloat(value);
+  if (v == null || isNaN(v)) delete _cpData[k].km_by_ticket[ticketKey];
+  else _cpData[k].km_by_ticket[ticketKey] = Math.round(v * 1000) / 1000;
+
+  // Aggiorna lo specchio km_cad (somma) per colorazione griglia/export
+  _cpData[k].km_cad = cpSumKm(_cpData[k].km_by_ticket);
+  pwApplyProduzioneColors();
+
+  if (!_sbClient || !_sbUser) return;
+  try {
+    const record = cpBuildRecord(commessa, squadra, operatore, giorno, cpDataISO(dataGiorno), cantiere, attivita);
+    const { error } = await _sbClient
+      .from('controllo_produzione')
+      .upsert(record, { onConflict: 'anno,week,commessa,squadra,operatore,giorno' });
+    if (error) throw error;
+  } catch (e) {
+    console.error('cpSaveKmTicket error:', e);
+    const st = document.getElementById('cp-status');
+    if (st) { st.textContent = '⚠ Errore salvataggio'; setTimeout(() => { st.textContent = ''; }, 3000); }
+  }
+}
+
+// Click sull'indicatore "Su Jira" di un singolo ticket: non attivabile a mano,
+// azzerabile solo con conferma (rimuove lo storico di scrittura per quel ticket).
+async function cpJiraFlagTicketClick(ev, commessa, squadra, operatore, giorno, ticketKey) {
+  if (ev && ev.preventDefault) ev.preventDefault();
+  const k = `${commessa}|||${squadra}|||${operatore}|||${giorno}`;
+  const cell = _cpData[k] || {};
+  const lastMap = (cell.km_last_by_ticket && typeof cell.km_last_by_ticket === 'object') ? cell.km_last_by_ticket : {};
+  const cur = lastMap[ticketKey] != null;
+
+  if (!cur) {
+    showAlertModal('Questo indicatore si spunta automaticamente dopo la scrittura del KM/CAD su Jira per questo ticket. Non può essere attivato manualmente.');
+    return;
+  }
+
+  const ok = await showConfirmAsync(
+    `Vuoi azzerare lo storico di scrittura su Jira per il ticket ${ticketKey}?\n\n` +
+    'Alla prossima sincronizzazione l\'INTERO valore KM/CAD di quel ticket verrà nuovamente SOMMATO all\'Actual Production ' +
+    '(non solo la differenza). Usa questa opzione solo se hai azzerato il campo su Jira manualmente.',
+    'Azzera storico');
+  if (!ok) return;
+
+  if (!_cpData[k]) _cpData[k] = {};
+  if (!_cpData[k].km_last_by_ticket || typeof _cpData[k].km_last_by_ticket !== 'object') _cpData[k].km_last_by_ticket = {};
+  delete _cpData[k].km_last_by_ticket[ticketKey];
+  const newLastMap = _cpData[k].km_last_by_ticket;
+  const lastSum = cpSumKm(newLastMap);
+
+  if (_sbClient && _sbUser) {
+    try {
+      const { error } = await _sbClient
+        .from('controllo_produzione')
+        .update({
+          km_last_by_ticket: newLastMap,
+          km_jira_last: lastSum,
+          km_jira_uploaded: lastSum != null,
+          updated_at: new Date().toISOString(),
+          updated_by: _sbUser?.email || null,
+        })
+        .eq('anno', pwAnno).eq('week', pwWeek)
+        .eq('commessa', commessa).eq('squadra', squadra)
+        .eq('operatore', operatore).eq('giorno', giorno);
+      if (error) throw error;
+    } catch (e) {
+      console.error('cpJiraFlagTicketClick error:', e);
       showAlertModal('Errore nell\'azzerare lo storico: ' + (e.message || e));
       return;
     }
@@ -8117,11 +8253,32 @@ async function cpProcessReport(csvText, commessa, squadra) {
     if (n && o.email && o.email.trim()) emailByNome[n] = o.email.trim();
   });
 
+  // Comuni (Epic) disponibili nei ticket della squadra questa settimana
+  const comuneSet = new Set();
+  for (const g of days) {
+    for (const op of opsByDay[g]) {
+      const k = `${commessa}|||${squadra}|||${op.nome}|||${g}`;
+      const tks = (_cpData[k] && Array.isArray(_cpData[k].jira_tickets)) ? _cpData[k].jira_tickets : [];
+      tks.forEach(t => { if (t.epic && t.epic.name) comuneSet.add(t.epic.name); });
+    }
+  }
+  const comuni = [...comuneSet].sort();
+  if (comuni.length === 0) {
+    showAlertModal('Nessun ticket trovato per questa squadra in questa settimana.\nEsegui prima "Sincronizza con Jira" per portare i ticket, poi ricarica il report.');
+    return;
+  }
+
+  // Selezione manuale del comune a cui si riferisce il report
+  const comuneSel = await cpSelectModal(
+    'Comune del report',
+    `A quale comune si riferisce questo report per la squadra "${squadra}"?\nIl valore Km/Cad verrà scritto sul ticket di quel comune.`,
+    comuni.map(c => ({ value: c, label: c })));
+  if (!comuneSel) return;
+
   // Costruisci l'elenco delle celle da aggiornare
   const updates = [];
   const opsNoEmail = new Set();
-  const matchedUsers = new Set();
-  let daysWithData = 0, daysZero = 0;
+  let daysWithData = 0, daysZero = 0, noTicket = 0;
 
   for (const g of days) {
     const ops = opsByDay[g];
@@ -8134,10 +8291,7 @@ async function cpProcessReport(csvText, commessa, squadra) {
       if (!email) { opsNoEmail.add(op.nome); return; }
       const user = email.split('@')[0].toLowerCase();
       const rec = parsed[`${user}|||${dateISO}`];
-      if (rec) {
-        matchedUsers.add(user);
-        if (!source || rec.lenM > source.lenM) source = rec;
-      }
+      if (rec && (!source || rec.lenM > source.lenM)) source = rec;
     });
 
     let oreVal = 0, kmVal = 0;
@@ -8151,15 +8305,18 @@ async function cpProcessReport(csvText, commessa, squadra) {
     }
 
     ops.forEach(op => {
+      const k = `${commessa}|||${squadra}|||${op.nome}|||${g}`;
+      const tks = (_cpData[k] && Array.isArray(_cpData[k].jira_tickets)) ? _cpData[k].jira_tickets : [];
+      const ticket = tks.find(t => t.epic && t.epic.name === comuneSel);
+      if (source && !ticket) noTicket++;
       updates.push({
         operatore: op.nome, giorno: g, dataISO: dateISO,
         cantiere: op.cantiere, attivita: op.attivita,
-        ore: oreVal, km: kmVal,
+        ore: oreVal, km: kmVal, ticketKey: ticket ? ticket.key : null,
       });
     });
   }
 
-  // Se nessun giorno ha dati, avvisa con dettaglio (spesso la settimana è fuori dal range del report)
   if (daysWithData === 0) {
     const range = (() => {
       const ds = Object.keys(parsed).map(k => k.split('|||')[1]).sort();
@@ -8167,42 +8324,34 @@ async function cpProcessReport(csvText, commessa, squadra) {
     })();
     const ok0 = await showConfirmAsync(
       `Nessun dato trovato nel report per gli operatori di "${squadra}" in questa settimana ` +
-      `(${isoDates[days[0]]} … ${isoDates[days[days.length-1]]}).\n\n` +
-      `Il report copre il periodo ${range}.\n\n` +
-      `Vuoi comunque azzerare (0) "Ore Report Prod." e "KM/Cad" per questi giorni?`,
+      `(${isoDates[days[0]]} … ${isoDates[days[days.length-1]]}).\n\nIl report copre il periodo ${range}.\n\n` +
+      `Vuoi comunque azzerare le ore per questi giorni?`,
       'Azzera comunque');
     if (!ok0) return;
   } else {
     const ok = await showConfirmAsync(
-      `Verranno compilati "Ore Report Prod." e "KM/Cad" per la squadra "${squadra}": ` +
-      `${updates.length} celle su ${days.length} giorni pianificati ` +
-      `(${daysWithData} con dati, ${daysZero} a zero). ` +
-      `I valori esistenti saranno sovrascritti. Procedere?`,
+      `Comune "${comuneSel}" — squadra "${squadra}": verranno compilati "Ore Report Prod." e il "Km/Cad" del ticket di quel comune ` +
+      `(${daysWithData} giorni con dati, ${daysZero} a zero` + (noTicket > 0 ? `, ${noTicket} senza ticket del comune` : ``) + `). ` +
+      `I valori esistenti per quel ticket saranno sovrascritti. Procedere?`,
       'Carica Report');
     if (!ok) return;
   }
 
-  // Applica: aggiorna cache locale e prepara i record per Supabase
-  const records = [];
+  // Applica: aggiorna cache locale (ore per cella, km sul ticket del comune) e persisti
+  const touched = new Map();
   updates.forEach(u => {
     const k = `${commessa}|||${squadra}|||${u.operatore}|||${u.giorno}`;
     if (!_cpData[k]) _cpData[k] = {};
     _cpData[k].ore_report = u.ore;
-    _cpData[k].km_cad     = u.km;
-    records.push({
-      anno: pwAnno, week: pwWeek,
-      commessa, squadra, operatore: u.operatore, giorno: u.giorno,
-      data_giorno: u.dataISO,
-      cantiere: u.cantiere || null, attivita: u.attivita || null,
-      ore_jira:   _cpData[k].ore_jira ?? null,
-      ore_report: u.ore,
-      km_cad:     u.km,
-      note:       _cpData[k].note ?? null,
-      verificato: _cpData[k].verificato === true,
-      updated_at: new Date().toISOString(),
-      updated_by: _sbUser?.email || null,
-    });
+    if (u.ticketKey) {
+      if (!_cpData[k].km_by_ticket || typeof _cpData[k].km_by_ticket !== 'object') _cpData[k].km_by_ticket = {};
+      _cpData[k].km_by_ticket[u.ticketKey] = u.km;
+      _cpData[k].km_cad = cpSumKm(_cpData[k].km_by_ticket);
+    }
+    touched.set(k, u);
   });
+
+  const records = [...touched.values()].map(u => cpBuildRecord(commessa, squadra, u.operatore, u.giorno, u.dataISO, u.cantiere, u.attivita));
 
   if (_sbClient && _sbUser && records.length > 0) {
     try {
@@ -8220,11 +8369,13 @@ async function cpProcessReport(csvText, commessa, squadra) {
   pwControlloRender();
   pwApplyProduzioneColors();
 
-  let msg = `✅ Squadra "${squadra}": aggiornate ${records.length} celle ` +
+  let msg = `✅ Comune "${comuneSel}" — squadra "${squadra}": aggiornate ${records.length} celle ` +
             `(${daysWithData} giorni con dati, ${daysZero} a zero).`;
+  if (noTicket > 0) {
+    msg += `\n\n⚠ ${noTicket} operatore/giorno con dati nel report ma senza ticket del comune "${comuneSel}" (KM non assegnato). Verifica di aver sincronizzato Jira.`;
+  }
   if (opsNoEmail.size > 0) {
-    msg += `\n\n⚠ Operatori senza email assegnata (non abbinabili al report): ` +
-           `${[...opsNoEmail].join(', ')}. Assegna le email dalla tab "Email/operatore".`;
+    msg += `\n\n⚠ Operatori senza email assegnata (non abbinabili al report): ${[...opsNoEmail].join(', ')}.`;
   }
   showAlertModal(msg);
 }
