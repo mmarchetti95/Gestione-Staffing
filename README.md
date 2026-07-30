@@ -1,3 +1,6 @@
+## v18.34.2
+- feat: nella tab Doppia Week l'intestazione con il numero della settimana resta visibile (sticky) durante lo scroll verticale. Il contenitore ha ora uno scroll interno (max 70vh) con header e colonna operatore fissi.
+
 ## v18.34.1
 - fix: etichetta del pulsante ferie cambiata in "Tutta la Settimana". La griglia Doppia Week ora si adatta alla larghezza del contenitore (colonne elastiche minmax/1fr) invece di restare compressa a sinistra.
 
