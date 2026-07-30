@@ -1,3 +1,6 @@
+## v18.34.0
+- feat: nella tab Ferie/Permessi, ogni riga operatore ha un pulsante "➕ Settimana" che applica le ferie a tutti i 6 giorni della settimana in un clic (e "➖ Settimana" per rimuoverle se già tutte impostate).
+
 ## v18.33.1
 - fix: le assegnazioni Doppia Week ora vengono salvate su Supabase con debounce breve (500ms, come le ferie) invece di 3s. Prima, un refresh subito dopo l'inserimento poteva far perdere il dato.
 
