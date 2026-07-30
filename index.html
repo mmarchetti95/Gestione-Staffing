@@ -654,7 +654,7 @@
         <select id="anno-selector" class="text-sm border-none font-semibold focus:outline-none cursor-pointer" style="color:#f9fafb;background:#1a1a1a;border-radius:4px;padding:1px 4px;"></select>
       </div>
       <div class="text-xs pl-2" style="border-left:1px solid #444;color:#9ca3af;">
-        <span class="font-medium" style="color:#00b8b0;">v18.35.0</span> · Michele Marchetti
+        <span class="font-medium" style="color:#00b8b0;">v18.36.0</span> · Michele Marchetti
       </div>
     </div>
   </div>
@@ -1012,7 +1012,10 @@
           <span class="font-semibold" id="pw-dw-month-label">—</span>
           <button class="px-2 py-0.5 rounded hover:bg-indigo-500" title="Mese successivo" onclick="pwDwMonthNav(1)">›</button>
         </div>
-        <div class="text-xs text-indigo-200">Clicca una cella per assegnare una doppia week (2 settimane di fila)</div>
+        <div class="flex items-center gap-3">
+          <span class="text-xs text-indigo-200 hidden md:inline">Clicca una cella per assegnare una doppia week (2 settimane di fila)</span>
+          <button onclick="pwDoppiaWeekExportPDF()" class="text-xs font-semibold bg-white text-indigo-700 rounded px-3 py-1 hover:bg-indigo-50 whitespace-nowrap">📄 Esporta PDF</button>
+        </div>
       </div>
       <div class="overflow-auto" style="max-height:70vh;" id="pw-dw-scroll">
         <div id="pw-dw-grid"></div>
@@ -7368,6 +7371,96 @@ async function pwDwToggle(nome, anno, week) {
     _sbPwPushTimer = setTimeout(() => sbPush(), 500);
   }
   pwDoppiaWeekRender();
+}
+
+// Esporta la griglia Doppia Week del mese in un PDF orizzontale, colorato e
+// leggibile in una sola pagina (per condivisione).
+function pwDoppiaWeekExportPDF() {
+  if (!window.jspdf || !window.jspdf.jsPDF) { showAlertModal('Libreria PDF non disponibile.'); return; }
+  const { jsPDF } = window.jspdf;
+
+  const weeks = pwMonthWeeks(pwDwYear, pwDwMonth);
+  const ops = getOperatoriAttivi().map(o => o.nome_esteso || o.nome).filter(Boolean).sort();
+  if (ops.length === 0) { showAlertModal('Nessun operatore attivo da esportare.'); return; }
+
+  // Stato per ogni cella
+  const stateGrid = ops.map(nome => weeks.map(wk => {
+    const ferie    = pwHasFeriaWeek(wk.anno, wk.week, nome);
+    const isStart  = pwIsDwStart(wk.anno, wk.week, nome);
+    const prev     = pwWeekAdd(wk.anno, wk.week, -1);
+    const isSecond = pwIsDwStart(prev.anno, prev.week, nome);
+    if (ferie && (isStart || isSecond)) return 'conflict';
+    if (ferie) return 'ferie';
+    if (isStart) return 'start';
+    if (isSecond) return 'second';
+    return 'empty';
+  }));
+
+  const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
+  const pageW = doc.internal.pageSize.getWidth();
+  const pageH = doc.internal.pageSize.getHeight();
+
+  doc.setFontSize(14); doc.setFont(undefined, 'bold'); doc.setTextColor(55, 48, 163);
+  doc.text(`Doppia Week — ${PW_MESI_IT[pwDwMonth]} ${pwDwYear}`, 14, 13);
+  doc.setFontSize(8); doc.setFont(undefined, 'normal'); doc.setTextColor(100, 116, 139);
+  doc.text(`Generato il ${new Date().toLocaleDateString('it-IT')}`, 14, 18);
+  doc.setTextColor(0, 0, 0);
+
+  // Font ridotto in base al numero di righe, per stare in una sola pagina
+  const totalRows = ops.length + 1;
+  const availH = pageH - 22 - 14; // sotto l'intestazione, sopra la legenda
+  let fs = 8.5;
+  const rowH = () => (fs * 0.42) + 2.4;
+  while (rowH() * totalRows > availH && fs > 4) fs -= 0.5;
+
+  const head = [['Operatore', ...weeks.map(wk => {
+    const mon = isoWeekToMonday(wk.anno, wk.week);
+    return `W${wk.week}\n${String(mon.getUTCDate()).padStart(2,'0')}/${String(mon.getUTCMonth()+1).padStart(2,'0')}`;
+  })]];
+  const LBL = { start: 'DOPPIA 1', second: 'DOPPIA 2\n(rientro gio/ven)', ferie: 'FERIE', conflict: 'DOPPIA+FERIE', empty: '' };
+  const body = ops.map((nome, ri) => [nome, ...weeks.map((wk, ci) => LBL[stateGrid[ri][ci]])]);
+
+  const opColW = 42;
+  const weekColW = (pageW - 28 - opColW) / weeks.length;
+  const colStyles = { 0: { cellWidth: opColW, halign: 'left', fontStyle: 'bold' } };
+  for (let i = 1; i <= weeks.length; i++) colStyles[i] = { cellWidth: weekColW, halign: 'center' };
+
+  const COLORS = {
+    start:    { fill: [99, 102, 241],  text: [255, 255, 255] },
+    second:   { fill: [129, 140, 248], text: [255, 255, 255] },
+    ferie:    { fill: [252, 165, 165], text: [127, 29, 29] },
+    conflict: { fill: [245, 158, 11],  text: [255, 255, 255] },
+  };
+
+  doc.autoTable({
+    startY: 22,
+    head, body,
+    styles: { fontSize: fs, cellPadding: 1.1, overflow: 'linebreak', valign: 'middle', halign: 'center', lineWidth: 0.1, lineColor: [226, 232, 240] },
+    headStyles: { fillColor: [79, 70, 229], textColor: 255, fontStyle: 'bold', halign: 'center', fontSize: fs },
+    columnStyles: colStyles,
+    margin: { left: 14, right: 14 },
+    didParseCell: function (h) {
+      if (h.section === 'body' && h.column.index >= 1) {
+        const st = stateGrid[h.row.index][h.column.index - 1];
+        const c = COLORS[st];
+        if (c) { h.cell.styles.fillColor = c.fill; h.cell.styles.textColor = c.text; h.cell.styles.fontStyle = 'bold'; }
+      }
+    },
+  });
+
+  // Legenda
+  let ly = doc.lastAutoTable.finalY + 6;
+  if (ly > pageH - 8) ly = pageH - 8;
+  doc.setFontSize(7); doc.setFont(undefined, 'normal');
+  const leg = [['Doppia week (1a/2a sett.)', [99, 102, 241]], ['In ferie', [252, 165, 165]], ['Conflitto doppia+ferie', [245, 158, 11]]];
+  let lx = 14;
+  leg.forEach(([lbl, rgb]) => {
+    doc.setFillColor(rgb[0], rgb[1], rgb[2]); doc.rect(lx, ly - 3, 4, 4, 'F');
+    doc.setTextColor(51, 65, 85); doc.text(lbl, lx + 5, ly);
+    lx += doc.getTextWidth(lbl) + 14;
+  });
+
+  doc.save(`Doppia_Week_${PW_MESI_IT[pwDwMonth]}_${pwDwYear}.pdf`);
 }
 
 /* ==================== COLLAPSE / ACCORDION ==================== */
