@@ -654,7 +654,7 @@
         <select id="anno-selector" class="text-sm border-none font-semibold focus:outline-none cursor-pointer" style="color:#f9fafb;background:#1a1a1a;border-radius:4px;padding:1px 4px;"></select>
       </div>
       <div class="text-xs pl-2" style="border-left:1px solid #444;color:#9ca3af;">
-        <span class="font-medium" style="color:#00b8b0;">v18.34.2</span> · Michele Marchetti
+        <span class="font-medium" style="color:#00b8b0;">v18.35.0</span> · Michele Marchetti
       </div>
     </div>
   </div>
@@ -8742,6 +8742,7 @@ function pwControlloExportPDF() {
             operatore: op.nome,
             cantiere:  cant,
             oreJira:   saved.ore_jira != null ? saved.ore_jira : null,
+            oreReport: saved.ore_report != null ? saved.ore_report : null,
             ticketStr, epicStr,
             altre: '',
           });
@@ -8772,6 +8773,7 @@ function pwControlloExportPDF() {
             operatore: op.nome,
             cantiere:  '—',
             oreJira:   null,
+            oreReport: null,
             ticketStr: '—', epicStr: '—',
             altre,
           });
@@ -8810,11 +8812,12 @@ function pwControlloExportPDF() {
 
     doc.autoTable({
       startY: y + 2,
-      head: [['Operatore', 'Cantiere', 'Ore Jira', 'Ticket', 'Epic', 'Altre informazioni']],
+      head: [['Operatore', 'Cantiere', 'Ore Jira', 'Ore Report Prod.', 'Ticket', 'Epic', 'Altre informazioni']],
       body: rows.map(r => [
         r.operatore,
         r.cantiere || '—',
         (r.oreJira != null ? String(r.oreJira) : '—'),
+        (r.oreReport != null ? String(r.oreReport) : '—'),
         r.ticketStr,
         r.epicStr,
         r.altre || '',
@@ -8823,12 +8826,13 @@ function pwControlloExportPDF() {
       headStyles: { fillColor: [15, 118, 110], textColor: 255, fontStyle: 'bold', halign: 'left' },
       alternateRowStyles: { fillColor: [248, 250, 252] },
       columnStyles: {
-        0: { cellWidth: 46 },
-        1: { cellWidth: 48 },
-        2: { cellWidth: 18, halign: 'center', fontStyle: 'bold' },
-        3: { cellWidth: 42 },
-        4: { cellWidth: 50 },
-        5: { cellWidth: 'auto' },
+        0: { cellWidth: 44 },
+        1: { cellWidth: 44 },
+        2: { cellWidth: 16, halign: 'center', fontStyle: 'bold' },
+        3: { cellWidth: 20, halign: 'center', fontStyle: 'bold' },
+        4: { cellWidth: 38 },
+        5: { cellWidth: 46 },
+        6: { cellWidth: 'auto' },
       },
       margin: { left: 14, right: 14 },
       didParseCell: function (hookData) {
