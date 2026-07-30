@@ -1,3 +1,6 @@
+## v18.40.0
+- feat: la Pianificazione Settimanale ricorda l'ultima tab aperta (Griglia/Ferie/Mappa/Controllo/Doppia Week) e l'ultima settimana visualizzata, ripristinandole dopo il refresh (salvataggio locale). Il pulsante "Oggi" riporta comunque alla settimana corrente.
+
 ## v18.39.0
 - feat: nella Griglia settimanale, gli operatori che risultano in doppia week nella settimana visualizzata mostrano un badge "🔁 DOPPIA W1/W2" (collegamento con la tab Doppia Week), così si vede subito chi è in trasferta lunga mentre si pianifica.
 
