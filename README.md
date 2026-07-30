@@ -1,3 +1,6 @@
+## v18.39.0
+- feat: nella Griglia settimanale, gli operatori che risultano in doppia week nella settimana visualizzata mostrano un badge "🔁 DOPPIA W1/W2" (collegamento con la tab Doppia Week), così si vede subito chi è in trasferta lunga mentre si pianifica.
+
 ## v18.38.0
 - feat: nella tab Doppia Week, sotto il nome di ogni operatore compare il contatore delle doppie week svolte (nel mese visualizzato e nell'intero anno), per bilanciare il carico.
 
