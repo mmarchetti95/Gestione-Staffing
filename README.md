@@ -1,3 +1,6 @@
+## v18.34.1
+- fix: etichetta del pulsante ferie cambiata in "Tutta la Settimana". La griglia Doppia Week ora si adatta alla larghezza del contenitore (colonne elastiche minmax/1fr) invece di restare compressa a sinistra.
+
 ## v18.34.0
 - feat: nella tab Ferie/Permessi, ogni riga operatore ha un pulsante "➕ Settimana" che applica le ferie a tutti i 6 giorni della settimana in un clic (e "➖ Settimana" per rimuoverle se già tutte impostate).
 
