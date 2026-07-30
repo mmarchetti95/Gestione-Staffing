@@ -1,3 +1,6 @@
+## v18.33.1
+- fix: le assegnazioni Doppia Week ora vengono salvate su Supabase con debounce breve (500ms, come le ferie) invece di 3s. Prima, un refresh subito dopo l'inserimento poteva far perdere il dato.
+
 ## v18.33.0
 - feat: nuova tab **Doppia Week** in Pianificazione Settimanale. Prospetto mensile (operatori × settimane ISO che toccano il mese) per programmare le doppie week. Click su una cella = assegna un blocco di 2 settimane consecutive (Opzione 1); la 2ª settimana riporta "rientro gio · riposo compensativo ven". Chi ha anche un solo giorno di ferie in una settimana non è assegnabile (blocco con avviso). Segnalazione visiva ⚠ per doppie week di fila (non bloccante). Conteggio operatori in doppia week per settimana. Navigazione mese ‹ ›. Dati salvati automaticamente su Supabase (staffing_state, nessun SQL da eseguire).
 
