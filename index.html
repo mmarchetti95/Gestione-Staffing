@@ -648,7 +648,7 @@
     <div class="flex items-center gap-2">
       <button id="btn-presentation" class="px-3 py-1.5 text-sm rounded hover:bg-white/10" style="border:1px solid #444;color:#d1d5db;visibility:visible;">📊 Modalità presentazione</button>
       <div class="text-xs pl-2" style="border-left:1px solid #444;color:#9ca3af;">
-        <span class="font-medium" style="color:#00b8b0;">v18.38.0</span> · Michele Marchetti
+        <span class="font-medium" style="color:#00b8b0;">v18.39.0</span> · Michele Marchetti
       </div>
     </div>
   </div>
@@ -6729,10 +6729,22 @@ function pwRender() {
           ? `<span class="op-stato-badge ${statoAttuale}">${badgeLabel}</span>`
           : '';
 
+        // Badge Doppia Week per la settimana corrente
+        let dwBadge = '';
+        if (op.nome) {
+          const prevW = pwWeekAdd(pwAnno, pwWeek, -1);
+          if (pwIsDwStart(pwAnno, pwWeek, op.nome)) {
+            dwBadge = `<span class="op-stato-badge" style="background:#6366f1;color:#fff;" title="Doppia week - 1a settimana">🔁 DOPPIA W1</span>`;
+          } else if (pwIsDwStart(prevW.anno, prevW.week, op.nome)) {
+            dwBadge = `<span class="op-stato-badge" style="background:#818cf8;color:#fff;" title="Doppia week - 2a settimana (rientro gio, riposo ven)">🔁 DOPPIA W2</span>`;
+          }
+        }
+
         return `<div class="pw-op-row" style="grid-template-columns: 200px repeat(6, 1fr);">
           <div class="pw-op-name" style="flex-direction:column;align-items:flex-start;gap:2px;overflow:hidden;padding:4px 8px;">
             ${pwRenderOpDropdown(cIdx, sIdx, oIdx, op.nome)}
             ${badgeHtml ? `<div>${badgeHtml}</div>` : ''}
+            ${dwBadge ? `<div>${dwBadge}</div>` : ''}
             <button class="text-[9px] text-red-400 hover:text-red-600 text-left"
               data-cidx="${cIdx}" data-sidx="${sIdx}" data-oidx="${oIdx}"
               onclick="pwRemoveOp(this)">✕ rimuovi</button>
