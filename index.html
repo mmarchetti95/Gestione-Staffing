@@ -647,14 +647,8 @@
     </div>
     <div class="flex items-center gap-2">
       <button id="btn-presentation" class="px-3 py-1.5 text-sm rounded hover:bg-white/10" style="border:1px solid #444;color:#d1d5db;visibility:visible;">📊 Modalità presentazione</button>
-      <button id="btn-export-xlsx" class="px-3 py-1.5 text-sm rounded text-white" style="background:#00b8b0;" title="Scarica una copia aggiornata del file Excel di partenza">📥 Esporta XLSX</button>
-      <button id="btn-print" class="px-3 py-1.5 text-sm rounded text-white" style="background:#009890;">🖨 Esporta PDF</button>
-      <div class="flex items-center gap-1 rounded px-2 py-1" style="border:1px solid #444;">
-        <span class="text-xs" style="color:#9ca3af;">Anno:</span>
-        <select id="anno-selector" class="text-sm border-none font-semibold focus:outline-none cursor-pointer" style="color:#f9fafb;background:#1a1a1a;border-radius:4px;padding:1px 4px;"></select>
-      </div>
       <div class="text-xs pl-2" style="border-left:1px solid #444;color:#9ca3af;">
-        <span class="font-medium" style="color:#00b8b0;">v18.36.0</span> · Michele Marchetti
+        <span class="font-medium" style="color:#00b8b0;">v18.37.0</span> · Michele Marchetti
       </div>
     </div>
   </div>
@@ -806,6 +800,14 @@
 </div>
 
 <main class="max-w-7xl mx-auto px-4 py-6 space-y-6">
+
+  <!-- Selettore anno Dashboard -->
+  <section class="flex items-center justify-end -mb-2">
+    <div class="flex items-center gap-2 bg-white border border-slate-200 rounded-lg px-3 py-1.5 shadow-sm">
+      <span class="text-xs font-semibold text-slate-500 uppercase tracking-wide">Anno pipeline</span>
+      <select id="anno-selector" class="text-sm border border-slate-300 rounded px-2 py-0.5 font-semibold text-slate-700 focus:outline-none focus:border-teal-400 cursor-pointer bg-slate-50"></select>
+    </div>
+  </section>
 
   <!-- 1. KPI -->
   <section>
@@ -5712,9 +5714,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       renderAll();
     });
   }
-  document.getElementById('btn-export-xlsx').onclick = exportXlsx;
-  // btn-save-html, btn-reset, btn-import-xlsx rimossi in v18.0.0
-  document.getElementById('btn-print').onclick = () => window.print();
+  // btn-export-xlsx e btn-print (Esporta PDF via stampa browser) rimossi in v18.37.0
   document.getElementById('btn-presentation').onclick = () => {
     document.body.classList.toggle('present-mode');
     const btn = document.getElementById('btn-presentation');
