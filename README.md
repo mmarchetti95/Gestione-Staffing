@@ -1,3 +1,6 @@
+## v18.37.0
+- refactor: rimossi dall'header globale i pulsanti "Esporta XLSX" e "Esporta PDF" (quest'ultimo era la stampa grezza del browser, superata dai report PDF dedicati). Il selettore Anno della Dashboard è stato spostato dall'header a una barra in cima alla Dashboard stessa (dove ha effetto), con stile coerente. Nessun impatto sulle tab settimanali.
+
 ## v18.36.0
 - feat: tab Doppia Week - bottone "📄 Esporta PDF" che esporta la griglia mensile (operatori × settimane) in PDF orizzontale, colorato (doppia week / ferie / conflitto) con legenda, dimensionato per stare in una sola pagina, pronto per la condivisione.
 
