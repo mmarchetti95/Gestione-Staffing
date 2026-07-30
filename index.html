@@ -654,7 +654,7 @@
         <select id="anno-selector" class="text-sm border-none font-semibold focus:outline-none cursor-pointer" style="color:#f9fafb;background:#1a1a1a;border-radius:4px;padding:1px 4px;"></select>
       </div>
       <div class="text-xs pl-2" style="border-left:1px solid #444;color:#9ca3af;">
-        <span class="font-medium" style="color:#00b8b0;">v18.34.0</span> · Michele Marchetti
+        <span class="font-medium" style="color:#00b8b0;">v18.34.1</span> · Michele Marchetti
       </div>
     </div>
   </div>
@@ -6283,7 +6283,7 @@ function pwFerieRender() {
         <button data-op="${nome.replace(/"/g, '&quot;')}" onclick="pwFerieToggleWeek(this.dataset.op)"
           title="${allSet ? 'Rimuovi le ferie da tutta la settimana' : 'Applica le ferie a tutta la settimana'}"
           style="width:100%;font-size:11px;font-weight:600;border-radius:5px;padding:3px 6px;cursor:pointer;border:1px solid ${allSet ? '#fca5a5' : '#cbd5e1'};background:${allSet ? '#fee2e2' : '#f8fafc'};color:${allSet ? '#991b1b' : '#475569'};white-space:nowrap;">
-          ${allSet ? '➖ Settimana' : '➕ Settimana'}
+          ${allSet ? 'Tutta la Settimana' : 'Tutta la Settimana'}
         </button>
       </div>
     </div>`;
@@ -7276,8 +7276,8 @@ function pwDoppiaWeekRender() {
   const ops = getOperatoriAttivi().map(o => o.nome_esteso || o.nome).filter(Boolean).sort();
   if (ops.length === 0) { grid.innerHTML = '<div style="padding:20px;color:#94a3b8;font-size:13px;">Nessun operatore attivo.</div>'; return; }
 
-  const colW = 92;
-  const cols = `180px repeat(${weeks.length}, ${colW}px)`;
+  const colW = 84; // larghezza minima colonna settimana
+  const cols = `180px repeat(${weeks.length}, minmax(${colW}px, 1fr))`;
   const minW = 180 + weeks.length * colW;
 
   // Header
