@@ -1,3 +1,6 @@
+## v18.36.0
+- feat: tab Doppia Week - bottone "📄 Esporta PDF" che esporta la griglia mensile (operatori × settimane) in PDF orizzontale, colorato (doppia week / ferie / conflitto) con legenda, dimensionato per stare in una sola pagina, pronto per la condivisione.
+
 ## v18.35.0
 - feat: il Report PDF del Controllo Produzione include ora la colonna "Ore Report Prod." accanto a "Ore Jira" (larghezze colonne ribilanciate per farla stare in pagina).
 
