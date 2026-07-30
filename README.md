@@ -1,3 +1,6 @@
+## v18.33.0
+- feat: nuova tab **Doppia Week** in Pianificazione Settimanale. Prospetto mensile (operatori × settimane ISO che toccano il mese) per programmare le doppie week. Click su una cella = assegna un blocco di 2 settimane consecutive (Opzione 1); la 2ª settimana riporta "rientro gio · riposo compensativo ven". Chi ha anche un solo giorno di ferie in una settimana non è assegnabile (blocco con avviso). Segnalazione visiva ⚠ per doppie week di fila (non bloccante). Conteggio operatori in doppia week per settimana. Navigazione mese ‹ ›. Dati salvati automaticamente su Supabase (staffing_state, nessun SQL da eseguire).
+
 ## v18.32.0
 - feat: modello KM/Cad **per singolo ticket** (un operatore può avere produzione su più comuni lo stesso giorno). Le colonne "Km/Cad" e "Su Jira" diventano impilate e allineate ai ticket. "Carica Report": chiede con una tendina il **comune** a cui si riferisce il report e scrive il Km/Cad sul ticket di quel comune. Lettura/adozione da Jira e upload (modello delta) ora operano **per ticket**: si scrive su ogni sottotask solo la differenza rispetto all'ultimo valore scritto per quel ticket. Migrazione automatica dal modello a cella singola. Richiede le colonne Supabase km_by_ticket e km_last_by_ticket (jsonb). Nota workflow: prima "Sincronizza con Jira" (porta i ticket), poi "Carica Report".
 
