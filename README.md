@@ -1,3 +1,6 @@
+## v18.38.0
+- feat: nella tab Doppia Week, sotto il nome di ogni operatore compare il contatore delle doppie week svolte (nel mese visualizzato e nell'intero anno), per bilanciare il carico.
+
 ## v18.37.0
 - refactor: rimossi dall'header globale i pulsanti "Esporta XLSX" e "Esporta PDF" (quest'ultimo era la stampa grezza del browser, superata dai report PDF dedicati). Il selettore Anno della Dashboard è stato spostato dall'header a una barra in cima alla Dashboard stessa (dove ha effetto), con stile coerente. Nessun impatto sulle tab settimanali.
 
