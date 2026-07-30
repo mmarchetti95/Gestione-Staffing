@@ -119,6 +119,21 @@ def main():
             for name, ln in new_undef:
                 errors.append(f"Variabile non definita `{name}` (riga JS ~{ln}) — possibile refuso tipo `dataISO`.")
 
+    # ---- 7. onclick con stringa dinamica NON escapata ----
+    # Cerca onclick="...'${ EXPR }'..." dove EXPR non usa jsAttr/jsesc/esc.
+    unescaped = []
+    for m in re.finditer(r'onclick="([^"]*)"', html):
+        inner = m.group(1)
+        for em in re.finditer(r"'\$\{([^}]*)\}'", inner):
+            expr = em.group(1)
+            if not re.search(r'\b(jsAttr|jsesc|esc)\s*\(', expr):
+                unescaped.append(expr.strip())
+    if unescaped:
+        for ex in unescaped:
+            errors.append(f"onclick con stringa dinamica non escapata: '${{{ex}}}' — usare jsAttr(...) (rischio con apostrofi/quote).")
+    else:
+        print("[onclick]  nessun onclick con stringa dinamica non escapata: OK")
+
     # ---- Esito ----
     print()
     for w in warnings:
