@@ -654,7 +654,7 @@
         <select id="anno-selector" class="text-sm border-none font-semibold focus:outline-none cursor-pointer" style="color:#f9fafb;background:#1a1a1a;border-radius:4px;padding:1px 4px;"></select>
       </div>
       <div class="text-xs pl-2" style="border-left:1px solid #444;color:#9ca3af;">
-        <span class="font-medium" style="color:#00b8b0;">v18.34.1</span> · Michele Marchetti
+        <span class="font-medium" style="color:#00b8b0;">v18.34.2</span> · Michele Marchetti
       </div>
     </div>
   </div>
@@ -1014,7 +1014,7 @@
         </div>
         <div class="text-xs text-indigo-200">Clicca una cella per assegnare una doppia week (2 settimane di fila)</div>
       </div>
-      <div class="overflow-x-auto">
+      <div class="overflow-auto" style="max-height:70vh;" id="pw-dw-scroll">
         <div id="pw-dw-grid"></div>
       </div>
     </div>
@@ -7280,9 +7280,9 @@ function pwDoppiaWeekRender() {
   const cols = `180px repeat(${weeks.length}, minmax(${colW}px, 1fr))`;
   const minW = 180 + weeks.length * colW;
 
-  // Header
-  let html = `<div style="display:grid;grid-template-columns:${cols};min-width:${minW}px;">`;
-  html += `<div style="position:sticky;left:0;z-index:2;background:#eef2ff;font-size:10px;font-weight:700;color:#3730a3;text-transform:uppercase;padding:8px;border-bottom:1px solid #e2e8f0;">Operatore</div>`;
+  // Header (riga sticky in alto durante lo scroll verticale)
+  let html = `<div style="display:grid;grid-template-columns:${cols};min-width:${minW}px;position:sticky;top:0;z-index:5;">`;
+  html += `<div style="position:sticky;left:0;z-index:6;background:#eef2ff;font-size:10px;font-weight:700;color:#3730a3;text-transform:uppercase;padding:8px;border-bottom:1px solid #e2e8f0;">Operatore</div>`;
   weeks.forEach(wk => {
     const mon = isoWeekToMonday(wk.anno, wk.week);
     const sat = new Date(mon); sat.setUTCDate(mon.getUTCDate() + 5);
