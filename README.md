@@ -1,3 +1,6 @@
+## v18.35.0
+- feat: il Report PDF del Controllo Produzione include ora la colonna "Ore Report Prod." accanto a "Ore Jira" (larghezze colonne ribilanciate per farla stare in pagina).
+
 ## v18.34.2
 - feat: nella tab Doppia Week l'intestazione con il numero della settimana resta visibile (sticky) durante lo scroll verticale. Il contenitore ha ora uno scroll interno (max 70vh) con header e colonna operatore fissi.
 
