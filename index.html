@@ -648,7 +648,7 @@
     <div class="flex items-center gap-2">
       <button id="btn-presentation" class="px-3 py-1.5 text-sm rounded hover:bg-white/10" style="border:1px solid #444;color:#d1d5db;visibility:visible;">📊 Modalità presentazione</button>
       <div class="text-xs pl-2" style="border-left:1px solid #444;color:#9ca3af;">
-        <span class="font-medium" style="color:#00b8b0;">v18.39.0</span> · Michele Marchetti
+        <span class="font-medium" style="color:#00b8b0;">v18.40.0</span> · Michele Marchetti
       </div>
     </div>
   </div>
@@ -7113,6 +7113,13 @@ document.addEventListener('DOMContentLoaded', async () => {
   const { week, year } = isoWeekYear(now);
   pwAnno = year; pwWeek = week;
 
+  // Ripristina l'ultima settimana visualizzata, se salvata
+  try {
+    const sa = parseInt(localStorage.getItem('pw_last_anno'));
+    const sw = parseInt(localStorage.getItem('pw_last_week'));
+    if (sa && sw && sw >= 1 && sw <= weeksInYear(sa)) { pwAnno = sa; pwWeek = sw; }
+  } catch (_) {}
+
   // Selettori anno/week
   const annoSel = document.getElementById('pw-anno');
   const weekSel = document.getElementById('pw-week');
@@ -7197,7 +7204,7 @@ function switchScreen(screen) {
 }
 
 /* ==================== TAB GRIGLIA / FERIE / MAPPA ==================== */
-let _pwActiveTab = 'griglia';
+let _pwActiveTab = (function(){ try { return localStorage.getItem('pw_last_tab') || 'griglia'; } catch(_) { return 'griglia'; } })();
 // Ricorda la posizione di scroll di ciascun tab (Griglia/Ferie/Mappa = scroll pagina,
 // Controllo Produzione = scroll interno alla tabella) finché non si fa il refresh.
 let _pwScrollY = { griglia: 0, ferie: 0, mappa: 0, controllo: 0, doppia: 0 };
@@ -7212,6 +7219,12 @@ function pwSwitchTab(tab) {
     if (_cpc) _cpTableScrollTop = _cpc.scrollTop;
   }
   _pwActiveTab = tab;
+  // Memorizza ultima tab e settimana per ripristinarle al refresh
+  try {
+    localStorage.setItem('pw_last_tab', tab);
+    localStorage.setItem('pw_last_anno', String(pwAnno));
+    localStorage.setItem('pw_last_week', String(pwWeek));
+  } catch (_) {}
   const headerDates = document.getElementById('pw-header-dates');
   if (headerDates) {
     const _mon = isoWeekToMonday(pwAnno, pwWeek);
