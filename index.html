@@ -648,7 +648,7 @@
     <div class="flex items-center gap-2">
       <button id="btn-presentation" class="px-3 py-1.5 text-sm rounded hover:bg-white/10" style="border:1px solid #444;color:#d1d5db;visibility:visible;">📊 Modalità presentazione</button>
       <div class="text-xs pl-2" style="border-left:1px solid #444;color:#9ca3af;">
-        <span class="font-medium" style="color:#00b8b0;">v18.37.0</span> · Michele Marchetti
+        <span class="font-medium" style="color:#00b8b0;">v18.38.0</span> · Michele Marchetti
       </div>
     </div>
   </div>
@@ -6162,6 +6162,19 @@ function pwSetDwStart(anno, week, nome, val) {
   }
 }
 
+// Conta i blocchi doppia-week (start) di un operatore: nell'insieme di settimane
+// indicato (mese corrente) e nell'intero anno.
+function pwDwCount(nome, weeksList, year) {
+  let mese = 0;
+  (weeksList || []).forEach(wk => { if (pwIsDwStart(wk.anno, wk.week, nome)) mese++; });
+  let anno = 0;
+  const y = pwDoppiaWeek[year];
+  if (y) {
+    Object.keys(y).forEach(wk => { if (y[wk] && y[wk][nome] === true) anno++; });
+  }
+  return { mese, anno };
+}
+
 // Ritorna le settimane ISO che toccano il mese (anno, mese 0-11), in ordine.
 function pwMonthWeeks(anno, mese) {
   const seen = new Set();
@@ -7295,8 +7308,12 @@ function pwDoppiaWeekRender() {
 
   // Righe operatori
   ops.forEach(nome => {
+    const cnt = pwDwCount(nome, weeks, pwDwYear);
     html += `<div style="display:grid;grid-template-columns:${cols};min-width:${minW}px;">`;
-    html += `<div style="position:sticky;left:0;z-index:1;background:#fff;font-size:12px;padding:6px 8px;border-bottom:1px solid #f1f5f9;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;" title="${esc(nome)}">${esc(nome)}</div>`;
+    html += `<div style="position:sticky;left:0;z-index:1;background:#fff;padding:4px 8px;border-bottom:1px solid #f1f5f9;overflow:hidden;" title="${esc(nome)}">
+      <div style="font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${esc(nome)}</div>
+      <div style="font-size:9px;color:#6366f1;white-space:nowrap;" title="Doppie week nel mese e nell'anno">🔁 ${cnt.mese} mese · ${cnt.anno} anno</div>
+    </div>`;
     weeks.forEach(wk => {
       const ferie    = pwHasFeriaWeek(wk.anno, wk.week, nome);
       const isStart  = pwIsDwStart(wk.anno, wk.week, nome);
