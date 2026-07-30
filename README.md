@@ -1,3 +1,6 @@
+## v18.41.0
+- fix: hardening escaping. Aggiunto helper globale `jsAttr()` e applicato ai pochi onclick che passano stringhe dinamiche (showKpiModal, openOperatoreModal, pwToggleStatPopover, cpToggleSq), per evitare rotture con nomi contenenti apostrofi/virgolette (es. "D'Ivrea"). Intervento mirato, non un refactor completo. Aggiunto smoke test pre-deploy in scripts/smoke_test.py.
+
 ## v18.40.0
 - feat: la Pianificazione Settimanale ricorda l'ultima tab aperta (Griglia/Ferie/Mappa/Controllo/Doppia Week) e l'ultima settimana visualizzata, ripristinandole dopo il refresh (salvataggio locale). Il pulsante "Oggi" riporta comunque alla settimana corrente.
 
