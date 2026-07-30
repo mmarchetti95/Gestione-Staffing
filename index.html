@@ -654,7 +654,7 @@
         <select id="anno-selector" class="text-sm border-none font-semibold focus:outline-none cursor-pointer" style="color:#f9fafb;background:#1a1a1a;border-radius:4px;padding:1px 4px;"></select>
       </div>
       <div class="text-xs pl-2" style="border-left:1px solid #444;color:#9ca3af;">
-        <span class="font-medium" style="color:#00b8b0;">v18.33.1</span> · Michele Marchetti
+        <span class="font-medium" style="color:#00b8b0;">v18.34.0</span> · Michele Marchetti
       </div>
     </div>
   </div>
@@ -6247,7 +6247,7 @@ function pwFerieRender() {
   if (!gridEl) return;
 
   const allOps = getOperatoriAttivi().map(o => o.nome_esteso || o.nome).filter(Boolean).sort();
-  const cols = `150px repeat(6, 1fr)`;
+  const cols = `150px repeat(6, 1fr) 130px`;
 
   // Header
   let html = `<div class="pw-ferie-header-row" style="grid-template-columns:${cols};">
@@ -6260,11 +6260,13 @@ function pwFerieRender() {
         ${DAY_NAMES[i]}<div class="pw-date">${formatDate(d)}</div>
       </div>`;
     }).join('')}
+    <div class="pw-ferie-day-header text-[10px] text-rose-700 uppercase font-bold">Settimana</div>
   </div>`;
 
   // Righe operatori
   allOps.forEach(nome => {
     const row = (fw[nome] || {});
+    const allSet = [0,1,2,3,4,5].every(i => row[i] === true);
     html += `<div class="pw-ferie-row" style="grid-template-columns:${cols};">
       <div class="pw-ferie-op-cell">${nome}</div>
       ${days.map((d, i) => {
@@ -6277,6 +6279,13 @@ function pwFerieRender() {
             onchange="pwToggleFeria(this)">
         </div>`;
       }).join('')}
+      <div class="pw-ferie-cell" style="padding:2px 6px;">
+        <button data-op="${nome.replace(/"/g, '&quot;')}" onclick="pwFerieToggleWeek(this.dataset.op)"
+          title="${allSet ? 'Rimuovi le ferie da tutta la settimana' : 'Applica le ferie a tutta la settimana'}"
+          style="width:100%;font-size:11px;font-weight:600;border-radius:5px;padding:3px 6px;cursor:pointer;border:1px solid ${allSet ? '#fca5a5' : '#cbd5e1'};background:${allSet ? '#fee2e2' : '#f8fafc'};color:${allSet ? '#991b1b' : '#475569'};white-space:nowrap;">
+          ${allSet ? '➖ Settimana' : '➕ Settimana'}
+        </button>
+      </div>
     </div>`;
   });
 
@@ -6339,6 +6348,16 @@ async function pwToggleFeria(cb) {
     const d = new Date(monday); d.setUTCDate(monday.getUTCDate() + i); days.push(d);
   }
   pwFerieSummaryRender(allOps, days, ['Lun','Mar','Mer','Gio','Ven','Sab'], new Date().toISOString().slice(0,10));
+}
+
+// Applica o rimuove le ferie a tutta la settimana (6 giorni) per un operatore.
+async function pwFerieToggleWeek(nome) {
+  const fw = pwGetFerieWeek();
+  if (!fw[nome]) fw[nome] = {};
+  const allSet = [0,1,2,3,4,5].every(i => fw[nome][i] === true);
+  for (let i = 0; i < 6; i++) fw[nome][i] = !allSet; // se tutta piena -> svuota, altrimenti riempi
+  await pwFerieSave();
+  pwFerieRender();
 }
 
 async function pwLoad() {
