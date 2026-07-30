@@ -648,7 +648,7 @@
     <div class="flex items-center gap-2">
       <button id="btn-presentation" class="px-3 py-1.5 text-sm rounded hover:bg-white/10" style="border:1px solid #444;color:#d1d5db;visibility:visible;">📊 Modalità presentazione</button>
       <div class="text-xs pl-2" style="border-left:1px solid #444;color:#9ca3af;">
-        <span class="font-medium" style="color:#00b8b0;">v18.40.0</span> · Michele Marchetti
+        <span class="font-medium" style="color:#00b8b0;">v18.41.0</span> · Michele Marchetti
       </div>
     </div>
   </div>
@@ -1867,7 +1867,7 @@ function renderKPI() {
     ['Gap risorse', k.gapTot, k.gapTot>0?'text-red-600':'text-emerald-700', 'gap'],
   ].map(([label, val, cls, type]) => `
     <div class="bg-white rounded-lg border border-slate-200 p-3 ${type ? clickable : ''}"
-         ${type ? `onclick="showKpiModal('${type}')"` : ''}>
+         ${type ? `onclick="showKpiModal('${jsAttr(type)}')"` : ''}>
       <div class="text-[11px] uppercase tracking-wider text-slate-500 font-medium">${label}</div>
       <div class="kpi-num text-3xl font-bold mt-1 ${cls}">${val}</div>
     </div>
@@ -2517,7 +2517,7 @@ function renderVistaOperatore(opId) {
           <div class="text-[10px] text-slate-500 mt-0.5">Sat. 3 mesi: <b>${(sat3*100).toFixed(0)}%</b></div>
         </div>
         <div class="flex gap-1">
-          <button onclick="openOperatoreModal('${op.id}')" class="text-xs px-2 py-1 bg-white text-slate-600 border border-slate-300 rounded hover:bg-slate-50">✎ Modifica</button>
+          <button onclick="openOperatoreModal('${jsAttr(op.id)}')" class="text-xs px-2 py-1 bg-white text-slate-600 border border-slate-300 rounded hover:bg-slate-50">✎ Modifica</button>
           <button onclick="switchOpTab('pool')" class="text-xs px-2 py-1 bg-slate-100 text-slate-600 rounded hover:bg-slate-200">← Pool</button>
         </div>
       </div>
@@ -3934,6 +3934,10 @@ function openOperatoreModal(id) {
 
 // esc() globale per HTML escaping — usata da showAlertModal, showConfirmAsync e tutti i render
 const esc = v => (v||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+// Escape sicuro per una stringa passata dentro un onclick="...'VALORE'...":
+// gestisce backslash e apice (contesto JS a virgolette singole) e doppio apice
+// (contesto attributo HTML). Usare per QUALSIASI dato dinamico dentro un onclick.
+const jsAttr = v => String(v == null ? '' : v).replace(/\\/g,'\\\\').replace(/'/g,"\\'").replace(/"/g,'&quot;');
 
 function showConfirm(htmlMsg, onConfirm) {
   const root = document.getElementById('modal-root');
@@ -6880,7 +6884,7 @@ function pwRenderStats() {
   ];
 
   banner.innerHTML = cards.map(c => `
-    <div class="pw-stat-card ${c.cls}" data-stat-key="${c.key}" onclick="pwToggleStatPopover('${c.key}', this)">
+    <div class="pw-stat-card ${c.cls}" data-stat-key="${c.key}" onclick="pwToggleStatPopover('${jsAttr(c.key)}', this)">
       <div class="pw-stat-icon">${c.icon}</div>
       <div>
         <div class="pw-stat-num">${c.num}</div>
@@ -7821,7 +7825,7 @@ function pwControlloRender() {
     html += `<tr class="cp-tr-commessa" data-comm-idx="${blIdx}"><td colspan="16"><span class="cp-carr" style="cursor:pointer;user-select:none;margin-right:5px;font-size:11px;display:inline-block;width:10px;text-align:center;" onclick="cpToggleComm(${blIdx})">▼</span>📁 ${esc(bl.commessa)}</td></tr>`;
     bl.squadre.forEach((sq, sqIdx) => {
       const sqKey = blIdx + '-' + sqIdx;
-      html += `<tr class="cp-tr-squadra" data-comm-idx="${blIdx}" data-sq-idx="${sqKey}"><td colspan="16">&nbsp;&nbsp;&nbsp;<span class="cp-sarr" style="cursor:pointer;user-select:none;margin-right:5px;font-size:11px;display:inline-block;width:10px;text-align:center;" onclick="cpToggleSq('${sqKey}')">▼</span>👥 ${esc(sq.nome)}<button class="no-print" style="margin-left:10px;font-size:11px;font-weight:600;background:#0ea5e9;color:#fff;border:none;border-radius:5px;padding:2px 8px;cursor:pointer;" onclick="event.stopPropagation();cpCaricaReportSquadra('${jsesc(bl.commessa)}','${jsesc(sq.nome)}')">📄 Carica Report</button></td></tr>`;
+      html += `<tr class="cp-tr-squadra" data-comm-idx="${blIdx}" data-sq-idx="${sqKey}"><td colspan="16">&nbsp;&nbsp;&nbsp;<span class="cp-sarr" style="cursor:pointer;user-select:none;margin-right:5px;font-size:11px;display:inline-block;width:10px;text-align:center;" onclick="cpToggleSq('${jsAttr(sqKey)}')">▼</span>👥 ${esc(sq.nome)}<button class="no-print" style="margin-left:10px;font-size:11px;font-weight:600;background:#0ea5e9;color:#fff;border:none;border-radius:5px;padding:2px 8px;cursor:pointer;" onclick="event.stopPropagation();cpCaricaReportSquadra('${jsesc(bl.commessa)}','${jsesc(sq.nome)}')">📄 Carica Report</button></td></tr>`;
       sq.giorni.forEach((gBlock, gIdx) => {
         const g   = gBlock.giornoIdx;
         const sep = gIdx > 0 ? ' cp-day-sep' : '';
