@@ -648,7 +648,7 @@
     <div class="flex items-center gap-2">
       <button id="btn-presentation" class="px-3 py-1.5 text-sm rounded hover:bg-white/10" style="border:1px solid #444;color:#d1d5db;visibility:visible;">📊 Modalità presentazione</button>
       <div class="text-xs pl-2" style="border-left:1px solid #444;color:#9ca3af;">
-        <span class="font-medium" style="color:#00b8b0;">v18.41.0</span> · Michele Marchetti
+        <span class="font-medium" style="color:#00b8b0;">v18.42.0</span> · Michele Marchetti
       </div>
     </div>
   </div>
@@ -979,6 +979,8 @@
           class="absolute right-2 top-1/2 -translate-y-1/2 text-slate-300 hover:text-slate-500 text-lg leading-none hidden">×</button>
       </div>
       <div id="pw-search-op-info" class="text-xs text-slate-400 hidden"></div>
+      <button id="pw-strumenti-refresh" class="px-3 py-1.5 text-sm border border-amber-300 bg-amber-50 text-amber-800 rounded hover:bg-amber-100 no-print whitespace-nowrap" title="Carica/aggiorna l'elenco strumenti dal progetto Jira GAR">🔧 Aggiorna strumenti</button>
+      <span id="pw-strumenti-status" class="text-xs text-slate-500 no-print"></span>
       <button id="pw-collapse-all" class="ml-auto px-3 py-1.5 text-sm border border-slate-300 rounded hover:bg-slate-50 no-print whitespace-nowrap" title="Collassa / Espandi tutto" onclick="pwCollapseAllToggle()">≡ Collassa</button>
     </div>
     <div id="pw-grid" class="space-y-4"></div>
@@ -6623,6 +6625,8 @@ function pwRenderOpDropdown(cidx, sidx, oidx, nomeCorrente) {
 
 /* ----- Render principale ----- */
 function pwRender() {
+  // Conteggio strumenti per avviso doppia assegnazione (settimana corrente)
+  const _stCount = pwStrumentoCounts();
   // Aggiorna selettori
   const annoSel = document.getElementById('pw-anno');
   const weekSel = document.getElementById('pw-week');
@@ -6774,6 +6778,24 @@ function pwRender() {
               onclick="pwRemoveSquadra(this)">✕ Rimuovi squadra</button>
           </div>
         </div>
+        ${(() => {
+          const strumenti = Array.isArray(squadra.strumenti) ? squadra.strumenti : [];
+          return `<div class="pw-strumenti-row no-print" style="display:flex;flex-wrap:wrap;align-items:center;gap:6px;padding:4px 10px;background:#fffbeb;border-top:1px solid #fde68a;">
+            <span style="font-size:10px;color:#92400e;font-weight:700;white-space:nowrap;">🔧 Strumenti:</span>
+            ${strumenti.map((k, idx) => {
+              const dup = k && _stCount[k] > 1;
+              return `<span style="display:inline-flex;align-items:center;gap:2px;">
+                <select data-cidx="${cIdx}" data-sidx="${sIdx}" data-idx="${idx}" onchange="pwSetStrumento(this)"
+                  title="${dup ? 'Attenzione: questo strumento e assegnato a piu squadre in questa settimana' : ''}"
+                  style="font-size:11px;border:1px solid ${dup ? '#dc2626' : '#d1d5db'};border-radius:4px;padding:1px 4px;max-width:220px;${dup ? 'background:#fef2f2;' : 'background:#fff;'}">
+                  ${pwStrumentoOptions(k)}
+                </select>${dup ? '<span title="Doppia assegnazione" style="color:#dc2626;font-size:12px;">⚠</span>' : ''}<button data-cidx="${cIdx}" data-sidx="${sIdx}" data-idx="${idx}" onclick="pwRemoveStrumento(this)" title="Rimuovi strumento" style="color:#b91c1c;font-size:12px;line-height:1;padding:0 2px;">✕</button>
+              </span>`;
+            }).join('')}
+            <button data-cidx="${cIdx}" data-sidx="${sIdx}" onclick="pwAddStrumento(this)" style="font-size:10px;font-weight:600;background:#fde68a;color:#92400e;border-radius:4px;padding:2px 7px;white-space:nowrap;">+ Strumento</button>
+            ${pwStrumenti.length === 0 ? '<span style="font-size:9px;color:#b45309;">(clicca "🔧 Aggiorna strumenti" in alto per caricare l\'elenco da Jira)</span>' : ''}
+          </div>`;
+        })()}
         ${colHeaderHtml}
         ${operatoriHtml || `<div class="text-xs text-slate-400 italic px-4 py-2">Nessun operatore — clicca "+ Operatore"</div>`}
       </div>`;
@@ -7044,6 +7066,80 @@ async function pwUpdateOpNome(sel) {
   if (op) { op.nome = sel.value; await pwSave(); pwRender(); }
 }
 
+/* ==================== STRUMENTI SQUADRA (da Jira GAR) ==================== */
+// Elenco strumenti (cache in memoria + localStorage): [{key, name}]
+let pwStrumenti = [];
+try { const _c = localStorage.getItem('pw_strumenti_cache'); if (_c) pwStrumenti = JSON.parse(_c) || []; } catch (_) {}
+
+async function pwFetchStrumenti() {
+  const st = document.getElementById('pw-strumenti-status');
+  if (!_sbClient || !_sbUser) { showAlertModal('Non connesso: impossibile contattare Jira.'); return; }
+  if (st) st.textContent = '⏳ Carico strumenti da Jira…';
+  try {
+    const { data, error } = await _sbClient.functions.invoke('jira-list-strumenti', { body: {} });
+    if (error) throw new Error(await _cpEdgeErr(error, 'jira-list-strumenti'));
+    if (data && data.error) throw new Error(data.error);
+    pwStrumenti = Array.isArray(data && data.strumenti) ? data.strumenti : [];
+    try { localStorage.setItem('pw_strumenti_cache', JSON.stringify(pwStrumenti)); } catch (_) {}
+    if (st) st.textContent = `✓ ${pwStrumenti.length} strumenti caricati`;
+    pwRender();
+    setTimeout(() => { if (st) st.textContent = ''; }, 4000);
+  } catch (e) {
+    console.error('pwFetchStrumenti', e);
+    if (st) st.textContent = '';
+    showAlertModal('Errore caricamento strumenti da Jira: ' + (e.message || e));
+  }
+}
+
+function pwStrumentoOptions(selectedKey) {
+  let opts = `<option value="">— strumento —</option>`;
+  const known = new Set();
+  pwStrumenti.forEach(s => {
+    known.add(s.key);
+    opts += `<option value="${esc(s.key)}"${s.key === selectedKey ? ' selected' : ''}>${esc(s.key)} · ${esc(s.name)}</option>`;
+  });
+  if (selectedKey && !known.has(selectedKey)) {
+    opts += `<option value="${esc(selectedKey)}" selected>${esc(selectedKey)}</option>`;
+  }
+  return opts;
+}
+
+function pwStrumentoCounts() {
+  const cnt = {};
+  pwGetWeekData().forEach(bc => (bc.squadre || []).forEach(sq => (sq.strumenti || []).forEach(k => {
+    if (k) cnt[k] = (cnt[k] || 0) + 1;
+  })));
+  return cnt;
+}
+
+async function pwAddStrumento(btn) {
+  const { cidx, sidx } = btn.dataset;
+  const sq = pwGetWeekData()[cidx]?.squadre[sidx];
+  if (!sq) return;
+  if (!Array.isArray(sq.strumenti)) sq.strumenti = [];
+  sq.strumenti.push('');
+  await pwSave();
+  pwRender();
+}
+
+async function pwSetStrumento(sel) {
+  const { cidx, sidx, idx } = sel.dataset;
+  const sq = pwGetWeekData()[cidx]?.squadre[sidx];
+  if (!sq || !Array.isArray(sq.strumenti)) return;
+  sq.strumenti[parseInt(idx)] = sel.value;
+  await pwSave();
+  pwRender();
+}
+
+async function pwRemoveStrumento(btn) {
+  const { cidx, sidx, idx } = btn.dataset;
+  const sq = pwGetWeekData()[cidx]?.squadre[sidx];
+  if (!sq || !Array.isArray(sq.strumenti)) return;
+  sq.strumenti.splice(parseInt(idx), 1);
+  await pwSave();
+  pwRender();
+}
+
 async function pwUpdateSquadraNome(inp) {
   const { cidx, sidx } = inp.dataset;
   const data = pwGetWeekData();
@@ -7152,6 +7248,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (pwWeek > maxW) { pwAnno++; pwWeek = 1; }
     pwSwitchTab(_pwActiveTab || 'griglia');
   };
+  const _strBtn = document.getElementById('pw-strumenti-refresh');
+  if (_strBtn) _strBtn.onclick = pwFetchStrumenti;
   document.getElementById('pw-today').onclick = () => {
     const { week, year } = isoWeekYear(new Date());
     pwAnno = year;
