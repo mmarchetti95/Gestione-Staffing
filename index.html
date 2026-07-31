@@ -648,7 +648,7 @@
     <div class="flex items-center gap-2">
       <button id="btn-presentation" class="px-3 py-1.5 text-sm rounded hover:bg-white/10" style="border:1px solid #444;color:#d1d5db;visibility:visible;">📊 Modalità presentazione</button>
       <div class="text-xs pl-2" style="border-left:1px solid #444;color:#9ca3af;">
-        <span class="font-medium" style="color:#00b8b0;">v18.42.0</span> · Michele Marchetti
+        <span class="font-medium" style="color:#00b8b0;">v18.43.0</span> · Michele Marchetti
       </div>
     </div>
   </div>
@@ -5776,7 +5776,7 @@ function pwGeneraMail() {
     ? squadreInfo.map((s, i) => {
         const sq = data[s.cIdx]?.squadre[s.sIdx];
         const noteSalvate      = sq?.note       || '';
-        const strumentiSalvati = sq?.strumenti  || '';
+        const strumentiSalvati = (typeof sq?.strumenti === 'string') ? sq.strumenti : '';
         return `
         <div class="mb-3 p-3 bg-slate-50 rounded-lg border border-slate-200">
           <div class="text-xs font-semibold text-slate-700 mb-2">
@@ -6779,17 +6779,15 @@ function pwRender() {
           </div>
         </div>
         ${(() => {
-          const strumenti = Array.isArray(squadra.strumenti) ? squadra.strumenti : [];
+          const strumenti = pwSqStrumentiJira(squadra);
           return `<div class="pw-strumenti-row no-print" style="display:flex;flex-wrap:wrap;align-items:center;gap:6px;padding:4px 10px;background:#fffbeb;border-top:1px solid #fde68a;">
             <span style="font-size:10px;color:#92400e;font-weight:700;white-space:nowrap;">🔧 Strumenti:</span>
             ${strumenti.map((k, idx) => {
               const dup = k && _stCount[k] > 1;
               return `<span style="display:inline-flex;align-items:center;gap:2px;">
-                <select data-cidx="${cIdx}" data-sidx="${sIdx}" data-idx="${idx}" onchange="pwSetStrumento(this)"
-                  title="${dup ? 'Attenzione: questo strumento e assegnato a piu squadre in questa settimana' : ''}"
-                  style="font-size:11px;border:1px solid ${dup ? '#dc2626' : '#d1d5db'};border-radius:4px;padding:1px 4px;max-width:220px;${dup ? 'background:#fef2f2;' : 'background:#fff;'}">
-                  ${pwStrumentoOptions(k)}
-                </select>${dup ? '<span title="Doppia assegnazione" style="color:#dc2626;font-size:12px;">⚠</span>' : ''}<button data-cidx="${cIdx}" data-sidx="${sIdx}" data-idx="${idx}" onclick="pwRemoveStrumento(this)" title="Rimuovi strumento" style="color:#b91c1c;font-size:12px;line-height:1;padding:0 2px;">✕</button>
+                <button type="button" class="pw-str-trigger" data-cidx="${cIdx}" data-sidx="${sIdx}" data-idx="${idx}" onclick="pwStrOpen(this)"
+                  title="${dup ? 'Attenzione: questo strumento e assegnato a piu squadre in questa settimana' : 'Clicca per cercare e scegliere lo strumento'}"
+                  style="font-size:11px;text-align:left;border:1px solid ${dup ? '#dc2626' : '#d1d5db'};border-radius:4px;padding:2px 6px;max-width:220px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;background:${dup ? '#fef2f2' : '#fff'};cursor:pointer;">${esc(pwStrLabel(k))} ▾</button>${dup ? '<span title="Doppia assegnazione" style="color:#dc2626;font-size:12px;">⚠</span>' : ''}<button data-cidx="${cIdx}" data-sidx="${sIdx}" data-idx="${idx}" onclick="pwRemoveStrumento(this)" title="Rimuovi strumento" style="color:#b91c1c;font-size:12px;line-height:1;padding:0 2px;">✕</button>
               </span>`;
             }).join('')}
             <button data-cidx="${cIdx}" data-sidx="${sIdx}" onclick="pwAddStrumento(this)" style="font-size:10px;font-weight:600;background:#fde68a;color:#92400e;border-radius:4px;padding:2px 7px;white-space:nowrap;">+ Strumento</button>
@@ -7091,22 +7089,25 @@ async function pwFetchStrumenti() {
   }
 }
 
-function pwStrumentoOptions(selectedKey) {
-  let opts = `<option value="">— strumento —</option>`;
-  const known = new Set();
-  pwStrumenti.forEach(s => {
-    known.add(s.key);
-    opts += `<option value="${esc(s.key)}"${s.key === selectedKey ? ' selected' : ''}>${esc(s.key)} · ${esc(s.name)}</option>`;
-  });
-  if (selectedKey && !known.has(selectedKey)) {
-    opts += `<option value="${esc(selectedKey)}" selected>${esc(selectedKey)}</option>`;
-  }
-  return opts;
+function pwSqStrumentiJira(sq) {
+  if (Array.isArray(sq.strumentiJira)) return sq.strumentiJira.slice();
+  if (Array.isArray(sq.strumenti)) return sq.strumenti.slice();
+  return [];
+}
+function pwSetSqStrumentiJira(sq, arr) {
+  sq.strumentiJira = arr;
+  if (Array.isArray(sq.strumenti)) sq.strumenti = '';
+}
+
+function pwStrLabel(key) {
+  if (!key) return '— strumento —';
+  const s = pwStrumenti.find(x => x.key === key);
+  return s ? (s.key + ' · ' + s.name) : key;
 }
 
 function pwStrumentoCounts() {
   const cnt = {};
-  pwGetWeekData().forEach(bc => (bc.squadre || []).forEach(sq => (sq.strumenti || []).forEach(k => {
+  pwGetWeekData().forEach(bc => (bc.squadre || []).forEach(sq => pwSqStrumentiJira(sq).forEach(k => {
     if (k) cnt[k] = (cnt[k] || 0) + 1;
   })));
   return cnt;
@@ -7116,17 +7117,9 @@ async function pwAddStrumento(btn) {
   const { cidx, sidx } = btn.dataset;
   const sq = pwGetWeekData()[cidx]?.squadre[sidx];
   if (!sq) return;
-  if (!Array.isArray(sq.strumenti)) sq.strumenti = [];
-  sq.strumenti.push('');
-  await pwSave();
-  pwRender();
-}
-
-async function pwSetStrumento(sel) {
-  const { cidx, sidx, idx } = sel.dataset;
-  const sq = pwGetWeekData()[cidx]?.squadre[sidx];
-  if (!sq || !Array.isArray(sq.strumenti)) return;
-  sq.strumenti[parseInt(idx)] = sel.value;
+  const arr = pwSqStrumentiJira(sq);
+  arr.push('');
+  pwSetSqStrumentiJira(sq, arr);
   await pwSave();
   pwRender();
 }
@@ -7134,9 +7127,80 @@ async function pwSetStrumento(sel) {
 async function pwRemoveStrumento(btn) {
   const { cidx, sidx, idx } = btn.dataset;
   const sq = pwGetWeekData()[cidx]?.squadre[sidx];
-  if (!sq || !Array.isArray(sq.strumenti)) return;
-  sq.strumenti.splice(parseInt(idx), 1);
+  if (!sq) return;
+  const arr = pwSqStrumentiJira(sq);
+  arr.splice(parseInt(idx), 1);
+  pwSetSqStrumentiJira(sq, arr);
   await pwSave();
+  pwRender();
+}
+
+/* --- Tendina custom con ricerca (si apre verso il basso, non viene clippata) --- */
+let _pwStrTarget = null;
+function pwStrEnsurePanel() {
+  let p = document.getElementById('pw-str-panel');
+  if (p) return p;
+  p = document.createElement('div');
+  p.id = 'pw-str-panel';
+  p.style.cssText = 'position:fixed;z-index:9999;background:#fff;border:1px solid #cbd5e1;border-radius:6px;box-shadow:0 8px 24px rgba(0,0,0,0.18);width:280px;display:none;overflow:hidden;';
+  p.innerHTML = '<div style="padding:6px;border-bottom:1px solid #e2e8f0;"><input id="pw-str-search" type="text" placeholder="Cerca strumento…" style="width:100%;font-size:12px;border:1px solid #d1d5db;border-radius:4px;padding:4px 6px;box-sizing:border-box;outline:none;"></div><div id="pw-str-list" style="overflow-y:auto;"></div>';
+  document.body.appendChild(p);
+  p.querySelector('#pw-str-search').addEventListener('input', e => pwStrRenderList(e.target.value));
+  document.addEventListener('mousedown', e => {
+    const pan = document.getElementById('pw-str-panel');
+    if (pan && pan.style.display !== 'none' && !pan.contains(e.target) && !(e.target.classList && e.target.classList.contains('pw-str-trigger'))) pwStrClose();
+  }, true);
+  document.addEventListener('keydown', e => { if (e.key === 'Escape') pwStrClose(); });
+  return p;
+}
+function pwStrClose() {
+  const p = document.getElementById('pw-str-panel');
+  if (p) p.style.display = 'none';
+  _pwStrTarget = null;
+}
+function pwStrOpen(btn) {
+  const p = pwStrEnsurePanel();
+  _pwStrTarget = { cidx: btn.dataset.cidx, sidx: btn.dataset.sidx, idx: parseInt(btn.dataset.idx) };
+  const r = btn.getBoundingClientRect();
+  p.style.display = 'block';
+  p.style.left = Math.max(6, Math.min(r.left, window.innerWidth - 290)) + 'px';
+  p.style.top = (r.bottom + 2) + 'px';
+  const avail = window.innerHeight - r.bottom - 16;
+  const list = p.querySelector('#pw-str-list');
+  list.style.maxHeight = Math.max(120, Math.min(280, avail)) + 'px';
+  const search = p.querySelector('#pw-str-search');
+  search.value = '';
+  pwStrRenderList('');
+  setTimeout(() => search.focus(), 0);
+}
+function pwStrRenderList(filter) {
+  const list = document.getElementById('pw-str-list');
+  if (!list) return;
+  const f = (filter || '').toLowerCase().trim();
+  let html = '<div class="pw-str-item" data-key="" style="padding:6px 8px;font-size:12px;color:#94a3b8;cursor:pointer;border-bottom:1px solid #f1f5f9;">— nessuno —</div>';
+  if (pwStrumenti.length === 0) {
+    html += '<div style="padding:8px;font-size:11px;color:#b45309;">Nessuno strumento in cache. Clicca "🔧 Aggiorna strumenti".</div>';
+  } else {
+    const items = pwStrumenti.filter(s => !f || (s.key + ' ' + s.name).toLowerCase().includes(f));
+    if (items.length === 0) html += '<div style="padding:8px;font-size:11px;color:#94a3b8;">Nessun risultato.</div>';
+    else items.forEach(s => {
+      html += `<div class="pw-str-item" data-key="${esc(s.key)}" style="padding:6px 8px;font-size:12px;cursor:pointer;border-bottom:1px solid #f1f5f9;" onmouseover="this.style.background='#eff6ff'" onmouseout="this.style.background='#fff'"><b>${esc(s.key)}</b> · ${esc(s.name)}</div>`;
+    });
+  }
+  list.innerHTML = html;
+  list.querySelectorAll('.pw-str-item').forEach(el => { el.onclick = () => pwStrPick(el.dataset.key); });
+}
+async function pwStrPick(key) {
+  if (!_pwStrTarget) return;
+  const { cidx, sidx, idx } = _pwStrTarget;
+  const sq = pwGetWeekData()[cidx]?.squadre[sidx];
+  if (sq) {
+    const arr = pwSqStrumentiJira(sq);
+    arr[idx] = key;
+    pwSetSqStrumentiJira(sq, arr);
+    await pwSave();
+  }
+  pwStrClose();
   pwRender();
 }
 
