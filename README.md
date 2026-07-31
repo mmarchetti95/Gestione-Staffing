@@ -1,3 +1,6 @@
+## v18.43.0
+- feat: le tendine strumenti nella Griglia settimanale ora sono un menu custom con **barra di ricerca**, che si apre correttamente verso il basso (posizionamento fixed, non piu clippato dai contenitori). fix: risolta la collisione tra gli strumenti Jira (ora nel campo dedicato `strumentiJira`) e il campo testo libero "strumenti" usato dalla mail, con migrazione automatica dei dati eventualmente gia inseriti.
+
 ## v18.42.0
 - feat: nella Griglia settimanale, sotto il nome di ogni squadra, si possono assegnare uno o piu strumenti (menu a discesa + "+ Strumento", rimuovibili). L'elenco strumenti e caricato da Jira (progetto GAR, tipo "Strumentazione") tramite il pulsante "Aggiorna strumenti" e messo in cache. Solo lettura da Jira; le assegnazioni si salvano nella pianificazione della settimana. Avviso visivo se lo stesso strumento e assegnato a piu squadre nella stessa settimana. Richiede la Edge Function jira-list-strumenti.
 
