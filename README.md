@@ -1,3 +1,6 @@
+## v18.42.0
+- feat: nella Griglia settimanale, sotto il nome di ogni squadra, si possono assegnare uno o piu strumenti (menu a discesa + "+ Strumento", rimuovibili). L'elenco strumenti e caricato da Jira (progetto GAR, tipo "Strumentazione") tramite il pulsante "Aggiorna strumenti" e messo in cache. Solo lettura da Jira; le assegnazioni si salvano nella pianificazione della settimana. Avviso visivo se lo stesso strumento e assegnato a piu squadre nella stessa settimana. Richiede la Edge Function jira-list-strumenti.
+
 ## v18.41.0
 - fix: hardening escaping. Aggiunto helper globale `jsAttr()` e applicato ai pochi onclick che passano stringhe dinamiche (showKpiModal, openOperatoreModal, pwToggleStatPopover, cpToggleSq), per evitare rotture con nomi contenenti apostrofi/virgolette (es. "D'Ivrea"). Intervento mirato, non un refactor completo. Aggiunto smoke test pre-deploy in scripts/smoke_test.py.
 
