@@ -1,3 +1,6 @@
+## v18.44.0
+- feat: nella mail generata, gli strumenti assegnati alla squadra dalla griglia compaiono con **key + nome** (es. "GAR-218 · Disto 13"), non piu solo la key. Nell'editor mail sono mostrati come promemoria sopra il campo strumenti aggiuntivi (testo libero per attrezzatura non Jira, es. auto).
+
 ## v18.43.0
 - feat: le tendine strumenti nella Griglia settimanale ora sono un menu custom con **barra di ricerca**, che si apre correttamente verso il basso (posizionamento fixed, non piu clippato dai contenitori). fix: risolta la collisione tra gli strumenti Jira (ora nel campo dedicato `strumentiJira`) e il campo testo libero "strumenti" usato dalla mail, con migrazione automatica dei dati eventualmente gia inseriti.
 
