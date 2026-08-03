@@ -1,3 +1,7 @@
+## v18.45.0
+- feat: Controllo Produzione — nuovo pulsante "🔄" accanto alla spunta "Su Jira" di un ticket già adottato: rilegge subito l'Actual Production di quel ticket da Jira, sovrascrivendo il valore locale. Serve per il caso in cui il valore sia stato modificato direttamente su Jira dopo che l'app lo aveva già letto/scritto: la sync automatica non lo rileggerebbe più (applica solo il delta rispetto al valore adottato), quindi senza questo pulsante la modifica manuale su Jira andrebbe recuperata svuotando a mano la cella "Km/Cad". Il comportamento della sync automatica non cambia.
+- fix: colonne della tabella Controllo Produzione più compatte (font, padding, testo con capo automatico invece di allargarsi all'infinito su Commessa/Cantiere/Attività, ellissi su Epic/Ticket) per ridurre la necessità di scroll orizzontale quando ci sono molti ticket per cella.
+
 ## v18.44.0
 - feat: nella mail generata, gli strumenti assegnati alla squadra dalla griglia compaiono con **key + nome** (es. "GAR-218 · Disto 13"), non piu solo la key. Nell'editor mail sono mostrati come promemoria sopra il campo strumenti aggiuntivi (testo libero per attrezzatura non Jira, es. auto).
 
