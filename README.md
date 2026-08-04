@@ -1,3 +1,6 @@
+## v18.45.1
+- fix: Pianificazione Settimanale — il banner statistiche ("Pianificati" / "Liberi" / "In ferie" / "Su più commesse") restava ancorato alla settimana vista sul tab Griglia quando si cambiava settimana stando su un altro tab (Ferie, Mappa, Controllo Produzione, Doppia Week). Ora il banner viene ricalcolato ad ogni cambio settimana indipendentemente dal tab attivo.
+
 ## v18.45.0
 - feat: Controllo Produzione — nuovo pulsante "🔄" accanto alla spunta "Su Jira" di un ticket già adottato: rilegge subito l'Actual Production di quel ticket da Jira, sovrascrivendo il valore locale. Serve per il caso in cui il valore sia stato modificato direttamente su Jira dopo che l'app lo aveva già letto/scritto: la sync automatica non lo rileggerebbe più (applica solo il delta rispetto al valore adottato), quindi senza questo pulsante la modifica manuale su Jira andrebbe recuperata svuotando a mano la cella "Km/Cad". Il comportamento della sync automatica non cambia.
 - fix: colonne della tabella Controllo Produzione più compatte (font, padding, testo con capo automatico invece di allargarsi all'infinito su Commessa/Cantiere/Attività, ellissi su Epic/Ticket) per ridurre la necessità di scroll orizzontale quando ci sono molti ticket per cella.
