@@ -1,3 +1,6 @@
+## v18.47.1
+- fix: Pianificazione Settimanale — selezionando un operatore su una cella e poi aprendo il selettore operatori su un'altra squadra della **stessa** commessa, l'operatore già assegnato risultava "LIBERO" invece di "ASSEGNATO". Il controllo escludeva erroneamente l'intero blocco commessa invece della sola cella in modifica. Ora l'esclusione è limitata alla cella corrente: un operatore già usato in un'altra squadra (della stessa commessa o di un'altra) viene sempre segnalato come assegnato.
+
 ## v18.47.0
 - feat: l'app ora ricorda anche l'ultima **schermata** visualizzata (Dashboard oppure Pianificazione Settimanale), non solo l'ultimo tab dentro Pianificazione Settimanale. Al refresh della pagina si riapre sulla schermata lasciata attiva.
 
