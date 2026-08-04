@@ -1,3 +1,6 @@
+## v18.45.2
+- fix: Controllo Produzione — "Carica Report": le righe del layer **"Note"** nel CSV contribuivano alla Lunghezza (quindi al Km/Cad), gonfiando il valore. Ora una riga con layer "Note" viene usata solo per allargare l'intervallo Inizio/Fine (quindi le "Ore Report Prod."), ma la sua Lunghezza non viene più sommata al totale km. Richiede una colonna "Layer" nel CSV (per nome se c'è intestazione, colonna 1 nel formato posizionale noto).
+
 ## v18.45.1
 - fix: Pianificazione Settimanale — il banner statistiche ("Pianificati" / "Liberi" / "In ferie" / "Su più commesse") restava ancorato alla settimana vista sul tab Griglia quando si cambiava settimana stando su un altro tab (Ferie, Mappa, Controllo Produzione, Doppia Week). Ora il banner viene ricalcolato ad ogni cambio settimana indipendentemente dal tab attivo.
 

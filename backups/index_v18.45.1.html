@@ -650,7 +650,7 @@
     <div class="flex items-center gap-2">
       <button id="btn-presentation" class="px-3 py-1.5 text-sm rounded hover:bg-white/10" style="border:1px solid #444;color:#d1d5db;visibility:visible;">📊 Modalità presentazione</button>
       <div class="text-xs pl-2" style="border-left:1px solid #444;color:#9ca3af;">
-        <span class="font-medium" style="color:#00b8b0;">v18.45.2</span> · Michele Marchetti
+        <span class="font-medium" style="color:#00b8b0;">v18.45.1</span> · Michele Marchetti
       </div>
     </div>
   </div>
@@ -8695,9 +8695,7 @@ function cpSplitCsvLine(line, delim) {
 
 // Parsa il CSV del report produzione. Rileva il delimitatore (; o ,), mappa le
 // colonne dall'intestazione (con fallback posizionale) e aggrega per
-// (username, dataISO): { startMin, endMin, lenM (somma metri sui layer diversi da "Note") }.
-// Le righe del layer "Note" contribuiscono solo a Inizio/Fine (orario), mai alla Lunghezza:
-// sono annotazioni puntuali senza un percorso reale associato, sommarle gonfierebbe il Km/Cad.
+// (username, dataISO): { startMin, endMin, lenM (somma metri su tutti i layer) }.
 function cpParseReportCsv(text) {
   const MESI = {
     gennaio:1, febbraio:2, marzo:3, aprile:4, maggio:5, giugno:6,
@@ -8722,10 +8720,10 @@ function cpParseReportCsv(text) {
   };
   let iAnno = findCol('anno'), iMese = findCol('mese'), iGiorno = findCol('giorno');
   let iOp = findCol('operatore', 'utente'), iIn = findCol('inizio'), iFin = findCol('fine');
-  let iLen = findCol('lunghezza', 'lungh'), iLayer = findCol('layer');
+  let iLen = findCol('lunghezza', 'lungh');
   const hasHeader = (iAnno >= 0 && iMese >= 0 && iGiorno >= 0 && iOp >= 0);
   // Fallback posizionale (formato noto: Layer;Anno;Mese;Giorno;Operatore;Inizio;Fine;Prod;Ore;Lunghezza;Attivita)
-  if (!hasHeader) { iAnno=1; iMese=2; iGiorno=3; iOp=4; iIn=5; iFin=6; iLen=9; iLayer=0; }
+  if (!hasHeader) { iAnno=1; iMese=2; iGiorno=3; iOp=4; iIn=5; iFin=6; iLen=9; }
 
   const agg = {};
   let rows = 0;
@@ -8743,11 +8741,9 @@ function cpParseReportCsv(text) {
     const dateISO = `${anno}-${String(meseNum).padStart(2, '0')}-${gg}`;
     const startMin = iIn  >= 0 ? cpHmToMin(f[iIn])  : null;
     const endMin   = iFin >= 0 ? cpHmToMin(f[iFin]) : null;
-    const isNoteLayer = iLayer >= 0 && String(f[iLayer] || '').trim().toLowerCase() === 'note';
-    const lenM = (!isNoteLayer && iLen >= 0) ? (parseFloat(String(f[iLen] || '').replace(',', '.')) || 0) : 0;
+    const lenM = iLen >= 0 ? (parseFloat(String(f[iLen] || '').replace(',', '.')) || 0) : 0;
     const key = `${user}|||${dateISO}`;
     if (!agg[key]) agg[key] = { startMin: Infinity, endMin: -Infinity, lenM: 0 };
-    // Il layer "Note" contribuisce solo a Inizio/Fine, mai alla Lunghezza (vedi commento in cima alla funzione).
     if (startMin != null && startMin < agg[key].startMin) agg[key].startMin = startMin;
     if (endMin   != null && endMin   > agg[key].endMin)   agg[key].endMin   = endMin;
     agg[key].lenM += lenM;
