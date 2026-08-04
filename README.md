@@ -1,3 +1,6 @@
+## v18.47.0
+- feat: l'app ora ricorda anche l'ultima **schermata** visualizzata (Dashboard oppure Pianificazione Settimanale), non solo l'ultimo tab dentro Pianificazione Settimanale. Al refresh della pagina si riapre sulla schermata lasciata attiva.
+
 ## v18.46.1
 - fix: Pianificazione Settimanale — il menu a tendina "Week" restava vuoto (nessuna settimana selezionabile) quando, all'apertura della sezione, il tab ripristinato dall'ultima sessione non era "Griglia settimanale" (es. dopo un refresh della pagina con "Controllo Produzione" come ultimo tab visitato). Il `<select>` delle settimane veniva popolato solo dal render della Griglia; ora viene ripopolato ad ogni cambio tab, indipendentemente da quale sia attivo.
 
