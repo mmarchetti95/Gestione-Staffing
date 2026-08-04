@@ -1,3 +1,6 @@
+## v18.46.1
+- fix: Pianificazione Settimanale — il menu a tendina "Week" restava vuoto (nessuna settimana selezionabile) quando, all'apertura della sezione, il tab ripristinato dall'ultima sessione non era "Griglia settimanale" (es. dopo un refresh della pagina con "Controllo Produzione" come ultimo tab visitato). Il `<select>` delle settimane veniva popolato solo dal render della Griglia; ora viene ripopolato ad ogni cambio tab, indipendentemente da quale sia attivo.
+
 ## v18.46.0
 - feat: Controllo Produzione — nuovo pulsante "🔄 Sincronizza squadra" accanto a "Carica Report" nell'header di ogni squadra: esegue la sincronizzazione Jira (worklog + Actual Production) solo per gli operatori di quella squadra invece che per tutta la settimana, per una sync più rapida. Il pulsante globale "Sincronizza da Jira" resta invariato e continua a sincronizzare tutte le commesse/squadre pianificate.
 
