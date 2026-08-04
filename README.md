@@ -1,3 +1,6 @@
+## v18.46.0
+- feat: Controllo Produzione — nuovo pulsante "🔄 Sincronizza squadra" accanto a "Carica Report" nell'header di ogni squadra: esegue la sincronizzazione Jira (worklog + Actual Production) solo per gli operatori di quella squadra invece che per tutta la settimana, per una sync più rapida. Il pulsante globale "Sincronizza da Jira" resta invariato e continua a sincronizzare tutte le commesse/squadre pianificate.
+
 ## v18.45.2
 - fix: Controllo Produzione — "Carica Report": le righe del layer **"Note"** nel CSV contribuivano alla Lunghezza (quindi al Km/Cad), gonfiando il valore. Ora una riga con layer "Note" viene usata solo per allargare l'intervallo Inizio/Fine (quindi le "Ore Report Prod."), ma la sua Lunghezza non viene più sommata al totale km. Richiede una colonna "Layer" nel CSV (per nome se c'è intestazione, colonna 1 nel formato posizionale noto).
 
