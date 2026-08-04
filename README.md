@@ -1,3 +1,6 @@
+## v18.48.0
+- feat: "Genera Mail" — per ogni squadra, la mail ora elenca i cantieri (e le attività) della settimana in un unico elenco deduplicato ("🏗 Cantieri: ..."), invece del programma rigido giorno-per-giorno ("Lun → Cantiere A, Mar → Cantiere B"). Lascia alla squadra la libertà di organizzarsi su quale cantiere andare in quale giorno.
+
 ## v18.47.2
 - fix: **bug importante di sincronizzazione multi-utente** — `sbPull()` aggiornava i dati di Pianificazione Settimanale (griglia) e Ferie scaricati da Supabase solo in memoria, senza scriverli nel local storage del browser. Poiché `pwLoad()`/`pwFerieLoad()` rileggono da lì ad ogni refresh della pagina e ogni volta che si apre/riapre il tab Pianificazione Settimanale, questa rilettura sovrascriveva silenziosamente i dati appena scaricati con l'ultima copia locale obsoleta — le modifiche fatte da un collega sparivano dopo un refresh, anche se il realtime/pull aveva funzionato. Ora `sbPull()` scrive anche in locale, come già faceva per i dati dashboard (core).
 
