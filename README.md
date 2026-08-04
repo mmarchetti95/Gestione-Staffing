@@ -1,3 +1,6 @@
+## v18.47.2
+- fix: **bug importante di sincronizzazione multi-utente** — `sbPull()` aggiornava i dati di Pianificazione Settimanale (griglia) e Ferie scaricati da Supabase solo in memoria, senza scriverli nel local storage del browser. Poiché `pwLoad()`/`pwFerieLoad()` rileggono da lì ad ogni refresh della pagina e ogni volta che si apre/riapre il tab Pianificazione Settimanale, questa rilettura sovrascriveva silenziosamente i dati appena scaricati con l'ultima copia locale obsoleta — le modifiche fatte da un collega sparivano dopo un refresh, anche se il realtime/pull aveva funzionato. Ora `sbPull()` scrive anche in locale, come già faceva per i dati dashboard (core).
+
 ## v18.47.1
 - fix: Pianificazione Settimanale — selezionando un operatore su una cella e poi aprendo il selettore operatori su un'altra squadra della **stessa** commessa, l'operatore già assegnato risultava "LIBERO" invece di "ASSEGNATO". Il controllo escludeva erroneamente l'intero blocco commessa invece della sola cella in modifica. Ora l'esclusione è limitata alla cella corrente: un operatore già usato in un'altra squadra (della stessa commessa o di un'altra) viene sempre segnalato come assegnato.
 
