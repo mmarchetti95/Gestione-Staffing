@@ -1,3 +1,6 @@
+## v18.49.0
+- feat: "Genera Mail" — nuovo pulsante "✉️ Apri Outlook (destinatari)": copia il testo della mail negli appunti e apre una nuova mail (link `mailto:`) con come destinatari le email di tutti gli operatori pianificati nella settimana (deduplicate). Serve perché incollare un tag "@email" nel corpo non attiva il meccanismo di menzione/destinatario automatico di Outlook (funziona solo digitandolo live) — il link mailto invece popola davvero il campo "A:". Operatori senza email in anagrafica vengono segnalati e esclusi dai destinatari.
+
 ## v18.48.0
 - feat: "Genera Mail" — per ogni squadra, la mail ora elenca i cantieri (e le attività) della settimana in un unico elenco deduplicato ("🏗 Cantieri: ..."), invece del programma rigido giorno-per-giorno ("Lun → Cantiere A, Mar → Cantiere B"). Lascia alla squadra la libertà di organizzarsi su quale cantiere andare in quale giorno.
 
