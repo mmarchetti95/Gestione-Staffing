@@ -650,7 +650,7 @@
     <div class="flex items-center gap-2">
       <button id="btn-presentation" class="px-3 py-1.5 text-sm rounded hover:bg-white/10" style="border:1px solid #444;color:#d1d5db;visibility:visible;">📊 Modalità presentazione</button>
       <div class="text-xs pl-2" style="border-left:1px solid #444;color:#9ca3af;">
-        <span class="font-medium" style="color:#00b8b0;">v18.49.2</span> · Michele Marchetti
+        <span class="font-medium" style="color:#00b8b0;">v18.49.1</span> · Michele Marchetti
       </div>
     </div>
   </div>
@@ -1534,11 +1534,9 @@ async function sbPull() {
       pwFerie = rows[SB_ROW_FERIE].payload.pw_ferie;
       sbSetLocal('pw_ferie', pwFerie);
     }
-    // Applica doppia week (stesso motivo di planning/ferie: senza sbSetLocal, un reload
-    // prima che sbPull() finisca mostrerebbe doppia-week vuota invece dell'ultima copia nota)
+    // Applica doppia week
     if (rows[SB_ROW_DW] && rows[SB_ROW_DW].payload && rows[SB_ROW_DW].payload.pw_doppia_week) {
       pwDoppiaWeek = rows[SB_ROW_DW].payload.pw_doppia_week;
-      sbSetLocal('pw_doppia_week', pwDoppiaWeek);
     }
 
     // Aggiorna timestamp per dominio
@@ -6267,10 +6265,6 @@ async function pwFerieLoad() {
   try { const r = await sget('pw_ferie'); if (r) pwFerie = r; } catch(e) { pwFerie = {}; }
 }
 
-async function pwDwLoad() {
-  try { const r = await sget('pw_doppia_week'); if (r) pwDoppiaWeek = r; } catch(e) { pwDoppiaWeek = {}; }
-}
-
 async function pwFerieSave() {
   _sbDirty.ferie = true;
   try { await sset('pw_ferie', pwFerie); } catch(e) { console.warn('pwFerieSave error', e); }
@@ -6467,7 +6461,6 @@ async function pwLoad() {
     if (r) pwData = r;
   } catch(e) { pwData = {}; }
   await pwFerieLoad();
-  await pwDwLoad();
 }
 
 async function pwSave() {
@@ -7664,7 +7657,6 @@ async function pwDwToggle(nome, anno, week) {
   }
 
   _sbDirty.dw = true;
-  try { await sset('pw_doppia_week', pwDoppiaWeek); } catch(e) { console.warn('pwDwToggle sset error', e); }
   // Push su Supabase con debounce breve (500ms), come per le ferie, per non perdere il dato al refresh
   if (typeof _sbUser !== 'undefined' && _sbUser) {
     clearTimeout(_sbPwPushTimer);

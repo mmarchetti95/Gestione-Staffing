@@ -1,3 +1,6 @@
+## v18.49.2
+- fix: **Doppia Week** non aveva nessuna cache locale (a differenza di Griglia e Ferie): il valore viveva solo in memoria, popolato esclusivamente da `sbPull()`. Se la pagina veniva ricaricata prima che `sbPull()` finisse (rete lenta) o offline, la vista Doppia Week risultava vuota anche con dati già sincronizzati in precedenza. Ora `sbPull()` scrive anche in locale (`sbSetLocal`), un nuovo `pwDwLoad()` la rilegge all'apertura della Pianificazione Settimanale (come `pwFerieLoad()`), e ogni toggle la persiste subito in locale oltre che schedulare il push su Supabase.
+
 ## v18.49.1
 - fix: "Genera Mail" — nome squadra, note squadra e strumenti/attrezzatura testo libero venivano iniettati non escapati nell'HTML del modal (a differenza di commessa e strumenti Jira, già passati per `esc()`). Una nota o un nome squadra contenente `<` o `</textarea>` rompeva il rendering del modal. Ora tutti i campi passano per `esc()`.
 
