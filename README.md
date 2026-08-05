@@ -1,3 +1,6 @@
+## v18.49.1
+- fix: "Genera Mail" — nome squadra, note squadra e strumenti/attrezzatura testo libero venivano iniettati non escapati nell'HTML del modal (a differenza di commessa e strumenti Jira, già passati per `esc()`). Una nota o un nome squadra contenente `<` o `</textarea>` rompeva il rendering del modal. Ora tutti i campi passano per `esc()`.
+
 ## v18.49.0
 - feat: "Genera Mail" — nuovo pulsante "✉️ Apri Outlook (destinatari)": copia il testo della mail negli appunti e apre una nuova mail (link `mailto:`) con come destinatari le email di tutti gli operatori pianificati nella settimana (deduplicate). Serve perché incollare un tag "@email" nel corpo non attiva il meccanismo di menzione/destinatario automatico di Outlook (funziona solo digitandolo live) — il link mailto invece popola davvero il campo "A:". Operatori senza email in anagrafica vengono segnalati e esclusi dai destinatari.
 
