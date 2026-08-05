@@ -650,7 +650,7 @@
     <div class="flex items-center gap-2">
       <button id="btn-presentation" class="px-3 py-1.5 text-sm rounded hover:bg-white/10" style="border:1px solid #444;color:#d1d5db;visibility:visible;">📊 Modalità presentazione</button>
       <div class="text-xs pl-2" style="border-left:1px solid #444;color:#9ca3af;">
-        <span class="font-medium" style="color:#00b8b0;">v18.50.0</span> · Michele Marchetti
+        <span class="font-medium" style="color:#00b8b0;">v18.49.2</span> · Michele Marchetti
       </div>
     </div>
   </div>
@@ -1590,25 +1590,22 @@ async function sbPush() {
     }
     if (domains.length === 0) return true;
 
-    // Controllo conflitti per dominio. NON usciamo alla prima collisione: un conflitto
-    // su un dominio non deve far perdere le modifiche locali di altri domini dirty nello
-    // stesso batch (es. planning+ferie salvati insieme per via del debounce condiviso).
-    const conflicting = [];
-    const clean = [];
+    // Controllo conflitti per dominio
     for (const d of domains) {
       const { data: remote, error: checkErr } = await _sbClient
         .from(SB_TABLE).select('updated_at').eq('id', d.id).single();
       if (checkErr && checkErr.code !== 'PGRST116') throw checkErr;
       if (remote && remote.updated_at && _sbRemoteTs[d.id] && remote.updated_at !== _sbRemoteTs[d.id]) {
-        conflicting.push(d);
-      } else {
-        clean.push(d);
+        console.warn('sbPush: conflitto su dominio ' + d.key);
+        sbUpdateUI('conflict', 'Sync: conflitto su ' + d.key + ' — ricarico…');
+        await sbPull();
+        sbUpdateUI('conflict', '⚠ Dati ricaricati: un altro utente ha modificato ' + d.key + '. Riprova.');
+        return false;
       }
     }
 
-    // Scrittura dei domini senza conflitto SUBITO, prima di un eventuale sbPull(): così le
-    // modifiche locali arrivano sul server prima che sbPull() sovrascriva lo stato in memoria.
-    for (const d of clean) {
+    // Scrittura domini dirty
+    for (const d of domains) {
       const ts = new Date().toISOString();
       const { data: pushed, error } = await _sbClient
         .from(SB_TABLE)
@@ -1618,15 +1615,6 @@ async function sbPush() {
       if (error) throw error;
       _sbRemoteTs[d.id] = (pushed && pushed.updated_at) ? pushed.updated_at : ts;
       _sbDirty[d.key] = false;
-    }
-
-    if (conflicting.length > 0) {
-      const nomi = conflicting.map(d => d.key).join(', ');
-      conflicting.forEach(d => console.warn('sbPush: conflitto su dominio ' + d.key));
-      sbUpdateUI('conflict', 'Sync: conflitto su ' + nomi + ' — ricarico…');
-      await sbPull();
-      sbUpdateUI('conflict', '⚠ Dati ricaricati: un altro utente ha modificato ' + nomi + '. Riprova.');
-      return false;
     }
 
     const ora = new Date().toLocaleTimeString('it-IT', { hour:'2-digit', minute:'2-digit' });
