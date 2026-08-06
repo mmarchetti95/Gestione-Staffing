@@ -650,7 +650,7 @@
     <div class="flex items-center gap-2">
       <button id="btn-presentation" class="px-3 py-1.5 text-sm rounded hover:bg-white/10" style="border:1px solid #444;color:#d1d5db;visibility:visible;">📊 Modalità presentazione</button>
       <div class="text-xs pl-2" style="border-left:1px solid #444;color:#9ca3af;">
-        <span class="font-medium" style="color:#00b8b0;">v18.51.0</span> · Michele Marchetti
+        <span class="font-medium" style="color:#00b8b0;">v18.50.0</span> · Michele Marchetti
       </div>
     </div>
   </div>
@@ -2775,7 +2775,6 @@ function renderCommessaPipelineCard(c) {
           <div class="font-medium text-sm text-slate-900 truncate" title="${c.progetto}">${esc(c.progetto)}</div>
           <div class="text-xs text-slate-500">${esc(c.cliente)}</div>
           <div class="text-[11px] text-slate-500 mt-1">📅 ${fmtDate(c.inizio)} → ${fmtDate(c.fine)}</div>
-          ${!c.email_referente ? '<div class="text-[10px] text-amber-700 bg-amber-50 border border-amber-200 rounded px-1.5 py-0.5 mt-1 inline-block">⚠ referente tecnico non impostato</div>' : ''}
         </div>
         <div class="flex items-center gap-1">
           <button class="promote-c text-xs text-slate-400 hover:text-teal-700" data-id="${c.id}" title="Promuovi a commessa attiva">↗</button>
@@ -2852,7 +2851,6 @@ function renderCommesseAttive() {
             <div>
               <div class="font-medium text-sm text-slate-900">${k}</div>
               <div class="text-[11px] text-slate-400">${esc(meta.cliente || '')} · Nessuna risorsa allocata ancora</div>
-              ${!meta.email_referente ? '<div class="text-[10px] text-amber-700 bg-amber-50 border border-amber-200 rounded px-1.5 py-0.5 mt-1 inline-block">⚠ referente tecnico non impostato</div>' : ''}
             </div>
             <div class="flex items-center gap-1 flex-shrink-0">
               <button class="edit-attiva text-xs px-2 py-1 bg-white text-slate-700 rounded border border-slate-300 hover:bg-slate-50" data-commessa="${encodeURIComponent(k)}" title="Modifica dettagli">✎</button>
@@ -2931,7 +2929,6 @@ function renderCommesseAttive() {
             <div>
               <div class="font-medium text-sm text-slate-900">${k}</div>
               <div class="text-[11px] text-slate-500">${risorse.length} risorse · ${ass.length} righe · ${totGG} gg-uomo totali</div>
-              ${(!isOreNonLav && !meta.email_referente) ? '<div class="text-[10px] text-amber-700 bg-amber-50 border border-amber-200 rounded px-1.5 py-0.5 mt-1 inline-block">⚠ referente tecnico non impostato</div>' : ''}
             </div>
           </div>
           ${isOreNonLav ? '' : `
@@ -3614,7 +3611,7 @@ function openModal(html) {
 function closeModal() { document.getElementById('modal-root').innerHTML = ''; }
 
 function openCommessaModal(id) {
-  const c = id ? state.pipeline.find(p => p.id === id) : { id:'p_new_'+Date.now(), cliente:'', progetto:'', industry: INDUSTRIES[0], inizio:'', fine:'', risorse_necessarie:1, skills:[], attestati_richiesti:[], email_referente:'' };
+  const c = id ? state.pipeline.find(p => p.id === id) : { id:'p_new_'+Date.now(), cliente:'', progetto:'', industry: INDUSTRIES[0], inizio:'', fine:'', risorse_necessarie:1, skills:[], attestati_richiesti:[] };
   const cAttReq = c.attestati_richiesti || [];
   const root = document.getElementById('modal-root');
   root.innerHTML = `<div class="modal-backdrop"><div class="bg-white rounded-lg shadow-xl w-full max-w-2xl mx-4 my-8 p-5 max-h-[90vh] overflow-y-auto">
@@ -3622,7 +3619,6 @@ function openCommessaModal(id) {
     <div class="space-y-2">
       <label class="block text-xs"><span class="text-slate-600">Cliente</span><input id="m-cliente" class="mt-0.5 w-full border border-slate-300 rounded px-2 py-1.5 text-sm" value="${(c.cliente||'').replace(/"/g, '&quot;')}"></label>
       <label class="block text-xs"><span class="text-slate-600">Progetto</span><input id="m-progetto" class="mt-0.5 w-full border border-slate-300 rounded px-2 py-1.5 text-sm" value="${(c.progetto||'').replace(/"/g, '&quot;')}"></label>
-      <label class="block text-xs"><span class="text-slate-600">Email referente tecnico <span class="text-red-500">*</span> <span class="text-slate-400 font-normal">(una o più, separate da virgola)</span></span><input id="m-email-ref" type="text" placeholder="mario.rossi@cliente.it, luigi.bianchi@cliente.it" class="mt-0.5 w-full border border-slate-300 rounded px-2 py-1.5 text-sm" value="${(c.email_referente||'').replace(/"/g, '&quot;')}"></label>
       <label class="block text-xs"><span class="text-slate-600">Industry</span>
         <select id="m-industry" class="mt-0.5 w-full border border-slate-300 rounded px-2 py-1.5 text-sm">
           ${INDUSTRIES.map(i => `<option ${i===c.industry?'selected':''}>${i}</option>`).join('')}
@@ -3677,13 +3673,10 @@ function openCommessaModal(id) {
   };
 
   document.getElementById('m-save').onclick = async () => {
-    const emailRefList = parseEmailList(document.getElementById('m-email-ref').value);
-    if (!emailRefList) { showAlertModal('Email referente tecnico obbligatoria: inserisci una o più email valide separate da virgola.'); return; }
     const newC = {
       id: c.id,
       cliente: document.getElementById('m-cliente').value.trim(),
       progetto: document.getElementById('m-progetto').value.trim(),
-      email_referente: emailRefList.join(', '),
       industry: document.getElementById('m-industry').value,
       inizio: document.getElementById('m-inizio').value,
       fine: document.getElementById('m-fine').value,
@@ -3968,15 +3961,6 @@ const esc = v => (v||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g
 // gestisce backslash e apice (contesto JS a virgolette singole) e doppio apice
 // (contesto attributo HTML). Usare per QUALSIASI dato dinamico dentro un onclick.
 const jsAttr = v => String(v == null ? '' : v).replace(/\\/g,'\\\\').replace(/'/g,"\\'").replace(/"/g,'&quot;');
-
-// Valida una stringa di una o più email separate da virgola (formato base).
-// Ritorna l'array di email pulite, o null se vuota o con almeno una voce non valida.
-function parseEmailList(str) {
-  const emailRe = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-  const parts = String(str || '').split(',').map(s => s.trim()).filter(Boolean);
-  if (parts.length === 0 || parts.some(p => !emailRe.test(p))) return null;
-  return [...new Set(parts)];
-}
 
 function showConfirm(htmlMsg, onConfirm) {
   const root = document.getElementById('modal-root');
@@ -4978,7 +4962,6 @@ function getCommessaAttivaMeta(nome) {
     inizio: stored.inizio||(p>=0?`${ANNO}-${pad2(p+1)}-01`:''),
     fine: stored.fine||(u>=0?`${ANNO}-${pad2(u+1)}-${pad2(lday)}`:''),
     note: stored.note||'',
-    email_referente: stored.email_referente||'',
     skills: stored.skills||[],
     attestati_richiesti: stored.attestati_richiesti||[],
     risorse_necessarie: stored.risorse_necessarie !== undefined ? stored.risorse_necessarie : null,
@@ -5012,8 +4995,6 @@ function openCommessaAttivaModal(nome) {
       </div>
       <label class="block text-xs"><span class="text-slate-600">Note / proroga / specifiche aggiuntive</span>
         <textarea id="ma-note" rows="3" class="mt-0.5 w-full border border-slate-300 rounded px-2 py-1.5 text-sm" placeholder="Es: Proroga al 31/12. Variante aggiunta area 5. Note interne...">${(m.note||'').replace(/</g,'&lt;')}</textarea></label>
-      <label class="block text-xs"><span class="text-slate-600">Email referente tecnico <span class="text-red-500">*</span> <span class="text-slate-400 font-normal">(una o più, separate da virgola)</span></span>
-        <input id="ma-email-ref" type="text" placeholder="mario.rossi@cliente.it, luigi.bianchi@cliente.it" class="mt-0.5 w-full border border-slate-300 rounded px-2 py-1.5 text-sm" value="${(m.email_referente||'').replace(/"/g,'&quot;')}"></label>
       <div>
         <div class="text-xs font-medium text-slate-600 mb-1">Fabbisogno risorse</div>
         <div class="flex items-center gap-3 p-2 bg-slate-50 rounded border border-slate-200">
@@ -5087,15 +5068,12 @@ function openCommessaAttivaModal(nome) {
       showAlertModal('Il numero di risorse necessarie deve essere un numero intero ≥ 0, oppure lascialo vuoto per la stima automatica.');
       return;
     }
-    const emailRefList = parseEmailList(document.getElementById('ma-email-ref').value);
-    if (!emailRefList) { showAlertModal('Email referente tecnico obbligatoria: inserisci una o più email valide separate da virgola.'); return; }
     state.commesse_attive_meta[nome] = {
       cliente: document.getElementById('ma-cli').value.trim(),
       industry: document.getElementById('ma-ind').value,
       inizio: document.getElementById('ma-ini').value,
       fine: document.getElementById('ma-fin').value,
       note: document.getElementById('ma-note').value,
-      email_referente: emailRefList.join(', '),
       skills: [...document.querySelectorAll('.ma-sk:checked')].map(x=>x.value),
       attestati_richiesti: [...document.querySelectorAll('.ma-at:checked')].map(x=>x.value),
       risorse_necessarie: risDichiarate,
@@ -5989,8 +5967,6 @@ function pwGeneraMail() {
       if (!bc.commessa) return;
       testo += `\n${sep}\n`;
       testo += `📋 ${bc.commessa.toUpperCase()}\n`;
-      const refCommessa = (state.commesse_attive_meta[bc.commessa] || {}).email_referente || '';
-      testo += `👤 Referente tecnico: ${refCommessa || '⚠️ non impostato'}\n`;
       testo += `${sep}\n`;
 
       (bc.squadre || []).forEach((sq) => {
@@ -6150,16 +6126,6 @@ function pwGeneraMail() {
       if (emailByNome[n]) emails.push(emailByNome[n]);
       else senzaEmail.push(n);
     });
-
-    // Referenti tecnici delle commesse pianificate questa settimana
-    const commesseSenzaRef = [];
-    data.forEach(bc => {
-      if (!bc.commessa) return;
-      const ref = (state.commesse_attive_meta[bc.commessa] || {}).email_referente || '';
-      if (ref) ref.split(',').map(s => s.trim()).filter(Boolean).forEach(e => emails.push(e));
-      else commesseSenzaRef.push(bc.commessa);
-    });
-
     const emailsUniche = [...new Set(emails)];
 
     if (emailsUniche.length === 0) {
@@ -6176,15 +6142,8 @@ function pwGeneraMail() {
     a.click();
     a.remove();
 
-    if (senzaEmail.length > 0 || commesseSenzaRef.length > 0) {
-      let warn = 'Testo copiato negli appunti (incollalo nel corpo della mail).';
-      if (senzaEmail.length > 0) {
-        warn += `\n\n⚠ ${senzaEmail.length} operatore/i senza email assegnata, non inclusi tra i destinatari: ${senzaEmail.join(', ')}.`;
-      }
-      if (commesseSenzaRef.length > 0) {
-        warn += `\n\n⚠ Referente tecnico non impostato per: ${commesseSenzaRef.join(', ')} (Dashboard → Commesse attive → Modifica). Non incluso tra i destinatari.`;
-      }
-      showAlertModal(warn);
+    if (senzaEmail.length > 0) {
+      showAlertModal(`Testo copiato negli appunti (incollalo nel corpo della mail).\n\n⚠ ${senzaEmail.length} operatore/i senza email assegnata, non inclusi tra i destinatari: ${senzaEmail.join(', ')}.`);
     }
   };
 
