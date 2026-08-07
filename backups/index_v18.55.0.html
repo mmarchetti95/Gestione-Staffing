@@ -650,7 +650,7 @@
     <div class="flex items-center gap-2">
       <button id="btn-presentation" class="px-3 py-1.5 text-sm rounded hover:bg-white/10" style="border:1px solid #444;color:#d1d5db;visibility:visible;">📊 Modalità presentazione</button>
       <div class="text-xs pl-2" style="border-left:1px solid #444;color:#9ca3af;">
-        <span class="font-medium" style="color:#00b8b0;">v18.56.0</span> · Michele Marchetti
+        <span class="font-medium" style="color:#00b8b0;">v18.55.0</span> · Michele Marchetti
       </div>
     </div>
   </div>
@@ -6192,40 +6192,34 @@ function pwGeneraMail() {
       if (nome && nome.trim() && Object.values(giorni).some(v => v === true)) nomiSettimana.add(nome.trim());
     });
     const senzaEmail = [];
-    const emailDipendenti = [];
+    const emails = [];
     nomiSettimana.forEach(n => {
-      if (emailByNome[n]) emailDipendenti.push(emailByNome[n]);
+      if (emailByNome[n]) emails.push(emailByNome[n]);
       else senzaEmail.push(n);
     });
 
     // Referenti tecnici delle commesse pianificate questa settimana
     const commesseSenzaRef = [];
-    const emailReferenti = [];
     data.forEach(bc => {
       if (!bc.commessa) return;
       const ref = (state.commesse_attive_meta[bc.commessa] || {}).email_referente || '';
-      if (ref) ref.split(',').map(s => s.trim()).filter(Boolean).forEach(e => emailReferenti.push(e));
+      if (ref) ref.split(',').map(s => s.trim()).filter(Boolean).forEach(e => emails.push(e));
       else commesseSenzaRef.push(bc.commessa);
     });
 
-    // Email sempre incluse (impostazione salvata, es. ufficio tecnico, capocommessa…)
+    // Email sempre incluse (impostazione salvata, es. ufficio tecnico, capocommessa…) → in CC, non tra i destinatari
     const emailSempreIncluse = document.getElementById('mail-email-sempre').value || '';
-    const emailSempre = emailSempreIncluse.split(',').map(s => s.trim()).filter(Boolean);
+    const ccEmails = [...new Set(emailSempreIncluse.split(',').map(s => s.trim()).filter(Boolean))];
 
-    // Unico destinatario ("A:"): logistica. Tutti gli altri vanno in copia conoscenza (CC),
-    // nell'ordine: email sempre in CC → referenti tecnici → dipendenti (compresi quelli in ferie), deduplicati.
-    const destinatario = 'logistica@eagleprojects.it';
-    const ccSeen = new Set([destinatario.toLowerCase()]);
-    const ccEmails = [];
-    [...emailSempre, ...emailReferenti, ...emailDipendenti].forEach(e => {
-      const key = e.toLowerCase();
-      if (ccSeen.has(key)) return;
-      ccSeen.add(key);
-      ccEmails.push(e);
-    });
+    const emailsUniche = [...new Set(emails)];
+
+    if (emailsUniche.length === 0 && ccEmails.length === 0) {
+      showAlertModal('Nessun operatore pianificato ha un\'email assegnata (Dashboard → Operatori). Il testo è comunque negli appunti: apri una mail vuota e incollalo.');
+      return;
+    }
 
     const subject = `Pianificazione Week ${pwWeek} — ${formatDate(monday)} / ${formatDate(saturday)} ${pwAnno}`;
-    let mailtoUrl = 'mailto:' + encodeURIComponent(destinatario) + '?subject=' + encodeURIComponent(subject);
+    let mailtoUrl = 'mailto:' + emailsUniche.join(',') + '?subject=' + encodeURIComponent(subject);
     if (ccEmails.length > 0) mailtoUrl += '&cc=' + encodeURIComponent(ccEmails.join(','));
     const a = document.createElement('a');
     a.href = mailtoUrl;
@@ -6238,10 +6232,10 @@ function pwGeneraMail() {
     if (senzaEmail.length > 0 || commesseSenzaRef.length > 0) {
       let warn = 'Testo copiato negli appunti (incollalo nel corpo della mail).';
       if (senzaEmail.length > 0) {
-        warn += `\n\n⚠ ${senzaEmail.length} operatore/i senza email assegnata, non inclusi in copia conoscenza: ${senzaEmail.join(', ')}.`;
+        warn += `\n\n⚠ ${senzaEmail.length} operatore/i senza email assegnata, non inclusi tra i destinatari: ${senzaEmail.join(', ')}.`;
       }
       if (commesseSenzaRef.length > 0) {
-        warn += `\n\n⚠ Referente tecnico non impostato per: ${commesseSenzaRef.join(', ')} (Dashboard → Commesse attive → Modifica). Non incluso in copia conoscenza.`;
+        warn += `\n\n⚠ Referente tecnico non impostato per: ${commesseSenzaRef.join(', ')} (Dashboard → Commesse attive → Modifica). Non incluso tra i destinatari.`;
       }
       showAlertModal(warn);
     }

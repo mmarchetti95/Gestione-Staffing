@@ -1,3 +1,6 @@
+## v18.56.0
+- feat: "Genera Mail" — riordinati i destinatari del link `mailto:` ("Apri Outlook"). Ora l'unico destinatario ("A:") è `logistica@eagleprojects.it`; tutti gli altri (email sempre in CC, referenti tecnici, dipendenti pianificati e in ferie) vanno in copia conoscenza (CC), in quest'ordine: 1) email sempre in CC, 2) referenti tecnici delle commesse, 3) dipendenti (inclusi quelli in ferie), deduplicati.
+
 ## v18.55.0
 - feat: "Genera Mail" — i campi "Orario partenza sede" e "Orario lavoro" sono ora persistiti in pianificazione (`pwData.mailOrarioPartenza` / `mailOrarioLavoro`, sincronizzati come "Email sempre in CC"), invece di ripartire ogni volta dal valore di default (08:00 / 08:00-08:30–16:30-17:00).
 - feat: nuovo campo **"Codice commessa"** nei parametri delle commesse attive (Dashboard → Commesse attive → Modifica), riportato tra parentesi accanto al nome della commessa nel testo della mail generata ("📋 COMMESSA (Cod. ...)").
