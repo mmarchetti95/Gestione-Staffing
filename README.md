@@ -1,3 +1,6 @@
+## v18.53.0
+- fix: "Genera Mail" — il campo "Email sempre incluse" (rinominato "Email sempre in CC") aggiungeva le email tra i destinatari principali (To) del link `mailto:`. Ora vengono messe in copia conoscenza (CC), lasciando come destinatari solo operatori pianificati e referenti tecnico delle commesse.
+
 ## v18.52.0
 - feat: "Genera Mail" — nuovo campo **"Email sempre incluse"** nei parametri del modal: una lista di email (separate da virgola) salvata in pianificazione (`pwData.emailSempreIncluse`, sincronizzata come le altre impostazioni di Griglia) e aggiunta automaticamente ai destinatari ogni volta che si genera la mail ("Apri Outlook"), indipendentemente da operatori/referenti pianificati. Utile per includere sempre indirizzi fissi (es. ufficio tecnico, capocommessa) senza doverli ridigitare ogni settimana.
 
