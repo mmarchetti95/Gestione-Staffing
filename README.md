@@ -1,3 +1,6 @@
+## v18.57.0
+- feat: "Genera Mail" — il riferimento alla doppia week non compare più solo nella sezione riepilogativa in fondo alla mail ("🔁 DOPPIA WEEK"), ma anche accanto al nome dell'operatore nella riga "👷" della squadra a cui è assegnato quella settimana, con l'indicazione se è la 1ª settimana (fuori tutta la settimana) o la 2ª (rientro giovedì).
+
 ## v18.56.0
 - feat: "Genera Mail" — riordinati i destinatari del link `mailto:` ("Apri Outlook"). Ora l'unico destinatario ("A:") è `logistica@eagleprojects.it`; tutti gli altri (email sempre in CC, referenti tecnici, dipendenti pianificati e in ferie) vanno in copia conoscenza (CC), in quest'ordine: 1) email sempre in CC, 2) referenti tecnici delle commesse, 3) dipendenti (inclusi quelli in ferie), deduplicati.
 

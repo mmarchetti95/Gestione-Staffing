@@ -650,7 +650,7 @@
     <div class="flex items-center gap-2">
       <button id="btn-presentation" class="px-3 py-1.5 text-sm rounded hover:bg-white/10" style="border:1px solid #444;color:#d1d5db;visibility:visible;">📊 Modalità presentazione</button>
       <div class="text-xs pl-2" style="border-left:1px solid #444;color:#9ca3af;">
-        <span class="font-medium" style="color:#00b8b0;">v18.57.0</span> · Michele Marchetti
+        <span class="font-medium" style="color:#00b8b0;">v18.56.0</span> · Michele Marchetti
       </div>
     </div>
   </div>
@@ -5989,12 +5989,6 @@ function pwGeneraMail() {
     const orarioLavoro   = document.getElementById('mail-orario-lavoro').value.trim()   || '08:00/08:30 – 16:30/17:00';
     const noteGenerali   = document.getElementById('mail-note-generali').value.trim();
     const sep = '━'.repeat(34);
-    const prevWeek = pwWeekAdd(pwAnno, pwWeek, -1);
-    const dwLabel = nome => {
-      if (pwIsDwStart(pwAnno, pwWeek, nome)) return ' [🔁 doppia week, 1ª sett.]';
-      if (pwIsDwStart(prevWeek.anno, prevWeek.week, nome)) return ' [🔁 doppia week, 2ª sett. — rientro gio]';
-      return '';
-    };
 
     let testo = '';
     testo += `📅 PIANIFICAZIONE WEEK ${pwWeek} — ${formatDate(monday)} / ${formatDate(saturday)} ${pwAnno}\n`;
@@ -6025,7 +6019,7 @@ function pwGeneraMail() {
         testo += `\n🟡 ${nomeSquadra}\n`;
 
         if (operatori.length > 0) {
-          testo += `👷 ${operatori.map(o => o.nome + dwLabel(o.nome)).join(' · ')}\n`;
+          testo += `👷 ${operatori.map(o => o.nome).join(' · ')}\n`;
         }
 
         const strumentiJiraTxt = pwSqStrumentiJira(sq).filter(Boolean).map(k => pwStrLabel(k));
@@ -6101,6 +6095,7 @@ function pwGeneraMail() {
 
     // --- Sezione doppia week automatica ---
     const dwStart = (pwDoppiaWeek[pwAnno] && pwDoppiaWeek[pwAnno][pwWeek]) || {};
+    const prevWeek = pwWeekAdd(pwAnno, pwWeek, -1);
     const dwPrevStart = (pwDoppiaWeek[prevWeek.anno] && pwDoppiaWeek[prevWeek.anno][prevWeek.week]) || {};
     const righeDw = [];
     Object.keys(dwStart).forEach(nome => {
