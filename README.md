@@ -1,3 +1,6 @@
+## v18.54.0
+- fix: **Griglia** — rimuovere una squadra con nome di default (es. "Squadra 1") e poi aggiungerne una nuova poteva creare due squadre con lo stesso nome sulla stessa commessa (es. due "Squadra 2"), perché il nome della nuova squadra veniva calcolato solo dal conteggio squadre attuali (`length + 1`), senza tener conto dei nomi già usati/rimasti dopo le rimozioni. Ora, dopo ogni aggiunta o rimozione, le squadre il cui nome è ancora quello di default (pattern "Squadra N", mai personalizzato dall'utente) vengono rinumerate in sequenza (1, 2, 3…); le squadre rinominate manualmente non vengono toccate.
+
 ## v18.53.0
 - fix: "Genera Mail" — il campo "Email sempre incluse" (rinominato "Email sempre in CC") aggiungeva le email tra i destinatari principali (To) del link `mailto:`. Ora vengono messe in copia conoscenza (CC), lasciando come destinatari solo operatori pianificati e referenti tecnico delle commesse.
 

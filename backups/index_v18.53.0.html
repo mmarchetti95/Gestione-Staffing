@@ -650,7 +650,7 @@
     <div class="flex items-center gap-2">
       <button id="btn-presentation" class="px-3 py-1.5 text-sm rounded hover:bg-white/10" style="border:1px solid #444;color:#d1d5db;visibility:visible;">📊 Modalità presentazione</button>
       <div class="text-xs pl-2" style="border-left:1px solid #444;color:#9ca3af;">
-        <span class="font-medium" style="color:#00b8b0;">v18.54.0</span> · Michele Marchetti
+        <span class="font-medium" style="color:#00b8b0;">v18.53.0</span> · Michele Marchetti
       </div>
     </div>
   </div>
@@ -7381,31 +7381,12 @@ async function pwUpdateCommessa(sel) {
   }
 }
 
-// Rinumera in sequenza (Squadra 1, Squadra 2, ...) le sole squadre con nome ancora
-// "di default" (mai personalizzato dall'utente, riconosciuto dal pattern "Squadra <N>").
-// Le squadre rinominate dall'utente non vengono toccate. Va richiamata dopo ogni
-// aggiunta/rimozione di squadra per evitare doppioni tipo due "Squadra 2" sulla
-// stessa commessa quando la squadra "Squadra 1" viene rimossa e ne viene aggiunta una nuova.
-function pwRinumeraSquadreDefault(cidx) {
-  const data = pwGetWeekData();
-  const squadre = data[cidx]?.squadre;
-  if (!squadre) return;
-  let n = 1;
-  squadre.forEach(sq => {
-    if (/^Squadra \d+$/.test((sq.nome || '').trim())) {
-      sq.nome = `Squadra ${n}`;
-      n++;
-    }
-  });
-}
-
 async function pwAddSquadra(btn) {
   const cidx = parseInt(btn.dataset.cidx);
   const data = pwGetWeekData();
   if (data[cidx]) {
     const n = data[cidx].squadre.length + 1;
     data[cidx].squadre.push({ nome: `Squadra ${n}`, operatori: [{ nome: '', giorni: {} }] });
-    pwRinumeraSquadreDefault(cidx);
     await pwSave(); pwRender();
   }
 }
@@ -7418,7 +7399,6 @@ async function pwRemoveSquadra(btn) {
     if (!await showConfirmAsync('Rimuovere l\'unica squadra? La commessa rimarrà senza squadre.', 'Rimuovi squadra')) return;
   }
   data[cidx].squadre.splice(parseInt(sidx), 1);
-  pwRinumeraSquadreDefault(parseInt(cidx));
   await pwSave(); pwRender();
 }
 
