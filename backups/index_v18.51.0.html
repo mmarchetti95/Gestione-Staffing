@@ -650,7 +650,7 @@
     <div class="flex items-center gap-2">
       <button id="btn-presentation" class="px-3 py-1.5 text-sm rounded hover:bg-white/10" style="border:1px solid #444;color:#d1d5db;visibility:visible;">📊 Modalità presentazione</button>
       <div class="text-xs pl-2" style="border-left:1px solid #444;color:#9ca3af;">
-        <span class="font-medium" style="color:#00b8b0;">v18.52.0</span> · Michele Marchetti
+        <span class="font-medium" style="color:#00b8b0;">v18.51.0</span> · Michele Marchetti
       </div>
     </div>
   </div>
@@ -5905,15 +5905,6 @@ function pwGeneraMail() {
                      padding:6px 10px; font-size:13px; outline:none; box-sizing:border-box;">
           </label>
         </div>
-        <label style="font-size:11px; display:block; margin-top:10px;">
-          <div style="color:#475569; font-weight:600; margin-bottom:3px;">📧 Email sempre incluse
-            <span style="font-weight:400; color:#94a3b8;">(separate da virgola, aggiunte sempre ai destinatari)</span>
-          </div>
-          <input id="mail-email-sempre" type="text" value="${esc(pwData.emailSempreIncluse || '')}"
-            placeholder="es: ufficio.tecnico@eagleprojects.it, capocommessa@eagleprojects.it"
-            style="width:100%; border:1px solid #e2e8f0; border-radius:6px;
-                   padding:6px 10px; font-size:13px; outline:none; box-sizing:border-box;">
-        </label>
       </div>
 
       <!-- Corpo scrollabile: note squadra + note generali + anteprima -->
@@ -6117,11 +6108,6 @@ function pwGeneraMail() {
       document.getElementById('mail-testo').value = componiTesto();
     });
   });
-  // Email sempre incluse: persistita in pwData, non fa parte del testo della mail
-  document.getElementById('mail-email-sempre').addEventListener('input', (e) => {
-    pwData.emailSempreIncluse = e.target.value;
-    pwSave();
-  });
   // Note e strumenti squadra: salva in storage + rigenera anteprima
   squadreInfo.forEach((_, i) => {
     const noteEl = document.getElementById(`mail-note-sq-${i}`);
@@ -6173,10 +6159,6 @@ function pwGeneraMail() {
       if (ref) ref.split(',').map(s => s.trim()).filter(Boolean).forEach(e => emails.push(e));
       else commesseSenzaRef.push(bc.commessa);
     });
-
-    // Email sempre incluse (impostazione salvata, es. ufficio tecnico, capocommessa…)
-    const emailSempreIncluse = document.getElementById('mail-email-sempre').value || '';
-    emailSempreIncluse.split(',').map(s => s.trim()).filter(Boolean).forEach(e => emails.push(e));
 
     const emailsUniche = [...new Set(emails)];
 

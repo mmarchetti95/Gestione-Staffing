@@ -1,3 +1,6 @@
+## v18.52.0
+- feat: "Genera Mail" — nuovo campo **"Email sempre incluse"** nei parametri del modal: una lista di email (separate da virgola) salvata in pianificazione (`pwData.emailSempreIncluse`, sincronizzata come le altre impostazioni di Griglia) e aggiunta automaticamente ai destinatari ogni volta che si genera la mail ("Apri Outlook"), indipendentemente da operatori/referenti pianificati. Utile per includere sempre indirizzi fissi (es. ufficio tecnico, capocommessa) senza doverli ridigitare ogni settimana.
+
 ## v18.51.0
 - feat: nuovo campo obbligatorio **"Email referente tecnico"** nei parametri delle commesse (sia pipeline che attive, una o più email separate da virgola). Il referente/i della commessa viene ora incluso automaticamente tra i destinatari quando si genera la mail di pianificazione settimanale ("Genera Mail" → "Apri Outlook"), e riportato in chiaro nel testo della mail accanto all'intestazione di ogni commessa ("👤 Referente tecnico: ..."). Le commesse già esistenti senza referente impostato mostrano un badge "⚠ referente tecnico non impostato" direttamente sulla card in Dashboard (sia Pipeline che Attive), oltre alla segnalazione già presente in Genera Mail; il salvataggio del modal di modifica resta bloccato finché il campo non viene compilato, ma i dati storici non vengono toccati finché non si modifica la commessa.
 
