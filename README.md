@@ -1,3 +1,9 @@
+## v18.55.0
+- feat: "Genera Mail" — i campi "Orario partenza sede" e "Orario lavoro" sono ora persistiti in pianificazione (`pwData.mailOrarioPartenza` / `mailOrarioLavoro`, sincronizzati come "Email sempre in CC"), invece di ripartire ogni volta dal valore di default (08:00 / 08:00-08:30–16:30-17:00).
+- feat: nuovo campo **"Codice commessa"** nei parametri delle commesse attive (Dashboard → Commesse attive → Modifica), riportato tra parentesi accanto al nome della commessa nel testo della mail generata ("📋 COMMESSA (Cod. ...)").
+- feat: "Genera Mail" — gli operatori in ferie/permesso nella settimana vengono ora inclusi anche tra i destinatari del link `mailto:` ("Apri Outlook"), non solo elencati nel testo ("🏖 FERIE / PERMESSI").
+- feat: "Genera Mail" — nuova sezione automatica nel testo della mail "🔁 DOPPIA WEEK" con gli operatori in 1ª settimana (fuori tutta la settimana) o 2ª settimana (rientro giovedì, riposo compensativo venerdì) di un blocco doppia-week che tocca la settimana pianificata.
+
 ## v18.54.0
 - fix: **Griglia** — rimuovere una squadra con nome di default (es. "Squadra 1") e poi aggiungerne una nuova poteva creare due squadre con lo stesso nome sulla stessa commessa (es. due "Squadra 2"), perché il nome della nuova squadra veniva calcolato solo dal conteggio squadre attuali (`length + 1`), senza tener conto dei nomi già usati/rimasti dopo le rimozioni. Ora, dopo ogni aggiunta o rimozione, le squadre il cui nome è ancora quello di default (pattern "Squadra N", mai personalizzato dall'utente) vengono rinumerate in sequenza (1, 2, 3…); le squadre rinominate manualmente non vengono toccate.
 
