@@ -1,0 +1,1099 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<title>Dashboard Staffing — Pipeline Commerciale</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.2/dist/jspdf.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/jspdf-autotable@3.8.4/dist/jspdf.plugin.autotable.min.js"></script>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+  :root {
+    --accent: #00b8b0;
+    --accent-dark: #009890;
+    --bg: #f4f6f8;
+    --card: #ffffff;
+    --border: #e2e8f0;
+    --text: #0f172a;
+    --muted: #64748b;
+    --green: #10b981;
+    --yellow: #f59e0b;
+    --orange: #f97316;
+    --red: #ef4444;
+  }
+  html, body { font-family: 'Inter', system-ui, -apple-system, sans-serif; background: var(--bg); color: var(--text); }
+
+  /* === CARD & SEZIONI === */
+  .bg-white.rounded-lg.border.border-slate-200 {
+    border-color: #e8edf2 !important;
+    box-shadow: 0 1px 4px rgba(0,0,0,.06), 0 0 0 1px rgba(0,0,0,.04);
+    border-radius: 12px !important;
+  }
+  section.bg-white {
+    border-radius: 12px !important;
+    box-shadow: 0 1px 4px rgba(0,0,0,.06), 0 0 0 1px rgba(0,0,0,.04);
+    border-color: #e8edf2 !important;
+  }
+
+  /* === TABELLE === */
+  table { border-collapse: separate; border-spacing: 0; }
+  thead th {
+    background: #f8fafc;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: .04em;
+    text-transform: uppercase;
+    color: #64748b;
+    padding: 10px 14px !important;
+    border-bottom: 1px solid #e8edf2;
+  }
+  tbody tr { transition: background .1s; }
+  tbody tr:hover { background: #f8fafc; }
+  tbody td { padding: 9px 14px !important; border-bottom: 1px solid #f1f5f9; }
+  tbody tr:last-child td { border-bottom: none; }
+
+  /* === INPUT & SELECT === */
+  input[type="text"], input[type="email"], input[type="number"],
+  input[type="password"], input[type="date"], select, textarea {
+    border-radius: 8px !important;
+    border-color: #dde3ea !important;
+    transition: border-color .15s, box-shadow .15s;
+  }
+  input[type="text"]:focus, input[type="email"]:focus, input[type="number"]:focus,
+  input[type="password"]:focus, input[type="date"]:focus, select:focus, textarea:focus {
+    outline: none !important;
+    border-color: var(--accent) !important;
+    box-shadow: 0 0 0 3px rgba(0,184,176,.12) !important;
+  }
+
+  /* === PULSANTI PRIMARI === */
+  button.bg-teal-600, button[style*="background:#00b8b0"], button[style*="background:#009890"] {
+    border-radius: 8px !important;
+    font-weight: 500;
+  }
+
+  /* === SPAZIO TRA SEZIONI === */
+  .space-y-6 > * + * { margin-top: 1.75rem !important; }
+
+  /* === KPI CARD === */
+  #kpi-grid > div {
+    border-radius: 12px !important;
+    box-shadow: 0 1px 4px rgba(0,0,0,.06);
+    border-color: #e8edf2 !important;
+    padding: 14px 16px !important;
+  }
+  .kpi-num { font-variant-numeric: tabular-nums; font-feature-settings: "tnum"; }
+  .skill-badge {
+    display: inline-block; padding: 1px 6px; border-radius: 4px;
+    font-size: 10px; font-weight: 600; margin: 1px;
+    background: #e0f2fe; color: #075985; border: 1px solid #bae6fd;
+  }
+  .skill-badge.req { background: #fef3c7; color: #92400e; border-color: #fde68a; }
+  .skill-badge.miss { background: #fee2e2; color: #991b1b; border-color: #fecaca; }
+  .att-badge {
+    display: inline-block; padding: 1px 6px; border-radius: 4px;
+    font-size: 10px; font-weight: 600; margin: 1px;
+    background: #ede9fe; color: #5b21b6; border: 1px solid #ddd6fe;
+  }
+  .att-badge.req { background: #fce7f3; color: #9d174d; border-color: #fbcfe8; }
+  .att-badge.miss { background: #fee2e2; color: #991b1b; border-color: #fecaca; }
+  .op-card {
+    cursor: grab; user-select: none;
+    transition: all .15s;
+  }
+  .op-card:hover { box-shadow: 0 4px 12px rgba(0,0,0,.08); border-color: var(--accent); }
+  .op-card.saturo { opacity: .55; }
+  .op-card.dragging { opacity: .4; }
+  .drop-zone {
+    min-height: 50px;
+    border: 2px dashed var(--border);
+    border-radius: 6px;
+    transition: all .15s;
+  }
+  .drop-zone.drag-over { border-color: var(--accent); background: rgba(13,148,136,.05); }
+  .commessa-card.flash-red { animation: flashred .6s 2; }
+  @keyframes flashred {
+    0%, 100% { background: var(--card); }
+    50% { background: #fee2e2; }
+  }
+  .chip {
+    display: inline-flex; align-items: center; gap: 4px;
+    padding: 2px 8px; border-radius: 999px;
+    font-size: 11px; background: #e0f2fe; color: #075985;
+    border: 1px solid #bae6fd; margin: 2px;
+  }
+  .chip.forzata { border-color: var(--red); background: #fee2e2; color: #991b1b; }
+  .chip button { background: none; border: none; cursor: pointer; padding: 0 0 0 4px; font-weight: bold; opacity: .6; }
+  .chip button:hover { opacity: 1; }
+  .sat-bar {
+    height: 6px; border-radius: 3px; overflow: hidden; background: #e2e8f0;
+    display: flex;
+  }
+  .sat-bar > div { height: 100%; flex: 1; border-right: 1px solid #fff; }
+  .sat-bar > div:last-child { border-right: none; }
+  .tab-btn {
+    padding: 8px 16px; font-size: 13px; font-weight: 500;
+    border-bottom: 2px solid transparent; cursor: pointer !important;
+    color: var(--muted); transition: color .15s;
+    user-select: none; -webkit-user-select: none;
+  }
+  .tab-btn:hover { color: #64748b; cursor: pointer !important; }
+  .tab-btn.active { color: var(--accent); border-color: var(--accent); }
+  .tab-btn.active:hover { color: var(--accent); cursor: pointer !important; }
+  .commessa-card summary { outline: none; }
+  .commessa-card summary::-webkit-details-marker { display: none; }
+  .commessa-card summary::marker { display: none; content: ''; }
+  .commessa-card[open] > summary .chevron { transform: rotate(90deg); }
+  .commessa-card summary:hover { background: rgba(0,184,176,.04); border-radius: 4px; }
+  .modal-backdrop {
+    position: fixed; inset: 0; background: rgba(0,0,0,.4);
+    display: flex; align-items: center; justify-content: center; z-index: 50;
+  }
+  .industry-pill {
+    display: inline-block; padding: 1px 8px; border-radius: 999px;
+    font-size: 10px; font-weight: 500;
+    background: #f1f5f9; color: #475569;
+  }
+  .scrollbox { max-height: 70vh; overflow-y: auto; }
+  .scrollbox::-webkit-scrollbar { width: 6px; }
+  .scrollbox::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
+
+  /* PRINT */
+  @media print {
+    body { background: white; }
+    .no-print { display: none !important; }
+    .print-only { display: block !important; }
+    .print-page-break { page-break-after: always; }
+    @page { size: A4; margin: 1.5cm; }
+  }
+  .print-only { display: none; }
+
+  /* ===== PIANIFICAZIONE SETTIMANALE ===== */
+  .pw-commessa-block {
+    background: white;
+    border: 2px solid #0d9488;
+    border-radius: 8px;
+    overflow: hidden;
+  }
+  .pw-commessa-header {
+    background: #0d9488;
+    color: white;
+    padding: 8px 12px;
+    font-weight: 600;
+    font-size: 13px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .pw-squadra-block {
+    border-top: 1px solid #e2e8f0;
+    background: #f8fafc;
+  }
+  .pw-commessa-block.pw-collapsed > *:not(.pw-commessa-header) { display: none !important; }
+  .pw-squadra-block.pw-sq-collapsed > *:not(.pw-squadra-header) { display: none !important; }
+  .pw-collapse-toggle { background:none;border:none;cursor:pointer;color:rgba(255,255,255,0.8);font-size:13px;padding:0 6px 0 0;line-height:1;user-select:none;flex-shrink:0; }
+  .pw-collapse-toggle:hover { color:#fff; }
+  .pw-sq-collapse-toggle { background:none;border:none;cursor:pointer;color:#92400e;font-size:13px;padding:0 4px 0 0;line-height:1;user-select:none;flex-shrink:0; }
+  .pw-sq-collapse-toggle:hover { color:#78350f; }
+  .pw-squadra-header {
+    background: #fef3c7;
+    border-bottom: 1px solid #fde68a;
+    padding: 5px 12px;
+    font-size: 12px;
+    font-weight: 600;
+    color: #92400e;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .pw-op-row {
+    display: grid;
+    border-bottom: 1px solid #e2e8f0;
+    background: white;
+  }
+  .pw-op-row:last-child { border-bottom: none; }
+  .pw-op-name {
+    padding: 4px 12px;
+    font-size: 11px;
+    font-weight: 600;
+    color: #1e293b;
+    background: #f1f5f9;
+    border-right: 1px solid #e2e8f0;
+    display: flex;
+    align-items: center;
+    min-width: 140px;
+  }
+  .pw-day-cell {
+    border-right: 1px solid #e2e8f0;
+    padding: 3px 4px;
+    min-width: 110px;
+  }
+  .pw-day-cell:last-child { border-right: none; }
+  .pw-day-cell.sabato { background: #f0fdf4; }
+  .pw-cantiere-input {
+    width: 100%;
+    font-size: 11px;
+    border: 1px solid transparent;
+    border-radius: 3px;
+    padding: 2px 4px;
+    background: transparent;
+    color: #1e293b;
+    transition: border-color .15s, background .15s;
+  }
+  .pw-cantiere-input:focus {
+    outline: none;
+    border-color: #0d9488;
+    background: #f0fdfa;
+  }
+  .pw-attivita-input {
+    width: 100%;
+    font-size: 10px;
+    border: 1px solid transparent;
+    border-radius: 3px;
+    padding: 1px 4px;
+    background: transparent;
+    color: #64748b;
+    font-style: italic;
+    transition: border-color .15s;
+  }
+  .pw-attivita-input:focus {
+    outline: none;
+    border-color: #94a3b8;
+    background: #f8fafc;
+    font-style: normal;
+  }
+  .pw-day-header {
+    text-align: center;
+    font-size: 11px;
+    font-weight: 700;
+    padding: 6px 4px 4px;
+    border-right: 1px solid #e2e8f0;
+    min-width: 110px;
+  }
+  .pw-day-header.sabato { background: #f0fdf4; color: #166534; }
+  .pw-day-header.today { background: #fef3c7; color: #92400e; }
+  .pw-day-header .pw-date { font-size: 10px; font-weight: 400; color: #64748b; }
+  .pw-day-header.sabato .pw-date { color: #166534; }
+  .pw-day-header.today .pw-date { color: #b45309; }
+
+  @media print {
+    #screen-weekly { display: block !important; }
+    .no-print { display: none !important; }
+    .pw-commessa-block { page-break-inside: avoid; margin-bottom: 12px; }
+    .pw-cantiere-input, .pw-attivita-input { border: none !important; background: transparent !important; }
+  }
+
+  /* Modalità presentazione */
+  body.present-mode .no-present { display: none !important; }
+  body.present-mode .present-only { display: block !important; }
+  .present-only { display: none; }
+
+  details > summary { cursor: pointer; }
+
+  /* Input inline nella griglia staffing */
+  .inline-cell-input {
+    width: 2.6rem; min-width: 2.4rem;
+    border-radius: 3px;
+    transition: border-color .1s, background .1s;
+    -moz-appearance: textfield;
+  }
+  .inline-cell-input::-webkit-inner-spin-button,
+  .inline-cell-input::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+  .inline-cell-input:focus {
+    outline: none;
+    border-color: var(--accent) !important;
+    background: #f0fdfa !important;
+    box-shadow: 0 0 0 2px rgba(13,148,136,.2);
+  }
+  .inline-cell-input.over-limit { border-color: #ef4444 !important; background: #fef2f2 !important; }
+  .inline-cell-input.modified { background: #fef9c3; border-color: #ca8a04; }
+  .row-total { min-width: 2.5rem; }
+
+  /* ===== FERIE / PERMESSI ===== */
+  .pw-ferie-header-row {
+    display: grid;
+    background: #fff1f2;
+    border-bottom: 2px solid #fecdd3;
+  }
+  .pw-ferie-row {
+    display: grid;
+    border-bottom: 1px solid #f1f5f9;
+    transition: background .1s;
+  }
+  .pw-ferie-row:hover { background: #fafafa; }
+  .pw-ferie-row:last-child { border-bottom: none; }
+  .pw-ferie-op-cell {
+    padding: 6px 12px;
+    font-size: 11px;
+    font-weight: 600;
+    color: #1e293b;
+    background: #f8fafc;
+    border-right: 1px solid #e2e8f0;
+    display: flex;
+    align-items: center;
+    min-width: 150px;
+  }
+  .pw-ferie-day-header {
+    text-align: center;
+    font-size: 11px;
+    font-weight: 700;
+    padding: 6px 4px;
+    border-right: 1px solid #fecdd3;
+    color: #be123c;
+    min-width: 100px;
+  }
+  .pw-ferie-day-header.sabato { background: #fff7ed; color: #c2410c; border-color: #fed7aa; }
+  .pw-ferie-day-header.today { background: #fef3c7; color: #92400e; }
+  .pw-ferie-day-header .pw-date { font-size: 9px; font-weight: 400; color: #94a3b8; }
+  .pw-ferie-cell {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-right: 1px solid #e2e8f0;
+    padding: 4px;
+    min-width: 100px;
+    min-height: 36px;
+  }
+  .pw-ferie-cell.sabato { background: #fff7f0; }
+  .pw-ferie-cell:last-child { border-right: none; }
+  .pw-ferie-cb {
+    width: 18px; height: 18px;
+    cursor: pointer;
+    accent-color: #e11d48;
+    border-radius: 4px;
+  }
+  .pw-ferie-cell.assente {
+    background: #fee2e2;
+  }
+  .pw-ferie-cell.assente.sabato {
+    background: #ffd6c4;
+  }
+
+  /* Badge stato operatore */
+  .op-stato-badge {
+    display: inline-block;
+    font-size: 9px;
+    font-weight: 700;
+    padding: 1px 5px;
+    border-radius: 999px;
+    vertical-align: middle;
+    line-height: 1.4;
+    letter-spacing: .3px;
+  }
+  .op-stato-badge.ferie    { background: #fee2e2; color: #991b1b; border: 1px solid #fca5a5; }
+  .op-stato-badge.assegnato{ background: #fef9c3; color: #854d0e; border: 1px solid #fde047; }
+  .op-stato-badge.libero   { background: #dcfce7; color: #166534; border: 1px solid #86efac; }
+
+  /* Legenda operatori */
+  .pw-op-legenda {
+    display: flex; gap: 10px; flex-wrap: wrap;
+    font-size: 9px; margin-top: 4px; padding: 4px 8px;
+    background: #f8fafc; border-radius: 0 0 6px 6px;
+    border-top: 1px solid #e2e8f0;
+  }
+  .pw-op-legenda-item { display: flex; align-items: center; gap: 4px; color: #64748b; }
+
+  /* ===== MODAL SELEZIONE OPERATORE ===== */
+  .op-modal-backdrop {
+    position: fixed; inset: 0;
+    background: rgba(0,0,0,.45);
+    z-index: 10000;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .op-modal {
+    background: white;
+    border-radius: 10px;
+    box-shadow: 0 20px 60px rgba(0,0,0,.25);
+    width: 360px; max-width: 95vw;
+    overflow: hidden;
+    animation: opModalIn .15s ease;
+  }
+  @keyframes opModalIn {
+    from { opacity: 0; transform: scale(.95) translateY(-8px); }
+    to   { opacity: 1; transform: scale(1)  translateY(0); }
+  }
+  .op-modal-header {
+    background: #0d9488; color: white;
+    padding: 12px 16px;
+    display: flex; align-items: center; justify-content: space-between;
+    font-size: 13px; font-weight: 600;
+  }
+  .op-modal-close {
+    background: none; border: none; color: white;
+    font-size: 20px; cursor: pointer; opacity: .8; line-height: 1;
+    padding: 0 2px;
+  }
+  .op-modal-close:hover { opacity: 1; }
+  .op-modal-search {
+    width: 100%; padding: 10px 14px;
+    border: none; border-bottom: 1px solid #e2e8f0;
+    font-size: 12px; outline: none;
+    background: #f8fafc; color: #1e293b;
+  }
+  .op-modal-search::placeholder { color: #94a3b8; }
+  .op-modal-list {
+    max-height: 320px; overflow-y: auto;
+  }
+  .op-modal-list::-webkit-scrollbar { width: 5px; }
+  .op-modal-list::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
+  .op-modal-item {
+    display: flex; align-items: center; gap: 10px;
+    padding: 9px 14px;
+    cursor: pointer;
+    border-bottom: 1px solid rgba(0,0,0,.05);
+    transition: filter .1s;
+    font-size: 12px; font-weight: 500;
+  }
+  .op-modal-item:last-child { border-bottom: none; }
+  .op-modal-item:hover { filter: brightness(.93); }
+  .op-modal-item.is-selected { font-weight: 700; }
+  .op-modal-item.stato-libero    { background: #f0fdf4; color: #166534; }
+  .op-modal-item.stato-assegnato { background: #fefce8; color: #854d0e; }
+  .op-modal-item.stato-ferie     { background: #fff1f2; color: #991b1b; }
+  .op-modal-item.stato-nessuno   { background: #f8fafc; color: #64748b; font-style: italic; }
+  .op-modal-dot {
+    width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0;
+  }
+  .op-modal-dot.stato-libero    { background: #22c55e; }
+  .op-modal-dot.stato-assegnato { background: #eab308; }
+  .op-modal-dot.stato-ferie     { background: #ef4444; }
+  .op-modal-dot.stato-nessuno   { background: #cbd5e1; }
+  .op-modal-tag {
+    margin-left: auto; flex-shrink: 0;
+    font-size: 8px; font-weight: 700; padding: 2px 6px;
+    border-radius: 999px; letter-spacing: .4px;
+  }
+  .op-modal-tag.stato-libero    { background: #dcfce7; color: #166534; }
+  .op-modal-tag.stato-assegnato { background: #fef9c3; color: #854d0e; }
+  .op-modal-tag.stato-ferie     { background: #fee2e2; color: #991b1b; }
+  .op-modal-legend {
+    display: flex; gap: 12px; padding: 8px 14px;
+    border-top: 1px solid #e2e8f0;
+    background: #f8fafc; font-size: 9px; color: #64748b;
+  }
+  .op-modal-legend-item { display: flex; align-items: center; gap: 4px; }
+
+  /* Trigger bottone nella cella operatore */
+  .op-trigger-btn {
+    display: flex; align-items: center; justify-content: space-between;
+    width: 100%; padding: 4px 7px;
+    border-radius: 4px; border: 1px solid #cbd5e1;
+    font-size: 10px; font-weight: 600;
+    cursor: pointer; background: white; color: #475569;
+    transition: border-color .15s;
+    min-height: 26px; text-align: left;
+  }
+  .op-trigger-btn:hover { border-color: #0d9488; background: #f0fdfa; }
+  .op-trigger-btn.stato-libero    { background: #dcfce7; color: #166534; border-color: #86efac; }
+  .op-trigger-btn.stato-assegnato { background: #fef9c3; color: #854d0e; border-color: #fde047; }
+  .op-trigger-btn.stato-ferie     { background: #fee2e2; color: #991b1b; border-color: #fca5a5; }
+  .op-trigger-label { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .op-trigger-arrow { font-size: 8px; margin-left: 4px; opacity: .5; flex-shrink: 0; }
+
+  /* ===== RICERCA OPERATORE NELLA GRIGLIA ===== */
+  .pw-op-row.search-match {
+    background: #fefce8;
+    border-left: 3px solid #f59e0b;
+  }
+  .pw-op-row.search-match .pw-op-name {
+    background: #fef9c3;
+  }
+  .pw-op-row.search-dim {
+    opacity: 0.25;
+    pointer-events: none;
+  }
+  .pw-commessa-block.search-no-match > .pw-commessa-header {
+    opacity: 0.4;
+  }
+
+  /* ===== STATISTICHE SETTIMANA ===== */
+  .pw-stat-card {
+    background: white;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    padding: 10px 14px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    box-shadow: 0 1px 3px rgba(0,0,0,.04);
+  }
+  .pw-stat-icon { font-size: 22px; flex-shrink: 0; }
+  .pw-stat-num  { font-size: 24px; font-weight: 800; line-height: 1; font-variant-numeric: tabular-nums; }
+  .pw-stat-lbl  { font-size: 10px; color: #64748b; margin-top: 2px; }
+  .pw-stat-card.blu    { border-color: #93c5fd; background: #eff6ff; }
+  .pw-stat-card.blu    .pw-stat-num { color: #1d4ed8; }
+  .pw-stat-card.verde  { border-color: #86efac; background: #f0fdf4; }
+  .pw-stat-card.verde  .pw-stat-num { color: #16a34a; }
+  .pw-stat-card.rosso  { border-color: #fca5a5; background: #fff1f2; }
+  .pw-stat-card.rosso  .pw-stat-num { color: #dc2626; }
+  .pw-stat-card.giallo { border-color: #fde047; background: #fefce8; }
+  .pw-stat-card.giallo .pw-stat-num { color: #ca8a04; }
+  .pw-stat-card { cursor: pointer; transition: box-shadow .15s, transform .1s; }
+  .pw-stat-card:hover { box-shadow: 0 4px 12px rgba(0,0,0,0.10); transform: translateY(-1px); }
+  .psp-row { display:flex; align-items:flex-start; gap:8px; padding:6px 14px; font-size:12px; border-bottom:1px solid #f8fafc; }
+  .psp-row:last-child { border-bottom:none; }
+  .psp-nome { flex-shrink:0; font-weight:500; color:#334155; min-width:130px; }
+  .psp-tags { display:flex; flex-wrap:wrap; gap:4px; }
+  .psp-tag { padding:2px 8px; border-radius:9999px; font-size:10px; font-weight:600; max-width:170px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .psp-tag.blu    { background:#eff6ff; color:#1d4ed8; }
+  .psp-tag.verde  { background:#f0fdf4; color:#16a34a; }
+  .psp-tag.rosso  { background:#fff1f2; color:#dc2626; }
+  .psp-tag.giallo { background:#fefce8; color:#ca8a04; }
+  /* ---- Controllo Produzione ---- */
+  .cp-table { width:100%; border-collapse:collapse; font-size:11px; }
+  .cp-table th { background:#0f766e; color:#fff; font-weight:700; padding:5px 6px; text-align:left; white-space:normal; line-height:1.25; position:sticky; top:0; z-index:2; }
+  .cp-table td { padding:4px 6px; border-bottom:1px solid #f1f5f9; vertical-align:middle; white-space:nowrap; }
+  .cp-table tr:nth-child(even) td:not(.cp-td-edit) { background:#f8fafc; }
+  .cp-tr-commessa td { background:#e2e8f0 !important; font-weight:700; color:#334155; font-size:11px; text-transform:uppercase; letter-spacing:.04em; }
+  .cp-tr-squadra  td { background:#f1f5f9 !important; font-weight:600; color:#475569; font-size:11px; }
+  .cp-tr-day      td { background:#f8fafc !important; color:#64748b; font-size:11px; font-style:italic; }
+  .cp-day-sep     td { border-top:2px solid #94a3b8 !important; }
+  .cp-td-edit { background:#fefce8 !important; }
+  .cp-wrap { white-space:normal !important; max-width:100px; overflow-wrap:break-word; }
+  .cp-ellipsis { max-width:100px; overflow:hidden; text-overflow:ellipsis; }
+  .cp-input { border:none; background:transparent; width:100%; min-width:44px; font-size:11px; padding:2px 3px; border-radius:4px; outline:none; font-family:inherit; }
+  .cp-input:focus { background:#fef9c3; box-shadow:0 0 0 2px #ca8a04; }
+  .cp-input.note { min-width:90px; }
+  .cp-saving { color:#ca8a04; font-size:10px; margin-left:6px; }
+
+  /* ===== CELLE FERIE NELLA GRIGLIA ===== */
+  .pw-day-cell.in-ferie {
+    background: #fff1f2 !important;
+    position: relative;
+  }
+  .pw-day-cell.in-ferie::after {
+    content: '🏖';
+    position: absolute;
+    top: 2px; right: 3px;
+    font-size: 10px;
+    pointer-events: none;
+    opacity: .75;
+  }
+  .pw-day-cell.in-ferie .pw-cantiere-input,
+  .pw-day-cell.in-ferie .pw-attivita-input {
+    background: #fff1f2;
+    color: #9f1239;
+    font-style: italic;
+  }
+  .pw-day-cell.in-ferie .pw-cantiere-input::placeholder,
+  .pw-day-cell.in-ferie .pw-attivita-input::placeholder {
+    color: #fda4af;
+  }
+
+  /* ===== CELLE CON PRODUZIONE GIA' INSERITA (Controllo Produzione) ===== */
+  .pw-day-cell.produzione-ok {
+    background: #dcfce7 !important;
+    position: relative;
+  }
+  .pw-day-cell.produzione-ok::after {
+    content: '✓';
+    position: absolute;
+    top: 2px; right: 3px;
+    font-size: 10px;
+    font-weight: 700;
+    color: #16a34a;
+    pointer-events: none;
+    opacity: .85;
+  }
+
+  /* ===== MAPPA SQUADRE ===== */
+  .pw-map-day-btn {
+    padding: 4px 12px; border-radius: 6px; font-size: 12px; font-weight: 600;
+    border: 1px solid #e2e8f0; cursor: pointer; background: white; color: #475569;
+    transition: all .15s;
+  }
+  .pw-map-day-btn:hover { background: #f1f5f9; }
+  .pw-map-day-btn.active { background: #0d9488; color: white; border-color: #0d9488; }
+  .pw-map-day-btn.is-today { border-color: #f59e0b; }
+  .pw-map-day-btn.active.is-today { background: #f59e0b; border-color: #f59e0b; }
+  .pw-squad-card { padding: 8px; border-radius: 6px; border: 1px solid #e2e8f0; margin-bottom: 4px; }
+  .pw-squad-card.not-found { border-color: #fb923c; background: #fff7ed; }
+  .pw-squad-card .sq-name { font-size: 11px; font-weight: 700; color: #1e293b; }
+  .pw-squad-card .sq-commessa { font-size: 10px; color: #64748b; }
+  .pw-squad-card .sq-cantiere { font-size: 11px; color: #0d9488; font-weight: 600; margin-top: 2px; }
+  .pw-squad-card .sq-ops { font-size: 10px; color: #64748b; margin-top: 2px; }
+  .pw-squad-card .sq-move { font-size: 10px; color: #d97706; font-weight: 600; margin-top: 2px; }
+  .pw-squad-card .sq-same { font-size: 10px; color: #94a3b8; margin-top: 2px; }
+  .pw-squad-card .sq-warn { font-size: 10px; color: #ea580c; font-weight: 600; margin-top: 3px; }
+  .pw-fix-input {
+    margin-top: 3px; width: 100%;
+    border: 1px solid #fb923c; border-radius: 3px;
+    padding: 2px 6px; font-size: 10px; background: white;
+  }
+  .pw-fix-input:focus { outline: none; border-color: #0d9488; }
+
+</style>
+</head>
+<body class="min-h-screen">
+
+<!-- Top bar -->
+<header class="no-print sticky top-0 z-30" style="background:#0d0d0d;border-bottom:1px solid #222;">
+  <div class="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between">
+    <div class="flex items-center gap-3">
+      <div class="w-9 h-9 rounded-lg text-white flex items-center justify-center font-bold" style="background:#00b8b0;">S</div>
+      <div>
+        <h1 class="font-semibold text-white">Dashboard Staffing</h1>
+        <p class="text-xs" style="color:#9ca3af;">Pipeline commerciale &middot; gap risorse &middot; raccomandazioni</p>
+      </div>
+      <!-- Navigazione schermata principale -->
+      <div class="flex ml-4 border border-slate-200 rounded-lg overflow-hidden">
+        <button id="nav-dashboard" class="px-3 py-1.5 text-sm font-medium text-white" style="background:#00b8b0;">📊 Dashboard</button>
+        <button id="nav-weekly" class="px-3 py-1.5 text-sm font-medium hover:bg-white/10" style="color:#d1d5db;">📅 Pianificazione settimanale</button>
+      </div>
+    </div>
+    <div class="flex items-center gap-2">
+      <button id="btn-presentation" class="px-3 py-1.5 text-sm rounded hover:bg-white/10" style="border:1px solid #444;color:#d1d5db;visibility:visible;">📊 Modalità presentazione</button>
+      <div class="text-xs pl-2" style="border-left:1px solid #444;color:#9ca3af;">
+        <span class="font-medium" style="color:#00b8b0;">v18.58.0</span> · Michele Marchetti
+      </div>
+    </div>
+  </div>
+</header>
+
+<!-- Schermata di Login Supabase (overlay fullscreen) -->
+<div id="sb-login-screen" style="display:none;position:fixed;inset:0;z-index:99999;background:#f8fafc;align-items:center;justify-content:center;">
+  <div style="background:white;border-radius:16px;padding:36px 40px;width:380px;max-width:95vw;box-shadow:0 20px 60px rgba(0,0,0,.12);border:1px solid #e2e8f0;">
+    <div style="text-align:center;margin-bottom:24px;">
+      <div style="font-size:28px;margin-bottom:8px;">📋</div>
+      <div style="font-weight:700;font-size:18px;color:#0f172a;">Dashboard Staffing</div>
+      <div style="font-size:12px;color:#94a3b8;margin-top:4px;">Eagleprojects</div>
+    </div>
+    <div id="sb-login-error" style="display:none;background:#fef2f2;border:1px solid #fecaca;color:#dc2626;font-size:12px;padding:8px 12px;border-radius:6px;margin-bottom:12px;"></div>
+    <div style="margin-bottom:12px;">
+      <label style="display:block;font-size:11px;font-weight:600;color:#374151;margin-bottom:4px;">Email</label>
+      <input id="sb-email" type="email" placeholder="nome@eagleprojects.it"
+        style="width:100%;border:1px solid #e2e8f0;border-radius:8px;padding:9px 12px;font-size:13px;outline:none;box-sizing:border-box;"
+        onkeydown="if(event.key==='Enter')document.getElementById('sb-password').focus()">
+    </div>
+    <div style="margin-bottom:20px;">
+      <label style="display:block;font-size:11px;font-weight:600;color:#374151;margin-bottom:4px;">Password</label>
+      <input id="sb-password" type="password" placeholder="••••••••"
+        style="width:100%;border:1px solid #e2e8f0;border-radius:8px;padding:9px 12px;font-size:13px;outline:none;box-sizing:border-box;"
+        onkeydown="if(event.key==='Enter')sbLogin()">
+    </div>
+    <button onclick="sbLogin()" id="sb-login-btn"
+      style="width:100%;padding:10px;background:#0d9488;color:white;border:none;border-radius:8px;font-size:14px;font-weight:600;cursor:pointer;">
+      Accedi
+    </button>
+    <div style="margin-top:16px;padding-top:16px;border-top:1px solid #f1f5f9;">
+      <div style="font-size:10px;color:#94a3b8;text-align:center;">Non hai un account? Contatta l'amministratore.</div>
+    </div>
+  </div>
+</div>
+
+<!-- Banner Supabase Sync -->
+<div id="sb-banner" class="no-print px-4 py-2 flex items-center justify-between gap-3 text-sm" style="display:none;background:#111;border-bottom:1px solid #222;">
+  <div class="flex items-center gap-2">
+    <span id="sb-status-dot" style="width:8px;height:8px;border-radius:50%;background:#94a3b8;display:inline-block;flex-shrink:0;"></span>
+    <span id="sb-status-text" class="text-xs" style="color:#9ca3af;">Sync: in attesa…</span>
+    <span id="sb-last-sync" class="text-xs text-slate-400 hidden"></span>
+  </div>
+  <div class="flex items-center gap-2">
+    <span id="sb-user-email" class="text-xs text-slate-400"></span>
+    <button onclick="sbSync()" class="text-xs px-3 py-1 bg-teal-600 text-white rounded hover:bg-teal-700">
+      ↺ Sincronizza
+    </button>
+    <button id="sb-btn-log" onclick="sbShowLog()" class="text-xs px-2 py-1 text-slate-400 hover:text-slate-200" style="visibility:hidden;">
+      📋 Log attività
+    </button>
+    <button id="sb-btn-sessions" onclick="sbShowSessions()" class="text-xs px-2 py-1 text-slate-400 hover:text-slate-200" style="visibility:hidden;">
+      🟢 Sessioni attive
+    </button>
+    <button onclick="sbShowChangePwd()" class="text-xs px-2 py-1 text-slate-400 hover:text-slate-200">
+      🔑 Cambia password
+    </button>
+    <button onclick="sbLogout()" class="text-xs px-2 py-1 text-slate-400 hover:text-red-500">
+      Esci
+    </button>
+  </div>
+</div>
+
+<!-- Modal cambio password -->
+<div id="sb-pwd-modal" style="display:none;position:fixed;inset:0;z-index:99999;background:rgba(0,0,0,.5);align-items:center;justify-content:center;">
+  <div style="background:white;border-radius:16px;padding:32px 36px;width:360px;max-width:95vw;box-shadow:0 20px 60px rgba(0,0,0,.2);">
+    <div style="font-weight:700;font-size:16px;margin-bottom:4px;color:#0f172a;">🔑 Cambia password</div>
+    <div style="font-size:12px;color:#94a3b8;margin-bottom:20px;">Scegli una nuova password per il tuo account.</div>
+    <div id="sb-pwd-error" style="display:none;background:#fef2f2;border:1px solid #fecaca;color:#dc2626;font-size:12px;padding:8px 12px;border-radius:6px;margin-bottom:12px;"></div>
+    <div id="sb-pwd-success" style="display:none;background:#f0fdf4;border:1px solid #86efac;color:#16a34a;font-size:12px;padding:8px 12px;border-radius:6px;margin-bottom:12px;"></div>
+    <div style="margin-bottom:12px;">
+      <label style="display:block;font-size:11px;font-weight:600;color:#374151;margin-bottom:4px;">Nuova password</label>
+      <input id="sb-pwd-new" type="password" placeholder="Minimo 6 caratteri"
+        style="width:100%;border:1px solid #dde3ea;border-radius:8px;padding:9px 12px;font-size:13px;outline:none;box-sizing:border-box;"
+        onkeydown="if(event.key==='Enter')document.getElementById('sb-pwd-confirm').focus()">
+    </div>
+    <div style="margin-bottom:20px;">
+      <label style="display:block;font-size:11px;font-weight:600;color:#374151;margin-bottom:4px;">Conferma password</label>
+      <input id="sb-pwd-confirm" type="password" placeholder="Ripeti la password"
+        style="width:100%;border:1px solid #dde3ea;border-radius:8px;padding:9px 12px;font-size:13px;outline:none;box-sizing:border-box;"
+        onkeydown="if(event.key==='Enter')sbChangePwd()">
+    </div>
+    <div style="display:flex;gap:8px;justify-content:flex-end;">
+      <button onclick="sbClosePwdModal()" style="padding:8px 16px;font-size:13px;border:1px solid #e2e8f0;border-radius:8px;background:white;cursor:pointer;color:#475569;">Annulla</button>
+      <button id="sb-pwd-btn" onclick="sbChangePwd()" style="padding:8px 18px;font-size:13px;background:#00b8b0;color:white;border:none;border-radius:8px;cursor:pointer;font-weight:600;">Salva</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Log Attività (solo admin) -->
+<div id="sb-log-modal" style="display:none;position:fixed;inset:0;z-index:99999;background:rgba(0,0,0,.5);align-items:center;justify-content:center;">
+  <div style="background:white;border-radius:16px;padding:28px 32px;width:780px;max-width:96vw;max-height:85vh;box-shadow:0 20px 60px rgba(0,0,0,.2);display:flex;flex-direction:column;">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
+      <div>
+        <div style="font-weight:700;font-size:16px;color:#0f172a;">📋 Log attività</div>
+        <div style="font-size:11px;color:#94a3b8;margin-top:2px;">Ultime modifiche effettuate dagli utenti</div>
+      </div>
+      <div style="display:flex;gap:8px;align-items:center;">
+        <button onclick="sbLoadLog()" style="padding:5px 12px;font-size:12px;background:#00b8b0;color:white;border:none;border-radius:6px;cursor:pointer;">↺ Aggiorna</button>
+        <button onclick="sbCloseLog()" style="padding:5px 12px;font-size:12px;border:1px solid #e2e8f0;border-radius:6px;background:white;cursor:pointer;color:#475569;">Chiudi</button>
+      </div>
+    </div>
+    <div style="overflow-y:auto;flex:1;">
+      <table style="width:100%;border-collapse:collapse;font-size:12px;">
+        <thead>
+          <tr style="background:#f8fafc;position:sticky;top:0;">
+            <th style="text-align:left;padding:8px 12px;border-bottom:1px solid #e2e8f0;color:#64748b;font-weight:600;white-space:nowrap;">Data/Ora</th>
+            <th style="text-align:left;padding:8px 12px;border-bottom:1px solid #e2e8f0;color:#64748b;font-weight:600;">Utente</th>
+            <th style="text-align:left;padding:8px 12px;border-bottom:1px solid #e2e8f0;color:#64748b;font-weight:600;">Azione</th>
+            <th style="text-align:left;padding:8px 12px;border-bottom:1px solid #e2e8f0;color:#64748b;font-weight:600;">Dettagli</th>
+          </tr>
+        </thead>
+        <tbody id="sb-log-tbody">
+          <tr><td colspan="4" style="padding:20px;text-align:center;color:#94a3b8;">Caricamento…</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<div id="sb-sessions-modal" style="display:none;position:fixed;inset:0;z-index:99999;background:rgba(0,0,0,.5);align-items:center;justify-content:center;">
+  <div style="background:white;border-radius:16px;padding:28px 32px;width:640px;max-width:96vw;max-height:85vh;box-shadow:0 20px 60px rgba(0,0,0,.2);display:flex;flex-direction:column;">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
+      <div>
+        <div style="font-weight:700;font-size:16px;color:#0f172a;">🟢 Sessioni attive</div>
+        <div style="font-size:11px;color:#94a3b8;margin-top:2px;">Utenti collegati alla dashboard in questo momento</div>
+      </div>
+      <div style="display:flex;gap:8px;align-items:center;">
+        <button onclick="sbLoadSessions()" style="padding:5px 12px;font-size:12px;background:#00b8b0;color:white;border:none;border-radius:6px;cursor:pointer;">↺ Aggiorna</button>
+        <button onclick="sbCloseSessions()" style="padding:5px 12px;font-size:12px;border:1px solid #e2e8f0;border-radius:6px;background:white;cursor:pointer;color:#475569;">Chiudi</button>
+      </div>
+    </div>
+    <div style="overflow-y:auto;flex:1;">
+      <table style="width:100%;border-collapse:collapse;font-size:12px;">
+        <thead>
+          <tr style="background:#f8fafc;position:sticky;top:0;">
+            <th style="text-align:left;padding:8px 12px;border-bottom:1px solid #e2e8f0;color:#64748b;font-weight:600;width:18px;"></th>
+            <th style="text-align:left;padding:8px 12px;border-bottom:1px solid #e2e8f0;color:#64748b;font-weight:600;">Utente</th>
+            <th style="text-align:left;padding:8px 12px;border-bottom:1px solid #e2e8f0;color:#64748b;font-weight:600;white-space:nowrap;">Login</th>
+            <th style="text-align:left;padding:8px 12px;border-bottom:1px solid #e2e8f0;color:#64748b;font-weight:600;white-space:nowrap;">Ultima attività</th>
+          </tr>
+        </thead>
+        <tbody id="sb-sessions-tbody">
+          <tr><td colspan="4" style="padding:20px;text-align:center;color:#94a3b8;">Caricamento…</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<main class="max-w-7xl mx-auto px-4 py-6 space-y-6">
+
+  <!-- Selettore anno Dashboard -->
+  <section class="flex items-center justify-end -mb-2">
+    <div class="flex items-center gap-2 bg-white border border-slate-200 rounded-lg px-3 py-1.5 shadow-sm">
+      <span class="text-xs font-semibold text-slate-500 uppercase tracking-wide">Anno pipeline</span>
+      <select id="anno-selector" class="text-sm border border-slate-300 rounded px-2 py-0.5 font-semibold text-slate-700 focus:outline-none focus:border-teal-400 cursor-pointer bg-slate-50"></select>
+    </div>
+  </section>
+
+  <!-- 1. KPI -->
+  <section>
+    <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-3" id="kpi-grid"></div>
+  </section>
+
+  <div id="alert-box"></div>
+
+  <!-- Vista mensile commesse -->
+  <section class="bg-white rounded-lg border border-slate-200 p-5">
+    <div class="flex items-center justify-between mb-3 flex-wrap gap-2">
+      <div>
+        <h2 class="font-semibold text-slate-900">Vista mensile commesse</h2>
+        <p class="text-xs text-slate-500">Gg-uomo per commessa nei 12 mesi. Click su una cella per vedere chi è allocato. Mesi storici in grigio.</p>
+      </div>
+      <div class="flex items-center gap-3 text-xs flex-wrap">
+        <label class="flex items-center gap-1 cursor-pointer text-slate-600"><input type="checkbox" id="gantt-pipeline" checked> Mostra pipeline</label>
+        <label class="flex items-center gap-1 cursor-pointer text-slate-600"><input type="checkbox" id="gantt-historic"> Includi storici</label>
+        <select id="gantt-sort" class="text-xs border border-slate-300 rounded px-1 py-0.5">
+          <option value="carico">Per carico</option>
+          <option value="alfa">Alfabetico</option>
+          <option value="inizio">Per inizio</option>
+        </select>
+      </div>
+    </div>
+    <div id="gantt-container" class="overflow-x-auto"></div>
+  </section>
+
+  <!-- 3. Vista commesse <-> operatori -->
+  <section class="no-present">
+    <div class="grid lg:grid-cols-2 gap-4">
+
+      <!-- POOL OPERATORI -->
+      <div class="bg-white rounded-lg border border-slate-200">
+        <div class="p-4 border-b border-slate-200">
+          <!-- Tab pool / vista operatore -->
+          <div class="flex border-b border-slate-200 mb-3 -mx-4 px-4">
+            <button id="op-tab-pool" class="tab-btn active text-sm">Pool operatori <span id="op-count" class="text-slate-400 text-xs font-normal"></span></button>
+            <button id="op-tab-email" class="tab-btn text-sm">✉ Email/operatore</button>
+            <button id="op-tab-vista" class="tab-btn text-sm hidden">📋 <span id="op-tab-vista-nome">—</span></button>
+          </div>
+          <!-- Filtri pool (nascosti nella vista operatore) -->
+          <div id="op-pool-filters" class="space-y-2">
+            <div class="flex items-center justify-between">
+              <input id="op-search" type="text" placeholder="Cerca operatore…" class="flex-1 mr-2 px-2 py-1.5 text-sm border border-slate-300 rounded">
+              <button id="btn-add-op" class="text-xs px-2 py-1 bg-teal-50 text-teal-700 rounded border border-teal-200 hover:bg-teal-100 whitespace-nowrap">+ Nuovo</button>
+            </div>
+            <div>
+              <div class="text-[10px] text-slate-500 uppercase tracking-wider font-medium mb-1">Skill</div>
+              <div class="flex flex-wrap gap-1" id="skill-filters"></div>
+            </div>
+            <div>
+              <div class="text-[10px] text-slate-500 uppercase tracking-wider font-medium mb-1">Attestati</div>
+              <details class="text-xs">
+                <summary class="cursor-pointer text-slate-600 hover:text-slate-900 px-2 py-1 bg-slate-50 rounded border border-slate-200"><span id="att-filter-summary">Tutti</span> ▾</summary>
+                <div class="mt-1 p-2 bg-slate-50 border border-slate-200 rounded max-h-40 overflow-y-auto" id="att-filters"></div>
+              </details>
+            </div>
+            <label class="flex items-center gap-2 text-xs text-slate-600">
+              <input type="checkbox" id="filter-low-sat"> Solo carico &lt;50% nel prossimo mese
+            </label>
+          </div>
+        </div>
+        <div id="op-coerenza-banner" class="hidden"></div>
+        <div class="p-3 scrollbox space-y-2" id="op-list"></div>
+        <div class="p-3 scrollbox hidden" id="op-email-container"></div>
+        <div class="p-3 scrollbox hidden" id="op-vista-container"></div>
+      </div>
+
+      <!-- COMMESSE -->
+      <div class="bg-white rounded-lg border border-slate-200">
+        <div class="border-b border-slate-200 px-4 pt-3">
+          <div class="flex items-center justify-between">
+            <div class="flex">
+              <button class="tab-btn active" data-tab="pipeline">In partenza <span id="count-pipeline" class="ml-1 text-xs"></span></button>
+              <button class="tab-btn" data-tab="attive">Attive <span id="count-attive" class="ml-1 text-xs"></span></button>
+            </div>
+            <button id="btn-add-commessa" class="text-xs px-2 py-1 bg-teal-50 text-teal-700 rounded border border-teal-200 hover:bg-teal-100">+ Nuova commessa</button>
+          </div>
+          <div class="pb-3 mt-2 flex items-center gap-2">
+            <input id="commesse-search" type="text" placeholder="Cerca commessa per cliente o progetto…" class="flex-1 px-2 py-1.5 text-sm border border-slate-300 rounded">
+            <button id="btn-expand-all-commesse" class="text-[11px] px-2 py-1.5 border border-slate-300 rounded text-slate-600 hover:bg-slate-50 whitespace-nowrap" title="Espandi tutte le commesse">⇕ Espandi tutte</button>
+            <button id="btn-collapse-all-commesse" class="text-[11px] px-2 py-1.5 border border-slate-300 rounded text-slate-600 hover:bg-slate-50 whitespace-nowrap" title="Comprimi tutte le commesse">⇕ Comprimi tutte</button>
+          </div>
+        </div>
+        <div class="p-3 scrollbox space-y-3" id="commesse-list"></div>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- 4. Suggerimenti & Gap -->
+  <section class="bg-white rounded-lg border border-slate-200 p-5">
+    <h2 class="font-semibold text-slate-900 mb-1">Gap risorse &amp; raccomandazioni assunzione</h2>
+    <p class="text-xs text-slate-500 mb-4">Analisi automatica: per ogni commessa in pipeline confronta fabbisogno vs operatori interni disponibili. Le raccomandazioni di assunzione sono aggregate per skill mancante.</p>
+    <div id="gap-detail" class="space-y-2 mb-6"></div>
+    <h3 class="font-semibold text-slate-900 mb-2 text-sm">Raccomandazioni di assunzione (aggregate per skill)</h3>
+    <div id="hire-recs" class="space-y-2"></div>
+  </section>
+
+  <!-- 5. Riconciliazione nomi (collassato, solo admin) -->
+  <section id="section-riconciliazione" class="bg-white rounded-lg border border-slate-200 p-4 no-present" style="display:none;">
+    <details>
+      <summary class="font-semibold text-slate-900">Riconciliazione nomi operatori (debug)</summary>
+      <div class="mt-3 overflow-x-auto">
+        <table class="w-full text-xs">
+          <thead class="bg-slate-50">
+            <tr><th class="text-left p-2">Nome breve (OPERATORI)</th><th class="text-left p-2">Nome esteso (Staffing)</th><th class="text-left p-2">Stato</th></tr>
+          </thead>
+          <tbody id="recon-tbody"></tbody>
+        </table>
+      </div>
+    </details>
+  </section>
+
+</main>
+
+<!-- ===================== PIANIFICAZIONE SETTIMANALE ===================== -->
+<div id="screen-weekly" class="hidden max-w-screen-2xl mx-auto px-4 py-6">
+
+  <!-- Toolbar navigazione settimana -->
+  <div class="bg-white border border-slate-200 rounded-lg p-4 mb-4 flex items-center justify-between flex-wrap gap-3 no-print">
+    <div class="flex items-center gap-2">
+      <button id="pw-prev" class="px-3 py-1.5 text-sm border border-slate-300 rounded hover:bg-slate-50">← Prec.</button>
+      <div class="flex items-center gap-1 border border-slate-200 rounded px-3 py-1.5 bg-slate-50">
+        <span class="text-xs text-slate-500 font-medium">Anno</span>
+        <select id="pw-anno" class="text-sm border-none bg-transparent font-semibold text-slate-700 focus:outline-none cursor-pointer ml-1">
+          <option value="2025">2025</option>
+          <option value="2026">2026</option>
+          <option value="2027">2027</option>
+          <option value="2028">2028</option>
+        </select>
+        <span class="text-xs text-slate-500 font-medium ml-2">Week</span>
+        <select id="pw-week" class="text-sm border-none bg-transparent font-semibold text-slate-700 focus:outline-none cursor-pointer ml-1 w-16"></select>
+      </div>
+      <button id="pw-next" class="px-3 py-1.5 text-sm border border-slate-300 rounded hover:bg-slate-50">Succ. →</button>
+      <button id="pw-today" class="px-3 py-1.5 text-sm bg-teal-50 text-teal-700 border border-teal-200 rounded hover:bg-teal-100">Oggi</button>
+    </div>
+    <div id="pw-header-dates" class="text-sm font-semibold text-slate-700"></div>
+    <div class="flex items-center gap-2">
+      <button id="pw-add-commessa" class="px-3 py-1.5 text-sm bg-teal-600 text-white rounded hover:bg-teal-700 no-print">+ Aggiungi commessa</button>
+      <button id="pw-gen-mail" class="px-3 py-1.5 text-sm bg-indigo-600 text-white rounded hover:bg-indigo-700 no-print">📧 Genera mail</button>
+      <button id="pw-print" class="px-3 py-1.5 text-sm border border-slate-300 rounded hover:bg-slate-50 no-print">🖨 Stampa</button>
+    </div>
+  </div>
+
+  <!-- Banner statistiche settimana -->
+  <div id="pw-stats-banner" class="grid grid-cols-4 gap-3 mb-4 no-print"></div>
+
+  <!-- Tab Griglia / Ferie / Mappa -->
+  <div class="flex border-b-2 border-slate-200 mb-4 no-print bg-white rounded-t-lg px-2">
+    <button id="pw-tab-griglia" class="tab-btn active text-sm py-3">📋 Griglia settimanale</button>
+    <button id="pw-tab-ferie" class="tab-btn text-sm py-3">🏖 Ferie / Permessi</button>
+    <button id="pw-tab-mappa" class="tab-btn text-sm py-3">🗺 Mappa squadre</button>
+    <button id="pw-tab-controllo" class="tab-btn text-sm py-3">📊 Controllo produzione</button>
+    <button id="pw-tab-doppia" class="tab-btn text-sm py-3">🔁 Doppia Week</button>
+  </div>
+
+  <!-- Vista Griglia -->
+  <div id="pw-view-griglia">
+    <!-- Barra ricerca operatore -->
+    <div class="bg-white border border-slate-200 rounded-lg px-4 py-3 mb-3 no-print flex items-center gap-3">
+      <div class="relative flex-1 max-w-sm">
+        <span class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm pointer-events-none">🔍</span>
+        <input id="pw-search-op" type="text"
+          placeholder="Cerca operatore nella griglia…"
+          class="w-full pl-8 pr-8 py-1.5 text-sm border border-slate-200 rounded-lg focus:outline-none focus:border-teal-400 bg-slate-50">
+        <button id="pw-search-op-clear"
+          class="absolute right-2 top-1/2 -translate-y-1/2 text-slate-300 hover:text-slate-500 text-lg leading-none hidden">×</button>
+      </div>
+      <div id="pw-search-op-info" class="text-xs text-slate-400 hidden"></div>
+      <button id="pw-strumenti-refresh" class="px-3 py-1.5 text-sm border border-amber-300 bg-amber-50 text-amber-800 rounded hover:bg-amber-100 no-print whitespace-nowrap" title="Carica/aggiorna l'elenco strumenti dal progetto Jira GAR">🔧 Aggiorna strumenti</button>
+      <span id="pw-strumenti-status" class="text-xs text-slate-500 no-print"></span>
+      <button id="pw-collapse-all" class="ml-auto px-3 py-1.5 text-sm border border-slate-300 rounded hover:bg-slate-50 no-print whitespace-nowrap" title="Collassa / Espandi tutto" onclick="pwCollapseAllToggle()">≡ Collassa</button>
+    </div>
+    <div id="pw-grid" class="space-y-4"></div>
+  </div>
+
+  <!-- Vista Ferie -->
+  <div id="pw-view-ferie" class="hidden">
+    <div class="bg-white border border-slate-200 rounded-lg overflow-hidden shadow-sm">
+      <div class="bg-rose-600 text-white px-4 py-3 flex items-center justify-between">
+        <div>
+          <span class="font-semibold">🏖 Ferie &amp; Permessi</span>
+          <span class="ml-3 text-rose-200 text-sm" id="pw-ferie-week-label"></span>
+        </div>
+        <div class="text-xs text-rose-200">Spunta i giorni di assenza per ogni operatore</div>
+      </div>
+      <div class="overflow-x-auto">
+        <div id="pw-ferie-grid"></div>
+      </div>
+    </div>
+    <!-- Riepilogo disponibili -->
+    <div class="mt-4 bg-white border border-slate-200 rounded-lg p-4 shadow-sm">
+      <div class="text-xs font-semibold text-slate-700 mb-3 uppercase tracking-wide">Operatori disponibili per giorno</div>
+      <div id="pw-ferie-summary" class="overflow-x-auto"></div>
+    </div>
+  </div>
+
+  <!-- Vista Doppia Week -->
+  <div id="pw-view-doppia" class="hidden">
+    <div class="bg-white border border-slate-200 rounded-lg overflow-hidden shadow-sm">
+      <div class="bg-indigo-600 text-white px-4 py-3 flex items-center justify-between">
+        <div class="flex items-center gap-3">
+          <button class="px-2 py-0.5 rounded hover:bg-indigo-500" title="Mese precedente" onclick="pwDwMonthNav(-1)">‹</button>
+          <span class="font-semibold" id="pw-dw-month-label">—</span>
+          <button class="px-2 py-0.5 rounded hover:bg-indigo-500" title="Mese successivo" onclick="pwDwMonthNav(1)">›</button>
+        </div>
+        <div class="flex items-center gap-3">
+          <span class="text-xs text-indigo-200 hidden md:inline">Clicca una cella per assegnare una doppia week (2 settimane di fila)</span>
+          <button onclick="pwDoppiaWeekExportPDF()" class="text-xs font-semibold bg-white text-indigo-700 rounded px-3 py-1 hover:bg-indigo-50 whitespace-nowrap">📄 Esporta PDF</button>
+        </div>
+      </div>
+      <div class="overflow-auto" style="max-height:70vh;" id="pw-dw-scroll">
+        <div id="pw-dw-grid"></div>
+      </div>
+    </div>
+    <div class="mt-3 flex flex-wrap gap-4 text-xs text-slate-600 no-print">
+      <span><span style="display:inline-block;width:12px;height:12px;background:#6366f1;border-radius:2px;vertical-align:middle;"></span> Doppia week</span>
+      <span><span style="display:inline-block;width:12px;height:12px;background:#fca5a5;border-radius:2px;vertical-align:middle;"></span> In ferie (non assegnabile)</span>
+      <span>⚠ Doppia week di fila (sconsigliato)</span>
+      <span>↩ gio · riposo ven = rientro e riposo compensativo</span>
+    </div>
+  </div>
+
+  <!-- Vista Mappa -->
+  <div id="pw-view-mappa" class="hidden">
+    <div class="bg-white border border-slate-200 rounded-lg p-3 mb-4 no-print">
+      <div class="flex items-center gap-2 flex-wrap justify-between">
+        <div class="flex items-center gap-2 flex-wrap">
+          <span class="text-xs font-semibold text-slate-600">Giorno:</span>
+          <div id="pw-map-days" class="flex gap-1 flex-wrap"></div>
+          <span class="text-xs text-slate-400 ml-2" id="pw-map-geocoding-status"></span>
+        </div>
+        <span class="text-xs font-semibold text-slate-500" id="pw-map-week-label"></span>
+      </div>
+    </div>
+    <div class="grid grid-cols-1 lg:grid-cols-4 gap-4">
+      <div class="lg:col-span-3">
+        <div class="bg-white border border-slate-200 rounded-lg overflow-hidden shadow-sm">
+          <div id="pw-map" style="height:520px;width:100%;"></div>
+        </div>
+      </div>
+      <div class="space-y-3">
+        <div class="bg-white border border-slate-200 rounded-lg p-3 shadow-sm">
+          <div class="text-xs font-semibold text-slate-700 mb-2 uppercase tracking-wide">Legenda</div>
+          <div id="pw-map-legend" class="space-y-1 text-xs"></div>
+        </div>
+        <div class="bg-white border border-slate-200 rounded-lg p-3 shadow-sm">
+          <div class="text-xs font-semibold text-slate-700 mb-2 uppercase tracking-wide">Squadre & spostamenti</div>
+          <div id="pw-map-summary" class="space-y-2"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- CONTROLLO PRODUZIONE -->
+  <div id="pw-view-controllo" class="hidden">
+    <div class="flex items-center justify-between mb-3 no-print">
+      <div class="flex items-center gap-2">
+        <span class="text-xs font-semibold text-slate-600">Controllo produzione settimanale</span>
+        <span class="text-xs text-slate-400" id="cp-status"></span>
+      </div>
+      <div class="flex items-center gap-2">
+        <button id="cp-collapse-all" class="px-3 py-1.5 text-sm border border-slate-300 rounded hover:bg-slate-50 no-print" onclick="cpCollapseAllToggle()">≡ Collassa</button>
+        <button id="cp-sync-jira" onclick="pwControlloSyncJira()" class="px-3 py-1.5 text-sm font-medium bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 flex items-center gap-1.5 no-print">
+          🔄 Sincronizza da Jira
+        </button>
+        <button onclick="pwControlloExport()" class="px-3 py-1.5 text-sm font-medium bg-teal-600 text-white rounded-lg hover:bg-teal-700 flex items-center gap-1.5 no-print">
+          ⬇ Esporta Excel
+        </button>
+        <button onclick="pwControlloExportPDF()" class="px-3 py-1.5 text-sm font-medium bg-rose-600 text-white rounded-lg hover:bg-rose-700 flex items-center gap-1.5 no-print">
+          📄 Report PDF
+        </button>
+      </div>
+    </div>
+    <div class="bg-white border border-slate-200 rounded-lg overflow-auto shadow-sm">
+      <div id="cp-table-container" style="max-height:600px;overflow-y:auto;">
+        <div class="text-center text-slate-400 py-10 text-sm">Seleziona la tab per caricare i dati.</div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- MODALE generica -->
+<div id="modal-root"></div>
+
+<script>

@@ -17,6 +17,12 @@ import sys
 import re
 import os
 import subprocess
+
+# Su Windows la console usa spesso una code page non-UTF8 (cp1252): i print
+# con emoji (❌, ⚠) altrimenti crashano con UnicodeEncodeError, perdendo il
+# messaggio d'errore proprio quando serve leggerlo.
+if hasattr(sys.stdout, 'reconfigure'):
+    sys.stdout.reconfigure(encoding='utf-8', errors='replace')
 import tempfile
 
 def main():
@@ -42,6 +48,28 @@ def main():
     errors = []
     warnings = []
     print(f"== Smoke test su {path} ({len(html)} caratteri) ==\n")
+
+    # ---- 0. index.html allineato a src/ (se src/ esiste) ----
+    # index.html resta l'artefatto deployato/testato; src/js/*.js è la sorgente
+    # editabile. Se divergono (modifica diretta a index.html, o src/ toccato
+    # senza rilanciare build.py) è un errore bloccante: si rischia di deployare
+    # codice diverso da quello nei sorgenti, o viceversa perdere una modifica
+    # al prossimo rebuild.
+    src_dir = os.path.join(os.path.dirname(os.path.abspath(path)), 'src')
+    if os.path.isdir(src_dir):
+        sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+        import build as _build
+        with open(path, 'rb') as f:
+            actual_bytes = f.read()
+        expected_bytes = _build.build_bytes()
+        if actual_bytes != expected_bytes:
+            errors.append(
+                f"{path} NON è allineato a src/js/*.js — rilanciare "
+                f"`python3 scripts/build.py` prima di committare "
+                f"({len(actual_bytes)} byte attuali vs {len(expected_bytes)} attesi)."
+            )
+        else:
+            print("[build]    index.html allineato a src/js/*.js: OK")
 
     # ---- 1. Versione nell'header ----
     vers = re.findall(r'>v(\d+\.\d+\.\d+)<', html)

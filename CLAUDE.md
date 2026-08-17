@@ -4,34 +4,52 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## What this is
 
-A single-file web app (`index.html`, ~470KB, all HTML/CSS/JS inline) for staffing and commercial-pipeline management at Eagleprojects (rilievi/surveying department). Hosted on GitHub Pages, backed by Supabase (Postgres + Auth + Realtime + Edge Functions). No build step, no bundler, no package.json — the repo *is* the deployed artifact.
+A web app (`index.html`, ~475KB, all HTML/CSS/JS inline) for staffing and commercial-pipeline management at Eagleprojects (rilievi/surveying department). Hosted on GitHub Pages, backed by Supabase (Postgres + Auth + Realtime + Edge Functions). No bundler, no package.json — `index.html` is still the deployed artifact, but it is now a **generated file**, not the source of truth (see "Source layout" below).
 
 Live app: https://mmarchetti95.github.io/Gestione-Staffing/
 
-## Commands
+## Source layout (since the `refactor/split-files` split)
 
-There is no build/test/lint toolchain (no npm scripts). The only automated check is the pre-deploy smoke test:
+`index.html` used to be hand-edited directly. It is now assembled by `scripts/build.py` from:
+- `src/head.html` — everything from `<!DOCTYPE html>` up to and including the `<script>` opening tag (head, CSS, body markup, CDN `<script src>` tags).
+- `src/js/*.js` — the app's JS, cut at the pre-existing `/* ===== ... ===== */` section banners, one file per section/group of sections. **Order matters**: `scripts/build.py` concatenates them in the exact order listed in its `JS_FILES` array, which reproduces the original top-to-bottom order of the single `<script>` block — this preserves the relative registration order of the two `DOMContentLoaded` listeners (dashboard init, then weekly-planning init).
+- `src/tail.html` — `</script>` through `</html>`.
+
+**Edit `src/js/*.js`, never `index.html` directly.** After editing, regenerate with:
 
 ```bash
+python3 scripts/build.py
+```
+
+`scripts/smoke_test.py` now checks (as its first, blocking check) that `index.html` is byte-identical to what `scripts/build.py` would produce from current `src/` — if you edit `src/` and forget to rebuild, or hand-edit `index.html` and let it drift from `src/`, the smoke test fails with an explicit message telling you to rebuild.
+
+## Commands
+
+There is no test/lint toolchain beyond the smoke test (no npm scripts, no CI). Before every commit that touches `index.html` or `src/`:
+
+```bash
+python3 scripts/build.py                    # regenerate index.html from src/
 python3 scripts/smoke_test.py index.html [--expect-version X.Y.Z] [--prev-version X.Y.Z]
 ```
 
-It requires `node` on PATH (JS syntax check via `node --check`) and optionally `eslint@8` (`npm i eslint@8`) for a `no-undef` pass. It checks:
+The smoke test requires `node` on PATH (JS syntax check via `node --check`) and optionally `eslint@8` (`npm i eslint@8`) for a `no-undef` pass. It checks:
+- `index.html` is in sync with `src/` (see above)
 - version string bump in the header (`>vX.Y.Z<`)
 - inline `<script>` blocks parse as valid JS
 - no native `alert()`/`confirm()`/`prompt()` (must use `showAlertModal`/`showConfirmAsync` custom modals — `window.confirm()` doesn't work when the app runs in an iframe)
 - no duplicate top-level `function` names
 - no unescaped dynamic strings inside `onclick="...'${expr}'..."` (must go through `jsAttr()`/`esc()`)
 
-Exit code 0 = pass, 1 = fail. Always run this before considering an `index.html` change done.
+Exit code 0 = pass, 1 = fail. Always run this before considering a change done.
 
 ## Deploy workflow
 
 1. Copy current `index.html` into `backups/index_vX.Y.Z.html` (one backup per released version — see `backups/`).
-2. Make the change in `index.html`, bump the version string in the header.
-3. Run the smoke test above.
-4. Commit/push `index.html` to `main` — GitHub Pages deploys automatically, no CI.
-5. Add an entry to the top of `README.md`'s changelog (Italian, terse, describes user-visible behavior and any required Supabase schema/Edge Function change).
+2. Make the change in the relevant `src/js/*.js` file(s), bump the version string in `src/head.html`.
+3. Run `python3 scripts/build.py` to regenerate `index.html`.
+4. Run the smoke test above.
+5. Commit/push both the changed `src/` file(s) and the regenerated `index.html` to `main` — GitHub Pages deploys automatically, no CI. Never commit an `index.html` that doesn't match a `python3 scripts/build.py` run against the `src/` in the same commit.
+6. Add an entry to the top of `README.md`'s changelog (Italian, terse, describes user-visible behavior and any required Supabase schema/Edge Function change).
 
 There's no local dev server needed — open `index.html` directly in a browser, or push and reload the Pages URL. Supabase URL/anon key are hardcoded in `index.html` (`SB_URL`/`SB_ANON_KEY`, around line 1305); this repo is private specifically because of that.
 
