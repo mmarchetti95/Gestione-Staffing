@@ -1,3 +1,7 @@
+## v18.58.0
+- chore: rimossi i CDN di `sortablejs` e `chart.js` dall'header — mai referenziati nel codice (il drag&drop usa l'HTML5 nativo `draggable`, nessun grafico Chart.js in uso). ~250 KB in meno scaricati ad ogni apertura, nessun cambio di comportamento.
+- chore: rimossa la funzione `salvaHTML()` (export "snapshot" dell'app come file HTML autonomo) — dead code, non richiamata da nessun pulsante/handler da quando i dati vivono solo su Supabase (v18.17+).
+
 ## v18.57.0
 - feat: "Genera Mail" — il riferimento alla doppia week non compare più solo nella sezione riepilogativa in fondo alla mail ("🔁 DOPPIA WEEK"), ma anche accanto al nome dell'operatore nella riga "👷" della squadra a cui è assegnato quella settimana, con l'indicazione se è la 1ª settimana (fuori tutta la settimana) o la 2ª (rientro giovedì).
 

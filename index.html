@@ -5,8 +5,6 @@
 <title>Dashboard Staffing — Pipeline Commerciale</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <script src="https://cdn.tailwindcss.com"></script>
-<script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.2/Sortable.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.2/dist/jspdf.umd.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/jspdf-autotable@3.8.4/dist/jspdf.plugin.autotable.min.js"></script>
@@ -650,7 +648,7 @@
     <div class="flex items-center gap-2">
       <button id="btn-presentation" class="px-3 py-1.5 text-sm rounded hover:bg-white/10" style="border:1px solid #444;color:#d1d5db;visibility:visible;">📊 Modalità presentazione</button>
       <div class="text-xs pl-2" style="border-left:1px solid #444;color:#9ca3af;">
-        <span class="font-medium" style="color:#00b8b0;">v18.57.0</span> · Michele Marchetti
+        <span class="font-medium" style="color:#00b8b0;">v18.58.0</span> · Michele Marchetti
       </div>
     </div>
   </div>
@@ -5587,50 +5585,6 @@ function apriDettaglioMeseCommessa(ev, commessaEnc, meseIdx) {
       </div>
     </div>`;
   root.querySelector('.modal-backdrop').addEventListener('click', e => { if (e.target.classList.contains('modal-backdrop')) closeModal(); });
-}
-
-/* ===================== SALVA HTML ===================== */
-function salvaHTML() {
-  const snap = {
-    pipeline:             JSON.parse(JSON.stringify(state.pipeline)),
-    operatori:            JSON.parse(JSON.stringify(state.operatori)),
-    staffing:             JSON.parse(JSON.stringify(state.staffing)),
-    commesse_attive:      JSON.parse(JSON.stringify(state.commesse_attive)),
-    giorni_lavorativi:    INITIAL_DATA.giorni_lavorativi,
-    saturazione_baseline: INITIAL_DATA.saturazione_baseline,
-    riconciliazione:      INITIAL_DATA.riconciliazione || [],
-    attestati_disponibili: ATTESTATI,
-    _assegnazioni:        JSON.parse(JSON.stringify(state.assegnazioni)),
-    _chiuse:              JSON.parse(JSON.stringify(state.commesse_chiuse)),
-    _meta:                JSON.parse(JSON.stringify(state.commesse_attive_meta)),
-  };
-  const dataStr = 'const INITIAL_DATA = ' + JSON.stringify(snap) + ';';
-  // Prende l'HTML corrente dal DOM
-  let html = '<!DOCTYPE html>\n' + document.documentElement.outerHTML;
-  // Sostituisce il blocco INITIAL_DATA con i dati correnti
-  html = html.replace(/const INITIAL_DATA = \{[\s\S]*?\};(?=\s*\n\s*const SKILLS)/, dataStr);
-  // Aggiorna l'anno nel file salvato
-  html = html.replace(
-    /let ANNO = parseInt\(localStorage\.getItem\('dashboard_anno'\) \|\| '\d+'\);/,
-    "let ANNO = parseInt(localStorage.getItem('dashboard_anno') || '" + ANNO + "');"
-  );
-  const ts = new Date();
-  const pad = n => String(n).padStart(2, '0');
-  const fname = 'dashboard_staffing_' + ts.getFullYear() + pad(ts.getMonth()+1) + pad(ts.getDate()) + '_' + pad(ts.getHours()) + pad(ts.getMinutes()) + '.html';
-  const blob = new Blob([html], { type: 'text/html;charset=utf-8' });
-  const a = document.createElement('a');
-  a.href = URL.createObjectURL(blob);
-  a.download = fname;
-  document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
-  URL.revokeObjectURL(a.href);
-  // Toast
-  const t = document.createElement('div');
-  t.style.cssText = 'position:fixed;top:1rem;right:1rem;z-index:9999;background:#4338ca;color:#fff;padding:10px 16px;border-radius:8px;font-size:13px;box-shadow:0 4px 12px rgba(0,0,0,.2)';
-  t.innerHTML = '<b>💾 Salvato:</b> ' + fname + '<br><span style="font-size:11px;opacity:.85">Riaprilo la prossima sessione — tutti i dati sono incorporati.</span>';
-  document.body.appendChild(t);
-  setTimeout(() => t.remove(), 4500);
 }
 
 /* ===================== ALERT SOVRA-ALLOCAZIONE E CARENZE ===================== */
