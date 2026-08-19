@@ -90,7 +90,7 @@ function showKpiModal(type) {
     </div>`;
   };
 
-  let title = '', headerBg = '#0f766e', bodyHtml = '';
+  let title = '', headerBg = 'var(--accent-dark)', bodyHtml = '';
 
   /* ── COMMESSE ATTIVE ─────────────────────────────── */
   if (type === 'attive') {
@@ -120,7 +120,7 @@ function showKpiModal(type) {
         <td style="padding:7px 10px;font-weight:600;color:#1e293b;">${esc(r.nome)}</td>
         <td style="padding:7px 10px;color:#475569;">${esc(r.cliente)}</td>
         <td style="padding:7px 10px;color:#64748b;">${esc(r.periodo)}</td>
-        <td style="padding:7px 10px;text-align:center;font-weight:700;color:#0f766e;">${r.nOp}</td>
+        <td style="padding:7px 10px;text-align:center;font-weight:700;color:var(--accent-dark);">${r.nOp}</td>
       </tr>`).join('')}
       </tbody></table>`;
   }
@@ -128,7 +128,7 @@ function showKpiModal(type) {
   /* ── COMMESSE IN PARTENZA (PIPELINE) ─────────────── */
   else if (type === 'pipeline') {
     title = '🚀 Commesse in partenza';
-    headerBg = '#0f766e';
+    headerBg = 'var(--accent-dark)';
     const sorted = [...state.pipeline].sort((a,b) => new Date(a.inizio||'9999-01-01') - new Date(b.inizio||'9999-01-01'));
     bodyHtml = `<div style="font-size:12px;color:#64748b;margin-bottom:12px;">${sorted.length} commesse in pipeline</div>
     <table style="width:100%;border-collapse:collapse;font-size:13px;">
@@ -150,7 +150,7 @@ function showKpiModal(type) {
           </td>
           <td style="padding:7px 10px;color:#475569;white-space:nowrap;">${p.inizio ? fmtDate(p.inizio) : '—'}</td>
           <td style="padding:7px 10px;text-align:center;font-weight:700;">
-            <span style="color:#0f766e;">${assegnate}</span><span style="color:#94a3b8;">/${p.risorse_necessarie||0}</span>${gapBadge}
+            <span style="color:var(--accent-dark);">${assegnate}</span><span style="color:#94a3b8;">/${p.risorse_necessarie||0}</span>${gapBadge}
           </td>
           <td style="padding:7px 10px;">${(p.skills||[]).map(skillBadge).join(' ')}</td>
         </tr>`;
@@ -254,7 +254,7 @@ function showKpiModal(type) {
           <div style="font-size:11px;color:#64748b;">${esc(p.cliente||'')} · ${p.inizio?fmtDate(p.inizio):'—'}</div>
         </td>
         <td style="padding:7px 10px;text-align:center;color:#475569;">${p.risorse_necessarie||0}</td>
-        <td style="padding:7px 10px;text-align:center;color:#0f766e;font-weight:700;">${assegnate}</td>
+        <td style="padding:7px 10px;text-align:center;color:var(--accent-dark);font-weight:700;">${assegnate}</td>
         <td style="padding:7px 10px;text-align:center;font-weight:800;color:${gap>0?'#dc2626':'#16a34a'};">${gap>0?'+'+gap:'✓'}</td>
       </tr>`).join('')}
       </tbody></table>`;
@@ -300,8 +300,8 @@ function showKpiModal(type) {
   }
 
   root.innerHTML = `<div class="modal-backdrop">
-    <div style="background:#fff;border-radius:12px;box-shadow:0 20px 60px rgba(0,0,0,.2);width:100%;max-width:760px;margin:2rem auto;display:flex;flex-direction:column;max-height:85vh;">
-      <div style="background:${headerBg};border-radius:12px 12px 0 0;padding:14px 18px;display:flex;justify-content:space-between;align-items:center;flex-shrink:0;">
+    <div style="background:#fff;border-radius:var(--radius-lg);box-shadow:var(--shadow-lg);width:100%;max-width:760px;margin:2rem auto;display:flex;flex-direction:column;max-height:85vh;">
+      <div style="background:${headerBg};border-radius:var(--radius-lg) var(--radius-lg) 0 0;padding:14px 18px;display:flex;justify-content:space-between;align-items:center;flex-shrink:0;">
         <span style="font-weight:800;color:#fff;font-size:15px;">${title}</span>
         <button onclick="closeModal()" style="color:rgba(255,255,255,.8);font-size:22px;font-weight:700;line-height:1;background:none;border:none;cursor:pointer;" onmouseover="this.style.color='#fff'" onmouseout="this.style.color='rgba(255,255,255,.8)'">✕</button>
       </div>
