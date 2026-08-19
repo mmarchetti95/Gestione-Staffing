@@ -47,6 +47,16 @@
     --shadow-sm: 0 1px 3px rgba(15,23,42,.06);
     --shadow-md: 0 4px 12px rgba(15,23,42,.08);
     --shadow-lg: 0 20px 60px rgba(15,23,42,.18);
+
+    /* Chrome scura condivisa da header e banner di sync: prima erano due
+       neri leggermente diversi (#0d0d0d / #111) con tre grigi "muted" non
+       coordinati (#9ca3af, #d1d5db, e lo slate-400 di Tailwind #94a3b8)
+       per lo stesso ruolo di testo secondario/terziario su sfondo scuro. */
+    --dark-bg: #0d0d0d;
+    --dark-border: #242424;
+    --dark-border-strong: #3f3f3f;
+    --dark-text: #d1d5db;
+    --dark-text-muted: #9ca3af;
   }
   html, body { font-family: 'Inter', system-ui, -apple-system, sans-serif; background: var(--bg); color: var(--text); }
 
@@ -649,29 +659,59 @@
   }
   .pw-fix-input:focus { outline: none; border-color: var(--accent); }
 
+  /* ===== NAVIGAZIONE SCHERMATA (Dashboard / Pianificazione settimanale) ===== */
+  /* Prima l'attivo/inattivo era deciso da style inline scritti una volta
+     sola nell'HTML iniziale; switchScreen() però sostituiva solo la
+     className, lasciando lo style inline del markup di partenza a
+     "vincere" per specificità sulla classe applicata dopo il primo
+     cambio schermata (bottone smarcato che restava con lo sfondo
+     accento, testo attivo che restava del grigio dell'inattivo). Ora
+     l'aspetto dipende solo dalla classe .active, mai da style inline. */
+  .topnav-btn {
+    padding: 6px 12px;
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--dark-text);
+    transition: background .15s, color .15s;
+  }
+  .topnav-btn:hover { background: rgba(255,255,255,.08); }
+  .topnav-btn.active {
+    background: var(--accent);
+    color: #fff;
+  }
+  .topnav-btn.active:hover { background: var(--accent); }
+
+  /* Pulsanti testuali secondari nel banner di sync (stesso ruolo di
+     .topnav-btn ma senza stato attivo): unifica i tre grigi Tailwind
+     diversi (slate-400/slate-200/red-500) usati prima per hover diversi
+     sullo stesso tipo di controllo. */
+  .dark-link-btn { color: var(--dark-text-muted); transition: color .15s; }
+  .dark-link-btn:hover { color: var(--dark-text); }
+  .dark-link-btn-danger:hover { color: #f87171; }
+
 </style>
 </head>
 <body class="min-h-screen">
 
 <!-- Top bar -->
-<header class="no-print sticky top-0 z-30" style="background:#0d0d0d;border-bottom:1px solid #222;">
+<header class="no-print sticky top-0 z-30" style="background:var(--dark-bg);border-bottom:1px solid var(--dark-border);">
   <div class="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between">
     <div class="flex items-center gap-3">
       <div class="w-9 h-9 rounded-lg text-white flex items-center justify-center font-bold" style="background:var(--accent);">S</div>
       <div>
         <h1 class="font-semibold text-white">Dashboard Staffing</h1>
-        <p class="text-xs" style="color:#9ca3af;">Pipeline commerciale &middot; gap risorse &middot; raccomandazioni</p>
+        <p class="text-xs" style="color:var(--dark-text-muted);">Pipeline commerciale &middot; gap risorse &middot; raccomandazioni</p>
       </div>
       <!-- Navigazione schermata principale -->
-      <div class="flex ml-4 border border-slate-200 rounded-lg overflow-hidden">
-        <button id="nav-dashboard" class="px-3 py-1.5 text-sm font-medium text-white" style="background:var(--accent);">📊 Dashboard</button>
-        <button id="nav-weekly" class="px-3 py-1.5 text-sm font-medium hover:bg-white/10" style="color:#d1d5db;">📅 Pianificazione settimanale</button>
+      <div class="flex ml-4 rounded-lg overflow-hidden" style="border:1px solid var(--dark-border-strong);">
+        <button id="nav-dashboard" class="topnav-btn active">📊 Dashboard</button>
+        <button id="nav-weekly" class="topnav-btn">📅 Pianificazione settimanale</button>
       </div>
     </div>
     <div class="flex items-center gap-2">
-      <button id="btn-presentation" class="px-3 py-1.5 text-sm rounded hover:bg-white/10" style="border:1px solid #444;color:#d1d5db;visibility:visible;">📊 Modalità presentazione</button>
-      <div class="text-xs pl-2" style="border-left:1px solid #444;color:#9ca3af;">
-        <span class="font-medium" style="color:var(--accent);">v18.59.0</span> · Michele Marchetti
+      <button id="btn-presentation" class="px-3 py-1.5 text-sm rounded hover:bg-white/10" style="border:1px solid var(--dark-border-strong);color:var(--dark-text);visibility:visible;">📊 Modalità presentazione</button>
+      <div class="text-xs pl-2" style="border-left:1px solid var(--dark-border-strong);color:var(--dark-text-muted);">
+        <span class="font-medium" style="color:var(--accent);">v18.60.0</span> · Michele Marchetti
       </div>
     </div>
   </div>
@@ -709,27 +749,27 @@
 </div>
 
 <!-- Banner Supabase Sync -->
-<div id="sb-banner" class="no-print px-4 py-2 flex items-center justify-between gap-3 text-sm" style="display:none;background:#111;border-bottom:1px solid #222;">
+<div id="sb-banner" class="no-print px-4 py-2 flex items-center justify-between gap-3 text-sm" style="display:none;background:var(--dark-bg);border-bottom:1px solid var(--dark-border);">
   <div class="flex items-center gap-2">
     <span id="sb-status-dot" style="width:8px;height:8px;border-radius:50%;background:#94a3b8;display:inline-block;flex-shrink:0;"></span>
-    <span id="sb-status-text" class="text-xs" style="color:#9ca3af;">Sync: in attesa…</span>
-    <span id="sb-last-sync" class="text-xs text-slate-400 hidden"></span>
+    <span id="sb-status-text" class="text-xs" style="color:var(--dark-text-muted);">Sync: in attesa…</span>
+    <span id="sb-last-sync" class="text-xs hidden" style="color:var(--dark-text-muted);"></span>
   </div>
   <div class="flex items-center gap-2">
-    <span id="sb-user-email" class="text-xs text-slate-400"></span>
+    <span id="sb-user-email" class="text-xs" style="color:var(--dark-text-muted);"></span>
     <button onclick="sbSync()" class="text-xs px-3 py-1 bg-teal-600 text-white rounded hover:bg-teal-700">
       ↺ Sincronizza
     </button>
-    <button id="sb-btn-log" onclick="sbShowLog()" class="text-xs px-2 py-1 text-slate-400 hover:text-slate-200" style="visibility:hidden;">
+    <button id="sb-btn-log" onclick="sbShowLog()" class="dark-link-btn text-xs px-2 py-1" style="visibility:hidden;">
       📋 Log attività
     </button>
-    <button id="sb-btn-sessions" onclick="sbShowSessions()" class="text-xs px-2 py-1 text-slate-400 hover:text-slate-200" style="visibility:hidden;">
+    <button id="sb-btn-sessions" onclick="sbShowSessions()" class="dark-link-btn text-xs px-2 py-1" style="visibility:hidden;">
       🟢 Sessioni attive
     </button>
-    <button onclick="sbShowChangePwd()" class="text-xs px-2 py-1 text-slate-400 hover:text-slate-200">
+    <button onclick="sbShowChangePwd()" class="dark-link-btn text-xs px-2 py-1">
       🔑 Cambia password
     </button>
-    <button onclick="sbLogout()" class="text-xs px-2 py-1 text-slate-400 hover:text-red-500">
+    <button onclick="sbLogout()" class="dark-link-btn dark-link-btn-danger text-xs px-2 py-1">
       Esci
     </button>
   </div>
@@ -981,7 +1021,7 @@
   <div id="pw-stats-banner" class="grid grid-cols-4 gap-3 mb-4 no-print"></div>
 
   <!-- Tab Griglia / Ferie / Mappa -->
-  <div class="flex border-b-2 border-slate-200 mb-4 no-print bg-white rounded-t-lg px-2">
+  <div class="flex border-b border-slate-200 mb-4 no-print bg-white rounded-t-lg px-2">
     <button id="pw-tab-griglia" class="tab-btn active text-sm py-3">📋 Griglia settimanale</button>
     <button id="pw-tab-ferie" class="tab-btn text-sm py-3">🏖 Ferie / Permessi</button>
     <button id="pw-tab-mappa" class="tab-btn text-sm py-3">🗺 Mappa squadre</button>

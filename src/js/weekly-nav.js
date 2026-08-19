@@ -9,15 +9,15 @@ function switchScreen(screen) {
   if (screen === 'weekly') {
     mainEl.classList.add('hidden');
     weeklyEl.classList.remove('hidden');
-    navDash.className = 'px-3 py-1.5 text-sm font-medium text-slate-600 hover:bg-slate-50';
-    navWk.className   = 'px-3 py-1.5 text-sm font-medium bg-teal-600 text-white';
+    navDash.classList.remove('active');
+    navWk.classList.add('active');
     if (btnPres) btnPres.style.visibility = 'hidden';
     pwLoad().then(() => pwSwitchTab(typeof _pwActiveTab !== 'undefined' ? _pwActiveTab : 'griglia'));
   } else {
     weeklyEl.classList.add('hidden');
     mainEl.classList.remove('hidden');
-    navDash.className = 'px-3 py-1.5 text-sm font-medium bg-teal-600 text-white';
-    navWk.className   = 'px-3 py-1.5 text-sm font-medium text-slate-600 hover:bg-slate-50';
+    navDash.classList.add('active');
+    navWk.classList.remove('active');
     if (btnPres) btnPres.style.visibility = 'visible';
   }
 }
