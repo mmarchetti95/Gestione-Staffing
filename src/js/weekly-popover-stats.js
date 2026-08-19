@@ -34,30 +34,23 @@ function pwToggleStatPopover(key, cardEl) {
   const rect = cardEl.getBoundingClientRect();
   const pop  = document.createElement('div');
   pop.id = 'pw-stat-popover';
+  pop.className = 'pw-popover';
   pop.dataset.key = key;
   pop.style.cssText = [
     'position:fixed',
     `top:${rect.bottom + 6}px`,
     `left:${Math.min(rect.left, window.innerWidth - 430)}px`,
     'z-index:9999',
-    'background:#fff',
-    'border:1px solid #e2e8f0',
-    'border-radius:10px',
-    'box-shadow:0 8px 24px rgba(0,0,0,0.13)',
-    'min-width:280px',
-    'max-width:420px',
-    'max-height:340px',
-    'overflow-y:auto',
   ].join(';');
 
   pop.innerHTML = `
-    <div style="padding:10px 14px;border-bottom:1px solid #f1f5f9;display:flex;justify-content:space-between;align-items:center;position:sticky;top:0;background:#fff;z-index:1;">
-      <span style="font-weight:700;font-size:13px;color:#1e293b;">${cfg.title}</span>
-      <span style="font-size:12px;color:#64748b;font-weight:600;">${items.length}</span>
+    <div class="pw-popover-header">
+      <span class="pw-popover-title">${cfg.title}</span>
+      <span class="pw-popover-count">${items.length}</span>
     </div>
-    <div style="padding:6px 0;">
+    <div class="pw-popover-body">
       ${items.length === 0
-        ? '<div style="padding:14px;color:#94a3b8;font-size:13px;text-align:center;">Nessun operatore</div>'
+        ? '<div class="pw-popover-empty">Nessun operatore</div>'
         : items.map(renderRow).join('')}
     </div>`;
 
@@ -122,10 +115,10 @@ function pwSearchOp(term) {
     infoEl.classList.remove('hidden');
     if (totalMatch === 0) {
       infoEl.textContent = 'Nessun operatore trovato';
-      infoEl.style.color = '#ef4444';
+      infoEl.style.color = 'var(--red)';
     } else {
       infoEl.textContent = `${totalMatch} risultat${totalMatch === 1 ? 'o' : 'i'} in ${commesseConMatch} commess${commesseConMatch === 1 ? 'a' : 'e'}`;
-      infoEl.style.color = '#0d9488';
+      infoEl.style.color = 'var(--accent)';
     }
   }
 }

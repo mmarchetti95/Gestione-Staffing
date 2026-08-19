@@ -57,6 +57,10 @@
     --dark-border-strong: #3f3f3f;
     --dark-text: #d1d5db;
     --dark-text-muted: #9ca3af;
+
+    /* Sfondo di attenuazione condiviso da tutti i backdrop modali: prima
+       erano tre alpha diverse (.4 / .45 / .5) per lo stesso ruolo. */
+    --backdrop: rgba(0,0,0,.4);
   }
   html, body { font-family: 'Inter', system-ui, -apple-system, sans-serif; background: var(--bg); color: var(--text); }
 
@@ -120,20 +124,18 @@
     padding: 14px 16px !important;
   }
   .kpi-num { font-variant-numeric: tabular-nums; font-feature-settings: "tnum"; }
-  .skill-badge {
+  /* .skill-badge e .att-badge condividevano identica struttura, ripetuta
+     due volte (compreso lo stesso stato "miss" con lo stesso colore) —
+     accorpata qui, i soli colori restano specifici per tipo. */
+  .skill-badge, .att-badge {
     display: inline-block; padding: 1px 6px; border-radius: 4px;
     font-size: var(--text-2xs); font-weight: 600; margin: 1px;
-    background: #e0f2fe; color: #075985; border: 1px solid #bae6fd;
   }
+  .skill-badge { background: #e0f2fe; color: #075985; border: 1px solid #bae6fd; }
   .skill-badge.req { background: #fef3c7; color: #92400e; border-color: #fde68a; }
-  .skill-badge.miss { background: #fee2e2; color: #991b1b; border-color: #fecaca; }
-  .att-badge {
-    display: inline-block; padding: 1px 6px; border-radius: 4px;
-    font-size: var(--text-2xs); font-weight: 600; margin: 1px;
-    background: #ede9fe; color: #5b21b6; border: 1px solid #ddd6fe;
-  }
+  .att-badge { background: #ede9fe; color: #5b21b6; border: 1px solid #ddd6fe; }
   .att-badge.req { background: #fce7f3; color: #9d174d; border-color: #fbcfe8; }
-  .att-badge.miss { background: #fee2e2; color: #991b1b; border-color: #fecaca; }
+  .skill-badge.miss, .att-badge.miss { background: #fee2e2; color: #991b1b; border-color: #fecaca; }
   .op-card {
     cursor: grab; user-select: none;
     transition: all .15s;
@@ -181,9 +183,9 @@
   .commessa-card summary::-webkit-details-marker { display: none; }
   .commessa-card summary::marker { display: none; content: ''; }
   .commessa-card[open] > summary .chevron { transform: rotate(90deg); }
-  .commessa-card summary:hover { background: rgba(0,184,176,.04); border-radius: 4px; }
+  .commessa-card summary:hover { background: rgba(13,148,136,.04); border-radius: 4px; }
   .modal-backdrop {
-    position: fixed; inset: 0; background: rgba(0,0,0,.4);
+    position: fixed; inset: 0; background: var(--backdrop);
     display: flex; align-items: center; justify-content: center; z-index: 50;
   }
   .industry-pill {
@@ -433,7 +435,7 @@
   /* ===== MODAL SELEZIONE OPERATORE ===== */
   .op-modal-backdrop {
     position: fixed; inset: 0;
-    background: rgba(0,0,0,.45);
+    background: var(--backdrop);
     z-index: 10000;
     display: flex; align-items: center; justify-content: center;
   }
@@ -689,6 +691,27 @@
   .dark-link-btn:hover { color: var(--dark-text); }
   .dark-link-btn-danger:hover { color: #f87171; }
 
+  /* ===== POPOVER (statistiche settimana) ===== */
+  /* Prima costruito interamente con uno style inline (radius/shadow/bordo
+     propri, non allineati alla scala di token) generato in JS. */
+  .pw-popover {
+    background: #fff;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    box-shadow: var(--shadow-md);
+    min-width: 280px; max-width: 420px; max-height: 340px;
+    overflow-y: auto;
+  }
+  .pw-popover-header {
+    padding: 10px 14px; border-bottom: 1px solid #f1f5f9;
+    display: flex; justify-content: space-between; align-items: center;
+    position: sticky; top: 0; background: #fff; z-index: 1;
+  }
+  .pw-popover-title { font-weight: 700; font-size: 13px; color: #1e293b; }
+  .pw-popover-count { font-size: var(--text-xs); color: var(--muted); font-weight: 600; }
+  .pw-popover-body { padding: 6px 0; }
+  .pw-popover-empty { padding: 14px; color: #94a3b8; font-size: 13px; text-align: center; }
+
 </style>
 </head>
 <body class="min-h-screen">
@@ -711,7 +734,7 @@
     <div class="flex items-center gap-2">
       <button id="btn-presentation" class="px-3 py-1.5 text-sm rounded hover:bg-white/10" style="border:1px solid var(--dark-border-strong);color:var(--dark-text);visibility:visible;">📊 Modalità presentazione</button>
       <div class="text-xs pl-2" style="border-left:1px solid var(--dark-border-strong);color:var(--dark-text-muted);">
-        <span class="font-medium" style="color:var(--accent);">v18.60.0</span> · Michele Marchetti
+        <span class="font-medium" style="color:var(--accent);">v18.61.0</span> · Michele Marchetti
       </div>
     </div>
   </div>
@@ -719,7 +742,7 @@
 
 <!-- Schermata di Login Supabase (overlay fullscreen) -->
 <div id="sb-login-screen" style="display:none;position:fixed;inset:0;z-index:99999;background:#f8fafc;align-items:center;justify-content:center;">
-  <div style="background:white;border-radius:16px;padding:36px 40px;width:380px;max-width:95vw;box-shadow:var(--shadow-lg);border:1px solid #e2e8f0;">
+  <div style="background:white;border-radius:var(--radius-lg);padding:36px 40px;width:380px;max-width:95vw;box-shadow:var(--shadow-lg);border:1px solid #e2e8f0;">
     <div style="text-align:center;margin-bottom:24px;">
       <div style="font-size:28px;margin-bottom:8px;">📋</div>
       <div style="font-weight:700;font-size:18px;color:#0f172a;">Dashboard Staffing</div>
@@ -776,8 +799,8 @@
 </div>
 
 <!-- Modal cambio password -->
-<div id="sb-pwd-modal" style="display:none;position:fixed;inset:0;z-index:99999;background:rgba(0,0,0,.5);align-items:center;justify-content:center;">
-  <div style="background:white;border-radius:16px;padding:32px 36px;width:360px;max-width:95vw;box-shadow:var(--shadow-lg);">
+<div id="sb-pwd-modal" style="display:none;position:fixed;inset:0;z-index:99999;background:var(--backdrop);align-items:center;justify-content:center;">
+  <div style="background:white;border-radius:var(--radius-lg);padding:32px 36px;width:360px;max-width:95vw;box-shadow:var(--shadow-lg);">
     <div style="font-weight:700;font-size:16px;margin-bottom:4px;color:#0f172a;">🔑 Cambia password</div>
     <div style="font-size:12px;color:#94a3b8;margin-bottom:20px;">Scegli una nuova password per il tuo account.</div>
     <div id="sb-pwd-error" style="display:none;background:#fef2f2;border:1px solid #fecaca;color:#dc2626;font-size:12px;padding:8px 12px;border-radius:6px;margin-bottom:12px;"></div>
@@ -802,8 +825,8 @@
 </div>
 
 <!-- Modal Log Attività (solo admin) -->
-<div id="sb-log-modal" style="display:none;position:fixed;inset:0;z-index:99999;background:rgba(0,0,0,.5);align-items:center;justify-content:center;">
-  <div style="background:white;border-radius:16px;padding:28px 32px;width:780px;max-width:96vw;max-height:85vh;box-shadow:var(--shadow-lg);display:flex;flex-direction:column;">
+<div id="sb-log-modal" style="display:none;position:fixed;inset:0;z-index:99999;background:var(--backdrop);align-items:center;justify-content:center;">
+  <div style="background:white;border-radius:var(--radius-lg);padding:28px 32px;width:780px;max-width:96vw;max-height:85vh;box-shadow:var(--shadow-lg);display:flex;flex-direction:column;">
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
       <div>
         <div style="font-weight:700;font-size:16px;color:#0f172a;">📋 Log attività</div>
@@ -832,8 +855,8 @@
   </div>
 </div>
 
-<div id="sb-sessions-modal" style="display:none;position:fixed;inset:0;z-index:99999;background:rgba(0,0,0,.5);align-items:center;justify-content:center;">
-  <div style="background:white;border-radius:16px;padding:28px 32px;width:640px;max-width:96vw;max-height:85vh;box-shadow:var(--shadow-lg);display:flex;flex-direction:column;">
+<div id="sb-sessions-modal" style="display:none;position:fixed;inset:0;z-index:99999;background:var(--backdrop);align-items:center;justify-content:center;">
+  <div style="background:white;border-radius:var(--radius-lg);padding:28px 32px;width:640px;max-width:96vw;max-height:85vh;box-shadow:var(--shadow-lg);display:flex;flex-direction:column;">
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
       <div>
         <div style="font-weight:700;font-size:16px;color:#0f172a;">🟢 Sessioni attive</div>
