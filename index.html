@@ -11,6 +11,9 @@
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@600;700;800&display=swap" rel="stylesheet">
 <style>
   :root {
     /* Accento unico dell'app: prima erano in uso due teal diversi
@@ -62,7 +65,17 @@
        erano tre alpha diverse (.4 / .45 / .5) per lo stesso ruolo. */
     --backdrop: rgba(0,0,0,.4);
   }
+  /* 'Inter' era dichiarato in font-family ma mai realmente caricato (nessun
+     <link> Google Fonts né @font-face) — l'app ha sempre reso nel font di
+     sistema del sistema operativo (Segoe UI su Windows), non in Inter.
+     Ora caricato per davvero, insieme a un secondo carattere per i titoli
+     (vedi --font-display) per dare più carattere senza toccare la densità
+     delle tabelle, che restano su Inter. */
   html, body { font-family: 'Inter', system-ui, -apple-system, sans-serif; background: var(--bg); color: var(--text); }
+  :root { --font-display: 'Plus Jakarta Sans', 'Inter', system-ui, sans-serif; }
+  h1, h2, h3, h4, .kpi-num, .pw-stat-num, .topnav-btn {
+    font-family: var(--font-display);
+  }
 
   /* === CARD & SEZIONI ===
      Prima: bordo pieno + un secondo "anello" via box-shadow (0 0 0 1px)
@@ -90,7 +103,19 @@
   h3.font-semibold.text-slate-900, h4.font-semibold.text-slate-900 {
     letter-spacing: -0.01em;
   }
-  h2.font-semibold.text-slate-900 { font-size: 1.05rem; }
+  h2.font-semibold.text-slate-900 {
+    font-size: 1.05rem;
+    position: relative;
+    padding-bottom: 11px;
+    margin-bottom: 4px;
+  }
+  h2.font-semibold.text-slate-900::after {
+    content: '';
+    position: absolute; left: 0; bottom: 0;
+    width: 28px; height: 3px;
+    background: var(--accent);
+    border-radius: 2px;
+  }
 
   /* === TABELLE === */
   table { border-collapse: separate; border-spacing: 0; }
@@ -771,7 +796,7 @@
 <body class="min-h-screen">
 
 <!-- Top bar -->
-<header class="no-print sticky top-0 z-30" style="background:var(--dark-bg);border-bottom:1px solid var(--dark-border);">
+<header class="no-print sticky top-0 z-30" style="background:var(--dark-bg);border-bottom:3px solid var(--accent);">
   <div class="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between">
     <div class="flex items-center gap-3">
       <div class="w-10 h-10 rounded-lg text-white flex items-center justify-center" style="background:var(--accent);font-size:17px;font-weight:800;letter-spacing:-0.02em;box-shadow:0 4px 10px rgba(13,148,136,.35);">S</div>
@@ -788,7 +813,7 @@
     <div class="flex items-center gap-2">
       <button id="btn-presentation" class="px-3 py-1.5 text-sm rounded hover:bg-white/10" style="border:1px solid var(--dark-border-strong);color:var(--dark-text);visibility:visible;">📊 Modalità presentazione</button>
       <div class="text-xs pl-2" style="border-left:1px solid var(--dark-border-strong);color:var(--dark-text-muted);">
-        <span class="font-medium" style="color:var(--accent);">v18.65.0</span> · Michele Marchetti
+        <span class="font-medium" style="color:var(--accent);">v18.66.0</span> · Michele Marchetti
       </div>
     </div>
   </div>
@@ -2018,18 +2043,22 @@ function renderKPI() {
   const k = calcKPI();
   const tot = k.nAttive + k.nPipeline;
   const clickable = 'cursor-pointer hover:shadow-md hover:-translate-y-0.5 transition-all select-none';
-  // Icone riprese dal titolo del modal di dettaglio di ciascun KPI
-  // (showKpiModal), invece di inventarne di nuove per la tile.
+  // Icone e colore identificativo ripresi dal modal di dettaglio di ciascun
+  // KPI (showKpiModal: stesse icone, stesso headerBg) invece di inventarne
+  // di nuovi solo per la tile — la striscia in cima anticipa il colore che
+  // si vede aprendo il modal.
+  const stripe = c => `box-shadow: inset 0 3px 0 0 ${c}, var(--shadow-sm);`;
   const html = [
-    ['📋', 'Commesse attive',    k.nAttive,  'text-slate-900', 'attive'],
-    ['🚀', 'Commesse in partenza', k.nPipeline, 'text-teal-700', 'pipeline'],
-    ['🗂',  'Totale commesse',    tot,        'text-slate-900', null],
-    ['👷', 'Operatori',          k.nOperatori,'text-slate-900','operatori'],
+    ['📋', 'Commesse attive',    k.nAttive,  'text-slate-900', 'attive', '#1e40af'],
+    ['🚀', 'Commesse in partenza', k.nPipeline, 'text-teal-700', 'pipeline', 'var(--accent-dark)'],
+    ['🗂',  'Totale commesse',    tot,        'text-slate-900', null, null],
+    ['👷', 'Operatori',          k.nOperatori,'text-slate-900','operatori', '#4f46e5'],
     ['📊', 'Saturazione 3 mesi', (k.satMedia*100).toFixed(0)+'%',
-      k.satMedia>1.0?'text-red-600':(k.satMedia>0.9?'text-orange-600':'text-emerald-700'), 'saturazione'],
-    ['📉', 'Gap risorse', k.gapTot, k.gapTot>0?'text-red-600':'text-emerald-700', 'gap'],
-  ].map(([icon, label, val, cls, type]) => `
+      k.satMedia>1.0?'text-red-600':(k.satMedia>0.9?'text-orange-600':'text-emerald-700'), 'saturazione', '#d97706'],
+    ['📉', 'Gap risorse', k.gapTot, k.gapTot>0?'text-red-600':'text-emerald-700', 'gap', '#dc2626'],
+  ].map(([icon, label, val, cls, type, color]) => `
     <div class="bg-white rounded-lg border border-slate-200 p-4 ${type ? clickable : ''}"
+         ${color ? `style="${stripe(color)}"` : ''}
          ${type ? `onclick="showKpiModal('${jsAttr(type)}')"` : ''}>
       <div class="flex items-center gap-1.5 text-[11px] uppercase tracking-wider text-slate-500 font-medium">
         <span class="text-sm leading-none opacity-70">${icon}</span>${label}
@@ -2039,6 +2068,7 @@ function renderKPI() {
   `).join('');
   document.getElementById('kpi-grid').innerHTML = html +
     `<div class="bg-white rounded-lg border ${k.alertCritici>0?'border-red-300 bg-red-50':'border-slate-200'} p-4 col-span-2 md:col-span-1 ${clickable}"
+          style="${stripe('#9f1239')}"
           onclick="showKpiModal('alert')">
       <div class="flex items-center gap-1.5 text-[11px] uppercase tracking-wider ${k.alertCritici>0?'text-red-600':'text-slate-500'} font-medium">
         <span class="text-sm leading-none opacity-70">🚨</span>Alert critici

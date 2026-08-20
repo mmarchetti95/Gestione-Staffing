@@ -42,18 +42,22 @@ function renderKPI() {
   const k = calcKPI();
   const tot = k.nAttive + k.nPipeline;
   const clickable = 'cursor-pointer hover:shadow-md hover:-translate-y-0.5 transition-all select-none';
-  // Icone riprese dal titolo del modal di dettaglio di ciascun KPI
-  // (showKpiModal), invece di inventarne di nuove per la tile.
+  // Icone e colore identificativo ripresi dal modal di dettaglio di ciascun
+  // KPI (showKpiModal: stesse icone, stesso headerBg) invece di inventarne
+  // di nuovi solo per la tile — la striscia in cima anticipa il colore che
+  // si vede aprendo il modal.
+  const stripe = c => `box-shadow: inset 0 3px 0 0 ${c}, var(--shadow-sm);`;
   const html = [
-    ['📋', 'Commesse attive',    k.nAttive,  'text-slate-900', 'attive'],
-    ['🚀', 'Commesse in partenza', k.nPipeline, 'text-teal-700', 'pipeline'],
-    ['🗂',  'Totale commesse',    tot,        'text-slate-900', null],
-    ['👷', 'Operatori',          k.nOperatori,'text-slate-900','operatori'],
+    ['📋', 'Commesse attive',    k.nAttive,  'text-slate-900', 'attive', '#1e40af'],
+    ['🚀', 'Commesse in partenza', k.nPipeline, 'text-teal-700', 'pipeline', 'var(--accent-dark)'],
+    ['🗂',  'Totale commesse',    tot,        'text-slate-900', null, null],
+    ['👷', 'Operatori',          k.nOperatori,'text-slate-900','operatori', '#4f46e5'],
     ['📊', 'Saturazione 3 mesi', (k.satMedia*100).toFixed(0)+'%',
-      k.satMedia>1.0?'text-red-600':(k.satMedia>0.9?'text-orange-600':'text-emerald-700'), 'saturazione'],
-    ['📉', 'Gap risorse', k.gapTot, k.gapTot>0?'text-red-600':'text-emerald-700', 'gap'],
-  ].map(([icon, label, val, cls, type]) => `
+      k.satMedia>1.0?'text-red-600':(k.satMedia>0.9?'text-orange-600':'text-emerald-700'), 'saturazione', '#d97706'],
+    ['📉', 'Gap risorse', k.gapTot, k.gapTot>0?'text-red-600':'text-emerald-700', 'gap', '#dc2626'],
+  ].map(([icon, label, val, cls, type, color]) => `
     <div class="bg-white rounded-lg border border-slate-200 p-4 ${type ? clickable : ''}"
+         ${color ? `style="${stripe(color)}"` : ''}
          ${type ? `onclick="showKpiModal('${jsAttr(type)}')"` : ''}>
       <div class="flex items-center gap-1.5 text-[11px] uppercase tracking-wider text-slate-500 font-medium">
         <span class="text-sm leading-none opacity-70">${icon}</span>${label}
@@ -63,6 +67,7 @@ function renderKPI() {
   `).join('');
   document.getElementById('kpi-grid').innerHTML = html +
     `<div class="bg-white rounded-lg border ${k.alertCritici>0?'border-red-300 bg-red-50':'border-slate-200'} p-4 col-span-2 md:col-span-1 ${clickable}"
+          style="${stripe('#9f1239')}"
           onclick="showKpiModal('alert')">
       <div class="flex items-center gap-1.5 text-[11px] uppercase tracking-wider ${k.alertCritici>0?'text-red-600':'text-slate-500'} font-medium">
         <span class="text-sm leading-none opacity-70">🚨</span>Alert critici

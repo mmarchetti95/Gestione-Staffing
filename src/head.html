@@ -11,6 +11,9 @@
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@600;700;800&display=swap" rel="stylesheet">
 <style>
   :root {
     /* Accento unico dell'app: prima erano in uso due teal diversi
@@ -62,7 +65,17 @@
        erano tre alpha diverse (.4 / .45 / .5) per lo stesso ruolo. */
     --backdrop: rgba(0,0,0,.4);
   }
+  /* 'Inter' era dichiarato in font-family ma mai realmente caricato (nessun
+     <link> Google Fonts né @font-face) — l'app ha sempre reso nel font di
+     sistema del sistema operativo (Segoe UI su Windows), non in Inter.
+     Ora caricato per davvero, insieme a un secondo carattere per i titoli
+     (vedi --font-display) per dare più carattere senza toccare la densità
+     delle tabelle, che restano su Inter. */
   html, body { font-family: 'Inter', system-ui, -apple-system, sans-serif; background: var(--bg); color: var(--text); }
+  :root { --font-display: 'Plus Jakarta Sans', 'Inter', system-ui, sans-serif; }
+  h1, h2, h3, h4, .kpi-num, .pw-stat-num, .topnav-btn {
+    font-family: var(--font-display);
+  }
 
   /* === CARD & SEZIONI ===
      Prima: bordo pieno + un secondo "anello" via box-shadow (0 0 0 1px)
@@ -90,7 +103,19 @@
   h3.font-semibold.text-slate-900, h4.font-semibold.text-slate-900 {
     letter-spacing: -0.01em;
   }
-  h2.font-semibold.text-slate-900 { font-size: 1.05rem; }
+  h2.font-semibold.text-slate-900 {
+    font-size: 1.05rem;
+    position: relative;
+    padding-bottom: 11px;
+    margin-bottom: 4px;
+  }
+  h2.font-semibold.text-slate-900::after {
+    content: '';
+    position: absolute; left: 0; bottom: 0;
+    width: 28px; height: 3px;
+    background: var(--accent);
+    border-radius: 2px;
+  }
 
   /* === TABELLE === */
   table { border-collapse: separate; border-spacing: 0; }
@@ -771,7 +796,7 @@
 <body class="min-h-screen">
 
 <!-- Top bar -->
-<header class="no-print sticky top-0 z-30" style="background:var(--dark-bg);border-bottom:1px solid var(--dark-border);">
+<header class="no-print sticky top-0 z-30" style="background:var(--dark-bg);border-bottom:3px solid var(--accent);">
   <div class="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between">
     <div class="flex items-center gap-3">
       <div class="w-10 h-10 rounded-lg text-white flex items-center justify-center" style="background:var(--accent);font-size:17px;font-weight:800;letter-spacing:-0.02em;box-shadow:0 4px 10px rgba(13,148,136,.35);">S</div>
@@ -788,7 +813,7 @@
     <div class="flex items-center gap-2">
       <button id="btn-presentation" class="px-3 py-1.5 text-sm rounded hover:bg-white/10" style="border:1px solid var(--dark-border-strong);color:var(--dark-text);visibility:visible;">📊 Modalità presentazione</button>
       <div class="text-xs pl-2" style="border-left:1px solid var(--dark-border-strong);color:var(--dark-text-muted);">
-        <span class="font-medium" style="color:var(--accent);">v18.65.0</span> · Michele Marchetti
+        <span class="font-medium" style="color:var(--accent);">v18.66.0</span> · Michele Marchetti
       </div>
     </div>
   </div>
