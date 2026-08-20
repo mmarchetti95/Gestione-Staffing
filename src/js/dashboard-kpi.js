@@ -42,26 +42,32 @@ function renderKPI() {
   const k = calcKPI();
   const tot = k.nAttive + k.nPipeline;
   const clickable = 'cursor-pointer hover:shadow-md hover:-translate-y-0.5 transition-all select-none';
+  // Icone riprese dal titolo del modal di dettaglio di ciascun KPI
+  // (showKpiModal), invece di inventarne di nuove per la tile.
   const html = [
-    ['Commesse attive',    k.nAttive,  'text-slate-900', 'attive'],
-    ['Commesse in partenza', k.nPipeline, 'text-teal-700', 'pipeline'],
-    ['Totale commesse',    tot,        'text-slate-900', null],
-    ['Operatori',          k.nOperatori,'text-slate-900','operatori'],
-    ['Saturazione 3 mesi', (k.satMedia*100).toFixed(0)+'%',
+    ['📋', 'Commesse attive',    k.nAttive,  'text-slate-900', 'attive'],
+    ['🚀', 'Commesse in partenza', k.nPipeline, 'text-teal-700', 'pipeline'],
+    ['🗂',  'Totale commesse',    tot,        'text-slate-900', null],
+    ['👷', 'Operatori',          k.nOperatori,'text-slate-900','operatori'],
+    ['📊', 'Saturazione 3 mesi', (k.satMedia*100).toFixed(0)+'%',
       k.satMedia>1.0?'text-red-600':(k.satMedia>0.9?'text-orange-600':'text-emerald-700'), 'saturazione'],
-    ['Gap risorse', k.gapTot, k.gapTot>0?'text-red-600':'text-emerald-700', 'gap'],
-  ].map(([label, val, cls, type]) => `
-    <div class="bg-white rounded-lg border border-slate-200 p-3 ${type ? clickable : ''}"
+    ['📉', 'Gap risorse', k.gapTot, k.gapTot>0?'text-red-600':'text-emerald-700', 'gap'],
+  ].map(([icon, label, val, cls, type]) => `
+    <div class="bg-white rounded-lg border border-slate-200 p-4 ${type ? clickable : ''}"
          ${type ? `onclick="showKpiModal('${jsAttr(type)}')"` : ''}>
-      <div class="text-[11px] uppercase tracking-wider text-slate-500 font-medium">${label}</div>
-      <div class="kpi-num text-3xl font-bold mt-1 ${cls}">${val}</div>
+      <div class="flex items-center gap-1.5 text-[11px] uppercase tracking-wider text-slate-500 font-medium">
+        <span class="text-sm leading-none opacity-70">${icon}</span>${label}
+      </div>
+      <div class="kpi-num text-3xl font-bold mt-1.5 ${cls}">${val}</div>
     </div>
   `).join('');
   document.getElementById('kpi-grid').innerHTML = html +
-    `<div class="bg-white rounded-lg border ${k.alertCritici>0?'border-red-300 bg-red-50':'border-slate-200'} p-3 col-span-2 md:col-span-1 ${clickable}"
+    `<div class="bg-white rounded-lg border ${k.alertCritici>0?'border-red-300 bg-red-50':'border-slate-200'} p-4 col-span-2 md:col-span-1 ${clickable}"
           onclick="showKpiModal('alert')">
-      <div class="text-[11px] uppercase tracking-wider ${k.alertCritici>0?'text-red-600':'text-slate-500'} font-medium">⚠ Alert critici</div>
-      <div class="kpi-num text-3xl font-bold mt-1 ${k.alertCritici>0?'text-red-600':'text-slate-900'}">${k.alertCritici}</div>
+      <div class="flex items-center gap-1.5 text-[11px] uppercase tracking-wider ${k.alertCritici>0?'text-red-600':'text-slate-500'} font-medium">
+        <span class="text-sm leading-none opacity-70">🚨</span>Alert critici
+      </div>
+      <div class="kpi-num text-3xl font-bold mt-1.5 ${k.alertCritici>0?'text-red-600':'text-slate-900'}">${k.alertCritici}</div>
     </div>`;
 }
 

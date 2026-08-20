@@ -64,17 +64,33 @@
   }
   html, body { font-family: 'Inter', system-ui, -apple-system, sans-serif; background: var(--bg); color: var(--text); }
 
-  /* === CARD & SEZIONI === */
+  /* === CARD & SEZIONI ===
+     Prima: bordo pieno + un secondo "anello" via box-shadow (0 0 0 1px)
+     che duplicava il bordo stesso — un doppio contorno ridondante, non
+     una scelta di profondità. Ora un solo bordo netto e un'ombra che fa
+     davvero da elevazione (offset + blur), non da doppio outline. */
   .bg-white.rounded-lg.border.border-slate-200 {
     border-color: #e8edf2 !important;
-    box-shadow: var(--shadow-sm), 0 0 0 1px rgba(15,23,42,.04);
+    box-shadow: var(--shadow-sm);
     border-radius: var(--radius-lg) !important;
   }
   section.bg-white {
     border-radius: var(--radius-lg) !important;
-    box-shadow: var(--shadow-sm), 0 0 0 1px rgba(15,23,42,.04);
+    box-shadow: var(--shadow-sm);
     border-color: #e8edf2 !important;
   }
+
+  /* === GERARCHIA TITOLI DI SEZIONE ===
+     Stesso identico markup (font-semibold text-slate-900) per intestazioni
+     di sezione e di modale in tutta l'app: qui basta un'unica regola per
+     dare a tutte un tocco tipografico più curato, senza toccare i
+     dimensionamenti già impostati caso per caso (text-lg/text-sm) nei
+     singoli render. */
+  h1.font-semibold, h2.font-semibold.text-slate-900,
+  h3.font-semibold.text-slate-900, h4.font-semibold.text-slate-900 {
+    letter-spacing: -0.01em;
+  }
+  h2.font-semibold.text-slate-900 { font-size: 1.05rem; }
 
   /* === TABELLE === */
   table { border-collapse: separate; border-spacing: 0; }
@@ -111,6 +127,15 @@
   button.bg-teal-600, button[style*="background:var(--accent)"] {
     border-radius: var(--radius-md) !important;
     font-weight: 500;
+    transition: box-shadow .15s, transform .1s;
+  }
+  button.bg-teal-600:hover, button[style*="background:var(--accent)"]:hover {
+    box-shadow: var(--shadow-sm);
+    transform: translateY(-1px);
+  }
+  button.bg-teal-600:active, button[style*="background:var(--accent)"]:active {
+    transform: translateY(0);
+    box-shadow: none;
   }
 
   /* === SPAZIO TRA SEZIONI === */
@@ -749,7 +774,7 @@
 <header class="no-print sticky top-0 z-30" style="background:var(--dark-bg);border-bottom:1px solid var(--dark-border);">
   <div class="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between">
     <div class="flex items-center gap-3">
-      <div class="w-9 h-9 rounded-lg text-white flex items-center justify-center font-bold" style="background:var(--accent);">S</div>
+      <div class="w-10 h-10 rounded-lg text-white flex items-center justify-center" style="background:var(--accent);font-size:17px;font-weight:800;letter-spacing:-0.02em;box-shadow:0 4px 10px rgba(13,148,136,.35);">S</div>
       <div>
         <h1 class="font-semibold text-white">Dashboard Staffing</h1>
         <p class="text-xs" style="color:var(--dark-text-muted);">Pipeline commerciale &middot; gap risorse &middot; raccomandazioni</p>
@@ -763,7 +788,7 @@
     <div class="flex items-center gap-2">
       <button id="btn-presentation" class="px-3 py-1.5 text-sm rounded hover:bg-white/10" style="border:1px solid var(--dark-border-strong);color:var(--dark-text);visibility:visible;">📊 Modalità presentazione</button>
       <div class="text-xs pl-2" style="border-left:1px solid var(--dark-border-strong);color:var(--dark-text-muted);">
-        <span class="font-medium" style="color:var(--accent);">v18.64.0</span> · Michele Marchetti
+        <span class="font-medium" style="color:var(--accent);">v18.65.0</span> · Michele Marchetti
       </div>
     </div>
   </div>
