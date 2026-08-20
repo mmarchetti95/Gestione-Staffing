@@ -1,0 +1,124 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-08-20T00:00:00.000Z",
+  "title": "Design System: Dashboard Staffing",
+  "extensions": {
+    "colorMeta": {
+      "accent": { "role": "primary", "displayName": "Deep Teal", "canonical": "#0d9488", "tonalRamp": ["#042f2c", "#0f4a45", "#0f766e", "#0d9488", "#14b8a6", "#5eead4", "#99f6e4", "#ccfbf1"] },
+      "accent-dark": { "role": "primary", "displayName": "Teal Ink", "canonical": "#0f766e", "tonalRamp": ["#031f1c", "#0b3a35", "#0f766e", "#0d9488", "#2dd4bf", "#5eead4", "#99f6e4", "#f0fdfa"] },
+      "category-blue": { "role": "secondary", "displayName": "Ledger Blue", "canonical": "#1e40af", "tonalRamp": ["#0a1a4a", "#122a70", "#1e40af", "#2563eb", "#3b82f6", "#93c5fd", "#bfdbfe", "#eff6ff"] },
+      "category-indigo": { "role": "secondary", "displayName": "Circuit Indigo", "canonical": "#4f46e5", "tonalRamp": ["#1e1b4b", "#312e81", "#4338ca", "#4f46e5", "#6366f1", "#a5b4fc", "#c7d2fe", "#eef2ff"] },
+      "category-amber": { "role": "secondary", "displayName": "Foreman Amber", "canonical": "#d97706", "tonalRamp": ["#451a03", "#78350f", "#b45309", "#d97706", "#f59e0b", "#fcd34d", "#fde68a", "#fffbeb"] },
+      "category-rose": { "role": "secondary", "displayName": "Alarm Rose", "canonical": "#9f1239", "tonalRamp": ["#4c0519", "#881337", "#9f1239", "#be123c", "#dc2626", "#fca5a5", "#fecaca", "#fef2f2"] },
+      "neutral-bg": { "role": "neutral", "displayName": "Fog", "canonical": "#f4f6f8", "tonalRamp": ["#0f172a", "#334155", "#64748b", "#94a3b8", "#cbd5e1", "#e2e8f0", "#f1f5f9", "#f4f6f8"] },
+      "neutral-surface": { "role": "neutral", "displayName": "Paper", "canonical": "#ffffff", "tonalRamp": ["#0f172a", "#334155", "#64748b", "#94a3b8", "#cbd5e1", "#e2e8f0", "#f8fafc", "#ffffff"] },
+      "chrome-dark-bg": { "role": "neutral", "displayName": "Near-Black Chrome", "canonical": "#0d0d0d", "tonalRamp": ["#000000", "#0d0d0d", "#1a1a1a", "#242424", "#3f3f3f", "#6b6b6b", "#9ca3af", "#d1d5db"] }
+    },
+    "typographyMeta": {
+      "body": { "displayName": "Body / UI", "purpose": "Testo di card, paragrafi, celle di tabella non compresse, controlli." },
+      "title": { "displayName": "Section / Modal Title", "purpose": "Titoli h2/h3/h4, header di card colorate, titoli di modale — stesso Inter, solo peso/dimensione diversi dal body." },
+      "label": { "displayName": "Micro Label", "purpose": "Etichette maiuscole di KPI, intestazioni tabella, badge di stato." }
+    },
+    "shadows": [
+      { "name": "shadow-sm", "value": "0 1px 3px rgba(15,23,42,.06)", "purpose": "Elevazione a riposo di card, sezioni, KPI tile." },
+      { "name": "shadow-md", "value": "0 4px 12px rgba(15,23,42,.08)", "purpose": "Hover di card interattive, popover, pannelli fluttuanti." },
+      { "name": "shadow-lg", "value": "0 20px 60px rgba(15,23,42,.18)", "purpose": "Modali su misura (selezione operatore, admin, KPI, Genera Mail)." },
+      { "name": "kpi-inset-stripe", "value": "inset 0 3px 0 0 var(--category-color), 0 1px 3px rgba(15,23,42,.06)", "purpose": "Striscia categorica in cima alle KPI tile, combinata con shadow-sm." }
+    ],
+    "motion": [
+      { "name": "button-lift", "value": "transform .1s, box-shadow .15s", "purpose": "Sollevamento (translateY(-1px)) dei bottoni primari al passaggio del mouse." },
+      { "name": "card-hover-lift", "value": "transform .1s, box-shadow .15s ease", "purpose": "Sollevamento leggero delle card cliccabili (operatori, KPI) all'hover." }
+    ],
+    "breakpoints": [
+      { "name": "md", "value": "768px" },
+      { "name": "lg", "value": "1024px" }
+    ]
+  },
+  "components": [
+    {
+      "name": "Primary Button",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "Bottone di azione primaria (Sincronizza, Salva, Accedi).",
+      "html": "<button class=\"ds-btn-primary\">Sincronizza</button>",
+      "css": ".ds-btn-primary { background: #0d9488; color: #fff; border: none; border-radius: 8px; padding: 6px 14px; font-weight: 500; font-family: Inter, system-ui, sans-serif; cursor: pointer; transition: transform .1s, box-shadow .15s; } .ds-btn-primary:hover { transform: translateY(-1px); box-shadow: 0 1px 3px rgba(15,23,42,.06); } .ds-btn-primary:active { transform: translateY(0); box-shadow: none; } .ds-btn-primary:focus-visible { outline: 2px solid #0d9488; outline-offset: 2px; }"
+    },
+    {
+      "name": "Secondary Button",
+      "kind": "button",
+      "refersTo": "button-ghost",
+      "description": "Azione secondaria/annulla su sfondo bianco.",
+      "html": "<button class=\"ds-btn-secondary\">Annulla</button>",
+      "css": ".ds-btn-secondary { background: #fff; color: #475569; border: 1px solid #e2e8f0; border-radius: 8px; padding: 6px 14px; font-weight: 500; font-family: Inter, system-ui, sans-serif; cursor: pointer; transition: background .15s; } .ds-btn-secondary:hover { background: #f8fafc; } .ds-btn-secondary:focus-visible { outline: 2px solid #0d9488; outline-offset: 2px; }"
+    },
+    {
+      "name": "KPI Tile",
+      "kind": "card",
+      "refersTo": "kpi-tile-teal",
+      "description": "Card di sintesi a tinta piena per categoria — componente distintivo del sistema: sfondo/bordo/badge icona nel colore della categoria, numero grande nello stesso colore scuro, apre un modale con lo stesso colore in header.",
+      "html": "<div class=\"ds-kpi-tile\" tabindex=\"0\"><div class=\"ds-kpi-head\"><span class=\"ds-kpi-icon\">🚀</span><span class=\"ds-kpi-label\">Commesse in partenza</span></div><div class=\"ds-kpi-num\">6</div></div>",
+      "css": ".ds-kpi-tile { background: #f0fdfa; border: 1px solid #99f6e4; border-radius: 12px; padding: 16px; box-shadow: 0 1px 3px rgba(15,23,42,.06); cursor: pointer; transition: box-shadow .15s, transform .1s; font-family: Inter, system-ui, sans-serif; } .ds-kpi-tile:hover { box-shadow: 0 4px 12px rgba(15,23,42,.08); transform: translateY(-2px); } .ds-kpi-head { display: flex; align-items: center; gap: 8px; } .ds-kpi-icon { width: 32px; height: 32px; border-radius: 8px; background: #ccfbf1; display: flex; align-items: center; justify-content: center; font-size: 16px; flex-shrink: 0; } .ds-kpi-label { font-size: 11px; text-transform: uppercase; letter-spacing: .04em; font-weight: 600; color: #475569; } .ds-kpi-num { font-size: 1.875rem; font-weight: 700; margin-top: 8px; color: #0f766e; font-variant-numeric: tabular-nums; }"
+    },
+    {
+      "name": "Card / Section",
+      "kind": "card",
+      "refersTo": "card",
+      "description": "Superficie bianca neutra per liste e contenuti operativi (Pool operatori, Commesse, Vista mensile).",
+      "html": "<div class=\"ds-card\"><h2 class=\"ds-card-title\">Vista mensile commesse</h2><p class=\"ds-card-body\">Contenuto della sezione.</p></div>",
+      "css": ".ds-card { background: #fff; border: 1px solid #e8edf2; border-radius: 12px; padding: 20px; box-shadow: 0 1px 3px rgba(15,23,42,.06); font-family: Inter, system-ui, sans-serif; } .ds-card-title { font-size: 1.05rem; font-weight: 600; color: #0f172a; letter-spacing: -0.01em; position: relative; padding-bottom: 11px; margin-bottom: 4px; } .ds-card-title::after { content: ''; position: absolute; left: 0; bottom: 0; width: 28px; height: 3px; background: #0d9488; border-radius: 2px; } .ds-card-body { font-size: 13px; color: #64748b; }"
+    },
+    {
+      "name": "Tab",
+      "kind": "nav",
+      "refersTo": "tab",
+      "description": "Voce di tab bar (Griglia/Ferie/Mappa/Controllo/Doppia Week e altre) — bordo inferiore da 3px sull'attiva.",
+      "html": "<div class=\"ds-tabs\"><button class=\"ds-tab ds-tab-active\">Griglia settimanale</button><button class=\"ds-tab\">Ferie / Permessi</button></div>",
+      "css": ".ds-tabs { display: flex; border-bottom: 1px solid #e2e8f0; } .ds-tab { padding: 8px 16px; font-size: 13px; font-weight: 500; border-bottom: 3px solid transparent; background: none; cursor: pointer; color: #64748b; font-family: Inter, system-ui, sans-serif; transition: color .15s, border-color .15s, background .15s; } .ds-tab:hover { color: #334155; background: rgba(15,23,42,.03); } .ds-tab-active { color: #0d9488; border-color: #0d9488; font-weight: 700; }"
+    },
+    {
+      "name": "Status Badge (skill/attestato)",
+      "kind": "chip",
+      "refersTo": "badge-skill",
+      "description": "Badge rettangolare per attributi stabili (skill posseduta/richiesta/mancante).",
+      "html": "<span class=\"ds-badge ds-badge-req\">Rilievo GPS</span>",
+      "css": ".ds-badge { display: inline-block; padding: 1px 6px; border-radius: 4px; font-size: 10px; font-weight: 600; font-family: Inter, system-ui, sans-serif; } .ds-badge-req { background: #fef3c7; color: #92400e; border: 1px solid #fde68a; }"
+    },
+    {
+      "name": "Custom Modal Panel",
+      "kind": "custom",
+      "refersTo": "modal-custom",
+      "description": "Famiglia di dialoghi 'su misura' (selezione operatore, admin, KPI, Genera Mail) — header colorato per categoria, corpo bianco, raggio 12px, ombra grande.",
+      "html": "<div class=\"ds-modal-backdrop\"><div class=\"ds-modal\"><div class=\"ds-modal-header\">👷 Seleziona operatore</div><div class=\"ds-modal-body\">Contenuto.</div></div></div>",
+      "css": ".ds-modal-backdrop { position: fixed; inset: 0; background: rgba(0,0,0,.4); display: flex; align-items: center; justify-content: center; } .ds-modal { background: #fff; border-radius: 12px; box-shadow: 0 20px 60px rgba(15,23,42,.18); width: 360px; max-width: 95vw; overflow: hidden; font-family: Inter, system-ui, sans-serif; } .ds-modal-header { background: #0d9488; color: #fff; padding: 12px 16px; font-size: 13px; font-weight: 600; } .ds-modal-body { padding: 16px; font-size: 13px; color: #334155; }"
+    }
+  ],
+  "narrative": {
+    "northStar": "The Site Foreman's Whiteboard",
+    "overview": "Uno strumento operativo, non una vetrina: la superficie di un caposquadra che tiene sotto controllo commesse, operatori e cantieri con colpo d'occhio rapido, non con eleganza da vetrina. Chiaro, denso, diretto — colori usati per significare stato (chi è libero, cosa è in ritardo, cosa richiede attenzione), non per decorare. Non esiste un pubblico da conquistare: il \"cliente\" sono le stesse 10-15 persone che lo aprono più volte al giorno, quindi la familiarità e la densità informativa contano più della sorpresa.\n\nIl sistema nasce da un'app funzionante ma incoerente (due teal diversi per lo stesso accento, tre grigi diversi per lo stesso testo secondario, quattro ombre diverse per lo stesso tipo di pannello) ed è stato riportato a un solo linguaggio: un accento, una scala di raggi, una scala di ombre. Sopra queste fondamenta, il sistema usa colori categorici (blu, indigo, ambra, rosso) per distinguere a colpo d'occhio le famiglie di indicatori — non un accento singolo ripetuto ovunque, ma nemmeno una tavolozza libera: ogni colore categorico ha un significato fisso e riappare identico ovunque quella categoria compare.",
+    "keyCharacteristics": [
+      "Un solo font (Inter), nessun secondo carattere \"da titolo\" — la gerarchia viene da peso/dimensione/colore, non da un cambio di font.",
+      "Un solo accento (teal, #0d9488) per le azioni primarie e l'identità dell'app; colori categorici fissi per differenziare classi di dati.",
+      "Tabelle e griglie dense per design: la densità informativa è un requisito, non un difetto da correggere con più spaziatura.",
+      "Card e tile a tinta piena quando rappresentano una sintesi/metrica; superfici bianche neutre quando contengono liste o dati operativi dettagliati."
+    ],
+    "rules": [
+      { "name": "The Colore Categorico Rule", "body": "Un colore categorico (blu/indigo/ambra/rosa) è legato per sempre al suo significato: se una card riassuntiva è blu, il modale che apre cliccandola è blu. Non si riusa un colore categorico per un significato diverso altrove nell'app.", "section": "colors" },
+      { "name": "The Stato Neutro a Riposo Rule", "body": "Le card che segnalano un problema (Gap risorse, Alert critici) sono a tinta piena SOLO quando il problema esiste. A zero, restano neutre: il colore è un segnale, non decorazione fissa.", "section": "colors" },
+      { "name": "The Unico Carattere Rule", "body": "Nessun secondo font \"da titolo\": introdurne uno (provato e poi rimosso durante questo restyling) è stato riconosciuto come uno dei pattern più abusati dalle interfacce generate da IA. La gerarchia tipografica si ottiene sempre con peso, dimensione, colore e spaziatura — mai cambiando famiglia di caratteri.", "section": "typography" },
+      { "name": "The Bagliore Vietato Rule", "body": "Nessuna ombra colorata a alone su sfondo scuro. La profondità sullo sfondo scuro dell'header usa un'ombra neutra (rgba(0,0,0,.4)), mai un bagliore nel colore dell'accento.", "section": "elevation" }
+    ],
+    "dos": [
+      "Do referenziare sempre var(--accent) / var(--accent-dark) per l'accento — mai un hex ripetuto, anche in stringhe HTML generate da JS.",
+      "Do riusare la stessa scala di raggio/ombra (--radius-sm/md/lg, --shadow-sm/md/lg) per ogni nuovo componente elevato.",
+      "Do far coincidere il colore categorico di una card di sintesi con quello del modale/dettaglio che apre.",
+      "Do mantenere le viste dati-intensive dense: font 10-12px e padding compresso sono una scelta di prodotto."
+    ],
+    "donts": [
+      "Don't aggiungere un secondo font \"da titolo\" per dare più carattere.",
+      "Don't usare un bordo laterale colorato (side-tab) come accento di stato.",
+      "Don't aggiungere ombre colorate a alone (glow), specialmente su sfondo scuro.",
+      "Don't colorare a tinta piena una card che segnala un problema (gap, alert) quando il valore è zero.",
+      "Don't forzare il pannello modale \"canonico\" (shadow-xl Tailwind) e quello \"su misura\" (--shadow-lg) a coincidere — sono due famiglie riconosciute con ruoli diversi."
+    ]
+  }
+}
