@@ -29,7 +29,7 @@ function pwGeneraMail() {
         const strumentiSalvati = (typeof sq?.strumenti === 'string') ? sq.strumenti : '';
         const strumentiJiraLbl = sq ? pwSqStrumentiJira(sq).filter(Boolean).map(k => pwStrLabel(k)) : [];
         const jiraHint = strumentiJiraLbl.length
-          ? `<div style="font-size:10px;color:#0f766e;margin-bottom:2px;">✓ Da griglia: ${esc(strumentiJiraLbl.join(', '))}</div>`
+          ? `<div style="font-size:10px;color:var(--accent-dark);margin-bottom:2px;">✓ Da griglia: ${esc(strumentiJiraLbl.join(', '))}</div>`
           : '';
         return `
         <div class="mb-3 p-3 bg-slate-50 rounded-lg border border-slate-200">
@@ -67,13 +67,13 @@ function pwGeneraMail() {
   wrap.style.cssText = [
     'position:fixed', 'inset:0', 'z-index:99999',
     'display:flex', 'align-items:center', 'justify-content:center',
-    'background:rgba(0,0,0,.5)', 'padding:16px'
+    'background:var(--backdrop)', 'padding:16px'
   ].join(';');
 
   wrap.innerHTML = `
     <div style="
-      background:white; border-radius:12px;
-      box-shadow:0 20px 60px rgba(0,0,0,.25);
+      background:white; border-radius:var(--radius-lg);
+      box-shadow:var(--shadow-lg);
       width:100%; max-width:760px;
       display:flex; flex-direction:column;
       max-height:calc(100vh - 32px);

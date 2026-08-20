@@ -712,6 +712,35 @@
   .pw-popover-body { padding: 6px 0; }
   .pw-popover-empty { padding: 14px; color: #94a3b8; font-size: 13px; text-align: center; }
 
+  /* Badge "ex dipendente": stessa identica dichiarazione style ripetuta
+     alla lettera in tre file (dashboard-operatori.js, produzione-core.js,
+     weekly-operatore-modal.js) — un solo posto dove cambiarla. */
+  .op-ex-tag {
+    font-size: 9px; font-weight: 700; background: #fee2e2; color: #ef4444;
+    border-radius: 3px; padding: 1px 4px; margin-left: 4px;
+  }
+
+  /* Pannello fluttuante di ricerca strumenti (Griglia settimanale): come
+     il popover statistiche, era interamente in stile inline con la sua
+     ombra/raggio propri, non allineati alla scala di token. */
+  .pw-str-panel {
+    background: #fff;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    box-shadow: var(--shadow-md);
+  }
+  .pw-str-panel-search {
+    padding: 6px; border-bottom: 1px solid var(--border);
+  }
+  .pw-str-panel-search input {
+    width: 100%; font-size: 12px; border: 1px solid #d1d5db;
+    border-radius: var(--radius-sm); padding: 4px 6px;
+    box-sizing: border-box; outline: none;
+  }
+  .pw-str-item { padding: 6px 8px; font-size: 12px; cursor: pointer; border-bottom: 1px solid #f1f5f9; }
+  .pw-str-item:hover { background: #eff6ff; }
+  .pw-str-item.empty { color: #94a3b8; }
+
 </style>
 </head>
 <body class="min-h-screen">
@@ -734,7 +763,7 @@
     <div class="flex items-center gap-2">
       <button id="btn-presentation" class="px-3 py-1.5 text-sm rounded hover:bg-white/10" style="border:1px solid var(--dark-border-strong);color:var(--dark-text);visibility:visible;">📊 Modalità presentazione</button>
       <div class="text-xs pl-2" style="border-left:1px solid var(--dark-border-strong);color:var(--dark-text-muted);">
-        <span class="font-medium" style="color:var(--accent);">v18.62.0</span> · Michele Marchetti
+        <span class="font-medium" style="color:var(--accent);">v18.63.0</span> · Michele Marchetti
       </div>
     </div>
   </div>

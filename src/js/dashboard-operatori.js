@@ -236,7 +236,7 @@ function renderEmailOperatori() {
       ? '<span style="font-size:10px;font-weight:700;background:#fee2e2;color:#dc2626;border-radius:3px;padding:2px 6px;">⚠ mancante</span>'
       : '<span style="font-size:10px;font-weight:700;background:#dcfce7;color:#16a34a;border-radius:3px;padding:2px 6px;">✓ ok</span>';
     const exTag = (typeof isOperatoreLicenziato === 'function' && isOperatoreLicenziato(nome))
-      ? '<span style="font-size:9px;font-weight:700;background:#fee2e2;color:#ef4444;border-radius:3px;padding:1px 4px;margin-left:4px;">ex</span>' : '';
+      ? '<span class="op-ex-tag">ex</span>' : '';
     html += `<tr style="border-bottom:1px solid #f1f5f9;">
       <td style="padding:5px 8px;font-weight:600;color:#1e293b;">${esc(nome)}${exTag}</td>
       <td style="padding:5px 8px;"><input type="email" value="${esc(email)}" placeholder="nome@eagleprojects.it"

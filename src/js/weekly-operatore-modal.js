@@ -148,7 +148,7 @@ function pwRenderOpDropdown(cidx, sidx, oidx, nomeCorrente) {
   const statoClass = nomeCorrente ? `stato-${stato}` : '';
   const label      = nomeCorrente || '— scegli —';
   const exBadge    = nomeCorrente && isOperatoreLicenziato(nomeCorrente)
-    ? '<span style="font-size:9px;font-weight:700;background:#fee2e2;color:#ef4444;border-radius:3px;padding:1px 4px;margin-left:4px;">ex</span>'
+    ? '<span class="op-ex-tag">ex</span>'
     : '';
   return `<button class="op-trigger-btn ${statoClass}"
     onclick="pwOpenOpModal(${cidx}, ${sidx}, ${oidx})">

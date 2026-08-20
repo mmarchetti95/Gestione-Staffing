@@ -76,8 +76,9 @@ function pwStrEnsurePanel() {
   if (p) return p;
   p = document.createElement('div');
   p.id = 'pw-str-panel';
-  p.style.cssText = 'position:fixed;z-index:9999;background:#fff;border:1px solid #cbd5e1;border-radius:6px;box-shadow:0 8px 24px rgba(0,0,0,0.18);width:280px;display:none;overflow:hidden;';
-  p.innerHTML = '<div style="padding:6px;border-bottom:1px solid #e2e8f0;"><input id="pw-str-search" type="text" placeholder="Cerca strumento…" style="width:100%;font-size:12px;border:1px solid #d1d5db;border-radius:4px;padding:4px 6px;box-sizing:border-box;outline:none;"></div><div id="pw-str-list" style="overflow-y:auto;"></div>';
+  p.className = 'pw-str-panel';
+  p.style.cssText = 'position:fixed;z-index:9999;width:280px;display:none;overflow:hidden;';
+  p.innerHTML = '<div class="pw-str-panel-search"><input id="pw-str-search" type="text" placeholder="Cerca strumento…"></div><div id="pw-str-list" style="overflow-y:auto;"></div>';
   document.body.appendChild(p);
   p.querySelector('#pw-str-search').addEventListener('input', e => pwStrRenderList(e.target.value));
   document.addEventListener('mousedown', e => {
@@ -111,14 +112,14 @@ function pwStrRenderList(filter) {
   const list = document.getElementById('pw-str-list');
   if (!list) return;
   const f = (filter || '').toLowerCase().trim();
-  let html = '<div class="pw-str-item" data-key="" style="padding:6px 8px;font-size:12px;color:#94a3b8;cursor:pointer;border-bottom:1px solid #f1f5f9;">— nessuno —</div>';
+  let html = '<div class="pw-str-item empty" data-key="">— nessuno —</div>';
   if (pwStrumenti.length === 0) {
     html += '<div style="padding:8px;font-size:11px;color:#b45309;">Nessuno strumento in cache. Clicca "🔧 Aggiorna strumenti".</div>';
   } else {
     const items = pwStrumenti.filter(s => !f || (s.key + ' ' + s.name).toLowerCase().includes(f));
     if (items.length === 0) html += '<div style="padding:8px;font-size:11px;color:#94a3b8;">Nessun risultato.</div>';
     else items.forEach(s => {
-      html += `<div class="pw-str-item" data-key="${esc(s.key)}" style="padding:6px 8px;font-size:12px;cursor:pointer;border-bottom:1px solid #f1f5f9;" onmouseover="this.style.background='#eff6ff'" onmouseout="this.style.background='#fff'"><b>${esc(s.key)}</b> · ${esc(s.name)}</div>`;
+      html += `<div class="pw-str-item" data-key="${esc(s.key)}"><b>${esc(s.key)}</b> · ${esc(s.name)}</div>`;
     });
   }
   list.innerHTML = html;

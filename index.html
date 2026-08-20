@@ -712,6 +712,35 @@
   .pw-popover-body { padding: 6px 0; }
   .pw-popover-empty { padding: 14px; color: #94a3b8; font-size: 13px; text-align: center; }
 
+  /* Badge "ex dipendente": stessa identica dichiarazione style ripetuta
+     alla lettera in tre file (dashboard-operatori.js, produzione-core.js,
+     weekly-operatore-modal.js) — un solo posto dove cambiarla. */
+  .op-ex-tag {
+    font-size: 9px; font-weight: 700; background: #fee2e2; color: #ef4444;
+    border-radius: 3px; padding: 1px 4px; margin-left: 4px;
+  }
+
+  /* Pannello fluttuante di ricerca strumenti (Griglia settimanale): come
+     il popover statistiche, era interamente in stile inline con la sua
+     ombra/raggio propri, non allineati alla scala di token. */
+  .pw-str-panel {
+    background: #fff;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    box-shadow: var(--shadow-md);
+  }
+  .pw-str-panel-search {
+    padding: 6px; border-bottom: 1px solid var(--border);
+  }
+  .pw-str-panel-search input {
+    width: 100%; font-size: 12px; border: 1px solid #d1d5db;
+    border-radius: var(--radius-sm); padding: 4px 6px;
+    box-sizing: border-box; outline: none;
+  }
+  .pw-str-item { padding: 6px 8px; font-size: 12px; cursor: pointer; border-bottom: 1px solid #f1f5f9; }
+  .pw-str-item:hover { background: #eff6ff; }
+  .pw-str-item.empty { color: #94a3b8; }
+
 </style>
 </head>
 <body class="min-h-screen">
@@ -734,7 +763,7 @@
     <div class="flex items-center gap-2">
       <button id="btn-presentation" class="px-3 py-1.5 text-sm rounded hover:bg-white/10" style="border:1px solid var(--dark-border-strong);color:var(--dark-text);visibility:visible;">📊 Modalità presentazione</button>
       <div class="text-xs pl-2" style="border-left:1px solid var(--dark-border-strong);color:var(--dark-text-muted);">
-        <span class="font-medium" style="color:var(--accent);">v18.62.0</span> · Michele Marchetti
+        <span class="font-medium" style="color:var(--accent);">v18.63.0</span> · Michele Marchetti
       </div>
     </div>
   </div>
@@ -2476,7 +2505,7 @@ function renderEmailOperatori() {
       ? '<span style="font-size:10px;font-weight:700;background:#fee2e2;color:#dc2626;border-radius:3px;padding:2px 6px;">⚠ mancante</span>'
       : '<span style="font-size:10px;font-weight:700;background:#dcfce7;color:#16a34a;border-radius:3px;padding:2px 6px;">✓ ok</span>';
     const exTag = (typeof isOperatoreLicenziato === 'function' && isOperatoreLicenziato(nome))
-      ? '<span style="font-size:9px;font-weight:700;background:#fee2e2;color:#ef4444;border-radius:3px;padding:1px 4px;margin-left:4px;">ex</span>' : '';
+      ? '<span class="op-ex-tag">ex</span>' : '';
     html += `<tr style="border-bottom:1px solid #f1f5f9;">
       <td style="padding:5px 8px;font-weight:600;color:#1e293b;">${esc(nome)}${exTag}</td>
       <td style="padding:5px 8px;"><input type="email" value="${esc(email)}" placeholder="nome@eagleprojects.it"
@@ -5871,7 +5900,7 @@ function pwGeneraMail() {
         const strumentiSalvati = (typeof sq?.strumenti === 'string') ? sq.strumenti : '';
         const strumentiJiraLbl = sq ? pwSqStrumentiJira(sq).filter(Boolean).map(k => pwStrLabel(k)) : [];
         const jiraHint = strumentiJiraLbl.length
-          ? `<div style="font-size:10px;color:#0f766e;margin-bottom:2px;">✓ Da griglia: ${esc(strumentiJiraLbl.join(', '))}</div>`
+          ? `<div style="font-size:10px;color:var(--accent-dark);margin-bottom:2px;">✓ Da griglia: ${esc(strumentiJiraLbl.join(', '))}</div>`
           : '';
         return `
         <div class="mb-3 p-3 bg-slate-50 rounded-lg border border-slate-200">
@@ -5909,13 +5938,13 @@ function pwGeneraMail() {
   wrap.style.cssText = [
     'position:fixed', 'inset:0', 'z-index:99999',
     'display:flex', 'align-items:center', 'justify-content:center',
-    'background:rgba(0,0,0,.5)', 'padding:16px'
+    'background:var(--backdrop)', 'padding:16px'
   ].join(';');
 
   wrap.innerHTML = `
     <div style="
-      background:white; border-radius:12px;
-      box-shadow:0 20px 60px rgba(0,0,0,.25);
+      background:white; border-radius:var(--radius-lg);
+      box-shadow:var(--shadow-lg);
       width:100%; max-width:760px;
       display:flex; flex-direction:column;
       max-height:calc(100vh - 32px);
@@ -6851,7 +6880,7 @@ function pwRenderOpDropdown(cidx, sidx, oidx, nomeCorrente) {
   const statoClass = nomeCorrente ? `stato-${stato}` : '';
   const label      = nomeCorrente || '— scegli —';
   const exBadge    = nomeCorrente && isOperatoreLicenziato(nomeCorrente)
-    ? '<span style="font-size:9px;font-weight:700;background:#fee2e2;color:#ef4444;border-radius:3px;padding:1px 4px;margin-left:4px;">ex</span>'
+    ? '<span class="op-ex-tag">ex</span>'
     : '';
   return `<button class="op-trigger-btn ${statoClass}"
     onclick="pwOpenOpModal(${cidx}, ${sidx}, ${oidx})">
@@ -7378,8 +7407,9 @@ function pwStrEnsurePanel() {
   if (p) return p;
   p = document.createElement('div');
   p.id = 'pw-str-panel';
-  p.style.cssText = 'position:fixed;z-index:9999;background:#fff;border:1px solid #cbd5e1;border-radius:6px;box-shadow:0 8px 24px rgba(0,0,0,0.18);width:280px;display:none;overflow:hidden;';
-  p.innerHTML = '<div style="padding:6px;border-bottom:1px solid #e2e8f0;"><input id="pw-str-search" type="text" placeholder="Cerca strumento…" style="width:100%;font-size:12px;border:1px solid #d1d5db;border-radius:4px;padding:4px 6px;box-sizing:border-box;outline:none;"></div><div id="pw-str-list" style="overflow-y:auto;"></div>';
+  p.className = 'pw-str-panel';
+  p.style.cssText = 'position:fixed;z-index:9999;width:280px;display:none;overflow:hidden;';
+  p.innerHTML = '<div class="pw-str-panel-search"><input id="pw-str-search" type="text" placeholder="Cerca strumento…"></div><div id="pw-str-list" style="overflow-y:auto;"></div>';
   document.body.appendChild(p);
   p.querySelector('#pw-str-search').addEventListener('input', e => pwStrRenderList(e.target.value));
   document.addEventListener('mousedown', e => {
@@ -7413,14 +7443,14 @@ function pwStrRenderList(filter) {
   const list = document.getElementById('pw-str-list');
   if (!list) return;
   const f = (filter || '').toLowerCase().trim();
-  let html = '<div class="pw-str-item" data-key="" style="padding:6px 8px;font-size:12px;color:#94a3b8;cursor:pointer;border-bottom:1px solid #f1f5f9;">— nessuno —</div>';
+  let html = '<div class="pw-str-item empty" data-key="">— nessuno —</div>';
   if (pwStrumenti.length === 0) {
     html += '<div style="padding:8px;font-size:11px;color:#b45309;">Nessuno strumento in cache. Clicca "🔧 Aggiorna strumenti".</div>';
   } else {
     const items = pwStrumenti.filter(s => !f || (s.key + ' ' + s.name).toLowerCase().includes(f));
     if (items.length === 0) html += '<div style="padding:8px;font-size:11px;color:#94a3b8;">Nessun risultato.</div>';
     else items.forEach(s => {
-      html += `<div class="pw-str-item" data-key="${esc(s.key)}" style="padding:6px 8px;font-size:12px;cursor:pointer;border-bottom:1px solid #f1f5f9;" onmouseover="this.style.background='#eff6ff'" onmouseout="this.style.background='#fff'"><b>${esc(s.key)}</b> · ${esc(s.name)}</div>`;
+      html += `<div class="pw-str-item" data-key="${esc(s.key)}"><b>${esc(s.key)}</b> · ${esc(s.name)}</div>`;
     });
   }
   list.innerHTML = html;
@@ -8311,7 +8341,7 @@ function pwControlloRender() {
           html += `<tr data-comm-idx="${blIdx}" data-sq-idx="${sqKey}">
       <td class="cp-wrap" title="${esc(bl.commessa)}">${esc(bl.commessa)}</td>
       <td class="cp-wrap" title="${esc(sq.nome)}">${esc(sq.nome)}</td>
-      <td class="cp-wrap" title="${esc(op.nome)}"><strong>${esc(op.nome)}</strong>${isOperatoreLicenziato(op.nome) ? '<span style="font-size:9px;font-weight:700;background:#fee2e2;color:#ef4444;border-radius:3px;padding:1px 4px;margin-left:4px;">ex</span>' : ''}</td>
+      <td class="cp-wrap" title="${esc(op.nome)}"><strong>${esc(op.nome)}</strong>${isOperatoreLicenziato(op.nome) ? '<span class="op-ex-tag">ex</span>' : ''}</td>
       <td style="text-align:center"><input type="checkbox" ${verificato ? 'checked' : ''} title="Verificato" style="width:16px;height:16px;cursor:pointer;" onchange="pwControlloSaveCell('${ci}','${si}','${oi}',${g},'${dt}','${ca}','${at}','verificato',this.checked)"></td>
       <td>${DAY_NAMES[g]}</td>
       <td>${dates[g]}</td>
@@ -8364,7 +8394,7 @@ function cpOreJiraStyle(jVal, giornoIdx) {
   const base = 'text-align:center;font-weight:600;';
   const h = parseFloat(String(jVal));
   // 0 o vuoto/non numerico -> default
-  if (isNaN(h) || h === 0) return base + 'background:#f8fafc;color:#0f766e;';
+  if (isNaN(h) || h === 0) return base + 'background:#f8fafc;color:var(--accent-dark);';
   const isLunVen = (giornoIdx === 0 || giornoIdx === 4);
   let bg, fg;
   if (h > 8.5) {                       // troppe ore
@@ -9674,7 +9704,7 @@ async function pwMapRender(dayIdx) {
     const popup = `<div style="font-family:system-ui;min-width:170px;font-size:12px;">
       <div style="font-weight:700;margin-bottom:3px;">${item.squadra}</div>
       <div style="color:#475569;font-size:11px;">📋 ${esc(item.commessa)}</div>
-      <div style="color:#0d9488;font-weight:600;margin:2px 0;">📍 ${item.cantiere}</div>
+      <div style="color:var(--accent);font-weight:600;margin:2px 0;">📍 ${item.cantiere}</div>
       <div style="color:#64748b;font-size:11px;">👷 ${item.operatori.join(', ')}</div>
       ${item.attivita ? `<div style="color:#64748b;font-style:italic;font-size:10px;">${item.attivita}</div>` : ''}
       ${missing ? `<div style="color:#ea580c;font-weight:600;font-size:10px;margin-top:3px;">⚠ Luogo non trovato</div>` : ''}

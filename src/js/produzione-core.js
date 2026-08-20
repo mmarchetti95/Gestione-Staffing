@@ -277,7 +277,7 @@ function pwControlloRender() {
           html += `<tr data-comm-idx="${blIdx}" data-sq-idx="${sqKey}">
       <td class="cp-wrap" title="${esc(bl.commessa)}">${esc(bl.commessa)}</td>
       <td class="cp-wrap" title="${esc(sq.nome)}">${esc(sq.nome)}</td>
-      <td class="cp-wrap" title="${esc(op.nome)}"><strong>${esc(op.nome)}</strong>${isOperatoreLicenziato(op.nome) ? '<span style="font-size:9px;font-weight:700;background:#fee2e2;color:#ef4444;border-radius:3px;padding:1px 4px;margin-left:4px;">ex</span>' : ''}</td>
+      <td class="cp-wrap" title="${esc(op.nome)}"><strong>${esc(op.nome)}</strong>${isOperatoreLicenziato(op.nome) ? '<span class="op-ex-tag">ex</span>' : ''}</td>
       <td style="text-align:center"><input type="checkbox" ${verificato ? 'checked' : ''} title="Verificato" style="width:16px;height:16px;cursor:pointer;" onchange="pwControlloSaveCell('${ci}','${si}','${oi}',${g},'${dt}','${ca}','${at}','verificato',this.checked)"></td>
       <td>${DAY_NAMES[g]}</td>
       <td>${dates[g]}</td>
@@ -330,7 +330,7 @@ function cpOreJiraStyle(jVal, giornoIdx) {
   const base = 'text-align:center;font-weight:600;';
   const h = parseFloat(String(jVal));
   // 0 o vuoto/non numerico -> default
-  if (isNaN(h) || h === 0) return base + 'background:#f8fafc;color:#0f766e;';
+  if (isNaN(h) || h === 0) return base + 'background:#f8fafc;color:var(--accent-dark);';
   const isLunVen = (giornoIdx === 0 || giornoIdx === 4);
   let bg, fg;
   if (h > 8.5) {                       // troppe ore

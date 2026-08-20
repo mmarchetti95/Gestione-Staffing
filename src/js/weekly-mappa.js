@@ -181,7 +181,7 @@ async function pwMapRender(dayIdx) {
     const popup = `<div style="font-family:system-ui;min-width:170px;font-size:12px;">
       <div style="font-weight:700;margin-bottom:3px;">${item.squadra}</div>
       <div style="color:#475569;font-size:11px;">📋 ${esc(item.commessa)}</div>
-      <div style="color:#0d9488;font-weight:600;margin:2px 0;">📍 ${item.cantiere}</div>
+      <div style="color:var(--accent);font-weight:600;margin:2px 0;">📍 ${item.cantiere}</div>
       <div style="color:#64748b;font-size:11px;">👷 ${item.operatori.join(', ')}</div>
       ${item.attivita ? `<div style="color:#64748b;font-style:italic;font-size:10px;">${item.attivita}</div>` : ''}
       ${missing ? `<div style="color:#ea580c;font-weight:600;font-size:10px;margin-top:3px;">⚠ Luogo non trovato</div>` : ''}
