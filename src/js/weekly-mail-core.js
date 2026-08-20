@@ -83,7 +83,7 @@ function pwGeneraMail() {
       <div style="flex-shrink:0; padding:16px 20px; border-bottom:1px solid #e2e8f0;
                   display:flex; align-items:center; justify-content:space-between;">
         <div>
-          <div style="font-weight:700; font-size:15px; color:#0f172a;">📧 Genera mail — Week ${pwWeek}</div>
+          <div style="font-weight:700; font-size:15px; color:#0f172a; font-family:var(--font-display);">📧 Genera mail — Week ${pwWeek}</div>
           <div style="font-size:11px; color:#64748b; margin-top:2px;">${formatDate(monday)} → ${formatDate(saturday)} ${pwAnno}</div>
         </div>
         <button id="pw-mail-close-btn"

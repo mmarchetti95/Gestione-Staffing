@@ -313,7 +313,7 @@ function showKpiModal(type) {
   root.innerHTML = `<div class="modal-backdrop">
     <div style="background:#fff;border-radius:var(--radius-lg);box-shadow:var(--shadow-lg);width:100%;max-width:760px;margin:2rem auto;display:flex;flex-direction:column;max-height:85vh;">
       <div style="background:${headerBg};border-radius:var(--radius-lg) var(--radius-lg) 0 0;padding:14px 18px;display:flex;justify-content:space-between;align-items:center;flex-shrink:0;">
-        <span style="font-weight:800;color:#fff;font-size:15px;">${title}</span>
+        <span style="font-weight:800;color:#fff;font-size:15px;font-family:var(--font-display);">${title}</span>
         <button onclick="closeModal()" style="color:rgba(255,255,255,.8);font-size:22px;font-weight:700;line-height:1;background:none;border:none;cursor:pointer;" onmouseover="this.style.color='#fff'" onmouseout="this.style.color='rgba(255,255,255,.8)'">✕</button>
       </div>
       <div style="overflow-y:auto;padding:18px 20px;flex:1;">${bodyHtml}</div>
