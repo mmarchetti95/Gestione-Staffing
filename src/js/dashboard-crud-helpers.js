@@ -227,7 +227,7 @@ function openFabbisognoModal(commessaId, commessaNome) {
       </div>
       <button onclick="closeModal()" class="text-slate-400 hover:text-slate-700 text-xl">×</button>
     </div>
-    <p class="text-[11px] text-slate-500 mb-3 bg-blue-50 border border-blue-100 rounded px-2 py-1.5">
+    <p class="text-[11px] text-blue-800 mb-3 bg-blue-50 border border-blue-100 rounded px-2 py-1.5">
       Definisci quanti operatori ti servono per ogni combinazione di skill. Per ogni riga vedrai i candidati interni ordinati per saturazione.
     </p>
     <div id="fb-righe" class="space-y-2 mb-3"></div>
