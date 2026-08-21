@@ -12,6 +12,9 @@ async function pwFetchStrumenti() {
     if (error) throw new Error(await _cpEdgeErr(error, 'jira-list-strumenti'));
     if (data && data.error) throw new Error(data.error);
     pwStrumenti = Array.isArray(data && data.strumenti) ? data.strumenti : [];
+    if (!pwStrumenti.find(s => s.key === 'DRONE')) {
+      pwStrumenti.push({ key: 'DRONE', name: 'Drone (UAV)' });
+    }
     try { localStorage.setItem('pw_strumenti_cache', JSON.stringify(pwStrumenti)); } catch (_) {}
     if (st) st.textContent = `✓ ${pwStrumenti.length} strumenti caricati`;
     pwRender();
@@ -221,6 +224,24 @@ async function pwRemoveCommessa(btn) {
   const data = pwGetWeekData();
   data.splice(cidx, 1);
   await pwSave(); pwRender();
+}
+
+async function pwMoveCommessaUp(btn) {
+  const cidx = parseInt(btn.dataset.cidx);
+  const data = pwGetWeekData();
+  if (cidx > 0) {
+    [data[cidx - 1], data[cidx]] = [data[cidx], data[cidx - 1]];
+    await pwSave(); pwRender();
+  }
+}
+
+async function pwMoveCommessaDown(btn) {
+  const cidx = parseInt(btn.dataset.cidx);
+  const data = pwGetWeekData();
+  if (cidx < data.length - 1) {
+    [data[cidx], data[cidx + 1]] = [data[cidx + 1], data[cidx]];
+    await pwSave(); pwRender();
+  }
 }
 
 /* ----- Init pianificazione ----- */

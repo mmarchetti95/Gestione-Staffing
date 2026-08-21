@@ -357,6 +357,10 @@ function pwRender() {
         <div class="flex items-center gap-2">
           <button class="text-xs bg-teal-500 hover:bg-teal-400 text-white px-3 py-1 rounded"
             data-cidx="${cIdx}" onclick="pwAddSquadra(this)">+ Squadra</button>
+          <button class="text-xs bg-teal-600 hover:bg-teal-500 text-white px-2 py-1 rounded disabled:opacity-50"
+            data-cidx="${cIdx}" onclick="pwMoveCommessaUp(this)" ${cIdx === 0 ? 'disabled' : ''} title="Sposta commessa su">▲</button>
+          <button class="text-xs bg-teal-600 hover:bg-teal-500 text-white px-2 py-1 rounded disabled:opacity-50"
+            data-cidx="${cIdx}" onclick="pwMoveCommessaDown(this)" ${cIdx === data.length - 1 ? 'disabled' : ''} title="Sposta commessa giù">▼</button>
           <button class="text-xs text-teal-200 hover:text-red-300"
             data-cidx="${cIdx}" onclick="pwRemoveCommessa(this)">✕</button>
         </div>
