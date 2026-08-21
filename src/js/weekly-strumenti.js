@@ -15,6 +15,9 @@ async function pwFetchStrumenti() {
     if (!pwStrumenti.find(s => s.key === 'DRONE')) {
       pwStrumenti.push({ key: 'DRONE', name: 'Drone (UAV)' });
     }
+    if (!pwStrumenti.find(s => s.key === 'HARD_DISK')) {
+      pwStrumenti.push({ key: 'HARD_DISK', name: 'Hard disk' });
+    }
     try { localStorage.setItem('pw_strumenti_cache', JSON.stringify(pwStrumenti)); } catch (_) {}
     if (st) st.textContent = `✓ ${pwStrumenti.length} strumenti caricati`;
     pwRender();
