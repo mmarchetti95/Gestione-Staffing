@@ -12,12 +12,6 @@ async function pwFetchStrumenti() {
     if (error) throw new Error(await _cpEdgeErr(error, 'jira-list-strumenti'));
     if (data && data.error) throw new Error(data.error);
     pwStrumenti = Array.isArray(data && data.strumenti) ? data.strumenti : [];
-    if (!pwStrumenti.find(s => s.key === 'DRONE')) {
-      pwStrumenti.push({ key: 'DRONE', name: 'Drone (UAV)' });
-    }
-    if (!pwStrumenti.find(s => s.key === 'HARD_DISK')) {
-      pwStrumenti.push({ key: 'HARD_DISK', name: 'Hard disk' });
-    }
     try { localStorage.setItem('pw_strumenti_cache', JSON.stringify(pwStrumenti)); } catch (_) {}
     if (st) st.textContent = `✓ ${pwStrumenti.length} strumenti caricati`;
     pwRender();
