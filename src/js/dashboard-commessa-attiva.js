@@ -238,12 +238,14 @@ const _CONFRONTO_STATO_BADGE = {
 // (calcolaConfrontoCommessa). Condivisa tra il box nelle card "Attive" e il
 // popup di dettaglio mese della Vista mensile (Gantt), per un rendering coerente.
 function _confrontoTableHtml(confronto) {
-  if (confronto.datiGrigliaAssenti) {
-    return `<div class="text-[11px] text-slate-400 italic text-center py-1">Nessun dato dalla Griglia settimanale per questo mese.</div>`;
-  }
   if (confronto.righe.length === 0) {
-    return `<div class="text-[11px] text-slate-400 italic text-center py-1">Nessuna risorsa preventivata o rilevata in Griglia per questo mese.</div>`;
+    return confronto.datiGrigliaAssenti
+      ? `<div class="text-[11px] text-slate-400 italic text-center py-1">Nessuna risorsa preventivata e nessun dato dalla Griglia settimanale per questo mese.</div>`
+      : `<div class="text-[11px] text-slate-400 italic text-center py-1">Nessuna risorsa preventivata o rilevata in Griglia per questo mese.</div>`;
   }
+  const notaGriglia = confronto.datiGrigliaAssenti
+    ? `<div class="text-[10px] text-slate-400 italic mb-1">Nessun dato dalla Griglia settimanale per questo mese — sotto solo i gg preventivati.</div>`
+    : '';
   const rows = confronto.righe.map(r => `
     <tr class="border-b border-slate-100">
       <td class="p-1 text-[11px] text-slate-800">${esc(r.nome)}</td>
@@ -252,7 +254,7 @@ function _confrontoTableHtml(confronto) {
       <td class="text-center text-[11px] font-medium ${r.delta<0?'text-red-600':(r.delta>0?'text-blue-600':'text-slate-400')}">${r.delta>0?'+':''}${r.delta}</td>
       <td class="text-center p-1">${_CONFRONTO_STATO_BADGE[r.stato]}</td>
     </tr>`).join('');
-  return `<table class="w-full text-[10px]">
+  return notaGriglia + `<table class="w-full text-[10px]">
     <thead><tr class="text-slate-400">
       <th class="text-left font-medium p-1">Risorsa</th>
       <th class="font-medium">Prev</th>
