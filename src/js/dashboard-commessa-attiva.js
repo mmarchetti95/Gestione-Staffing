@@ -221,3 +221,62 @@ function renderArchivioCommesseChiuse() {
   </div>`;
 }
 
+/* ===================== CONFRONTO PREVENTIVATO / EFFETTIVO — UI =====================
+   Box collassabile con tabella Risorsa|Prev|Eff|Δ|Stato per il mese selezionato.
+   La parte che cambia al cambio mese (select + tabella) è isolata in .confronto-body
+   così _refreshConfrontoBox (dashboard-staffing-celle.js) può rigenerarla senza
+   toccare il <details> esterno, preservandone lo stato aperto/chiuso.
+*/
+const _CONFRONTO_STATO_BADGE = {
+  ok: '<span class="text-[10px] font-medium text-emerald-700 bg-emerald-100 px-1.5 py-0.5 rounded whitespace-nowrap">✓ ok</span>',
+  scostamento: '<span class="text-[10px] font-medium text-amber-700 bg-amber-100 px-1.5 py-0.5 rounded whitespace-nowrap">⚠ scostamento</span>',
+  assente: '<span class="text-[10px] font-medium text-red-700 bg-red-100 px-1.5 py-0.5 rounded whitespace-nowrap">🔴 assente in Griglia</span>',
+  extra: '<span class="text-[10px] font-medium text-blue-700 bg-blue-100 px-1.5 py-0.5 rounded whitespace-nowrap">⚡ extra</span>',
+};
+
+// Tabella Risorsa|Prev|Eff|Δ|Stato a partire da un confronto giÃ  calcolato
+// (calcolaConfrontoCommessa). Condivisa tra il box nelle card "Attive" e il
+// popup di dettaglio mese della Vista mensile (Gantt), per un rendering coerente.
+function _confrontoTableHtml(confronto) {
+  if (confronto.datiGrigliaAssenti) {
+    return `<div class="text-[11px] text-slate-400 italic text-center py-1">Nessun dato dalla Griglia settimanale per questo mese.</div>`;
+  }
+  if (confronto.righe.length === 0) {
+    return `<div class="text-[11px] text-slate-400 italic text-center py-1">Nessuna risorsa preventivata o rilevata in Griglia per questo mese.</div>`;
+  }
+  const rows = confronto.righe.map(r => `
+    <tr class="border-b border-slate-100">
+      <td class="p-1 text-[11px] text-slate-800">${esc(r.nome)}</td>
+      <td class="text-center text-[11px] text-slate-600">${r.prev || '—'}</td>
+      <td class="text-center text-[11px] text-slate-600">${r.eff || '—'}</td>
+      <td class="text-center text-[11px] font-medium ${r.delta<0?'text-red-600':(r.delta>0?'text-blue-600':'text-slate-400')}">${r.delta>0?'+':''}${r.delta}</td>
+      <td class="text-center p-1">${_CONFRONTO_STATO_BADGE[r.stato]}</td>
+    </tr>`).join('');
+  return `<table class="w-full text-[10px]">
+    <thead><tr class="text-slate-400">
+      <th class="text-left font-medium p-1">Risorsa</th>
+      <th class="font-medium">Prev</th>
+      <th class="font-medium">Eff</th>
+      <th class="font-medium">Δ</th>
+      <th class="font-medium">Stato</th>
+    </tr></thead>
+    <tbody>${rows}</tbody>
+  </table>`;
+}
+
+function _confrontoBodyHtml(commessaNome, meseSel) {
+  const meseOptions = MESI_LONG.map((m, i) => `<option value="${i}" ${i===meseSel?'selected':''}>${m}</option>`).join('');
+  const selectHtml = `<div class="flex justify-end mb-1">
+    <select class="confronto-mese-sel text-[10px] border border-slate-300 rounded px-1 py-0.5" data-commessa="${encodeURIComponent(commessaNome)}">${meseOptions}</select>
+  </div>`;
+  const confronto = calcolaConfrontoCommessa(commessaNome, meseSel);
+  return selectHtml + _confrontoTableHtml(confronto);
+}
+
+function renderConfrontoBox(commessaNome, meseSel) {
+  return `<details class="confronto-box my-2 p-2 rounded border border-slate-200 bg-slate-50" data-commessa="${encodeURIComponent(commessaNome)}">
+    <summary class="cursor-pointer text-[11px] font-semibold text-slate-600">🔍 Confronto Preventivo/Effettivo</summary>
+    <div class="confronto-body mt-2">${_confrontoBodyHtml(commessaNome, meseSel)}</div>
+  </details>`;
+}
+

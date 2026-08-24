@@ -245,6 +245,12 @@ async function pwMoveCommessaDown(btn) {
 document.addEventListener('DOMContentLoaded', async () => {
   await pwLoad();
 
+  // pwData/pwFerie arrivano da un DOMContentLoaded separato da quello del Dashboard
+  // (nessun ordine garantito tra i due): se la tab Commesse è già stata renderizzata
+  // prima che pwLoad() finisse, il box "Confronto Preventivo/Effettivo" andrebbe
+  // rigenerato con i dati ora disponibili.
+  if (document.getElementById('commesse-list')) renderCommesse();
+
   // Imposta settimana corrente
   const now = new Date();
   const { week, year } = isoWeekYear(now);

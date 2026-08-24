@@ -224,3 +224,16 @@ function _refreshFabbisognoBox(commessaNome) {
   }
 }
 
+// Rigenera solo il contenuto del box confronto (select mese + tabella) per la
+// commessa indicata, individuato via data-attribute (non per titolo, a differenza
+// di _refreshFabbisognoBox) — così funziona indipendentemente dalla posizione
+// della card nella lista. Non tocca il <details> esterno: ne preserva lo stato aperto/chiuso.
+function _refreshConfrontoBox(commessaNome) {
+  const box = document.querySelector(`.confronto-box[data-commessa="${CSS.escape(encodeURIComponent(commessaNome))}"]`);
+  if (!box) return;
+  const body = box.querySelector('.confronto-body');
+  if (!body) return;
+  const meseSel = _confrontoMeseSel[commessaNome] !== undefined ? _confrontoMeseSel[commessaNome] : meseCorrente();
+  body.innerHTML = _confrontoBodyHtml(commessaNome, meseSel);
+}
+

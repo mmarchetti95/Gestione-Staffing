@@ -1,4 +1,8 @@
 /* ===================== COMMESSE ===================== */
+// Mese selezionato per il box "Confronto Preventivo/Effettivo" di ogni commessa attiva
+// (nomeCommessa -> indice mese 0-11). Solo stato di vista, non persistito.
+let _confrontoMeseSel = {};
+
 function renderCommesse() {
   const list = document.getElementById('commesse-list');
 
@@ -106,6 +110,13 @@ function renderCommesse() {
   // ripristina commessa chiusa
   list.querySelectorAll('.restore-commessa').forEach(b => b.onclick = () => ripristinaCommessa(parseInt(b.dataset.idx)));
   list.querySelectorAll('.delete-commessa-chiusa').forEach(b => b.onclick = () => eliminaCommessaChiusa(parseInt(b.dataset.idx)));
+  // cambio mese nel box "Confronto Preventivo/Effettivo" — refresh mirato, non renderCommesse()
+  // completo, per non richiudere i <details> aperti (stesso motivo di _refreshFabbisognoBox)
+  list.querySelectorAll('.confronto-mese-sel').forEach(sel => sel.onchange = () => {
+    const nome = decodeURIComponent(sel.dataset.commessa);
+    _confrontoMeseSel[nome] = parseInt(sel.value, 10);
+    _refreshConfrontoBox(nome);
+  });
 }
 
 function renderCommessaPipelineCard(c) {
@@ -257,6 +268,7 @@ function renderCommesseAttive() {
     // Commessa senza staffing: mostra card semplice con invito ad aggiungere risorse
     if (ass.length === 0) {
       const meta = state.commesse_attive_meta[k] || {};
+      const meseSelVuota = _confrontoMeseSel[k] !== undefined ? _confrontoMeseSel[k] : mc;
       return `
         <div class="bg-white border border-teal-200 rounded-md p-3">
           <div class="flex items-start justify-between mb-1 gap-2">
@@ -272,6 +284,7 @@ function renderCommesseAttive() {
             </div>
           </div>
           <div class="text-[10px] text-teal-600 italic">Commessa attiva — aggiungi le risorse con "+ Aggiungi risorsa"</div>
+          ${renderConfrontoBox(k, meseSelVuota)}
         </div>`;
     }
 
@@ -334,6 +347,10 @@ function renderCommesseAttive() {
       }
     }
     const meta = state.commesse_attive_meta[k] || {};
+    const meseSelConfronto = _confrontoMeseSel[k] !== undefined ? _confrontoMeseSel[k] : mc;
+    const confrontoInfo = isOreNonLav ? null : calcolaConfrontoCommessa(k, meseSelConfronto);
+    const nScostamentiConfronto = (confrontoInfo && !confrontoInfo.datiGrigliaAssenti)
+      ? confrontoInfo.righe.filter(r => r.stato !== 'ok').length : 0;
     return `
       <details class="commessa-card bg-white border ${isOreNonLav?'border-slate-300 bg-slate-50':'border-slate-200'} rounded-md p-3">
         <summary class="flex items-start justify-between mb-0 gap-2 cursor-pointer list-none">
@@ -343,6 +360,7 @@ function renderCommesseAttive() {
               <div class="font-medium text-sm text-slate-900">${k}</div>
               <div class="text-[11px] text-slate-500">${risorse.length} risorse · ${ass.length} righe · ${totGG} gg-uomo totali</div>
               ${(!isOreNonLav && !meta.email_referente) ? '<div class="text-[10px] text-amber-700 bg-amber-50 border border-amber-200 rounded px-1.5 py-0.5 mt-1 inline-block">⚠ referente tecnico non impostato</div>' : ''}
+              ${nScostamentiConfronto > 0 ? `<div class="text-[10px] text-amber-700 bg-amber-50 border border-amber-200 rounded px-1.5 py-0.5 mt-1 inline-block">⚠ ${nScostamentiConfronto} scostamenti Griglia (${MESI[meseSelConfronto]})</div>` : ''}
             </div>
           </div>
           ${isOreNonLav ? '' : `
@@ -368,6 +386,7 @@ function renderCommesseAttive() {
               <tbody>${rows}</tbody>
             </table>
           </div>
+          ${isOreNonLav ? '' : renderConfrontoBox(k, meseSelConfronto)}
         </div>
       </details>`;
   }).join('');

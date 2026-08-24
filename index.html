@@ -817,7 +817,7 @@
     <div class="flex items-center gap-2">
       <button id="btn-presentation" class="px-3 py-1.5 text-sm rounded hover:bg-white/10" style="border:1px solid var(--dark-border-strong);color:var(--dark-text);visibility:visible;">📊 Modalità presentazione</button>
       <div class="text-xs pl-2" style="border-left:1px solid var(--dark-border-strong);color:var(--dark-text-muted);">
-        <span class="font-medium" style="color:var(--accent);">v18.71.0</span> · Michele Marchetti
+        <span class="font-medium" style="color:var(--accent);">v18.72.0</span> · Michele Marchetti
       </div>
     </div>
   </div>
@@ -2774,6 +2774,10 @@ async function aggiornaGgOpVistaCommessa(inp) {
 }
 
 /* ===================== COMMESSE ===================== */
+// Mese selezionato per il box "Confronto Preventivo/Effettivo" di ogni commessa attiva
+// (nomeCommessa -> indice mese 0-11). Solo stato di vista, non persistito.
+let _confrontoMeseSel = {};
+
 function renderCommesse() {
   const list = document.getElementById('commesse-list');
 
@@ -2881,6 +2885,13 @@ function renderCommesse() {
   // ripristina commessa chiusa
   list.querySelectorAll('.restore-commessa').forEach(b => b.onclick = () => ripristinaCommessa(parseInt(b.dataset.idx)));
   list.querySelectorAll('.delete-commessa-chiusa').forEach(b => b.onclick = () => eliminaCommessaChiusa(parseInt(b.dataset.idx)));
+  // cambio mese nel box "Confronto Preventivo/Effettivo" — refresh mirato, non renderCommesse()
+  // completo, per non richiudere i <details> aperti (stesso motivo di _refreshFabbisognoBox)
+  list.querySelectorAll('.confronto-mese-sel').forEach(sel => sel.onchange = () => {
+    const nome = decodeURIComponent(sel.dataset.commessa);
+    _confrontoMeseSel[nome] = parseInt(sel.value, 10);
+    _refreshConfrontoBox(nome);
+  });
 }
 
 function renderCommessaPipelineCard(c) {
@@ -3032,6 +3043,7 @@ function renderCommesseAttive() {
     // Commessa senza staffing: mostra card semplice con invito ad aggiungere risorse
     if (ass.length === 0) {
       const meta = state.commesse_attive_meta[k] || {};
+      const meseSelVuota = _confrontoMeseSel[k] !== undefined ? _confrontoMeseSel[k] : mc;
       return `
         <div class="bg-white border border-teal-200 rounded-md p-3">
           <div class="flex items-start justify-between mb-1 gap-2">
@@ -3047,6 +3059,7 @@ function renderCommesseAttive() {
             </div>
           </div>
           <div class="text-[10px] text-teal-600 italic">Commessa attiva — aggiungi le risorse con "+ Aggiungi risorsa"</div>
+          ${renderConfrontoBox(k, meseSelVuota)}
         </div>`;
     }
 
@@ -3109,6 +3122,10 @@ function renderCommesseAttive() {
       }
     }
     const meta = state.commesse_attive_meta[k] || {};
+    const meseSelConfronto = _confrontoMeseSel[k] !== undefined ? _confrontoMeseSel[k] : mc;
+    const confrontoInfo = isOreNonLav ? null : calcolaConfrontoCommessa(k, meseSelConfronto);
+    const nScostamentiConfronto = (confrontoInfo && !confrontoInfo.datiGrigliaAssenti)
+      ? confrontoInfo.righe.filter(r => r.stato !== 'ok').length : 0;
     return `
       <details class="commessa-card bg-white border ${isOreNonLav?'border-slate-300 bg-slate-50':'border-slate-200'} rounded-md p-3">
         <summary class="flex items-start justify-between mb-0 gap-2 cursor-pointer list-none">
@@ -3118,6 +3135,7 @@ function renderCommesseAttive() {
               <div class="font-medium text-sm text-slate-900">${k}</div>
               <div class="text-[11px] text-slate-500">${risorse.length} risorse · ${ass.length} righe · ${totGG} gg-uomo totali</div>
               ${(!isOreNonLav && !meta.email_referente) ? '<div class="text-[10px] text-amber-700 bg-amber-50 border border-amber-200 rounded px-1.5 py-0.5 mt-1 inline-block">⚠ referente tecnico non impostato</div>' : ''}
+              ${nScostamentiConfronto > 0 ? `<div class="text-[10px] text-amber-700 bg-amber-50 border border-amber-200 rounded px-1.5 py-0.5 mt-1 inline-block">⚠ ${nScostamentiConfronto} scostamenti Griglia (${MESI[meseSelConfronto]})</div>` : ''}
             </div>
           </div>
           ${isOreNonLav ? '' : `
@@ -3143,6 +3161,7 @@ function renderCommesseAttive() {
               <tbody>${rows}</tbody>
             </table>
           </div>
+          ${isOreNonLav ? '' : renderConfrontoBox(k, meseSelConfronto)}
         </div>
       </details>`;
   }).join('');
@@ -3310,6 +3329,67 @@ function calcolaFabbisognoCommessa(commessaNome) {
     totGG, totGGFuturo, caricoMese, opPerMese, mesiInRange,
     completata: mesiAttiviFuturi === 0 && mesiAttiviStorici > 0,
   };
+}
+
+/* ===================== CONFRONTO PREVENTIVATO / EFFETTIVO (da Griglia settimanale) =====================
+   Confronta i gg preventivati nello staffing (state.staffing) con i giorni
+   effettivamente lavorati risultanti dalla Griglia settimanale (pwData), per una
+   commessa e un mese specifici. Un giorno di Griglia conta come "lavorato" con la
+   stessa regola usata in produzione-report.js (cpGetSquadraOpsByDay): cantiere
+   valorizzato e operatore non in ferie quel giorno.
+*/
+function calcolaConfrontoCommessa(commessaNome, meseIdx) {
+  const preventivato = {};
+  state.staffing.filter(r => r.commessa === commessaNome).forEach(r => {
+    const v = Number(r.mesi[meseIdx]) || 0;
+    if (v > 0) preventivato[r.risorsa] = (preventivato[r.risorsa] || 0) + v;
+  });
+
+  const settimane = pwMonthWeeks(ANNO, meseIdx);
+  const effettivo = {};
+  let trovatoBlocco = false;
+  settimane.forEach(({ anno: wa, week: ww }) => {
+    const blocchi = (pwData[wa] && pwData[wa][ww]) || [];
+    const monday = isoWeekToMonday(wa, ww);
+    blocchi.forEach(bc => {
+      if (bc.commessa !== commessaNome) return;
+      trovatoBlocco = true;
+      (bc.squadre || []).forEach(sq => {
+        (sq.operatori || []).forEach(op => {
+          const nome = (op.nome || '').trim();
+          if (!nome) return;
+          for (let g = 0; g < 6; g++) {
+            const d = new Date(monday);
+            d.setUTCDate(d.getUTCDate() + g);
+            if (d.getUTCFullYear() !== ANNO || d.getUTCMonth() !== meseIdx) continue; // giorno fuori dal mese target (settimana a cavallo)
+            const opG = (op.giorni && op.giorni[g]) || {};
+            if (!opG.cantiere || !opG.cantiere.trim()) continue;
+            const inFerie = pwFerie[wa] && pwFerie[wa][ww] && pwFerie[wa][ww][nome] && pwFerie[wa][ww][nome][g] === true;
+            if (inFerie) continue;
+            effettivo[nome] = (effettivo[nome] || 0) + 1;
+          }
+        });
+      });
+    });
+  });
+
+  const nomi = new Set([...Object.keys(preventivato), ...Object.keys(effettivo)]);
+  const righe = [...nomi].map(nome => {
+    const prev = preventivato[nome] || 0;
+    const eff = effettivo[nome] || 0;
+    const delta = eff - prev;
+    let stato;
+    if (prev === 0 && eff > 0) stato = 'extra';
+    else if (prev > 0 && eff === 0) stato = 'assente';
+    else if (Math.abs(delta) <= 1) stato = 'ok';
+    else stato = 'scostamento';
+    return { nome, prev, eff, delta, stato };
+  });
+
+  const ordinePeso = { assente: 0, scostamento: 1, extra: 2, ok: 3 };
+  righe.sort((a, b) => (ordinePeso[a.stato] - ordinePeso[b.stato]) || a.nome.localeCompare(b.nome));
+
+  return { righe, datiGrigliaAssenti: !trovatoBlocco };
 }
 
 async function rimuoviRigaStaffing(idx) {
@@ -5046,8 +5126,19 @@ function renderGantt() {
         return;
       }
 
-      // Nel range ma senza giorni
+      // Nel range ma senza giorni preventivati: verifica se dalla Griglia settimanale
+      // risulta comunque del lavoro effettivo non pianificato ("extra")
       if (!gg) {
+        const confrontoVuoto = calcolaConfrontoCommessa(r.nome, i);
+        const effExtra = !confrontoVuoto.datiGrigliaAssenti
+          ? confrontoVuoto.righe.reduce((s, x) => s + x.eff, 0) : 0;
+        if (effExtra > 0) {
+          const encNome = encodeURIComponent(r.nome);
+          cells += '<td class="gantt-cell" data-gnome="' + encNome + '" data-gm="' + i + '"'
+            + ' style="min-width:52px;background:#dbeafe;padding:3px;cursor:pointer" title="' + m + ': ' + effExtra + ' gg effettivi da Griglia settimanale, non preventivati">'
+            + '<div style="text-align:center;font-size:10px;font-weight:700;color:#1e40af">⚡' + effExtra + '</div></td>';
+          return;
+        }
         const bg = past ? '#f8fafc' : (r.risDich ? '#fff7ed' : '#f8fafc');
         cells += '<td style="min-width:52px;background:' + bg + ';padding:2px" title="' + m + ': nessuna allocazione' + (r.risDich && !past ? ' ⚠' : '') + '"></td>';
         return;
@@ -5138,11 +5229,23 @@ function renderGantt() {
       if (meta && meta.risorse_necessarie != null) {
         apriDettaglioMeseCommessa(ev, td.dataset.gnome, mIdx);
       } else {
-        // Semplice popup lista operatori
-        const righe = state.staffing.filter(r => r.commessa === nome && Number(r.mesi[mIdx]) > 0);
-        if (!righe.length) return;
-        const txt = nome + ' — ' + MESI_LONG[mIdx] + '\n\n' + righe.map(r => '• ' + r.risorsa + ': ' + r.mesi[mIdx] + ' gg').join('\n');
-        showAlertModal(txt);
+        // Popup con tabella Preventivo/Effettivo (stessa resa delle card "Attive")
+        const confronto = calcolaConfrontoCommessa(nome, mIdx);
+        if (confronto.righe.length === 0 && confronto.datiGrigliaAssenti) return;
+        const root = document.getElementById('modal-root');
+        root.innerHTML = `<div class="modal-backdrop">
+          <div class="bg-white rounded-lg shadow-xl w-full max-w-lg mx-4 my-8 p-5 max-h-[90vh] overflow-y-auto">
+            <div class="flex items-center justify-between mb-3">
+              <h3 class="font-semibold text-slate-900">${esc(nome)} — ${MESI_LONG[mIdx]}</h3>
+              <button onclick="closeModal()" class="text-slate-400 hover:text-slate-700 text-xl leading-none">×</button>
+            </div>
+            ${_confrontoTableHtml(confronto)}
+            <div class="flex justify-end mt-4">
+              <button onclick="closeModal()" class="px-3 py-1.5 text-sm bg-teal-600 text-white rounded hover:bg-teal-700">OK</button>
+            </div>
+          </div>
+        </div>`;
+        root.querySelector('.modal-backdrop').addEventListener('click', e => { if (e.target.classList.contains('modal-backdrop')) closeModal(); });
       }
     });
   });
@@ -5371,6 +5474,65 @@ function renderArchivioCommesseChiuse() {
   </div>`;
 }
 
+/* ===================== CONFRONTO PREVENTIVATO / EFFETTIVO — UI =====================
+   Box collassabile con tabella Risorsa|Prev|Eff|Δ|Stato per il mese selezionato.
+   La parte che cambia al cambio mese (select + tabella) è isolata in .confronto-body
+   così _refreshConfrontoBox (dashboard-staffing-celle.js) può rigenerarla senza
+   toccare il <details> esterno, preservandone lo stato aperto/chiuso.
+*/
+const _CONFRONTO_STATO_BADGE = {
+  ok: '<span class="text-[10px] font-medium text-emerald-700 bg-emerald-100 px-1.5 py-0.5 rounded whitespace-nowrap">✓ ok</span>',
+  scostamento: '<span class="text-[10px] font-medium text-amber-700 bg-amber-100 px-1.5 py-0.5 rounded whitespace-nowrap">⚠ scostamento</span>',
+  assente: '<span class="text-[10px] font-medium text-red-700 bg-red-100 px-1.5 py-0.5 rounded whitespace-nowrap">🔴 assente in Griglia</span>',
+  extra: '<span class="text-[10px] font-medium text-blue-700 bg-blue-100 px-1.5 py-0.5 rounded whitespace-nowrap">⚡ extra</span>',
+};
+
+// Tabella Risorsa|Prev|Eff|Δ|Stato a partire da un confronto giÃ  calcolato
+// (calcolaConfrontoCommessa). Condivisa tra il box nelle card "Attive" e il
+// popup di dettaglio mese della Vista mensile (Gantt), per un rendering coerente.
+function _confrontoTableHtml(confronto) {
+  if (confronto.datiGrigliaAssenti) {
+    return `<div class="text-[11px] text-slate-400 italic text-center py-1">Nessun dato dalla Griglia settimanale per questo mese.</div>`;
+  }
+  if (confronto.righe.length === 0) {
+    return `<div class="text-[11px] text-slate-400 italic text-center py-1">Nessuna risorsa preventivata o rilevata in Griglia per questo mese.</div>`;
+  }
+  const rows = confronto.righe.map(r => `
+    <tr class="border-b border-slate-100">
+      <td class="p-1 text-[11px] text-slate-800">${esc(r.nome)}</td>
+      <td class="text-center text-[11px] text-slate-600">${r.prev || '—'}</td>
+      <td class="text-center text-[11px] text-slate-600">${r.eff || '—'}</td>
+      <td class="text-center text-[11px] font-medium ${r.delta<0?'text-red-600':(r.delta>0?'text-blue-600':'text-slate-400')}">${r.delta>0?'+':''}${r.delta}</td>
+      <td class="text-center p-1">${_CONFRONTO_STATO_BADGE[r.stato]}</td>
+    </tr>`).join('');
+  return `<table class="w-full text-[10px]">
+    <thead><tr class="text-slate-400">
+      <th class="text-left font-medium p-1">Risorsa</th>
+      <th class="font-medium">Prev</th>
+      <th class="font-medium">Eff</th>
+      <th class="font-medium">Δ</th>
+      <th class="font-medium">Stato</th>
+    </tr></thead>
+    <tbody>${rows}</tbody>
+  </table>`;
+}
+
+function _confrontoBodyHtml(commessaNome, meseSel) {
+  const meseOptions = MESI_LONG.map((m, i) => `<option value="${i}" ${i===meseSel?'selected':''}>${m}</option>`).join('');
+  const selectHtml = `<div class="flex justify-end mb-1">
+    <select class="confronto-mese-sel text-[10px] border border-slate-300 rounded px-1 py-0.5" data-commessa="${encodeURIComponent(commessaNome)}">${meseOptions}</select>
+  </div>`;
+  const confronto = calcolaConfrontoCommessa(commessaNome, meseSel);
+  return selectHtml + _confrontoTableHtml(confronto);
+}
+
+function renderConfrontoBox(commessaNome, meseSel) {
+  return `<details class="confronto-box my-2 p-2 rounded border border-slate-200 bg-slate-50" data-commessa="${encodeURIComponent(commessaNome)}">
+    <summary class="cursor-pointer text-[11px] font-semibold text-slate-600">🔍 Confronto Preventivo/Effettivo</summary>
+    <div class="confronto-body mt-2">${_confrontoBodyHtml(commessaNome, meseSel)}</div>
+  </details>`;
+}
+
 /* ===================== COMMIT CELLE INLINE ===================== */
 /* Gestisce la validazione e il salvataggio di una cella inline della griglia staffing.
    Aggiorna lo stato e ricalcola solo il totale riga + il box fabbisogno,
@@ -5597,6 +5759,19 @@ function _refreshFabbisognoBox(commessaNome) {
   }
 }
 
+// Rigenera solo il contenuto del box confronto (select mese + tabella) per la
+// commessa indicata, individuato via data-attribute (non per titolo, a differenza
+// di _refreshFabbisognoBox) — così funziona indipendentemente dalla posizione
+// della card nella lista. Non tocca il <details> esterno: ne preserva lo stato aperto/chiuso.
+function _refreshConfrontoBox(commessaNome) {
+  const box = document.querySelector(`.confronto-box[data-commessa="${CSS.escape(encodeURIComponent(commessaNome))}"]`);
+  if (!box) return;
+  const body = box.querySelector('.confronto-body');
+  if (!body) return;
+  const meseSel = _confrontoMeseSel[commessaNome] !== undefined ? _confrontoMeseSel[commessaNome] : meseCorrente();
+  body.innerHTML = _confrontoBodyHtml(commessaNome, meseSel);
+}
+
 /* ===================== DETTAGLIO MESE COMMESSA ===================== */
 function apriDettaglioMeseCommessa(ev, commessaEnc, meseIdx) {
   ev.stopPropagation();
@@ -5751,6 +5926,15 @@ function apriDettaglioMeseCommessa(ev, commessaEnc, meseIdx) {
     </div>`;
   }).join('');
 
+  // Confronto con la Griglia settimanale: chi ha lavorato davvero questo mese
+  // (persone diverse o giorni diversi da quelli preventivati sopra). Stessa
+  // tabella colorata usata nelle card "Attive" e nel popup della Vista mensile.
+  const confrontoMese = calcolaConfrontoCommessa(commessaNome, meseIdx);
+  const confrontoHtml = `<div class="mt-3">
+    <div class="text-xs font-semibold text-slate-700 mb-1">🔍 Confronto Preventivo/Effettivo (${meseName}):</div>
+    ${_confrontoTableHtml(confrontoMese)}
+  </div>`;
+
   const root = document.getElementById('modal-root');
   root.innerHTML = `
     <div class="modal-backdrop">
@@ -5766,6 +5950,7 @@ function apriDettaglioMeseCommessa(ev, commessaEnc, meseIdx) {
         </div>
         ${statusHtml}
         ${impiegatiHtml ? `<div class="mt-3"><div class="text-xs font-semibold text-slate-700 mb-1">Impiegati in ${meseName} (${nOp}):</div><div class="space-y-1">${impiegatiHtml}</div></div>` : `<div class="mt-3 text-xs text-slate-500 italic">Nessun operatore impiegato in ${meseName}.</div>`}
+        ${confrontoHtml}
         ${suggestHtml}
         <div class="flex justify-end mt-4">
           <button onclick="closeModal()" class="px-3 py-1.5 text-sm border border-slate-300 rounded hover:bg-slate-50">Chiudi</button>
@@ -7652,6 +7837,12 @@ async function pwMoveCommessaDown(btn) {
 /* ----- Init pianificazione ----- */
 document.addEventListener('DOMContentLoaded', async () => {
   await pwLoad();
+
+  // pwData/pwFerie arrivano da un DOMContentLoaded separato da quello del Dashboard
+  // (nessun ordine garantito tra i due): se la tab Commesse è già stata renderizzata
+  // prima che pwLoad() finisse, il box "Confronto Preventivo/Effettivo" andrebbe
+  // rigenerato con i dati ora disponibili.
+  if (document.getElementById('commesse-list')) renderCommesse();
 
   // Imposta settimana corrente
   const now = new Date();

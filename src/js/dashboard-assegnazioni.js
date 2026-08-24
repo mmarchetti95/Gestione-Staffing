@@ -157,6 +157,67 @@ function calcolaFabbisognoCommessa(commessaNome) {
   };
 }
 
+/* ===================== CONFRONTO PREVENTIVATO / EFFETTIVO (da Griglia settimanale) =====================
+   Confronta i gg preventivati nello staffing (state.staffing) con i giorni
+   effettivamente lavorati risultanti dalla Griglia settimanale (pwData), per una
+   commessa e un mese specifici. Un giorno di Griglia conta come "lavorato" con la
+   stessa regola usata in produzione-report.js (cpGetSquadraOpsByDay): cantiere
+   valorizzato e operatore non in ferie quel giorno.
+*/
+function calcolaConfrontoCommessa(commessaNome, meseIdx) {
+  const preventivato = {};
+  state.staffing.filter(r => r.commessa === commessaNome).forEach(r => {
+    const v = Number(r.mesi[meseIdx]) || 0;
+    if (v > 0) preventivato[r.risorsa] = (preventivato[r.risorsa] || 0) + v;
+  });
+
+  const settimane = pwMonthWeeks(ANNO, meseIdx);
+  const effettivo = {};
+  let trovatoBlocco = false;
+  settimane.forEach(({ anno: wa, week: ww }) => {
+    const blocchi = (pwData[wa] && pwData[wa][ww]) || [];
+    const monday = isoWeekToMonday(wa, ww);
+    blocchi.forEach(bc => {
+      if (bc.commessa !== commessaNome) return;
+      trovatoBlocco = true;
+      (bc.squadre || []).forEach(sq => {
+        (sq.operatori || []).forEach(op => {
+          const nome = (op.nome || '').trim();
+          if (!nome) return;
+          for (let g = 0; g < 6; g++) {
+            const d = new Date(monday);
+            d.setUTCDate(d.getUTCDate() + g);
+            if (d.getUTCFullYear() !== ANNO || d.getUTCMonth() !== meseIdx) continue; // giorno fuori dal mese target (settimana a cavallo)
+            const opG = (op.giorni && op.giorni[g]) || {};
+            if (!opG.cantiere || !opG.cantiere.trim()) continue;
+            const inFerie = pwFerie[wa] && pwFerie[wa][ww] && pwFerie[wa][ww][nome] && pwFerie[wa][ww][nome][g] === true;
+            if (inFerie) continue;
+            effettivo[nome] = (effettivo[nome] || 0) + 1;
+          }
+        });
+      });
+    });
+  });
+
+  const nomi = new Set([...Object.keys(preventivato), ...Object.keys(effettivo)]);
+  const righe = [...nomi].map(nome => {
+    const prev = preventivato[nome] || 0;
+    const eff = effettivo[nome] || 0;
+    const delta = eff - prev;
+    let stato;
+    if (prev === 0 && eff > 0) stato = 'extra';
+    else if (prev > 0 && eff === 0) stato = 'assente';
+    else if (Math.abs(delta) <= 1) stato = 'ok';
+    else stato = 'scostamento';
+    return { nome, prev, eff, delta, stato };
+  });
+
+  const ordinePeso = { assente: 0, scostamento: 1, extra: 2, ok: 3 };
+  righe.sort((a, b) => (ordinePeso[a.stato] - ordinePeso[b.stato]) || a.nome.localeCompare(b.nome));
+
+  return { righe, datiGrigliaAssenti: !trovatoBlocco };
+}
+
 async function rimuoviRigaStaffing(idx) {
   const r = state.staffing[idx];
   if (!r) return;

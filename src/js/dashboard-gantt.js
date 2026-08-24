@@ -100,8 +100,19 @@ function renderGantt() {
         return;
       }
 
-      // Nel range ma senza giorni
+      // Nel range ma senza giorni preventivati: verifica se dalla Griglia settimanale
+      // risulta comunque del lavoro effettivo non pianificato ("extra")
       if (!gg) {
+        const confrontoVuoto = calcolaConfrontoCommessa(r.nome, i);
+        const effExtra = !confrontoVuoto.datiGrigliaAssenti
+          ? confrontoVuoto.righe.reduce((s, x) => s + x.eff, 0) : 0;
+        if (effExtra > 0) {
+          const encNome = encodeURIComponent(r.nome);
+          cells += '<td class="gantt-cell" data-gnome="' + encNome + '" data-gm="' + i + '"'
+            + ' style="min-width:52px;background:#dbeafe;padding:3px;cursor:pointer" title="' + m + ': ' + effExtra + ' gg effettivi da Griglia settimanale, non preventivati">'
+            + '<div style="text-align:center;font-size:10px;font-weight:700;color:#1e40af">⚡' + effExtra + '</div></td>';
+          return;
+        }
         const bg = past ? '#f8fafc' : (r.risDich ? '#fff7ed' : '#f8fafc');
         cells += '<td style="min-width:52px;background:' + bg + ';padding:2px" title="' + m + ': nessuna allocazione' + (r.risDich && !past ? ' ⚠' : '') + '"></td>';
         return;
@@ -192,11 +203,23 @@ function renderGantt() {
       if (meta && meta.risorse_necessarie != null) {
         apriDettaglioMeseCommessa(ev, td.dataset.gnome, mIdx);
       } else {
-        // Semplice popup lista operatori
-        const righe = state.staffing.filter(r => r.commessa === nome && Number(r.mesi[mIdx]) > 0);
-        if (!righe.length) return;
-        const txt = nome + ' — ' + MESI_LONG[mIdx] + '\n\n' + righe.map(r => '• ' + r.risorsa + ': ' + r.mesi[mIdx] + ' gg').join('\n');
-        showAlertModal(txt);
+        // Popup con tabella Preventivo/Effettivo (stessa resa delle card "Attive")
+        const confronto = calcolaConfrontoCommessa(nome, mIdx);
+        if (confronto.righe.length === 0 && confronto.datiGrigliaAssenti) return;
+        const root = document.getElementById('modal-root');
+        root.innerHTML = `<div class="modal-backdrop">
+          <div class="bg-white rounded-lg shadow-xl w-full max-w-lg mx-4 my-8 p-5 max-h-[90vh] overflow-y-auto">
+            <div class="flex items-center justify-between mb-3">
+              <h3 class="font-semibold text-slate-900">${esc(nome)} — ${MESI_LONG[mIdx]}</h3>
+              <button onclick="closeModal()" class="text-slate-400 hover:text-slate-700 text-xl leading-none">×</button>
+            </div>
+            ${_confrontoTableHtml(confronto)}
+            <div class="flex justify-end mt-4">
+              <button onclick="closeModal()" class="px-3 py-1.5 text-sm bg-teal-600 text-white rounded hover:bg-teal-700">OK</button>
+            </div>
+          </div>
+        </div>`;
+        root.querySelector('.modal-backdrop').addEventListener('click', e => { if (e.target.classList.contains('modal-backdrop')) closeModal(); });
       }
     });
   });

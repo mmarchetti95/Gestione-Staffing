@@ -152,6 +152,15 @@ function apriDettaglioMeseCommessa(ev, commessaEnc, meseIdx) {
     </div>`;
   }).join('');
 
+  // Confronto con la Griglia settimanale: chi ha lavorato davvero questo mese
+  // (persone diverse o giorni diversi da quelli preventivati sopra). Stessa
+  // tabella colorata usata nelle card "Attive" e nel popup della Vista mensile.
+  const confrontoMese = calcolaConfrontoCommessa(commessaNome, meseIdx);
+  const confrontoHtml = `<div class="mt-3">
+    <div class="text-xs font-semibold text-slate-700 mb-1">🔍 Confronto Preventivo/Effettivo (${meseName}):</div>
+    ${_confrontoTableHtml(confrontoMese)}
+  </div>`;
+
   const root = document.getElementById('modal-root');
   root.innerHTML = `
     <div class="modal-backdrop">
@@ -167,6 +176,7 @@ function apriDettaglioMeseCommessa(ev, commessaEnc, meseIdx) {
         </div>
         ${statusHtml}
         ${impiegatiHtml ? `<div class="mt-3"><div class="text-xs font-semibold text-slate-700 mb-1">Impiegati in ${meseName} (${nOp}):</div><div class="space-y-1">${impiegatiHtml}</div></div>` : `<div class="mt-3 text-xs text-slate-500 italic">Nessun operatore impiegato in ${meseName}.</div>`}
+        ${confrontoHtml}
         ${suggestHtml}
         <div class="flex justify-end mt-4">
           <button onclick="closeModal()" class="px-3 py-1.5 text-sm border border-slate-300 rounded hover:bg-slate-50">Chiudi</button>
