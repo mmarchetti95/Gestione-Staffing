@@ -817,7 +817,7 @@
     <div class="flex items-center gap-2">
       <button id="btn-presentation" class="px-3 py-1.5 text-sm rounded hover:bg-white/10" style="border:1px solid var(--dark-border-strong);color:var(--dark-text);visibility:visible;">📊 Modalità presentazione</button>
       <div class="text-xs pl-2" style="border-left:1px solid var(--dark-border-strong);color:var(--dark-text-muted);">
-        <span class="font-medium" style="color:var(--accent);">v18.72.1</span> · Michele Marchetti
+        <span class="font-medium" style="color:var(--accent);">v18.74.0</span> · Michele Marchetti
       </div>
     </div>
   </div>
@@ -2678,6 +2678,18 @@ function renderVistaOperatore(opId) {
               onchange="aggiornaGgOpVistaCommessa(this)">
           </td>`;
         }).join('');
+        const mesiEffRow = MESI.map((m, i) => {
+          const isPast = i < mc;
+          const confronto = calcolaConfrontoCommessa(ca.nome, i);
+          const rigaOp = confronto.righe.find(r => r.nome === op.nome_esteso);
+          if (confronto.datiGrigliaAssenti) {
+            return `<td class="text-center text-[10px] py-0.5 text-slate-300" title="${m}: nessun dato dalla Griglia settimanale">·</td>`;
+          }
+          const eff = rigaOp ? rigaOp.eff : 0;
+          const stato = rigaOp ? rigaOp.stato : 'assente';
+          const clsByStato = { ok: 'text-emerald-600 font-medium', scostamento: 'text-amber-600 font-semibold', assente: 'text-red-400', extra: 'text-blue-600 font-semibold' };
+          return `<td class="text-center text-[10px] py-0.5 ${clsByStato[stato]||'text-slate-300'} ${isPast?'opacity-50':''}" title="${m}: ${eff} gg effettivi da Griglia settimanale (${stato})">${eff || '·'}</td>`;
+        }).join('');
         return `<div class="border border-slate-200 rounded p-2 mb-2">
           <div class="flex items-center justify-between mb-1">
             <div class="font-medium text-xs text-slate-800">${esc(ca.nome)}</div>
@@ -2685,12 +2697,53 @@ function renderVistaOperatore(opId) {
           </div>
           <div class="overflow-x-auto">
             <table class="w-full text-[9px]">
-              <thead><tr>${MESI.map((m,i)=>`<th class="text-center text-[8px] font-medium ${i<mc?'text-slate-300':'text-slate-500'} px-0.5">${m}</th>`).join('')}</tr></thead>
-              <tbody><tr>${mesiBar}</tr></tbody>
+              <thead><tr>
+                <th class="text-left text-[8px] font-medium text-slate-400 px-0.5"></th>
+                ${MESI.map((m,i)=>`<th class="text-center text-[8px] font-medium ${i<mc?'text-slate-300':'text-slate-500'} px-0.5">${m}</th>`).join('')}
+              </tr></thead>
+              <tbody>
+                <tr><td class="text-[8px] text-slate-400 pr-1 whitespace-nowrap">Prev.</td>${mesiBar}</tr>
+                <tr class="border-t border-slate-100"><td class="text-[8px] text-slate-400 pr-1 whitespace-nowrap">Eff.</td>${mesiEffRow}</tr>
+              </tbody>
             </table>
           </div>
         </div>`;
       }).join('');
+
+  // --- Commesse "solo Griglia": impiegato in Griglia settimanale ma mai
+  // preventivato nello staffing (scoperte solo scansionando pwData). ---
+  const effAnno = calcolaImpegniEffettiviAnnoOperatore(op.nome_esteso);
+  const soloEffettivoOp = Object.entries(effAnno)
+    .filter(([nome, mesi]) => !commesseNomi.includes(nome) && mesi.some(v => v > 0))
+    .map(([nome, mesi]) => ({ nome, mesi, totEff: mesi.reduce((a,b)=>a+b,0) }));
+
+  const soloEffettivoHtml = soloEffettivoOp.length === 0 ? '' : `
+      <div>
+        <div class="text-[9px] text-amber-700 uppercase font-medium mb-1.5">⚡ Solo in Griglia settimanale — non preventivate (${soloEffettivoOp.length})</div>
+        ${soloEffettivoOp.map(ca => {
+          const meta = state.commesse_attive_meta[ca.nome] || {};
+          const effRow = MESI.map((m, i) => {
+            const isPast = i < mc;
+            const v = ca.mesi[i] || 0;
+            return `<td class="text-center text-[10px] py-0.5 ${v>0?'text-blue-700 font-semibold':'text-slate-300'} ${isPast?'opacity-50':''}" title="${m}: ${v} gg effettivi da Griglia settimanale, mai preventivati">${v || '·'}</td>`;
+          }).join('');
+          return `<div class="border border-amber-300 bg-amber-50 rounded p-2 mb-2">
+            <div class="flex items-center justify-between mb-1">
+              <div class="font-medium text-xs text-slate-800">${esc(ca.nome)} <span class="text-[9px] bg-amber-100 text-amber-800 px-1 rounded ml-1">⚠ mai preventivata</span></div>
+              <div class="text-[10px] text-slate-500">${ca.totEff} gg effettivi${meta.cliente?' · '+esc(meta.cliente):''}</div>
+            </div>
+            <div class="overflow-x-auto">
+              <table class="w-full text-[9px]">
+                <thead><tr>
+                  <th class="text-left text-[8px] font-medium text-slate-400 px-0.5"></th>
+                  ${MESI.map((m,i)=>`<th class="text-center text-[8px] font-medium ${i<mc?'text-slate-300':'text-slate-500'} px-0.5">${m}</th>`).join('')}
+                </tr></thead>
+                <tbody><tr><td class="text-[8px] text-slate-400 pr-1 whitespace-nowrap">Eff.</td>${effRow}</tr></tbody>
+              </table>
+            </div>
+          </div>`;
+        }).join('')}
+      </div>`;
 
   // --- Pipeline assegnazioni ---
   const pipelineOp = state.assegnazioni
@@ -2740,6 +2793,7 @@ function renderVistaOperatore(opId) {
         <div class="text-[9px] text-slate-500 uppercase font-medium mb-1.5">Commesse attive (${commesseAttiveOp.length})</div>
         ${commesseAttiveHtml}
       </div>
+      ${soloEffettivoHtml}
       <!-- Pipeline -->
       <div>
         <div class="text-[9px] text-slate-500 uppercase font-medium mb-1.5">Pipeline assegnata (${pipelineOp.length})</div>
@@ -3390,6 +3444,41 @@ function calcolaConfrontoCommessa(commessaNome, meseIdx) {
   righe.sort((a, b) => (ordinePeso[a.stato] - ordinePeso[b.stato]) || a.nome.localeCompare(b.nome));
 
   return { righe, datiGrigliaAssenti: !trovatoBlocco };
+}
+
+/* Scansiona l'intera Griglia settimanale dell'anno corrente e restituisce, per
+   ciascuna commessa in cui l'operatore risulta impiegato (cantiere valorizzato
+   e non in ferie), i gg effettivi mese per mese. Usata per far emergere, nella
+   vista operatore, le commesse "solo Griglia" mai preventivate nello staffing. */
+function calcolaImpegniEffettiviAnnoOperatore(nomeOperatore) {
+  const perCommessa = {};
+  for (let meseIdx = 0; meseIdx < 12; meseIdx++) {
+    pwMonthWeeks(ANNO, meseIdx).forEach(({ anno: wa, week: ww }) => {
+      const blocchi = (pwData[wa] && pwData[wa][ww]) || [];
+      const monday = isoWeekToMonday(wa, ww);
+      blocchi.forEach(bc => {
+        if (!bc.commessa) return;
+        (bc.squadre || []).forEach(sq => {
+          (sq.operatori || []).forEach(op => {
+            const nome = (op.nome || '').trim();
+            if (nome !== nomeOperatore) return;
+            for (let g = 0; g < 6; g++) {
+              const d = new Date(monday);
+              d.setUTCDate(d.getUTCDate() + g);
+              if (d.getUTCFullYear() !== ANNO || d.getUTCMonth() !== meseIdx) continue;
+              const opG = (op.giorni && op.giorni[g]) || {};
+              if (!opG.cantiere || !opG.cantiere.trim()) continue;
+              const inFerie = pwFerie[wa] && pwFerie[wa][ww] && pwFerie[wa][ww][nome] && pwFerie[wa][ww][nome][g] === true;
+              if (inFerie) continue;
+              if (!perCommessa[bc.commessa]) perCommessa[bc.commessa] = new Array(12).fill(0);
+              perCommessa[bc.commessa][meseIdx] += 1;
+            }
+          });
+        });
+      });
+    });
+  }
+  return perCommessa;
 }
 
 async function rimuoviRigaStaffing(idx) {

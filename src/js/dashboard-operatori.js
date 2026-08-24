@@ -336,6 +336,18 @@ function renderVistaOperatore(opId) {
               onchange="aggiornaGgOpVistaCommessa(this)">
           </td>`;
         }).join('');
+        const mesiEffRow = MESI.map((m, i) => {
+          const isPast = i < mc;
+          const confronto = calcolaConfrontoCommessa(ca.nome, i);
+          const rigaOp = confronto.righe.find(r => r.nome === op.nome_esteso);
+          if (confronto.datiGrigliaAssenti) {
+            return `<td class="text-center text-[10px] py-0.5 text-slate-300" title="${m}: nessun dato dalla Griglia settimanale">·</td>`;
+          }
+          const eff = rigaOp ? rigaOp.eff : 0;
+          const stato = rigaOp ? rigaOp.stato : 'assente';
+          const clsByStato = { ok: 'text-emerald-600 font-medium', scostamento: 'text-amber-600 font-semibold', assente: 'text-red-400', extra: 'text-blue-600 font-semibold' };
+          return `<td class="text-center text-[10px] py-0.5 ${clsByStato[stato]||'text-slate-300'} ${isPast?'opacity-50':''}" title="${m}: ${eff} gg effettivi da Griglia settimanale (${stato})">${eff || '·'}</td>`;
+        }).join('');
         return `<div class="border border-slate-200 rounded p-2 mb-2">
           <div class="flex items-center justify-between mb-1">
             <div class="font-medium text-xs text-slate-800">${esc(ca.nome)}</div>
@@ -343,12 +355,53 @@ function renderVistaOperatore(opId) {
           </div>
           <div class="overflow-x-auto">
             <table class="w-full text-[9px]">
-              <thead><tr>${MESI.map((m,i)=>`<th class="text-center text-[8px] font-medium ${i<mc?'text-slate-300':'text-slate-500'} px-0.5">${m}</th>`).join('')}</tr></thead>
-              <tbody><tr>${mesiBar}</tr></tbody>
+              <thead><tr>
+                <th class="text-left text-[8px] font-medium text-slate-400 px-0.5"></th>
+                ${MESI.map((m,i)=>`<th class="text-center text-[8px] font-medium ${i<mc?'text-slate-300':'text-slate-500'} px-0.5">${m}</th>`).join('')}
+              </tr></thead>
+              <tbody>
+                <tr><td class="text-[8px] text-slate-400 pr-1 whitespace-nowrap">Prev.</td>${mesiBar}</tr>
+                <tr class="border-t border-slate-100"><td class="text-[8px] text-slate-400 pr-1 whitespace-nowrap">Eff.</td>${mesiEffRow}</tr>
+              </tbody>
             </table>
           </div>
         </div>`;
       }).join('');
+
+  // --- Commesse "solo Griglia": impiegato in Griglia settimanale ma mai
+  // preventivato nello staffing (scoperte solo scansionando pwData). ---
+  const effAnno = calcolaImpegniEffettiviAnnoOperatore(op.nome_esteso);
+  const soloEffettivoOp = Object.entries(effAnno)
+    .filter(([nome, mesi]) => !commesseNomi.includes(nome) && mesi.some(v => v > 0))
+    .map(([nome, mesi]) => ({ nome, mesi, totEff: mesi.reduce((a,b)=>a+b,0) }));
+
+  const soloEffettivoHtml = soloEffettivoOp.length === 0 ? '' : `
+      <div>
+        <div class="text-[9px] text-amber-700 uppercase font-medium mb-1.5">⚡ Solo in Griglia settimanale — non preventivate (${soloEffettivoOp.length})</div>
+        ${soloEffettivoOp.map(ca => {
+          const meta = state.commesse_attive_meta[ca.nome] || {};
+          const effRow = MESI.map((m, i) => {
+            const isPast = i < mc;
+            const v = ca.mesi[i] || 0;
+            return `<td class="text-center text-[10px] py-0.5 ${v>0?'text-blue-700 font-semibold':'text-slate-300'} ${isPast?'opacity-50':''}" title="${m}: ${v} gg effettivi da Griglia settimanale, mai preventivati">${v || '·'}</td>`;
+          }).join('');
+          return `<div class="border border-amber-300 bg-amber-50 rounded p-2 mb-2">
+            <div class="flex items-center justify-between mb-1">
+              <div class="font-medium text-xs text-slate-800">${esc(ca.nome)} <span class="text-[9px] bg-amber-100 text-amber-800 px-1 rounded ml-1">⚠ mai preventivata</span></div>
+              <div class="text-[10px] text-slate-500">${ca.totEff} gg effettivi${meta.cliente?' · '+esc(meta.cliente):''}</div>
+            </div>
+            <div class="overflow-x-auto">
+              <table class="w-full text-[9px]">
+                <thead><tr>
+                  <th class="text-left text-[8px] font-medium text-slate-400 px-0.5"></th>
+                  ${MESI.map((m,i)=>`<th class="text-center text-[8px] font-medium ${i<mc?'text-slate-300':'text-slate-500'} px-0.5">${m}</th>`).join('')}
+                </tr></thead>
+                <tbody><tr><td class="text-[8px] text-slate-400 pr-1 whitespace-nowrap">Eff.</td>${effRow}</tr></tbody>
+              </table>
+            </div>
+          </div>`;
+        }).join('')}
+      </div>`;
 
   // --- Pipeline assegnazioni ---
   const pipelineOp = state.assegnazioni
@@ -398,6 +451,7 @@ function renderVistaOperatore(opId) {
         <div class="text-[9px] text-slate-500 uppercase font-medium mb-1.5">Commesse attive (${commesseAttiveOp.length})</div>
         ${commesseAttiveHtml}
       </div>
+      ${soloEffettivoHtml}
       <!-- Pipeline -->
       <div>
         <div class="text-[9px] text-slate-500 uppercase font-medium mb-1.5">Pipeline assegnata (${pipelineOp.length})</div>

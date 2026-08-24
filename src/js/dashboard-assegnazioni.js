@@ -218,6 +218,41 @@ function calcolaConfrontoCommessa(commessaNome, meseIdx) {
   return { righe, datiGrigliaAssenti: !trovatoBlocco };
 }
 
+/* Scansiona l'intera Griglia settimanale dell'anno corrente e restituisce, per
+   ciascuna commessa in cui l'operatore risulta impiegato (cantiere valorizzato
+   e non in ferie), i gg effettivi mese per mese. Usata per far emergere, nella
+   vista operatore, le commesse "solo Griglia" mai preventivate nello staffing. */
+function calcolaImpegniEffettiviAnnoOperatore(nomeOperatore) {
+  const perCommessa = {};
+  for (let meseIdx = 0; meseIdx < 12; meseIdx++) {
+    pwMonthWeeks(ANNO, meseIdx).forEach(({ anno: wa, week: ww }) => {
+      const blocchi = (pwData[wa] && pwData[wa][ww]) || [];
+      const monday = isoWeekToMonday(wa, ww);
+      blocchi.forEach(bc => {
+        if (!bc.commessa) return;
+        (bc.squadre || []).forEach(sq => {
+          (sq.operatori || []).forEach(op => {
+            const nome = (op.nome || '').trim();
+            if (nome !== nomeOperatore) return;
+            for (let g = 0; g < 6; g++) {
+              const d = new Date(monday);
+              d.setUTCDate(d.getUTCDate() + g);
+              if (d.getUTCFullYear() !== ANNO || d.getUTCMonth() !== meseIdx) continue;
+              const opG = (op.giorni && op.giorni[g]) || {};
+              if (!opG.cantiere || !opG.cantiere.trim()) continue;
+              const inFerie = pwFerie[wa] && pwFerie[wa][ww] && pwFerie[wa][ww][nome] && pwFerie[wa][ww][nome][g] === true;
+              if (inFerie) continue;
+              if (!perCommessa[bc.commessa]) perCommessa[bc.commessa] = new Array(12).fill(0);
+              perCommessa[bc.commessa][meseIdx] += 1;
+            }
+          });
+        });
+      });
+    });
+  }
+  return perCommessa;
+}
+
 async function rimuoviRigaStaffing(idx) {
   const r = state.staffing[idx];
   if (!r) return;

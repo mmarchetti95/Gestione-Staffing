@@ -1,3 +1,9 @@
+## v18.74.0
+- feat: **Dashboard - Pool operatori, "Vedi impegni/commesse"** — se l'operatore risulta impiegato in Griglia settimanale su una commessa mai preventivata nello staffing, ora compare una sezione aggiuntiva "⚡ Solo in Griglia settimanale — non preventivate" con card evidenziate in ambra (badge "⚠ mai preventivata") e la sola riga "Eff." mese per mese, così da non perdere allocazioni reali che prima restavano invisibili perché la vista operatore leggeva solo `state.staffing`.
+
+## v18.73.0
+- feat: **Dashboard - Pool operatori, "Vedi impegni/commesse"** — nella card di ogni commessa attiva mostrata nella vista dettaglio operatore, sotto la riga mensile "Prev." (gg-uomo preventivati, editabile) è stata aggiunta una riga "Eff." di sola lettura con i giorni effettivamente lavorati risultanti dalla Griglia settimanale per quell'operatore su quella commessa, mese per mese (stessa logica/colori del confronto Preventivo/Effettivo già presente nelle card commessa e nella Vista mensile).
+
 ## v18.72.1
 - fix: **Dashboard - Confronto Preventivo/Effettivo** (card "Attive" e popup Vista mensile Gantt) — le risorse preventivate nello staffing venivano nascoste quando la commessa non aveva alcun blocco nella Griglia settimanale per quel mese, mostrando solo il messaggio "Nessun dato dalla Griglia settimanale". Ora i gg preventivati sono sempre visibili (con badge "🔴 assente in Griglia" per ciascuna risorsa); l'assenza di dati Griglia è solo una nota informativa, non blocca più la visualizzazione.
 
