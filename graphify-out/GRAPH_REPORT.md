@@ -1,13 +1,18 @@
 # Graph Report - Gestione-Staffing  (2026-08-24)
 
 ## Corpus Check
-- 22 files · ~108,411 words
+- 34 files · ~108,469 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
 - 426 nodes · 572 edges · 60 communities (30 shown, 30 thin omitted)
 - Extraction: 98% EXTRACTED · 2% INFERRED · 0% AMBIGUOUS · INFERRED: 10 edges (avg confidence: 0.72)
-- Token cost: 137,602 input · 0 output
+- Token cost: 0 input · 0 output
+
+## Graph Freshness
+- Built from commit: `882e5bcf`
+- Run `git rev-parse HEAD` and compare to check if the graph is stale.
+- Run `graphify update .` after code changes (no API cost).
 
 ## Community Hubs (Navigation)
 - Weekly Mail & ISO Week Utils
@@ -77,10 +82,10 @@
 4. `pwGeneraMail()` - 8 edges
 5. `pwGetFerieWeek()` - 8 edges
 6. `sbPull()` - 7 edges
-7. `pwControlloRender()` - 7 edges
-8. `cpRereadTicket()` - 7 edges
-9. `v18.33.0 feature Doppia Week (tab trasferte consecutive)` - 7 edges
-10. `Pianificazione Settimanale screen (#screen-weekly)` - 7 edges
+7. `cpRereadTicket()` - 7 edges
+8. `pwControlloRender()` - 7 edges
+9. `Pianificazione Settimanale screen (#screen-weekly)` - 7 edges
+10. `v18.33.0 feature Doppia Week (tab trasferte consecutive)` - 7 edges
 
 ## Surprising Connections (you probably didn't know these)
 - `Legacy sessionStorage keys migration` --semantically_similar_to--> `INITIAL_DATA fallback constant`  [INFERRED] [semantically similar]
@@ -91,19 +96,19 @@
   src/head.html → README.md
 - `:root CSS design tokens (--accent, --shadow-*, --radius-*)` --shares_data_with--> `Deep Teal accent (#0d9488)`  [EXTRACTED]
   src/head.html → DESIGN.md
-- `Rationale: .skill-badge/.att-badge structure deduplicated` --conceptually_related_to--> `KPI Tile component`  [INFERRED]
-  src/head.html → DESIGN.md
+- `index.html generated build artifact` --shares_data_with--> `:root CSS design tokens (--accent, --shadow-*, --radius-*)`  [EXTRACTED]
+  index.html → src/head.html
 
 ## Import Cycles
 - None detected.
 
 ## Hyperedges (group relationships)
-- **Genera Mail recipient-handling evolution** — readme_v18_49_0_apri_outlook, readme_v18_51_referente_tecnico, readme_v18_52_email_sempre_incluse, readme_v18_53_email_sempre_cc_fix, readme_v18_56_mailto_recipients_reorder [INFERRED 0.85]
-- **Jira Actual Production delta-model pipeline** — readme_v18_29_jira_actual_production_write, readme_v18_30_jira_read_before_upload, readme_v18_31_delta_model, readme_v18_32_km_per_ticket_model [INFERRED 0.90]
-- **Multi-domain sync persistence bug-fix cluster** — readme_v18_15_multi_domain_sync, readme_v18_47_2_sbpull_localstorage_bug, readme_v18_49_2_doppia_week_local_cache_fix, readme_v18_50_sbpush_conflict_bug_fix [INFERRED 0.85]
 - **Escaping & Modal Safety Conventions** — claude_showalertmodal, claude_showconfirmasync, claude_jsattr, claude_esc_function, claude_hard_won_conventions [EXTRACTED 1.00]
 - **Four Independent Sync Domains** — claude_four_sync_domains, claude_staffing_state_table, claude_sbpush, claude_sbpull [EXTRACTED 1.00]
 - **Jira Integration Edge Functions** — claude_jira_list_strumenti, claude_jira_sync_worklogs, claude_jira_update_production, claude_delta_model [EXTRACTED 1.00]
+- **Genera Mail recipient-handling evolution** — readme_v18_49_0_apri_outlook, readme_v18_51_referente_tecnico, readme_v18_52_email_sempre_incluse, readme_v18_53_email_sempre_cc_fix, readme_v18_56_mailto_recipients_reorder [INFERRED 0.85]
+- **Multi-domain sync persistence bug-fix cluster** — readme_v18_15_multi_domain_sync, readme_v18_47_2_sbpull_localstorage_bug, readme_v18_49_2_doppia_week_local_cache_fix, readme_v18_50_sbpush_conflict_bug_fix [INFERRED 0.85]
+- **Jira Actual Production delta-model pipeline** — readme_v18_29_jira_actual_production_write, readme_v18_30_jira_read_before_upload, readme_v18_31_delta_model, readme_v18_32_km_per_ticket_model [INFERRED 0.90]
 
 ## Communities (60 total, 30 thin omitted)
 
@@ -224,14 +229,14 @@ Cohesion: 0.67
 Nodes (3): v18.49.0 pulsante Apri Outlook (mailto destinatari), v18.51.0 campo Email referente tecnico obbligatorio, v18.56.0 riordino destinatari mailto (To/CC)
 
 ## Knowledge Gaps
-- **82 isolated node(s):** `ANNO`, `INDUSTRIES`, `INITIAL_DATA`, `MESI`, `MESI_LONG` (+77 more)
+- **82 isolated node(s):** `_CONFRONTO_STATO_BADGE`, `pwData`, `pwDoppiaWeek`, `pwFerie`, `_geoCache` (+77 more)
   These have ≤1 connection - possible missing edges or undocumented components.
 - **30 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
 
 ## Suggested Questions
 _Questions this graph is uniquely positioned to answer:_
 
-- **What connects `ANNO`, `INDUSTRIES`, `INITIAL_DATA` to the rest of the system?**
+- **What connects `_CONFRONTO_STATO_BADGE`, `pwData`, `pwDoppiaWeek` to the rest of the system?**
   _82 weakly-connected nodes found - possible documentation gaps or missing edges._
 - **Should `Weekly Mail & ISO Week Utils` be split into smaller, more focused modules?**
   _Cohesion score 0.12121212121212122 - nodes in this community are weakly interconnected._
