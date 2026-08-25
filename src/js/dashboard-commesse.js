@@ -15,12 +15,17 @@ function renderCommesse() {
   document.getElementById('count-attive').textContent = `(${commesseAttiveSet.size})`;
 
   if (state.activeTab === 'pipeline') {
+    // NOTA: a differenza della vista Attive, qui NON si filtra per state.commesse_escluse.
+    // Quella lista esclude per NOME ed è pensata per le commesse attive (derivate da righe
+    // staffing senza id proprio); le commesse pipeline hanno invece un id univoco e un ciclo
+    // di vita esplicito (creazione/eliminazione via CRUD). Filtrarle per nome può nascondere
+    // per sempre un'opportunità pipeline del tutto legittima che riusa il nome di una vecchia
+    // commessa attiva chiusa — causando un conteggio "in partenza" disallineato dalla lista
+    // visibile (v18.78.0).
     const q = state.searchCommesse.toLowerCase();
-    const nomiChiusePl = new Set((state.commesse_escluse || []).map(n => (n||'').trim()).filter(Boolean));
-    const pipelineVisibile = state.pipeline.filter(c => !nomiChiusePl.has((c.progetto || c.nome || '').trim()));
     const filtered = q
-      ? pipelineVisibile.filter(c => ((c.cliente||'') + ' ' + (c.progetto||'') + ' ' + (c.industry||'')).toLowerCase().includes(q))
-      : pipelineVisibile;
+      ? state.pipeline.filter(c => ((c.cliente||'') + ' ' + (c.progetto||'') + ' ' + (c.industry||'')).toLowerCase().includes(q))
+      : state.pipeline;
     list.innerHTML = filtered.map(c => renderCommessaPipelineCard(c)).join('') ||
       `<div class="text-center text-sm text-slate-400 py-6">${q ? 'Nessuna commessa corrisponde alla ricerca.' : 'Nessuna commessa in pipeline.'}</div>`;
   } else {
