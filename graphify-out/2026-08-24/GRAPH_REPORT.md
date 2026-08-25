@@ -1,15 +1,16 @@
-# Graph Report - Gestione-Staffing  (2026-08-25)
+# Graph Report - Gestione-Staffing  (2026-08-24)
 
 ## Corpus Check
-- cluster-only mode — file stats not available
+- 34 files · ~108,469 words
+- Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
-- 438 nodes · 591 edges · 60 communities (30 shown, 30 thin omitted)
+- 426 nodes · 572 edges · 60 communities (30 shown, 30 thin omitted)
 - Extraction: 98% EXTRACTED · 2% INFERRED · 0% AMBIGUOUS · INFERRED: 10 edges (avg confidence: 0.72)
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `c78b24ff`
+- Built from commit: `882e5bcf`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -20,18 +21,18 @@
 - Design System Rationale
 - Controllo Produzione Core
 - Griglia Squadre & Strumenti
-- dashboard-crud-helpers.js
+- Dashboard CRUD Helpers
 - Design Tokens & KPI Component
-- dashboard-operatori.js
+- Operatori Pool & Email
 - Version History: Sync & Doppia Week
-- dashboard-assegnazioni.js
+- Assegnazioni & Confronto Calc
 - Storage Utils & Saturazione
 - Mappa Squadre Geocoding
-- config.js
+- Global Config & Constants
 - Commessa Attiva Detail UI
 - Report CSV Import (Produzione)
 - Collapse/Expand UI State
-- weekly-operatore-modal.js
+- Operatore Selection Modal
 - Doppia Week Feature
 - Excel Import/Export
 - Build Smoke Test ESLint
@@ -83,8 +84,8 @@
 6. `sbPull()` - 7 edges
 7. `cpRereadTicket()` - 7 edges
 8. `pwControlloRender()` - 7 edges
-9. `renderOperatori()` - 7 edges
-10. `Pianificazione Settimanale screen (#screen-weekly)` - 7 edges
+9. `Pianificazione Settimanale screen (#screen-weekly)` - 7 edges
+10. `v18.33.0 feature Doppia Week (tab trasferte consecutive)` - 7 edges
 
 ## Surprising Connections (you probably didn't know these)
 - `Legacy sessionStorage keys migration` --semantically_similar_to--> `INITIAL_DATA fallback constant`  [INFERRED] [semantically similar]
@@ -135,24 +136,24 @@ Nodes (22): cpBuildRecord(), _cpCollapsedComm, _cpCollapsedSq, _cpData, cpDataIS
 Cohesion: 0.14
 Nodes (14): pwAddSquadra(), pwAddStrumento(), pwRemoveSquadra(), pwRemoveStrumento(), pwRinumeraSquadreDefault(), pwSetSqStrumentiJira(), pwSqStrumentiJira(), pwStrClose() (+6 more)
 
-### Community 6 - "dashboard-crud-helpers.js"
-Cohesion: 0.17
-Nodes (22): closeModal(), cpSelectModal(), deleteCommessa(), deleteOperatore(), esc(), getOperatoriAttivi(), isOperatoreLicenziato(), isOperatoreScaduto() (+14 more)
+### Community 6 - "Dashboard CRUD Helpers"
+Cohesion: 0.19
+Nodes (20): closeModal(), cpSelectModal(), deleteCommessa(), deleteOperatore(), esc(), getOperatoriAttivi(), licenziaOperatore(), openCommessaModal() (+12 more)
 
 ### Community 7 - "Design Tokens & KPI Component"
 Cohesion: 0.16
 Nodes (15): Alarm Rose (gap risorse/alert), Categorical Color System (colori categorici), Circuit Indigo (operatori/Jira sync), Foreman Amber (saturazione/carico), KPI Tile component, Ledger Blue (commesse attive), Modale canonico (Tailwind shadow-xl family), Modale su misura (--shadow-lg family) (+7 more)
 
-### Community 8 - "dashboard-operatori.js"
-Cohesion: 0.21
-Nodes (14): aggiornaGgOpVistaCommessa(), apriVistaOperatore(), checkCoerenzaOperatori(), EMAIL_SEED, renderAttestatiFilters(), renderEmailOperatori(), renderOperatori(), renderProvinciaFilterOptions() (+6 more)
+### Community 8 - "Operatori Pool & Email"
+Cohesion: 0.24
+Nodes (11): aggiornaGgOpVistaCommessa(), apriVistaOperatore(), checkCoerenzaOperatori(), EMAIL_SEED, renderAttestatiFilters(), renderEmailOperatori(), renderOperatori(), renderSkillFilters() (+3 more)
 
 ### Community 9 - "Version History: Sync & Doppia Week"
 Cohesion: 0.15
 Nodes (13): Operating Context (GitHub Pages + Supabase + iframe), v18.0.0 migrazione a Supabase + GitHub Pages, v18.15.0 sync multi-dominio (core/planning/ferie) con conflict detection, v18.17.0 rimozione INITIAL_DATA hardcoded, v18.33.0 feature Doppia Week (tab trasferte consecutive), v18.34.2 header sticky Doppia Week, v18.36.0 export PDF griglia mensile Doppia Week, v18.38.0 contatore doppie week per operatore (+5 more)
 
-### Community 10 - "dashboard-assegnazioni.js"
-Cohesion: 0.21
+### Community 10 - "Assegnazioni & Confronto Calc"
+Cohesion: 0.23
 Nodes (6): assegnaOperatore(), openOperatoreImpegniModal(), rimuoviAssegnazione(), rimuoviMeseAllocazione(), rimuoviRigaStaffing(), spostaAssegnazione()
 
 ### Community 11 - "Storage Utils & Saturazione"
@@ -163,9 +164,9 @@ Nodes (7): loadState(), monthsBetween(), operatoreSatPeriodo(), ricalcolaAllocOp
 Cohesion: 0.26
 Nodes (10): _geoCache, _geoCacheSave(), geocodifica(), MAP_COLORS, _mapColor(), _mapColors, _mapMarkers, pwMapFixLuogo() (+2 more)
 
-### Community 13 - "config.js"
-Cohesion: 0.15
-Nodes (11): ANNO, INDUSTRIES, INITIAL_DATA, meseCorrente(), MESI, MESI_LONG, PROVINCE_ITALIA, REGIONI_ITALIA (+3 more)
+### Community 13 - "Global Config & Constants"
+Cohesion: 0.22
+Nodes (9): ANNO, INDUSTRIES, INITIAL_DATA, meseCorrente(), MESI, MESI_LONG, SKILLS, soloFuturi() (+1 more)
 
 ### Community 14 - "Commessa Attiva Detail UI"
 Cohesion: 0.27
@@ -179,9 +180,9 @@ Nodes (8): cpCaricaReportSquadra(), cpGetSquadraOpsByDay(), cpHmToMin(), cpOreJi
 Cohesion: 0.39
 Nodes (8): cpApplyCollapse(), cpCollapseAllToggle(), cpToggleComm(), cpToggleSq(), pwApplyCollapseState(), pwCollapseAllToggle(), pwToggleComm(), pwToggleSq()
 
-### Community 17 - "weekly-operatore-modal.js"
-Cohesion: 0.33
-Nodes (9): pwCloseOpModal(), pwConfirmOpModal(), pwOpenOpModal(), buildList(), passaFiltroGeo(), pwPopulateWeekSelect(), pwRender(), pwRenderOpDropdown() (+1 more)
+### Community 17 - "Operatore Selection Modal"
+Cohesion: 0.42
+Nodes (8): pwCloseOpModal(), pwConfirmOpModal(), pwOpenOpModal(), buildList(), pwPopulateWeekSelect(), pwRender(), pwRenderOpDropdown(), pwRenderStats()
 
 ### Community 18 - "Doppia Week Feature"
 Cohesion: 0.32
@@ -228,15 +229,15 @@ Cohesion: 0.67
 Nodes (3): v18.49.0 pulsante Apri Outlook (mailto destinatari), v18.51.0 campo Email referente tecnico obbligatorio, v18.56.0 riordino destinatari mailto (To/CC)
 
 ## Knowledge Gaps
-- **84 isolated node(s):** `pwData`, `pwDoppiaWeek`, `pwFerie`, `_geoCache`, `MAP_COLORS` (+79 more)
+- **82 isolated node(s):** `_CONFRONTO_STATO_BADGE`, `pwData`, `pwDoppiaWeek`, `pwFerie`, `_geoCache` (+77 more)
   These have ≤1 connection - possible missing edges or undocumented components.
 - **30 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
 
 ## Suggested Questions
 _Questions this graph is uniquely positioned to answer:_
 
-- **What connects `pwData`, `pwDoppiaWeek`, `pwFerie` to the rest of the system?**
-  _84 weakly-connected nodes found - possible documentation gaps or missing edges._
+- **What connects `_CONFRONTO_STATO_BADGE`, `pwData`, `pwDoppiaWeek` to the rest of the system?**
+  _82 weakly-connected nodes found - possible documentation gaps or missing edges._
 - **Should `Weekly Mail & ISO Week Utils` be split into smaller, more focused modules?**
   _Cohesion score 0.12121212121212122 - nodes in this community are weakly interconnected._
 - **Should `Persistence Architecture & Conventions` be split into smaller, more focused modules?**

@@ -819,10 +819,10 @@
       "source_location": "L80",
       "_callable": true,
       "_origin": "ast",
+      "id": "src_js_config_mesecorrente",
       "community": 13,
       "community_name": "config.js",
-      "norm_label": "mesecorrente()",
-      "id": "src_js_config_mesecorrente"
+      "norm_label": "mesecorrente()"
     },
     {
       "label": "provinceDiRegione()",
@@ -831,10 +831,10 @@
       "source_location": "L75",
       "_callable": true,
       "_origin": "ast",
+      "id": "src_js_config_provincediregione",
       "community": 13,
       "community_name": "config.js",
-      "norm_label": "provincediregione()",
-      "id": "src_js_config_provincediregione"
+      "norm_label": "provincediregione()"
     },
     {
       "label": "provinciaInfo()",
@@ -843,10 +843,10 @@
       "source_location": "L74",
       "_callable": true,
       "_origin": "ast",
+      "id": "src_js_config_provinciainfo",
       "community": 13,
       "community_name": "config.js",
-      "norm_label": "provinciainfo()",
-      "id": "src_js_config_provinciainfo"
+      "norm_label": "provinciainfo()"
     },
     {
       "label": "soloFuturi()",
@@ -855,10 +855,10 @@
       "source_location": "L86",
       "_callable": true,
       "_origin": "ast",
+      "id": "src_js_config_solofuturi",
       "community": 13,
       "community_name": "config.js",
-      "norm_label": "solofuturi()",
-      "id": "src_js_config_solofuturi"
+      "norm_label": "solofuturi()"
     },
     {
       "label": "chiudiCommessa()",
@@ -1167,10 +1167,10 @@
       "source_location": "L168",
       "_callable": true,
       "_origin": "ast",
+      "id": "src_js_weekly_operatore_modal_pwcloseopmodal",
       "community": 17,
       "community_name": "weekly-operatore-modal.js",
-      "norm_label": "pwcloseopmodal()",
-      "id": "src_js_weekly_operatore_modal_pwcloseopmodal"
+      "norm_label": "pwcloseopmodal()"
     },
     {
       "label": "pwConfirmOpModal()",
@@ -1179,10 +1179,10 @@
       "source_location": "L173",
       "_callable": true,
       "_origin": "ast",
+      "id": "src_js_weekly_operatore_modal_pwconfirmopmodal",
       "community": 17,
       "community_name": "weekly-operatore-modal.js",
-      "norm_label": "pwconfirmopmodal()",
-      "id": "src_js_weekly_operatore_modal_pwconfirmopmodal"
+      "norm_label": "pwconfirmopmodal()"
     },
     {
       "label": "pwOpenOpModal()",
@@ -1191,10 +1191,10 @@
       "source_location": "L3",
       "_callable": true,
       "_origin": "ast",
+      "id": "src_js_weekly_operatore_modal_pwopenopmodal",
       "community": 17,
       "community_name": "weekly-operatore-modal.js",
-      "norm_label": "pwopenopmodal()",
-      "id": "src_js_weekly_operatore_modal_pwopenopmodal"
+      "norm_label": "pwopenopmodal()"
     },
     {
       "label": "buildList()",
@@ -1203,10 +1203,10 @@
       "source_location": "L98",
       "_callable": true,
       "_origin": "ast",
+      "id": "src_js_weekly_operatore_modal_pwopenopmodal_buildlist",
       "community": 17,
       "community_name": "weekly-operatore-modal.js",
-      "norm_label": "buildlist()",
-      "id": "src_js_weekly_operatore_modal_pwopenopmodal_buildlist"
+      "norm_label": "buildlist()"
     },
     {
       "label": "passaFiltroGeo()",
@@ -1215,10 +1215,10 @@
       "source_location": "L90",
       "_callable": true,
       "_origin": "ast",
+      "id": "src_js_weekly_operatore_modal_pwopenopmodal_passafiltrogeo",
       "community": 17,
       "community_name": "weekly-operatore-modal.js",
-      "norm_label": "passafiltrogeo()",
-      "id": "src_js_weekly_operatore_modal_pwopenopmodal_passafiltrogeo"
+      "norm_label": "passafiltrogeo()"
     },
     {
       "label": "rebuildProvinciaOptions()",
@@ -1227,10 +1227,10 @@
       "source_location": "L66",
       "_callable": true,
       "_origin": "ast",
+      "id": "src_js_weekly_operatore_modal_pwopenopmodal_rebuildprovinciaoptions",
       "community": 17,
       "community_name": "weekly-operatore-modal.js",
-      "norm_label": "rebuildprovinciaoptions()",
-      "id": "src_js_weekly_operatore_modal_pwopenopmodal_rebuildprovinciaoptions"
+      "norm_label": "rebuildprovinciaoptions()"
     },
     {
       "label": "pwPopulateWeekSelect()",
@@ -1239,10 +1239,10 @@
       "source_location": "L204",
       "_callable": true,
       "_origin": "ast",
+      "id": "src_js_weekly_operatore_modal_pwpopulateweekselect",
       "community": 17,
       "community_name": "weekly-operatore-modal.js",
-      "norm_label": "pwpopulateweekselect()",
-      "id": "src_js_weekly_operatore_modal_pwpopulateweekselect"
+      "norm_label": "pwpopulateweekselect()"
     },
     {
       "label": "pwRender()",
@@ -1251,10 +1251,10 @@
       "source_location": "L219",
       "_callable": true,
       "_origin": "ast",
+      "id": "src_js_weekly_operatore_modal_pwrender",
       "community": 17,
       "community_name": "weekly-operatore-modal.js",
-      "norm_label": "pwrender()",
-      "id": "src_js_weekly_operatore_modal_pwrender"
+      "norm_label": "pwrender()"
     },
     {
       "label": "pwRenderOpDropdown()",
@@ -1263,10 +1263,10 @@
       "source_location": "L185",
       "_callable": true,
       "_origin": "ast",
+      "id": "src_js_weekly_operatore_modal_pwrenderopdropdown",
       "community": 17,
       "community_name": "weekly-operatore-modal.js",
-      "norm_label": "pwrenderopdropdown()",
-      "id": "src_js_weekly_operatore_modal_pwrenderopdropdown"
+      "norm_label": "pwrenderopdropdown()"
     },
     {
       "label": "pwRenderStats()",
@@ -1275,10 +1275,10 @@
       "source_location": "L431",
       "_callable": true,
       "_origin": "ast",
+      "id": "src_js_weekly_operatore_modal_pwrenderstats",
       "community": 17,
       "community_name": "weekly-operatore-modal.js",
-      "norm_label": "pwrenderstats()",
-      "id": "src_js_weekly_operatore_modal_pwrenderstats"
+      "norm_label": "pwrenderstats()"
     },
     {
       "label": "pwDoppiaWeekExportPDF()",
@@ -2043,10 +2043,10 @@
       "source_location": "L2",
       "_callable": true,
       "_origin": "ast",
+      "id": "src_js_dashboard_alerts_render_renderalerts",
       "community": 33,
       "community_name": "Alerts & Full Render",
-      "norm_label": "renderalerts()",
-      "id": "src_js_dashboard_alerts_render_renderalerts"
+      "norm_label": "renderalerts()"
     },
     {
       "label": "renderAll()",
@@ -2055,10 +2055,10 @@
       "source_location": "L68",
       "_callable": true,
       "_origin": "ast",
+      "id": "src_js_dashboard_alerts_render_renderall",
       "community": 33,
       "community_name": "Alerts & Full Render",
-      "norm_label": "renderall()",
-      "id": "src_js_dashboard_alerts_render_renderall"
+      "norm_label": "renderall()"
     },
     {
       "label": "renderGap()",
@@ -2571,10 +2571,10 @@
       "source_location": "L7",
       "_callable": true,
       "_origin": "ast",
+      "id": "src_js_dashboard_crud_helpers_closemodal",
       "community": 6,
       "community_name": "dashboard-crud-helpers.js",
-      "norm_label": "closemodal()",
-      "id": "src_js_dashboard_crud_helpers_closemodal"
+      "norm_label": "closemodal()"
     },
     {
       "label": "cpSelectModal()",
@@ -2583,10 +2583,10 @@
       "source_location": "L463",
       "_callable": true,
       "_origin": "ast",
+      "id": "src_js_dashboard_crud_helpers_cpselectmodal",
       "community": 6,
       "community_name": "dashboard-crud-helpers.js",
-      "norm_label": "cpselectmodal()",
-      "id": "src_js_dashboard_crud_helpers_cpselectmodal"
+      "norm_label": "cpselectmodal()"
     },
     {
       "label": "deleteCommessa()",
@@ -2595,10 +2595,10 @@
       "source_location": "L269",
       "_callable": true,
       "_origin": "ast",
+      "id": "src_js_dashboard_crud_helpers_deletecommessa",
       "community": 6,
       "community_name": "dashboard-crud-helpers.js",
-      "norm_label": "deletecommessa()",
-      "id": "src_js_dashboard_crud_helpers_deletecommessa"
+      "norm_label": "deletecommessa()"
     },
     {
       "label": "deleteOperatore()",
@@ -2607,10 +2607,10 @@
       "source_location": "L484",
       "_callable": true,
       "_origin": "ast",
+      "id": "src_js_dashboard_crud_helpers_deleteoperatore",
       "community": 6,
       "community_name": "dashboard-crud-helpers.js",
-      "norm_label": "deleteoperatore()",
-      "id": "src_js_dashboard_crud_helpers_deleteoperatore"
+      "norm_label": "deleteoperatore()"
     },
     {
       "label": "esc()",
@@ -2619,10 +2619,10 @@
       "source_location": "L393",
       "_callable": true,
       "_origin": "ast",
+      "id": "src_js_dashboard_crud_helpers_esc",
       "community": 6,
       "community_name": "dashboard-crud-helpers.js",
-      "norm_label": "esc()",
-      "id": "src_js_dashboard_crud_helpers_esc"
+      "norm_label": "esc()"
     },
     {
       "label": "getOperatoriAttivi()",
@@ -2631,10 +2631,10 @@
       "source_location": "L444",
       "_callable": true,
       "_origin": "ast",
+      "id": "src_js_dashboard_crud_helpers_getoperatoriattivi",
       "community": 6,
       "community_name": "dashboard-crud-helpers.js",
-      "norm_label": "getoperatoriattivi()",
-      "id": "src_js_dashboard_crud_helpers_getoperatoriattivi"
+      "norm_label": "getoperatoriattivi()"
     },
     {
       "label": "isOperatoreLicenziato()",
@@ -2643,10 +2643,10 @@
       "source_location": "L479",
       "_callable": true,
       "_origin": "ast",
+      "id": "src_js_dashboard_crud_helpers_isoperatorelicenziato",
       "community": 6,
       "community_name": "dashboard-crud-helpers.js",
-      "norm_label": "isoperatorelicenziato()",
-      "id": "src_js_dashboard_crud_helpers_isoperatorelicenziato"
+      "norm_label": "isoperatorelicenziato()"
     },
     {
       "label": "isOperatoreScaduto()",
@@ -2655,10 +2655,10 @@
       "source_location": "L439",
       "_callable": true,
       "_origin": "ast",
+      "id": "src_js_dashboard_crud_helpers_isoperatorescaduto",
       "community": 6,
       "community_name": "dashboard-crud-helpers.js",
-      "norm_label": "isoperatorescaduto()",
-      "id": "src_js_dashboard_crud_helpers_isoperatorescaduto"
+      "norm_label": "isoperatorescaduto()"
     },
     {
       "label": "jsAttr()",
@@ -2667,10 +2667,10 @@
       "source_location": "L397",
       "_callable": true,
       "_origin": "ast",
+      "id": "src_js_dashboard_crud_helpers_jsattr",
       "community": 6,
       "community_name": "dashboard-crud-helpers.js",
-      "norm_label": "jsattr()",
-      "id": "src_js_dashboard_crud_helpers_jsattr"
+      "norm_label": "jsattr()"
     },
     {
       "label": "licenziaOperatore()",
@@ -2679,10 +2679,10 @@
       "source_location": "L559",
       "_callable": true,
       "_origin": "ast",
+      "id": "src_js_dashboard_crud_helpers_licenziaoperatore",
       "community": 6,
       "community_name": "dashboard-crud-helpers.js",
-      "norm_label": "licenziaoperatore()",
-      "id": "src_js_dashboard_crud_helpers_licenziaoperatore"
+      "norm_label": "licenziaoperatore()"
     },
     {
       "label": "meseFineRapportoInAnno()",
@@ -2691,10 +2691,10 @@
       "source_location": "L451",
       "_callable": true,
       "_origin": "ast",
+      "id": "src_js_dashboard_crud_helpers_mesefinerapportoinanno",
       "community": 6,
       "community_name": "dashboard-crud-helpers.js",
-      "norm_label": "mesefinerapportoinanno()",
-      "id": "src_js_dashboard_crud_helpers_mesefinerapportoinanno"
+      "norm_label": "mesefinerapportoinanno()"
     },
     {
       "label": "openCommessaModal()",
@@ -2703,10 +2703,10 @@
       "source_location": "L9",
       "_callable": true,
       "_origin": "ast",
+      "id": "src_js_dashboard_crud_helpers_opencommessamodal",
       "community": 6,
       "community_name": "dashboard-crud-helpers.js",
-      "norm_label": "opencommessamodal()",
-      "id": "src_js_dashboard_crud_helpers_opencommessamodal"
+      "norm_label": "opencommessamodal()"
     },
     {
       "label": "openFabbisognoModal()",
@@ -2715,10 +2715,10 @@
       "source_location": "L99",
       "_callable": true,
       "_origin": "ast",
+      "id": "src_js_dashboard_crud_helpers_openfabbisognomodal",
       "community": 6,
       "community_name": "dashboard-crud-helpers.js",
-      "norm_label": "openfabbisognomodal()",
-      "id": "src_js_dashboard_crud_helpers_openfabbisognomodal"
+      "norm_label": "openfabbisognomodal()"
     },
     {
       "label": "renderRighe()",
@@ -2727,10 +2727,10 @@
       "source_location": "L144",
       "_callable": true,
       "_origin": "ast",
+      "id": "src_js_dashboard_crud_helpers_openfabbisognomodal_renderrighe",
       "community": 6,
       "community_name": "dashboard-crud-helpers.js",
-      "norm_label": "renderrighe()",
-      "id": "src_js_dashboard_crud_helpers_openfabbisognomodal_renderrighe"
+      "norm_label": "renderrighe()"
     },
     {
       "label": "suggestOperatoriPerRiga()",
@@ -2739,10 +2739,10 @@
       "source_location": "L125",
       "_callable": true,
       "_origin": "ast",
+      "id": "src_js_dashboard_crud_helpers_openfabbisognomodal_suggestoperatoriperriga",
       "community": 6,
       "community_name": "dashboard-crud-helpers.js",
-      "norm_label": "suggestoperatoriperriga()",
-      "id": "src_js_dashboard_crud_helpers_openfabbisognomodal_suggestoperatoriperriga"
+      "norm_label": "suggestoperatoriperriga()"
     },
     {
       "label": "totaleRighe()",
@@ -2751,10 +2751,10 @@
       "source_location": "L123",
       "_callable": true,
       "_origin": "ast",
+      "id": "src_js_dashboard_crud_helpers_openfabbisognomodal_totalerighe",
       "community": 6,
       "community_name": "dashboard-crud-helpers.js",
-      "norm_label": "totalerighe()",
-      "id": "src_js_dashboard_crud_helpers_openfabbisognomodal_totalerighe"
+      "norm_label": "totalerighe()"
     },
     {
       "label": "openLicenziaModal()",
@@ -2763,10 +2763,10 @@
       "source_location": "L532",
       "_callable": true,
       "_origin": "ast",
+      "id": "src_js_dashboard_crud_helpers_openlicenziamodal",
       "community": 6,
       "community_name": "dashboard-crud-helpers.js",
-      "norm_label": "openlicenziamodal()",
-      "id": "src_js_dashboard_crud_helpers_openlicenziamodal"
+      "norm_label": "openlicenziamodal()"
     },
     {
       "label": "openModal()",
@@ -2775,10 +2775,10 @@
       "source_location": "L2",
       "_callable": true,
       "_origin": "ast",
+      "id": "src_js_dashboard_crud_helpers_openmodal",
       "community": 6,
       "community_name": "dashboard-crud-helpers.js",
-      "norm_label": "openmodal()",
-      "id": "src_js_dashboard_crud_helpers_openmodal"
+      "norm_label": "openmodal()"
     },
     {
       "label": "openOperatoreModal()",
@@ -2787,10 +2787,10 @@
       "source_location": "L308",
       "_callable": true,
       "_origin": "ast",
+      "id": "src_js_dashboard_crud_helpers_openoperatoremodal",
       "community": 6,
       "community_name": "dashboard-crud-helpers.js",
-      "norm_label": "openoperatoremodal()",
-      "id": "src_js_dashboard_crud_helpers_openoperatoremodal"
+      "norm_label": "openoperatoremodal()"
     },
     {
       "label": "parseEmailList()",
@@ -2799,10 +2799,10 @@
       "source_location": "L401",
       "_callable": true,
       "_origin": "ast",
+      "id": "src_js_dashboard_crud_helpers_parseemaillist",
       "community": 6,
       "community_name": "dashboard-crud-helpers.js",
-      "norm_label": "parseemaillist()",
-      "id": "src_js_dashboard_crud_helpers_parseemaillist"
+      "norm_label": "parseemaillist()"
     },
     {
       "label": "promuoviCommessa()",
@@ -2811,10 +2811,10 @@
       "source_location": "L277",
       "_callable": true,
       "_origin": "ast",
+      "id": "src_js_dashboard_crud_helpers_promuovicommessa",
       "community": 6,
       "community_name": "dashboard-crud-helpers.js",
-      "norm_label": "promuovicommessa()",
-      "id": "src_js_dashboard_crud_helpers_promuovicommessa"
+      "norm_label": "promuovicommessa()"
     },
     {
       "label": "showAlertModal()",
@@ -2823,10 +2823,10 @@
       "source_location": "L416",
       "_callable": true,
       "_origin": "ast",
+      "id": "src_js_dashboard_crud_helpers_showalertmodal",
       "community": 6,
       "community_name": "dashboard-crud-helpers.js",
-      "norm_label": "showalertmodal()",
-      "id": "src_js_dashboard_crud_helpers_showalertmodal"
+      "norm_label": "showalertmodal()"
     },
     {
       "label": "showConfirm()",
@@ -2835,10 +2835,10 @@
       "source_location": "L408",
       "_callable": true,
       "_origin": "ast",
+      "id": "src_js_dashboard_crud_helpers_showconfirm",
       "community": 6,
       "community_name": "dashboard-crud-helpers.js",
-      "norm_label": "showconfirm()",
-      "id": "src_js_dashboard_crud_helpers_showconfirm"
+      "norm_label": "showconfirm()"
     },
     {
       "label": "showConfirmAsync()",
@@ -2847,10 +2847,10 @@
       "source_location": "L424",
       "_callable": true,
       "_origin": "ast",
+      "id": "src_js_dashboard_crud_helpers_showconfirmasync",
       "community": 6,
       "community_name": "dashboard-crud-helpers.js",
-      "norm_label": "showconfirmasync()",
-      "id": "src_js_dashboard_crud_helpers_showconfirmasync"
+      "norm_label": "showconfirmasync()"
     },
     {
       "label": "aggiornaGgOpVistaCommessa()",
@@ -2859,10 +2859,10 @@
       "source_location": "L542",
       "_callable": true,
       "_origin": "ast",
+      "id": "src_js_dashboard_operatori_aggiornaggopvistacommessa",
       "community": 8,
       "community_name": "dashboard-operatori.js",
-      "norm_label": "aggiornaggopvistacommessa()",
-      "id": "src_js_dashboard_operatori_aggiornaggopvistacommessa"
+      "norm_label": "aggiornaggopvistacommessa()"
     },
     {
       "label": "apriVistaOperatore()",
@@ -2871,10 +2871,10 @@
       "source_location": "L339",
       "_callable": true,
       "_origin": "ast",
+      "id": "src_js_dashboard_operatori_aprivistaoperatore",
       "community": 8,
       "community_name": "dashboard-operatori.js",
-      "norm_label": "aprivistaoperatore()",
-      "id": "src_js_dashboard_operatori_aprivistaoperatore"
+      "norm_label": "aprivistaoperatore()"
     },
     {
       "label": "checkCoerenzaOperatori()",
@@ -2883,10 +2883,10 @@
       "source_location": "L67",
       "_callable": true,
       "_origin": "ast",
+      "id": "src_js_dashboard_operatori_checkcoerenzaoperatori",
       "community": 8,
       "community_name": "dashboard-operatori.js",
-      "norm_label": "checkcoerenzaoperatori()",
-      "id": "src_js_dashboard_operatori_checkcoerenzaoperatori"
+      "norm_label": "checkcoerenzaoperatori()"
     },
     {
       "label": "renderAttestatiFilters()",
@@ -2895,10 +2895,10 @@
       "source_location": "L16",
       "_callable": true,
       "_origin": "ast",
+      "id": "src_js_dashboard_operatori_renderattestatifilters",
       "community": 8,
       "community_name": "dashboard-operatori.js",
-      "norm_label": "renderattestatifilters()",
-      "id": "src_js_dashboard_operatori_renderattestatifilters"
+      "norm_label": "renderattestatifilters()"
     },
     {
       "label": "renderEmailOperatori()",
@@ -2907,10 +2907,10 @@
       "source_location": "L284",
       "_callable": true,
       "_origin": "ast",
+      "id": "src_js_dashboard_operatori_renderemailoperatori",
       "community": 8,
       "community_name": "dashboard-operatori.js",
-      "norm_label": "renderemailoperatori()",
-      "id": "src_js_dashboard_operatori_renderemailoperatori"
+      "norm_label": "renderemailoperatori()"
     },
     {
       "label": "renderOperatori()",
@@ -2919,10 +2919,10 @@
       "source_location": "L88",
       "_callable": true,
       "_origin": "ast",
+      "id": "src_js_dashboard_operatori_renderoperatori",
       "community": 8,
       "community_name": "dashboard-operatori.js",
-      "norm_label": "renderoperatori()",
-      "id": "src_js_dashboard_operatori_renderoperatori"
+      "norm_label": "renderoperatori()"
     },
     {
       "label": "renderProvinciaFilterOptions()",
@@ -2931,10 +2931,10 @@
       "source_location": "L39",
       "_callable": true,
       "_origin": "ast",
+      "id": "src_js_dashboard_operatori_renderprovinciafilteroptions",
       "community": 8,
       "community_name": "dashboard-operatori.js",
-      "norm_label": "renderprovinciafilteroptions()",
-      "id": "src_js_dashboard_operatori_renderprovinciafilteroptions"
+      "norm_label": "renderprovinciafilteroptions()"
     },
     {
       "label": "renderSkillFilters()",
@@ -2943,10 +2943,10 @@
       "source_location": "L2",
       "_callable": true,
       "_origin": "ast",
+      "id": "src_js_dashboard_operatori_renderskillfilters",
       "community": 8,
       "community_name": "dashboard-operatori.js",
-      "norm_label": "renderskillfilters()",
-      "id": "src_js_dashboard_operatori_renderskillfilters"
+      "norm_label": "renderskillfilters()"
     },
     {
       "label": "renderVistaOperatore()",
@@ -2955,10 +2955,10 @@
       "source_location": "L350",
       "_callable": true,
       "_origin": "ast",
+      "id": "src_js_dashboard_operatori_rendervistaoperatore",
       "community": 8,
       "community_name": "dashboard-operatori.js",
-      "norm_label": "rendervistaoperatore()",
-      "id": "src_js_dashboard_operatori_rendervistaoperatore"
+      "norm_label": "rendervistaoperatore()"
     },
     {
       "label": "riattivaOperatore()",
@@ -2967,10 +2967,10 @@
       "source_location": "L198",
       "_callable": true,
       "_origin": "ast",
+      "id": "src_js_dashboard_operatori_riattivaoperatore",
       "community": 8,
       "community_name": "dashboard-operatori.js",
-      "norm_label": "riattivaoperatore()",
-      "id": "src_js_dashboard_operatori_riattivaoperatore"
+      "norm_label": "riattivaoperatore()"
     },
     {
       "label": "saveEmailOperatore()",
@@ -2979,10 +2979,10 @@
       "source_location": "L323",
       "_callable": true,
       "_origin": "ast",
+      "id": "src_js_dashboard_operatori_saveemailoperatore",
       "community": 8,
       "community_name": "dashboard-operatori.js",
-      "norm_label": "saveemailoperatore()",
-      "id": "src_js_dashboard_operatori_saveemailoperatore"
+      "norm_label": "saveemailoperatore()"
     },
     {
       "label": "seedEmailOperatori()",
@@ -2991,10 +2991,10 @@
       "source_location": "L272",
       "_callable": true,
       "_origin": "ast",
+      "id": "src_js_dashboard_operatori_seedemailoperatori",
       "community": 8,
       "community_name": "dashboard-operatori.js",
-      "norm_label": "seedemailoperatori()",
-      "id": "src_js_dashboard_operatori_seedemailoperatori"
+      "norm_label": "seedemailoperatori()"
     },
     {
       "label": "switchOpTab()",
@@ -3003,10 +3003,10 @@
       "source_location": "L216",
       "_callable": true,
       "_origin": "ast",
+      "id": "src_js_dashboard_operatori_switchoptab",
       "community": 8,
       "community_name": "dashboard-operatori.js",
-      "norm_label": "switchoptab()",
-      "id": "src_js_dashboard_operatori_switchoptab"
+      "norm_label": "switchoptab()"
     },
     {
       "label": "updateAttestatiSummary()",
@@ -3015,10 +3015,10 @@
       "source_location": "L60",
       "_callable": true,
       "_origin": "ast",
+      "id": "src_js_dashboard_operatori_updateattestatisummary",
       "community": 8,
       "community_name": "dashboard-operatori.js",
-      "norm_label": "updateattestatisummary()",
-      "id": "src_js_dashboard_operatori_updateattestatisummary"
+      "norm_label": "updateattestatisummary()"
     },
     {
       "label": "updateProvinciaFilterOptions()",
@@ -3027,10 +3027,10 @@
       "source_location": "L50",
       "_callable": true,
       "_origin": "ast",
+      "id": "src_js_dashboard_operatori_updateprovinciafilteroptions",
       "community": 8,
       "community_name": "dashboard-operatori.js",
-      "norm_label": "updateprovinciafilteroptions()",
-      "id": "src_js_dashboard_operatori_updateprovinciafilteroptions"
+      "norm_label": "updateprovinciafilteroptions()"
     },
     {
       "label": "weekly-mail-core.js",
@@ -3159,10 +3159,10 @@
       "source_file": "src/js/config.js",
       "source_location": "L1",
       "_origin": "ast",
+      "id": "src_js_config",
       "community": 13,
       "community_name": "config.js",
-      "norm_label": "config.js",
-      "id": "src_js_config"
+      "norm_label": "config.js"
     },
     {
       "label": "ANNO",
@@ -3170,10 +3170,10 @@
       "source_file": "src/js/config.js",
       "source_location": "L76",
       "_origin": "ast",
+      "id": "src_js_config_anno",
       "community": 13,
       "community_name": "config.js",
-      "norm_label": "anno",
-      "id": "src_js_config_anno"
+      "norm_label": "anno"
     },
     {
       "label": "INDUSTRIES",
@@ -3181,10 +3181,10 @@
       "source_file": "src/js/config.js",
       "source_location": "L7",
       "_origin": "ast",
+      "id": "src_js_config_industries",
       "community": 13,
       "community_name": "config.js",
-      "norm_label": "industries",
-      "id": "src_js_config_industries"
+      "norm_label": "industries"
     },
     {
       "label": "INITIAL_DATA",
@@ -3192,10 +3192,10 @@
       "source_file": "src/js/config.js",
       "source_location": "L2",
       "_origin": "ast",
+      "id": "src_js_config_initial_data",
       "community": 13,
       "community_name": "config.js",
-      "norm_label": "initial_data",
-      "id": "src_js_config_initial_data"
+      "norm_label": "initial_data"
     },
     {
       "label": "MESI",
@@ -3203,10 +3203,10 @@
       "source_file": "src/js/config.js",
       "source_location": "L5",
       "_origin": "ast",
+      "id": "src_js_config_mesi",
       "community": 13,
       "community_name": "config.js",
-      "norm_label": "mesi",
-      "id": "src_js_config_mesi"
+      "norm_label": "mesi"
     },
     {
       "label": "MESI_LONG",
@@ -3214,10 +3214,10 @@
       "source_file": "src/js/config.js",
       "source_location": "L6",
       "_origin": "ast",
+      "id": "src_js_config_mesi_long",
       "community": 13,
       "community_name": "config.js",
-      "norm_label": "mesi_long",
-      "id": "src_js_config_mesi_long"
+      "norm_label": "mesi_long"
     },
     {
       "label": "PROVINCE_ITALIA",
@@ -3225,10 +3225,10 @@
       "source_file": "src/js/config.js",
       "source_location": "L13",
       "_origin": "ast",
+      "id": "src_js_config_province_italia",
       "community": 13,
       "community_name": "config.js",
-      "norm_label": "province_italia",
-      "id": "src_js_config_province_italia"
+      "norm_label": "province_italia"
     },
     {
       "label": "REGIONI_ITALIA",
@@ -3236,10 +3236,10 @@
       "source_file": "src/js/config.js",
       "source_location": "L73",
       "_origin": "ast",
+      "id": "src_js_config_regioni_italia",
       "community": 13,
       "community_name": "config.js",
-      "norm_label": "regioni_italia",
-      "id": "src_js_config_regioni_italia"
+      "norm_label": "regioni_italia"
     },
     {
       "label": "SKILLS",
@@ -3247,10 +3247,10 @@
       "source_file": "src/js/config.js",
       "source_location": "L3",
       "_origin": "ast",
+      "id": "src_js_config_skills",
       "community": 13,
       "community_name": "config.js",
-      "norm_label": "skills",
-      "id": "src_js_config_skills"
+      "norm_label": "skills"
     },
     {
       "label": "state",
@@ -3258,10 +3258,10 @@
       "source_file": "src/js/config.js",
       "source_location": "L89",
       "_origin": "ast",
+      "id": "src_js_config_state",
       "community": 13,
       "community_name": "config.js",
-      "norm_label": "state",
-      "id": "src_js_config_state"
+      "norm_label": "state"
     },
     {
       "label": "dashboard-commessa-attiva.js",
@@ -3313,10 +3313,10 @@
       "source_file": "src/js/weekly-operatore-modal.js",
       "source_location": "L1",
       "_origin": "ast",
+      "id": "src_js_weekly_operatore_modal",
       "community": 17,
       "community_name": "weekly-operatore-modal.js",
-      "norm_label": "weekly-operatore-modal.js",
-      "id": "src_js_weekly_operatore_modal"
+      "norm_label": "weekly-operatore-modal.js"
     },
     {
       "label": "weekly-doppiaweek.js",
@@ -3588,10 +3588,10 @@
       "source_file": "src/js/dashboard-alerts-render.js",
       "source_location": "L1",
       "_origin": "ast",
+      "id": "src_js_dashboard_alerts_render",
       "community": 33,
       "community_name": "Alerts & Full Render",
-      "norm_label": "dashboard-alerts-render.js",
-      "id": "src_js_dashboard_alerts_render"
+      "norm_label": "dashboard-alerts-render.js"
     },
     {
       "label": "dashboard-gap-riconc.js",
@@ -3698,10 +3698,10 @@
       "source_file": "src/js/dashboard-crud-helpers.js",
       "source_location": "L1",
       "_origin": "ast",
+      "id": "src_js_dashboard_crud_helpers",
       "community": 6,
       "community_name": "dashboard-crud-helpers.js",
-      "norm_label": "dashboard-crud-helpers.js",
-      "id": "src_js_dashboard_crud_helpers"
+      "norm_label": "dashboard-crud-helpers.js"
     },
     {
       "label": "dashboard-operatori.js",
@@ -3709,10 +3709,10 @@
       "source_file": "src/js/dashboard-operatori.js",
       "source_location": "L1",
       "_origin": "ast",
+      "id": "src_js_dashboard_operatori",
       "community": 8,
       "community_name": "dashboard-operatori.js",
-      "norm_label": "dashboard-operatori.js",
-      "id": "src_js_dashboard_operatori"
+      "norm_label": "dashboard-operatori.js"
     },
     {
       "label": "EMAIL_SEED",
@@ -3720,10 +3720,10 @@
       "source_file": "src/js/dashboard-operatori.js",
       "source_location": "L247",
       "_origin": "ast",
+      "id": "src_js_dashboard_operatori_email_seed",
       "community": 8,
       "community_name": "dashboard-operatori.js",
-      "norm_label": "email_seed",
-      "id": "src_js_dashboard_operatori_email_seed"
+      "norm_label": "email_seed"
     },
     {
       "label": "Supabase table active_sessions",
@@ -5721,9 +5721,9 @@
       "source_location": "L86",
       "weight": 1.0,
       "_origin": "ast",
-      "confidence_score": 1.0,
       "source": "src_js_config_solofuturi",
-      "target": "src_js_config_mesecorrente"
+      "target": "src_js_config_mesecorrente",
+      "confidence_score": 1.0
     },
     {
       "relation": "calls",
@@ -5733,9 +5733,9 @@
       "source_location": "L70",
       "weight": 1.0,
       "_origin": "ast",
-      "confidence_score": 1.0,
       "source": "src_js_dashboard_alerts_render_renderall",
-      "target": "src_js_dashboard_alerts_render_renderalerts"
+      "target": "src_js_dashboard_alerts_render_renderalerts",
+      "confidence_score": 1.0
     },
     {
       "relation": "calls",
@@ -5853,9 +5853,9 @@
       "source_location": "L466",
       "weight": 1.0,
       "_origin": "ast",
-      "confidence_score": 1.0,
       "source": "src_js_dashboard_crud_helpers_cpselectmodal",
-      "target": "src_js_dashboard_crud_helpers_esc"
+      "target": "src_js_dashboard_crud_helpers_esc",
+      "confidence_score": 1.0
     },
     {
       "relation": "calls",
@@ -5865,9 +5865,9 @@
       "source_location": "L473",
       "weight": 1.0,
       "_origin": "ast",
-      "confidence_score": 1.0,
       "source": "src_js_dashboard_crud_helpers_cpselectmodal",
-      "target": "src_js_dashboard_crud_helpers_closemodal"
+      "target": "src_js_dashboard_crud_helpers_closemodal",
+      "confidence_score": 1.0
     },
     {
       "relation": "calls",
@@ -5877,9 +5877,9 @@
       "source_location": "L270",
       "weight": 1.0,
       "_origin": "ast",
-      "confidence_score": 1.0,
       "source": "src_js_dashboard_crud_helpers_deletecommessa",
-      "target": "src_js_dashboard_crud_helpers_showconfirmasync"
+      "target": "src_js_dashboard_crud_helpers_showconfirmasync",
+      "confidence_score": 1.0
     },
     {
       "relation": "calls",
@@ -5889,9 +5889,9 @@
       "source_location": "L519",
       "weight": 1.0,
       "_origin": "ast",
-      "confidence_score": 1.0,
       "source": "src_js_dashboard_crud_helpers_deleteoperatore",
-      "target": "src_js_dashboard_crud_helpers_showconfirm"
+      "target": "src_js_dashboard_crud_helpers_showconfirm",
+      "confidence_score": 1.0
     },
     {
       "relation": "calls",
@@ -5901,9 +5901,9 @@
       "source_location": "L445",
       "weight": 1.0,
       "_origin": "ast",
-      "confidence_score": 1.0,
       "source": "src_js_dashboard_crud_helpers_getoperatoriattivi",
-      "target": "src_js_dashboard_crud_helpers_isoperatorescaduto"
+      "target": "src_js_dashboard_crud_helpers_isoperatorescaduto",
+      "confidence_score": 1.0
     },
     {
       "relation": "calls",
@@ -5913,9 +5913,9 @@
       "source_location": "L481",
       "weight": 1.0,
       "_origin": "ast",
-      "confidence_score": 1.0,
       "source": "src_js_dashboard_crud_helpers_isoperatorelicenziato",
-      "target": "src_js_dashboard_crud_helpers_isoperatorescaduto"
+      "target": "src_js_dashboard_crud_helpers_isoperatorescaduto",
+      "confidence_score": 1.0
     },
     {
       "relation": "calls",
@@ -5925,9 +5925,9 @@
       "source_location": "L59",
       "weight": 1.0,
       "_origin": "ast",
-      "confidence_score": 1.0,
       "source": "src_js_dashboard_crud_helpers_opencommessamodal",
-      "target": "src_js_dashboard_crud_helpers_closemodal"
+      "target": "src_js_dashboard_crud_helpers_closemodal",
+      "confidence_score": 1.0
     },
     {
       "relation": "calls",
@@ -5937,9 +5937,9 @@
       "source_location": "L69",
       "weight": 1.0,
       "_origin": "ast",
-      "confidence_score": 1.0,
       "source": "src_js_dashboard_crud_helpers_opencommessamodal",
-      "target": "src_js_dashboard_crud_helpers_openfabbisognomodal"
+      "target": "src_js_dashboard_crud_helpers_openfabbisognomodal",
+      "confidence_score": 1.0
     },
     {
       "relation": "calls",
@@ -5949,9 +5949,9 @@
       "source_location": "L73",
       "weight": 1.0,
       "_origin": "ast",
-      "confidence_score": 1.0,
       "source": "src_js_dashboard_crud_helpers_opencommessamodal",
-      "target": "src_js_dashboard_crud_helpers_parseemaillist"
+      "target": "src_js_dashboard_crud_helpers_parseemaillist",
+      "confidence_score": 1.0
     },
     {
       "relation": "calls",
@@ -5961,9 +5961,9 @@
       "source_location": "L74",
       "weight": 1.0,
       "_origin": "ast",
-      "confidence_score": 1.0,
       "source": "src_js_dashboard_crud_helpers_opencommessamodal",
-      "target": "src_js_dashboard_crud_helpers_showalertmodal"
+      "target": "src_js_dashboard_crud_helpers_showalertmodal",
+      "confidence_score": 1.0
     },
     {
       "relation": "calls",
@@ -5973,9 +5973,9 @@
       "source_location": "L243",
       "weight": 1.0,
       "_origin": "ast",
-      "confidence_score": 1.0,
       "source": "src_js_dashboard_crud_helpers_openfabbisognomodal",
-      "target": "src_js_dashboard_crud_helpers_closemodal"
+      "target": "src_js_dashboard_crud_helpers_closemodal",
+      "confidence_score": 1.0
     },
     {
       "relation": "calls",
@@ -5985,9 +5985,9 @@
       "source_location": "L147",
       "weight": 1.0,
       "_origin": "ast",
-      "confidence_score": 1.0,
       "source": "src_js_dashboard_crud_helpers_openfabbisognomodal_renderrighe",
-      "target": "src_js_dashboard_crud_helpers_openfabbisognomodal_totalerighe"
+      "target": "src_js_dashboard_crud_helpers_openfabbisognomodal_totalerighe",
+      "confidence_score": 1.0
     },
     {
       "relation": "calls",
@@ -5997,9 +5997,9 @@
       "source_location": "L149",
       "weight": 1.0,
       "_origin": "ast",
-      "confidence_score": 1.0,
       "source": "src_js_dashboard_crud_helpers_openfabbisognomodal_renderrighe",
-      "target": "src_js_dashboard_crud_helpers_openfabbisognomodal_suggestoperatoriperriga"
+      "target": "src_js_dashboard_crud_helpers_openfabbisognomodal_suggestoperatoriperriga",
+      "confidence_score": 1.0
     },
     {
       "relation": "calls",
@@ -6009,9 +6009,9 @@
       "source_location": "L166",
       "weight": 1.0,
       "_origin": "ast",
-      "confidence_score": 1.0,
       "source": "src_js_dashboard_crud_helpers_openfabbisognomodal_renderrighe",
-      "target": "src_js_dashboard_crud_helpers_esc"
+      "target": "src_js_dashboard_crud_helpers_esc",
+      "confidence_score": 1.0
     },
     {
       "relation": "calls",
@@ -6021,9 +6021,9 @@
       "source_location": "L127",
       "weight": 1.0,
       "_origin": "ast",
-      "confidence_score": 1.0,
       "source": "src_js_dashboard_crud_helpers_openfabbisognomodal_suggestoperatoriperriga",
-      "target": "src_js_dashboard_crud_helpers_getoperatoriattivi"
+      "target": "src_js_dashboard_crud_helpers_getoperatoriattivi",
+      "confidence_score": 1.0
     },
     {
       "relation": "calls",
@@ -6033,9 +6033,9 @@
       "source_location": "L553",
       "weight": 1.0,
       "_origin": "ast",
-      "confidence_score": 1.0,
       "source": "src_js_dashboard_crud_helpers_openlicenziamodal",
-      "target": "src_js_dashboard_crud_helpers_closemodal"
+      "target": "src_js_dashboard_crud_helpers_closemodal",
+      "confidence_score": 1.0
     },
     {
       "relation": "calls",
@@ -6045,9 +6045,9 @@
       "source_location": "L553",
       "weight": 1.0,
       "_origin": "ast",
-      "confidence_score": 1.0,
       "source": "src_js_dashboard_crud_helpers_openlicenziamodal",
-      "target": "src_js_dashboard_crud_helpers_licenziaoperatore"
+      "target": "src_js_dashboard_crud_helpers_licenziaoperatore",
+      "confidence_score": 1.0
     },
     {
       "relation": "calls",
@@ -6057,9 +6057,9 @@
       "source_location": "L554",
       "weight": 1.0,
       "_origin": "ast",
-      "confidence_score": 1.0,
       "source": "src_js_dashboard_crud_helpers_openlicenziamodal",
-      "target": "src_js_dashboard_crud_helpers_deleteoperatore"
+      "target": "src_js_dashboard_crud_helpers_deleteoperatore",
+      "confidence_score": 1.0
     },
     {
       "relation": "calls",
@@ -6069,9 +6069,9 @@
       "source_location": "L5",
       "weight": 1.0,
       "_origin": "ast",
-      "confidence_score": 1.0,
       "source": "src_js_dashboard_crud_helpers_openmodal",
-      "target": "src_js_dashboard_crud_helpers_closemodal"
+      "target": "src_js_dashboard_crud_helpers_closemodal",
+      "confidence_score": 1.0
     },
     {
       "relation": "calls",
@@ -6081,9 +6081,9 @@
       "source_location": "L311",
       "weight": 1.0,
       "_origin": "ast",
-      "confidence_score": 1.0,
       "source": "src_js_dashboard_crud_helpers_openoperatoremodal",
-      "target": "src_js_dashboard_crud_helpers_esc"
+      "target": "src_js_dashboard_crud_helpers_esc",
+      "confidence_score": 1.0
     },
     {
       "relation": "calls",
@@ -6093,9 +6093,9 @@
       "source_location": "L361",
       "weight": 1.0,
       "_origin": "ast",
-      "confidence_score": 1.0,
       "source": "src_js_dashboard_crud_helpers_openoperatoremodal",
-      "target": "src_js_dashboard_crud_helpers_closemodal"
+      "target": "src_js_dashboard_crud_helpers_closemodal",
+      "confidence_score": 1.0
     },
     {
       "relation": "calls",
@@ -6105,9 +6105,9 @@
       "source_location": "L373",
       "weight": 1.0,
       "_origin": "ast",
-      "confidence_score": 1.0,
       "source": "src_js_dashboard_crud_helpers_openoperatoremodal",
-      "target": "src_js_dashboard_crud_helpers_showalertmodal"
+      "target": "src_js_dashboard_crud_helpers_showalertmodal",
+      "confidence_score": 1.0
     },
     {
       "relation": "calls",
@@ -6117,9 +6117,9 @@
       "source_location": "L280",
       "weight": 1.0,
       "_origin": "ast",
-      "confidence_score": 1.0,
       "source": "src_js_dashboard_crud_helpers_promuovicommessa",
-      "target": "src_js_dashboard_crud_helpers_showconfirmasync"
+      "target": "src_js_dashboard_crud_helpers_showconfirmasync",
+      "confidence_score": 1.0
     },
     {
       "relation": "calls",
@@ -6129,9 +6129,9 @@
       "source_location": "L418",
       "weight": 1.0,
       "_origin": "ast",
-      "confidence_score": 1.0,
       "source": "src_js_dashboard_crud_helpers_showalertmodal",
-      "target": "src_js_dashboard_crud_helpers_esc"
+      "target": "src_js_dashboard_crud_helpers_esc",
+      "confidence_score": 1.0
     },
     {
       "relation": "calls",
@@ -6141,9 +6141,9 @@
       "source_location": "L420",
       "weight": 1.0,
       "_origin": "ast",
-      "confidence_score": 1.0,
       "source": "src_js_dashboard_crud_helpers_showalertmodal",
-      "target": "src_js_dashboard_crud_helpers_closemodal"
+      "target": "src_js_dashboard_crud_helpers_closemodal",
+      "confidence_score": 1.0
     },
     {
       "relation": "calls",
@@ -6153,9 +6153,9 @@
       "source_location": "L411",
       "weight": 1.0,
       "_origin": "ast",
-      "confidence_score": 1.0,
       "source": "src_js_dashboard_crud_helpers_showconfirm",
-      "target": "src_js_dashboard_crud_helpers_closemodal"
+      "target": "src_js_dashboard_crud_helpers_closemodal",
+      "confidence_score": 1.0
     },
     {
       "relation": "calls",
@@ -6165,9 +6165,9 @@
       "source_location": "L427",
       "weight": 1.0,
       "_origin": "ast",
-      "confidence_score": 1.0,
       "source": "src_js_dashboard_crud_helpers_showconfirmasync",
-      "target": "src_js_dashboard_crud_helpers_esc"
+      "target": "src_js_dashboard_crud_helpers_esc",
+      "confidence_score": 1.0
     },
     {
       "relation": "calls",
@@ -6177,9 +6177,9 @@
       "source_location": "L430",
       "weight": 1.0,
       "_origin": "ast",
-      "confidence_score": 1.0,
       "source": "src_js_dashboard_crud_helpers_showconfirmasync",
-      "target": "src_js_dashboard_crud_helpers_closemodal"
+      "target": "src_js_dashboard_crud_helpers_closemodal",
+      "confidence_score": 1.0
     },
     {
       "relation": "calls",
@@ -6249,9 +6249,9 @@
       "source_location": "L556",
       "weight": 1.0,
       "_origin": "ast",
-      "confidence_score": 1.0,
       "source": "src_js_dashboard_operatori_aggiornaggopvistacommessa",
-      "target": "src_js_dashboard_operatori_rendervistaoperatore"
+      "target": "src_js_dashboard_operatori_rendervistaoperatore",
+      "confidence_score": 1.0
     },
     {
       "relation": "calls",
@@ -6261,9 +6261,9 @@
       "source_location": "L347",
       "weight": 1.0,
       "_origin": "ast",
-      "confidence_score": 1.0,
       "source": "src_js_dashboard_operatori_aprivistaoperatore",
-      "target": "src_js_dashboard_operatori_switchoptab"
+      "target": "src_js_dashboard_operatori_switchoptab",
+      "confidence_score": 1.0
     },
     {
       "relation": "calls",
@@ -6273,9 +6273,9 @@
       "source_location": "L29",
       "weight": 1.0,
       "_origin": "ast",
-      "confidence_score": 1.0,
       "source": "src_js_dashboard_operatori_renderattestatifilters",
-      "target": "src_js_dashboard_operatori_updateattestatisummary"
+      "target": "src_js_dashboard_operatori_updateattestatisummary",
+      "confidence_score": 1.0
     },
     {
       "relation": "calls",
@@ -6285,9 +6285,9 @@
       "source_location": "L30",
       "weight": 1.0,
       "_origin": "ast",
-      "confidence_score": 1.0,
       "source": "src_js_dashboard_operatori_renderattestatifilters",
-      "target": "src_js_dashboard_operatori_renderoperatori"
+      "target": "src_js_dashboard_operatori_renderoperatori",
+      "confidence_score": 1.0
     },
     {
       "relation": "calls",
@@ -6297,9 +6297,9 @@
       "source_location": "L118",
       "weight": 1.0,
       "_origin": "ast",
-      "confidence_score": 1.0,
       "source": "src_js_dashboard_operatori_renderoperatori",
-      "target": "src_js_dashboard_operatori_checkcoerenzaoperatori"
+      "target": "src_js_dashboard_operatori_checkcoerenzaoperatori",
+      "confidence_score": 1.0
     },
     {
       "relation": "calls",
@@ -6309,9 +6309,9 @@
       "source_location": "L119",
       "weight": 1.0,
       "_origin": "ast",
-      "confidence_score": 1.0,
       "source": "src_js_dashboard_operatori_renderoperatori",
-      "target": "src_js_dashboard_operatori_renderprovinciafilteroptions"
+      "target": "src_js_dashboard_operatori_renderprovinciafilteroptions",
+      "confidence_score": 1.0
     },
     {
       "relation": "calls",
@@ -6321,9 +6321,9 @@
       "source_location": "L189",
       "weight": 1.0,
       "_origin": "ast",
-      "confidence_score": 1.0,
       "source": "src_js_dashboard_operatori_renderoperatori",
-      "target": "src_js_dashboard_operatori_aprivistaoperatore"
+      "target": "src_js_dashboard_operatori_aprivistaoperatore",
+      "confidence_score": 1.0
     },
     {
       "relation": "calls",
@@ -6333,9 +6333,9 @@
       "source_location": "L192",
       "weight": 1.0,
       "_origin": "ast",
-      "confidence_score": 1.0,
       "source": "src_js_dashboard_operatori_renderoperatori",
-      "target": "src_js_dashboard_operatori_riattivaoperatore"
+      "target": "src_js_dashboard_operatori_riattivaoperatore",
+      "confidence_score": 1.0
     },
     {
       "relation": "calls",
@@ -6345,9 +6345,9 @@
       "source_location": "L47",
       "weight": 1.0,
       "_origin": "ast",
-      "confidence_score": 1.0,
       "source": "src_js_dashboard_operatori_renderprovinciafilteroptions",
-      "target": "src_js_dashboard_operatori_updateprovinciafilteroptions"
+      "target": "src_js_dashboard_operatori_updateprovinciafilteroptions",
+      "confidence_score": 1.0
     },
     {
       "relation": "calls",
@@ -6357,9 +6357,9 @@
       "source_location": "L11",
       "weight": 1.0,
       "_origin": "ast",
-      "confidence_score": 1.0,
       "source": "src_js_dashboard_operatori_renderskillfilters",
-      "target": "src_js_dashboard_operatori_renderoperatori"
+      "target": "src_js_dashboard_operatori_renderoperatori",
+      "confidence_score": 1.0
     },
     {
       "relation": "calls",
@@ -6369,9 +6369,9 @@
       "source_location": "L235",
       "weight": 1.0,
       "_origin": "ast",
-      "confidence_score": 1.0,
       "source": "src_js_dashboard_operatori_switchoptab",
-      "target": "src_js_dashboard_operatori_renderemailoperatori"
+      "target": "src_js_dashboard_operatori_renderemailoperatori",
+      "confidence_score": 1.0
     },
     {
       "relation": "calls",
@@ -6381,9 +6381,9 @@
       "source_location": "L240",
       "weight": 1.0,
       "_origin": "ast",
-      "confidence_score": 1.0,
       "source": "src_js_dashboard_operatori_switchoptab",
-      "target": "src_js_dashboard_operatori_rendervistaoperatore"
+      "target": "src_js_dashboard_operatori_rendervistaoperatore",
+      "confidence_score": 1.0
     },
     {
       "relation": "calls",
@@ -7737,9 +7737,9 @@
       "source_location": "L174",
       "weight": 1.0,
       "_origin": "ast",
-      "confidence_score": 1.0,
       "source": "src_js_weekly_operatore_modal_pwconfirmopmodal",
-      "target": "src_js_weekly_operatore_modal_pwcloseopmodal"
+      "target": "src_js_weekly_operatore_modal_pwcloseopmodal",
+      "confidence_score": 1.0
     },
     {
       "relation": "calls",
@@ -7749,9 +7749,9 @@
       "source_location": "L180",
       "weight": 1.0,
       "_origin": "ast",
-      "confidence_score": 1.0,
       "source": "src_js_weekly_operatore_modal_pwconfirmopmodal",
-      "target": "src_js_weekly_operatore_modal_pwrender"
+      "target": "src_js_weekly_operatore_modal_pwrender",
+      "confidence_score": 1.0
     },
     {
       "relation": "calls",
@@ -7761,9 +7761,9 @@
       "source_location": "L160",
       "weight": 1.0,
       "_origin": "ast",
-      "confidence_score": 1.0,
       "source": "src_js_weekly_operatore_modal_pwopenopmodal",
-      "target": "src_js_weekly_operatore_modal_pwcloseopmodal"
+      "target": "src_js_weekly_operatore_modal_pwcloseopmodal",
+      "confidence_score": 1.0
     },
     {
       "relation": "calls",
@@ -7773,9 +7773,9 @@
       "source_location": "L105",
       "weight": 1.0,
       "_origin": "ast",
-      "confidence_score": 1.0,
       "source": "src_js_weekly_operatore_modal_pwopenopmodal_buildlist",
-      "target": "src_js_weekly_operatore_modal_pwconfirmopmodal"
+      "target": "src_js_weekly_operatore_modal_pwconfirmopmodal",
+      "confidence_score": 1.0
     },
     {
       "relation": "calls",
@@ -7785,9 +7785,9 @@
       "source_location": "L108",
       "weight": 1.0,
       "_origin": "ast",
-      "confidence_score": 1.0,
       "source": "src_js_weekly_operatore_modal_pwopenopmodal_buildlist",
-      "target": "src_js_weekly_operatore_modal_pwopenopmodal_passafiltrogeo"
+      "target": "src_js_weekly_operatore_modal_pwopenopmodal_passafiltrogeo",
+      "confidence_score": 1.0
     },
     {
       "relation": "calls",
@@ -7797,9 +7797,9 @@
       "source_location": "L225",
       "weight": 1.0,
       "_origin": "ast",
-      "confidence_score": 1.0,
       "source": "src_js_weekly_operatore_modal_pwrender",
-      "target": "src_js_weekly_operatore_modal_pwpopulateweekselect"
+      "target": "src_js_weekly_operatore_modal_pwpopulateweekselect",
+      "confidence_score": 1.0
     },
     {
       "relation": "calls",
@@ -7809,9 +7809,9 @@
       "source_location": "L259",
       "weight": 1.0,
       "_origin": "ast",
-      "confidence_score": 1.0,
       "source": "src_js_weekly_operatore_modal_pwrender",
-      "target": "src_js_weekly_operatore_modal_pwrenderstats"
+      "target": "src_js_weekly_operatore_modal_pwrenderstats",
+      "confidence_score": 1.0
     },
     {
       "relation": "calls",
@@ -7821,9 +7821,9 @@
       "source_location": "L332",
       "weight": 1.0,
       "_origin": "ast",
-      "confidence_score": 1.0,
       "source": "src_js_weekly_operatore_modal_pwrender",
-      "target": "src_js_weekly_operatore_modal_pwrenderopdropdown"
+      "target": "src_js_weekly_operatore_modal_pwrenderopdropdown",
+      "confidence_score": 1.0
     },
     {
       "relation": "calls",
@@ -8013,9 +8013,9 @@
       "source_location": "L123",
       "weight": 1.0,
       "_origin": "ast",
-      "confidence_score": 1.0,
       "source": "src_js_dashboard_crud_helpers_openfabbisognomodal",
-      "target": "src_js_dashboard_crud_helpers_openfabbisognomodal_totalerighe"
+      "target": "src_js_dashboard_crud_helpers_openfabbisognomodal_totalerighe",
+      "confidence_score": 1.0
     },
     {
       "relation": "contains",
@@ -8025,9 +8025,9 @@
       "source_location": "L144",
       "weight": 1.0,
       "_origin": "ast",
-      "confidence_score": 1.0,
       "source": "src_js_dashboard_crud_helpers_openfabbisognomodal",
-      "target": "src_js_dashboard_crud_helpers_openfabbisognomodal_renderrighe"
+      "target": "src_js_dashboard_crud_helpers_openfabbisognomodal_renderrighe",
+      "confidence_score": 1.0
     },
     {
       "relation": "contains",
@@ -8085,9 +8085,9 @@
       "source_location": "L66",
       "weight": 1.0,
       "_origin": "ast",
-      "confidence_score": 1.0,
       "source": "src_js_weekly_operatore_modal_pwopenopmodal",
-      "target": "src_js_weekly_operatore_modal_pwopenopmodal_rebuildprovinciaoptions"
+      "target": "src_js_weekly_operatore_modal_pwopenopmodal_rebuildprovinciaoptions",
+      "confidence_score": 1.0
     },
     {
       "relation": "contains",
@@ -8097,9 +8097,9 @@
       "source_location": "L98",
       "weight": 1.0,
       "_origin": "ast",
-      "confidence_score": 1.0,
       "source": "src_js_weekly_operatore_modal_pwopenopmodal",
-      "target": "src_js_weekly_operatore_modal_pwopenopmodal_buildlist"
+      "target": "src_js_weekly_operatore_modal_pwopenopmodal_buildlist",
+      "confidence_score": 1.0
     },
     {
       "relation": "contains",
@@ -8163,9 +8163,9 @@
       "source_location": "L13",
       "weight": 1.0,
       "_origin": "ast",
-      "confidence_score": 1.0,
       "source": "src_js_config",
-      "target": "src_js_config_province_italia"
+      "target": "src_js_config_province_italia",
+      "confidence_score": 1.0
     },
     {
       "relation": "contains",
@@ -8174,9 +8174,9 @@
       "source_location": "L2",
       "weight": 1.0,
       "_origin": "ast",
-      "confidence_score": 1.0,
       "source": "src_js_config",
-      "target": "src_js_config_initial_data"
+      "target": "src_js_config_initial_data",
+      "confidence_score": 1.0
     },
     {
       "relation": "contains",
@@ -8185,9 +8185,9 @@
       "source_location": "L3",
       "weight": 1.0,
       "_origin": "ast",
-      "confidence_score": 1.0,
       "source": "src_js_config",
-      "target": "src_js_config_skills"
+      "target": "src_js_config_skills",
+      "confidence_score": 1.0
     },
     {
       "relation": "contains",
@@ -8196,9 +8196,9 @@
       "source_location": "L5",
       "weight": 1.0,
       "_origin": "ast",
-      "confidence_score": 1.0,
       "source": "src_js_config",
-      "target": "src_js_config_mesi"
+      "target": "src_js_config_mesi",
+      "confidence_score": 1.0
     },
     {
       "relation": "contains",
@@ -8207,9 +8207,9 @@
       "source_location": "L6",
       "weight": 1.0,
       "_origin": "ast",
-      "confidence_score": 1.0,
       "source": "src_js_config",
-      "target": "src_js_config_mesi_long"
+      "target": "src_js_config_mesi_long",
+      "confidence_score": 1.0
     },
     {
       "relation": "contains",
@@ -8218,9 +8218,9 @@
       "source_location": "L7",
       "weight": 1.0,
       "_origin": "ast",
-      "confidence_score": 1.0,
       "source": "src_js_config",
-      "target": "src_js_config_industries"
+      "target": "src_js_config_industries",
+      "confidence_score": 1.0
     },
     {
       "relation": "contains",
@@ -8229,9 +8229,9 @@
       "source_location": "L73",
       "weight": 1.0,
       "_origin": "ast",
-      "confidence_score": 1.0,
       "source": "src_js_config",
-      "target": "src_js_config_regioni_italia"
+      "target": "src_js_config_regioni_italia",
+      "confidence_score": 1.0
     },
     {
       "relation": "contains",
@@ -8240,9 +8240,9 @@
       "source_location": "L74",
       "weight": 1.0,
       "_origin": "ast",
-      "confidence_score": 1.0,
       "source": "src_js_config",
-      "target": "src_js_config_provinciainfo"
+      "target": "src_js_config_provinciainfo",
+      "confidence_score": 1.0
     },
     {
       "relation": "contains",
@@ -8251,9 +8251,9 @@
       "source_location": "L75",
       "weight": 1.0,
       "_origin": "ast",
-      "confidence_score": 1.0,
       "source": "src_js_config",
-      "target": "src_js_config_provincediregione"
+      "target": "src_js_config_provincediregione",
+      "confidence_score": 1.0
     },
     {
       "relation": "contains",
@@ -8262,9 +8262,9 @@
       "source_location": "L76",
       "weight": 1.0,
       "_origin": "ast",
-      "confidence_score": 1.0,
       "source": "src_js_config",
-      "target": "src_js_config_anno"
+      "target": "src_js_config_anno",
+      "confidence_score": 1.0
     },
     {
       "relation": "contains",
@@ -8273,9 +8273,9 @@
       "source_location": "L80",
       "weight": 1.0,
       "_origin": "ast",
-      "confidence_score": 1.0,
       "source": "src_js_config",
-      "target": "src_js_config_mesecorrente"
+      "target": "src_js_config_mesecorrente",
+      "confidence_score": 1.0
     },
     {
       "relation": "contains",
@@ -8284,9 +8284,9 @@
       "source_location": "L86",
       "weight": 1.0,
       "_origin": "ast",
-      "confidence_score": 1.0,
       "source": "src_js_config",
-      "target": "src_js_config_solofuturi"
+      "target": "src_js_config_solofuturi",
+      "confidence_score": 1.0
     },
     {
       "relation": "contains",
@@ -8295,9 +8295,9 @@
       "source_location": "L89",
       "weight": 1.0,
       "_origin": "ast",
-      "confidence_score": 1.0,
       "source": "src_js_config",
-      "target": "src_js_config_state"
+      "target": "src_js_config_state",
+      "confidence_score": 1.0
     },
     {
       "relation": "contains",
@@ -8306,9 +8306,9 @@
       "source_location": "L2",
       "weight": 1.0,
       "_origin": "ast",
-      "confidence_score": 1.0,
       "source": "src_js_dashboard_alerts_render",
-      "target": "src_js_dashboard_alerts_render_renderalerts"
+      "target": "src_js_dashboard_alerts_render_renderalerts",
+      "confidence_score": 1.0
     },
     {
       "relation": "contains",
@@ -8317,9 +8317,9 @@
       "source_location": "L68",
       "weight": 1.0,
       "_origin": "ast",
-      "confidence_score": 1.0,
       "source": "src_js_dashboard_alerts_render",
-      "target": "src_js_dashboard_alerts_render_renderall"
+      "target": "src_js_dashboard_alerts_render_renderall",
+      "confidence_score": 1.0
     },
     {
       "relation": "contains",
@@ -8603,9 +8603,9 @@
       "source_location": "L2",
       "weight": 1.0,
       "_origin": "ast",
-      "confidence_score": 1.0,
       "source": "src_js_dashboard_crud_helpers",
-      "target": "src_js_dashboard_crud_helpers_openmodal"
+      "target": "src_js_dashboard_crud_helpers_openmodal",
+      "confidence_score": 1.0
     },
     {
       "relation": "contains",
@@ -8614,9 +8614,9 @@
       "source_location": "L269",
       "weight": 1.0,
       "_origin": "ast",
-      "confidence_score": 1.0,
       "source": "src_js_dashboard_crud_helpers",
-      "target": "src_js_dashboard_crud_helpers_deletecommessa"
+      "target": "src_js_dashboard_crud_helpers_deletecommessa",
+      "confidence_score": 1.0
     },
     {
       "relation": "contains",
@@ -8625,9 +8625,9 @@
       "source_location": "L277",
       "weight": 1.0,
       "_origin": "ast",
-      "confidence_score": 1.0,
       "source": "src_js_dashboard_crud_helpers",
-      "target": "src_js_dashboard_crud_helpers_promuovicommessa"
+      "target": "src_js_dashboard_crud_helpers_promuovicommessa",
+      "confidence_score": 1.0
     },
     {
       "relation": "contains",
@@ -8636,9 +8636,9 @@
       "source_location": "L308",
       "weight": 1.0,
       "_origin": "ast",
-      "confidence_score": 1.0,
       "source": "src_js_dashboard_crud_helpers",
-      "target": "src_js_dashboard_crud_helpers_openoperatoremodal"
+      "target": "src_js_dashboard_crud_helpers_openoperatoremodal",
+      "confidence_score": 1.0
     },
     {
       "relation": "contains",
@@ -8647,9 +8647,9 @@
       "source_location": "L393",
       "weight": 1.0,
       "_origin": "ast",
-      "confidence_score": 1.0,
       "source": "src_js_dashboard_crud_helpers",
-      "target": "src_js_dashboard_crud_helpers_esc"
+      "target": "src_js_dashboard_crud_helpers_esc",
+      "confidence_score": 1.0
     },
     {
       "relation": "contains",
@@ -8658,9 +8658,9 @@
       "source_location": "L397",
       "weight": 1.0,
       "_origin": "ast",
-      "confidence_score": 1.0,
       "source": "src_js_dashboard_crud_helpers",
-      "target": "src_js_dashboard_crud_helpers_jsattr"
+      "target": "src_js_dashboard_crud_helpers_jsattr",
+      "confidence_score": 1.0
     },
     {
       "relation": "contains",
@@ -8669,9 +8669,9 @@
       "source_location": "L401",
       "weight": 1.0,
       "_origin": "ast",
-      "confidence_score": 1.0,
       "source": "src_js_dashboard_crud_helpers",
-      "target": "src_js_dashboard_crud_helpers_parseemaillist"
+      "target": "src_js_dashboard_crud_helpers_parseemaillist",
+      "confidence_score": 1.0
     },
     {
       "relation": "contains",
@@ -8680,9 +8680,9 @@
       "source_location": "L408",
       "weight": 1.0,
       "_origin": "ast",
-      "confidence_score": 1.0,
       "source": "src_js_dashboard_crud_helpers",
-      "target": "src_js_dashboard_crud_helpers_showconfirm"
+      "target": "src_js_dashboard_crud_helpers_showconfirm",
+      "confidence_score": 1.0
     },
     {
       "relation": "contains",
@@ -8691,9 +8691,9 @@
       "source_location": "L416",
       "weight": 1.0,
       "_origin": "ast",
-      "confidence_score": 1.0,
       "source": "src_js_dashboard_crud_helpers",
-      "target": "src_js_dashboard_crud_helpers_showalertmodal"
+      "target": "src_js_dashboard_crud_helpers_showalertmodal",
+      "confidence_score": 1.0
     },
     {
       "relation": "contains",
@@ -8702,9 +8702,9 @@
       "source_location": "L424",
       "weight": 1.0,
       "_origin": "ast",
-      "confidence_score": 1.0,
       "source": "src_js_dashboard_crud_helpers",
-      "target": "src_js_dashboard_crud_helpers_showconfirmasync"
+      "target": "src_js_dashboard_crud_helpers_showconfirmasync",
+      "confidence_score": 1.0
     },
     {
       "relation": "contains",
@@ -8713,9 +8713,9 @@
       "source_location": "L439",
       "weight": 1.0,
       "_origin": "ast",
-      "confidence_score": 1.0,
       "source": "src_js_dashboard_crud_helpers",
-      "target": "src_js_dashboard_crud_helpers_isoperatorescaduto"
+      "target": "src_js_dashboard_crud_helpers_isoperatorescaduto",
+      "confidence_score": 1.0
     },
     {
       "relation": "contains",
@@ -8724,9 +8724,9 @@
       "source_location": "L444",
       "weight": 1.0,
       "_origin": "ast",
-      "confidence_score": 1.0,
       "source": "src_js_dashboard_crud_helpers",
-      "target": "src_js_dashboard_crud_helpers_getoperatoriattivi"
+      "target": "src_js_dashboard_crud_helpers_getoperatoriattivi",
+      "confidence_score": 1.0
     },
     {
       "relation": "contains",
@@ -8735,9 +8735,9 @@
       "source_location": "L451",
       "weight": 1.0,
       "_origin": "ast",
-      "confidence_score": 1.0,
       "source": "src_js_dashboard_crud_helpers",
-      "target": "src_js_dashboard_crud_helpers_mesefinerapportoinanno"
+      "target": "src_js_dashboard_crud_helpers_mesefinerapportoinanno",
+      "confidence_score": 1.0
     },
     {
       "relation": "contains",
@@ -8746,9 +8746,9 @@
       "source_location": "L463",
       "weight": 1.0,
       "_origin": "ast",
-      "confidence_score": 1.0,
       "source": "src_js_dashboard_crud_helpers",
-      "target": "src_js_dashboard_crud_helpers_cpselectmodal"
+      "target": "src_js_dashboard_crud_helpers_cpselectmodal",
+      "confidence_score": 1.0
     },
     {
       "relation": "contains",
@@ -8757,9 +8757,9 @@
       "source_location": "L479",
       "weight": 1.0,
       "_origin": "ast",
-      "confidence_score": 1.0,
       "source": "src_js_dashboard_crud_helpers",
-      "target": "src_js_dashboard_crud_helpers_isoperatorelicenziato"
+      "target": "src_js_dashboard_crud_helpers_isoperatorelicenziato",
+      "confidence_score": 1.0
     },
     {
       "relation": "contains",
@@ -8768,9 +8768,9 @@
       "source_location": "L484",
       "weight": 1.0,
       "_origin": "ast",
-      "confidence_score": 1.0,
       "source": "src_js_dashboard_crud_helpers",
-      "target": "src_js_dashboard_crud_helpers_deleteoperatore"
+      "target": "src_js_dashboard_crud_helpers_deleteoperatore",
+      "confidence_score": 1.0
     },
     {
       "relation": "contains",
@@ -8779,9 +8779,9 @@
       "source_location": "L532",
       "weight": 1.0,
       "_origin": "ast",
-      "confidence_score": 1.0,
       "source": "src_js_dashboard_crud_helpers",
-      "target": "src_js_dashboard_crud_helpers_openlicenziamodal"
+      "target": "src_js_dashboard_crud_helpers_openlicenziamodal",
+      "confidence_score": 1.0
     },
     {
       "relation": "contains",
@@ -8790,9 +8790,9 @@
       "source_location": "L559",
       "weight": 1.0,
       "_origin": "ast",
-      "confidence_score": 1.0,
       "source": "src_js_dashboard_crud_helpers",
-      "target": "src_js_dashboard_crud_helpers_licenziaoperatore"
+      "target": "src_js_dashboard_crud_helpers_licenziaoperatore",
+      "confidence_score": 1.0
     },
     {
       "relation": "contains",
@@ -8801,9 +8801,9 @@
       "source_location": "L7",
       "weight": 1.0,
       "_origin": "ast",
-      "confidence_score": 1.0,
       "source": "src_js_dashboard_crud_helpers",
-      "target": "src_js_dashboard_crud_helpers_closemodal"
+      "target": "src_js_dashboard_crud_helpers_closemodal",
+      "confidence_score": 1.0
     },
     {
       "relation": "contains",
@@ -8812,9 +8812,9 @@
       "source_location": "L9",
       "weight": 1.0,
       "_origin": "ast",
-      "confidence_score": 1.0,
       "source": "src_js_dashboard_crud_helpers",
-      "target": "src_js_dashboard_crud_helpers_opencommessamodal"
+      "target": "src_js_dashboard_crud_helpers_opencommessamodal",
+      "confidence_score": 1.0
     },
     {
       "relation": "contains",
@@ -8823,9 +8823,9 @@
       "source_location": "L99",
       "weight": 1.0,
       "_origin": "ast",
-      "confidence_score": 1.0,
       "source": "src_js_dashboard_crud_helpers",
-      "target": "src_js_dashboard_crud_helpers_openfabbisognomodal"
+      "target": "src_js_dashboard_crud_helpers_openfabbisognomodal",
+      "confidence_score": 1.0
     },
     {
       "relation": "contains",
@@ -8834,9 +8834,9 @@
       "source_location": "L125",
       "weight": 1.0,
       "_origin": "ast",
-      "confidence_score": 1.0,
       "source": "src_js_dashboard_crud_helpers_openfabbisognomodal",
-      "target": "src_js_dashboard_crud_helpers_openfabbisognomodal_suggestoperatoriperriga"
+      "target": "src_js_dashboard_crud_helpers_openfabbisognomodal_suggestoperatoriperriga",
+      "confidence_score": 1.0
     },
     {
       "relation": "contains",
@@ -8999,9 +8999,9 @@
       "source_location": "L16",
       "weight": 1.0,
       "_origin": "ast",
-      "confidence_score": 1.0,
       "source": "src_js_dashboard_operatori",
-      "target": "src_js_dashboard_operatori_renderattestatifilters"
+      "target": "src_js_dashboard_operatori_renderattestatifilters",
+      "confidence_score": 1.0
     },
     {
       "relation": "contains",
@@ -9010,9 +9010,9 @@
       "source_location": "L198",
       "weight": 1.0,
       "_origin": "ast",
-      "confidence_score": 1.0,
       "source": "src_js_dashboard_operatori",
-      "target": "src_js_dashboard_operatori_riattivaoperatore"
+      "target": "src_js_dashboard_operatori_riattivaoperatore",
+      "confidence_score": 1.0
     },
     {
       "relation": "contains",
@@ -9021,9 +9021,9 @@
       "source_location": "L2",
       "weight": 1.0,
       "_origin": "ast",
-      "confidence_score": 1.0,
       "source": "src_js_dashboard_operatori",
-      "target": "src_js_dashboard_operatori_renderskillfilters"
+      "target": "src_js_dashboard_operatori_renderskillfilters",
+      "confidence_score": 1.0
     },
     {
       "relation": "contains",
@@ -9032,9 +9032,9 @@
       "source_location": "L216",
       "weight": 1.0,
       "_origin": "ast",
-      "confidence_score": 1.0,
       "source": "src_js_dashboard_operatori",
-      "target": "src_js_dashboard_operatori_switchoptab"
+      "target": "src_js_dashboard_operatori_switchoptab",
+      "confidence_score": 1.0
     },
     {
       "relation": "contains",
@@ -9043,9 +9043,9 @@
       "source_location": "L247",
       "weight": 1.0,
       "_origin": "ast",
-      "confidence_score": 1.0,
       "source": "src_js_dashboard_operatori",
-      "target": "src_js_dashboard_operatori_email_seed"
+      "target": "src_js_dashboard_operatori_email_seed",
+      "confidence_score": 1.0
     },
     {
       "relation": "contains",
@@ -9054,9 +9054,9 @@
       "source_location": "L272",
       "weight": 1.0,
       "_origin": "ast",
-      "confidence_score": 1.0,
       "source": "src_js_dashboard_operatori",
-      "target": "src_js_dashboard_operatori_seedemailoperatori"
+      "target": "src_js_dashboard_operatori_seedemailoperatori",
+      "confidence_score": 1.0
     },
     {
       "relation": "contains",
@@ -9065,9 +9065,9 @@
       "source_location": "L284",
       "weight": 1.0,
       "_origin": "ast",
-      "confidence_score": 1.0,
       "source": "src_js_dashboard_operatori",
-      "target": "src_js_dashboard_operatori_renderemailoperatori"
+      "target": "src_js_dashboard_operatori_renderemailoperatori",
+      "confidence_score": 1.0
     },
     {
       "relation": "contains",
@@ -9076,9 +9076,9 @@
       "source_location": "L323",
       "weight": 1.0,
       "_origin": "ast",
-      "confidence_score": 1.0,
       "source": "src_js_dashboard_operatori",
-      "target": "src_js_dashboard_operatori_saveemailoperatore"
+      "target": "src_js_dashboard_operatori_saveemailoperatore",
+      "confidence_score": 1.0
     },
     {
       "relation": "contains",
@@ -9087,9 +9087,9 @@
       "source_location": "L339",
       "weight": 1.0,
       "_origin": "ast",
-      "confidence_score": 1.0,
       "source": "src_js_dashboard_operatori",
-      "target": "src_js_dashboard_operatori_aprivistaoperatore"
+      "target": "src_js_dashboard_operatori_aprivistaoperatore",
+      "confidence_score": 1.0
     },
     {
       "relation": "contains",
@@ -9098,9 +9098,9 @@
       "source_location": "L350",
       "weight": 1.0,
       "_origin": "ast",
-      "confidence_score": 1.0,
       "source": "src_js_dashboard_operatori",
-      "target": "src_js_dashboard_operatori_rendervistaoperatore"
+      "target": "src_js_dashboard_operatori_rendervistaoperatore",
+      "confidence_score": 1.0
     },
     {
       "relation": "contains",
@@ -9109,9 +9109,9 @@
       "source_location": "L39",
       "weight": 1.0,
       "_origin": "ast",
-      "confidence_score": 1.0,
       "source": "src_js_dashboard_operatori",
-      "target": "src_js_dashboard_operatori_renderprovinciafilteroptions"
+      "target": "src_js_dashboard_operatori_renderprovinciafilteroptions",
+      "confidence_score": 1.0
     },
     {
       "relation": "contains",
@@ -9120,9 +9120,9 @@
       "source_location": "L50",
       "weight": 1.0,
       "_origin": "ast",
-      "confidence_score": 1.0,
       "source": "src_js_dashboard_operatori",
-      "target": "src_js_dashboard_operatori_updateprovinciafilteroptions"
+      "target": "src_js_dashboard_operatori_updateprovinciafilteroptions",
+      "confidence_score": 1.0
     },
     {
       "relation": "contains",
@@ -9131,9 +9131,9 @@
       "source_location": "L542",
       "weight": 1.0,
       "_origin": "ast",
-      "confidence_score": 1.0,
       "source": "src_js_dashboard_operatori",
-      "target": "src_js_dashboard_operatori_aggiornaggopvistacommessa"
+      "target": "src_js_dashboard_operatori_aggiornaggopvistacommessa",
+      "confidence_score": 1.0
     },
     {
       "relation": "contains",
@@ -9142,9 +9142,9 @@
       "source_location": "L60",
       "weight": 1.0,
       "_origin": "ast",
-      "confidence_score": 1.0,
       "source": "src_js_dashboard_operatori",
-      "target": "src_js_dashboard_operatori_updateattestatisummary"
+      "target": "src_js_dashboard_operatori_updateattestatisummary",
+      "confidence_score": 1.0
     },
     {
       "relation": "contains",
@@ -9153,9 +9153,9 @@
       "source_location": "L67",
       "weight": 1.0,
       "_origin": "ast",
-      "confidence_score": 1.0,
       "source": "src_js_dashboard_operatori",
-      "target": "src_js_dashboard_operatori_checkcoerenzaoperatori"
+      "target": "src_js_dashboard_operatori_checkcoerenzaoperatori",
+      "confidence_score": 1.0
     },
     {
       "relation": "contains",
@@ -9164,9 +9164,9 @@
       "source_location": "L88",
       "weight": 1.0,
       "_origin": "ast",
-      "confidence_score": 1.0,
       "source": "src_js_dashboard_operatori",
-      "target": "src_js_dashboard_operatori_renderoperatori"
+      "target": "src_js_dashboard_operatori_renderoperatori",
+      "confidence_score": 1.0
     },
     {
       "relation": "contains",
@@ -10671,9 +10671,9 @@
       "source_location": "L168",
       "weight": 1.0,
       "_origin": "ast",
-      "confidence_score": 1.0,
       "source": "src_js_weekly_operatore_modal",
-      "target": "src_js_weekly_operatore_modal_pwcloseopmodal"
+      "target": "src_js_weekly_operatore_modal_pwcloseopmodal",
+      "confidence_score": 1.0
     },
     {
       "relation": "contains",
@@ -10682,9 +10682,9 @@
       "source_location": "L173",
       "weight": 1.0,
       "_origin": "ast",
-      "confidence_score": 1.0,
       "source": "src_js_weekly_operatore_modal",
-      "target": "src_js_weekly_operatore_modal_pwconfirmopmodal"
+      "target": "src_js_weekly_operatore_modal_pwconfirmopmodal",
+      "confidence_score": 1.0
     },
     {
       "relation": "contains",
@@ -10693,9 +10693,9 @@
       "source_location": "L185",
       "weight": 1.0,
       "_origin": "ast",
-      "confidence_score": 1.0,
       "source": "src_js_weekly_operatore_modal",
-      "target": "src_js_weekly_operatore_modal_pwrenderopdropdown"
+      "target": "src_js_weekly_operatore_modal_pwrenderopdropdown",
+      "confidence_score": 1.0
     },
     {
       "relation": "contains",
@@ -10704,9 +10704,9 @@
       "source_location": "L204",
       "weight": 1.0,
       "_origin": "ast",
-      "confidence_score": 1.0,
       "source": "src_js_weekly_operatore_modal",
-      "target": "src_js_weekly_operatore_modal_pwpopulateweekselect"
+      "target": "src_js_weekly_operatore_modal_pwpopulateweekselect",
+      "confidence_score": 1.0
     },
     {
       "relation": "contains",
@@ -10715,9 +10715,9 @@
       "source_location": "L219",
       "weight": 1.0,
       "_origin": "ast",
-      "confidence_score": 1.0,
       "source": "src_js_weekly_operatore_modal",
-      "target": "src_js_weekly_operatore_modal_pwrender"
+      "target": "src_js_weekly_operatore_modal_pwrender",
+      "confidence_score": 1.0
     },
     {
       "relation": "contains",
@@ -10726,9 +10726,9 @@
       "source_location": "L3",
       "weight": 1.0,
       "_origin": "ast",
-      "confidence_score": 1.0,
       "source": "src_js_weekly_operatore_modal",
-      "target": "src_js_weekly_operatore_modal_pwopenopmodal"
+      "target": "src_js_weekly_operatore_modal_pwopenopmodal",
+      "confidence_score": 1.0
     },
     {
       "relation": "contains",
@@ -10737,9 +10737,9 @@
       "source_location": "L431",
       "weight": 1.0,
       "_origin": "ast",
-      "confidence_score": 1.0,
       "source": "src_js_weekly_operatore_modal",
-      "target": "src_js_weekly_operatore_modal_pwrenderstats"
+      "target": "src_js_weekly_operatore_modal_pwrenderstats",
+      "confidence_score": 1.0
     },
     {
       "relation": "contains",
@@ -10748,9 +10748,9 @@
       "source_location": "L90",
       "weight": 1.0,
       "_origin": "ast",
-      "confidence_score": 1.0,
       "source": "src_js_weekly_operatore_modal_pwopenopmodal",
-      "target": "src_js_weekly_operatore_modal_pwopenopmodal_passafiltrogeo"
+      "target": "src_js_weekly_operatore_modal_pwopenopmodal_passafiltrogeo",
+      "confidence_score": 1.0
     },
     {
       "relation": "contains",

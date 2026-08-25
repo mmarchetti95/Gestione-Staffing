@@ -1,7 +1,8 @@
 # Graph Report - Gestione-Staffing  (2026-08-25)
 
 ## Corpus Check
-- cluster-only mode — file stats not available
+- 34 files · ~113,000 words
+- Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
 - 438 nodes · 591 edges · 60 communities (30 shown, 30 thin omitted)
@@ -80,10 +81,10 @@
 3. `pwApplyProduzioneColors()` - 9 edges
 4. `pwGeneraMail()` - 8 edges
 5. `pwGetFerieWeek()` - 8 edges
-6. `sbPull()` - 7 edges
-7. `cpRereadTicket()` - 7 edges
-8. `pwControlloRender()` - 7 edges
-9. `renderOperatori()` - 7 edges
+6. `renderOperatori()` - 7 edges
+7. `sbPull()` - 7 edges
+8. `cpRereadTicket()` - 7 edges
+9. `pwControlloRender()` - 7 edges
 10. `Pianificazione Settimanale screen (#screen-weekly)` - 7 edges
 
 ## Surprising Connections (you probably didn't know these)
@@ -228,14 +229,14 @@ Cohesion: 0.67
 Nodes (3): v18.49.0 pulsante Apri Outlook (mailto destinatari), v18.51.0 campo Email referente tecnico obbligatorio, v18.56.0 riordino destinatari mailto (To/CC)
 
 ## Knowledge Gaps
-- **84 isolated node(s):** `pwData`, `pwDoppiaWeek`, `pwFerie`, `_geoCache`, `MAP_COLORS` (+79 more)
+- **84 isolated node(s):** `INITIAL_DATA`, `SKILLS`, `MESI`, `MESI_LONG`, `INDUSTRIES` (+79 more)
   These have ≤1 connection - possible missing edges or undocumented components.
 - **30 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
 
 ## Suggested Questions
 _Questions this graph is uniquely positioned to answer:_
 
-- **What connects `pwData`, `pwDoppiaWeek`, `pwFerie` to the rest of the system?**
+- **What connects `INITIAL_DATA`, `SKILLS`, `MESI` to the rest of the system?**
   _84 weakly-connected nodes found - possible documentation gaps or missing edges._
 - **Should `Weekly Mail & ISO Week Utils` be split into smaller, more focused modules?**
   _Cohesion score 0.12121212121212122 - nodes in this community are weakly interconnected._
