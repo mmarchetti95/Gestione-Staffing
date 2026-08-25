@@ -306,14 +306,34 @@ async function promuoviCommessa(id) {
 }
 
 function openOperatoreModal(id) {
-  const op = id ? state.operatori.find(o => o.id === id) : { id:'op_new_'+Date.now(), nome_breve:'', nome_esteso:'', email:'', skills:[], attestati:[], alloc_mensile:new Array(12).fill(0) };
+  const op = id ? state.operatori.find(o => o.id === id) : { id:'op_new_'+Date.now(), nome_breve:'', nome_esteso:'', email:'', provincia:'', contratto_tipo:'indeterminato', data_inizio_rapporto:'', data_fine_rapporto:'', skills:[], attestati:[], alloc_mensile:new Array(12).fill(0) };
   const opAtt = op.attestati || [];
+  const provinciaOptions = REGIONI_ITALIA.map(r => `<optgroup label="${esc(r)}">${
+    provinceDiRegione(r).map(p => `<option value="${p.sigla}" ${op.provincia===p.sigla?'selected':''}>${esc(p.nome)} (${p.sigla})</option>`).join('')
+  }</optgroup>`).join('');
   const root = document.getElementById('modal-root');
   root.innerHTML = `<div class="modal-backdrop"><div class="bg-white rounded-lg shadow-xl w-full max-w-2xl mx-4 my-8 p-5 max-h-[90vh] overflow-y-auto">
     <h3 class="font-semibold text-slate-900 mb-3">${id?'Modifica':'Nuovo'} operatore</h3>
     <div class="space-y-3">
       <label class="block text-xs"><span class="text-slate-600">Nome esteso</span><input id="mo-esteso" class="mt-0.5 w-full border border-slate-300 rounded px-2 py-1.5 text-sm" value="${(op.nome_esteso||'').replace(/"/g, '&quot;')}"></label>
       <label class="block text-xs"><span class="text-slate-600">Email aziendale</span><input id="mo-email" type="email" placeholder="nome@eagleprojects.it" class="mt-0.5 w-full border border-slate-300 rounded px-2 py-1.5 text-sm" value="${(op.email||'').replace(/"/g, '&quot;')}"></label>
+      <label class="block text-xs"><span class="text-slate-600">Provincia di provenienza</span>
+        <select id="mo-provincia" class="mt-0.5 w-full border border-slate-300 rounded px-2 py-1.5 text-sm">
+          <option value="">— non specificata —</option>
+          ${provinciaOptions}
+        </select>
+      </label>
+      <div>
+        <div class="text-xs text-slate-600 mb-1 font-medium">Tipo di rapporto</div>
+        <div class="flex gap-4 text-xs mb-1.5">
+          <label class="flex items-center gap-1 cursor-pointer"><input type="radio" name="mo-contratto" id="mo-contratto-indet" value="indeterminato" ${op.contratto_tipo!=='determinato'?'checked':''}> Tempo indeterminato</label>
+          <label class="flex items-center gap-1 cursor-pointer"><input type="radio" name="mo-contratto" id="mo-contratto-det" value="determinato" ${op.contratto_tipo==='determinato'?'checked':''}> A termine (data inizio/fine)</label>
+        </div>
+        <div id="mo-contratto-date" class="grid grid-cols-2 gap-2 ${op.contratto_tipo==='determinato'?'':'hidden'}">
+          <label class="block text-xs"><span class="text-slate-500">Data inizio</span><input id="mo-data-inizio" type="date" class="mt-0.5 w-full border border-slate-300 rounded px-2 py-1.5 text-sm" value="${op.data_inizio_rapporto||''}"></label>
+          <label class="block text-xs"><span class="text-slate-500">Data fine</span><input id="mo-data-fine" type="date" class="mt-0.5 w-full border border-slate-300 rounded px-2 py-1.5 text-sm" value="${op.data_fine_rapporto||''}"></label>
+        </div>
+      </div>
       <div>
         <div class="text-xs text-slate-600 mb-1 font-medium">Skill</div>
         <div class="grid grid-cols-3 gap-1 p-2 bg-slate-50 rounded border border-slate-200">
@@ -343,14 +363,28 @@ function openOperatoreModal(id) {
   document.getElementById('mo-att-all').onclick = () => document.querySelectorAll('.mo-att').forEach(x => x.checked = true);
   document.getElementById('mo-att-none').onclick = () => document.querySelectorAll('.mo-att').forEach(x => x.checked = false);
 
+  const contrattoDateBox = document.getElementById('mo-contratto-date');
+  document.querySelectorAll('input[name="mo-contratto"]').forEach(r => {
+    r.onchange = () => contrattoDateBox.classList.toggle('hidden', !document.getElementById('mo-contratto-det').checked);
+  });
+
   document.getElementById('mo-save').onclick = async () => {
     const nomeEsteso = document.getElementById('mo-esteso').value.trim();
     if (!nomeEsteso) { showAlertModal('Nome obbligatorio.'); return; }
     const skills = [...document.querySelectorAll('.mo-skill:checked')].map(x => x.value);
     const attestati = [...document.querySelectorAll('.mo-att:checked')].map(x => x.value);
     const email = (document.getElementById('mo-email')?.value || '').trim();
-    if (id) { Object.assign(op, { nome_esteso: nomeEsteso, email, skills, attestati }); await saveState('Modifica operatore', {operatore: nomeEsteso}); }
-    else { state.operatori.push({ ...op, nome_esteso: nomeEsteso, nome_breve: nomeEsteso, email, skills, attestati }); await saveState('Nuovo operatore', {operatore: nomeEsteso}); }
+    const provincia = document.getElementById('mo-provincia')?.value || '';
+    const contrattoTipo = document.getElementById('mo-contratto-det').checked ? 'determinato' : 'indeterminato';
+    const dataInizio = document.getElementById('mo-data-inizio')?.value || '';
+    const dataFine = document.getElementById('mo-data-fine')?.value || '';
+    if (contrattoTipo === 'determinato' && dataInizio && dataFine && dataFine < dataInizio) {
+      showAlertModal('La data di fine non può essere precedente alla data di inizio.'); return;
+    }
+    const dataInizioRapporto = contrattoTipo === 'determinato' ? dataInizio : '';
+    const dataFineRapporto = contrattoTipo === 'determinato' ? dataFine : '';
+    if (id) { Object.assign(op, { nome_esteso: nomeEsteso, email, provincia, contratto_tipo: contrattoTipo, data_inizio_rapporto: dataInizioRapporto, data_fine_rapporto: dataFineRapporto, skills, attestati }); await saveState('Modifica operatore', {operatore: nomeEsteso}); }
+    else { state.operatori.push({ ...op, nome_esteso: nomeEsteso, nome_breve: nomeEsteso, email, provincia, contratto_tipo: contrattoTipo, data_inizio_rapporto: dataInizioRapporto, data_fine_rapporto: dataFineRapporto, skills, attestati }); await saveState('Nuovo operatore', {operatore: nomeEsteso}); }
     renderAll(); closeModal();
   };
 }
@@ -399,8 +433,29 @@ function showConfirmAsync(msg, btnLabel) {
   });
 }
 
+/* Vero se il rapporto a termine e' scaduto (data fine gia' passata rispetto a oggi).
+   Calcolato, non persistito: basta correggere/rimuovere la data fine per "riattivare"
+   l'operatore, senza dover disfare un flag manuale. */
+function isOperatoreScaduto(op) {
+  if (!op || op.contratto_tipo !== 'determinato' || !op.data_fine_rapporto) return false;
+  return op.data_fine_rapporto < new Date().toISOString().slice(0, 10);
+}
+
 function getOperatoriAttivi() {
-  return (state.operatori || []).filter(o => !o.licenziato);
+  return (state.operatori || []).filter(o => !o.licenziato && !isOperatoreScaduto(o));
+}
+
+/* Indice mese (0-11) di fine rapporto entro l'ANNO visualizzato:
+   -1 se il rapporto e' terminato in un anno precedente (tutti i mesi dell'ANNO contano come "dopo"),
+   12 se termina in un anno successivo (nessun mese dell'ANNO conta come "dopo"). */
+function meseFineRapportoInAnno(op) {
+  if (!op || !op.data_fine_rapporto) return null;
+  const d = new Date(op.data_fine_rapporto + 'T00:00:00Z');
+  if (isNaN(d.getTime())) return null;
+  const y = d.getUTCFullYear();
+  if (y < ANNO) return -1;
+  if (y > ANNO) return 12;
+  return d.getUTCMonth();
 }
 
 // Modale di selezione: mostra una tendina di opzioni e risolve col valore scelto (o null).
@@ -423,7 +478,7 @@ function cpSelectModal(title, message, options) {
 
 function isOperatoreLicenziato(nome) {
   if (!nome) return false;
-  return (state.operatori || []).some(o => (o.nome_esteso || o.nome) === nome && o.licenziato);
+  return (state.operatori || []).some(o => (o.nome_esteso || o.nome) === nome && (o.licenziato || isOperatoreScaduto(o)));
 }
 
 async function deleteOperatore(id) {

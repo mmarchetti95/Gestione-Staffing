@@ -32,15 +32,34 @@ function renderAlerts() {
     if (mesiKO.length) errori.push({ tipo: 'carenza', testo: '<b>' + k + '</b>: carenza FTE in ' + mesiKO.join(', ') });
   });
 
+  // Operatori con contratto a termine scaduto ma ancora impiegati su commesse
+  // nei mesi successivi alla fine rapporto (probabile errore di pianificazione/anagrafica)
+  const oggiStr = new Date().toISOString().slice(0, 10);
+  (state.operatori || []).forEach(op => {
+    if (op.contratto_tipo !== 'determinato' || !op.data_fine_rapporto) return;
+    if (op.data_fine_rapporto >= oggiStr) return;
+    const meseFine = meseFineRapportoInAnno(op);
+    if (meseFine === null || meseFine >= 12) return;
+    const righeOp = state.staffing.filter(r => r.risorsa === op.nome_esteso && r.commessa !== 'ORE NON LAVORATE');
+    const mesiKO = [];
+    for (let i = Math.max(0, meseFine + 1); i < 12; i++) {
+      const gg = righeOp.reduce((s, r) => s + (Number(r.mesi[i]) || 0), 0);
+      if (gg > 0) mesiKO.push(MESI[i] + ' (' + gg + 'gg)');
+    }
+    if (mesiKO.length) errori.push({ tipo: 'exImpiegato', testo: '<b>' + op.nome_esteso + '</b> (rapporto terminato il ' + fmtDate(op.data_fine_rapporto) + '): ancora impiegato in ' + mesiKO.join(', ') });
+  });
+
   const el = document.getElementById('alert-box');
   if (!el) return;
   if (!errori.length) { el.innerHTML = ''; return; }
 
-  const sovra   = errori.filter(e => e.tipo === 'sovra');
-  const carenze = errori.filter(e => e.tipo === 'carenza');
+  const sovra       = errori.filter(e => e.tipo === 'sovra');
+  const carenze     = errori.filter(e => e.tipo === 'carenza');
+  const exImpiegati = errori.filter(e => e.tipo === 'exImpiegato');
   let inner = '';
-  if (sovra.length)   inner += '<div class="text-xs font-semibold text-red-700 mb-1">Sovra-allocazioni (' + sovra.length + '):</div>'   + sovra.map(e   => '<div class="text-xs text-red-700 pl-2 mb-0.5">• ' + e.testo + '</div>').join('');
-  if (carenze.length) inner += '<div class="text-xs font-semibold text-orange-700 mb-1 mt-2">Carenze FTE (' + carenze.length + '):</div>' + carenze.map(e => '<div class="text-xs text-orange-700 pl-2 mb-0.5">• ' + e.testo + '</div>').join('');
+  if (sovra.length)       inner += '<div class="text-xs font-semibold text-red-700 mb-1">Sovra-allocazioni (' + sovra.length + '):</div>'   + sovra.map(e   => '<div class="text-xs text-red-700 pl-2 mb-0.5">• ' + e.testo + '</div>').join('');
+  if (carenze.length)     inner += '<div class="text-xs font-semibold text-orange-700 mb-1 mt-2">Carenze FTE (' + carenze.length + '):</div>' + carenze.map(e => '<div class="text-xs text-orange-700 pl-2 mb-0.5">• ' + e.testo + '</div>').join('');
+  if (exImpiegati.length) inner += '<div class="text-xs font-semibold text-purple-700 mb-1 mt-2">🚪 Ex collega ancora impiegato (' + exImpiegati.length + '):</div>' + exImpiegati.map(e => '<div class="text-xs text-purple-700 pl-2 mb-0.5">• ' + e.testo + '</div>').join('');
 
   el.innerHTML = '<div class="bg-red-50 border border-red-200 rounded-lg p-3 mb-4"><div class="flex items-center justify-between mb-2"><span class="font-semibold text-red-800 text-sm">⚠ ' + errori.length + ' problema/i rilevato/i</span><button onclick="this.closest(\'.bg-red-50\').querySelector(\'.ab-body\').classList.toggle(\'hidden\')" class="text-xs text-red-600 hover:underline">mostra/nascondi</button></div><div class="ab-body">' + inner + '</div></div>';
 }
@@ -76,6 +95,19 @@ document.addEventListener('DOMContentLoaded', async () => {
   });
   document.getElementById('filter-low-sat').addEventListener('change', e => {
     state.filters.lowSat = e.target.checked;
+    renderOperatori();
+  });
+  document.getElementById('op-filter-regione').addEventListener('change', e => {
+    state.filters.regione = e.target.value;
+    state.filters.provincia = '';
+    renderOperatori();
+  });
+  document.getElementById('op-filter-provincia').addEventListener('change', e => {
+    state.filters.provincia = e.target.value;
+    renderOperatori();
+  });
+  document.getElementById('filter-show-ex').addEventListener('change', e => {
+    state.filters.showEx = e.target.checked;
     renderOperatori();
   });
   document.getElementById('commesse-search').addEventListener('input', e => {

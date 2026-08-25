@@ -33,6 +33,30 @@ function renderAttestatiFilters() {
   updateAttestatiSummary();
 }
 
+/* Filtro provenienza (regione → provincia a cascata). La select regione è
+   popolata una volta sola; la select provincia si ricalcola quando cambia
+   la regione scelta, così mostra solo le province coerenti. */
+function renderProvinciaFilterOptions() {
+  const selRegione = document.getElementById('op-filter-regione');
+  if (!selRegione) return;
+  if (selRegione.options.length <= 1) {
+    selRegione.innerHTML = '<option value="">Tutte le regioni</option>' +
+      REGIONI_ITALIA.map(r => `<option value="${esc(r)}">${esc(r)}</option>`).join('');
+  }
+  selRegione.value = state.filters.regione || '';
+  updateProvinciaFilterOptions();
+}
+
+function updateProvinciaFilterOptions() {
+  const selProvincia = document.getElementById('op-filter-provincia');
+  if (!selProvincia) return;
+  const regione = state.filters.regione || '';
+  const province = regione ? provinceDiRegione(regione) : PROVINCE_ITALIA.slice().sort((a,b) => a.nome.localeCompare(b.nome));
+  selProvincia.innerHTML = '<option value="">Tutte le province</option>' +
+    province.map(p => `<option value="${p.sigla}">${esc(p.nome)} (${p.sigla})</option>`).join('');
+  selProvincia.value = state.filters.provincia || '';
+}
+
 function updateAttestatiSummary() {
   const sum = document.getElementById('att-filter-summary');
   if (!sum) return;
@@ -66,10 +90,16 @@ function renderOperatori() {
   const mese0 = meseCorrente();
   const meseProx = Math.min(11, mese0+1);
 
-  let ops = state.operatori.filter(op => !op.licenziato).filter(op => {
+  const modoEx = state.filters.showEx;
+  let ops = state.operatori.filter(op => modoEx ? (op.licenziato || isOperatoreScaduto(op)) : (!op.licenziato && !isOperatoreScaduto(op))).filter(op => {
     if (state.filters.search && !op.nome_esteso.toLowerCase().includes(state.filters.search.toLowerCase())) return false;
     if (state.filters.skills.size > 0 && ![...state.filters.skills].every(s => op.skills.includes(s))) return false;
     if (state.filters.attestati.size > 0 && ![...state.filters.attestati].every(a => (op.attestati||[]).includes(a))) return false;
+    if (state.filters.provincia && op.provincia !== state.filters.provincia) return false;
+    if (state.filters.regione && !state.filters.provincia) {
+      const info = provinciaInfo(op.provincia);
+      if (!info || info.regione !== state.filters.regione) return false;
+    }
     if (state.filters.lowSat) {
       const s = operatoreSatPeriodo(op, [meseProx]);
       if (s >= 0.5) return false;
@@ -77,15 +107,28 @@ function renderOperatori() {
     return true;
   });
 
-  // ordina: liberi prima, saturi dopo
-  ops.sort((a,b) => operatoreSatPeriodo(a, [mese0, meseProx]) - operatoreSatPeriodo(b, [mese0, meseProx]));
+  // ordina: in modo normale liberi prima/saturi dopo, in modo ex per nome
+  if (modoEx) ops.sort((a,b) => (a.nome_esteso||'').localeCompare(b.nome_esteso||''));
+  else ops.sort((a,b) => operatoreSatPeriodo(a, [mese0, meseProx]) - operatoreSatPeriodo(b, [mese0, meseProx]));
 
-  document.getElementById('op-count').textContent = `(${ops.length}/${getOperatoriAttivi().length})`;
+  const totEx = state.operatori.filter(op => op.licenziato || isOperatoreScaduto(op)).length;
+  document.getElementById('op-count').textContent = modoEx ? `(${ops.length} ex colleghi)` : `(${ops.length}/${getOperatoriAttivi().length})`;
+  const exCountEl = document.getElementById('ex-count');
+  if (exCountEl) exCountEl.textContent = totEx > 0 ? `(${totEx})` : '';
   checkCoerenzaOperatori();
+  renderProvinciaFilterOptions();
 
   list.innerHTML = ops.map(op => {
     const sat3 = operatoreSatPeriodo(op, [mese0, meseProx, Math.min(11,mese0+2)]);
     const isSaturo = sat3 >= 1.0;
+    const provInfo = provinciaInfo(op.provincia);
+    const provBadge = provInfo ? `<span class="text-[9px] bg-sky-50 text-sky-700 border border-sky-200 px-1 rounded" title="${esc(provInfo.regione)}">📍 ${esc(provInfo.nome)}</span>` : '';
+    const contrattoBadge = op.contratto_tipo === 'determinato' && op.data_fine_rapporto
+      ? `<span class="text-[9px] bg-amber-50 text-amber-700 border border-amber-200 px-1 rounded">📅 fino al ${fmtDate(op.data_fine_rapporto)}</span>` : '';
+    const exReason = isOperatoreScaduto(op)
+      ? `Contratto a termine scaduto il ${fmtDate(op.data_fine_rapporto)}`
+      : (op.licenziato ? 'Segnato manualmente come ex collega' : '');
+    const exBadge = modoEx ? `<span class="op-ex-tag" title="${esc(exReason)}">ex</span>` : '';
     const skillBadges = op.skills.map(s => `<span class="skill-badge">${s}</span>`).join('');
     const attBadges = (op.attestati||[]).map(a => `<span class="att-badge" title="${a}">${a.length>14 ? a.substring(0,13)+'…' : a}</span>`).join('');
     // mini sat bar 12 mesi
@@ -106,38 +149,65 @@ function renderOperatori() {
     }).join('');
 
     return `
-      <div class="op-card bg-white border border-slate-200 rounded-md p-2 ${isSaturo?'saturo':''}" data-op-id="${op.id}" draggable="true">
+      <div class="op-card bg-white border border-slate-200 rounded-md p-2 ${isSaturo&&!modoEx?'saturo':''} ${modoEx?'opacity-70':''}" data-op-id="${op.id}" draggable="${modoEx?'false':'true'}">
         <div class="flex items-center justify-between mb-1">
           <div class="flex items-center gap-2">
             <div class="font-medium text-sm text-slate-900">${esc(op.nome_esteso)}</div>
-            ${isSaturo ? '<span class="text-[9px] bg-red-100 text-red-700 px-1 rounded">SATURO</span>' : ''}
+            ${exBadge}
+            ${provBadge}
+            ${contrattoBadge}
+            ${!modoEx && isSaturo ? '<span class="text-[9px] bg-red-100 text-red-700 px-1 rounded">SATURO</span>' : ''}
             ${op.orphan ? '<span class="text-[9px] bg-slate-100 text-slate-600 px-1 rounded" title="Non presente nel foglio OPERATORI">no skill matrix</span>' : ''}
           </div>
           <div class="flex items-center gap-1">
             <button class="view-op text-xs text-slate-400 hover:text-teal-700" data-id="${op.id}" title="Vedi impegni / commesse">📋</button>
             <button class="edit-op text-xs text-slate-400 hover:text-teal-700" data-id="${op.id}" title="Modifica">✎</button>
-            <button class="del-op text-xs text-slate-400 hover:text-red-600" data-id="${op.id}" title="Elimina">🗑</button>
+            ${modoEx
+              ? `<button class="reattiva-op text-xs text-slate-400 hover:text-emerald-600" data-id="${op.id}" title="Riattiva (rimuovi stato ex collega)">↩</button>`
+              : `<button class="del-op text-xs text-slate-400 hover:text-red-600" data-id="${op.id}" title="Elimina">🗑</button>`}
           </div>
         </div>
+        ${modoEx && exReason ? `<div class="text-[10px] text-slate-500 mb-1">${esc(exReason)}</div>` : ''}
         <div class="mb-1">${skillBadges || '<span class="text-[10px] text-slate-400">nessuna skill</span>'}</div>
         ${attBadges ? `<div class="mb-1.5">${attBadges}</div>` : ''}
         <div class="sat-bar" aria-label="Saturazione mensile ${op.nome_esteso}">${satBarHtml}</div>
         <div class="text-[10px] text-slate-500 mt-0.5">Sat. 3 mesi: <span class="font-medium">${(sat3*100).toFixed(0)}%</span></div>
       </div>
     `;
-  }).join('') || '<div class="text-center text-sm text-slate-400 py-4">Nessun operatore corrisponde ai filtri.</div>';
+  }).join('') || `<div class="text-center text-sm text-slate-400 py-4">${modoEx ? 'Nessun ex collega.' : 'Nessun operatore corrisponde ai filtri.'}</div>`;
 
-  // drag handlers
-  list.querySelectorAll('.op-card').forEach(card => {
-    card.addEventListener('dragstart', e => {
-      e.dataTransfer.setData('text/plain', JSON.stringify({ type:'operatore', id: card.dataset.opId }));
-      card.classList.add('dragging');
+  // drag handlers (disattivati in modalità ex colleghi: non assegnabili)
+  if (!modoEx) {
+    list.querySelectorAll('.op-card').forEach(card => {
+      card.addEventListener('dragstart', e => {
+        e.dataTransfer.setData('text/plain', JSON.stringify({ type:'operatore', id: card.dataset.opId }));
+        card.classList.add('dragging');
+      });
+      card.addEventListener('dragend', () => card.classList.remove('dragging'));
     });
-    card.addEventListener('dragend', () => card.classList.remove('dragging'));
-  });
+  }
   list.querySelectorAll('.view-op').forEach(b => b.onclick = () => apriVistaOperatore(b.dataset.id));
   list.querySelectorAll('.edit-op').forEach(b => b.onclick = () => openOperatoreModal(b.dataset.id));
   list.querySelectorAll('.del-op').forEach(b => b.onclick = () => openLicenziaModal(b.dataset.id));
+  list.querySelectorAll('.reattiva-op').forEach(b => b.onclick = () => riattivaOperatore(b.dataset.id));
+}
+
+/* Rimuove lo stato "ex collega": azzera il flag manuale e, se il contratto
+   a termine risultava scaduto, lo riporta a tempo indeterminato (altrimenti
+   tornerebbe ex al prossimo render finche' non si aggiorna la data di fine). */
+async function riattivaOperatore(id) {
+  const op = state.operatori.find(o => o.id === id);
+  if (!op) return;
+  const eraScaduto = isOperatoreScaduto(op);
+  const msg = eraScaduto
+    ? `Riattivare ${op.nome_esteso}? Il contratto a termine (scaduto il ${fmtDate(op.data_fine_rapporto)}) verrà impostato a tempo indeterminato: modifica la scheda operatore se vuoi impostare una nuova data di fine.`
+    : `Riattivare ${op.nome_esteso} e rimuoverlo dagli ex colleghi?`;
+  const ok = await showConfirmAsync(msg, 'Riattiva');
+  if (!ok) return;
+  op.licenziato = false;
+  if (eraScaduto) { op.contratto_tipo = 'indeterminato'; op.data_inizio_rapporto = ''; op.data_fine_rapporto = ''; }
+  await saveState('Riattivazione operatore', {operatore: op.nome_esteso});
+  renderAll();
 }
 
 /* ===================== VISTA OPERATORE ===================== */
@@ -432,9 +502,12 @@ function renderVistaOperatore(opId) {
       <!-- Header operatore -->
       <div class="flex items-start justify-between">
         <div>
-          <div class="font-semibold text-slate-900 text-sm">${esc(op.nome_esteso)}</div>
+          <div class="font-semibold text-slate-900 text-sm">${esc(op.nome_esteso)}${isOperatoreScaduto(op) ? '<span class="op-ex-tag">ex</span>' : ''}</div>
           <div class="mt-0.5">${op.skills.map(s=>`<span class="skill-badge">${s}</span>`).join('') || '<span class="text-[10px] text-slate-400">nessuna skill</span>'}</div>
           <div class="text-[10px] text-slate-500 mt-0.5">Sat. 3 mesi: <b>${(sat3*100).toFixed(0)}%</b></div>
+          <div class="text-[10px] text-slate-500 mt-0.5">${op.contratto_tipo === 'determinato'
+            ? `Contratto a termine: ${fmtDate(op.data_inizio_rapporto)} &rarr; <b class="${isOperatoreScaduto(op)?'text-red-600':''}">${fmtDate(op.data_fine_rapporto)}</b>`
+            : 'Contratto a tempo indeterminato'}</div>
         </div>
         <div class="flex gap-1">
           <button onclick="openOperatoreModal('${jsAttr(op.id)}')" class="text-xs px-2 py-1 bg-white text-slate-600 border border-slate-300 rounded hover:bg-slate-50">✎ Modifica</button>

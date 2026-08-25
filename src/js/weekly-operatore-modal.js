@@ -47,6 +47,35 @@ function pwOpenOpModal(cidx, sidx, oidx) {
     <button class="op-modal-close" onclick="pwCloseOpModal()">×</button>`;
   modal.appendChild(header);
 
+  // Filtro provenienza (regione/provincia) - utile per trovare velocemente
+  // chi e' vicino alla zona del rilievo quando si assegna una squadra.
+  const opByNome = {};
+  (state.operatori || []).forEach(o => { opByNome[o.nome_esteso || o.nome] = o; });
+  let filtroRegione = '', filtroProvincia = '';
+
+  const geoRow = document.createElement('div');
+  geoRow.style.cssText = 'display:flex;gap:6px;padding:0 0 6px;';
+  const selRegione = document.createElement('select');
+  selRegione.className = 'op-modal-search';
+  selRegione.style.cssText = 'flex:1;';
+  selRegione.innerHTML = '<option value="">Tutte le regioni</option>' +
+    REGIONI_ITALIA.map(r => `<option value="${esc(r)}">${esc(r)}</option>`).join('');
+  const selProvincia = document.createElement('select');
+  selProvincia.className = 'op-modal-search';
+  selProvincia.style.cssText = 'flex:1;';
+  function rebuildProvinciaOptions() {
+    const province = filtroRegione ? provinceDiRegione(filtroRegione) : PROVINCE_ITALIA.slice().sort((a,b) => a.nome.localeCompare(b.nome));
+    selProvincia.innerHTML = '<option value="">Tutte le province</option>' +
+      province.map(p => `<option value="${p.sigla}">${esc(p.nome)} (${p.sigla})</option>`).join('');
+    selProvincia.value = filtroProvincia;
+  }
+  rebuildProvinciaOptions();
+  selRegione.onchange = () => { filtroRegione = selRegione.value; filtroProvincia = ''; rebuildProvinciaOptions(); buildList(search.value); };
+  selProvincia.onchange = () => { filtroProvincia = selProvincia.value; buildList(search.value); };
+  geoRow.appendChild(selRegione);
+  geoRow.appendChild(selProvincia);
+  modal.appendChild(geoRow);
+
   // Search
   const search = document.createElement('input');
   search.type = 'text';
@@ -58,6 +87,14 @@ function pwOpenOpModal(cidx, sidx, oidx) {
   const list = document.createElement('div');
   list.className = 'op-modal-list';
 
+  function passaFiltroGeo(nome) {
+    if (!filtroRegione && !filtroProvincia) return true;
+    const op = opByNome[nome];
+    const info = op ? provinciaInfo(op.provincia) : null;
+    if (filtroProvincia) return !!info && info.sigla === filtroProvincia;
+    return !!info && info.regione === filtroRegione;
+  }
+
   function buildList(filter) {
     list.innerHTML = '';
 
@@ -68,7 +105,7 @@ function pwOpenOpModal(cidx, sidx, oidx) {
     noneEl.onclick = () => pwConfirmOpModal(cidx, sidx, oidx, '');
     list.appendChild(noneEl);
 
-    const filtrati = tuttiNomi.filter(n => !filter || n.toLowerCase().includes(filter.toLowerCase()));
+    const filtrati = tuttiNomi.filter(n => (!filter || n.toLowerCase().includes(filter.toLowerCase())) && passaFiltroGeo(n));
 
     if (filtrati.length === 0) {
       const empty = document.createElement('div');
@@ -88,6 +125,7 @@ function pwOpenOpModal(cidx, sidx, oidx) {
       const stato     = pwStatoOperatore(nome, cidx, sidx, oidx);
       const tagLabel  = stato === 'ferie' ? 'FERIE' : stato === 'assegnato' ? 'ASSEGNATO' : 'LIBERO';
       const inCommessa = fromStaffing.has(nome);
+      const provInfo = provinciaInfo(opByNome[nome]?.provincia);
 
       const item = document.createElement('div');
       item.className = `op-modal-item stato-${stato}${nome === nomeCorrente ? ' is-selected' : ''}`;
@@ -95,6 +133,7 @@ function pwOpenOpModal(cidx, sidx, oidx) {
         <div class="op-modal-dot stato-${stato}"></div>
         <span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">
           ${nome}${inCommessa ? '' : ' <span style="font-size:9px;opacity:.6;">(fuori commessa)</span>'}
+          ${provInfo ? ` <span style="font-size:9px;opacity:.6;">📍 ${esc(provInfo.nome)}</span>` : ''}
         </span>
         <span class="op-modal-tag stato-${stato}">${tagLabel}</span>`;
       item.onclick = () => pwConfirmOpModal(cidx, sidx, oidx, nome);

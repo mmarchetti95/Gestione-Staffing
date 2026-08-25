@@ -817,7 +817,7 @@
     <div class="flex items-center gap-2">
       <button id="btn-presentation" class="px-3 py-1.5 text-sm rounded hover:bg-white/10" style="border:1px solid var(--dark-border-strong);color:var(--dark-text);visibility:visible;">📊 Modalità presentazione</button>
       <div class="text-xs pl-2" style="border-left:1px solid var(--dark-border-strong);color:var(--dark-text-muted);">
-        <span class="font-medium" style="color:var(--accent);">v18.74.0</span> · Michele Marchetti
+        <span class="font-medium" style="color:var(--accent);">v18.77.0</span> · Michele Marchetti
       </div>
     </div>
   </div>
@@ -1035,8 +1035,22 @@
                 <div class="mt-1 p-2 bg-slate-50 border border-slate-200 rounded max-h-40 overflow-y-auto" id="att-filters"></div>
               </details>
             </div>
+            <div>
+              <div class="text-[10px] text-slate-500 uppercase tracking-wider font-medium mb-1">Provenienza</div>
+              <div class="flex gap-1">
+                <select id="op-filter-regione" class="flex-1 text-xs border border-slate-300 rounded px-1.5 py-1">
+                  <option value="">Tutte le regioni</option>
+                </select>
+                <select id="op-filter-provincia" class="flex-1 text-xs border border-slate-300 rounded px-1.5 py-1">
+                  <option value="">Tutte le province</option>
+                </select>
+              </div>
+            </div>
             <label class="flex items-center gap-2 text-xs text-slate-600">
               <input type="checkbox" id="filter-low-sat"> Solo carico &lt;50% nel prossimo mese
+            </label>
+            <label class="flex items-center gap-2 text-xs text-slate-600 border-t border-slate-100 pt-2">
+              <input type="checkbox" id="filter-show-ex"> 🚪 Mostra solo ex colleghi <span id="ex-count" class="text-slate-400"></span>
             </label>
           </div>
         </div>

@@ -817,7 +817,7 @@
     <div class="flex items-center gap-2">
       <button id="btn-presentation" class="px-3 py-1.5 text-sm rounded hover:bg-white/10" style="border:1px solid var(--dark-border-strong);color:var(--dark-text);visibility:visible;">📊 Modalità presentazione</button>
       <div class="text-xs pl-2" style="border-left:1px solid var(--dark-border-strong);color:var(--dark-text-muted);">
-        <span class="font-medium" style="color:var(--accent);">v18.77.0</span> · Michele Marchetti
+        <span class="font-medium" style="color:var(--accent);">v18.75.0</span> · Michele Marchetti
       </div>
     </div>
   </div>
@@ -1048,9 +1048,6 @@
             </div>
             <label class="flex items-center gap-2 text-xs text-slate-600">
               <input type="checkbox" id="filter-low-sat"> Solo carico &lt;50% nel prossimo mese
-            </label>
-            <label class="flex items-center gap-2 text-xs text-slate-600 border-t border-slate-100 pt-2">
-              <input type="checkbox" id="filter-show-ex"> 🚪 Mostra solo ex colleghi <span id="ex-count" class="text-slate-400"></span>
             </label>
           </div>
         </div>
@@ -1378,7 +1375,7 @@ let state = {
   commesse_attive_meta: {}, // {[nome]: {cliente,industry,inizio,fine,note,skills,attestati_richiesti}}
   assegnazioni: [],
   activeTab: 'pipeline',
-  filters: { search:'', skills:new Set(), attestati:new Set(), lowSat:false, regione:'', provincia:'', showEx:false },
+  filters: { search:'', skills:new Set(), attestati:new Set(), lowSat:false, regione:'', provincia:'' },
   searchCommesse: '',
 };
 
@@ -2514,8 +2511,7 @@ function renderOperatori() {
   const mese0 = meseCorrente();
   const meseProx = Math.min(11, mese0+1);
 
-  const modoEx = state.filters.showEx;
-  let ops = state.operatori.filter(op => modoEx ? (op.licenziato || isOperatoreScaduto(op)) : (!op.licenziato && !isOperatoreScaduto(op))).filter(op => {
+  let ops = state.operatori.filter(op => !op.licenziato).filter(op => {
     if (state.filters.search && !op.nome_esteso.toLowerCase().includes(state.filters.search.toLowerCase())) return false;
     if (state.filters.skills.size > 0 && ![...state.filters.skills].every(s => op.skills.includes(s))) return false;
     if (state.filters.attestati.size > 0 && ![...state.filters.attestati].every(a => (op.attestati||[]).includes(a))) return false;
@@ -2531,14 +2527,10 @@ function renderOperatori() {
     return true;
   });
 
-  // ordina: in modo normale liberi prima/saturi dopo, in modo ex per nome
-  if (modoEx) ops.sort((a,b) => (a.nome_esteso||'').localeCompare(b.nome_esteso||''));
-  else ops.sort((a,b) => operatoreSatPeriodo(a, [mese0, meseProx]) - operatoreSatPeriodo(b, [mese0, meseProx]));
+  // ordina: liberi prima, saturi dopo
+  ops.sort((a,b) => operatoreSatPeriodo(a, [mese0, meseProx]) - operatoreSatPeriodo(b, [mese0, meseProx]));
 
-  const totEx = state.operatori.filter(op => op.licenziato || isOperatoreScaduto(op)).length;
-  document.getElementById('op-count').textContent = modoEx ? `(${ops.length} ex colleghi)` : `(${ops.length}/${getOperatoriAttivi().length})`;
-  const exCountEl = document.getElementById('ex-count');
-  if (exCountEl) exCountEl.textContent = totEx > 0 ? `(${totEx})` : '';
+  document.getElementById('op-count').textContent = `(${ops.length}/${getOperatoriAttivi().length})`;
   checkCoerenzaOperatori();
   renderProvinciaFilterOptions();
 
@@ -2547,12 +2539,6 @@ function renderOperatori() {
     const isSaturo = sat3 >= 1.0;
     const provInfo = provinciaInfo(op.provincia);
     const provBadge = provInfo ? `<span class="text-[9px] bg-sky-50 text-sky-700 border border-sky-200 px-1 rounded" title="${esc(provInfo.regione)}">📍 ${esc(provInfo.nome)}</span>` : '';
-    const contrattoBadge = op.contratto_tipo === 'determinato' && op.data_fine_rapporto
-      ? `<span class="text-[9px] bg-amber-50 text-amber-700 border border-amber-200 px-1 rounded">📅 fino al ${fmtDate(op.data_fine_rapporto)}</span>` : '';
-    const exReason = isOperatoreScaduto(op)
-      ? `Contratto a termine scaduto il ${fmtDate(op.data_fine_rapporto)}`
-      : (op.licenziato ? 'Segnato manualmente come ex collega' : '');
-    const exBadge = modoEx ? `<span class="op-ex-tag" title="${esc(exReason)}">ex</span>` : '';
     const skillBadges = op.skills.map(s => `<span class="skill-badge">${s}</span>`).join('');
     const attBadges = (op.attestati||[]).map(a => `<span class="att-badge" title="${a}">${a.length>14 ? a.substring(0,13)+'…' : a}</span>`).join('');
     // mini sat bar 12 mesi
@@ -2573,65 +2559,39 @@ function renderOperatori() {
     }).join('');
 
     return `
-      <div class="op-card bg-white border border-slate-200 rounded-md p-2 ${isSaturo&&!modoEx?'saturo':''} ${modoEx?'opacity-70':''}" data-op-id="${op.id}" draggable="${modoEx?'false':'true'}">
+      <div class="op-card bg-white border border-slate-200 rounded-md p-2 ${isSaturo?'saturo':''}" data-op-id="${op.id}" draggable="true">
         <div class="flex items-center justify-between mb-1">
           <div class="flex items-center gap-2">
             <div class="font-medium text-sm text-slate-900">${esc(op.nome_esteso)}</div>
-            ${exBadge}
             ${provBadge}
-            ${contrattoBadge}
-            ${!modoEx && isSaturo ? '<span class="text-[9px] bg-red-100 text-red-700 px-1 rounded">SATURO</span>' : ''}
+            ${isSaturo ? '<span class="text-[9px] bg-red-100 text-red-700 px-1 rounded">SATURO</span>' : ''}
             ${op.orphan ? '<span class="text-[9px] bg-slate-100 text-slate-600 px-1 rounded" title="Non presente nel foglio OPERATORI">no skill matrix</span>' : ''}
           </div>
           <div class="flex items-center gap-1">
             <button class="view-op text-xs text-slate-400 hover:text-teal-700" data-id="${op.id}" title="Vedi impegni / commesse">📋</button>
             <button class="edit-op text-xs text-slate-400 hover:text-teal-700" data-id="${op.id}" title="Modifica">✎</button>
-            ${modoEx
-              ? `<button class="reattiva-op text-xs text-slate-400 hover:text-emerald-600" data-id="${op.id}" title="Riattiva (rimuovi stato ex collega)">↩</button>`
-              : `<button class="del-op text-xs text-slate-400 hover:text-red-600" data-id="${op.id}" title="Elimina">🗑</button>`}
+            <button class="del-op text-xs text-slate-400 hover:text-red-600" data-id="${op.id}" title="Elimina">🗑</button>
           </div>
         </div>
-        ${modoEx && exReason ? `<div class="text-[10px] text-slate-500 mb-1">${esc(exReason)}</div>` : ''}
         <div class="mb-1">${skillBadges || '<span class="text-[10px] text-slate-400">nessuna skill</span>'}</div>
         ${attBadges ? `<div class="mb-1.5">${attBadges}</div>` : ''}
         <div class="sat-bar" aria-label="Saturazione mensile ${op.nome_esteso}">${satBarHtml}</div>
         <div class="text-[10px] text-slate-500 mt-0.5">Sat. 3 mesi: <span class="font-medium">${(sat3*100).toFixed(0)}%</span></div>
       </div>
     `;
-  }).join('') || `<div class="text-center text-sm text-slate-400 py-4">${modoEx ? 'Nessun ex collega.' : 'Nessun operatore corrisponde ai filtri.'}</div>`;
+  }).join('') || '<div class="text-center text-sm text-slate-400 py-4">Nessun operatore corrisponde ai filtri.</div>';
 
-  // drag handlers (disattivati in modalità ex colleghi: non assegnabili)
-  if (!modoEx) {
-    list.querySelectorAll('.op-card').forEach(card => {
-      card.addEventListener('dragstart', e => {
-        e.dataTransfer.setData('text/plain', JSON.stringify({ type:'operatore', id: card.dataset.opId }));
-        card.classList.add('dragging');
-      });
-      card.addEventListener('dragend', () => card.classList.remove('dragging'));
+  // drag handlers
+  list.querySelectorAll('.op-card').forEach(card => {
+    card.addEventListener('dragstart', e => {
+      e.dataTransfer.setData('text/plain', JSON.stringify({ type:'operatore', id: card.dataset.opId }));
+      card.classList.add('dragging');
     });
-  }
+    card.addEventListener('dragend', () => card.classList.remove('dragging'));
+  });
   list.querySelectorAll('.view-op').forEach(b => b.onclick = () => apriVistaOperatore(b.dataset.id));
   list.querySelectorAll('.edit-op').forEach(b => b.onclick = () => openOperatoreModal(b.dataset.id));
   list.querySelectorAll('.del-op').forEach(b => b.onclick = () => openLicenziaModal(b.dataset.id));
-  list.querySelectorAll('.reattiva-op').forEach(b => b.onclick = () => riattivaOperatore(b.dataset.id));
-}
-
-/* Rimuove lo stato "ex collega": azzera il flag manuale e, se il contratto
-   a termine risultava scaduto, lo riporta a tempo indeterminato (altrimenti
-   tornerebbe ex al prossimo render finche' non si aggiorna la data di fine). */
-async function riattivaOperatore(id) {
-  const op = state.operatori.find(o => o.id === id);
-  if (!op) return;
-  const eraScaduto = isOperatoreScaduto(op);
-  const msg = eraScaduto
-    ? `Riattivare ${op.nome_esteso}? Il contratto a termine (scaduto il ${fmtDate(op.data_fine_rapporto)}) verrà impostato a tempo indeterminato: modifica la scheda operatore se vuoi impostare una nuova data di fine.`
-    : `Riattivare ${op.nome_esteso} e rimuoverlo dagli ex colleghi?`;
-  const ok = await showConfirmAsync(msg, 'Riattiva');
-  if (!ok) return;
-  op.licenziato = false;
-  if (eraScaduto) { op.contratto_tipo = 'indeterminato'; op.data_inizio_rapporto = ''; op.data_fine_rapporto = ''; }
-  await saveState('Riattivazione operatore', {operatore: op.nome_esteso});
-  renderAll();
 }
 
 /* ===================== VISTA OPERATORE ===================== */
@@ -2926,12 +2886,9 @@ function renderVistaOperatore(opId) {
       <!-- Header operatore -->
       <div class="flex items-start justify-between">
         <div>
-          <div class="font-semibold text-slate-900 text-sm">${esc(op.nome_esteso)}${isOperatoreScaduto(op) ? '<span class="op-ex-tag">ex</span>' : ''}</div>
+          <div class="font-semibold text-slate-900 text-sm">${esc(op.nome_esteso)}</div>
           <div class="mt-0.5">${op.skills.map(s=>`<span class="skill-badge">${s}</span>`).join('') || '<span class="text-[10px] text-slate-400">nessuna skill</span>'}</div>
           <div class="text-[10px] text-slate-500 mt-0.5">Sat. 3 mesi: <b>${(sat3*100).toFixed(0)}%</b></div>
-          <div class="text-[10px] text-slate-500 mt-0.5">${op.contratto_tipo === 'determinato'
-            ? `Contratto a termine: ${fmtDate(op.data_inizio_rapporto)} &rarr; <b class="${isOperatoreScaduto(op)?'text-red-600':''}">${fmtDate(op.data_fine_rapporto)}</b>`
-            : 'Contratto a tempo indeterminato'}</div>
         </div>
         <div class="flex gap-1">
           <button onclick="openOperatoreModal('${jsAttr(op.id)}')" class="text-xs px-2 py-1 bg-white text-slate-600 border border-slate-300 rounded hover:bg-slate-50">✎ Modifica</button>
@@ -4423,7 +4380,7 @@ async function promuoviCommessa(id) {
 }
 
 function openOperatoreModal(id) {
-  const op = id ? state.operatori.find(o => o.id === id) : { id:'op_new_'+Date.now(), nome_breve:'', nome_esteso:'', email:'', provincia:'', contratto_tipo:'indeterminato', data_inizio_rapporto:'', data_fine_rapporto:'', skills:[], attestati:[], alloc_mensile:new Array(12).fill(0) };
+  const op = id ? state.operatori.find(o => o.id === id) : { id:'op_new_'+Date.now(), nome_breve:'', nome_esteso:'', email:'', provincia:'', skills:[], attestati:[], alloc_mensile:new Array(12).fill(0) };
   const opAtt = op.attestati || [];
   const provinciaOptions = REGIONI_ITALIA.map(r => `<optgroup label="${esc(r)}">${
     provinceDiRegione(r).map(p => `<option value="${p.sigla}" ${op.provincia===p.sigla?'selected':''}>${esc(p.nome)} (${p.sigla})</option>`).join('')
@@ -4440,17 +4397,6 @@ function openOperatoreModal(id) {
           ${provinciaOptions}
         </select>
       </label>
-      <div>
-        <div class="text-xs text-slate-600 mb-1 font-medium">Tipo di rapporto</div>
-        <div class="flex gap-4 text-xs mb-1.5">
-          <label class="flex items-center gap-1 cursor-pointer"><input type="radio" name="mo-contratto" id="mo-contratto-indet" value="indeterminato" ${op.contratto_tipo!=='determinato'?'checked':''}> Tempo indeterminato</label>
-          <label class="flex items-center gap-1 cursor-pointer"><input type="radio" name="mo-contratto" id="mo-contratto-det" value="determinato" ${op.contratto_tipo==='determinato'?'checked':''}> A termine (data inizio/fine)</label>
-        </div>
-        <div id="mo-contratto-date" class="grid grid-cols-2 gap-2 ${op.contratto_tipo==='determinato'?'':'hidden'}">
-          <label class="block text-xs"><span class="text-slate-500">Data inizio</span><input id="mo-data-inizio" type="date" class="mt-0.5 w-full border border-slate-300 rounded px-2 py-1.5 text-sm" value="${op.data_inizio_rapporto||''}"></label>
-          <label class="block text-xs"><span class="text-slate-500">Data fine</span><input id="mo-data-fine" type="date" class="mt-0.5 w-full border border-slate-300 rounded px-2 py-1.5 text-sm" value="${op.data_fine_rapporto||''}"></label>
-        </div>
-      </div>
       <div>
         <div class="text-xs text-slate-600 mb-1 font-medium">Skill</div>
         <div class="grid grid-cols-3 gap-1 p-2 bg-slate-50 rounded border border-slate-200">
@@ -4480,11 +4426,6 @@ function openOperatoreModal(id) {
   document.getElementById('mo-att-all').onclick = () => document.querySelectorAll('.mo-att').forEach(x => x.checked = true);
   document.getElementById('mo-att-none').onclick = () => document.querySelectorAll('.mo-att').forEach(x => x.checked = false);
 
-  const contrattoDateBox = document.getElementById('mo-contratto-date');
-  document.querySelectorAll('input[name="mo-contratto"]').forEach(r => {
-    r.onchange = () => contrattoDateBox.classList.toggle('hidden', !document.getElementById('mo-contratto-det').checked);
-  });
-
   document.getElementById('mo-save').onclick = async () => {
     const nomeEsteso = document.getElementById('mo-esteso').value.trim();
     if (!nomeEsteso) { showAlertModal('Nome obbligatorio.'); return; }
@@ -4492,16 +4433,8 @@ function openOperatoreModal(id) {
     const attestati = [...document.querySelectorAll('.mo-att:checked')].map(x => x.value);
     const email = (document.getElementById('mo-email')?.value || '').trim();
     const provincia = document.getElementById('mo-provincia')?.value || '';
-    const contrattoTipo = document.getElementById('mo-contratto-det').checked ? 'determinato' : 'indeterminato';
-    const dataInizio = document.getElementById('mo-data-inizio')?.value || '';
-    const dataFine = document.getElementById('mo-data-fine')?.value || '';
-    if (contrattoTipo === 'determinato' && dataInizio && dataFine && dataFine < dataInizio) {
-      showAlertModal('La data di fine non può essere precedente alla data di inizio.'); return;
-    }
-    const dataInizioRapporto = contrattoTipo === 'determinato' ? dataInizio : '';
-    const dataFineRapporto = contrattoTipo === 'determinato' ? dataFine : '';
-    if (id) { Object.assign(op, { nome_esteso: nomeEsteso, email, provincia, contratto_tipo: contrattoTipo, data_inizio_rapporto: dataInizioRapporto, data_fine_rapporto: dataFineRapporto, skills, attestati }); await saveState('Modifica operatore', {operatore: nomeEsteso}); }
-    else { state.operatori.push({ ...op, nome_esteso: nomeEsteso, nome_breve: nomeEsteso, email, provincia, contratto_tipo: contrattoTipo, data_inizio_rapporto: dataInizioRapporto, data_fine_rapporto: dataFineRapporto, skills, attestati }); await saveState('Nuovo operatore', {operatore: nomeEsteso}); }
+    if (id) { Object.assign(op, { nome_esteso: nomeEsteso, email, provincia, skills, attestati }); await saveState('Modifica operatore', {operatore: nomeEsteso}); }
+    else { state.operatori.push({ ...op, nome_esteso: nomeEsteso, nome_breve: nomeEsteso, email, provincia, skills, attestati }); await saveState('Nuovo operatore', {operatore: nomeEsteso}); }
     renderAll(); closeModal();
   };
 }
@@ -4550,29 +4483,8 @@ function showConfirmAsync(msg, btnLabel) {
   });
 }
 
-/* Vero se il rapporto a termine e' scaduto (data fine gia' passata rispetto a oggi).
-   Calcolato, non persistito: basta correggere/rimuovere la data fine per "riattivare"
-   l'operatore, senza dover disfare un flag manuale. */
-function isOperatoreScaduto(op) {
-  if (!op || op.contratto_tipo !== 'determinato' || !op.data_fine_rapporto) return false;
-  return op.data_fine_rapporto < new Date().toISOString().slice(0, 10);
-}
-
 function getOperatoriAttivi() {
-  return (state.operatori || []).filter(o => !o.licenziato && !isOperatoreScaduto(o));
-}
-
-/* Indice mese (0-11) di fine rapporto entro l'ANNO visualizzato:
-   -1 se il rapporto e' terminato in un anno precedente (tutti i mesi dell'ANNO contano come "dopo"),
-   12 se termina in un anno successivo (nessun mese dell'ANNO conta come "dopo"). */
-function meseFineRapportoInAnno(op) {
-  if (!op || !op.data_fine_rapporto) return null;
-  const d = new Date(op.data_fine_rapporto + 'T00:00:00Z');
-  if (isNaN(d.getTime())) return null;
-  const y = d.getUTCFullYear();
-  if (y < ANNO) return -1;
-  if (y > ANNO) return 12;
-  return d.getUTCMonth();
+  return (state.operatori || []).filter(o => !o.licenziato);
 }
 
 // Modale di selezione: mostra una tendina di opzioni e risolve col valore scelto (o null).
@@ -4595,7 +4507,7 @@ function cpSelectModal(title, message, options) {
 
 function isOperatoreLicenziato(nome) {
   if (!nome) return false;
-  return (state.operatori || []).some(o => (o.nome_esteso || o.nome) === nome && (o.licenziato || isOperatoreScaduto(o)));
+  return (state.operatori || []).some(o => (o.nome_esteso || o.nome) === nome && o.licenziato);
 }
 
 async function deleteOperatore(id) {
@@ -6295,34 +6207,15 @@ function renderAlerts() {
     if (mesiKO.length) errori.push({ tipo: 'carenza', testo: '<b>' + k + '</b>: carenza FTE in ' + mesiKO.join(', ') });
   });
 
-  // Operatori con contratto a termine scaduto ma ancora impiegati su commesse
-  // nei mesi successivi alla fine rapporto (probabile errore di pianificazione/anagrafica)
-  const oggiStr = new Date().toISOString().slice(0, 10);
-  (state.operatori || []).forEach(op => {
-    if (op.contratto_tipo !== 'determinato' || !op.data_fine_rapporto) return;
-    if (op.data_fine_rapporto >= oggiStr) return;
-    const meseFine = meseFineRapportoInAnno(op);
-    if (meseFine === null || meseFine >= 12) return;
-    const righeOp = state.staffing.filter(r => r.risorsa === op.nome_esteso && r.commessa !== 'ORE NON LAVORATE');
-    const mesiKO = [];
-    for (let i = Math.max(0, meseFine + 1); i < 12; i++) {
-      const gg = righeOp.reduce((s, r) => s + (Number(r.mesi[i]) || 0), 0);
-      if (gg > 0) mesiKO.push(MESI[i] + ' (' + gg + 'gg)');
-    }
-    if (mesiKO.length) errori.push({ tipo: 'exImpiegato', testo: '<b>' + op.nome_esteso + '</b> (rapporto terminato il ' + fmtDate(op.data_fine_rapporto) + '): ancora impiegato in ' + mesiKO.join(', ') });
-  });
-
   const el = document.getElementById('alert-box');
   if (!el) return;
   if (!errori.length) { el.innerHTML = ''; return; }
 
-  const sovra       = errori.filter(e => e.tipo === 'sovra');
-  const carenze     = errori.filter(e => e.tipo === 'carenza');
-  const exImpiegati = errori.filter(e => e.tipo === 'exImpiegato');
+  const sovra   = errori.filter(e => e.tipo === 'sovra');
+  const carenze = errori.filter(e => e.tipo === 'carenza');
   let inner = '';
-  if (sovra.length)       inner += '<div class="text-xs font-semibold text-red-700 mb-1">Sovra-allocazioni (' + sovra.length + '):</div>'   + sovra.map(e   => '<div class="text-xs text-red-700 pl-2 mb-0.5">• ' + e.testo + '</div>').join('');
-  if (carenze.length)     inner += '<div class="text-xs font-semibold text-orange-700 mb-1 mt-2">Carenze FTE (' + carenze.length + '):</div>' + carenze.map(e => '<div class="text-xs text-orange-700 pl-2 mb-0.5">• ' + e.testo + '</div>').join('');
-  if (exImpiegati.length) inner += '<div class="text-xs font-semibold text-purple-700 mb-1 mt-2">🚪 Ex collega ancora impiegato (' + exImpiegati.length + '):</div>' + exImpiegati.map(e => '<div class="text-xs text-purple-700 pl-2 mb-0.5">• ' + e.testo + '</div>').join('');
+  if (sovra.length)   inner += '<div class="text-xs font-semibold text-red-700 mb-1">Sovra-allocazioni (' + sovra.length + '):</div>'   + sovra.map(e   => '<div class="text-xs text-red-700 pl-2 mb-0.5">• ' + e.testo + '</div>').join('');
+  if (carenze.length) inner += '<div class="text-xs font-semibold text-orange-700 mb-1 mt-2">Carenze FTE (' + carenze.length + '):</div>' + carenze.map(e => '<div class="text-xs text-orange-700 pl-2 mb-0.5">• ' + e.testo + '</div>').join('');
 
   el.innerHTML = '<div class="bg-red-50 border border-red-200 rounded-lg p-3 mb-4"><div class="flex items-center justify-between mb-2"><span class="font-semibold text-red-800 text-sm">⚠ ' + errori.length + ' problema/i rilevato/i</span><button onclick="this.closest(\'.bg-red-50\').querySelector(\'.ab-body\').classList.toggle(\'hidden\')" class="text-xs text-red-600 hover:underline">mostra/nascondi</button></div><div class="ab-body">' + inner + '</div></div>';
 }
@@ -6367,10 +6260,6 @@ document.addEventListener('DOMContentLoaded', async () => {
   });
   document.getElementById('op-filter-provincia').addEventListener('change', e => {
     state.filters.provincia = e.target.value;
-    renderOperatori();
-  });
-  document.getElementById('filter-show-ex').addEventListener('change', e => {
-    state.filters.showEx = e.target.checked;
     renderOperatori();
   });
   document.getElementById('commesse-search').addEventListener('input', e => {
