@@ -27,6 +27,8 @@ function apriDettaglioMeseCommessa(ev, commessaEnc, meseIdx) {
   };
 
   // Helper: costruisce lista candidati filtrati per skill richieste
+  const provinciaCommessa = meta.provincia || '';
+  const regioneCommessa = meta.regione || '';
   function buildCandidati(skillRichieste) {
     const candidati = [];
     const tuttiNomiStaffing = new Set(ass.map(a => a.risorsa));
@@ -39,7 +41,8 @@ function apriDettaglioMeseCommessa(ev, commessaEnc, meseIdx) {
       const skillMancanti = skillRichieste.filter(s => !skills.includes(s));
       const sat = satOpMese(nome);
       const ggDisp = Math.round(gl * Math.max(0, 1 - sat));
-      candidati.push({ nome, sat, ggDisp, tipo: 'già_su_commessa', skills, matchSkill, skillMancanti });
+      const distanza = distanzaLavorazione(regioneCommessa, provinciaCommessa, opObj?.provincia);
+      candidati.push({ nome, sat, ggDisp, tipo: 'già_su_commessa', skills, matchSkill, skillMancanti, distanza });
     });
     // Dal pool, non sulla commessa
     getOperatoriAttivi()
@@ -50,13 +53,19 @@ function apriDettaglioMeseCommessa(ev, commessaEnc, meseIdx) {
         const skillMancanti = skillRichieste.filter(s => !op.skills.includes(s));
         const sat = satOpMese(op.nome_esteso);
         const ggDisp = Math.round(gl * Math.max(0, 1 - sat));
-        if (ggDisp > 0) candidati.push({ nome: op.nome_esteso, sat, ggDisp, tipo: 'disponibile', skills: op.skills, matchSkill, skillMancanti });
+        const distanza = distanzaLavorazione(regioneCommessa, provinciaCommessa, op.provincia);
+        if (ggDisp > 0) candidati.push({ nome: op.nome_esteso, sat, ggDisp, tipo: 'disponibile', skills: op.skills, matchSkill, skillMancanti, distanza });
       });
-    // Ordina: prima match skill esatto, poi già su commessa, poi sat crescente
+    // Ordina: prima i validi (match skill), poi la vicinanza geografica alla commessa,
+    // infine in generale ordine alfabetico come criterio finale
     candidati.sort((a, b) => {
       if (a.matchSkill !== b.matchSkill) return a.matchSkill ? -1 : 1;
-      if (a.tipo !== b.tipo) return a.tipo === 'già_su_commessa' ? -1 : 1;
-      return a.sat - b.sat;
+      if (a.distanza !== b.distanza) {
+        if (a.distanza === null) return 1;
+        if (b.distanza === null) return -1;
+        if (a.distanza !== b.distanza) return a.distanza - b.distanza;
+      }
+      return a.nome.localeCompare(b.nome);
     });
     return candidati;
   }
@@ -68,10 +77,17 @@ function apriDettaglioMeseCommessa(ev, commessaEnc, meseIdx) {
     const matchTag = c.matchSkill
       ? '<span class="text-[9px] bg-emerald-100 text-emerald-700 px-1 rounded">✓ skill</span>'
       : `<span class="text-[9px] bg-red-100 text-red-600 px-1 rounded">manca: ${c.skillMancanti.join(', ')}</span>`;
+    const geoTag = c.distanza === null ? '' : c.distanza === 0
+      ? (provinciaCommessa
+          ? '<span class="text-[9px] bg-sky-100 text-sky-700 px-1 rounded">📍 stessa provincia</span>'
+          : '<span class="text-[9px] bg-sky-100 text-sky-700 px-1 rounded">📍 stessa regione</span>')
+      : `<span class="text-[9px] bg-sky-50 text-sky-700 px-1 rounded">📍 ~${Math.round(c.distanza)} km</span>`;
     const skillsHtml = c.skills.length ? c.skills.map(s => `<span class="skill-badge">${s}</span>`).join('') : '';
-    return `<div class="p-2 bg-red-50 border border-red-200 rounded text-xs">
+    // Colore leggero del riquadro: verde chi ha la skill richiesta, ambra chi no.
+    const cardCls = c.matchSkill ? 'bg-emerald-50/60 border-emerald-200' : 'bg-amber-50/60 border-amber-200';
+    return `<div class="p-2 ${cardCls} border rounded text-xs">
       <div class="flex items-center justify-between mb-0.5">
-        <span class="font-medium text-slate-800">${esc(c.nome)} ${tipoTag} ${matchTag}</span>
+        <span class="font-medium text-slate-800">${esc(c.nome)} ${tipoTag} ${matchTag} ${geoTag}</span>
         <span class="text-slate-500">${(c.sat*100).toFixed(0)}% sat · ~${c.ggDisp} gg</span>
       </div>
       ${skillsHtml ? `<div class="text-[10px] mt-0.5">${skillsHtml}</div>` : ''}

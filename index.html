@@ -817,7 +817,7 @@
     <div class="flex items-center gap-2">
       <button id="btn-presentation" class="px-3 py-1.5 text-sm rounded hover:bg-white/10" style="border:1px solid var(--dark-border-strong);color:var(--dark-text);visibility:visible;">📊 Modalità presentazione</button>
       <div class="text-xs pl-2" style="border-left:1px solid var(--dark-border-strong);color:var(--dark-text-muted);">
-        <span class="font-medium" style="color:var(--accent);">v18.79.0</span> · Michele Marchetti
+        <span class="font-medium" style="color:var(--accent);">v18.84.0</span> · Michele Marchetti
       </div>
     </div>
   </div>
@@ -1022,6 +1022,7 @@
           <div id="op-pool-filters" class="space-y-2">
             <div class="flex items-center justify-between">
               <input id="op-search" type="text" placeholder="Cerca operatore…" class="flex-1 mr-2 px-2 py-1.5 text-sm border border-slate-300 rounded">
+              <button id="btn-export-op" class="text-xs px-2 py-1 mr-1 bg-white text-slate-500 rounded border border-slate-200 hover:bg-slate-50 hover:text-slate-700 whitespace-nowrap" title="Scarica Excel del pool operatori">⬇ Excel</button>
               <button id="btn-add-op" class="text-xs px-2 py-1 bg-teal-50 text-teal-700 rounded border border-teal-200 hover:bg-teal-100 whitespace-nowrap">+ Nuovo</button>
             </div>
             <div>
@@ -1291,70 +1292,117 @@ const INDUSTRIES = ['Altre infrastrutture','Telco','Energy','Water','Robotica e 
 /* ===================== ANAGRAFICA PROVINCE/REGIONI ===================== */
 /* Usata per la provenienza geografica degli operatori (filtro regione/provincia
    in Pool operatori e nel picker Griglia settimanale, per trovare velocemente
-   chi e' vicino a un rilievo). Sigla = codice targa provincia. */
+   chi e' vicino a un rilievo) e per la provincia/regione di lavorazione della
+   commessa. Sigla = codice targa provincia. lat/lng = coordinate del
+   capoluogo, usate solo per stimare la distanza tra due province (ranking dei
+   suggerimenti di allocazione), non per una geolocalizzazione precisa. */
 const PROVINCE_ITALIA = [
-  {sigla:'TO',nome:'Torino',regione:'Piemonte'}, {sigla:'VC',nome:'Vercelli',regione:'Piemonte'},
-  {sigla:'NO',nome:'Novara',regione:'Piemonte'}, {sigla:'CN',nome:'Cuneo',regione:'Piemonte'},
-  {sigla:'AT',nome:'Asti',regione:'Piemonte'}, {sigla:'AL',nome:'Alessandria',regione:'Piemonte'},
-  {sigla:'BI',nome:'Biella',regione:'Piemonte'}, {sigla:'VB',nome:'Verbano-Cusio-Ossola',regione:'Piemonte'},
-  {sigla:'AO',nome:'Aosta',regione:"Valle d'Aosta"},
-  {sigla:'MI',nome:'Milano',regione:'Lombardia'}, {sigla:'BG',nome:'Bergamo',regione:'Lombardia'},
-  {sigla:'BS',nome:'Brescia',regione:'Lombardia'}, {sigla:'PV',nome:'Pavia',regione:'Lombardia'},
-  {sigla:'CR',nome:'Cremona',regione:'Lombardia'}, {sigla:'MN',nome:'Mantova',regione:'Lombardia'},
-  {sigla:'LC',nome:'Lecco',regione:'Lombardia'}, {sigla:'LO',nome:'Lodi',regione:'Lombardia'},
-  {sigla:'SO',nome:'Sondrio',regione:'Lombardia'}, {sigla:'VA',nome:'Varese',regione:'Lombardia'},
-  {sigla:'CO',nome:'Como',regione:'Lombardia'}, {sigla:'MB',nome:'Monza e della Brianza',regione:'Lombardia'},
-  {sigla:'TN',nome:'Trento',regione:'Trentino-Alto Adige'}, {sigla:'BZ',nome:'Bolzano',regione:'Trentino-Alto Adige'},
-  {sigla:'VR',nome:'Verona',regione:'Veneto'}, {sigla:'VI',nome:'Vicenza',regione:'Veneto'},
-  {sigla:'BL',nome:'Belluno',regione:'Veneto'}, {sigla:'TV',nome:'Treviso',regione:'Veneto'},
-  {sigla:'VE',nome:'Venezia',regione:'Veneto'}, {sigla:'PD',nome:'Padova',regione:'Veneto'},
-  {sigla:'RO',nome:'Rovigo',regione:'Veneto'},
-  {sigla:'UD',nome:'Udine',regione:'Friuli-Venezia Giulia'}, {sigla:'GO',nome:'Gorizia',regione:'Friuli-Venezia Giulia'},
-  {sigla:'TS',nome:'Trieste',regione:'Friuli-Venezia Giulia'}, {sigla:'PN',nome:'Pordenone',regione:'Friuli-Venezia Giulia'},
-  {sigla:'GE',nome:'Genova',regione:'Liguria'}, {sigla:'IM',nome:'Imperia',regione:'Liguria'},
-  {sigla:'SP',nome:'La Spezia',regione:'Liguria'}, {sigla:'SV',nome:'Savona',regione:'Liguria'},
-  {sigla:'PC',nome:'Piacenza',regione:'Emilia-Romagna'}, {sigla:'PR',nome:'Parma',regione:'Emilia-Romagna'},
-  {sigla:'RE',nome:'Reggio Emilia',regione:'Emilia-Romagna'}, {sigla:'MO',nome:'Modena',regione:'Emilia-Romagna'},
-  {sigla:'BO',nome:'Bologna',regione:'Emilia-Romagna'}, {sigla:'FE',nome:'Ferrara',regione:'Emilia-Romagna'},
-  {sigla:'RA',nome:'Ravenna',regione:'Emilia-Romagna'}, {sigla:'FC',nome:'Forlì-Cesena',regione:'Emilia-Romagna'},
-  {sigla:'RN',nome:'Rimini',regione:'Emilia-Romagna'},
-  {sigla:'MS',nome:'Massa-Carrara',regione:'Toscana'}, {sigla:'LU',nome:'Lucca',regione:'Toscana'},
-  {sigla:'PT',nome:'Pistoia',regione:'Toscana'}, {sigla:'FI',nome:'Firenze',regione:'Toscana'},
-  {sigla:'LI',nome:'Livorno',regione:'Toscana'}, {sigla:'PI',nome:'Pisa',regione:'Toscana'},
-  {sigla:'AR',nome:'Arezzo',regione:'Toscana'}, {sigla:'SI',nome:'Siena',regione:'Toscana'},
-  {sigla:'GR',nome:'Grosseto',regione:'Toscana'}, {sigla:'PO',nome:'Prato',regione:'Toscana'},
-  {sigla:'PG',nome:'Perugia',regione:'Umbria'}, {sigla:'TR',nome:'Terni',regione:'Umbria'},
-  {sigla:'PU',nome:'Pesaro e Urbino',regione:'Marche'}, {sigla:'AN',nome:'Ancona',regione:'Marche'},
-  {sigla:'MC',nome:'Macerata',regione:'Marche'}, {sigla:'AP',nome:'Ascoli Piceno',regione:'Marche'},
-  {sigla:'FM',nome:'Fermo',regione:'Marche'},
-  {sigla:'VT',nome:'Viterbo',regione:'Lazio'}, {sigla:'RI',nome:'Rieti',regione:'Lazio'},
-  {sigla:'RM',nome:'Roma',regione:'Lazio'}, {sigla:'LT',nome:'Latina',regione:'Lazio'},
-  {sigla:'FR',nome:'Frosinone',regione:'Lazio'},
-  {sigla:'AQ',nome:"L'Aquila",regione:'Abruzzo'}, {sigla:'TE',nome:'Teramo',regione:'Abruzzo'},
-  {sigla:'PE',nome:'Pescara',regione:'Abruzzo'}, {sigla:'CH',nome:'Chieti',regione:'Abruzzo'},
-  {sigla:'CB',nome:'Campobasso',regione:'Molise'}, {sigla:'IS',nome:'Isernia',regione:'Molise'},
-  {sigla:'CE',nome:'Caserta',regione:'Campania'}, {sigla:'BN',nome:'Benevento',regione:'Campania'},
-  {sigla:'NA',nome:'Napoli',regione:'Campania'}, {sigla:'AV',nome:'Avellino',regione:'Campania'},
-  {sigla:'SA',nome:'Salerno',regione:'Campania'},
-  {sigla:'FG',nome:'Foggia',regione:'Puglia'}, {sigla:'BA',nome:'Bari',regione:'Puglia'},
-  {sigla:'TA',nome:'Taranto',regione:'Puglia'}, {sigla:'BR',nome:'Brindisi',regione:'Puglia'},
-  {sigla:'LE',nome:'Lecce',regione:'Puglia'}, {sigla:'BT',nome:'Barletta-Andria-Trani',regione:'Puglia'},
-  {sigla:'PZ',nome:'Potenza',regione:'Basilicata'}, {sigla:'MT',nome:'Matera',regione:'Basilicata'},
-  {sigla:'CS',nome:'Cosenza',regione:'Calabria'}, {sigla:'KR',nome:'Crotone',regione:'Calabria'},
-  {sigla:'CZ',nome:'Catanzaro',regione:'Calabria'}, {sigla:'VV',nome:'Vibo Valentia',regione:'Calabria'},
-  {sigla:'RC',nome:'Reggio Calabria',regione:'Calabria'},
-  {sigla:'TP',nome:'Trapani',regione:'Sicilia'}, {sigla:'PA',nome:'Palermo',regione:'Sicilia'},
-  {sigla:'ME',nome:'Messina',regione:'Sicilia'}, {sigla:'AG',nome:'Agrigento',regione:'Sicilia'},
-  {sigla:'CL',nome:'Caltanissetta',regione:'Sicilia'}, {sigla:'EN',nome:'Enna',regione:'Sicilia'},
-  {sigla:'CT',nome:'Catania',regione:'Sicilia'}, {sigla:'RG',nome:'Ragusa',regione:'Sicilia'},
-  {sigla:'SR',nome:'Siracusa',regione:'Sicilia'},
-  {sigla:'SS',nome:'Sassari',regione:'Sardegna'}, {sigla:'NU',nome:'Nuoro',regione:'Sardegna'},
-  {sigla:'CA',nome:'Cagliari',regione:'Sardegna'}, {sigla:'OR',nome:'Oristano',regione:'Sardegna'},
-  {sigla:'SU',nome:'Sud Sardegna',regione:'Sardegna'},
+  {sigla:'TO',nome:'Torino',regione:'Piemonte',lat:45.07,lng:7.69}, {sigla:'VC',nome:'Vercelli',regione:'Piemonte',lat:45.32,lng:8.42},
+  {sigla:'NO',nome:'Novara',regione:'Piemonte',lat:45.45,lng:8.62}, {sigla:'CN',nome:'Cuneo',regione:'Piemonte',lat:44.39,lng:7.55},
+  {sigla:'AT',nome:'Asti',regione:'Piemonte',lat:44.90,lng:8.21}, {sigla:'AL',nome:'Alessandria',regione:'Piemonte',lat:44.91,lng:8.61},
+  {sigla:'BI',nome:'Biella',regione:'Piemonte',lat:45.57,lng:8.06}, {sigla:'VB',nome:'Verbano-Cusio-Ossola',regione:'Piemonte',lat:45.92,lng:8.55},
+  {sigla:'AO',nome:'Aosta',regione:"Valle d'Aosta",lat:45.74,lng:7.32},
+  {sigla:'MI',nome:'Milano',regione:'Lombardia',lat:45.46,lng:9.19}, {sigla:'BG',nome:'Bergamo',regione:'Lombardia',lat:45.69,lng:9.67},
+  {sigla:'BS',nome:'Brescia',regione:'Lombardia',lat:45.54,lng:10.22}, {sigla:'PV',nome:'Pavia',regione:'Lombardia',lat:45.18,lng:9.16},
+  {sigla:'CR',nome:'Cremona',regione:'Lombardia',lat:45.13,lng:10.02}, {sigla:'MN',nome:'Mantova',regione:'Lombardia',lat:45.16,lng:10.79},
+  {sigla:'LC',nome:'Lecco',regione:'Lombardia',lat:45.85,lng:9.39}, {sigla:'LO',nome:'Lodi',regione:'Lombardia',lat:45.31,lng:9.50},
+  {sigla:'SO',nome:'Sondrio',regione:'Lombardia',lat:46.17,lng:9.87}, {sigla:'VA',nome:'Varese',regione:'Lombardia',lat:45.82,lng:8.83},
+  {sigla:'CO',nome:'Como',regione:'Lombardia',lat:45.81,lng:9.09}, {sigla:'MB',nome:'Monza e della Brianza',regione:'Lombardia',lat:45.58,lng:9.27},
+  {sigla:'TN',nome:'Trento',regione:'Trentino-Alto Adige',lat:46.07,lng:11.12}, {sigla:'BZ',nome:'Bolzano',regione:'Trentino-Alto Adige',lat:46.50,lng:11.35},
+  {sigla:'VR',nome:'Verona',regione:'Veneto',lat:45.44,lng:10.99}, {sigla:'VI',nome:'Vicenza',regione:'Veneto',lat:45.55,lng:11.55},
+  {sigla:'BL',nome:'Belluno',regione:'Veneto',lat:46.14,lng:12.22}, {sigla:'TV',nome:'Treviso',regione:'Veneto',lat:45.67,lng:12.24},
+  {sigla:'VE',nome:'Venezia',regione:'Veneto',lat:45.44,lng:12.33}, {sigla:'PD',nome:'Padova',regione:'Veneto',lat:45.41,lng:11.88},
+  {sigla:'RO',nome:'Rovigo',regione:'Veneto',lat:45.07,lng:11.79},
+  {sigla:'UD',nome:'Udine',regione:'Friuli-Venezia Giulia',lat:46.06,lng:13.24}, {sigla:'GO',nome:'Gorizia',regione:'Friuli-Venezia Giulia',lat:45.94,lng:13.62},
+  {sigla:'TS',nome:'Trieste',regione:'Friuli-Venezia Giulia',lat:45.65,lng:13.77}, {sigla:'PN',nome:'Pordenone',regione:'Friuli-Venezia Giulia',lat:45.96,lng:12.66},
+  {sigla:'GE',nome:'Genova',regione:'Liguria',lat:44.41,lng:8.93}, {sigla:'IM',nome:'Imperia',regione:'Liguria',lat:43.89,lng:8.03},
+  {sigla:'SP',nome:'La Spezia',regione:'Liguria',lat:44.11,lng:9.82}, {sigla:'SV',nome:'Savona',regione:'Liguria',lat:44.31,lng:8.48},
+  {sigla:'PC',nome:'Piacenza',regione:'Emilia-Romagna',lat:45.05,lng:9.69}, {sigla:'PR',nome:'Parma',regione:'Emilia-Romagna',lat:44.80,lng:10.33},
+  {sigla:'RE',nome:'Reggio Emilia',regione:'Emilia-Romagna',lat:44.70,lng:10.63}, {sigla:'MO',nome:'Modena',regione:'Emilia-Romagna',lat:44.65,lng:10.93},
+  {sigla:'BO',nome:'Bologna',regione:'Emilia-Romagna',lat:44.49,lng:11.34}, {sigla:'FE',nome:'Ferrara',regione:'Emilia-Romagna',lat:44.84,lng:11.62},
+  {sigla:'RA',nome:'Ravenna',regione:'Emilia-Romagna',lat:44.42,lng:12.20}, {sigla:'FC',nome:'Forlì-Cesena',regione:'Emilia-Romagna',lat:44.22,lng:12.04},
+  {sigla:'RN',nome:'Rimini',regione:'Emilia-Romagna',lat:44.06,lng:12.57},
+  {sigla:'MS',nome:'Massa-Carrara',regione:'Toscana',lat:44.03,lng:10.14}, {sigla:'LU',nome:'Lucca',regione:'Toscana',lat:43.84,lng:10.50},
+  {sigla:'PT',nome:'Pistoia',regione:'Toscana',lat:43.93,lng:10.92}, {sigla:'FI',nome:'Firenze',regione:'Toscana',lat:43.77,lng:11.26},
+  {sigla:'LI',nome:'Livorno',regione:'Toscana',lat:43.55,lng:10.31}, {sigla:'PI',nome:'Pisa',regione:'Toscana',lat:43.72,lng:10.40},
+  {sigla:'AR',nome:'Arezzo',regione:'Toscana',lat:43.46,lng:11.88}, {sigla:'SI',nome:'Siena',regione:'Toscana',lat:43.32,lng:11.33},
+  {sigla:'GR',nome:'Grosseto',regione:'Toscana',lat:42.76,lng:11.11}, {sigla:'PO',nome:'Prato',regione:'Toscana',lat:43.88,lng:11.10},
+  {sigla:'PG',nome:'Perugia',regione:'Umbria',lat:43.11,lng:12.39}, {sigla:'TR',nome:'Terni',regione:'Umbria',lat:42.56,lng:12.65},
+  {sigla:'PU',nome:'Pesaro e Urbino',regione:'Marche',lat:43.91,lng:12.91}, {sigla:'AN',nome:'Ancona',regione:'Marche',lat:43.62,lng:13.52},
+  {sigla:'MC',nome:'Macerata',regione:'Marche',lat:43.30,lng:13.45}, {sigla:'AP',nome:'Ascoli Piceno',regione:'Marche',lat:42.85,lng:13.58},
+  {sigla:'FM',nome:'Fermo',regione:'Marche',lat:43.16,lng:13.72},
+  {sigla:'VT',nome:'Viterbo',regione:'Lazio',lat:42.42,lng:12.11}, {sigla:'RI',nome:'Rieti',regione:'Lazio',lat:42.40,lng:12.86},
+  {sigla:'RM',nome:'Roma',regione:'Lazio',lat:41.90,lng:12.50}, {sigla:'LT',nome:'Latina',regione:'Lazio',lat:41.47,lng:12.90},
+  {sigla:'FR',nome:'Frosinone',regione:'Lazio',lat:41.64,lng:13.35},
+  {sigla:'AQ',nome:"L'Aquila",regione:'Abruzzo',lat:42.35,lng:13.40}, {sigla:'TE',nome:'Teramo',regione:'Abruzzo',lat:42.66,lng:13.70},
+  {sigla:'PE',nome:'Pescara',regione:'Abruzzo',lat:42.46,lng:14.21}, {sigla:'CH',nome:'Chieti',regione:'Abruzzo',lat:42.35,lng:14.17},
+  {sigla:'CB',nome:'Campobasso',regione:'Molise',lat:41.56,lng:14.66}, {sigla:'IS',nome:'Isernia',regione:'Molise',lat:41.60,lng:14.23},
+  {sigla:'CE',nome:'Caserta',regione:'Campania',lat:41.07,lng:14.33}, {sigla:'BN',nome:'Benevento',regione:'Campania',lat:41.13,lng:14.78},
+  {sigla:'NA',nome:'Napoli',regione:'Campania',lat:40.85,lng:14.27}, {sigla:'AV',nome:'Avellino',regione:'Campania',lat:40.91,lng:14.79},
+  {sigla:'SA',nome:'Salerno',regione:'Campania',lat:40.68,lng:14.77},
+  {sigla:'FG',nome:'Foggia',regione:'Puglia',lat:41.46,lng:15.55}, {sigla:'BA',nome:'Bari',regione:'Puglia',lat:41.12,lng:16.87},
+  {sigla:'TA',nome:'Taranto',regione:'Puglia',lat:40.47,lng:17.24}, {sigla:'BR',nome:'Brindisi',regione:'Puglia',lat:40.64,lng:17.94},
+  {sigla:'LE',nome:'Lecce',regione:'Puglia',lat:40.35,lng:18.17}, {sigla:'BT',nome:'Barletta-Andria-Trani',regione:'Puglia',lat:41.23,lng:16.30},
+  {sigla:'PZ',nome:'Potenza',regione:'Basilicata',lat:40.64,lng:15.81}, {sigla:'MT',nome:'Matera',regione:'Basilicata',lat:40.67,lng:16.60},
+  {sigla:'CS',nome:'Cosenza',regione:'Calabria',lat:39.30,lng:16.25}, {sigla:'KR',nome:'Crotone',regione:'Calabria',lat:39.08,lng:17.13},
+  {sigla:'CZ',nome:'Catanzaro',regione:'Calabria',lat:38.91,lng:16.60}, {sigla:'VV',nome:'Vibo Valentia',regione:'Calabria',lat:38.68,lng:16.10},
+  {sigla:'RC',nome:'Reggio Calabria',regione:'Calabria',lat:38.11,lng:15.65},
+  {sigla:'TP',nome:'Trapani',regione:'Sicilia',lat:38.02,lng:12.53}, {sigla:'PA',nome:'Palermo',regione:'Sicilia',lat:38.12,lng:13.36},
+  {sigla:'ME',nome:'Messina',regione:'Sicilia',lat:38.19,lng:15.55}, {sigla:'AG',nome:'Agrigento',regione:'Sicilia',lat:37.31,lng:13.58},
+  {sigla:'CL',nome:'Caltanissetta',regione:'Sicilia',lat:37.49,lng:14.06}, {sigla:'EN',nome:'Enna',regione:'Sicilia',lat:37.57,lng:14.28},
+  {sigla:'CT',nome:'Catania',regione:'Sicilia',lat:37.51,lng:15.08}, {sigla:'RG',nome:'Ragusa',regione:'Sicilia',lat:36.93,lng:14.73},
+  {sigla:'SR',nome:'Siracusa',regione:'Sicilia',lat:37.07,lng:15.29},
+  {sigla:'SS',nome:'Sassari',regione:'Sardegna',lat:40.73,lng:8.56}, {sigla:'NU',nome:'Nuoro',regione:'Sardegna',lat:40.32,lng:9.33},
+  {sigla:'CA',nome:'Cagliari',regione:'Sardegna',lat:39.22,lng:9.12}, {sigla:'OR',nome:'Oristano',regione:'Sardegna',lat:39.90,lng:8.59},
+  {sigla:'SU',nome:'Sud Sardegna',regione:'Sardegna',lat:39.17,lng:8.53},
 ];
 const REGIONI_ITALIA = [...new Set(PROVINCE_ITALIA.map(p => p.regione))].sort((a,b) => a.localeCompare(b));
 function provinciaInfo(sigla) { return PROVINCE_ITALIA.find(p => p.sigla === sigla) || null; }
 function provinceDiRegione(regione) { return PROVINCE_ITALIA.filter(p => p.regione === regione).sort((a,b) => a.nome.localeCompare(b.nome)); }
+
+function haversineKm(latA, lngA, latB, lngB) {
+  const R = 6371;
+  const dLat = (latB - latA) * Math.PI / 180;
+  const dLng = (lngB - lngA) * Math.PI / 180;
+  const s = Math.sin(dLat/2)**2 + Math.cos(latA*Math.PI/180) * Math.cos(latB*Math.PI/180) * Math.sin(dLng/2)**2;
+  return R * 2 * Math.atan2(Math.sqrt(s), Math.sqrt(1-s));
+}
+/* Distanza approssimata (km, haversine tra i capoluoghi) tra due province,
+   usata per ordinare i suggerimenti di allocazione per vicinanza geografica.
+   Ritorna null se una delle due sigle non e' nota (nessun criterio di distanza
+   applicabile: chi chiama deve trattarlo come "sconosciuto", non come "vicino"). */
+function distanzaProvince(siglaA, siglaB) {
+  if (!siglaA || !siglaB) return null;
+  if (siglaA === siglaB) return 0;
+  const a = provinciaInfo(siglaA), b = provinciaInfo(siglaB);
+  if (!a || !b) return null;
+  return haversineKm(a.lat, a.lng, b.lat, b.lng);
+}
+function regioneCentroid(regione) {
+  const province = provinceDiRegione(regione);
+  if (!province.length) return null;
+  return {
+    lat: province.reduce((s,p) => s + p.lat, 0) / province.length,
+    lng: province.reduce((s,p) => s + p.lng, 0) / province.length,
+  };
+}
+/* Distanza "di lavorazione" tra una commessa (nota per regione e/o provincia)
+   e la provincia di provenienza di un operatore. Usa la provincia della
+   commessa se nota (piu' precisa, vedi distanzaProvince); se la commessa ha
+   solo la regione, approssima con il centroide della regione — 0 se
+   l'operatore e' della stessa regione. Ritorna null se non c'e' nessun
+   criterio applicabile. */
+function distanzaLavorazione(regioneCommessa, provinciaCommessa, siglaOperatore) {
+  if (!siglaOperatore) return null;
+  if (provinciaCommessa) return distanzaProvince(provinciaCommessa, siglaOperatore);
+  if (!regioneCommessa) return null;
+  const opInfo = provinciaInfo(siglaOperatore);
+  if (!opInfo) return null;
+  if (opInfo.regione === regioneCommessa) return 0;
+  const centro = regioneCentroid(regioneCommessa);
+  if (!centro) return null;
+  return haversineKm(centro.lat, centro.lng, opInfo.lat, opInfo.lng);
+}
 let ANNO = parseInt(localStorage.getItem('dashboard_anno') || String(new Date().getFullYear()));
 
 /* Indice 0-11 del mese corrente di riferimento.
@@ -2531,9 +2579,8 @@ function renderOperatori() {
     return true;
   });
 
-  // ordina: in modo normale liberi prima/saturi dopo, in modo ex per nome
-  if (modoEx) ops.sort((a,b) => (a.nome_esteso||'').localeCompare(b.nome_esteso||''));
-  else ops.sort((a,b) => operatoreSatPeriodo(a, [mese0, meseProx]) - operatoreSatPeriodo(b, [mese0, meseProx]));
+  // ordina sempre alfabeticamente per nome, per una visione più chiara e ordinata
+  ops.sort((a,b) => (a.nome_esteso||'').localeCompare(b.nome_esteso||''));
 
   const totEx = state.operatori.filter(op => op.licenziato || isOperatoreScaduto(op)).length;
   document.getElementById('op-count').textContent = modoEx ? `(${ops.length} ex colleghi)` : `(${ops.length}/${getOperatoriAttivi().length})`;
@@ -2614,6 +2661,41 @@ function renderOperatori() {
   list.querySelectorAll('.edit-op').forEach(b => b.onclick = () => openOperatoreModal(b.dataset.id));
   list.querySelectorAll('.del-op').forEach(b => b.onclick = () => openLicenziaModal(b.dataset.id));
   list.querySelectorAll('.reattiva-op').forEach(b => b.onclick = () => riattivaOperatore(b.dataset.id));
+}
+
+/* Esporta l'intero pool operatori (attivi ed ex) in un unico foglio Excel,
+   con tutte le informazioni anagrafiche/contrattuali più la data di
+   aggiunta al pool (valorizzata solo per gli operatori creati da quando
+   il campo esiste; per i precedenti la cella resta vuota). */
+function exportOperatoriXlsx() {
+  if (typeof XLSX === 'undefined') { showAlertModal('Libreria XLSX non caricata. Verifica la connessione internet e ricarica la pagina.'); return; }
+  const header = ['Nome', 'Email', 'Stato', 'Provincia', 'Regione', 'Tipo contratto', 'Data inizio rapporto', 'Data fine rapporto', 'Skill', 'Attestati e certificazioni', 'Data aggiunta al pool'];
+  const rows = [...state.operatori]
+    .sort((a, b) => (a.nome_esteso || '').localeCompare(b.nome_esteso || ''))
+    .map(op => {
+      const provInfo = provinciaInfo(op.provincia);
+      const stato = (op.licenziato || isOperatoreScaduto(op)) ? 'Ex collega' : 'Attivo';
+      return [
+        op.nome_esteso || '',
+        op.email || '',
+        stato,
+        provInfo ? provInfo.nome : '',
+        provInfo ? provInfo.regione : '',
+        op.contratto_tipo === 'determinato' ? 'A termine' : 'Tempo indeterminato',
+        op.data_inizio_rapporto ? fmtDate(op.data_inizio_rapporto) : '',
+        op.data_fine_rapporto ? fmtDate(op.data_fine_rapporto) : '',
+        (op.skills || []).join(', '),
+        (op.attestati || []).join(', '),
+        op.data_aggiunta ? fmtDate(op.data_aggiunta) : ''
+      ];
+    });
+  const ws = XLSX.utils.aoa_to_sheet([header, ...rows]);
+  ws['!cols'] = [{wch:28},{wch:26},{wch:12},{wch:18},{wch:16},{wch:16},{wch:14},{wch:14},{wch:35},{wch:35},{wch:16}];
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'Operatori');
+  const ts = new Date();
+  const pad = n => String(n).padStart(2, '0');
+  XLSX.writeFile(wb, `Pool_Operatori_${ts.getFullYear()}${pad(ts.getMonth()+1)}${pad(ts.getDate())}.xlsx`);
 }
 
 /* Rimuove lo stato "ex collega": azzera il flag manuale e, se il contratto
@@ -3073,7 +3155,7 @@ function renderCommesse() {
     const c = state.pipeline.find(p => p.id === b.dataset.cid);
     if (!c) return;
     const mesi = monthsBetween(c.inizio, c.fine);
-    openAddAllocazioneModal(c.progetto, { mesiSuggeriti: mesi, commessaPipeline: c, skillRichieste: c.skills, attestatiRichiesti: c.attestati_richiesti || [] });
+    openAddAllocazioneModal(c.progetto, { mesiSuggeriti: mesi, commessaPipeline: c, skillRichieste: c.skills, attestatiRichiesti: c.attestati_richiesti || [], provincia: c.provincia || '', regione: c.regione || '' });
   });
   // aggiungi risorsa su commessa attiva
   list.querySelectorAll('.add-risorsa-attiva').forEach(b => b.onclick = (e) => {
@@ -3084,7 +3166,8 @@ function renderCommesse() {
     state.staffing.filter(r => r.commessa === commessa).forEach(r => {
       r.mesi.forEach((v, i) => { if (Number(v) > 0) mesiAttivi.add(i); });
     });
-    openAddAllocazioneModal(commessa, { mesiSuggeriti: [...mesiAttivi].sort((a,b)=>a-b) });
+    const metaAttiva = state.commesse_attive_meta[commessa] || {};
+    openAddAllocazioneModal(commessa, { mesiSuggeriti: [...mesiAttivi].sort((a,b)=>a-b), provincia: metaAttiva.provincia || '', regione: metaAttiva.regione || '' });
   });
   // modifica dettagli commessa attiva
   list.querySelectorAll('.edit-attiva').forEach(b => b.onclick = (e) => {
@@ -3669,24 +3752,31 @@ function openAddAllocazioneModal(commessaNome, opts = {}) {
   const mesiSuggeriti = opts.mesiSuggeriti || [];
   const skillReq = opts.skillRichieste || [];
   const attReq = opts.attestatiRichiesti || [];
+  const provinciaCommessa = opts.provincia || opts.commessaPipeline?.provincia || '';
+  const regioneCommessa = opts.regione || opts.commessaPipeline?.regione || '';
+  const distanzaDi = op => distanzaLavorazione(regioneCommessa, provinciaCommessa, op.provincia);
 
-  // ordinamento operatori: chi ha skill+attestati richiesti prima, poi per saturazione crescente
+  // ordinamento operatori: prima i validi (hanno tutte le skill+attestati richiesti),
+  // poi - a parita' di validita' - chi e' della provincia/regione della commessa o il
+  // piu' vicino, infine in generale ordine alfabetico come criterio finale
+  const validoOp = op => (skillReq.length === 0 || skillReq.every(s => op.skills.includes(s)))
+    && (attReq.length === 0 || attReq.every(s => (op.attestati||[]).includes(s)));
   const ops = [...getOperatoriAttivi()].sort((a, b) => {
-    const hasSkillA = skillReq.length === 0 || skillReq.every(s => a.skills.includes(s));
-    const hasSkillB = skillReq.length === 0 || skillReq.every(s => b.skills.includes(s));
-    const hasAttA = attReq.length === 0 || attReq.every(s => (a.attestati||[]).includes(s));
-    const hasAttB = attReq.length === 0 || attReq.every(s => (b.attestati||[]).includes(s));
-    const scoreA = (hasSkillA?2:0) + (hasAttA?1:0);
-    const scoreB = (hasSkillB?2:0) + (hasAttB?1:0);
-    if (scoreA !== scoreB) return scoreB - scoreA;
-    const satA = mesiSuggeriti.length > 0 ? operatoreSatPeriodo(a, mesiSuggeriti) : a.saturazione.reduce((s,v)=>s+v,0)/12;
-    const satB = mesiSuggeriti.length > 0 ? operatoreSatPeriodo(b, mesiSuggeriti) : b.saturazione.reduce((s,v)=>s+v,0)/12;
-    return satA - satB;
+    const validoA = validoOp(a), validoB = validoOp(b);
+    if (validoA !== validoB) return validoA ? -1 : 1;
+    const distA = distanzaDi(a), distB = distanzaDi(b);
+    if (distA !== distB) {
+      if (distA === null) return 1;
+      if (distB === null) return -1;
+      if (distA !== distB) return distA - distB;
+    }
+    return a.nome_esteso.localeCompare(b.nome_esteso);
   });
 
   const opOptions = ops.map(op => {
     const hasAllSkill = skillReq.length === 0 || skillReq.every(s => op.skills.includes(s));
     const hasAllAtt = attReq.length === 0 || attReq.every(s => (op.attestati||[]).includes(s));
+    const valido = hasAllSkill && hasAllAtt;
     const sat = mesiSuggeriti.length > 0 ? operatoreSatPeriodo(op, mesiSuggeriti) : 0;
     const satTag = mesiSuggeriti.length > 0 ? ` [sat ${(sat*100).toFixed(0)}%]` : '';
     let tag = '';
@@ -3695,7 +3785,14 @@ function openAddAllocazioneModal(commessaNome, opts = {}) {
       else if (!hasAllSkill && !hasAllAtt) tag = ' ⚠⚠';
       else tag = ' ⚠';
     }
-    return `<option value="${op.id}">${op.nome_esteso}${tag}${satTag}</option>`;
+    const dist = distanzaDi(op);
+    const geoTag = dist === null ? '' : dist === 0 ? (provinciaCommessa ? ' 📍stessa provincia' : ' 📍stessa regione') : ` 📍~${Math.round(dist)}km`;
+    // Colore leggero: verde chi ha tutti i requisiti, ambra chi ne manca almeno uno
+    // (solo se sono stati richiesti skill/attestati — altrimenti nessuna distinzione).
+    const colorStyle = (skillReq.length > 0 || attReq.length > 0)
+      ? (valido ? 'color:#15803d;' : 'color:#b45309;')
+      : '';
+    return `<option value="${op.id}" style="${colorStyle}">${op.nome_esteso}${tag}${geoTag}${satTag}</option>`;
   }).join('');
 
   const mesiInputs = MESI.map((m, i) => {
@@ -4129,7 +4226,8 @@ function openModal(html) {
 function closeModal() { document.getElementById('modal-root').innerHTML = ''; }
 
 function openCommessaModal(id) {
-  const c = id ? state.pipeline.find(p => p.id === id) : { id:'p_new_'+Date.now(), cliente:'', progetto:'', industry: INDUSTRIES[0], inizio:'', fine:'', risorse_necessarie:1, skills:[], attestati_richiesti:[], email_referente:'' };
+  const c = id ? state.pipeline.find(p => p.id === id) : { id:'p_new_'+Date.now(), cliente:'', progetto:'', industry: INDUSTRIES[0], inizio:'', fine:'', risorse_necessarie:1, skills:[], attestati_richiesti:[], email_referente:'', regione:'', provincia:'' };
+  const regioneIniziale = c.regione || (c.provincia && provinciaInfo(c.provincia)?.regione) || '';
   const cAttReq = c.attestati_richiesti || [];
   const root = document.getElementById('modal-root');
   root.innerHTML = `<div class="modal-backdrop"><div class="bg-white rounded-lg shadow-xl w-full max-w-2xl mx-4 my-8 p-5 max-h-[90vh] overflow-y-auto">
@@ -4146,6 +4244,17 @@ function openCommessaModal(id) {
       <div class="grid grid-cols-2 gap-2">
         <label class="block text-xs"><span class="text-slate-600">Data inizio</span><input id="m-inizio" type="date" class="mt-0.5 w-full border border-slate-300 rounded px-2 py-1.5 text-sm" value="${c.inizio?c.inizio.slice(0,10):''}"></label>
         <label class="block text-xs"><span class="text-slate-600">Data fine</span><input id="m-fine" type="date" class="mt-0.5 w-full border border-slate-300 rounded px-2 py-1.5 text-sm" value="${c.fine?c.fine.slice(0,10):''}"></label>
+      </div>
+      <div class="grid grid-cols-2 gap-2">
+        <label class="block text-xs"><span class="text-slate-600">Regione di lavorazione <span class="text-slate-400 font-normal">(usata per suggerire gli operatori più vicini)</span></span>
+          <select id="m-regione" class="mt-0.5 w-full border border-slate-300 rounded px-2 py-1.5 text-sm">
+            <option value="">(non specificata)</option>
+            ${REGIONI_ITALIA.map(r => `<option value="${esc(r)}" ${r===regioneIniziale?'selected':''}>${esc(r)}</option>`).join('')}
+          </select>
+        </label>
+        <label class="block text-xs"><span class="text-slate-600">Provincia <span class="text-slate-400 font-normal">(facoltativa)</span></span>
+          <select id="m-provincia" class="mt-0.5 w-full border border-slate-300 rounded px-2 py-1.5 text-sm"></select>
+        </label>
       </div>
       <label class="block text-xs"><span class="text-slate-600">Risorse necessarie</span>
         <div class="flex items-center gap-2 mt-0.5">
@@ -4180,6 +4289,22 @@ function openCommessaModal(id) {
   </div></div>`;
   root.querySelector('.modal-backdrop').addEventListener('click', e => { if (e.target.classList.contains('modal-backdrop')) closeModal(); });
 
+  function rebuildProvinciaOptionsCommessa(preselect) {
+    const regioneSel = document.getElementById('m-regione').value;
+    const provSel = document.getElementById('m-provincia');
+    if (!regioneSel) {
+      provSel.innerHTML = '<option value="">(seleziona prima una regione)</option>';
+      provSel.disabled = true;
+      return;
+    }
+    provSel.disabled = false;
+    const value = preselect !== undefined ? preselect : provSel.value;
+    provSel.innerHTML = '<option value="">(non specificata)</option>' +
+      provinceDiRegione(regioneSel).map(p => `<option value="${p.sigla}" ${p.sigla===value?'selected':''}>${esc(p.nome)} (${p.sigla})</option>`).join('');
+  }
+  rebuildProvinciaOptionsCommessa(c.provincia || '');
+  document.getElementById('m-regione').onchange = () => rebuildProvinciaOptionsCommessa('');
+
   document.getElementById('m-att-all').onclick = () => document.querySelectorAll('.m-att').forEach(x => x.checked = true);
   document.getElementById('m-att-none').onclick = () => document.querySelectorAll('.m-att').forEach(x => x.checked = false);
   document.getElementById('m-btn-fabbisogno').onclick = () => {
@@ -4202,6 +4327,8 @@ function openCommessaModal(id) {
       industry: document.getElementById('m-industry').value,
       inizio: document.getElementById('m-inizio').value,
       fine: document.getElementById('m-fine').value,
+      regione: document.getElementById('m-regione').value,
+      provincia: document.getElementById('m-provincia').value,
       risorse_necessarie: parseInt(document.getElementById('m-risorse').value)||0,
       skills: [...document.querySelectorAll('.m-skill:checked')].map(x => x.value),
       attestati_richiesti: [...document.querySelectorAll('.m-att:checked')].map(x => x.value),
@@ -4220,7 +4347,7 @@ function openCommessaModal(id) {
 */
 function openFabbisognoModal(commessaId, commessaNome) {
   // Recupera oggetto commessa e fabbisogno corrente
-  let tipoCommessa, nomeDisplay, fabbisognoCorrente, inizio, fine, attestatiRichiesti;
+  let tipoCommessa, nomeDisplay, fabbisognoCorrente, inizio, fine, attestatiRichiesti, provinciaCommessa, regioneCommessa;
   if (commessaId) {
     tipoCommessa = 'pipeline';
     const c = state.pipeline.find(p => p.id === commessaId);
@@ -4229,6 +4356,8 @@ function openFabbisognoModal(commessaId, commessaNome) {
     fabbisognoCorrente = c.fabbisogno_dettagliato || [];
     inizio = c.inizio; fine = c.fine;
     attestatiRichiesti = c.attestati_richiesti || [];
+    provinciaCommessa = c.provincia || '';
+    regioneCommessa = c.regione || '';
   } else {
     tipoCommessa = 'attiva';
     const m = state.commesse_attive_meta[commessaNome] || {};
@@ -4236,6 +4365,8 @@ function openFabbisognoModal(commessaId, commessaNome) {
     fabbisognoCorrente = m.fabbisogno_dettagliato || [];
     inizio = m.inizio; fine = m.fine;
     attestatiRichiesti = m.attestati_richiesti || [];
+    provinciaCommessa = m.provincia || '';
+    regioneCommessa = m.regione || '';
   }
 
   // Clona fabbisogno in locale per editing
@@ -4252,13 +4383,24 @@ function openFabbisognoModal(commessaId, commessaNome) {
       const skillMancanti = riga.skills.filter(s => !op.skills.includes(s));
       const attestatiMancanti = attestatiRichiesti.filter(a => !(op.attestati||[]).includes(a));
       const matchCompleto = matchSkill && attestatiMancanti.length === 0;
-      return { op, matchSkill, matchCompleto, sat, skillMancanti, attestatiMancanti };
+      // null = ne' regione ne' provincia della commessa (o provincia dell'operatore) note,
+      // nessun criterio di vicinanza applicabile
+      const distanza = distanzaLavorazione(regioneCommessa, provinciaCommessa, op.provincia);
+      return { op, matchSkill, matchCompleto, sat, skillMancanti, attestatiMancanti, distanza };
     })
     .filter(x => x.sat < 1.0 || x.matchCompleto) // mostra anche saturi se idonei al 100% (skill+attestati)
     .sort((a, b) => {
+      // prima i validi (tutte le skill+attestati richiesti)
       if (a.matchCompleto !== b.matchCompleto) return a.matchCompleto ? -1 : 1;
-      if (a.matchSkill !== b.matchSkill) return a.matchSkill ? -1 : 1;
-      return a.sat - b.sat;
+      // poi chi e' nella stessa provincia/regione (o comunque piu' vicino) viene prima;
+      // chi ha provincia sconosciuta va dopo chi e' geolocalizzato ma lontano
+      if (a.distanza !== b.distanza) {
+        if (a.distanza === null) return 1;
+        if (b.distanza === null) return -1;
+        if (a.distanza !== b.distanza) return a.distanza - b.distanza;
+      }
+      // infine, in generale, ordine alfabetico
+      return a.op.nome_esteso.localeCompare(b.op.nome_esteso);
     })
     .slice(0, 6);
   }
@@ -4275,7 +4417,7 @@ function openFabbisognoModal(commessaId, commessaNome) {
 
       const candidatiHtml = candidati.length === 0
         ? `<div class="text-[10px] text-red-600 mt-1 pl-1">⚠ Nessun operatore disponibile — valuta assunzione</div>`
-        : candidati.map(({op, matchSkill, sat, skillMancanti, attestatiMancanti}) => {
+        : candidati.map(({op, matchSkill, matchCompleto, sat, skillMancanti, attestatiMancanti, distanza}) => {
             const satPct = Math.round(sat*100);
             const satCls = sat < 0.5 ? 'text-emerald-700' : sat < 0.85 ? 'text-amber-600' : 'text-red-600';
             const skillBadge = matchSkill
@@ -4284,9 +4426,17 @@ function openFabbisognoModal(commessaId, commessaNome) {
             const attBadge = attestatiMancanti.length > 0
               ? `<span class="text-[9px] bg-purple-100 text-purple-700 px-1 rounded" title="Attestati richiesti dalla commessa">manca attestato: ${attestatiMancanti.join(', ')}</span>`
               : '';
-            return `<div class="flex items-center justify-between px-2 py-1 bg-white rounded border border-slate-100 text-[10px]">
+            const geoBadge = distanza === null ? '' : distanza === 0
+              ? (provinciaCommessa
+                  ? `<span class="text-[9px] bg-sky-100 text-sky-700 px-1 rounded" title="Stessa provincia della commessa">📍 stessa provincia</span>`
+                  : `<span class="text-[9px] bg-sky-100 text-sky-700 px-1 rounded" title="Stessa regione della commessa">📍 stessa regione</span>`)
+              : `<span class="text-[9px] bg-sky-50 text-sky-700 px-1 rounded" title="Distanza dalla zona di lavorazione della commessa">📍 ~${Math.round(distanza)} km</span>`;
+            // Colore leggero del riquadro: verde chi ha tutti i requisiti, ambra chi no —
+            // per distinguerli a colpo d'occhio senza appesantire la lista.
+            const cardCls = matchCompleto ? 'bg-emerald-50/60 border-emerald-200' : 'bg-amber-50/60 border-amber-200';
+            return `<div class="flex items-center justify-between px-2 py-1 ${cardCls} rounded border text-[10px]">
               <span class="font-medium text-slate-800">${esc(op.nome_esteso)}</span>
-              <span class="flex items-center gap-1 flex-wrap justify-end">${skillBadge} ${attBadge} <span class="${satCls} font-medium">${satPct}% sat</span></span>
+              <span class="flex items-center gap-1 flex-wrap justify-end">${skillBadge} ${attBadge} ${geoBadge} <span class="${satCls} font-medium">${satPct}% sat</span></span>
             </div>`;
           }).join('');
 
@@ -4428,7 +4578,7 @@ async function promuoviCommessa(id) {
 }
 
 function openOperatoreModal(id) {
-  const op = id ? state.operatori.find(o => o.id === id) : { id:'op_new_'+Date.now(), nome_breve:'', nome_esteso:'', email:'', provincia:'', contratto_tipo:'indeterminato', data_inizio_rapporto:'', data_fine_rapporto:'', skills:[], attestati:[], alloc_mensile:new Array(12).fill(0) };
+  const op = id ? state.operatori.find(o => o.id === id) : { id:'op_new_'+Date.now(), nome_breve:'', nome_esteso:'', email:'', provincia:'', contratto_tipo:'indeterminato', data_inizio_rapporto:'', data_fine_rapporto:'', skills:[], attestati:[], alloc_mensile:new Array(12).fill(0), data_aggiunta: new Date().toISOString().slice(0,10) };
   const opAtt = op.attestati || [];
   const provinciaOptions = REGIONI_ITALIA.map(r => `<optgroup label="${esc(r)}">${
     provinceDiRegione(r).map(p => `<option value="${p.sigla}" ${op.provincia===p.sigla?'selected':''}>${esc(p.nome)} (${p.sigla})</option>`).join('')
@@ -5573,6 +5723,8 @@ function getCommessaAttivaMeta(nome) {
     fine: stored.fine||(u>=0?`${ANNO}-${pad2(u+1)}-${pad2(lday)}`:''),
     note: stored.note||'',
     email_referente: stored.email_referente||'',
+    regione: stored.regione||'',
+    provincia: stored.provincia||'',
     skills: stored.skills||[],
     attestati_richiesti: stored.attestati_richiesti||[],
     risorse_necessarie: stored.risorse_necessarie !== undefined ? stored.risorse_necessarie : null,
@@ -5583,6 +5735,7 @@ function getCommessaAttivaMeta(nome) {
 
 function openCommessaAttivaModal(nome) {
   const m = getCommessaAttivaMeta(nome);
+  const regioneIniziale = m.regione || (m.provincia && provinciaInfo(m.provincia)?.regione) || '';
   const nRis = new Set(state.staffing.filter(r=>r.commessa===nome).map(r=>r.risorsa)).size;
   const root = document.getElementById('modal-root');
   root.innerHTML = `<div class="modal-backdrop"><div class="bg-white rounded-lg shadow-xl w-full max-w-2xl mx-4 my-8 p-5 max-h-[90vh] overflow-y-auto">
@@ -5610,6 +5763,17 @@ function openCommessaAttivaModal(nome) {
         <textarea id="ma-note" rows="3" class="mt-0.5 w-full border border-slate-300 rounded px-2 py-1.5 text-sm" placeholder="Es: Proroga al 31/12. Variante aggiunta area 5. Note interne...">${(m.note||'').replace(/</g,'&lt;')}</textarea></label>
       <label class="block text-xs"><span class="text-slate-600">Email referente tecnico <span class="text-red-500">*</span> <span class="text-slate-400 font-normal">(una o più, separate da virgola)</span></span>
         <input id="ma-email-ref" type="text" placeholder="mario.rossi@cliente.it, luigi.bianchi@cliente.it" class="mt-0.5 w-full border border-slate-300 rounded px-2 py-1.5 text-sm" value="${(m.email_referente||'').replace(/"/g,'&quot;')}"></label>
+      <div class="grid grid-cols-2 gap-2">
+        <label class="block text-xs"><span class="text-slate-600">Regione di lavorazione <span class="text-slate-400 font-normal">(usata per suggerire gli operatori più vicini)</span></span>
+          <select id="ma-regione" class="mt-0.5 w-full border border-slate-300 rounded px-2 py-1.5 text-sm">
+            <option value="">(non specificata)</option>
+            ${REGIONI_ITALIA.map(r => `<option value="${esc(r)}" ${r===regioneIniziale?'selected':''}>${esc(r)}</option>`).join('')}
+          </select>
+        </label>
+        <label class="block text-xs"><span class="text-slate-600">Provincia <span class="text-slate-400 font-normal">(facoltativa)</span></span>
+          <select id="ma-provincia" class="mt-0.5 w-full border border-slate-300 rounded px-2 py-1.5 text-sm"></select>
+        </label>
+      </div>
       <div>
         <div class="text-xs font-medium text-slate-600 mb-1">Fabbisogno risorse</div>
         <div class="flex items-center gap-3 p-2 bg-slate-50 rounded border border-slate-200">
@@ -5664,6 +5828,21 @@ function openCommessaAttivaModal(nome) {
     </div>
   </div></div>`;
   root.querySelector('.modal-backdrop').addEventListener('click', e => { if(e.target.classList.contains('modal-backdrop')) closeModal(); });
+  function rebuildProvinciaOptionsCommessaAttiva(preselect) {
+    const regioneSel = document.getElementById('ma-regione').value;
+    const provSel = document.getElementById('ma-provincia');
+    if (!regioneSel) {
+      provSel.innerHTML = '<option value="">(seleziona prima una regione)</option>';
+      provSel.disabled = true;
+      return;
+    }
+    provSel.disabled = false;
+    const value = preselect !== undefined ? preselect : provSel.value;
+    provSel.innerHTML = '<option value="">(non specificata)</option>' +
+      provinceDiRegione(regioneSel).map(p => `<option value="${p.sigla}" ${p.sigla===value?'selected':''}>${esc(p.nome)} (${p.sigla})</option>`).join('');
+  }
+  rebuildProvinciaOptionsCommessaAttiva(m.provincia || '');
+  document.getElementById('ma-regione').onchange = () => rebuildProvinciaOptionsCommessaAttiva('');
   document.getElementById('ma-att-all').onclick = () => document.querySelectorAll('.ma-at').forEach(x => x.checked=true);
   document.getElementById('ma-att-none').onclick = () => document.querySelectorAll('.ma-at').forEach(x => x.checked=false);
   document.getElementById('ma-btn-fabbisogno').onclick = () => {
@@ -5693,6 +5872,8 @@ function openCommessaAttivaModal(nome) {
       fine: document.getElementById('ma-fin').value,
       note: document.getElementById('ma-note').value,
       email_referente: emailRefList.join(', '),
+      regione: document.getElementById('ma-regione').value,
+      provincia: document.getElementById('ma-provincia').value,
       skills: [...document.querySelectorAll('.ma-sk:checked')].map(x=>x.value),
       attestati_richiesti: [...document.querySelectorAll('.ma-at:checked')].map(x=>x.value),
       risorse_necessarie: risDichiarate,
@@ -6116,6 +6297,8 @@ function apriDettaglioMeseCommessa(ev, commessaEnc, meseIdx) {
   };
 
   // Helper: costruisce lista candidati filtrati per skill richieste
+  const provinciaCommessa = meta.provincia || '';
+  const regioneCommessa = meta.regione || '';
   function buildCandidati(skillRichieste) {
     const candidati = [];
     const tuttiNomiStaffing = new Set(ass.map(a => a.risorsa));
@@ -6128,7 +6311,8 @@ function apriDettaglioMeseCommessa(ev, commessaEnc, meseIdx) {
       const skillMancanti = skillRichieste.filter(s => !skills.includes(s));
       const sat = satOpMese(nome);
       const ggDisp = Math.round(gl * Math.max(0, 1 - sat));
-      candidati.push({ nome, sat, ggDisp, tipo: 'già_su_commessa', skills, matchSkill, skillMancanti });
+      const distanza = distanzaLavorazione(regioneCommessa, provinciaCommessa, opObj?.provincia);
+      candidati.push({ nome, sat, ggDisp, tipo: 'già_su_commessa', skills, matchSkill, skillMancanti, distanza });
     });
     // Dal pool, non sulla commessa
     getOperatoriAttivi()
@@ -6139,13 +6323,19 @@ function apriDettaglioMeseCommessa(ev, commessaEnc, meseIdx) {
         const skillMancanti = skillRichieste.filter(s => !op.skills.includes(s));
         const sat = satOpMese(op.nome_esteso);
         const ggDisp = Math.round(gl * Math.max(0, 1 - sat));
-        if (ggDisp > 0) candidati.push({ nome: op.nome_esteso, sat, ggDisp, tipo: 'disponibile', skills: op.skills, matchSkill, skillMancanti });
+        const distanza = distanzaLavorazione(regioneCommessa, provinciaCommessa, op.provincia);
+        if (ggDisp > 0) candidati.push({ nome: op.nome_esteso, sat, ggDisp, tipo: 'disponibile', skills: op.skills, matchSkill, skillMancanti, distanza });
       });
-    // Ordina: prima match skill esatto, poi già su commessa, poi sat crescente
+    // Ordina: prima i validi (match skill), poi la vicinanza geografica alla commessa,
+    // infine in generale ordine alfabetico come criterio finale
     candidati.sort((a, b) => {
       if (a.matchSkill !== b.matchSkill) return a.matchSkill ? -1 : 1;
-      if (a.tipo !== b.tipo) return a.tipo === 'già_su_commessa' ? -1 : 1;
-      return a.sat - b.sat;
+      if (a.distanza !== b.distanza) {
+        if (a.distanza === null) return 1;
+        if (b.distanza === null) return -1;
+        if (a.distanza !== b.distanza) return a.distanza - b.distanza;
+      }
+      return a.nome.localeCompare(b.nome);
     });
     return candidati;
   }
@@ -6157,10 +6347,17 @@ function apriDettaglioMeseCommessa(ev, commessaEnc, meseIdx) {
     const matchTag = c.matchSkill
       ? '<span class="text-[9px] bg-emerald-100 text-emerald-700 px-1 rounded">✓ skill</span>'
       : `<span class="text-[9px] bg-red-100 text-red-600 px-1 rounded">manca: ${c.skillMancanti.join(', ')}</span>`;
+    const geoTag = c.distanza === null ? '' : c.distanza === 0
+      ? (provinciaCommessa
+          ? '<span class="text-[9px] bg-sky-100 text-sky-700 px-1 rounded">📍 stessa provincia</span>'
+          : '<span class="text-[9px] bg-sky-100 text-sky-700 px-1 rounded">📍 stessa regione</span>')
+      : `<span class="text-[9px] bg-sky-50 text-sky-700 px-1 rounded">📍 ~${Math.round(c.distanza)} km</span>`;
     const skillsHtml = c.skills.length ? c.skills.map(s => `<span class="skill-badge">${s}</span>`).join('') : '';
-    return `<div class="p-2 bg-red-50 border border-red-200 rounded text-xs">
+    // Colore leggero del riquadro: verde chi ha la skill richiesta, ambra chi no.
+    const cardCls = c.matchSkill ? 'bg-emerald-50/60 border-emerald-200' : 'bg-amber-50/60 border-amber-200';
+    return `<div class="p-2 ${cardCls} border rounded text-xs">
       <div class="flex items-center justify-between mb-0.5">
-        <span class="font-medium text-slate-800">${esc(c.nome)} ${tipoTag} ${matchTag}</span>
+        <span class="font-medium text-slate-800">${esc(c.nome)} ${tipoTag} ${matchTag} ${geoTag}</span>
         <span class="text-slate-500">${(c.sat*100).toFixed(0)}% sat · ~${c.ggDisp} gg</span>
       </div>
       ${skillsHtml ? `<div class="text-[10px] mt-0.5">${skillsHtml}</div>` : ''}
@@ -6415,6 +6612,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   if (btnExpandAll) btnExpandAll.onclick = () => document.querySelectorAll('.commessa-card').forEach(d => d.open = true);
   if (btnCollapseAll) btnCollapseAll.onclick = () => document.querySelectorAll('.commessa-card').forEach(d => d.open = false);
   document.getElementById('btn-add-op').onclick = () => openOperatoreModal(null);
+  document.getElementById('btn-export-op').onclick = () => exportOperatoriXlsx();
   document.getElementById('op-tab-pool').onclick = () => switchOpTab('pool');
   document.getElementById('op-tab-email').onclick = () => switchOpTab('email');
   document.getElementById('op-tab-vista').onclick = () => { if (_vistaOpId) switchOpTab('vista'); };
@@ -7348,6 +7546,15 @@ function pwOpenOpModal(cidx, sidx, oidx) {
   const nomeCorrente = op ? (op.nome || '') : '';
   const commessa     = bc.commessa || '';
 
+  // Provincia di lavorazione della commessa (se impostata), per suggerire
+  // in cima chi e' della stessa zona o il piu' vicino.
+  const provinciaCommessa = (state.commesse_attive_meta[commessa] || {}).provincia
+    || (state.pipeline.find(p => p.progetto === commessa) || {}).provincia
+    || '';
+  const regioneCommessa = (state.commesse_attive_meta[commessa] || {}).regione
+    || (state.pipeline.find(p => p.progetto === commessa) || {}).regione
+    || '';
+
   // Prendi tutti gli operatori presenti in state.operatori (lista completa)
   // più quelli dello staffing per questa commessa nel mese corrente
   const monday = isoWeekToMonday(pwAnno, pwWeek);
@@ -7452,10 +7659,27 @@ function pwOpenOpModal(cidx, sidx, oidx) {
       return;
     }
 
-    // Ordina: liberi → assegnati → ferie
+    // Ordina per precedenza: prima i liberi e già assegnati alla commessa (staffing del
+    // mese), poi i liberi ma non assegnati alla commessa (per vicinanza alla zona di
+    // lavorazione), poi gli assegnati altrove questa settimana, infine chi e' in ferie;
+    // in generale, ordine alfabetico come criterio finale.
+    const distanzaDi = nome => distanzaLavorazione(regioneCommessa, provinciaCommessa, opByNome[nome]?.provincia);
+    const rangoDi = nome => {
+      const stato = pwStatoOperatore(nome, cidx, sidx, oidx);
+      if (stato === 'libero') return fromStaffing.has(nome) ? 0 : 1;
+      if (stato === 'assegnato') return 2;
+      return 3; // ferie
+    };
     const ordinati = [...filtrati].sort((a, b) => {
-      const ord = { libero: 0, assegnato: 1, ferie: 2 };
-      return (ord[pwStatoOperatore(a, cidx, sidx, oidx)] || 0) - (ord[pwStatoOperatore(b, cidx, sidx, oidx)] || 0);
+      const dRango = rangoDi(a) - rangoDi(b);
+      if (dRango !== 0) return dRango;
+      const da = distanzaDi(a), db = distanzaDi(b);
+      if (da !== db) {
+        if (da === null) return 1;
+        if (db === null) return -1;
+        if (da !== db) return da - db;
+      }
+      return a.localeCompare(b);
     });
 
     ordinati.forEach(nome => {

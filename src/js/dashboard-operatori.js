@@ -107,9 +107,8 @@ function renderOperatori() {
     return true;
   });
 
-  // ordina: in modo normale liberi prima/saturi dopo, in modo ex per nome
-  if (modoEx) ops.sort((a,b) => (a.nome_esteso||'').localeCompare(b.nome_esteso||''));
-  else ops.sort((a,b) => operatoreSatPeriodo(a, [mese0, meseProx]) - operatoreSatPeriodo(b, [mese0, meseProx]));
+  // ordina sempre alfabeticamente per nome, per una visione più chiara e ordinata
+  ops.sort((a,b) => (a.nome_esteso||'').localeCompare(b.nome_esteso||''));
 
   const totEx = state.operatori.filter(op => op.licenziato || isOperatoreScaduto(op)).length;
   document.getElementById('op-count').textContent = modoEx ? `(${ops.length} ex colleghi)` : `(${ops.length}/${getOperatoriAttivi().length})`;
@@ -190,6 +189,41 @@ function renderOperatori() {
   list.querySelectorAll('.edit-op').forEach(b => b.onclick = () => openOperatoreModal(b.dataset.id));
   list.querySelectorAll('.del-op').forEach(b => b.onclick = () => openLicenziaModal(b.dataset.id));
   list.querySelectorAll('.reattiva-op').forEach(b => b.onclick = () => riattivaOperatore(b.dataset.id));
+}
+
+/* Esporta l'intero pool operatori (attivi ed ex) in un unico foglio Excel,
+   con tutte le informazioni anagrafiche/contrattuali più la data di
+   aggiunta al pool (valorizzata solo per gli operatori creati da quando
+   il campo esiste; per i precedenti la cella resta vuota). */
+function exportOperatoriXlsx() {
+  if (typeof XLSX === 'undefined') { showAlertModal('Libreria XLSX non caricata. Verifica la connessione internet e ricarica la pagina.'); return; }
+  const header = ['Nome', 'Email', 'Stato', 'Provincia', 'Regione', 'Tipo contratto', 'Data inizio rapporto', 'Data fine rapporto', 'Skill', 'Attestati e certificazioni', 'Data aggiunta al pool'];
+  const rows = [...state.operatori]
+    .sort((a, b) => (a.nome_esteso || '').localeCompare(b.nome_esteso || ''))
+    .map(op => {
+      const provInfo = provinciaInfo(op.provincia);
+      const stato = (op.licenziato || isOperatoreScaduto(op)) ? 'Ex collega' : 'Attivo';
+      return [
+        op.nome_esteso || '',
+        op.email || '',
+        stato,
+        provInfo ? provInfo.nome : '',
+        provInfo ? provInfo.regione : '',
+        op.contratto_tipo === 'determinato' ? 'A termine' : 'Tempo indeterminato',
+        op.data_inizio_rapporto ? fmtDate(op.data_inizio_rapporto) : '',
+        op.data_fine_rapporto ? fmtDate(op.data_fine_rapporto) : '',
+        (op.skills || []).join(', '),
+        (op.attestati || []).join(', '),
+        op.data_aggiunta ? fmtDate(op.data_aggiunta) : ''
+      ];
+    });
+  const ws = XLSX.utils.aoa_to_sheet([header, ...rows]);
+  ws['!cols'] = [{wch:28},{wch:26},{wch:12},{wch:18},{wch:16},{wch:16},{wch:14},{wch:14},{wch:35},{wch:35},{wch:16}];
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'Operatori');
+  const ts = new Date();
+  const pad = n => String(n).padStart(2, '0');
+  XLSX.writeFile(wb, `Pool_Operatori_${ts.getFullYear()}${pad(ts.getMonth()+1)}${pad(ts.getDate())}.xlsx`);
 }
 
 /* Rimuove lo stato "ex collega": azzera il flag manuale e, se il contratto

@@ -11,6 +11,15 @@ function pwOpenOpModal(cidx, sidx, oidx) {
   const nomeCorrente = op ? (op.nome || '') : '';
   const commessa     = bc.commessa || '';
 
+  // Provincia di lavorazione della commessa (se impostata), per suggerire
+  // in cima chi e' della stessa zona o il piu' vicino.
+  const provinciaCommessa = (state.commesse_attive_meta[commessa] || {}).provincia
+    || (state.pipeline.find(p => p.progetto === commessa) || {}).provincia
+    || '';
+  const regioneCommessa = (state.commesse_attive_meta[commessa] || {}).regione
+    || (state.pipeline.find(p => p.progetto === commessa) || {}).regione
+    || '';
+
   // Prendi tutti gli operatori presenti in state.operatori (lista completa)
   // più quelli dello staffing per questa commessa nel mese corrente
   const monday = isoWeekToMonday(pwAnno, pwWeek);
@@ -115,10 +124,27 @@ function pwOpenOpModal(cidx, sidx, oidx) {
       return;
     }
 
-    // Ordina: liberi → assegnati → ferie
+    // Ordina per precedenza: prima i liberi e già assegnati alla commessa (staffing del
+    // mese), poi i liberi ma non assegnati alla commessa (per vicinanza alla zona di
+    // lavorazione), poi gli assegnati altrove questa settimana, infine chi e' in ferie;
+    // in generale, ordine alfabetico come criterio finale.
+    const distanzaDi = nome => distanzaLavorazione(regioneCommessa, provinciaCommessa, opByNome[nome]?.provincia);
+    const rangoDi = nome => {
+      const stato = pwStatoOperatore(nome, cidx, sidx, oidx);
+      if (stato === 'libero') return fromStaffing.has(nome) ? 0 : 1;
+      if (stato === 'assegnato') return 2;
+      return 3; // ferie
+    };
     const ordinati = [...filtrati].sort((a, b) => {
-      const ord = { libero: 0, assegnato: 1, ferie: 2 };
-      return (ord[pwStatoOperatore(a, cidx, sidx, oidx)] || 0) - (ord[pwStatoOperatore(b, cidx, sidx, oidx)] || 0);
+      const dRango = rangoDi(a) - rangoDi(b);
+      if (dRango !== 0) return dRango;
+      const da = distanzaDi(a), db = distanzaDi(b);
+      if (da !== db) {
+        if (da === null) return 1;
+        if (db === null) return -1;
+        if (da !== db) return da - db;
+      }
+      return a.localeCompare(b);
     });
 
     ordinati.forEach(nome => {

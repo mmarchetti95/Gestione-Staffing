@@ -16,6 +16,8 @@ function getCommessaAttivaMeta(nome) {
     fine: stored.fine||(u>=0?`${ANNO}-${pad2(u+1)}-${pad2(lday)}`:''),
     note: stored.note||'',
     email_referente: stored.email_referente||'',
+    regione: stored.regione||'',
+    provincia: stored.provincia||'',
     skills: stored.skills||[],
     attestati_richiesti: stored.attestati_richiesti||[],
     risorse_necessarie: stored.risorse_necessarie !== undefined ? stored.risorse_necessarie : null,
@@ -26,6 +28,7 @@ function getCommessaAttivaMeta(nome) {
 
 function openCommessaAttivaModal(nome) {
   const m = getCommessaAttivaMeta(nome);
+  const regioneIniziale = m.regione || (m.provincia && provinciaInfo(m.provincia)?.regione) || '';
   const nRis = new Set(state.staffing.filter(r=>r.commessa===nome).map(r=>r.risorsa)).size;
   const root = document.getElementById('modal-root');
   root.innerHTML = `<div class="modal-backdrop"><div class="bg-white rounded-lg shadow-xl w-full max-w-2xl mx-4 my-8 p-5 max-h-[90vh] overflow-y-auto">
@@ -53,6 +56,17 @@ function openCommessaAttivaModal(nome) {
         <textarea id="ma-note" rows="3" class="mt-0.5 w-full border border-slate-300 rounded px-2 py-1.5 text-sm" placeholder="Es: Proroga al 31/12. Variante aggiunta area 5. Note interne...">${(m.note||'').replace(/</g,'&lt;')}</textarea></label>
       <label class="block text-xs"><span class="text-slate-600">Email referente tecnico <span class="text-red-500">*</span> <span class="text-slate-400 font-normal">(una o più, separate da virgola)</span></span>
         <input id="ma-email-ref" type="text" placeholder="mario.rossi@cliente.it, luigi.bianchi@cliente.it" class="mt-0.5 w-full border border-slate-300 rounded px-2 py-1.5 text-sm" value="${(m.email_referente||'').replace(/"/g,'&quot;')}"></label>
+      <div class="grid grid-cols-2 gap-2">
+        <label class="block text-xs"><span class="text-slate-600">Regione di lavorazione <span class="text-slate-400 font-normal">(usata per suggerire gli operatori più vicini)</span></span>
+          <select id="ma-regione" class="mt-0.5 w-full border border-slate-300 rounded px-2 py-1.5 text-sm">
+            <option value="">(non specificata)</option>
+            ${REGIONI_ITALIA.map(r => `<option value="${esc(r)}" ${r===regioneIniziale?'selected':''}>${esc(r)}</option>`).join('')}
+          </select>
+        </label>
+        <label class="block text-xs"><span class="text-slate-600">Provincia <span class="text-slate-400 font-normal">(facoltativa)</span></span>
+          <select id="ma-provincia" class="mt-0.5 w-full border border-slate-300 rounded px-2 py-1.5 text-sm"></select>
+        </label>
+      </div>
       <div>
         <div class="text-xs font-medium text-slate-600 mb-1">Fabbisogno risorse</div>
         <div class="flex items-center gap-3 p-2 bg-slate-50 rounded border border-slate-200">
@@ -107,6 +121,21 @@ function openCommessaAttivaModal(nome) {
     </div>
   </div></div>`;
   root.querySelector('.modal-backdrop').addEventListener('click', e => { if(e.target.classList.contains('modal-backdrop')) closeModal(); });
+  function rebuildProvinciaOptionsCommessaAttiva(preselect) {
+    const regioneSel = document.getElementById('ma-regione').value;
+    const provSel = document.getElementById('ma-provincia');
+    if (!regioneSel) {
+      provSel.innerHTML = '<option value="">(seleziona prima una regione)</option>';
+      provSel.disabled = true;
+      return;
+    }
+    provSel.disabled = false;
+    const value = preselect !== undefined ? preselect : provSel.value;
+    provSel.innerHTML = '<option value="">(non specificata)</option>' +
+      provinceDiRegione(regioneSel).map(p => `<option value="${p.sigla}" ${p.sigla===value?'selected':''}>${esc(p.nome)} (${p.sigla})</option>`).join('');
+  }
+  rebuildProvinciaOptionsCommessaAttiva(m.provincia || '');
+  document.getElementById('ma-regione').onchange = () => rebuildProvinciaOptionsCommessaAttiva('');
   document.getElementById('ma-att-all').onclick = () => document.querySelectorAll('.ma-at').forEach(x => x.checked=true);
   document.getElementById('ma-att-none').onclick = () => document.querySelectorAll('.ma-at').forEach(x => x.checked=false);
   document.getElementById('ma-btn-fabbisogno').onclick = () => {
@@ -136,6 +165,8 @@ function openCommessaAttivaModal(nome) {
       fine: document.getElementById('ma-fin').value,
       note: document.getElementById('ma-note').value,
       email_referente: emailRefList.join(', '),
+      regione: document.getElementById('ma-regione').value,
+      provincia: document.getElementById('ma-provincia').value,
       skills: [...document.querySelectorAll('.ma-sk:checked')].map(x=>x.value),
       attestati_richiesti: [...document.querySelectorAll('.ma-at:checked')].map(x=>x.value),
       risorse_necessarie: risDichiarate,

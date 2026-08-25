@@ -7,7 +7,8 @@ function openModal(html) {
 function closeModal() { document.getElementById('modal-root').innerHTML = ''; }
 
 function openCommessaModal(id) {
-  const c = id ? state.pipeline.find(p => p.id === id) : { id:'p_new_'+Date.now(), cliente:'', progetto:'', industry: INDUSTRIES[0], inizio:'', fine:'', risorse_necessarie:1, skills:[], attestati_richiesti:[], email_referente:'' };
+  const c = id ? state.pipeline.find(p => p.id === id) : { id:'p_new_'+Date.now(), cliente:'', progetto:'', industry: INDUSTRIES[0], inizio:'', fine:'', risorse_necessarie:1, skills:[], attestati_richiesti:[], email_referente:'', regione:'', provincia:'' };
+  const regioneIniziale = c.regione || (c.provincia && provinciaInfo(c.provincia)?.regione) || '';
   const cAttReq = c.attestati_richiesti || [];
   const root = document.getElementById('modal-root');
   root.innerHTML = `<div class="modal-backdrop"><div class="bg-white rounded-lg shadow-xl w-full max-w-2xl mx-4 my-8 p-5 max-h-[90vh] overflow-y-auto">
@@ -24,6 +25,17 @@ function openCommessaModal(id) {
       <div class="grid grid-cols-2 gap-2">
         <label class="block text-xs"><span class="text-slate-600">Data inizio</span><input id="m-inizio" type="date" class="mt-0.5 w-full border border-slate-300 rounded px-2 py-1.5 text-sm" value="${c.inizio?c.inizio.slice(0,10):''}"></label>
         <label class="block text-xs"><span class="text-slate-600">Data fine</span><input id="m-fine" type="date" class="mt-0.5 w-full border border-slate-300 rounded px-2 py-1.5 text-sm" value="${c.fine?c.fine.slice(0,10):''}"></label>
+      </div>
+      <div class="grid grid-cols-2 gap-2">
+        <label class="block text-xs"><span class="text-slate-600">Regione di lavorazione <span class="text-slate-400 font-normal">(usata per suggerire gli operatori più vicini)</span></span>
+          <select id="m-regione" class="mt-0.5 w-full border border-slate-300 rounded px-2 py-1.5 text-sm">
+            <option value="">(non specificata)</option>
+            ${REGIONI_ITALIA.map(r => `<option value="${esc(r)}" ${r===regioneIniziale?'selected':''}>${esc(r)}</option>`).join('')}
+          </select>
+        </label>
+        <label class="block text-xs"><span class="text-slate-600">Provincia <span class="text-slate-400 font-normal">(facoltativa)</span></span>
+          <select id="m-provincia" class="mt-0.5 w-full border border-slate-300 rounded px-2 py-1.5 text-sm"></select>
+        </label>
       </div>
       <label class="block text-xs"><span class="text-slate-600">Risorse necessarie</span>
         <div class="flex items-center gap-2 mt-0.5">
@@ -58,6 +70,22 @@ function openCommessaModal(id) {
   </div></div>`;
   root.querySelector('.modal-backdrop').addEventListener('click', e => { if (e.target.classList.contains('modal-backdrop')) closeModal(); });
 
+  function rebuildProvinciaOptionsCommessa(preselect) {
+    const regioneSel = document.getElementById('m-regione').value;
+    const provSel = document.getElementById('m-provincia');
+    if (!regioneSel) {
+      provSel.innerHTML = '<option value="">(seleziona prima una regione)</option>';
+      provSel.disabled = true;
+      return;
+    }
+    provSel.disabled = false;
+    const value = preselect !== undefined ? preselect : provSel.value;
+    provSel.innerHTML = '<option value="">(non specificata)</option>' +
+      provinceDiRegione(regioneSel).map(p => `<option value="${p.sigla}" ${p.sigla===value?'selected':''}>${esc(p.nome)} (${p.sigla})</option>`).join('');
+  }
+  rebuildProvinciaOptionsCommessa(c.provincia || '');
+  document.getElementById('m-regione').onchange = () => rebuildProvinciaOptionsCommessa('');
+
   document.getElementById('m-att-all').onclick = () => document.querySelectorAll('.m-att').forEach(x => x.checked = true);
   document.getElementById('m-att-none').onclick = () => document.querySelectorAll('.m-att').forEach(x => x.checked = false);
   document.getElementById('m-btn-fabbisogno').onclick = () => {
@@ -80,6 +108,8 @@ function openCommessaModal(id) {
       industry: document.getElementById('m-industry').value,
       inizio: document.getElementById('m-inizio').value,
       fine: document.getElementById('m-fine').value,
+      regione: document.getElementById('m-regione').value,
+      provincia: document.getElementById('m-provincia').value,
       risorse_necessarie: parseInt(document.getElementById('m-risorse').value)||0,
       skills: [...document.querySelectorAll('.m-skill:checked')].map(x => x.value),
       attestati_richiesti: [...document.querySelectorAll('.m-att:checked')].map(x => x.value),
@@ -98,7 +128,7 @@ function openCommessaModal(id) {
 */
 function openFabbisognoModal(commessaId, commessaNome) {
   // Recupera oggetto commessa e fabbisogno corrente
-  let tipoCommessa, nomeDisplay, fabbisognoCorrente, inizio, fine, attestatiRichiesti;
+  let tipoCommessa, nomeDisplay, fabbisognoCorrente, inizio, fine, attestatiRichiesti, provinciaCommessa, regioneCommessa;
   if (commessaId) {
     tipoCommessa = 'pipeline';
     const c = state.pipeline.find(p => p.id === commessaId);
@@ -107,6 +137,8 @@ function openFabbisognoModal(commessaId, commessaNome) {
     fabbisognoCorrente = c.fabbisogno_dettagliato || [];
     inizio = c.inizio; fine = c.fine;
     attestatiRichiesti = c.attestati_richiesti || [];
+    provinciaCommessa = c.provincia || '';
+    regioneCommessa = c.regione || '';
   } else {
     tipoCommessa = 'attiva';
     const m = state.commesse_attive_meta[commessaNome] || {};
@@ -114,6 +146,8 @@ function openFabbisognoModal(commessaId, commessaNome) {
     fabbisognoCorrente = m.fabbisogno_dettagliato || [];
     inizio = m.inizio; fine = m.fine;
     attestatiRichiesti = m.attestati_richiesti || [];
+    provinciaCommessa = m.provincia || '';
+    regioneCommessa = m.regione || '';
   }
 
   // Clona fabbisogno in locale per editing
@@ -130,13 +164,24 @@ function openFabbisognoModal(commessaId, commessaNome) {
       const skillMancanti = riga.skills.filter(s => !op.skills.includes(s));
       const attestatiMancanti = attestatiRichiesti.filter(a => !(op.attestati||[]).includes(a));
       const matchCompleto = matchSkill && attestatiMancanti.length === 0;
-      return { op, matchSkill, matchCompleto, sat, skillMancanti, attestatiMancanti };
+      // null = ne' regione ne' provincia della commessa (o provincia dell'operatore) note,
+      // nessun criterio di vicinanza applicabile
+      const distanza = distanzaLavorazione(regioneCommessa, provinciaCommessa, op.provincia);
+      return { op, matchSkill, matchCompleto, sat, skillMancanti, attestatiMancanti, distanza };
     })
     .filter(x => x.sat < 1.0 || x.matchCompleto) // mostra anche saturi se idonei al 100% (skill+attestati)
     .sort((a, b) => {
+      // prima i validi (tutte le skill+attestati richiesti)
       if (a.matchCompleto !== b.matchCompleto) return a.matchCompleto ? -1 : 1;
-      if (a.matchSkill !== b.matchSkill) return a.matchSkill ? -1 : 1;
-      return a.sat - b.sat;
+      // poi chi e' nella stessa provincia/regione (o comunque piu' vicino) viene prima;
+      // chi ha provincia sconosciuta va dopo chi e' geolocalizzato ma lontano
+      if (a.distanza !== b.distanza) {
+        if (a.distanza === null) return 1;
+        if (b.distanza === null) return -1;
+        if (a.distanza !== b.distanza) return a.distanza - b.distanza;
+      }
+      // infine, in generale, ordine alfabetico
+      return a.op.nome_esteso.localeCompare(b.op.nome_esteso);
     })
     .slice(0, 6);
   }
@@ -153,7 +198,7 @@ function openFabbisognoModal(commessaId, commessaNome) {
 
       const candidatiHtml = candidati.length === 0
         ? `<div class="text-[10px] text-red-600 mt-1 pl-1">⚠ Nessun operatore disponibile — valuta assunzione</div>`
-        : candidati.map(({op, matchSkill, sat, skillMancanti, attestatiMancanti}) => {
+        : candidati.map(({op, matchSkill, matchCompleto, sat, skillMancanti, attestatiMancanti, distanza}) => {
             const satPct = Math.round(sat*100);
             const satCls = sat < 0.5 ? 'text-emerald-700' : sat < 0.85 ? 'text-amber-600' : 'text-red-600';
             const skillBadge = matchSkill
@@ -162,9 +207,17 @@ function openFabbisognoModal(commessaId, commessaNome) {
             const attBadge = attestatiMancanti.length > 0
               ? `<span class="text-[9px] bg-purple-100 text-purple-700 px-1 rounded" title="Attestati richiesti dalla commessa">manca attestato: ${attestatiMancanti.join(', ')}</span>`
               : '';
-            return `<div class="flex items-center justify-between px-2 py-1 bg-white rounded border border-slate-100 text-[10px]">
+            const geoBadge = distanza === null ? '' : distanza === 0
+              ? (provinciaCommessa
+                  ? `<span class="text-[9px] bg-sky-100 text-sky-700 px-1 rounded" title="Stessa provincia della commessa">📍 stessa provincia</span>`
+                  : `<span class="text-[9px] bg-sky-100 text-sky-700 px-1 rounded" title="Stessa regione della commessa">📍 stessa regione</span>`)
+              : `<span class="text-[9px] bg-sky-50 text-sky-700 px-1 rounded" title="Distanza dalla zona di lavorazione della commessa">📍 ~${Math.round(distanza)} km</span>`;
+            // Colore leggero del riquadro: verde chi ha tutti i requisiti, ambra chi no —
+            // per distinguerli a colpo d'occhio senza appesantire la lista.
+            const cardCls = matchCompleto ? 'bg-emerald-50/60 border-emerald-200' : 'bg-amber-50/60 border-amber-200';
+            return `<div class="flex items-center justify-between px-2 py-1 ${cardCls} rounded border text-[10px]">
               <span class="font-medium text-slate-800">${esc(op.nome_esteso)}</span>
-              <span class="flex items-center gap-1 flex-wrap justify-end">${skillBadge} ${attBadge} <span class="${satCls} font-medium">${satPct}% sat</span></span>
+              <span class="flex items-center gap-1 flex-wrap justify-end">${skillBadge} ${attBadge} ${geoBadge} <span class="${satCls} font-medium">${satPct}% sat</span></span>
             </div>`;
           }).join('');
 
@@ -306,7 +359,7 @@ async function promuoviCommessa(id) {
 }
 
 function openOperatoreModal(id) {
-  const op = id ? state.operatori.find(o => o.id === id) : { id:'op_new_'+Date.now(), nome_breve:'', nome_esteso:'', email:'', provincia:'', contratto_tipo:'indeterminato', data_inizio_rapporto:'', data_fine_rapporto:'', skills:[], attestati:[], alloc_mensile:new Array(12).fill(0) };
+  const op = id ? state.operatori.find(o => o.id === id) : { id:'op_new_'+Date.now(), nome_breve:'', nome_esteso:'', email:'', provincia:'', contratto_tipo:'indeterminato', data_inizio_rapporto:'', data_fine_rapporto:'', skills:[], attestati:[], alloc_mensile:new Array(12).fill(0), data_aggiunta: new Date().toISOString().slice(0,10) };
   const opAtt = op.attestati || [];
   const provinciaOptions = REGIONI_ITALIA.map(r => `<optgroup label="${esc(r)}">${
     provinceDiRegione(r).map(p => `<option value="${p.sigla}" ${op.provincia===p.sigla?'selected':''}>${esc(p.nome)} (${p.sigla})</option>`).join('')

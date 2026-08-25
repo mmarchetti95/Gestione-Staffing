@@ -138,6 +138,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   if (btnExpandAll) btnExpandAll.onclick = () => document.querySelectorAll('.commessa-card').forEach(d => d.open = true);
   if (btnCollapseAll) btnCollapseAll.onclick = () => document.querySelectorAll('.commessa-card').forEach(d => d.open = false);
   document.getElementById('btn-add-op').onclick = () => openOperatoreModal(null);
+  document.getElementById('btn-export-op').onclick = () => exportOperatoriXlsx();
   document.getElementById('op-tab-pool').onclick = () => switchOpTab('pool');
   document.getElementById('op-tab-email').onclick = () => switchOpTab('email');
   document.getElementById('op-tab-vista').onclick = () => { if (_vistaOpId) switchOpTab('vista'); };

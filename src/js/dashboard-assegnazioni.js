@@ -281,24 +281,31 @@ function openAddAllocazioneModal(commessaNome, opts = {}) {
   const mesiSuggeriti = opts.mesiSuggeriti || [];
   const skillReq = opts.skillRichieste || [];
   const attReq = opts.attestatiRichiesti || [];
+  const provinciaCommessa = opts.provincia || opts.commessaPipeline?.provincia || '';
+  const regioneCommessa = opts.regione || opts.commessaPipeline?.regione || '';
+  const distanzaDi = op => distanzaLavorazione(regioneCommessa, provinciaCommessa, op.provincia);
 
-  // ordinamento operatori: chi ha skill+attestati richiesti prima, poi per saturazione crescente
+  // ordinamento operatori: prima i validi (hanno tutte le skill+attestati richiesti),
+  // poi - a parita' di validita' - chi e' della provincia/regione della commessa o il
+  // piu' vicino, infine in generale ordine alfabetico come criterio finale
+  const validoOp = op => (skillReq.length === 0 || skillReq.every(s => op.skills.includes(s)))
+    && (attReq.length === 0 || attReq.every(s => (op.attestati||[]).includes(s)));
   const ops = [...getOperatoriAttivi()].sort((a, b) => {
-    const hasSkillA = skillReq.length === 0 || skillReq.every(s => a.skills.includes(s));
-    const hasSkillB = skillReq.length === 0 || skillReq.every(s => b.skills.includes(s));
-    const hasAttA = attReq.length === 0 || attReq.every(s => (a.attestati||[]).includes(s));
-    const hasAttB = attReq.length === 0 || attReq.every(s => (b.attestati||[]).includes(s));
-    const scoreA = (hasSkillA?2:0) + (hasAttA?1:0);
-    const scoreB = (hasSkillB?2:0) + (hasAttB?1:0);
-    if (scoreA !== scoreB) return scoreB - scoreA;
-    const satA = mesiSuggeriti.length > 0 ? operatoreSatPeriodo(a, mesiSuggeriti) : a.saturazione.reduce((s,v)=>s+v,0)/12;
-    const satB = mesiSuggeriti.length > 0 ? operatoreSatPeriodo(b, mesiSuggeriti) : b.saturazione.reduce((s,v)=>s+v,0)/12;
-    return satA - satB;
+    const validoA = validoOp(a), validoB = validoOp(b);
+    if (validoA !== validoB) return validoA ? -1 : 1;
+    const distA = distanzaDi(a), distB = distanzaDi(b);
+    if (distA !== distB) {
+      if (distA === null) return 1;
+      if (distB === null) return -1;
+      if (distA !== distB) return distA - distB;
+    }
+    return a.nome_esteso.localeCompare(b.nome_esteso);
   });
 
   const opOptions = ops.map(op => {
     const hasAllSkill = skillReq.length === 0 || skillReq.every(s => op.skills.includes(s));
     const hasAllAtt = attReq.length === 0 || attReq.every(s => (op.attestati||[]).includes(s));
+    const valido = hasAllSkill && hasAllAtt;
     const sat = mesiSuggeriti.length > 0 ? operatoreSatPeriodo(op, mesiSuggeriti) : 0;
     const satTag = mesiSuggeriti.length > 0 ? ` [sat ${(sat*100).toFixed(0)}%]` : '';
     let tag = '';
@@ -307,7 +314,14 @@ function openAddAllocazioneModal(commessaNome, opts = {}) {
       else if (!hasAllSkill && !hasAllAtt) tag = ' ⚠⚠';
       else tag = ' ⚠';
     }
-    return `<option value="${op.id}">${op.nome_esteso}${tag}${satTag}</option>`;
+    const dist = distanzaDi(op);
+    const geoTag = dist === null ? '' : dist === 0 ? (provinciaCommessa ? ' 📍stessa provincia' : ' 📍stessa regione') : ` 📍~${Math.round(dist)}km`;
+    // Colore leggero: verde chi ha tutti i requisiti, ambra chi ne manca almeno uno
+    // (solo se sono stati richiesti skill/attestati — altrimenti nessuna distinzione).
+    const colorStyle = (skillReq.length > 0 || attReq.length > 0)
+      ? (valido ? 'color:#15803d;' : 'color:#b45309;')
+      : '';
+    return `<option value="${op.id}" style="${colorStyle}">${op.nome_esteso}${tag}${geoTag}${satTag}</option>`;
   }).join('');
 
   const mesiInputs = MESI.map((m, i) => {

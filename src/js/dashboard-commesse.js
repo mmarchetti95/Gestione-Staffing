@@ -89,7 +89,7 @@ function renderCommesse() {
     const c = state.pipeline.find(p => p.id === b.dataset.cid);
     if (!c) return;
     const mesi = monthsBetween(c.inizio, c.fine);
-    openAddAllocazioneModal(c.progetto, { mesiSuggeriti: mesi, commessaPipeline: c, skillRichieste: c.skills, attestatiRichiesti: c.attestati_richiesti || [] });
+    openAddAllocazioneModal(c.progetto, { mesiSuggeriti: mesi, commessaPipeline: c, skillRichieste: c.skills, attestatiRichiesti: c.attestati_richiesti || [], provincia: c.provincia || '', regione: c.regione || '' });
   });
   // aggiungi risorsa su commessa attiva
   list.querySelectorAll('.add-risorsa-attiva').forEach(b => b.onclick = (e) => {
@@ -100,7 +100,8 @@ function renderCommesse() {
     state.staffing.filter(r => r.commessa === commessa).forEach(r => {
       r.mesi.forEach((v, i) => { if (Number(v) > 0) mesiAttivi.add(i); });
     });
-    openAddAllocazioneModal(commessa, { mesiSuggeriti: [...mesiAttivi].sort((a,b)=>a-b) });
+    const metaAttiva = state.commesse_attive_meta[commessa] || {};
+    openAddAllocazioneModal(commessa, { mesiSuggeriti: [...mesiAttivi].sort((a,b)=>a-b), provincia: metaAttiva.provincia || '', regione: metaAttiva.regione || '' });
   });
   // modifica dettagli commessa attiva
   list.querySelectorAll('.edit-attiva').forEach(b => b.onclick = (e) => {
