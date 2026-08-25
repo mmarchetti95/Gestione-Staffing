@@ -235,5 +235,14 @@ function _refreshConfrontoBox(commessaNome) {
   if (!body) return;
   const meseSel = _confrontoMeseSel[commessaNome] !== undefined ? _confrontoMeseSel[commessaNome] : meseCorrente();
   body.innerHTML = _confrontoBodyHtml(commessaNome, meseSel);
+  // body.innerHTML sostituisce anche la <select>: il suo onchange, legato una sola
+  // volta durante il renderCommesse() completo, va ricollegato qui — altrimenti dopo
+  // il primo cambio mese la nuova <select> resta senza handler e i cambi successivi
+  // non ricaricano più la tabella (v18.79.0).
+  const sel = body.querySelector('.confronto-mese-sel');
+  if (sel) sel.onchange = () => {
+    _confrontoMeseSel[commessaNome] = parseInt(sel.value, 10);
+    _refreshConfrontoBox(commessaNome);
+  };
 }
 
