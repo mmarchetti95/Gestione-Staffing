@@ -360,7 +360,9 @@ function pwRender() {
                 data-cidx="${cIdx}" data-sidx="${sIdx}" data-oidx="${oIdx}" data-day="${dKey}" data-idx="${ci}"
                 onclick="pwRemoveCantiereField(this)">✕</button>` : ''}
             </div>`).join('');
-          return `<div class="pw-day-cell${isSab ? ' sabato' : ''}${ferieClass}" data-cidx="${cIdx}" data-sidx="${sIdx}" data-oidx="${oIdx}" data-day="${dKey}">
+          return `<div class="pw-day-cell${isSab ? ' sabato' : ''}${ferieClass}" data-cidx="${cIdx}" data-sidx="${sIdx}" data-oidx="${oIdx}" data-day="${dKey}"
+            title="Click destro per copiare/incollare cantiere e attività"
+            oncontextmenu="return pwCellCtxMenu(event, ${cIdx}, ${sIdx}, ${oIdx}, ${dKey});">
             <div class="pw-cantiere-list">
               ${cantiereRowsHtml}
               <button type="button" class="pw-cantiere-add" title="Aggiungi un altro cantiere per questo giorno"
@@ -395,7 +397,9 @@ function pwRender() {
         }
 
         return `<div class="pw-op-row" style="grid-template-columns: 200px repeat(6, 1fr);">
-          <div class="pw-op-name" style="flex-direction:column;align-items:flex-start;gap:2px;overflow:hidden;padding:4px 8px;">
+          <div class="pw-op-name" style="flex-direction:column;align-items:flex-start;gap:2px;overflow:hidden;padding:4px 8px;"
+            title="Click destro per copiare/incollare l'intera settimana (cantieri/attività)"
+            oncontextmenu="return pwRowCtxMenu(event, ${cIdx}, ${sIdx}, ${oIdx});">
             ${pwRenderOpDropdown(cIdx, sIdx, oIdx, op.nome)}
             ${badgeHtml ? `<div>${badgeHtml}</div>` : ''}
             ${dwBadge ? `<div>${dwBadge}</div>` : ''}

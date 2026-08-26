@@ -551,30 +551,6 @@
   }
   .pw-op-legenda-item { display: flex; align-items: center; gap: 4px; color: #64748b; }
 
-  /* ===== MENU COPIA/INCOLLA CANTIERE/ATTIVITA (click destro in Griglia) ===== */
-  .pw-ctx-menu {
-    position: fixed;
-    z-index: 10001;
-    background: white;
-    border: 1px solid #e2e8f0;
-    border-radius: 8px;
-    box-shadow: var(--shadow-lg);
-    padding: 4px;
-    min-width: 220px;
-    display: flex; flex-direction: column;
-    animation: opModalIn .12s ease;
-  }
-  .pw-ctx-menu-item {
-    text-align: left;
-    background: none; border: none;
-    font-size: 12px; font-weight: 500; color: #1e293b;
-    padding: 7px 10px;
-    border-radius: 5px;
-    cursor: pointer;
-  }
-  .pw-ctx-menu-item:hover { background: #f0fdfa; }
-  .pw-ctx-menu-item.disabled { color: #cbd5e1; cursor: default; }
-
   /* ===== MODAL SELEZIONE OPERATORE ===== */
   .op-modal-backdrop {
     position: fixed; inset: 0;
@@ -907,7 +883,7 @@
     <div class="flex items-center gap-2">
       <button id="btn-presentation" class="px-3 py-1.5 text-sm rounded hover:bg-white/10" style="border:1px solid var(--dark-border-strong);color:var(--dark-text);visibility:visible;">📊 Modalità presentazione</button>
       <div class="text-xs pl-2" style="border-left:1px solid var(--dark-border-strong);color:var(--dark-text-muted);">
-        <span class="font-medium" style="color:var(--accent);">v18.92.0</span> · Michele Marchetti
+        <span class="font-medium" style="color:var(--accent);">v18.91.2</span> · Michele Marchetti
       </div>
     </div>
   </div>
@@ -8057,9 +8033,7 @@ function pwRender() {
                 data-cidx="${cIdx}" data-sidx="${sIdx}" data-oidx="${oIdx}" data-day="${dKey}" data-idx="${ci}"
                 onclick="pwRemoveCantiereField(this)">✕</button>` : ''}
             </div>`).join('');
-          return `<div class="pw-day-cell${isSab ? ' sabato' : ''}${ferieClass}" data-cidx="${cIdx}" data-sidx="${sIdx}" data-oidx="${oIdx}" data-day="${dKey}"
-            title="Click destro per copiare/incollare cantiere e attività"
-            oncontextmenu="return pwCellCtxMenu(event, ${cIdx}, ${sIdx}, ${oIdx}, ${dKey});">
+          return `<div class="pw-day-cell${isSab ? ' sabato' : ''}${ferieClass}" data-cidx="${cIdx}" data-sidx="${sIdx}" data-oidx="${oIdx}" data-day="${dKey}">
             <div class="pw-cantiere-list">
               ${cantiereRowsHtml}
               <button type="button" class="pw-cantiere-add" title="Aggiungi un altro cantiere per questo giorno"
@@ -8094,9 +8068,7 @@ function pwRender() {
         }
 
         return `<div class="pw-op-row" style="grid-template-columns: 200px repeat(6, 1fr);">
-          <div class="pw-op-name" style="flex-direction:column;align-items:flex-start;gap:2px;overflow:hidden;padding:4px 8px;"
-            title="Click destro per copiare/incollare l'intera settimana (cantieri/attività)"
-            oncontextmenu="return pwRowCtxMenu(event, ${cIdx}, ${sIdx}, ${oIdx});">
+          <div class="pw-op-name" style="flex-direction:column;align-items:flex-start;gap:2px;overflow:hidden;padding:4px 8px;">
             ${pwRenderOpDropdown(cIdx, sIdx, oIdx, op.nome)}
             ${badgeHtml ? `<div>${badgeHtml}</div>` : ''}
             ${dwBadge ? `<div>${dwBadge}</div>` : ''}
@@ -8474,121 +8446,6 @@ async function pwUpdateOpNome(sel) {
   if (op) { op.nome = sel.value; await pwSave(); pwRender(); }
 }
 
-/* ===== COPIA/INCOLLA CANTIERE/ATTIVITA IN GRIGLIA (click destro) ===== */
-// Permette di duplicare cantiere/i + attività di una cella (o dell'intera
-// settimana di un operatore) su un altro operatore/squadra/commessa, senza
-// dover ridigitare gli stessi valori a mano. Il click destro su una cella
-// giorno apre il menu per quella cella; il click destro sulla colonna nome
-// operatore apre il menu per l'intera riga (tutti e 6 i giorni).
-
-let _pwClipCell = null; // { cantieri: string[], attivita: string }
-let _pwClipRow  = null; // { giorni: { [day]: { cantieri: string[], attivita: string } } }
-
-function _pwCtxMenuEsc(e) {
-  if (e.key === 'Escape') _pwCloseCtxMenu();
-}
-
-function _pwCloseCtxMenu() {
-  const m = document.getElementById('pw-ctx-menu');
-  if (m) m.remove();
-  document.removeEventListener('keydown', _pwCtxMenuEsc);
-}
-
-function _pwShowCtxMenu(x, y, items) {
-  _pwCloseCtxMenu();
-  const menu = document.createElement('div');
-  menu.id = 'pw-ctx-menu';
-  menu.className = 'pw-ctx-menu';
-  menu.onclick = e => e.stopPropagation();
-  items.forEach(it => {
-    const btn = document.createElement('button');
-    btn.type = 'button';
-    btn.className = 'pw-ctx-menu-item' + (it.disabled ? ' disabled' : '');
-    btn.textContent = it.label;
-    if (!it.disabled) btn.onclick = () => { _pwCloseCtxMenu(); it.onClick(); };
-    menu.appendChild(btn);
-  });
-  document.body.appendChild(menu);
-
-  // Posiziona e poi ricorregge se esce dal viewport (il menu va misurato da renderizzato).
-  menu.style.left = x + 'px';
-  menu.style.top = y + 'px';
-  const rect = menu.getBoundingClientRect();
-  if (rect.right > window.innerWidth) menu.style.left = Math.max(4, window.innerWidth - rect.width - 4) + 'px';
-  if (rect.bottom > window.innerHeight) menu.style.top = Math.max(4, window.innerHeight - rect.height - 4) + 'px';
-
-  // Chiusura su click fuori / Esc; il listener va agganciato dopo il click corrente
-  // che ha aperto il menu, altrimenti lo stesso evento lo richiuderebbe subito.
-  setTimeout(() => document.addEventListener('click', _pwCloseCtxMenu, { once: true }), 0);
-  document.addEventListener('keydown', _pwCtxMenuEsc);
-}
-
-/* ----- Singola cella (cantiere/i + attività di un giorno) ----- */
-function pwCellCtxMenu(ev, cidx, sidx, oidx, day) {
-  ev.preventDefault();
-  _pwShowCtxMenu(ev.clientX, ev.clientY, [
-    { label: '📋 Copia cantiere/attività', onClick: () => pwCopyCell(cidx, sidx, oidx, day) },
-    { label: '📥 Incolla qui', disabled: !_pwClipCell, onClick: () => pwPasteCell(cidx, sidx, oidx, day) },
-  ]);
-  return false;
-}
-
-function pwCopyCell(cidx, sidx, oidx, day) {
-  const data = pwGetWeekData();
-  const op = data[cidx]?.squadre[sidx]?.operatori[oidx];
-  if (!op) return;
-  const g = (op.giorni || {})[day] || {};
-  _pwClipCell = { cantieri: pwCellCantieri(g), attivita: g.attivita || '' };
-}
-
-async function pwPasteCell(cidx, sidx, oidx, day) {
-  if (!_pwClipCell) return;
-  const data = pwGetWeekData();
-  const op = data[cidx]?.squadre[sidx]?.operatori[oidx];
-  if (!op) return;
-  if (!op.giorni) op.giorni = {};
-  op.giorni[day] = { cantieri: _pwClipCell.cantieri.slice(), attivita: _pwClipCell.attivita };
-  await pwSave();
-  pwRender();
-  pwRefreshMeteoWeek();
-}
-
-/* ----- Intera settimana di un operatore (tutti i giorni Lun-Sab) ----- */
-function pwRowCtxMenu(ev, cidx, sidx, oidx) {
-  ev.preventDefault();
-  _pwShowCtxMenu(ev.clientX, ev.clientY, [
-    { label: '📋 Copia settimana (cantieri/attività)', onClick: () => pwCopyRow(cidx, sidx, oidx) },
-    { label: '📥 Incolla settimana qui', disabled: !_pwClipRow, onClick: () => pwPasteRow(cidx, sidx, oidx) },
-  ]);
-  return false;
-}
-
-function pwCopyRow(cidx, sidx, oidx) {
-  const data = pwGetWeekData();
-  const op = data[cidx]?.squadre[sidx]?.operatori[oidx];
-  if (!op) return;
-  const giorni = {};
-  for (let d = 0; d < 6; d++) {
-    const g = (op.giorni || {})[d] || {};
-    giorni[d] = { cantieri: pwCellCantieri(g), attivita: g.attivita || '' };
-  }
-  _pwClipRow = { giorni };
-}
-
-async function pwPasteRow(cidx, sidx, oidx) {
-  if (!_pwClipRow) return;
-  const data = pwGetWeekData();
-  const op = data[cidx]?.squadre[sidx]?.operatori[oidx];
-  if (!op) return;
-  op.giorni = {};
-  for (let d = 0; d < 6; d++) {
-    const src = _pwClipRow.giorni[d] || { cantieri: [], attivita: '' };
-    op.giorni[d] = { cantieri: src.cantieri.slice(), attivita: src.attivita };
-  }
-  await pwSave();
-  pwRender();
-  pwRefreshMeteoWeek();
-}
 /* ==================== STRUMENTI SQUADRA (da Jira GAR) ==================== */
 // Elenco strumenti (cache in memoria + localStorage): [{key, name}]
 let pwStrumenti = [];

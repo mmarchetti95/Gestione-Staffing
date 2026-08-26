@@ -551,6 +551,30 @@
   }
   .pw-op-legenda-item { display: flex; align-items: center; gap: 4px; color: #64748b; }
 
+  /* ===== MENU COPIA/INCOLLA CANTIERE/ATTIVITA (click destro in Griglia) ===== */
+  .pw-ctx-menu {
+    position: fixed;
+    z-index: 10001;
+    background: white;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    box-shadow: var(--shadow-lg);
+    padding: 4px;
+    min-width: 220px;
+    display: flex; flex-direction: column;
+    animation: opModalIn .12s ease;
+  }
+  .pw-ctx-menu-item {
+    text-align: left;
+    background: none; border: none;
+    font-size: 12px; font-weight: 500; color: #1e293b;
+    padding: 7px 10px;
+    border-radius: 5px;
+    cursor: pointer;
+  }
+  .pw-ctx-menu-item:hover { background: #f0fdfa; }
+  .pw-ctx-menu-item.disabled { color: #cbd5e1; cursor: default; }
+
   /* ===== MODAL SELEZIONE OPERATORE ===== */
   .op-modal-backdrop {
     position: fixed; inset: 0;
@@ -883,7 +907,7 @@
     <div class="flex items-center gap-2">
       <button id="btn-presentation" class="px-3 py-1.5 text-sm rounded hover:bg-white/10" style="border:1px solid var(--dark-border-strong);color:var(--dark-text);visibility:visible;">📊 Modalità presentazione</button>
       <div class="text-xs pl-2" style="border-left:1px solid var(--dark-border-strong);color:var(--dark-text-muted);">
-        <span class="font-medium" style="color:var(--accent);">v18.91.2</span> · Michele Marchetti
+        <span class="font-medium" style="color:var(--accent);">v18.92.0</span> · Michele Marchetti
       </div>
     </div>
   </div>

@@ -36,6 +36,7 @@ JS_FILES = [
     'weekly-mail-core.js',
     'weekly-operatore-modal.js',
     'weekly-popover-stats.js',
+    'weekly-clipboard-cantiere.js',
     'weekly-strumenti.js',
     'weekly-jira-subtask.js',
     'weekly-nav.js',

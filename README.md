@@ -1,3 +1,6 @@
+## v18.92.0
+- feat: **Griglia settimanale — copia/incolla cantiere e attività tra operatori** — click destro su una cella giorno apre un menu con "Copia cantiere/attività" e "Incolla qui", per duplicare cantiere/i + attività su un altro operatore/squadra/commessa senza ridigitarli; click destro sulla colonna del nome operatore apre invece "Copia settimana" / "Incolla settimana qui" per duplicare tutti e 6 i giorni (Lun-Sab) in un colpo solo su un altro operatore. Nessuna modifica allo schema Supabase, il clipboard vive solo in memoria per la sessione corrente.
+
 ## v18.91.2
 - fix: **Griglia settimanale — meteo non si aggiornava subito dopo aver digitato un cantiere** — modificare il testo di un campo cantiere (`onchange`) salvava il dato ma non richiamava il refresh meteo (a differenza di aggiungere/rimuovere un campo con "+ cantiere", che passa da un render completo), per cui il badge/modal meteo si aggiornava solo al refresh orario automatico o a un altro render. Ora la modifica del testo del cantiere richiama subito `pwRefreshMeteoWeek()` (fire-and-forget, senza un render completo che farebbe perdere il focus).
 
