@@ -1,0 +1,273 @@
+/* ==================== METEO CANTIERI (Open-Meteo, gratuito senza API key) ====================
+   Badge meteo per squadra/giorno nella Griglia settimanale, basato sui cantieri pianificati
+   quel giorno. Riusa il geocoder Nominatim + _geoCache già presenti in weekly-mappa.js: un
+   cantiere non geocodificabile semplicemente non genera nessun badge (nessun errore bloccante).
+   Refresh in background ogni ora mentre l'app è aperta sul tab Griglia. */
+
+const METEO_TTL_MS = 60 * 60 * 1000;       // 1 ora
+const METEO_MAX_FORECAST_DAYS = 15;        // limite forecast giornaliero Open-Meteo
+
+/* Fasce orarie mostrate nel modal di dettaglio (copertura del tipico orario di cantiere). */
+const METEO_FASCE = ['06:00', '09:00', '12:00', '15:00', '18:00', '21:00'];
+
+/* Cache meteo persistente: chiave "lat,lon|dataISO" ->
+   { code, tmax, tmin, pop, hourly: [{hour,temp,code,pop}], fetchedAt } */
+let _meteoCache = {};
+async function _meteoCacheLoad() {
+  try { const r = await sget('meteo_cache_v1'); if (r) _meteoCache = r; } catch(e) {}
+}
+async function _meteoCacheSave() {
+  try { await sset('meteo_cache_v1', _meteoCache); } catch(e) {}
+}
+
+const METEO_ICONS = {
+  0: '☀️', 1: '🌤️', 2: '⛅', 3: '☁️',
+  45: '🌫️', 48: '🌫️',
+  51: '🌦️', 53: '🌦️', 55: '🌦️', 56: '🌦️', 57: '🌦️',
+  61: '🌧️', 63: '🌧️', 65: '🌧️', 66: '🌧️', 67: '🌧️',
+  71: '🌨️', 73: '🌨️', 75: '🌨️', 77: '🌨️',
+  80: '🌦️', 81: '🌧️', 82: '🌧️',
+  85: '🌨️', 86: '🌨️',
+  95: '⛈️', 96: '⛈️', 99: '⛈️',
+};
+function pwMeteoIconFor(code) {
+  return METEO_ICONS[code] || '🌡️';
+}
+
+/* Cantieri distinti in uso da una squadra in un giorno: unisce i cantieri di TUTTI gli
+   operatori (ciascuno può averne più di uno, vedi pwCellCantieri). */
+function pwSquadraCantieriGiorno(squadra, dayIdx) {
+  const set = new Set();
+  (squadra.operatori || []).forEach(op => {
+    pwCellCantieri((op.giorni || {})[dayIdx]).forEach(c => set.add(c));
+  });
+  return [...set];
+}
+
+/* Legge dalla cache il meteo di un cantiere in una data, sfruttando il geocoding già
+   disponibile in _geoCache (condivisa con la Mappa). null se non geocodificato/non ancora
+   scaricato. */
+function pwMeteoInfoFor(cantiere, dateISO) {
+  const key = cantiere.toLowerCase().trim().replace(/\s+/g, ' ');
+  const geo = _geoCache[key];
+  if (!geo) return null;
+  const mk = geo.lat.toFixed(2) + ',' + geo.lng.toFixed(2) + '|' + dateISO;
+  const m = _meteoCache[mk];
+  if (!m) return null;
+  return { cantiere, code: m.code, tmax: m.tmax, tmin: m.tmin, pop: m.pop, hourly: m.hourly || [] };
+}
+
+/* Sottoinsieme di ore rappresentative (METEO_FASCE) dal dettaglio orario di un cantiere. */
+function pwFasceOrarieFor(info) {
+  if (!info || !Array.isArray(info.hourly) || !info.hourly.length) return [];
+  const byHour = {};
+  info.hourly.forEach(h => { byHour[h.hour] = h; });
+  return METEO_FASCE.map(hh => byHour[hh]).filter(Boolean);
+}
+
+/* Una chiamata Open-Meteo per località, copre l'intero intervallo richiesto (tipicamente
+   l'intera settimana visibile) — popola _meteoCache per ciascun giorno restituito, sia con
+   l'aggregato giornaliero (per il badge) sia con il dettaglio orario (per il modal). */
+async function pwFetchMeteoRange(lat, lon, startISO, endISO) {
+  try {
+    const url = 'https://api.open-meteo.com/v1/forecast?latitude=' + lat + '&longitude=' + lon +
+      '&daily=weathercode,temperature_2m_max,temperature_2m_min,precipitation_probability_max' +
+      '&hourly=temperature_2m,weathercode,precipitation_probability' +
+      '&timezone=Europe%2FRome&start_date=' + startISO + '&end_date=' + endISO;
+    const res = await fetch(url);
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    const data = await res.json();
+    const d = data && data.daily;
+    const h = data && data.hourly;
+    if (!d || !Array.isArray(d.time)) return;
+    const now = Date.now();
+
+    // Raggruppa le ore per data (YYYY-MM-DD), per associarle al rispettivo giorno.
+    const hourlyByDate = {};
+    if (h && Array.isArray(h.time)) {
+      h.time.forEach((ts, i) => {
+        const dateISO = ts.slice(0, 10);
+        const hour = ts.slice(11, 16); // "HH:MM"
+        if (!hourlyByDate[dateISO]) hourlyByDate[dateISO] = [];
+        hourlyByDate[dateISO].push({
+          hour,
+          temp: h.temperature_2m[i],
+          code: h.weathercode[i],
+          pop: (h.precipitation_probability || [])[i] ?? null,
+        });
+      });
+    }
+
+    d.time.forEach((dateISO, i) => {
+      const mk = lat.toFixed(2) + ',' + lon.toFixed(2) + '|' + dateISO;
+      _meteoCache[mk] = {
+        code: d.weathercode[i],
+        tmax: d.temperature_2m_max[i],
+        tmin: d.temperature_2m_min[i],
+        pop: (d.precipitation_probability_max || [])[i] ?? null,
+        hourly: hourlyByDate[dateISO] || [],
+        fetchedAt: now,
+      };
+    });
+    await _meteoCacheSave();
+  } catch (e) {
+    // Meteo non essenziale: nessun blocco, semplicemente niente badge per questa località.
+  }
+}
+
+/* Entry point periodico: geocodifica i cantieri della settimana visibile (sequenziale, stesso
+   throttling Nominatim già usato dalla Mappa), scarica il meteo mancante/scaduto e aggiorna
+   i badge già in pagina. */
+let _pwMeteoRefreshing = false;
+async function pwRefreshMeteoWeek() {
+  if (_pwMeteoRefreshing) return;
+  _pwMeteoRefreshing = true;
+  try {
+    const monday = isoWeekToMonday(pwAnno, pwWeek);
+    const saturday = new Date(monday); saturday.setUTCDate(monday.getUTCDate() + 5);
+    const startISO = monday.toISOString().slice(0, 10);
+    const endISO = saturday.toISOString().slice(0, 10);
+
+    const todayISO = new Date().toISOString().slice(0, 10);
+    const maxDate = new Date(); maxDate.setUTCDate(maxDate.getUTCDate() + METEO_MAX_FORECAST_DAYS);
+    const maxISO = maxDate.toISOString().slice(0, 10);
+    if (endISO < todayISO || startISO > maxISO) return; // settimana fuori dal range forecast
+
+    const fetchStartISO = startISO < todayISO ? todayISO : startISO;
+    const fetchEndISO = endISO > maxISO ? maxISO : endISO;
+
+    const data = pwGetWeekData();
+    const cantieriSet = new Set();
+    data.forEach(bc => (bc.squadre || []).forEach(sq => (sq.operatori || []).forEach(op => {
+      for (let di = 0; di < 6; di++) pwCellCantieri((op.giorni || {})[di]).forEach(c => cantieriSet.add(c));
+    })));
+    if (!cantieriSet.size) return;
+
+    // Geocodifica sequenziale (rate-limit Nominatim), riusa _geoCache condivisa con la Mappa
+    for (const cantiere of cantieriSet) {
+      const key = cantiere.toLowerCase().trim().replace(/\s+/g, ' ');
+      if (!(key in _geoCache)) {
+        await geocodifica(cantiere);
+        await new Promise(r => setTimeout(r, 300));
+      }
+    }
+
+    // Una fetch meteo per località distinta non ancora fresca in cache
+    const now = Date.now();
+    const seenPos = new Set();
+    for (const cantiere of cantieriSet) {
+      const key = cantiere.toLowerCase().trim().replace(/\s+/g, ' ');
+      const geo = _geoCache[key];
+      if (!geo) continue; // non geocodificabile: niente meteo per questo cantiere
+      const posKey = geo.lat.toFixed(2) + ',' + geo.lng.toFixed(2);
+      if (seenPos.has(posKey)) continue;
+      seenPos.add(posKey);
+      // "Fresca" solo se anche il dettaglio orario è presente: un'entry con solo l'aggregato
+      // giornaliero (es. per un errore transitorio Open-Meteo su una singola fetch) altrimenti
+      // resterebbe bloccata senza dettaglio orario per l'intera durata del TTL.
+      const cached = _meteoCache[posKey + '|' + fetchStartISO];
+      const isFresh = cached && Array.isArray(cached.hourly) && cached.hourly.length && (now - cached.fetchedAt) < METEO_TTL_MS;
+      if (isFresh) continue;
+      await pwFetchMeteoRange(geo.lat, geo.lng, fetchStartISO, fetchEndISO);
+    }
+
+    pwApplyMeteoBadgesToDom();
+  } finally {
+    _pwMeteoRefreshing = false;
+  }
+}
+
+/* ----- Rendering badge ----- */
+// Sempre cliccabile (a prescindere dal numero di cantieri): apre il modal col dettaglio
+// meteo per fasce orarie, per cantiere.
+function pwWeatherBadgeInnerHtml(cIdx, sIdx, squadra, dayIdx, dateISO) {
+  const cantieri = pwSquadraCantieriGiorno(squadra, dayIdx);
+  if (!cantieri.length) return '';
+  const infos = cantieri.map(c => pwMeteoInfoFor(c, dateISO)).filter(Boolean);
+  if (!infos.length) return '';
+  const main = infos[0];
+  const icon = pwMeteoIconFor(main.code);
+  const tempTxt = Math.round(main.tmax) + '°';
+  const countBadge = cantieri.length > 1 ? ` <span class="pw-weather-badge-count">+${cantieri.length - 1}</span>` : '';
+  return `<span class="pw-weather-badge" title="Clicca per il dettaglio meteo per fasce orarie"
+    onclick="event.stopPropagation();pwOpenMeteoModal(${cIdx},${sIdx},${dayIdx})">${icon} ${tempTxt}${countBadge}</span>`;
+}
+
+function pwWeatherBadgeHtml(cIdx, sIdx, squadra, dayIdx, dateISO) {
+  return `<div class="pw-weather-slot" data-cidx="${cIdx}" data-sidx="${sIdx}" data-day="${dayIdx}" data-date="${dateISO}">${pwWeatherBadgeInnerHtml(cIdx, sIdx, squadra, dayIdx, dateISO)}</div>`;
+}
+
+/* Aggiorna i badge già renderizzati SENZA un pwRender() completo (eviterebbe di far perdere
+   il focus/cursore agli input cantiere/attività mentre l'utente sta digitando). */
+function pwApplyMeteoBadgesToDom() {
+  const data = pwGetWeekData();
+  document.querySelectorAll('.pw-weather-slot').forEach(slot => {
+    const cIdx = Number(slot.dataset.cidx), sIdx = Number(slot.dataset.sidx), dayIdx = Number(slot.dataset.day);
+    const dateISO = slot.dataset.date;
+    const squadra = data[cIdx] && data[cIdx].squadre && data[cIdx].squadre[sIdx];
+    if (!squadra) return;
+    slot.innerHTML = pwWeatherBadgeInnerHtml(cIdx, sIdx, squadra, dayIdx, dateISO);
+  });
+}
+
+/* ----- Modal dettaglio meteo per fasce orarie (uno o più cantieri) ----- */
+function pwOpenMeteoModal(cIdx, sIdx, dayIdx) {
+  const data = pwGetWeekData();
+  const squadra = data[cIdx] && data[cIdx].squadre && data[cIdx].squadre[sIdx];
+  if (!squadra) return;
+
+  const monday = isoWeekToMonday(pwAnno, pwWeek);
+  const d = new Date(monday); d.setUTCDate(monday.getUTCDate() + dayIdx);
+  const dateISO = d.toISOString().slice(0, 10);
+  const DAY_NAMES_FULL = ['Lunedì', 'Martedì', 'Mercoledì', 'Giovedì', 'Venerdì', 'Sabato'];
+
+  const cantieri = pwSquadraCantieriGiorno(squadra, dayIdx);
+  const blocks = cantieri.map(cantiere => {
+    const info = pwMeteoInfoFor(cantiere, dateISO);
+    if (!info) {
+      return `<div class="pw-meteo-modal-block">
+        <div class="pw-meteo-modal-cantiere">${esc(cantiere)}</div>
+        <div class="pw-meteo-modal-missing">Meteo non disponibile</div>
+      </div>`;
+    }
+    const fasce = pwFasceOrarieFor(info);
+    const fasceHtml = fasce.length
+      ? `<div class="pw-meteo-fasce">
+          ${fasce.map(h => `<div class="pw-meteo-fascia">
+            <div class="pw-meteo-fascia-ora">${h.hour}</div>
+            <div class="pw-meteo-fascia-icon">${pwMeteoIconFor(h.code)}</div>
+            <div class="pw-meteo-fascia-temp">${Math.round(h.temp)}°</div>
+            ${h.pop != null ? `<div class="pw-meteo-fascia-pop">💧${Math.round(h.pop)}%</div>` : ''}
+          </div>`).join('')}
+        </div>`
+      : `<div class="pw-meteo-modal-info">${pwMeteoIconFor(info.code)} ${Math.round(info.tmax)}° / ${Math.round(info.tmin)}° <span class="pw-meteo-modal-missing">(dettaglio orario non disponibile)</span></div>`;
+    return `<div class="pw-meteo-modal-block">
+      <div class="pw-meteo-modal-cantiere">${esc(cantiere)}</div>
+      ${fasceHtml}
+    </div>`;
+  }).join('');
+
+  const root = document.getElementById('modal-root');
+  if (!root) return;
+  root.innerHTML = `<div class="modal-backdrop"><div class="bg-white rounded-lg shadow-xl w-full max-w-lg mx-4 my-8 p-5">
+    <h3 class="font-semibold text-slate-900 mb-1">Meteo — ${esc(squadra.nome || 'Squadra')}</h3>
+    <p class="text-xs text-slate-500 mb-3">${DAY_NAMES_FULL[dayIdx]} ${formatDate(d)}</p>
+    <div>${blocks || '<div class="text-slate-400 text-sm">Nessun cantiere pianificato.</div>'}</div>
+    <div class="flex justify-end mt-4">
+      <button onclick="closeModal()" class="px-3 py-1.5 text-sm border border-slate-300 rounded">Chiudi</button>
+    </div>
+  </div></div>`;
+  root.querySelector('.modal-backdrop').addEventListener('click', e => {
+    if (e.target.classList.contains('modal-backdrop')) closeModal();
+  });
+}
+
+/* ----- Refresh periodico (avviato una volta al caricamento dell'app) ----- */
+function pwStartMeteoTimer() {
+  setInterval(() => {
+    const weeklyEl = document.getElementById('screen-weekly');
+    if (weeklyEl && !weeklyEl.classList.contains('hidden') && _pwActiveTab === 'griglia') {
+      pwRefreshMeteoWeek();
+    }
+  }, METEO_TTL_MS);
+}

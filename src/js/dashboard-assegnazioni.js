@@ -189,7 +189,7 @@ function calcolaConfrontoCommessa(commessaNome, meseIdx) {
             d.setUTCDate(d.getUTCDate() + g);
             if (d.getUTCFullYear() !== ANNO || d.getUTCMonth() !== meseIdx) continue; // giorno fuori dal mese target (settimana a cavallo)
             const opG = (op.giorni && op.giorni[g]) || {};
-            if (!opG.cantiere || !opG.cantiere.trim()) continue;
+            if (pwCellCantieri(opG).length === 0) continue;
             const inFerie = pwFerie[wa] && pwFerie[wa][ww] && pwFerie[wa][ww][nome] && pwFerie[wa][ww][nome][g] === true;
             if (inFerie) continue;
             effettivo[nome] = (effettivo[nome] || 0) + 1;

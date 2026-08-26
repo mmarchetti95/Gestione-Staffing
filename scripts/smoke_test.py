@@ -207,6 +207,16 @@ def _run_eslint_noundef(eslint_bin, js):
             [eslint_bin, '--no-eslintrc', '-c', cfgf, '--format', 'compact', jsf],
             capture_output=True, text=True,
         )
+        # ESLint: 0 = pulito, 1 = problemi di lint trovati (atteso quando la lista
+        # sotto non è vuota). Qualunque altro exit code è un fallimento della CLI
+        # stessa (es. ESLint 9+ non accetta più `--no-eslintrc`/config legacy: "Invalid
+        # option '--eslintrc'") — in quel caso l'analisi non è MAI girata, e va trattato
+        # come controllo saltato, non come "0 variabili non definite trovate": scambiare
+        # un ESLint rotto/incompatibile per un pass silenzioso vanifica il gate (è
+        # esattamente quello che ha lasciato passare inosservato un vero ReferenceError
+        # in produzione — vedi v18.91.0).
+        if res.returncode not in (0, 1):
+            return None
         out = res.stdout + res.stderr
         found = []
         for m in re.finditer(r'line (\d+),.*?\'([^\']+)\' is not defined\. \(no-undef\)', out):

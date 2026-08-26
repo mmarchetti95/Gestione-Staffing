@@ -340,30 +340,6 @@
     border-color: var(--accent);
     background: #f0fdfa;
   }
-  .pw-cantiere-list { display: flex; flex-direction: column; gap: 1px; }
-  .pw-cantiere-row { display: flex; align-items: center; gap: 2px; }
-  .pw-cantiere-row .pw-cantiere-input { flex: 1; }
-  .pw-cantiere-remove {
-    flex-shrink: 0;
-    font-size: 10px;
-    line-height: 1;
-    color: #b91c1c;
-    background: transparent;
-    border: none;
-    cursor: pointer;
-    padding: 0 2px;
-  }
-  .pw-cantiere-add {
-    align-self: flex-start;
-    font-size: 9px;
-    font-weight: 600;
-    color: var(--accent);
-    background: transparent;
-    border: none;
-    cursor: pointer;
-    padding: 1px 2px;
-  }
-  .pw-cantiere-add:hover { text-decoration: underline; }
   .pw-attivita-input {
     width: 100%;
     font-size: 10px;
@@ -394,45 +370,6 @@
   .pw-day-header .pw-date { font-size: 10px; font-weight: 400; color: #64748b; }
   .pw-day-header.sabato .pw-date { color: #166534; }
   .pw-day-header.today .pw-date { color: #b45309; }
-  .pw-weather-slot { min-height: 14px; margin-top: 2px; }
-  .pw-weather-badge {
-    display: inline-flex;
-    align-items: center;
-    gap: 2px;
-    font-size: 10px;
-    font-weight: 600;
-    color: #0f766e;
-    cursor: pointer;
-  }
-  .pw-weather-badge:hover { text-decoration: underline; }
-  .pw-weather-badge-count { color: #64748b; font-weight: 500; }
-  .pw-meteo-modal-block { padding: 8px 2px; border-bottom: 1px solid #f1f5f9; }
-  .pw-meteo-modal-block:last-child { border-bottom: none; }
-  .pw-meteo-modal-cantiere { font-weight: 600; color: #1e293b; font-size: 13px; margin-bottom: 4px; }
-  .pw-meteo-modal-info { color: #334155; font-size: 13px; }
-  .pw-meteo-modal-missing { color: #94a3b8; font-style: italic; }
-  .pw-meteo-fasce {
-    display: flex;
-    gap: 6px;
-    overflow-x: auto;
-    padding-bottom: 2px;
-  }
-  .pw-meteo-fascia {
-    flex: 0 0 auto;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 1px;
-    min-width: 46px;
-    padding: 5px 4px;
-    background: #f8fafc;
-    border-radius: 6px;
-    font-size: 11px;
-  }
-  .pw-meteo-fascia-ora { color: #64748b; font-size: 10px; }
-  .pw-meteo-fascia-icon { font-size: 15px; }
-  .pw-meteo-fascia-temp { font-weight: 700; color: #1e293b; }
-  .pw-meteo-fascia-pop { color: #0ea5e9; font-size: 9px; }
 
   @media print {
     #screen-weekly { display: block !important; }
@@ -883,7 +820,7 @@
     <div class="flex items-center gap-2">
       <button id="btn-presentation" class="px-3 py-1.5 text-sm rounded hover:bg-white/10" style="border:1px solid var(--dark-border-strong);color:var(--dark-text);visibility:visible;">📊 Modalità presentazione</button>
       <div class="text-xs pl-2" style="border-left:1px solid var(--dark-border-strong);color:var(--dark-text-muted);">
-        <span class="font-medium" style="color:var(--accent);">v18.91.2</span> · Michele Marchetti
+        <span class="font-medium" style="color:var(--accent);">v18.90.0</span> · Michele Marchetti
       </div>
     </div>
   </div>
@@ -3739,7 +3676,7 @@ function calcolaConfrontoCommessa(commessaNome, meseIdx) {
             d.setUTCDate(d.getUTCDate() + g);
             if (d.getUTCFullYear() !== ANNO || d.getUTCMonth() !== meseIdx) continue; // giorno fuori dal mese target (settimana a cavallo)
             const opG = (op.giorni && op.giorni[g]) || {};
-            if (pwCellCantieri(opG).length === 0) continue;
+            if (!opG.cantiere || !opG.cantiere.trim()) continue;
             const inFerie = pwFerie[wa] && pwFerie[wa][ww] && pwFerie[wa][ww][nome] && pwFerie[wa][ww][nome][g] === true;
             if (inFerie) continue;
             effettivo[nome] = (effettivo[nome] || 0) + 1;
@@ -6774,9 +6711,6 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   // Carica rubrica geocoding
   _geoCacheLoad();
-  // Carica cache meteo cantieri e avvia il refresh periodico (Griglia settimanale)
-  _meteoCacheLoad();
-  pwStartMeteoTimer();
 
   // Ripristina l'ultima schermata (Dashboard / Pianificazione Settimanale) visualizzata,
   // fatto qui e non nel secondo DOMContentLoaded (init pianificazione) perché richiede
@@ -7032,7 +6966,7 @@ function pwGeneraMail() {
         for (let di = 0; di < 6; di++) {
           operatori.forEach(op => {
             const g = (op.giorni || {})[di] || {};
-            pwCellCantieri(g).forEach(c => cantieriSett.add(c));
+            if (g.cantiere && g.cantiere.trim()) cantieriSett.add(g.cantiere.trim());
             if (g.attivita && g.attivita.trim()) attivitaSett.add(g.attivita.trim());
           });
         }
@@ -7298,32 +7232,10 @@ function formatDateFull(d) {
 }
 
 /* ----- Stato pianificazione settimanale ----- */
-// Struttura: pwData[anno][week] = [ { commessa, commessaId, squadre: [ { nome, operatori: [ { nome, giorni: {0..5: {cantieri: string[], attivita}} } ] } ] } ]
-// giorni[d].cantieri è un elenco (più cantieri nello stesso giorno per lo stesso operatore).
-// Settimane salvate prima di questa modifica hanno ancora giorni[d].cantiere come stringa
-// singola: si legge sempre tramite pwCellCantieri(), mai leggendo il campo direttamente.
+// Struttura: pwData[anno][week] = [ { commessa, commessaId, squadre: [ { nome, operatori: [ { nome, giorni: {0..5: {cantiere,attivita}} } ] } ] } ]
 let pwData = {};
 let pwAnno = 2026;
 let pwWeek = 22;
-
-// Unica funzione di lettura dei cantieri di una cella operatore/giorno: normalizza sia il
-// nuovo formato (giorni[d].cantieri: string[]) sia il vecchio (giorni[d].cantiere: string).
-function pwCellCantieri(g) {
-  if (!g) return [];
-  if (Array.isArray(g.cantieri)) return g.cantieri.map(c => (c || '').trim()).filter(Boolean);
-  if (g.cantiere && g.cantiere.trim()) return [g.cantiere.trim()];
-  return [];
-}
-
-// Come pwCellCantieri(), ma SENZA scartare le voci vuote: usata solo per renderizzare la
-// cella editabile in Griglia, dove un campo appena aggiunto con "+ cantiere" deve restare
-// visibile (vuoto, pronto per la digitazione) invece di sparire al render successivo.
-function pwCellCantieriRaw(g) {
-  if (!g) return [];
-  if (Array.isArray(g.cantieri)) return g.cantieri.slice();
-  if (g.cantiere && g.cantiere.trim()) return [g.cantiere.trim()];
-  return [];
-}
 
 /* ----- Stato ferie ----- */
 // Struttura: pwFerie[anno][week][nomeOperatore] = { 0: bool, 1: bool, ..., 5: bool }
@@ -7990,9 +7902,8 @@ function pwRender() {
   grid.innerHTML = data.map((bloccoCommessa, cIdx) => {
     const commesseValide = pwGetCommesseValide();
 
-    // Header colonne — costruito per squadra (non per commessa) perché il badge meteo
-    // dipende dai cantieri specifici della squadra in quel giorno.
-    const buildColHeaderHtml = (squadra, sIdx) => `
+    // Header colonne
+    const colHeaderHtml = `
       <div class="pw-op-row" style="grid-template-columns: 200px repeat(6, 1fr);">
         <div class="pw-op-name text-[10px] text-slate-400 uppercase font-medium">Operatore</div>
         ${days.map((d, di) => {
@@ -8002,7 +7913,6 @@ function pwRender() {
           return `<div class="pw-day-header ${isSab ? 'sabato' : ''} ${isToday ? 'today' : ''}">
             ${DAY_NAMES[di]}
             <div class="pw-date">${formatDate(d)}</div>
-            ${pwWeatherBadgeHtml(cIdx, sIdx, squadra, di, ds)}
           </div>`;
         }).join('')}
       </div>`;
@@ -8016,30 +7926,18 @@ function pwRender() {
 
         const celleHtml = days.map((d, di) => {
           const dKey     = di;
-          const cantieriArr = pwCellCantieriRaw(giorni[dKey]);
-          const cantiereList = cantieriArr.length ? cantieriArr : [''];
+          const cantiere = (giorni[dKey] || {}).cantiere || '';
           const attivita = (giorni[dKey] || {}).attivita || '';
           const isSab    = di === 5;
           const isInFerie = opFerie[di] === true;
           const ferieClass = isInFerie ? ' in-ferie' : '';
           const cantierePlaceholder = isInFerie ? '🏖 ferie' : 'cantiere…';
           const attivitaPlaceholder = isInFerie ? '' : 'attività (facolt.)';
-          const cantiereRowsHtml = cantiereList.map((c, ci) => `
-            <div class="pw-cantiere-row">
-              <input class="pw-cantiere-input" type="text" placeholder="${cantierePlaceholder}"
-                value="${c.replace(/"/g, '&quot;')}"
-                data-cidx="${cIdx}" data-sidx="${sIdx}" data-oidx="${oIdx}" data-day="${dKey}" data-idx="${ci}"
-                onchange="pwUpdateCantiere(this)">${cantiereList.length > 1 ? `<button type="button" class="pw-cantiere-remove" title="Rimuovi cantiere"
-                data-cidx="${cIdx}" data-sidx="${sIdx}" data-oidx="${oIdx}" data-day="${dKey}" data-idx="${ci}"
-                onclick="pwRemoveCantiereField(this)">✕</button>` : ''}
-            </div>`).join('');
           return `<div class="pw-day-cell${isSab ? ' sabato' : ''}${ferieClass}" data-cidx="${cIdx}" data-sidx="${sIdx}" data-oidx="${oIdx}" data-day="${dKey}">
-            <div class="pw-cantiere-list">
-              ${cantiereRowsHtml}
-              <button type="button" class="pw-cantiere-add" title="Aggiungi un altro cantiere per questo giorno"
-                data-cidx="${cIdx}" data-sidx="${sIdx}" data-oidx="${oIdx}" data-day="${dKey}"
-                onclick="pwAddCantiereField(this)">+ cantiere</button>
-            </div>
+            <input class="pw-cantiere-input" type="text" placeholder="${cantierePlaceholder}"
+              value="${cantiere.replace(/"/g, '&quot;')}"
+              data-cidx="${cIdx}" data-sidx="${sIdx}" data-oidx="${oIdx}" data-day="${dKey}" data-field="cantiere"
+              onchange="pwUpdateCell(this)">
             <input class="pw-attivita-input" type="text" placeholder="${attivitaPlaceholder}"
               value="${attivita.replace(/"/g, '&quot;')}"
               data-cidx="${cIdx}" data-sidx="${sIdx}" data-oidx="${oIdx}" data-day="${dKey}" data-field="attivita"
@@ -8119,7 +8017,7 @@ function pwRender() {
             ${pwStrumenti.length === 0 ? '<span style="font-size:9px;color:#b45309;">(clicca "🔧 Aggiorna strumenti" in alto per caricare l\'elenco da Jira)</span>' : ''}
           </div>`;
         })()}
-        ${buildColHeaderHtml(squadra, sIdx)}
+        ${colHeaderHtml}
         ${operatoriHtml || `<div class="text-xs text-slate-400 italic px-4 py-2">Nessun operatore — clicca "+ Operatore"</div>`}
       </div>`;
     }).join('');
@@ -8173,9 +8071,6 @@ function pwRender() {
   pwApplyCollapseState();
   // Colora le celle con produzione già inserita (Controllo Produzione)
   pwSyncCpDataForGrid();
-  // Meteo per squadra/giorno: fire-and-forget, aggiorna i badge già in pagina senza
-  // un secondo pwRender() (perderebbe focus/cursore negli input appena renderizzati).
-  pwRefreshMeteoWeek();
 }
 
 /* ----- Statistiche settimana ----- */
@@ -8388,55 +8283,6 @@ async function pwUpdateCell(inp) {
   inp.value = value;
   op.giorni[day][field] = value;
   await pwSave();
-}
-
-/* ----- Più cantieri per operatore/giorno (giorni[d].cantieri: string[]) ----- */
-function pwCantiereCellOf(dataset) {
-  const { cidx, sidx, oidx, day } = dataset;
-  const data = pwGetWeekData();
-  const op = data[cidx]?.squadre[sidx]?.operatori[oidx];
-  if (!op) return null;
-  if (!op.giorni) op.giorni = {};
-  if (!op.giorni[day]) op.giorni[day] = {};
-  const g = op.giorni[day];
-  if (!Array.isArray(g.cantieri)) g.cantieri = pwCellCantieri(g);
-  delete g.cantiere; // il campo legacy singolo non va più scritto
-  return g;
-}
-
-async function pwUpdateCantiere(inp) {
-  const g = pwCantiereCellOf(inp.dataset);
-  if (!g) return;
-  const idx = Number(inp.dataset.idx);
-  const value = pwTitleCase(inp.value.trim());
-  inp.value = value;
-  g.cantieri[idx] = value;
-  await pwSave();
-  // Fire-and-forget: aggiorna subito il meteo per il nuovo cantiere, senza un pwRender()
-  // completo (perderebbe il focus appena rilasciato dal campo che ha appena scatenato onchange).
-  pwRefreshMeteoWeek();
-}
-
-async function pwAddCantiereField(btn) {
-  const g = pwCantiereCellOf(btn.dataset);
-  if (!g) return;
-  // Cella vuota: la UI mostra già un campo vuoto "sintetico" (non salvato) come
-  // placeholder. Se non lo si materializza prima di aggiungerne un altro, il primo
-  // click su "+ cantiere" produce un array di un solo elemento — identico a quello
-  // già mostrato — e sembra non fare nulla.
-  if (g.cantieri.length === 0) g.cantieri.push('');
-  g.cantieri.push('');
-  await pwSave();
-  pwRender();
-}
-
-async function pwRemoveCantiereField(btn) {
-  const g = pwCantiereCellOf(btn.dataset);
-  if (!g) return;
-  const idx = Number(btn.dataset.idx);
-  g.cantieri.splice(idx, 1);
-  await pwSave();
-  pwRender();
 }
 
 async function pwUpdateOpNome(sel) {
@@ -8943,13 +8789,13 @@ function pwJiraSubtaskInit(cIdx) {
       if (!op.nome) return;
       const giorni = op.giorni || {};
       Object.keys(giorni).forEach(dKey => {
+        const cantiere = (giorni[dKey] || {}).cantiere || '';
+        if (!cantiere) return;
         const attivita = (giorni[dKey] || {}).attivita || '';
-        pwCellCantieri(giorni[dKey]).forEach(cantiere => {
-          if (!comuni[cantiere]) comuni[cantiere] = {};
-          if (!(op.nome in comuni[cantiere]) || (!comuni[cantiere][op.nome] && attivita)) {
-            comuni[cantiere][op.nome] = attivita;
-          }
-        });
+        if (!comuni[cantiere]) comuni[cantiere] = {};
+        if (!(op.nome in comuni[cantiere]) || (!comuni[cantiere][op.nome] && attivita)) {
+          comuni[cantiere][op.nome] = attivita;
+        }
       });
     });
   });
@@ -9787,11 +9633,10 @@ function pwControlloRender() {
         (sq.operatori || []).forEach(op => {
           if (!op.nome || !op.nome.trim()) return;
           const opG = op.giorni && op.giorni[g] ? op.giorni[g] : {};
-          const cantieri = pwCellCantieri(opG);
-          if (cantieri.length === 0) return;
+          if (!opG.cantiere || !opG.cantiere.trim()) return;
           const fw = pwGetFerieWeek();
           if (fw[op.nome] && fw[op.nome][g] === true) return;
-          ops.push({ nome: op.nome, cantiere: cantieri.join(', '), attivita: opG.attivita || '' });
+          ops.push({ nome: op.nome, cantiere: opG.cantiere || '', attivita: opG.attivita || '' });
         });
         if (ops.length > 0) giorni.push({ giornoIdx: g, ops });
       }
@@ -10024,12 +9869,11 @@ async function pwControlloSyncJira(scopeCommessa, scopeSquadra, btnEl) {
           (sq.operatori || []).forEach(op => {
             if (!op.nome || !op.nome.trim()) return;
             const opG = op.giorni && op.giorni[g] ? op.giorni[g] : {};
-            const cantieri = pwCellCantieri(opG);
-            if (cantieri.length === 0) return;
+            if (!opG.cantiere || !opG.cantiere.trim()) return;
             if (fw[op.nome] && fw[op.nome][g] === true) return;
             cells.push({
               commessa: bc.commessa, squadra: sqNome, operatore: op.nome, giorno: g,
-              dataISO: isoDates[g], cantiere: cantieri.join(', '), attivita: opG.attivita || '',
+              dataISO: isoDates[g], cantiere: opG.cantiere || '', attivita: opG.attivita || '',
               email: emailByNome[op.nome] || '',
             });
           });
@@ -10609,10 +10453,9 @@ function cpGetSquadraOpsByDay(commessa, squadra) {
         (sq.operatori || []).forEach(op => {
           if (!op.nome || !op.nome.trim()) return;
           const opG = op.giorni && op.giorni[g] ? op.giorni[g] : {};
-          const cantieri = pwCellCantieri(opG);
-          if (cantieri.length === 0) return;
+          if (!opG.cantiere || !opG.cantiere.trim()) return;
           if (fw[op.nome] && fw[op.nome][g] === true) return;
-          ops.push({ nome: op.nome, cantiere: cantieri.join(', '), attivita: opG.attivita || '' });
+          ops.push({ nome: op.nome, cantiere: opG.cantiere || '', attivita: opG.attivita || '' });
         });
         if (ops.length > 0) perDay[g] = ops;
       }
@@ -10854,7 +10697,7 @@ function pwControlloExport() {
             bc.commessa, sqNome, op.nome,
             saved.verificato === true ? 'Sì' : '',
             DAY_NAMES[g], dates[g],
-            pwCellCantieri(opG).join(', '), opG.attivita || '',
+            opG.cantiere || '', opG.attivita || '',
             jVal === '' ? '' : jVal,
             ticketStr,
             epicStr,
@@ -10938,7 +10781,7 @@ function pwControlloExportPDF() {
         (sq.operatori || []).forEach(op => {
           if (!op.nome || !op.nome.trim()) return;
           const opG = op.giorni && op.giorni[g] ? op.giorni[g] : {};
-          const cant = pwCellCantieri(opG).join(', ');
+          const cant = (opG.cantiere || '').trim();
           if (cant) anyCantiereByDay[g].add(op.nome);
           const isFerie = fw[op.nome] && fw[op.nome][g] === true;
           if (!cant || isFerie) return; // righa normale solo se cantiere e non ferie
@@ -10971,7 +10814,7 @@ function pwControlloExportPDF() {
         (sq.operatori || []).forEach(op => {
           if (!op.nome || !op.nome.trim()) return;
           const opG = op.giorni && op.giorni[g] ? op.giorni[g] : {};
-          const cant = pwCellCantieri(opG).join(', ');
+          const cant = (opG.cantiere || '').trim();
           const att  = (opG.attivita || '').trim();
           const isFerie = fw[op.nome] && fw[op.nome][g] === true;
           if (cant) return;                              // questa cella ha cantiere -> non speciale
@@ -11178,7 +11021,7 @@ async function pwMapRender(dayIdx) {
       const attvOggi = new Set();
       ops.forEach(op => {
         const g = (op.giorni || {})[dayIdx] || {};
-        pwCellCantieri(g).forEach(c => cantieriOggi.add(c));
+        if (g.cantiere && g.cantiere.trim()) cantieriOggi.add(g.cantiere.trim());
         if (g.attivita && g.attivita.trim()) attvOggi.add(g.attivita.trim());
       });
       if (!cantieriOggi.size) return;
@@ -11187,7 +11030,7 @@ async function pwMapRender(dayIdx) {
       if (dayIdx > 0) {
         ops.forEach(op => {
           const g = (op.giorni || {})[dayIdx - 1] || {};
-          pwCellCantieri(g).forEach(c => cantieriPrec.add(c));
+          if (g.cantiere && g.cantiere.trim()) cantieriPrec.add(g.cantiere.trim());
         });
       }
 
@@ -11341,279 +11184,6 @@ async function pwMapFixLuogo(inp) {
   } catch(e) { inp.disabled = false; inp.placeholder = 'Errore rete'; }
 }
 
-/* ==================== METEO CANTIERI (Open-Meteo, gratuito senza API key) ====================
-   Badge meteo per squadra/giorno nella Griglia settimanale, basato sui cantieri pianificati
-   quel giorno. Riusa il geocoder Nominatim + _geoCache già presenti in weekly-mappa.js: un
-   cantiere non geocodificabile semplicemente non genera nessun badge (nessun errore bloccante).
-   Refresh in background ogni ora mentre l'app è aperta sul tab Griglia. */
-
-const METEO_TTL_MS = 60 * 60 * 1000;       // 1 ora
-const METEO_MAX_FORECAST_DAYS = 15;        // limite forecast giornaliero Open-Meteo
-
-/* Fasce orarie mostrate nel modal di dettaglio (copertura del tipico orario di cantiere). */
-const METEO_FASCE = ['06:00', '09:00', '12:00', '15:00', '18:00', '21:00'];
-
-/* Cache meteo persistente: chiave "lat,lon|dataISO" ->
-   { code, tmax, tmin, pop, hourly: [{hour,temp,code,pop}], fetchedAt } */
-let _meteoCache = {};
-async function _meteoCacheLoad() {
-  try { const r = await sget('meteo_cache_v1'); if (r) _meteoCache = r; } catch(e) {}
-}
-async function _meteoCacheSave() {
-  try { await sset('meteo_cache_v1', _meteoCache); } catch(e) {}
-}
-
-const METEO_ICONS = {
-  0: '☀️', 1: '🌤️', 2: '⛅', 3: '☁️',
-  45: '🌫️', 48: '🌫️',
-  51: '🌦️', 53: '🌦️', 55: '🌦️', 56: '🌦️', 57: '🌦️',
-  61: '🌧️', 63: '🌧️', 65: '🌧️', 66: '🌧️', 67: '🌧️',
-  71: '🌨️', 73: '🌨️', 75: '🌨️', 77: '🌨️',
-  80: '🌦️', 81: '🌧️', 82: '🌧️',
-  85: '🌨️', 86: '🌨️',
-  95: '⛈️', 96: '⛈️', 99: '⛈️',
-};
-function pwMeteoIconFor(code) {
-  return METEO_ICONS[code] || '🌡️';
-}
-
-/* Cantieri distinti in uso da una squadra in un giorno: unisce i cantieri di TUTTI gli
-   operatori (ciascuno può averne più di uno, vedi pwCellCantieri). */
-function pwSquadraCantieriGiorno(squadra, dayIdx) {
-  const set = new Set();
-  (squadra.operatori || []).forEach(op => {
-    pwCellCantieri((op.giorni || {})[dayIdx]).forEach(c => set.add(c));
-  });
-  return [...set];
-}
-
-/* Legge dalla cache il meteo di un cantiere in una data, sfruttando il geocoding già
-   disponibile in _geoCache (condivisa con la Mappa). null se non geocodificato/non ancora
-   scaricato. */
-function pwMeteoInfoFor(cantiere, dateISO) {
-  const key = cantiere.toLowerCase().trim().replace(/\s+/g, ' ');
-  const geo = _geoCache[key];
-  if (!geo) return null;
-  const mk = geo.lat.toFixed(2) + ',' + geo.lng.toFixed(2) + '|' + dateISO;
-  const m = _meteoCache[mk];
-  if (!m) return null;
-  return { cantiere, code: m.code, tmax: m.tmax, tmin: m.tmin, pop: m.pop, hourly: m.hourly || [] };
-}
-
-/* Sottoinsieme di ore rappresentative (METEO_FASCE) dal dettaglio orario di un cantiere. */
-function pwFasceOrarieFor(info) {
-  if (!info || !Array.isArray(info.hourly) || !info.hourly.length) return [];
-  const byHour = {};
-  info.hourly.forEach(h => { byHour[h.hour] = h; });
-  return METEO_FASCE.map(hh => byHour[hh]).filter(Boolean);
-}
-
-/* Una chiamata Open-Meteo per località, copre l'intero intervallo richiesto (tipicamente
-   l'intera settimana visibile) — popola _meteoCache per ciascun giorno restituito, sia con
-   l'aggregato giornaliero (per il badge) sia con il dettaglio orario (per il modal). */
-async function pwFetchMeteoRange(lat, lon, startISO, endISO) {
-  try {
-    const url = 'https://api.open-meteo.com/v1/forecast?latitude=' + lat + '&longitude=' + lon +
-      '&daily=weathercode,temperature_2m_max,temperature_2m_min,precipitation_probability_max' +
-      '&hourly=temperature_2m,weathercode,precipitation_probability' +
-      '&timezone=Europe%2FRome&start_date=' + startISO + '&end_date=' + endISO;
-    const res = await fetch(url);
-    if (!res.ok) throw new Error('HTTP ' + res.status);
-    const data = await res.json();
-    const d = data && data.daily;
-    const h = data && data.hourly;
-    if (!d || !Array.isArray(d.time)) return;
-    const now = Date.now();
-
-    // Raggruppa le ore per data (YYYY-MM-DD), per associarle al rispettivo giorno.
-    const hourlyByDate = {};
-    if (h && Array.isArray(h.time)) {
-      h.time.forEach((ts, i) => {
-        const dateISO = ts.slice(0, 10);
-        const hour = ts.slice(11, 16); // "HH:MM"
-        if (!hourlyByDate[dateISO]) hourlyByDate[dateISO] = [];
-        hourlyByDate[dateISO].push({
-          hour,
-          temp: h.temperature_2m[i],
-          code: h.weathercode[i],
-          pop: (h.precipitation_probability || [])[i] ?? null,
-        });
-      });
-    }
-
-    d.time.forEach((dateISO, i) => {
-      const mk = lat.toFixed(2) + ',' + lon.toFixed(2) + '|' + dateISO;
-      _meteoCache[mk] = {
-        code: d.weathercode[i],
-        tmax: d.temperature_2m_max[i],
-        tmin: d.temperature_2m_min[i],
-        pop: (d.precipitation_probability_max || [])[i] ?? null,
-        hourly: hourlyByDate[dateISO] || [],
-        fetchedAt: now,
-      };
-    });
-    await _meteoCacheSave();
-  } catch (e) {
-    // Meteo non essenziale: nessun blocco, semplicemente niente badge per questa località.
-  }
-}
-
-/* Entry point periodico: geocodifica i cantieri della settimana visibile (sequenziale, stesso
-   throttling Nominatim già usato dalla Mappa), scarica il meteo mancante/scaduto e aggiorna
-   i badge già in pagina. */
-let _pwMeteoRefreshing = false;
-async function pwRefreshMeteoWeek() {
-  if (_pwMeteoRefreshing) return;
-  _pwMeteoRefreshing = true;
-  try {
-    const monday = isoWeekToMonday(pwAnno, pwWeek);
-    const saturday = new Date(monday); saturday.setUTCDate(monday.getUTCDate() + 5);
-    const startISO = monday.toISOString().slice(0, 10);
-    const endISO = saturday.toISOString().slice(0, 10);
-
-    const todayISO = new Date().toISOString().slice(0, 10);
-    const maxDate = new Date(); maxDate.setUTCDate(maxDate.getUTCDate() + METEO_MAX_FORECAST_DAYS);
-    const maxISO = maxDate.toISOString().slice(0, 10);
-    if (endISO < todayISO || startISO > maxISO) return; // settimana fuori dal range forecast
-
-    const fetchStartISO = startISO < todayISO ? todayISO : startISO;
-    const fetchEndISO = endISO > maxISO ? maxISO : endISO;
-
-    const data = pwGetWeekData();
-    const cantieriSet = new Set();
-    data.forEach(bc => (bc.squadre || []).forEach(sq => (sq.operatori || []).forEach(op => {
-      for (let di = 0; di < 6; di++) pwCellCantieri((op.giorni || {})[di]).forEach(c => cantieriSet.add(c));
-    })));
-    if (!cantieriSet.size) return;
-
-    // Geocodifica sequenziale (rate-limit Nominatim), riusa _geoCache condivisa con la Mappa
-    for (const cantiere of cantieriSet) {
-      const key = cantiere.toLowerCase().trim().replace(/\s+/g, ' ');
-      if (!(key in _geoCache)) {
-        await geocodifica(cantiere);
-        await new Promise(r => setTimeout(r, 300));
-      }
-    }
-
-    // Una fetch meteo per località distinta non ancora fresca in cache
-    const now = Date.now();
-    const seenPos = new Set();
-    for (const cantiere of cantieriSet) {
-      const key = cantiere.toLowerCase().trim().replace(/\s+/g, ' ');
-      const geo = _geoCache[key];
-      if (!geo) continue; // non geocodificabile: niente meteo per questo cantiere
-      const posKey = geo.lat.toFixed(2) + ',' + geo.lng.toFixed(2);
-      if (seenPos.has(posKey)) continue;
-      seenPos.add(posKey);
-      // "Fresca" solo se anche il dettaglio orario è presente: un'entry con solo l'aggregato
-      // giornaliero (es. per un errore transitorio Open-Meteo su una singola fetch) altrimenti
-      // resterebbe bloccata senza dettaglio orario per l'intera durata del TTL.
-      const cached = _meteoCache[posKey + '|' + fetchStartISO];
-      const isFresh = cached && Array.isArray(cached.hourly) && cached.hourly.length && (now - cached.fetchedAt) < METEO_TTL_MS;
-      if (isFresh) continue;
-      await pwFetchMeteoRange(geo.lat, geo.lng, fetchStartISO, fetchEndISO);
-    }
-
-    pwApplyMeteoBadgesToDom();
-  } finally {
-    _pwMeteoRefreshing = false;
-  }
-}
-
-/* ----- Rendering badge ----- */
-// Sempre cliccabile (a prescindere dal numero di cantieri): apre il modal col dettaglio
-// meteo per fasce orarie, per cantiere.
-function pwWeatherBadgeInnerHtml(cIdx, sIdx, squadra, dayIdx, dateISO) {
-  const cantieri = pwSquadraCantieriGiorno(squadra, dayIdx);
-  if (!cantieri.length) return '';
-  const infos = cantieri.map(c => pwMeteoInfoFor(c, dateISO)).filter(Boolean);
-  if (!infos.length) return '';
-  const main = infos[0];
-  const icon = pwMeteoIconFor(main.code);
-  const tempTxt = Math.round(main.tmax) + '°';
-  const countBadge = cantieri.length > 1 ? ` <span class="pw-weather-badge-count">+${cantieri.length - 1}</span>` : '';
-  return `<span class="pw-weather-badge" title="Clicca per il dettaglio meteo per fasce orarie"
-    onclick="event.stopPropagation();pwOpenMeteoModal(${cIdx},${sIdx},${dayIdx})">${icon} ${tempTxt}${countBadge}</span>`;
-}
-
-function pwWeatherBadgeHtml(cIdx, sIdx, squadra, dayIdx, dateISO) {
-  return `<div class="pw-weather-slot" data-cidx="${cIdx}" data-sidx="${sIdx}" data-day="${dayIdx}" data-date="${dateISO}">${pwWeatherBadgeInnerHtml(cIdx, sIdx, squadra, dayIdx, dateISO)}</div>`;
-}
-
-/* Aggiorna i badge già renderizzati SENZA un pwRender() completo (eviterebbe di far perdere
-   il focus/cursore agli input cantiere/attività mentre l'utente sta digitando). */
-function pwApplyMeteoBadgesToDom() {
-  const data = pwGetWeekData();
-  document.querySelectorAll('.pw-weather-slot').forEach(slot => {
-    const cIdx = Number(slot.dataset.cidx), sIdx = Number(slot.dataset.sidx), dayIdx = Number(slot.dataset.day);
-    const dateISO = slot.dataset.date;
-    const squadra = data[cIdx] && data[cIdx].squadre && data[cIdx].squadre[sIdx];
-    if (!squadra) return;
-    slot.innerHTML = pwWeatherBadgeInnerHtml(cIdx, sIdx, squadra, dayIdx, dateISO);
-  });
-}
-
-/* ----- Modal dettaglio meteo per fasce orarie (uno o più cantieri) ----- */
-function pwOpenMeteoModal(cIdx, sIdx, dayIdx) {
-  const data = pwGetWeekData();
-  const squadra = data[cIdx] && data[cIdx].squadre && data[cIdx].squadre[sIdx];
-  if (!squadra) return;
-
-  const monday = isoWeekToMonday(pwAnno, pwWeek);
-  const d = new Date(monday); d.setUTCDate(monday.getUTCDate() + dayIdx);
-  const dateISO = d.toISOString().slice(0, 10);
-  const DAY_NAMES_FULL = ['Lunedì', 'Martedì', 'Mercoledì', 'Giovedì', 'Venerdì', 'Sabato'];
-
-  const cantieri = pwSquadraCantieriGiorno(squadra, dayIdx);
-  const blocks = cantieri.map(cantiere => {
-    const info = pwMeteoInfoFor(cantiere, dateISO);
-    if (!info) {
-      return `<div class="pw-meteo-modal-block">
-        <div class="pw-meteo-modal-cantiere">${esc(cantiere)}</div>
-        <div class="pw-meteo-modal-missing">Meteo non disponibile</div>
-      </div>`;
-    }
-    const fasce = pwFasceOrarieFor(info);
-    const fasceHtml = fasce.length
-      ? `<div class="pw-meteo-fasce">
-          ${fasce.map(h => `<div class="pw-meteo-fascia">
-            <div class="pw-meteo-fascia-ora">${h.hour}</div>
-            <div class="pw-meteo-fascia-icon">${pwMeteoIconFor(h.code)}</div>
-            <div class="pw-meteo-fascia-temp">${Math.round(h.temp)}°</div>
-            ${h.pop != null ? `<div class="pw-meteo-fascia-pop">💧${Math.round(h.pop)}%</div>` : ''}
-          </div>`).join('')}
-        </div>`
-      : `<div class="pw-meteo-modal-info">${pwMeteoIconFor(info.code)} ${Math.round(info.tmax)}° / ${Math.round(info.tmin)}° <span class="pw-meteo-modal-missing">(dettaglio orario non disponibile)</span></div>`;
-    return `<div class="pw-meteo-modal-block">
-      <div class="pw-meteo-modal-cantiere">${esc(cantiere)}</div>
-      ${fasceHtml}
-    </div>`;
-  }).join('');
-
-  const root = document.getElementById('modal-root');
-  if (!root) return;
-  root.innerHTML = `<div class="modal-backdrop"><div class="bg-white rounded-lg shadow-xl w-full max-w-lg mx-4 my-8 p-5">
-    <h3 class="font-semibold text-slate-900 mb-1">Meteo — ${esc(squadra.nome || 'Squadra')}</h3>
-    <p class="text-xs text-slate-500 mb-3">${DAY_NAMES_FULL[dayIdx]} ${formatDate(d)}</p>
-    <div>${blocks || '<div class="text-slate-400 text-sm">Nessun cantiere pianificato.</div>'}</div>
-    <div class="flex justify-end mt-4">
-      <button onclick="closeModal()" class="px-3 py-1.5 text-sm border border-slate-300 rounded">Chiudi</button>
-    </div>
-  </div></div>`;
-  root.querySelector('.modal-backdrop').addEventListener('click', e => {
-    if (e.target.classList.contains('modal-backdrop')) closeModal();
-  });
-}
-
-/* ----- Refresh periodico (avviato una volta al caricamento dell'app) ----- */
-function pwStartMeteoTimer() {
-  setInterval(() => {
-    const weeklyEl = document.getElementById('screen-weekly');
-    if (weeklyEl && !weeklyEl.classList.contains('hidden') && _pwActiveTab === 'griglia') {
-      pwRefreshMeteoWeek();
-    }
-  }, METEO_TTL_MS);
-}
 </script>
 
 </body>

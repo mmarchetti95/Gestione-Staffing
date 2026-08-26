@@ -108,7 +108,7 @@ async function pwMapRender(dayIdx) {
       const attvOggi = new Set();
       ops.forEach(op => {
         const g = (op.giorni || {})[dayIdx] || {};
-        if (g.cantiere && g.cantiere.trim()) cantieriOggi.add(g.cantiere.trim());
+        pwCellCantieri(g).forEach(c => cantieriOggi.add(c));
         if (g.attivita && g.attivita.trim()) attvOggi.add(g.attivita.trim());
       });
       if (!cantieriOggi.size) return;
@@ -117,7 +117,7 @@ async function pwMapRender(dayIdx) {
       if (dayIdx > 0) {
         ops.forEach(op => {
           const g = (op.giorni || {})[dayIdx - 1] || {};
-          if (g.cantiere && g.cantiere.trim()) cantieriPrec.add(g.cantiere.trim());
+          pwCellCantieri(g).forEach(c => cantieriPrec.add(c));
         });
       }
 

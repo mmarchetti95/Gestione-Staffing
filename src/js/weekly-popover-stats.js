@@ -141,6 +141,55 @@ async function pwUpdateCell(inp) {
   await pwSave();
 }
 
+/* ----- Più cantieri per operatore/giorno (giorni[d].cantieri: string[]) ----- */
+function pwCantiereCellOf(dataset) {
+  const { cidx, sidx, oidx, day } = dataset;
+  const data = pwGetWeekData();
+  const op = data[cidx]?.squadre[sidx]?.operatori[oidx];
+  if (!op) return null;
+  if (!op.giorni) op.giorni = {};
+  if (!op.giorni[day]) op.giorni[day] = {};
+  const g = op.giorni[day];
+  if (!Array.isArray(g.cantieri)) g.cantieri = pwCellCantieri(g);
+  delete g.cantiere; // il campo legacy singolo non va più scritto
+  return g;
+}
+
+async function pwUpdateCantiere(inp) {
+  const g = pwCantiereCellOf(inp.dataset);
+  if (!g) return;
+  const idx = Number(inp.dataset.idx);
+  const value = pwTitleCase(inp.value.trim());
+  inp.value = value;
+  g.cantieri[idx] = value;
+  await pwSave();
+  // Fire-and-forget: aggiorna subito il meteo per il nuovo cantiere, senza un pwRender()
+  // completo (perderebbe il focus appena rilasciato dal campo che ha appena scatenato onchange).
+  pwRefreshMeteoWeek();
+}
+
+async function pwAddCantiereField(btn) {
+  const g = pwCantiereCellOf(btn.dataset);
+  if (!g) return;
+  // Cella vuota: la UI mostra già un campo vuoto "sintetico" (non salvato) come
+  // placeholder. Se non lo si materializza prima di aggiungerne un altro, il primo
+  // click su "+ cantiere" produce un array di un solo elemento — identico a quello
+  // già mostrato — e sembra non fare nulla.
+  if (g.cantieri.length === 0) g.cantieri.push('');
+  g.cantieri.push('');
+  await pwSave();
+  pwRender();
+}
+
+async function pwRemoveCantiereField(btn) {
+  const g = pwCantiereCellOf(btn.dataset);
+  if (!g) return;
+  const idx = Number(btn.dataset.idx);
+  g.cantieri.splice(idx, 1);
+  await pwSave();
+  pwRender();
+}
+
 async function pwUpdateOpNome(sel) {
   const { cidx, sidx, oidx } = sel.dataset;
   const data = pwGetWeekData();

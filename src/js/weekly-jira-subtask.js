@@ -168,13 +168,13 @@ function pwJiraSubtaskInit(cIdx) {
       if (!op.nome) return;
       const giorni = op.giorni || {};
       Object.keys(giorni).forEach(dKey => {
-        const cantiere = (giorni[dKey] || {}).cantiere || '';
-        if (!cantiere) return;
         const attivita = (giorni[dKey] || {}).attivita || '';
-        if (!comuni[cantiere]) comuni[cantiere] = {};
-        if (!(op.nome in comuni[cantiere]) || (!comuni[cantiere][op.nome] && attivita)) {
-          comuni[cantiere][op.nome] = attivita;
-        }
+        pwCellCantieri(giorni[dKey]).forEach(cantiere => {
+          if (!comuni[cantiere]) comuni[cantiere] = {};
+          if (!(op.nome in comuni[cantiere]) || (!comuni[cantiere][op.nome] && attivita)) {
+            comuni[cantiere][op.nome] = attivita;
+          }
+        });
       });
     });
   });

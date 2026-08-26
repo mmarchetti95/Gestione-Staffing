@@ -244,7 +244,7 @@ function pwGeneraMail() {
         for (let di = 0; di < 6; di++) {
           operatori.forEach(op => {
             const g = (op.giorni || {})[di] || {};
-            if (g.cantiere && g.cantiere.trim()) cantieriSett.add(g.cantiere.trim());
+            pwCellCantieri(g).forEach(c => cantieriSett.add(c));
             if (g.attivita && g.attivita.trim()) attivitaSett.add(g.attivita.trim());
           });
         }
@@ -510,10 +510,32 @@ function formatDateFull(d) {
 }
 
 /* ----- Stato pianificazione settimanale ----- */
-// Struttura: pwData[anno][week] = [ { commessa, commessaId, squadre: [ { nome, operatori: [ { nome, giorni: {0..5: {cantiere,attivita}} } ] } ] } ]
+// Struttura: pwData[anno][week] = [ { commessa, commessaId, squadre: [ { nome, operatori: [ { nome, giorni: {0..5: {cantieri: string[], attivita}} } ] } ] } ]
+// giorni[d].cantieri è un elenco (più cantieri nello stesso giorno per lo stesso operatore).
+// Settimane salvate prima di questa modifica hanno ancora giorni[d].cantiere come stringa
+// singola: si legge sempre tramite pwCellCantieri(), mai leggendo il campo direttamente.
 let pwData = {};
 let pwAnno = 2026;
 let pwWeek = 22;
+
+// Unica funzione di lettura dei cantieri di una cella operatore/giorno: normalizza sia il
+// nuovo formato (giorni[d].cantieri: string[]) sia il vecchio (giorni[d].cantiere: string).
+function pwCellCantieri(g) {
+  if (!g) return [];
+  if (Array.isArray(g.cantieri)) return g.cantieri.map(c => (c || '').trim()).filter(Boolean);
+  if (g.cantiere && g.cantiere.trim()) return [g.cantiere.trim()];
+  return [];
+}
+
+// Come pwCellCantieri(), ma SENZA scartare le voci vuote: usata solo per renderizzare la
+// cella editabile in Griglia, dove un campo appena aggiunto con "+ cantiere" deve restare
+// visibile (vuoto, pronto per la digitazione) invece di sparire al render successivo.
+function pwCellCantieriRaw(g) {
+  if (!g) return [];
+  if (Array.isArray(g.cantieri)) return g.cantieri.slice();
+  if (g.cantiere && g.cantiere.trim()) return [g.cantiere.trim()];
+  return [];
+}
 
 /* ----- Stato ferie ----- */
 // Struttura: pwFerie[anno][week][nomeOperatore] = { 0: bool, 1: bool, ..., 5: bool }

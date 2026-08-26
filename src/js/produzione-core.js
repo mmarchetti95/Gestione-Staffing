@@ -179,10 +179,11 @@ function pwControlloRender() {
         (sq.operatori || []).forEach(op => {
           if (!op.nome || !op.nome.trim()) return;
           const opG = op.giorni && op.giorni[g] ? op.giorni[g] : {};
-          if (!opG.cantiere || !opG.cantiere.trim()) return;
+          const cantieri = pwCellCantieri(opG);
+          if (cantieri.length === 0) return;
           const fw = pwGetFerieWeek();
           if (fw[op.nome] && fw[op.nome][g] === true) return;
-          ops.push({ nome: op.nome, cantiere: opG.cantiere || '', attivita: opG.attivita || '' });
+          ops.push({ nome: op.nome, cantiere: cantieri.join(', '), attivita: opG.attivita || '' });
         });
         if (ops.length > 0) giorni.push({ giornoIdx: g, ops });
       }
@@ -415,11 +416,12 @@ async function pwControlloSyncJira(scopeCommessa, scopeSquadra, btnEl) {
           (sq.operatori || []).forEach(op => {
             if (!op.nome || !op.nome.trim()) return;
             const opG = op.giorni && op.giorni[g] ? op.giorni[g] : {};
-            if (!opG.cantiere || !opG.cantiere.trim()) return;
+            const cantieri = pwCellCantieri(opG);
+            if (cantieri.length === 0) return;
             if (fw[op.nome] && fw[op.nome][g] === true) return;
             cells.push({
               commessa: bc.commessa, squadra: sqNome, operatore: op.nome, giorno: g,
-              dataISO: isoDates[g], cantiere: opG.cantiere || '', attivita: opG.attivita || '',
+              dataISO: isoDates[g], cantiere: cantieri.join(', '), attivita: opG.attivita || '',
               email: emailByNome[op.nome] || '',
             });
           });

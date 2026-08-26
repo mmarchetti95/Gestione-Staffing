@@ -112,9 +112,10 @@ function cpGetSquadraOpsByDay(commessa, squadra) {
         (sq.operatori || []).forEach(op => {
           if (!op.nome || !op.nome.trim()) return;
           const opG = op.giorni && op.giorni[g] ? op.giorni[g] : {};
-          if (!opG.cantiere || !opG.cantiere.trim()) return;
+          const cantieri = pwCellCantieri(opG);
+          if (cantieri.length === 0) return;
           if (fw[op.nome] && fw[op.nome][g] === true) return;
-          ops.push({ nome: op.nome, cantiere: opG.cantiere || '', attivita: opG.attivita || '' });
+          ops.push({ nome: op.nome, cantiere: cantieri.join(', '), attivita: opG.attivita || '' });
         });
         if (ops.length > 0) perDay[g] = ops;
       }
@@ -356,7 +357,7 @@ function pwControlloExport() {
             bc.commessa, sqNome, op.nome,
             saved.verificato === true ? 'Sì' : '',
             DAY_NAMES[g], dates[g],
-            opG.cantiere || '', opG.attivita || '',
+            pwCellCantieri(opG).join(', '), opG.attivita || '',
             jVal === '' ? '' : jVal,
             ticketStr,
             epicStr,
@@ -440,7 +441,7 @@ function pwControlloExportPDF() {
         (sq.operatori || []).forEach(op => {
           if (!op.nome || !op.nome.trim()) return;
           const opG = op.giorni && op.giorni[g] ? op.giorni[g] : {};
-          const cant = (opG.cantiere || '').trim();
+          const cant = pwCellCantieri(opG).join(', ');
           if (cant) anyCantiereByDay[g].add(op.nome);
           const isFerie = fw[op.nome] && fw[op.nome][g] === true;
           if (!cant || isFerie) return; // righa normale solo se cantiere e non ferie
@@ -473,7 +474,7 @@ function pwControlloExportPDF() {
         (sq.operatori || []).forEach(op => {
           if (!op.nome || !op.nome.trim()) return;
           const opG = op.giorni && op.giorni[g] ? op.giorni[g] : {};
-          const cant = (opG.cantiere || '').trim();
+          const cant = pwCellCantieri(opG).join(', ');
           const att  = (opG.attivita || '').trim();
           const isFerie = fw[op.nome] && fw[op.nome][g] === true;
           if (cant) return;                              // questa cella ha cantiere -> non speciale

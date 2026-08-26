@@ -189,6 +189,9 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   // Carica rubrica geocoding
   _geoCacheLoad();
+  // Carica cache meteo cantieri e avvia il refresh periodico (Griglia settimanale)
+  _meteoCacheLoad();
+  pwStartMeteoTimer();
 
   // Ripristina l'ultima schermata (Dashboard / Pianificazione Settimanale) visualizzata,
   // fatto qui e non nel secondo DOMContentLoaded (init pianificazione) perché richiede

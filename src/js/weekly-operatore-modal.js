@@ -317,8 +317,9 @@ function pwRender() {
   grid.innerHTML = data.map((bloccoCommessa, cIdx) => {
     const commesseValide = pwGetCommesseValide();
 
-    // Header colonne
-    const colHeaderHtml = `
+    // Header colonne — costruito per squadra (non per commessa) perché il badge meteo
+    // dipende dai cantieri specifici della squadra in quel giorno.
+    const buildColHeaderHtml = (squadra, sIdx) => `
       <div class="pw-op-row" style="grid-template-columns: 200px repeat(6, 1fr);">
         <div class="pw-op-name text-[10px] text-slate-400 uppercase font-medium">Operatore</div>
         ${days.map((d, di) => {
@@ -328,6 +329,7 @@ function pwRender() {
           return `<div class="pw-day-header ${isSab ? 'sabato' : ''} ${isToday ? 'today' : ''}">
             ${DAY_NAMES[di]}
             <div class="pw-date">${formatDate(d)}</div>
+            ${pwWeatherBadgeHtml(cIdx, sIdx, squadra, di, ds)}
           </div>`;
         }).join('')}
       </div>`;
@@ -341,18 +343,30 @@ function pwRender() {
 
         const celleHtml = days.map((d, di) => {
           const dKey     = di;
-          const cantiere = (giorni[dKey] || {}).cantiere || '';
+          const cantieriArr = pwCellCantieriRaw(giorni[dKey]);
+          const cantiereList = cantieriArr.length ? cantieriArr : [''];
           const attivita = (giorni[dKey] || {}).attivita || '';
           const isSab    = di === 5;
           const isInFerie = opFerie[di] === true;
           const ferieClass = isInFerie ? ' in-ferie' : '';
           const cantierePlaceholder = isInFerie ? '🏖 ferie' : 'cantiere…';
           const attivitaPlaceholder = isInFerie ? '' : 'attività (facolt.)';
+          const cantiereRowsHtml = cantiereList.map((c, ci) => `
+            <div class="pw-cantiere-row">
+              <input class="pw-cantiere-input" type="text" placeholder="${cantierePlaceholder}"
+                value="${c.replace(/"/g, '&quot;')}"
+                data-cidx="${cIdx}" data-sidx="${sIdx}" data-oidx="${oIdx}" data-day="${dKey}" data-idx="${ci}"
+                onchange="pwUpdateCantiere(this)">${cantiereList.length > 1 ? `<button type="button" class="pw-cantiere-remove" title="Rimuovi cantiere"
+                data-cidx="${cIdx}" data-sidx="${sIdx}" data-oidx="${oIdx}" data-day="${dKey}" data-idx="${ci}"
+                onclick="pwRemoveCantiereField(this)">✕</button>` : ''}
+            </div>`).join('');
           return `<div class="pw-day-cell${isSab ? ' sabato' : ''}${ferieClass}" data-cidx="${cIdx}" data-sidx="${sIdx}" data-oidx="${oIdx}" data-day="${dKey}">
-            <input class="pw-cantiere-input" type="text" placeholder="${cantierePlaceholder}"
-              value="${cantiere.replace(/"/g, '&quot;')}"
-              data-cidx="${cIdx}" data-sidx="${sIdx}" data-oidx="${oIdx}" data-day="${dKey}" data-field="cantiere"
-              onchange="pwUpdateCell(this)">
+            <div class="pw-cantiere-list">
+              ${cantiereRowsHtml}
+              <button type="button" class="pw-cantiere-add" title="Aggiungi un altro cantiere per questo giorno"
+                data-cidx="${cIdx}" data-sidx="${sIdx}" data-oidx="${oIdx}" data-day="${dKey}"
+                onclick="pwAddCantiereField(this)">+ cantiere</button>
+            </div>
             <input class="pw-attivita-input" type="text" placeholder="${attivitaPlaceholder}"
               value="${attivita.replace(/"/g, '&quot;')}"
               data-cidx="${cIdx}" data-sidx="${sIdx}" data-oidx="${oIdx}" data-day="${dKey}" data-field="attivita"
@@ -432,7 +446,7 @@ function pwRender() {
             ${pwStrumenti.length === 0 ? '<span style="font-size:9px;color:#b45309;">(clicca "🔧 Aggiorna strumenti" in alto per caricare l\'elenco da Jira)</span>' : ''}
           </div>`;
         })()}
-        ${colHeaderHtml}
+        ${buildColHeaderHtml(squadra, sIdx)}
         ${operatoriHtml || `<div class="text-xs text-slate-400 italic px-4 py-2">Nessun operatore — clicca "+ Operatore"</div>`}
       </div>`;
     }).join('');
@@ -486,6 +500,9 @@ function pwRender() {
   pwApplyCollapseState();
   // Colora le celle con produzione già inserita (Controllo Produzione)
   pwSyncCpDataForGrid();
+  // Meteo per squadra/giorno: fire-and-forget, aggiorna i badge già in pagina senza
+  // un secondo pwRender() (perderebbe focus/cursore negli input appena renderizzati).
+  pwRefreshMeteoWeek();
 }
 
 /* ----- Statistiche settimana ----- */
