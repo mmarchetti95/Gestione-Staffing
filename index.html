@@ -288,6 +288,8 @@
   .pw-collapse-toggle:hover { color:#fff; }
   .pw-sq-collapse-toggle { background:none;border:none;cursor:pointer;color:#92400e;font-size:13px;padding:0 4px 0 0;line-height:1;user-select:none;flex-shrink:0; }
   .pw-sq-collapse-toggle:hover { color:#78350f; }
+  .pw-sq-nome-input { flex: 0 1 auto; width: 140px; min-width: 60px; }
+  .pw-sq-cognomi { font-size: 10px; font-weight: 500; color: #92400e; opacity: .75; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 220px; flex-shrink: 1; margin-left: 6px; }
   .pw-squadra-header {
     background: #fef3c7;
     border-bottom: 1px solid #fde68a;
@@ -582,6 +584,7 @@
   .op-trigger-btn.stato-assegnato { background: #fef9c3; color: #854d0e; border-color: #fde047; }
   .op-trigger-btn.stato-ferie     { background: #fee2e2; color: #991b1b; border-color: #fca5a5; }
   .op-trigger-label { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .op-trigger-geo { font-size: 9px; opacity: .6; margin-left: 4px; white-space: nowrap; flex-shrink: 0; }
   .op-trigger-arrow { font-size: 8px; margin-left: 4px; opacity: .5; flex-shrink: 0; }
 
   /* ===== RICERCA OPERATORE NELLA GRIGLIA ===== */
@@ -817,7 +820,7 @@
     <div class="flex items-center gap-2">
       <button id="btn-presentation" class="px-3 py-1.5 text-sm rounded hover:bg-white/10" style="border:1px solid var(--dark-border-strong);color:var(--dark-text);visibility:visible;">📊 Modalità presentazione</button>
       <div class="text-xs pl-2" style="border-left:1px solid var(--dark-border-strong);color:var(--dark-text-muted);">
-        <span class="font-medium" style="color:var(--accent);">v18.88.2</span> · Michele Marchetti
+        <span class="font-medium" style="color:var(--accent);">v18.90.0</span> · Michele Marchetti
       </div>
     </div>
   </div>
@@ -4696,8 +4699,8 @@ function openOperatoreModal(id) {
     }
     const dataInizioRapporto = contrattoTipo === 'determinato' ? dataInizio : '';
     const dataFineRapporto = contrattoTipo === 'determinato' ? dataFine : '';
-    if (id) { Object.assign(op, { nome_esteso: nomeEsteso, nome, cognome, email, regione, provincia, contratto_tipo: contrattoTipo, data_inizio_rapporto: dataInizioRapporto, data_fine_rapporto: dataFineRapporto, skills, attestati }); await saveState('Modifica operatore', {operatore: nomeEsteso}); }
-    else { state.operatori.push({ ...op, nome_esteso: nomeEsteso, nome_breve: nomeEsteso, nome, cognome, email, regione, provincia, contratto_tipo: contrattoTipo, data_inizio_rapporto: dataInizioRapporto, data_fine_rapporto: dataFineRapporto, skills, attestati }); await saveState('Nuovo operatore', {operatore: nomeEsteso}); }
+    if (id) { Object.assign(op, { nome_esteso: nomeEsteso, nome, cognome, email, regione, provincia, contratto_tipo: contrattoTipo, data_inizio_rapporto: dataInizioRapporto, data_fine_rapporto: dataFineRapporto, skills, attestati }); await saveState('Modifica operatore', {operatore: nomeEsteso}, true); }
+    else { state.operatori.push({ ...op, nome_esteso: nomeEsteso, nome_breve: nomeEsteso, nome, cognome, email, regione, provincia, contratto_tipo: contrattoTipo, data_inizio_rapporto: dataInizioRapporto, data_fine_rapporto: dataFineRapporto, skills, attestati }); await saveState('Nuovo operatore', {operatore: nomeEsteso}, true); }
     renderAll(); closeModal();
   };
 }
@@ -5896,7 +5899,7 @@ function openCommessaAttivaModal(nome) {
   };
   document.getElementById('ma-reset').onclick = async () => {
     if(!await showConfirmAsync('Rimuovere i metadati salvati?', 'Rimuovi')) return;
-    delete state.commesse_attive_meta[nome]; await saveState(); renderAll(); closeModal();
+    delete state.commesse_attive_meta[nome]; await saveState(null, null, true); renderAll(); closeModal();
   };
   document.getElementById('ma-save').onclick = async () => {
     const risRaw = document.getElementById('ma-ris').value.trim();
@@ -5923,7 +5926,7 @@ function openCommessaAttivaModal(nome) {
       attestati_richiesti: [...document.querySelectorAll('.ma-at:checked')].map(x=>x.value),
       risorse_necessarie: risDichiarate,
     };
-    await saveState(); renderAll(); closeModal();
+    await saveState('Modifica commessa attiva', {commessa: nome}, true); renderAll(); closeModal();
   };
 }
 
@@ -6939,7 +6942,9 @@ function pwGeneraMail() {
         const strumentiSq  = strumentiEl ? strumentiEl.value.trim() : '';
         sqInfoIdx++;
 
-        testo += `\n🟡 ${nomeSquadra}\n`;
+        const cognomiSq = pwSquadraCognomi(sq);
+        const cognomiSuffix = cognomiSq.length ? `: ${cognomiSq.join(', ')}` : '';
+        testo += `\n🟡 ${nomeSquadra}${cognomiSuffix}\n`;
 
         if (operatori.length > 0) {
           testo += `👷 ${operatori.map(o => o.nome + dwLabel(o.nome)).join(' · ')}\n`;
@@ -7788,6 +7793,30 @@ async function pwConfirmOpModal(cidx, sidx, oidx, nome) {
   }
 }
 
+// Cognomi (deduplicati, in ordine di assegnazione) degli operatori correntemente
+// nella squadra — mostrati come riferimento a sola lettura accanto al campo
+// "Nome squadra", che resta libero/editabile.
+function pwSquadraCognomi(squadra) {
+  const cognomi = (squadra.operatori || [])
+    .map(o => o.nome)
+    .filter(Boolean)
+    .map(nome => {
+      const op = (state.operatori || []).find(o => (o.nome_esteso || o.nome) === nome);
+      return (op && op.cognome) ? op.cognome : nome.split(' ').pop();
+    });
+  return [...new Set(cognomi)];
+}
+
+// Provincia (o, in mancanza, regione) di provenienza dell'operatore, per il
+// badge di localizzazione nella griglia — stessa logica del filtro geo del
+// modal di selezione (pwOpenOpModal).
+function pwOperatoreGeoLabel(nome) {
+  const op = (state.operatori || []).find(o => (o.nome_esteso || o.nome) === nome);
+  if (!op) return '';
+  const provInfo = provinciaInfo(op.provincia);
+  return provInfo ? provInfo.nome : operatoreRegione(op);
+}
+
 /* Costruisce HTML del trigger nella cella operatore */
 function pwRenderOpDropdown(cidx, sidx, oidx, nomeCorrente) {
   const stato      = nomeCorrente ? pwStatoOperatore(nomeCorrente, cidx, sidx, oidx) : '';
@@ -7796,9 +7825,11 @@ function pwRenderOpDropdown(cidx, sidx, oidx, nomeCorrente) {
   const exBadge    = nomeCorrente && isOperatoreLicenziato(nomeCorrente)
     ? '<span class="op-ex-tag">ex</span>'
     : '';
+  const geoLabel   = nomeCorrente ? pwOperatoreGeoLabel(nomeCorrente) : '';
   return `<button class="op-trigger-btn ${statoClass}"
     onclick="pwOpenOpModal(${cidx}, ${sidx}, ${oidx})">
     <span class="op-trigger-label">${label}${exBadge}</span>
+    ${geoLabel ? `<span class="op-trigger-geo">📍 ${esc(geoLabel)}</span>` : ''}
     <span class="op-trigger-arrow">▾</span>
   </button>`;
 }
@@ -7947,15 +7978,21 @@ function pwRender() {
         </div>`;
       }).join('');
 
+      const cognomiSquadra = pwSquadraCognomi(squadra);
+      const cognomiHtml = cognomiSquadra.length
+        ? `<span class="pw-sq-cognomi" title="Operatori: ${esc(cognomiSquadra.join(', '))}">: ${esc(cognomiSquadra.join(', '))}</span>`
+        : '';
+
       return `<div class="pw-squadra-block" data-collapse-key="${cIdx}-${sIdx}">
         <div class="pw-squadra-header">
           <button class="pw-sq-collapse-toggle" onclick="pwToggleSq(${cIdx},${sIdx})">▼</button>
           <span>🟡</span>
-          <input type="text" class="flex-1 bg-transparent border-none outline-none font-semibold text-amber-900 text-xs"
+          <input type="text" class="pw-sq-nome-input bg-transparent border-none outline-none font-semibold text-amber-900 text-xs"
             placeholder="Nome squadra…" value="${(squadra.nome || '').replace(/"/g, '&quot;')}"
             data-cidx="${cIdx}" data-sidx="${sIdx}"
             onchange="pwUpdateSquadraNome(this)">
-          <div class="flex items-center gap-2 ml-2">
+          ${cognomiHtml}
+          <div class="flex items-center gap-2 ml-2" style="margin-left:auto;">
             <button class="text-[10px] bg-amber-200 hover:bg-amber-300 text-amber-900 px-2 py-0.5 rounded"
               data-cidx="${cIdx}" data-sidx="${sIdx}"
               onclick="pwAddOp(this)">+ Operatore</button>

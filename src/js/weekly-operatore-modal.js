@@ -208,6 +208,30 @@ async function pwConfirmOpModal(cidx, sidx, oidx, nome) {
   }
 }
 
+// Cognomi (deduplicati, in ordine di assegnazione) degli operatori correntemente
+// nella squadra — mostrati come riferimento a sola lettura accanto al campo
+// "Nome squadra", che resta libero/editabile.
+function pwSquadraCognomi(squadra) {
+  const cognomi = (squadra.operatori || [])
+    .map(o => o.nome)
+    .filter(Boolean)
+    .map(nome => {
+      const op = (state.operatori || []).find(o => (o.nome_esteso || o.nome) === nome);
+      return (op && op.cognome) ? op.cognome : nome.split(' ').pop();
+    });
+  return [...new Set(cognomi)];
+}
+
+// Provincia (o, in mancanza, regione) di provenienza dell'operatore, per il
+// badge di localizzazione nella griglia — stessa logica del filtro geo del
+// modal di selezione (pwOpenOpModal).
+function pwOperatoreGeoLabel(nome) {
+  const op = (state.operatori || []).find(o => (o.nome_esteso || o.nome) === nome);
+  if (!op) return '';
+  const provInfo = provinciaInfo(op.provincia);
+  return provInfo ? provInfo.nome : operatoreRegione(op);
+}
+
 /* Costruisce HTML del trigger nella cella operatore */
 function pwRenderOpDropdown(cidx, sidx, oidx, nomeCorrente) {
   const stato      = nomeCorrente ? pwStatoOperatore(nomeCorrente, cidx, sidx, oidx) : '';
@@ -216,9 +240,11 @@ function pwRenderOpDropdown(cidx, sidx, oidx, nomeCorrente) {
   const exBadge    = nomeCorrente && isOperatoreLicenziato(nomeCorrente)
     ? '<span class="op-ex-tag">ex</span>'
     : '';
+  const geoLabel   = nomeCorrente ? pwOperatoreGeoLabel(nomeCorrente) : '';
   return `<button class="op-trigger-btn ${statoClass}"
     onclick="pwOpenOpModal(${cidx}, ${sidx}, ${oidx})">
     <span class="op-trigger-label">${label}${exBadge}</span>
+    ${geoLabel ? `<span class="op-trigger-geo">📍 ${esc(geoLabel)}</span>` : ''}
     <span class="op-trigger-arrow">▾</span>
   </button>`;
 }
@@ -367,15 +393,21 @@ function pwRender() {
         </div>`;
       }).join('');
 
+      const cognomiSquadra = pwSquadraCognomi(squadra);
+      const cognomiHtml = cognomiSquadra.length
+        ? `<span class="pw-sq-cognomi" title="Operatori: ${esc(cognomiSquadra.join(', '))}">: ${esc(cognomiSquadra.join(', '))}</span>`
+        : '';
+
       return `<div class="pw-squadra-block" data-collapse-key="${cIdx}-${sIdx}">
         <div class="pw-squadra-header">
           <button class="pw-sq-collapse-toggle" onclick="pwToggleSq(${cIdx},${sIdx})">▼</button>
           <span>🟡</span>
-          <input type="text" class="flex-1 bg-transparent border-none outline-none font-semibold text-amber-900 text-xs"
+          <input type="text" class="pw-sq-nome-input bg-transparent border-none outline-none font-semibold text-amber-900 text-xs"
             placeholder="Nome squadra…" value="${(squadra.nome || '').replace(/"/g, '&quot;')}"
             data-cidx="${cIdx}" data-sidx="${sIdx}"
             onchange="pwUpdateSquadraNome(this)">
-          <div class="flex items-center gap-2 ml-2">
+          ${cognomiHtml}
+          <div class="flex items-center gap-2 ml-2" style="margin-left:auto;">
             <button class="text-[10px] bg-amber-200 hover:bg-amber-300 text-amber-900 px-2 py-0.5 rounded"
               data-cidx="${cIdx}" data-sidx="${sIdx}"
               onclick="pwAddOp(this)">+ Operatore</button>

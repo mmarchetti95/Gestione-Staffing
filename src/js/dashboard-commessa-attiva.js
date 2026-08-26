@@ -148,7 +148,7 @@ function openCommessaAttivaModal(nome) {
   };
   document.getElementById('ma-reset').onclick = async () => {
     if(!await showConfirmAsync('Rimuovere i metadati salvati?', 'Rimuovi')) return;
-    delete state.commesse_attive_meta[nome]; await saveState(); renderAll(); closeModal();
+    delete state.commesse_attive_meta[nome]; await saveState(null, null, true); renderAll(); closeModal();
   };
   document.getElementById('ma-save').onclick = async () => {
     const risRaw = document.getElementById('ma-ris').value.trim();
@@ -175,7 +175,7 @@ function openCommessaAttivaModal(nome) {
       attestati_richiesti: [...document.querySelectorAll('.ma-at:checked')].map(x=>x.value),
       risorse_necessarie: risDichiarate,
     };
-    await saveState(); renderAll(); closeModal();
+    await saveState('Modifica commessa attiva', {commessa: nome}, true); renderAll(); closeModal();
   };
 }
 

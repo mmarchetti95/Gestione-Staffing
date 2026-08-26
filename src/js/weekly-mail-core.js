@@ -220,7 +220,9 @@ function pwGeneraMail() {
         const strumentiSq  = strumentiEl ? strumentiEl.value.trim() : '';
         sqInfoIdx++;
 
-        testo += `\n🟡 ${nomeSquadra}\n`;
+        const cognomiSq = pwSquadraCognomi(sq);
+        const cognomiSuffix = cognomiSq.length ? `: ${cognomiSq.join(', ')}` : '';
+        testo += `\n🟡 ${nomeSquadra}${cognomiSuffix}\n`;
 
         if (operatori.length > 0) {
           testo += `👷 ${operatori.map(o => o.nome + dwLabel(o.nome)).join(' · ')}\n`;

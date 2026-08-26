@@ -1,3 +1,14 @@
+## v18.90.0
+- feat: **Genera mail — cognomi squadra nell'intestazione** — la riga "🟡 Nome squadra" nel testo generato da "Genera mail" riporta ora anche i cognomi degli operatori assegnati (stesso formato "Nome squadra: Cognome1, Cognome2" introdotto in griglia in v18.89.0/v18.89.1), per coerenza tra la griglia e il testo copiato/inviato via mail.
+
+## v18.89.1
+- fix: **Griglia settimanale — cognomi squadra attaccati al nome squadra** — l'etichetta con i cognomi (introdotta in v18.89.0) veniva stampata subito dopo il testo digitato nel campo "Nome squadra…", perché quel campo era a larghezza piena (`flex-1`) ma il testo occupava solo una parte della sua larghezza reale, senza un separatore visivo. Ora il campo ha una larghezza fissa più contenuta e l'etichetta cognomi è preceduta da "`: `" con un margine dedicato, leggibile come "Nome squadra: Cognome1, Cognome2".
+
+## v18.89.0
+- feat: **Griglia settimanale — badge localizzazione accanto al nome operatore** — ogni riga operatore nella Griglia mostra ora, accanto al nome, la provincia (o la regione se la provincia non è nota) di provenienza — stessa informazione già disponibile nel modal di selezione operatore, ora visibile direttamente in griglia senza doverlo aprire.
+- feat: **Griglia settimanale — cognomi squadra accanto al nome squadra** — l'header di ogni blocco squadra mostra ora, accanto al campo libero "Nome squadra…", un'etichetta a sola lettura con i cognomi degli operatori correntemente assegnati (dedotti dal campo "Cognome" anagrafico, o dall'ultima parola del nome esteso se non compilato), aggiornata automaticamente ad ogni assegnazione/rimozione. Il campo nome squadra resta libero e non viene mai sovrascritto.
+- fix: **Salvataggio operatore e commessa attiva — rischio di perdita modifiche se si naviga via subito dopo il salvataggio** — "Nuovo/Modifica operatore" e "Salva/Reset metadati" della modale Commessa attiva scrivevano lo stato solo in locale e demandavano l'invio a Supabase al debounce di auto-push (3s); senza un flush alla chiusura pagina, chiudere/ricaricare la scheda entro quei 3s faceva sì che la modifica non arrivasse mai al database, pur risultando "salvata" localmente. Questi due salvataggi ora forzano il push immediato (stesso pattern già usato per eliminazione/licenziamento operatore e chiusura commessa).
+
 ## v18.88.2
 - fix: **Sottotask Jira — "Nessun risultato" nella scelta del Task sotto un Epic** — `jira-list-tasks` filtrava di default su `issuetype = "Task"`, ma sul progetto testato dall'utente il tipo del livello sotto l'Epic non è "Task" (osservato empiricamente: varia da progetto a progetto, es. "Story"). Rimosso il filtro per issuetype di default: ora vengono mostrati tutti i figli diretti dell'Epic (via campo `parent`), con l'issuetype indicato tra parentesi quadre in ogni riga del dropdown, e sceglie l'utente. Il filtro resta disponibile via `JIRA_TASK_ISSUETYPE` (env Edge Function) per chi vuole restringerlo a un solo tipo.
 
