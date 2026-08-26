@@ -124,6 +124,10 @@ function pwSearchOp(term) {
 }
 
 /* ----- Handlers CRUD pianificazione ----- */
+function pwTitleCase(str) {
+  return str.replace(/\S+/g, w => w.charAt(0).toLocaleUpperCase('it-IT') + w.slice(1).toLocaleLowerCase('it-IT'));
+}
+
 async function pwUpdateCell(inp) {
   const { cidx, sidx, oidx, day, field } = inp.dataset;
   const data = pwGetWeekData();
@@ -131,7 +135,9 @@ async function pwUpdateCell(inp) {
   if (!op) return;
   if (!op.giorni) op.giorni = {};
   if (!op.giorni[day]) op.giorni[day] = {};
-  op.giorni[day][field] = inp.value.trim();
+  const value = pwTitleCase(inp.value.trim());
+  inp.value = value;
+  op.giorni[day][field] = value;
   await pwSave();
 }
 

@@ -1,15 +1,16 @@
 # Graph Report - Gestione-Staffing  (2026-08-25)
 
 ## Corpus Check
-- cluster-only mode — file stats not available
+- 34 files · ~116,517 words
+- Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
-- 438 nodes · 591 edges · 60 communities (30 shown, 30 thin omitted)
+- 445 nodes · 607 edges · 60 communities (30 shown, 30 thin omitted)
 - Extraction: 98% EXTRACTED · 2% INFERRED · 0% AMBIGUOUS · INFERRED: 10 edges (avg confidence: 0.72)
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `c78b24ff`
+- Built from commit: `4d6c01ca`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -28,7 +29,7 @@
 - Storage Utils & Saturazione
 - Mappa Squadre Geocoding
 - config.js
-- Commessa Attiva Detail UI
+- dashboard-commessa-attiva.js
 - Report CSV Import (Produzione)
 - Collapse/Expand UI State
 - weekly-operatore-modal.js
@@ -78,13 +79,13 @@
 1. `closeModal()` - 10 edges
 2. `sbOnLoggedIn()` - 9 edges
 3. `pwApplyProduzioneColors()` - 9 edges
-4. `pwGeneraMail()` - 8 edges
-5. `pwGetFerieWeek()` - 8 edges
-6. `sbPull()` - 7 edges
-7. `cpRereadTicket()` - 7 edges
-8. `pwControlloRender()` - 7 edges
-9. `renderOperatori()` - 7 edges
-10. `Pianificazione Settimanale screen (#screen-weekly)` - 7 edges
+4. `esc()` - 8 edges
+5. `pwGeneraMail()` - 8 edges
+6. `pwGetFerieWeek()` - 8 edges
+7. `openCommessaModal()` - 7 edges
+8. `renderOperatori()` - 7 edges
+9. `sbPull()` - 7 edges
+10. `cpRereadTicket()` - 7 edges
 
 ## Surprising Connections (you probably didn't know these)
 - `Legacy sessionStorage keys migration` --semantically_similar_to--> `INITIAL_DATA fallback constant`  [INFERRED] [semantically similar]
@@ -137,14 +138,14 @@ Nodes (14): pwAddSquadra(), pwAddStrumento(), pwRemoveSquadra(), pwRemoveStrumen
 
 ### Community 6 - "dashboard-crud-helpers.js"
 Cohesion: 0.17
-Nodes (22): closeModal(), cpSelectModal(), deleteCommessa(), deleteOperatore(), esc(), getOperatoriAttivi(), isOperatoreLicenziato(), isOperatoreScaduto() (+14 more)
+Nodes (23): closeModal(), cpSelectModal(), deleteCommessa(), deleteOperatore(), esc(), getOperatoriAttivi(), isOperatoreLicenziato(), isOperatoreScaduto() (+15 more)
 
 ### Community 7 - "Design Tokens & KPI Component"
 Cohesion: 0.16
 Nodes (15): Alarm Rose (gap risorse/alert), Categorical Color System (colori categorici), Circuit Indigo (operatori/Jira sync), Foreman Amber (saturazione/carico), KPI Tile component, Ledger Blue (commesse attive), Modale canonico (Tailwind shadow-xl family), Modale su misura (--shadow-lg family) (+7 more)
 
 ### Community 8 - "dashboard-operatori.js"
-Cohesion: 0.21
+Cohesion: 0.19
 Nodes (14): aggiornaGgOpVistaCommessa(), apriVistaOperatore(), checkCoerenzaOperatori(), EMAIL_SEED, renderAttestatiFilters(), renderEmailOperatori(), renderOperatori(), renderProvinciaFilterOptions() (+6 more)
 
 ### Community 9 - "Version History: Sync & Doppia Week"
@@ -164,11 +165,11 @@ Cohesion: 0.26
 Nodes (10): _geoCache, _geoCacheSave(), geocodifica(), MAP_COLORS, _mapColor(), _mapColors, _mapMarkers, pwMapFixLuogo() (+2 more)
 
 ### Community 13 - "config.js"
-Cohesion: 0.15
-Nodes (11): ANNO, INDUSTRIES, INITIAL_DATA, meseCorrente(), MESI, MESI_LONG, PROVINCE_ITALIA, REGIONI_ITALIA (+3 more)
+Cohesion: 0.16
+Nodes (17): ANNO, distanzaLavorazione(), distanzaProvince(), haversineKm(), INDUSTRIES, INITIAL_DATA, meseCorrente(), MESI (+9 more)
 
-### Community 14 - "Commessa Attiva Detail UI"
-Cohesion: 0.27
+### Community 14 - "dashboard-commessa-attiva.js"
+Cohesion: 0.24
 Nodes (6): _CONFRONTO_STATO_BADGE, _confrontoBodyHtml(), _confrontoTableHtml(), getCommessaAttivaMeta(), openCommessaAttivaModal(), renderConfrontoBox()
 
 ### Community 15 - "Report CSV Import (Produzione)"
@@ -228,14 +229,14 @@ Cohesion: 0.67
 Nodes (3): v18.49.0 pulsante Apri Outlook (mailto destinatari), v18.51.0 campo Email referente tecnico obbligatorio, v18.56.0 riordino destinatari mailto (To/CC)
 
 ## Knowledge Gaps
-- **84 isolated node(s):** `pwData`, `pwDoppiaWeek`, `pwFerie`, `_geoCache`, `MAP_COLORS` (+79 more)
+- **84 isolated node(s):** `INITIAL_DATA`, `SKILLS`, `MESI`, `MESI_LONG`, `INDUSTRIES` (+79 more)
   These have ≤1 connection - possible missing edges or undocumented components.
 - **30 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
 
 ## Suggested Questions
 _Questions this graph is uniquely positioned to answer:_
 
-- **What connects `pwData`, `pwDoppiaWeek`, `pwFerie` to the rest of the system?**
+- **What connects `INITIAL_DATA`, `SKILLS`, `MESI` to the rest of the system?**
   _84 weakly-connected nodes found - possible documentation gaps or missing edges._
 - **Should `Weekly Mail & ISO Week Utils` be split into smaller, more focused modules?**
   _Cohesion score 0.12121212121212122 - nodes in this community are weakly interconnected._

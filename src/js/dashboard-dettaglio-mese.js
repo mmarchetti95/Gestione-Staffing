@@ -41,7 +41,7 @@ function apriDettaglioMeseCommessa(ev, commessaEnc, meseIdx) {
       const skillMancanti = skillRichieste.filter(s => !skills.includes(s));
       const sat = satOpMese(nome);
       const ggDisp = Math.round(gl * Math.max(0, 1 - sat));
-      const distanza = distanzaLavorazione(regioneCommessa, provinciaCommessa, opObj?.provincia);
+      const distanza = distanzaLavorazione(regioneCommessa, provinciaCommessa, opObj?.provincia, opObj?.regione);
       candidati.push({ nome, sat, ggDisp, tipo: 'già_su_commessa', skills, matchSkill, skillMancanti, distanza });
     });
     // Dal pool, non sulla commessa
@@ -53,7 +53,7 @@ function apriDettaglioMeseCommessa(ev, commessaEnc, meseIdx) {
         const skillMancanti = skillRichieste.filter(s => !op.skills.includes(s));
         const sat = satOpMese(op.nome_esteso);
         const ggDisp = Math.round(gl * Math.max(0, 1 - sat));
-        const distanza = distanzaLavorazione(regioneCommessa, provinciaCommessa, op.provincia);
+        const distanza = distanzaLavorazione(regioneCommessa, provinciaCommessa, op.provincia, op.regione);
         if (ggDisp > 0) candidati.push({ nome: op.nome_esteso, sat, ggDisp, tipo: 'disponibile', skills: op.skills, matchSkill, skillMancanti, distanza });
       });
     // Ordina: prima i validi (match skill), poi la vicinanza geografica alla commessa,

@@ -1,7 +1,7 @@
 # Graph Report - Gestione-Staffing  (2026-08-25)
 
 ## Corpus Check
-- 34 files · ~113,000 words
+- 34 files · ~113,264 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
@@ -10,7 +10,7 @@
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `c78b24ff`
+- Built from commit: `e70456a0`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -81,10 +81,10 @@
 3. `pwApplyProduzioneColors()` - 9 edges
 4. `pwGeneraMail()` - 8 edges
 5. `pwGetFerieWeek()` - 8 edges
-6. `renderOperatori()` - 7 edges
-7. `sbPull()` - 7 edges
-8. `cpRereadTicket()` - 7 edges
-9. `pwControlloRender()` - 7 edges
+6. `sbPull()` - 7 edges
+7. `cpRereadTicket()` - 7 edges
+8. `pwControlloRender()` - 7 edges
+9. `renderOperatori()` - 7 edges
 10. `Pianificazione Settimanale screen (#screen-weekly)` - 7 edges
 
 ## Surprising Connections (you probably didn't know these)
@@ -229,14 +229,14 @@ Cohesion: 0.67
 Nodes (3): v18.49.0 pulsante Apri Outlook (mailto destinatari), v18.51.0 campo Email referente tecnico obbligatorio, v18.56.0 riordino destinatari mailto (To/CC)
 
 ## Knowledge Gaps
-- **84 isolated node(s):** `INITIAL_DATA`, `SKILLS`, `MESI`, `MESI_LONG`, `INDUSTRIES` (+79 more)
+- **84 isolated node(s):** `_confrontoMeseSel`, `pwData`, `pwDoppiaWeek`, `pwFerie`, `_geoCache` (+79 more)
   These have ≤1 connection - possible missing edges or undocumented components.
 - **30 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
 
 ## Suggested Questions
 _Questions this graph is uniquely positioned to answer:_
 
-- **What connects `INITIAL_DATA`, `SKILLS`, `MESI` to the rest of the system?**
+- **What connects `_confrontoMeseSel`, `pwData`, `pwDoppiaWeek` to the rest of the system?**
   _84 weakly-connected nodes found - possible documentation gaps or missing edges._
 - **Should `Weekly Mail & ISO Week Utils` be split into smaller, more focused modules?**
   _Cohesion score 0.12121212121212122 - nodes in this community are weakly interconnected._

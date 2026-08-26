@@ -99,9 +99,9 @@ function pwOpenOpModal(cidx, sidx, oidx) {
   function passaFiltroGeo(nome) {
     if (!filtroRegione && !filtroProvincia) return true;
     const op = opByNome[nome];
-    const info = op ? provinciaInfo(op.provincia) : null;
-    if (filtroProvincia) return !!info && info.sigla === filtroProvincia;
-    return !!info && info.regione === filtroRegione;
+    if (!op) return false;
+    if (filtroProvincia) return op.provincia === filtroProvincia;
+    return operatoreRegione(op) === filtroRegione;
   }
 
   function buildList(filter) {
@@ -128,7 +128,7 @@ function pwOpenOpModal(cidx, sidx, oidx) {
     // mese), poi i liberi ma non assegnati alla commessa (per vicinanza alla zona di
     // lavorazione), poi gli assegnati altrove questa settimana, infine chi e' in ferie;
     // in generale, ordine alfabetico come criterio finale.
-    const distanzaDi = nome => distanzaLavorazione(regioneCommessa, provinciaCommessa, opByNome[nome]?.provincia);
+    const distanzaDi = nome => distanzaLavorazione(regioneCommessa, provinciaCommessa, opByNome[nome]?.provincia, opByNome[nome]?.regione);
     const rangoDi = nome => {
       const stato = pwStatoOperatore(nome, cidx, sidx, oidx);
       if (stato === 'libero') return fromStaffing.has(nome) ? 0 : 1;
@@ -152,6 +152,7 @@ function pwOpenOpModal(cidx, sidx, oidx) {
       const tagLabel  = stato === 'ferie' ? 'FERIE' : stato === 'assegnato' ? 'ASSEGNATO' : 'LIBERO';
       const inCommessa = fromStaffing.has(nome);
       const provInfo = provinciaInfo(opByNome[nome]?.provincia);
+      const geoLabel = provInfo ? provInfo.nome : operatoreRegione(opByNome[nome]);
 
       const item = document.createElement('div');
       item.className = `op-modal-item stato-${stato}${nome === nomeCorrente ? ' is-selected' : ''}`;
@@ -159,7 +160,7 @@ function pwOpenOpModal(cidx, sidx, oidx) {
         <div class="op-modal-dot stato-${stato}"></div>
         <span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">
           ${nome}${inCommessa ? '' : ' <span style="font-size:9px;opacity:.6;">(fuori commessa)</span>'}
-          ${provInfo ? ` <span style="font-size:9px;opacity:.6;">📍 ${esc(provInfo.nome)}</span>` : ''}
+          ${geoLabel ? ` <span style="font-size:9px;opacity:.6;">📍 ${esc(geoLabel)}</span>` : ''}
         </span>
         <span class="op-modal-tag stato-${stato}">${tagLabel}</span>`;
       item.onclick = () => pwConfirmOpModal(cidx, sidx, oidx, nome);
@@ -422,6 +423,8 @@ function pwRender() {
         <div class="flex items-center gap-2">
           <button class="text-xs bg-teal-500 hover:bg-teal-400 text-white px-3 py-1 rounded"
             data-cidx="${cIdx}" onclick="pwAddSquadra(this)">+ Squadra</button>
+          <button class="text-xs bg-amber-500 hover:bg-amber-400 text-white px-2 py-1 rounded"
+            data-cidx="${cIdx}" onclick="pwJiraSubtaskInit(${cIdx})" title="Crea sottotask su Jira per gli operatori pianificati questa settimana">🎫 Sottotask Jira</button>
           <button class="text-xs bg-teal-600 hover:bg-teal-500 text-white px-2 py-1 rounded disabled:opacity-50"
             data-cidx="${cIdx}" onclick="pwMoveCommessaUp(this)" ${cIdx === 0 ? 'disabled' : ''} title="Sposta commessa su">▲</button>
           <button class="text-xs bg-teal-600 hover:bg-teal-500 text-white px-2 py-1 rounded disabled:opacity-50"

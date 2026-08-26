@@ -76,6 +76,9 @@ const PROVINCE_ITALIA = [
 const REGIONI_ITALIA = [...new Set(PROVINCE_ITALIA.map(p => p.regione))].sort((a,b) => a.localeCompare(b));
 function provinciaInfo(sigla) { return PROVINCE_ITALIA.find(p => p.sigla === sigla) || null; }
 function provinceDiRegione(regione) { return PROVINCE_ITALIA.filter(p => p.regione === regione).sort((a,b) => a.nome.localeCompare(b.nome)); }
+/* Regione di un operatore: usa il campo regione se valorizzato (provincia
+   facoltativa, spesso ignota), altrimenti la deriva dalla provincia nota. */
+function operatoreRegione(op) { return (op && (op.regione || (op.provincia && provinciaInfo(op.provincia)?.regione))) || ''; }
 
 function haversineKm(latA, lngA, latB, lngB) {
   const R = 6371;
@@ -104,21 +107,31 @@ function regioneCentroid(regione) {
   };
 }
 /* Distanza "di lavorazione" tra una commessa (nota per regione e/o provincia)
-   e la provincia di provenienza di un operatore. Usa la provincia della
-   commessa se nota (piu' precisa, vedi distanzaProvince); se la commessa ha
-   solo la regione, approssima con il centroide della regione — 0 se
-   l'operatore e' della stessa regione. Ritorna null se non c'e' nessun
-   criterio applicabile. */
-function distanzaLavorazione(regioneCommessa, provinciaCommessa, siglaOperatore) {
-  if (!siglaOperatore) return null;
-  if (provinciaCommessa) return distanzaProvince(provinciaCommessa, siglaOperatore);
-  if (!regioneCommessa) return null;
-  const opInfo = provinciaInfo(siglaOperatore);
-  if (!opInfo) return null;
-  if (opInfo.regione === regioneCommessa) return 0;
-  const centro = regioneCentroid(regioneCommessa);
-  if (!centro) return null;
-  return haversineKm(centro.lat, centro.lng, opInfo.lat, opInfo.lng);
+   e la provenienza di un operatore. Usa la provincia della commessa se nota
+   (piu' precisa, vedi distanzaProvince); se la commessa ha solo la regione,
+   approssima con il centroide della regione — 0 se l'operatore e' della
+   stessa regione. Se la provincia dell'operatore non e' nota (facoltativa)
+   ma lo e' la sua regione, approssima anche l'operatore con il centroide
+   della sua regione. Ritorna null se non c'e' nessun criterio applicabile. */
+function distanzaLavorazione(regioneCommessa, provinciaCommessa, siglaOperatore, regioneOperatore) {
+  if (siglaOperatore) {
+    if (provinciaCommessa) return distanzaProvince(provinciaCommessa, siglaOperatore);
+    if (!regioneCommessa) return null;
+    const opInfo = provinciaInfo(siglaOperatore);
+    if (!opInfo) return null;
+    if (opInfo.regione === regioneCommessa) return 0;
+    const centro = regioneCentroid(regioneCommessa);
+    if (!centro) return null;
+    return haversineKm(centro.lat, centro.lng, opInfo.lat, opInfo.lng);
+  }
+  if (!regioneOperatore) return null;
+  const regioneCommessaEffettiva = regioneCommessa || (provinciaCommessa && provinciaInfo(provinciaCommessa)?.regione) || '';
+  if (!regioneCommessaEffettiva) return null;
+  if (regioneOperatore === regioneCommessaEffettiva) return 0;
+  const centroOp = regioneCentroid(regioneOperatore);
+  const centroCommessa = provinciaCommessa ? provinciaInfo(provinciaCommessa) : regioneCentroid(regioneCommessaEffettiva);
+  if (!centroOp || !centroCommessa) return null;
+  return haversineKm(centroCommessa.lat, centroCommessa.lng, centroOp.lat, centroOp.lng);
 }
 let ANNO = parseInt(localStorage.getItem('dashboard_anno') || String(new Date().getFullYear()));
 

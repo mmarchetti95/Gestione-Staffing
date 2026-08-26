@@ -37,6 +37,7 @@ JS_FILES = [
     'weekly-operatore-modal.js',
     'weekly-popover-stats.js',
     'weekly-strumenti.js',
+    'weekly-jira-subtask.js',
     'weekly-nav.js',
     'weekly-doppiaweek.js',
     'weekly-collapse-cp.js',

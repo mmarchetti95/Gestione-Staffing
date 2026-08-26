@@ -96,10 +96,7 @@ function renderOperatori() {
     if (state.filters.skills.size > 0 && ![...state.filters.skills].every(s => op.skills.includes(s))) return false;
     if (state.filters.attestati.size > 0 && ![...state.filters.attestati].every(a => (op.attestati||[]).includes(a))) return false;
     if (state.filters.provincia && op.provincia !== state.filters.provincia) return false;
-    if (state.filters.regione && !state.filters.provincia) {
-      const info = provinciaInfo(op.provincia);
-      if (!info || info.regione !== state.filters.regione) return false;
-    }
+    if (state.filters.regione && !state.filters.provincia && operatoreRegione(op) !== state.filters.regione) return false;
     if (state.filters.lowSat) {
       const s = operatoreSatPeriodo(op, [meseProx]);
       if (s >= 0.5) return false;
@@ -121,7 +118,10 @@ function renderOperatori() {
     const sat3 = operatoreSatPeriodo(op, [mese0, meseProx, Math.min(11,mese0+2)]);
     const isSaturo = sat3 >= 1.0;
     const provInfo = provinciaInfo(op.provincia);
-    const provBadge = provInfo ? `<span class="text-[9px] bg-sky-50 text-sky-700 border border-sky-200 px-1 rounded" title="${esc(provInfo.regione)}">📍 ${esc(provInfo.nome)}</span>` : '';
+    const regioneOp = operatoreRegione(op);
+    const provBadge = provInfo
+      ? `<span class="text-[9px] bg-sky-50 text-sky-700 border border-sky-200 px-1 rounded" title="${esc(provInfo.regione)}">📍 ${esc(provInfo.nome)}</span>`
+      : (regioneOp ? `<span class="text-[9px] bg-sky-50 text-sky-700 border border-sky-200 px-1 rounded" title="Provincia non specificata">📍 ${esc(regioneOp)}</span>` : '');
     const contrattoBadge = op.contratto_tipo === 'determinato' && op.data_fine_rapporto
       ? `<span class="text-[9px] bg-amber-50 text-amber-700 border border-amber-200 px-1 rounded">📅 fino al ${fmtDate(op.data_fine_rapporto)}</span>` : '';
     const exReason = isOperatoreScaduto(op)
@@ -208,7 +208,7 @@ function exportOperatoriXlsx() {
         op.email || '',
         stato,
         provInfo ? provInfo.nome : '',
-        provInfo ? provInfo.regione : '',
+        operatoreRegione(op),
         op.contratto_tipo === 'determinato' ? 'A termine' : 'Tempo indeterminato',
         op.data_inizio_rapporto ? fmtDate(op.data_inizio_rapporto) : '',
         op.data_fine_rapporto ? fmtDate(op.data_fine_rapporto) : '',

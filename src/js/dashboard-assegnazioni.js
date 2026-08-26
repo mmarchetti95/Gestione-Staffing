@@ -283,7 +283,7 @@ function openAddAllocazioneModal(commessaNome, opts = {}) {
   const attReq = opts.attestatiRichiesti || [];
   const provinciaCommessa = opts.provincia || opts.commessaPipeline?.provincia || '';
   const regioneCommessa = opts.regione || opts.commessaPipeline?.regione || '';
-  const distanzaDi = op => distanzaLavorazione(regioneCommessa, provinciaCommessa, op.provincia);
+  const distanzaDi = op => distanzaLavorazione(regioneCommessa, provinciaCommessa, op.provincia, op.regione);
 
   // ordinamento operatori: prima i validi (hanno tutte le skill+attestati richiesti),
   // poi - a parita' di validita' - chi e' della provincia/regione della commessa o il

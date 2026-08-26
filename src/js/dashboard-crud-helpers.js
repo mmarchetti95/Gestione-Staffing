@@ -166,7 +166,7 @@ function openFabbisognoModal(commessaId, commessaNome) {
       const matchCompleto = matchSkill && attestatiMancanti.length === 0;
       // null = ne' regione ne' provincia della commessa (o provincia dell'operatore) note,
       // nessun criterio di vicinanza applicabile
-      const distanza = distanzaLavorazione(regioneCommessa, provinciaCommessa, op.provincia);
+      const distanza = distanzaLavorazione(regioneCommessa, provinciaCommessa, op.provincia, op.regione);
       return { op, matchSkill, matchCompleto, sat, skillMancanti, attestatiMancanti, distanza };
     })
     .filter(x => x.sat < 1.0 || x.matchCompleto) // mostra anche saturi se idonei al 100% (skill+attestati)
@@ -359,23 +359,32 @@ async function promuoviCommessa(id) {
 }
 
 function openOperatoreModal(id) {
-  const op = id ? state.operatori.find(o => o.id === id) : { id:'op_new_'+Date.now(), nome_breve:'', nome_esteso:'', email:'', provincia:'', contratto_tipo:'indeterminato', data_inizio_rapporto:'', data_fine_rapporto:'', skills:[], attestati:[], alloc_mensile:new Array(12).fill(0), data_aggiunta: new Date().toISOString().slice(0,10) };
+  const op = id ? state.operatori.find(o => o.id === id) : { id:'op_new_'+Date.now(), nome_breve:'', nome_esteso:'', nome:'', cognome:'', email:'', regione:'', provincia:'', contratto_tipo:'indeterminato', data_inizio_rapporto:'', data_fine_rapporto:'', skills:[], attestati:[], alloc_mensile:new Array(12).fill(0), data_aggiunta: new Date().toISOString().slice(0,10) };
   const opAtt = op.attestati || [];
-  const provinciaOptions = REGIONI_ITALIA.map(r => `<optgroup label="${esc(r)}">${
-    provinceDiRegione(r).map(p => `<option value="${p.sigla}" ${op.provincia===p.sigla?'selected':''}>${esc(p.nome)} (${p.sigla})</option>`).join('')
-  }</optgroup>`).join('');
+  const regioneIniziale = op.regione || (op.provincia && provinciaInfo(op.provincia)?.regione) || '';
   const root = document.getElementById('modal-root');
   root.innerHTML = `<div class="modal-backdrop"><div class="bg-white rounded-lg shadow-xl w-full max-w-2xl mx-4 my-8 p-5 max-h-[90vh] overflow-y-auto">
     <h3 class="font-semibold text-slate-900 mb-3">${id?'Modifica':'Nuovo'} operatore</h3>
     <div class="space-y-3">
       <label class="block text-xs"><span class="text-slate-600">Nome esteso</span><input id="mo-esteso" class="mt-0.5 w-full border border-slate-300 rounded px-2 py-1.5 text-sm" value="${(op.nome_esteso||'').replace(/"/g, '&quot;')}"></label>
+      <div class="grid grid-cols-2 gap-2">
+        <label class="block text-xs"><span class="text-slate-600">Nome <span class="text-slate-400 font-normal">(facolt., per sottotask Jira)</span></span>
+          <input id="mo-nome" class="mt-0.5 w-full border border-slate-300 rounded px-2 py-1.5 text-sm" value="${(op.nome||'').replace(/"/g, '&quot;')}"></label>
+        <label class="block text-xs"><span class="text-slate-600">Cognome <span class="text-slate-400 font-normal">(facolt., per sottotask Jira)</span></span>
+          <input id="mo-cognome" class="mt-0.5 w-full border border-slate-300 rounded px-2 py-1.5 text-sm" value="${(op.cognome||'').replace(/"/g, '&quot;')}"></label>
+      </div>
       <label class="block text-xs"><span class="text-slate-600">Email aziendale</span><input id="mo-email" type="email" placeholder="nome@eagleprojects.it" class="mt-0.5 w-full border border-slate-300 rounded px-2 py-1.5 text-sm" value="${(op.email||'').replace(/"/g, '&quot;')}"></label>
-      <label class="block text-xs"><span class="text-slate-600">Provincia di provenienza</span>
-        <select id="mo-provincia" class="mt-0.5 w-full border border-slate-300 rounded px-2 py-1.5 text-sm">
-          <option value="">— non specificata —</option>
-          ${provinciaOptions}
-        </select>
-      </label>
+      <div class="grid grid-cols-2 gap-2">
+        <label class="block text-xs"><span class="text-slate-600">Regione di provenienza</span>
+          <select id="mo-regione" class="mt-0.5 w-full border border-slate-300 rounded px-2 py-1.5 text-sm">
+            <option value="">— non specificata —</option>
+            ${REGIONI_ITALIA.map(r => `<option value="${esc(r)}" ${r===regioneIniziale?'selected':''}>${esc(r)}</option>`).join('')}
+          </select>
+        </label>
+        <label class="block text-xs"><span class="text-slate-600">Provincia <span class="text-slate-400 font-normal">(facoltativa)</span></span>
+          <select id="mo-provincia" class="mt-0.5 w-full border border-slate-300 rounded px-2 py-1.5 text-sm"></select>
+        </label>
+      </div>
       <div>
         <div class="text-xs text-slate-600 mb-1 font-medium">Tipo di rapporto</div>
         <div class="flex gap-4 text-xs mb-1.5">
@@ -413,6 +422,22 @@ function openOperatoreModal(id) {
   </div></div>`;
   root.querySelector('.modal-backdrop').addEventListener('click', e => { if (e.target.classList.contains('modal-backdrop')) closeModal(); });
 
+  function rebuildProvinciaOptionsOperatore(preselect) {
+    const regioneSel = document.getElementById('mo-regione').value;
+    const provSel = document.getElementById('mo-provincia');
+    if (!regioneSel) {
+      provSel.innerHTML = '<option value="">(seleziona prima una regione)</option>';
+      provSel.disabled = true;
+      return;
+    }
+    provSel.disabled = false;
+    const value = preselect !== undefined ? preselect : provSel.value;
+    provSel.innerHTML = '<option value="">(non specificata)</option>' +
+      provinceDiRegione(regioneSel).map(p => `<option value="${p.sigla}" ${p.sigla===value?'selected':''}>${esc(p.nome)} (${p.sigla})</option>`).join('');
+  }
+  rebuildProvinciaOptionsOperatore(op.provincia || '');
+  document.getElementById('mo-regione').onchange = () => rebuildProvinciaOptionsOperatore('');
+
   document.getElementById('mo-att-all').onclick = () => document.querySelectorAll('.mo-att').forEach(x => x.checked = true);
   document.getElementById('mo-att-none').onclick = () => document.querySelectorAll('.mo-att').forEach(x => x.checked = false);
 
@@ -426,7 +451,10 @@ function openOperatoreModal(id) {
     if (!nomeEsteso) { showAlertModal('Nome obbligatorio.'); return; }
     const skills = [...document.querySelectorAll('.mo-skill:checked')].map(x => x.value);
     const attestati = [...document.querySelectorAll('.mo-att:checked')].map(x => x.value);
+    const nome = (document.getElementById('mo-nome')?.value || '').trim();
+    const cognome = (document.getElementById('mo-cognome')?.value || '').trim();
     const email = (document.getElementById('mo-email')?.value || '').trim();
+    const regione = document.getElementById('mo-regione')?.value || '';
     const provincia = document.getElementById('mo-provincia')?.value || '';
     const contrattoTipo = document.getElementById('mo-contratto-det').checked ? 'determinato' : 'indeterminato';
     const dataInizio = document.getElementById('mo-data-inizio')?.value || '';
@@ -436,8 +464,8 @@ function openOperatoreModal(id) {
     }
     const dataInizioRapporto = contrattoTipo === 'determinato' ? dataInizio : '';
     const dataFineRapporto = contrattoTipo === 'determinato' ? dataFine : '';
-    if (id) { Object.assign(op, { nome_esteso: nomeEsteso, email, provincia, contratto_tipo: contrattoTipo, data_inizio_rapporto: dataInizioRapporto, data_fine_rapporto: dataFineRapporto, skills, attestati }); await saveState('Modifica operatore', {operatore: nomeEsteso}); }
-    else { state.operatori.push({ ...op, nome_esteso: nomeEsteso, nome_breve: nomeEsteso, email, provincia, contratto_tipo: contrattoTipo, data_inizio_rapporto: dataInizioRapporto, data_fine_rapporto: dataFineRapporto, skills, attestati }); await saveState('Nuovo operatore', {operatore: nomeEsteso}); }
+    if (id) { Object.assign(op, { nome_esteso: nomeEsteso, nome, cognome, email, regione, provincia, contratto_tipo: contrattoTipo, data_inizio_rapporto: dataInizioRapporto, data_fine_rapporto: dataFineRapporto, skills, attestati }); await saveState('Modifica operatore', {operatore: nomeEsteso}); }
+    else { state.operatori.push({ ...op, nome_esteso: nomeEsteso, nome_breve: nomeEsteso, nome, cognome, email, regione, provincia, contratto_tipo: contrattoTipo, data_inizio_rapporto: dataInizioRapporto, data_fine_rapporto: dataFineRapporto, skills, attestati }); await saveState('Nuovo operatore', {operatore: nomeEsteso}); }
     renderAll(); closeModal();
   };
 }

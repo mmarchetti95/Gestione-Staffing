@@ -21,6 +21,7 @@ function getCommessaAttivaMeta(nome) {
     skills: stored.skills||[],
     attestati_richiesti: stored.attestati_richiesti||[],
     risorse_necessarie: stored.risorse_necessarie !== undefined ? stored.risorse_necessarie : null,
+    jira_project_code: stored.jira_project_code||'',
     _risorseAttuali: risorseAttuali,
     _dedotto: !state.commesse_attive_meta[nome],
   };
@@ -46,6 +47,8 @@ function openCommessaAttivaModal(nome) {
       </div>
       <label class="block text-xs"><span class="text-slate-600">Codice commessa</span>
         <input id="ma-cod" class="mt-0.5 w-full border border-slate-300 rounded px-2 py-1.5 text-sm" placeholder="Es: C-2026-0123" value="${(m.codice_commessa||'').replace(/"/g,'&quot;')}"></label>
+      <label class="block text-xs"><span class="text-slate-600">Codice progetto Jira <span class="text-slate-400 font-normal">(per creazione sottotask da Griglia — l'Epic e il Task si scelgono per comune al momento della creazione)</span></span>
+        <input id="ma-jira-project" class="mt-0.5 w-full border border-slate-300 rounded px-2 py-1.5 text-sm" placeholder="Es: W07R" value="${(m.jira_project_code||'').replace(/"/g,'&quot;')}"></label>
       <div class="grid grid-cols-2 gap-2">
         <label class="block text-xs"><span class="text-slate-600">Data inizio</span>
           <input id="ma-ini" type="date" class="mt-0.5 w-full border border-slate-300 rounded px-2 py-1.5 text-sm" value="${m.inizio?m.inizio.slice(0,10):''}"></label>
@@ -160,6 +163,7 @@ function openCommessaAttivaModal(nome) {
     state.commesse_attive_meta[nome] = {
       cliente: document.getElementById('ma-cli').value.trim(),
       codice_commessa: document.getElementById('ma-cod').value.trim(),
+      jira_project_code: document.getElementById('ma-jira-project').value.trim(),
       industry: document.getElementById('ma-ind').value,
       inizio: document.getElementById('ma-ini').value,
       fine: document.getElementById('ma-fin').value,
