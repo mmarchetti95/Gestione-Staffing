@@ -37,6 +37,10 @@ async function assegnaOperatore(commessaId, operatoreId) {
 }
 
 async function rimuoviAssegnazione(cid, oid) {
+  const c = state.pipeline.find(p => p.id === cid);
+  const op = state.operatori.find(o => o.id === oid);
+  const msg = (c && op) ? `Rimuovere l'assegnazione di "${op.nome_esteso}" su "${c.progetto}"?` : 'Rimuovere questa assegnazione?';
+  if (!await showConfirmAsync(msg, 'Rimuovi assegnazione')) return;
   state.assegnazioni = state.assegnazioni.filter(a => !(a.commessa_id === cid && a.operatore_id === oid));
   await saveState(); renderAll();
 }
@@ -267,6 +271,8 @@ async function rimuoviRigaStaffing(idx) {
 async function rimuoviMeseAllocazione(idx, meseIdx) {
   const r = state.staffing[idx];
   if (!r) return;
+  const val = r.mesi[meseIdx];
+  if (val && !await showConfirmAsync(`Rimuovere ${val} gg-uomo di "${r.risorsa}" su "${r.commessa}" in ${MESI_LONG[meseIdx]}?`, 'Rimuovi')) return;
   r.mesi[meseIdx] = 0;
   // se la riga è tutta vuota, la rimuoviamo
   if (r.mesi.every(v => !v)) state.staffing.splice(idx, 1);

@@ -4,7 +4,10 @@
    progetto Jira" ed "Epic Jira" configurati in anagrafica (dashboard-commessa-attiva.js).
    Per ogni comune/cantiere pianificato questa settimana si sceglie un Task Jira
    (sotto l'Epic della commessa, scelta da rifare ogni volta, non cacheata), poi si
-   crea un sottotask per ogni operatore assegnato: "[Attività] - [Comune] - [Cognome]".
+   compilano gli eventuali campi extra obbligatori in creazione su quel progetto
+   (Data scadenza, Stima originale, Activity Type, Target Production, Start date
+   pianificato, Tempo Team — vedi pwJiraFetchExtraFields), infine si crea un
+   sottotask per ogni operatore assegnato: "[Attività] - [Comune] - [Cognome]".
    Anteprima obbligatoria (dryRun) prima di ogni creazione reale — vedi jira-create-subtask
    Edge Function per il contratto e il check di idempotenza per assignee/Task.
 */
@@ -114,12 +117,26 @@ async function pwJiraFetchTasks(epicKey, search) {
   return Array.isArray(data && data.tasks) ? data.tasks : [];
 }
 
-async function pwJiraCreateSubtasks(items, dryRun) {
+async function pwJiraCreateSubtasks(items, dryRun, extraFields) {
   if (!_sbClient || !_sbUser) throw new Error('Non connesso a Supabase.');
-  const { data, error } = await _sbClient.functions.invoke('jira-create-subtask', { body: { items, dryRun: !!dryRun } });
+  const { data, error } = await _sbClient.functions.invoke('jira-create-subtask', { body: { items, dryRun: !!dryRun, extraFields: extraFields || {} } });
   if (error) throw new Error(await _cpEdgeErr(error, 'jira-create-subtask'));
   if (data && data.error) throw new Error(data.error);
   return Array.isArray(data && data.results) ? data.results : [];
+}
+
+// Campi extra (Data scadenza, Stima originale, Activity Type, Target
+// Production, Start date pianificato, Tempo Team) che su alcuni progetti
+// Jira sono obbligatori in creazione senza che l'API createmeta lo segnali
+// correttamente (verificato empiricamente sull'istanza Jira di Eagleprojects:
+// createmeta li marca required=false ma la creazione fallisce con "Inserire:
+// <campo>"). Restituisce solo i campi che esistono per quel progetto.
+async function pwJiraFetchExtraFields(projectKey) {
+  if (!_sbClient || !_sbUser) throw new Error('Non connesso a Supabase.');
+  const { data, error } = await _sbClient.functions.invoke('jira-create-subtask', { body: { mode: 'fields', projectKey } });
+  if (error) throw new Error(await _cpEdgeErr(error, 'jira-create-subtask'));
+  if (data && data.error) throw new Error(data.error);
+  return Array.isArray(data && data.fields) ? data.fields : [];
 }
 
 /* ----- Costruzione item da griglia ----- */
@@ -310,12 +327,90 @@ function pwJiraSubtaskOpenComuniModal(commessaNome, meta, comuneNames, comuni) {
     });
     if (items.length === 0) { showAlertModal('Nessun sottotask da creare' + (skipped.length ? ':\n' + skipped.join('\n') : '.')); return; }
     closeModal();
-    pwJiraSubtaskPreview(commessaNome, items, skipped);
+    pwJiraSubtaskOpenExtraFieldsModal(commessaNome, meta, items, skipped);
+  };
+}
+
+/* ----- Step 1.5: campi extra spesso obbligatori in creazione (Data scadenza,
+   Stima originale, Activity Type, Target Production, Start date pianificato,
+   Tempo Team) — vedi commento su pwJiraFetchExtraFields. Un solo form per
+   l'intero batch (si applica a tutti i sottotask creati in questa sessione),
+   con un valore di esempio precompilato ma sempre modificabile. Se il
+   progetto non ha nessuno di questi campi si salta direttamente all'anteprima. */
+async function pwJiraSubtaskOpenExtraFieldsModal(commessaNome, meta, items, skippedComuni) {
+  const root = document.getElementById('modal-root');
+  root.innerHTML = `<div class="modal-backdrop"><div class="bg-white rounded-lg shadow-xl w-full max-w-md mx-4 p-5">
+    <div class="text-sm text-slate-600">⏳ Verifica campi obbligatori Jira…</div>
+  </div></div>`;
+
+  let fields;
+  try {
+    fields = await pwJiraFetchExtraFields(meta.jira_project_code);
+  } catch (e) {
+    // Non blocca il flusso: si procede senza campi extra, l'eventuale errore
+    // di creazione reale su Jira resterà comunque visibile nel riepilogo finale.
+    fields = [];
+  }
+
+  if (fields.length === 0) {
+    pwJiraSubtaskPreview(commessaNome, items, skippedComuni, {});
+    return;
+  }
+
+  const monday = isoWeekToMonday(pwAnno, pwWeek);
+  const saturday = new Date(monday); saturday.setUTCDate(monday.getUTCDate() + 5);
+  const defaults = {
+    duedate: saturday.toISOString().slice(0, 10),
+    originalEstimate: '8h',
+    activityType: '',
+    targetProduction: '',
+    startDatePianificato: monday.toISOString().slice(0, 10),
+    tempoTeam: '',
+  };
+
+  const rowsHtml = fields.map(f => {
+    const val = defaults[f.extraKey] !== undefined ? defaults[f.extraKey] : '';
+    let inputHtml;
+    if (f.allowedValues && f.allowedValues.length) {
+      const preselect = f.allowedValues.length === 1 ? f.allowedValues[0].id : '';
+      const opts = f.allowedValues.map(v => `<option value="${esc(String(v.id))}"${String(v.id) === String(preselect) ? ' selected' : ''}>${esc(v.value)}</option>`).join('');
+      inputHtml = `<select data-extra-key="${esc(f.extraKey)}" class="w-full border border-slate-300 rounded px-2 py-1.5 text-sm"><option value="">— seleziona —</option>${opts}</select>`;
+    } else if (f.type === 'date') {
+      inputHtml = `<input type="date" data-extra-key="${esc(f.extraKey)}" value="${esc(val)}" class="w-full border border-slate-300 rounded px-2 py-1.5 text-sm">`;
+    } else if (f.type === 'number' || f.key === 'customfield_11280') {
+      inputHtml = `<input type="number" data-extra-key="${esc(f.extraKey)}" value="${esc(val)}" class="w-full border border-slate-300 rounded px-2 py-1.5 text-sm">`;
+    } else {
+      inputHtml = `<input type="text" data-extra-key="${esc(f.extraKey)}" value="${esc(val)}" class="w-full border border-slate-300 rounded px-2 py-1.5 text-sm">`;
+    }
+    return `<div class="mb-2">
+      <label class="block text-[11px] text-slate-500 mb-0.5">${esc(f.name)}</label>
+      ${inputHtml}
+    </div>`;
+  }).join('');
+
+  root.innerHTML = `<div class="modal-backdrop"><div class="bg-white rounded-lg shadow-xl w-full max-w-md mx-4 my-8 p-5 max-h-[90vh] overflow-y-auto">
+    <h3 class="font-semibold text-slate-900 mb-1">Crea sottotask Jira — ${esc(commessaNome)}</h3>
+    <p class="text-xs text-slate-500 mb-3">Alcuni campi possono essere obbligatori in creazione su questo progetto Jira. Valori di esempio precompilati, modificabili o lasciabili vuoti.</p>
+    <div id="pw-jira-extra-fields">${rowsHtml}</div>
+    <div class="flex justify-end gap-2 mt-4">
+      <button onclick="closeModal()" class="px-3 py-1.5 text-sm border border-slate-300 rounded">Annulla</button>
+      <button id="pw-jira-extra-continua" class="px-3 py-1.5 text-sm bg-teal-600 text-white rounded hover:bg-teal-700">Continua</button>
+    </div>
+  </div></div>`;
+  root.querySelector('.modal-backdrop').addEventListener('click', e => { if (e.target.classList.contains('modal-backdrop')) closeModal(); });
+
+  document.getElementById('pw-jira-extra-continua').onclick = () => {
+    const extraFields = {};
+    root.querySelectorAll('[data-extra-key]').forEach(el => {
+      const key = el.dataset.extraKey;
+      if (el.value !== '') extraFields[key] = el.value;
+    });
+    pwJiraSubtaskPreview(commessaNome, items, skippedComuni, extraFields);
   };
 }
 
 /* ----- Step 2: anteprima (dryRun) ----- */
-async function pwJiraSubtaskPreview(commessaNome, items, skippedComuni) {
+async function pwJiraSubtaskPreview(commessaNome, items, skippedComuni, extraFields) {
   const root = document.getElementById('modal-root');
   root.innerHTML = `<div class="modal-backdrop"><div class="bg-white rounded-lg shadow-xl w-full max-w-xl mx-4 my-8 p-5 max-h-[90vh] overflow-y-auto">
     <h3 class="font-semibold text-slate-900 mb-3">Crea sottotask Jira — ${esc(commessaNome)}</h3>
@@ -324,17 +419,17 @@ async function pwJiraSubtaskPreview(commessaNome, items, skippedComuni) {
 
   let results;
   try {
-    results = await pwJiraCreateSubtasks(items, true);
+    results = await pwJiraCreateSubtasks(items, true, extraFields);
   } catch (e) {
     const body = document.getElementById('pw-jira-preview-body');
     if (body) body.innerHTML = `<div class="text-red-600 text-sm">Errore durante il controllo su Jira: ${esc(e.message || String(e))}</div><div class="flex justify-end mt-4"><button onclick="closeModal()" class="px-3 py-1.5 text-sm border border-slate-300 rounded">Chiudi</button></div>`;
     return;
   }
 
-  pwJiraSubtaskRenderPreview(commessaNome, items, results, skippedComuni);
+  pwJiraSubtaskRenderPreview(commessaNome, items, results, skippedComuni, extraFields);
 }
 
-function pwJiraSubtaskRenderPreview(commessaNome, items, results, skippedComuni) {
+function pwJiraSubtaskRenderPreview(commessaNome, items, results, skippedComuni, extraFields) {
   const root = document.getElementById('modal-root');
   const wouldCreate = results.filter(r => r.status === 'would_create').length;
 
@@ -373,12 +468,12 @@ function pwJiraSubtaskRenderPreview(commessaNome, items, results, skippedComuni)
   root.querySelector('.modal-backdrop').addEventListener('click', e => { if (e.target.classList.contains('modal-backdrop')) closeModal(); });
 
   if (wouldCreate > 0) {
-    document.getElementById('pw-jira-confirm-create').onclick = () => pwJiraSubtaskConfirmCreate(commessaNome, items);
+    document.getElementById('pw-jira-confirm-create').onclick = () => pwJiraSubtaskConfirmCreate(commessaNome, items, extraFields);
   }
 }
 
 /* ----- Step 3: creazione reale + riepilogo ----- */
-async function pwJiraSubtaskConfirmCreate(commessaNome, items) {
+async function pwJiraSubtaskConfirmCreate(commessaNome, items, extraFields) {
   const root = document.getElementById('modal-root');
   root.innerHTML = `<div class="modal-backdrop"><div class="bg-white rounded-lg shadow-xl w-full max-w-md mx-4 p-5">
     <div class="text-sm text-slate-600">⏳ Creazione sottotask su Jira in corso…</div>
@@ -386,7 +481,7 @@ async function pwJiraSubtaskConfirmCreate(commessaNome, items) {
 
   let results;
   try {
-    results = await pwJiraCreateSubtasks(items, false);
+    results = await pwJiraCreateSubtasks(items, false, extraFields);
   } catch (e) {
     showAlertModal('Errore durante la creazione: ' + (e.message || e));
     return;

@@ -31,28 +31,35 @@ function pwGeneraMail() {
         const jiraHint = strumentiJiraLbl.length
           ? `<div style="font-size:10px;color:var(--accent-dark);margin-bottom:2px;">✓ Da griglia: ${esc(strumentiJiraLbl.join(', '))}</div>`
           : '';
+        const cognomiSq = sq ? pwSquadraCognomi(sq) : [];
+        const cognomiHtml = cognomiSq.length
+          ? `<span class="text-slate-400 mx-1">·</span><span class="text-slate-500 font-normal">${esc(cognomiSq.join(', '))}</span>`
+          : '';
         return `
         <div class="mb-3 p-3 bg-slate-50 rounded-lg border border-slate-200">
-          <div class="text-xs font-semibold text-slate-700 mb-2">
-            <span class="text-teal-700">${esc(s.commessa)}</span>
-            <span class="text-slate-400 mx-1">/</span>
-            <span class="text-amber-700">${esc(s.squadraNome)}</span>
-          </div>
-          <div class="grid grid-cols-2 gap-2">
-            <div>
-              <label class="block text-[10px] text-slate-500 font-medium mb-0.5">📝 Note squadra <span class="text-slate-400 font-normal">(facoltativo)</span></label>
-              <textarea id="mail-note-sq-${i}" rows="2"
-                class="w-full border border-slate-200 rounded px-2 py-1 text-xs text-slate-700 focus:outline-none focus:border-teal-400 bg-white"
-                placeholder="Es: Affiancamento, istruzioni operative…">${esc(noteSalvate)}</textarea>
+          <details open>
+            <summary class="text-xs font-semibold text-slate-700 mb-2" style="cursor:pointer; user-select:none;">
+              <span class="text-teal-700">${esc(s.commessa)}</span>
+              <span class="text-slate-400 mx-1">/</span>
+              <span class="text-amber-700">${esc(s.squadraNome)}</span>
+              ${cognomiHtml}
+            </summary>
+            <div class="grid grid-cols-2 gap-2" style="margin-top:8px;">
+              <div>
+                <label class="block text-[10px] text-slate-500 font-medium mb-0.5">📝 Note squadra <span class="text-slate-400 font-normal">(facoltativo)</span></label>
+                <textarea id="mail-note-sq-${i}" rows="2"
+                  class="w-full border border-slate-200 rounded px-2 py-1 text-xs text-slate-700 focus:outline-none focus:border-teal-400 bg-white"
+                  placeholder="Es: Affiancamento, istruzioni operative…">${esc(noteSalvate)}</textarea>
+              </div>
+              <div>
+                <label class="block text-[10px] text-slate-500 font-medium mb-0.5">🔧 Strumenti / attrezzatura <span class="text-slate-400 font-normal">(aggiuntivi, facoltativo)</span></label>
+                ${jiraHint}
+                <textarea id="mail-strumenti-sq-${i}" rows="2"
+                  class="w-full border border-slate-200 rounded px-2 py-1 text-xs text-slate-700 focus:outline-none focus:border-teal-400 bg-white"
+                  placeholder="Es: GPS Leica RX1250, Auto targa AB123CD…">${esc(strumentiSalvati)}</textarea>
+              </div>
             </div>
-            <div>
-              <label class="block text-[10px] text-slate-500 font-medium mb-0.5">🔧 Strumenti / attrezzatura <span class="text-slate-400 font-normal">(aggiuntivi, facoltativo)</span></label>
-              ${jiraHint}
-              <textarea id="mail-strumenti-sq-${i}" rows="2"
-                class="w-full border border-slate-200 rounded px-2 py-1 text-xs text-slate-700 focus:outline-none focus:border-teal-400 bg-white"
-                placeholder="Es: GPS Leica RX1250, Auto targa AB123CD…">${esc(strumentiSalvati)}</textarea>
-            </div>
-          </div>
+          </details>
         </div>`;
       }).join('')
     : '<div class="text-xs text-slate-400 italic">Nessuna squadra pianificata.</div>';
@@ -123,10 +130,14 @@ function pwGeneraMail() {
 
         <!-- Note & strumenti per squadra -->
         <div style="padding:12px 20px; border-bottom:1px solid #e2e8f0;">
-          <div style="font-size:11px; font-weight:600; color:#1e293b; margin-bottom:8px;">
-            Note &amp; strumenti per squadra
-          </div>
-          ${noteSquadreHtml}
+          <details open>
+            <summary style="font-size:11px; font-weight:600; color:#1e293b; margin-bottom:8px; cursor:pointer; user-select:none;">
+              Note &amp; strumenti per squadra
+            </summary>
+            <div style="margin-top:8px;">
+              ${noteSquadreHtml}
+            </div>
+          </details>
         </div>
 
         <!-- Note generali -->

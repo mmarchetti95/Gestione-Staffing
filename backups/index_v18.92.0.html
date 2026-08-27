@@ -907,7 +907,7 @@
     <div class="flex items-center gap-2">
       <button id="btn-presentation" class="px-3 py-1.5 text-sm rounded hover:bg-white/10" style="border:1px solid var(--dark-border-strong);color:var(--dark-text);visibility:visible;">📊 Modalità presentazione</button>
       <div class="text-xs pl-2" style="border-left:1px solid var(--dark-border-strong);color:var(--dark-text-muted);">
-        <span class="font-medium" style="color:var(--accent);">v18.94.0</span> · Michele Marchetti
+        <span class="font-medium" style="color:var(--accent);">v18.92.0</span> · Michele Marchetti
       </div>
     </div>
   </div>
@@ -3611,10 +3611,6 @@ async function assegnaOperatore(commessaId, operatoreId) {
 }
 
 async function rimuoviAssegnazione(cid, oid) {
-  const c = state.pipeline.find(p => p.id === cid);
-  const op = state.operatori.find(o => o.id === oid);
-  const msg = (c && op) ? `Rimuovere l'assegnazione di "${op.nome_esteso}" su "${c.progetto}"?` : 'Rimuovere questa assegnazione?';
-  if (!await showConfirmAsync(msg, 'Rimuovi assegnazione')) return;
   state.assegnazioni = state.assegnazioni.filter(a => !(a.commessa_id === cid && a.operatore_id === oid));
   await saveState(); renderAll();
 }
@@ -3845,8 +3841,6 @@ async function rimuoviRigaStaffing(idx) {
 async function rimuoviMeseAllocazione(idx, meseIdx) {
   const r = state.staffing[idx];
   if (!r) return;
-  const val = r.mesi[meseIdx];
-  if (val && !await showConfirmAsync(`Rimuovere ${val} gg-uomo di "${r.risorsa}" su "${r.commessa}" in ${MESI_LONG[meseIdx]}?`, 'Rimuovi')) return;
   r.mesi[meseIdx] = 0;
   // se la riga è tutta vuota, la rimuoviamo
   if (r.mesi.every(v => !v)) state.staffing.splice(idx, 1);
@@ -6849,35 +6843,28 @@ function pwGeneraMail() {
         const jiraHint = strumentiJiraLbl.length
           ? `<div style="font-size:10px;color:var(--accent-dark);margin-bottom:2px;">✓ Da griglia: ${esc(strumentiJiraLbl.join(', '))}</div>`
           : '';
-        const cognomiSq = sq ? pwSquadraCognomi(sq) : [];
-        const cognomiHtml = cognomiSq.length
-          ? `<span class="text-slate-400 mx-1">·</span><span class="text-slate-500 font-normal">${esc(cognomiSq.join(', '))}</span>`
-          : '';
         return `
         <div class="mb-3 p-3 bg-slate-50 rounded-lg border border-slate-200">
-          <details open>
-            <summary class="text-xs font-semibold text-slate-700 mb-2" style="cursor:pointer; user-select:none;">
-              <span class="text-teal-700">${esc(s.commessa)}</span>
-              <span class="text-slate-400 mx-1">/</span>
-              <span class="text-amber-700">${esc(s.squadraNome)}</span>
-              ${cognomiHtml}
-            </summary>
-            <div class="grid grid-cols-2 gap-2" style="margin-top:8px;">
-              <div>
-                <label class="block text-[10px] text-slate-500 font-medium mb-0.5">📝 Note squadra <span class="text-slate-400 font-normal">(facoltativo)</span></label>
-                <textarea id="mail-note-sq-${i}" rows="2"
-                  class="w-full border border-slate-200 rounded px-2 py-1 text-xs text-slate-700 focus:outline-none focus:border-teal-400 bg-white"
-                  placeholder="Es: Affiancamento, istruzioni operative…">${esc(noteSalvate)}</textarea>
-              </div>
-              <div>
-                <label class="block text-[10px] text-slate-500 font-medium mb-0.5">🔧 Strumenti / attrezzatura <span class="text-slate-400 font-normal">(aggiuntivi, facoltativo)</span></label>
-                ${jiraHint}
-                <textarea id="mail-strumenti-sq-${i}" rows="2"
-                  class="w-full border border-slate-200 rounded px-2 py-1 text-xs text-slate-700 focus:outline-none focus:border-teal-400 bg-white"
-                  placeholder="Es: GPS Leica RX1250, Auto targa AB123CD…">${esc(strumentiSalvati)}</textarea>
-              </div>
+          <div class="text-xs font-semibold text-slate-700 mb-2">
+            <span class="text-teal-700">${esc(s.commessa)}</span>
+            <span class="text-slate-400 mx-1">/</span>
+            <span class="text-amber-700">${esc(s.squadraNome)}</span>
+          </div>
+          <div class="grid grid-cols-2 gap-2">
+            <div>
+              <label class="block text-[10px] text-slate-500 font-medium mb-0.5">📝 Note squadra <span class="text-slate-400 font-normal">(facoltativo)</span></label>
+              <textarea id="mail-note-sq-${i}" rows="2"
+                class="w-full border border-slate-200 rounded px-2 py-1 text-xs text-slate-700 focus:outline-none focus:border-teal-400 bg-white"
+                placeholder="Es: Affiancamento, istruzioni operative…">${esc(noteSalvate)}</textarea>
             </div>
-          </details>
+            <div>
+              <label class="block text-[10px] text-slate-500 font-medium mb-0.5">🔧 Strumenti / attrezzatura <span class="text-slate-400 font-normal">(aggiuntivi, facoltativo)</span></label>
+              ${jiraHint}
+              <textarea id="mail-strumenti-sq-${i}" rows="2"
+                class="w-full border border-slate-200 rounded px-2 py-1 text-xs text-slate-700 focus:outline-none focus:border-teal-400 bg-white"
+                placeholder="Es: GPS Leica RX1250, Auto targa AB123CD…">${esc(strumentiSalvati)}</textarea>
+            </div>
+          </div>
         </div>`;
       }).join('')
     : '<div class="text-xs text-slate-400 italic">Nessuna squadra pianificata.</div>';
@@ -6948,14 +6935,10 @@ function pwGeneraMail() {
 
         <!-- Note & strumenti per squadra -->
         <div style="padding:12px 20px; border-bottom:1px solid #e2e8f0;">
-          <details open>
-            <summary style="font-size:11px; font-weight:600; color:#1e293b; margin-bottom:8px; cursor:pointer; user-select:none;">
-              Note &amp; strumenti per squadra
-            </summary>
-            <div style="margin-top:8px;">
-              ${noteSquadreHtml}
-            </div>
-          </details>
+          <div style="font-size:11px; font-weight:600; color:#1e293b; margin-bottom:8px;">
+            Note &amp; strumenti per squadra
+          </div>
+          ${noteSquadreHtml}
         </div>
 
         <!-- Note generali -->
@@ -8798,11 +8781,9 @@ async function pwRemoveSquadra(btn) {
   const { cidx, sidx } = btn.dataset;
   const data = pwGetWeekData();
   if (!data[cidx]) return;
-  const sq = data[cidx].squadre[sidx];
-  const msg = data[cidx].squadre.length <= 1
-    ? 'Rimuovere l\'unica squadra? La commessa rimarrà senza squadre.'
-    : `Rimuovere "${sq?.nome || 'la squadra'}" e le assegnazioni della settimana dei suoi operatori?`;
-  if (!await showConfirmAsync(msg, 'Rimuovi squadra')) return;
+  if (data[cidx].squadre.length <= 1) {
+    if (!await showConfirmAsync('Rimuovere l\'unica squadra? La commessa rimarrà senza squadre.', 'Rimuovi squadra')) return;
+  }
   data[cidx].squadre.splice(parseInt(sidx), 1);
   pwRinumeraSquadreDefault(parseInt(cidx));
   await pwSave(); pwRender();
@@ -8821,10 +8802,6 @@ async function pwRemoveOp(btn) {
   const sq = data[cidx]?.squadre[sidx];
   if (!sq) return;
   if (sq.operatori.length <= 1) { showAlertModal('Ogni squadra deve avere almeno un operatore.'); return; }
-  const op = sq.operatori[oidx];
-  const nome = (op?.nome || '').trim();
-  const msg = nome ? `Rimuovere "${nome}" e le sue assegnazioni della settimana da questa squadra?` : 'Rimuovere questo operatore dalla squadra?';
-  if (!await showConfirmAsync(msg, 'Rimuovi operatore')) return;
   sq.operatori.splice(parseInt(oidx), 1);
   await pwSave(); pwRender();
 }
@@ -8945,10 +8922,7 @@ document.addEventListener('DOMContentLoaded', async () => {
    progetto Jira" ed "Epic Jira" configurati in anagrafica (dashboard-commessa-attiva.js).
    Per ogni comune/cantiere pianificato questa settimana si sceglie un Task Jira
    (sotto l'Epic della commessa, scelta da rifare ogni volta, non cacheata), poi si
-   compilano gli eventuali campi extra obbligatori in creazione su quel progetto
-   (Data scadenza, Stima originale, Activity Type, Target Production, Start date
-   pianificato, Tempo Team — vedi pwJiraFetchExtraFields), infine si crea un
-   sottotask per ogni operatore assegnato: "[Attività] - [Comune] - [Cognome]".
+   crea un sottotask per ogni operatore assegnato: "[Attività] - [Comune] - [Cognome]".
    Anteprima obbligatoria (dryRun) prima di ogni creazione reale — vedi jira-create-subtask
    Edge Function per il contratto e il check di idempotenza per assignee/Task.
 */
@@ -9058,26 +9032,12 @@ async function pwJiraFetchTasks(epicKey, search) {
   return Array.isArray(data && data.tasks) ? data.tasks : [];
 }
 
-async function pwJiraCreateSubtasks(items, dryRun, extraFields) {
+async function pwJiraCreateSubtasks(items, dryRun) {
   if (!_sbClient || !_sbUser) throw new Error('Non connesso a Supabase.');
-  const { data, error } = await _sbClient.functions.invoke('jira-create-subtask', { body: { items, dryRun: !!dryRun, extraFields: extraFields || {} } });
+  const { data, error } = await _sbClient.functions.invoke('jira-create-subtask', { body: { items, dryRun: !!dryRun } });
   if (error) throw new Error(await _cpEdgeErr(error, 'jira-create-subtask'));
   if (data && data.error) throw new Error(data.error);
   return Array.isArray(data && data.results) ? data.results : [];
-}
-
-// Campi extra (Data scadenza, Stima originale, Activity Type, Target
-// Production, Start date pianificato, Tempo Team) che su alcuni progetti
-// Jira sono obbligatori in creazione senza che l'API createmeta lo segnali
-// correttamente (verificato empiricamente sull'istanza Jira di Eagleprojects:
-// createmeta li marca required=false ma la creazione fallisce con "Inserire:
-// <campo>"). Restituisce solo i campi che esistono per quel progetto.
-async function pwJiraFetchExtraFields(projectKey) {
-  if (!_sbClient || !_sbUser) throw new Error('Non connesso a Supabase.');
-  const { data, error } = await _sbClient.functions.invoke('jira-create-subtask', { body: { mode: 'fields', projectKey } });
-  if (error) throw new Error(await _cpEdgeErr(error, 'jira-create-subtask'));
-  if (data && data.error) throw new Error(data.error);
-  return Array.isArray(data && data.fields) ? data.fields : [];
 }
 
 /* ----- Costruzione item da griglia ----- */
@@ -9268,90 +9228,12 @@ function pwJiraSubtaskOpenComuniModal(commessaNome, meta, comuneNames, comuni) {
     });
     if (items.length === 0) { showAlertModal('Nessun sottotask da creare' + (skipped.length ? ':\n' + skipped.join('\n') : '.')); return; }
     closeModal();
-    pwJiraSubtaskOpenExtraFieldsModal(commessaNome, meta, items, skipped);
-  };
-}
-
-/* ----- Step 1.5: campi extra spesso obbligatori in creazione (Data scadenza,
-   Stima originale, Activity Type, Target Production, Start date pianificato,
-   Tempo Team) — vedi commento su pwJiraFetchExtraFields. Un solo form per
-   l'intero batch (si applica a tutti i sottotask creati in questa sessione),
-   con un valore di esempio precompilato ma sempre modificabile. Se il
-   progetto non ha nessuno di questi campi si salta direttamente all'anteprima. */
-async function pwJiraSubtaskOpenExtraFieldsModal(commessaNome, meta, items, skippedComuni) {
-  const root = document.getElementById('modal-root');
-  root.innerHTML = `<div class="modal-backdrop"><div class="bg-white rounded-lg shadow-xl w-full max-w-md mx-4 p-5">
-    <div class="text-sm text-slate-600">⏳ Verifica campi obbligatori Jira…</div>
-  </div></div>`;
-
-  let fields;
-  try {
-    fields = await pwJiraFetchExtraFields(meta.jira_project_code);
-  } catch (e) {
-    // Non blocca il flusso: si procede senza campi extra, l'eventuale errore
-    // di creazione reale su Jira resterà comunque visibile nel riepilogo finale.
-    fields = [];
-  }
-
-  if (fields.length === 0) {
-    pwJiraSubtaskPreview(commessaNome, items, skippedComuni, {});
-    return;
-  }
-
-  const monday = isoWeekToMonday(pwAnno, pwWeek);
-  const saturday = new Date(monday); saturday.setUTCDate(monday.getUTCDate() + 5);
-  const defaults = {
-    duedate: saturday.toISOString().slice(0, 10),
-    originalEstimate: '8h',
-    activityType: '',
-    targetProduction: '',
-    startDatePianificato: monday.toISOString().slice(0, 10),
-    tempoTeam: '',
-  };
-
-  const rowsHtml = fields.map(f => {
-    const val = defaults[f.extraKey] !== undefined ? defaults[f.extraKey] : '';
-    let inputHtml;
-    if (f.allowedValues && f.allowedValues.length) {
-      const preselect = f.allowedValues.length === 1 ? f.allowedValues[0].id : '';
-      const opts = f.allowedValues.map(v => `<option value="${esc(String(v.id))}"${String(v.id) === String(preselect) ? ' selected' : ''}>${esc(v.value)}</option>`).join('');
-      inputHtml = `<select data-extra-key="${esc(f.extraKey)}" class="w-full border border-slate-300 rounded px-2 py-1.5 text-sm"><option value="">— seleziona —</option>${opts}</select>`;
-    } else if (f.type === 'date') {
-      inputHtml = `<input type="date" data-extra-key="${esc(f.extraKey)}" value="${esc(val)}" class="w-full border border-slate-300 rounded px-2 py-1.5 text-sm">`;
-    } else if (f.type === 'number' || f.key === 'customfield_11280') {
-      inputHtml = `<input type="number" data-extra-key="${esc(f.extraKey)}" value="${esc(val)}" class="w-full border border-slate-300 rounded px-2 py-1.5 text-sm">`;
-    } else {
-      inputHtml = `<input type="text" data-extra-key="${esc(f.extraKey)}" value="${esc(val)}" class="w-full border border-slate-300 rounded px-2 py-1.5 text-sm">`;
-    }
-    return `<div class="mb-2">
-      <label class="block text-[11px] text-slate-500 mb-0.5">${esc(f.name)}</label>
-      ${inputHtml}
-    </div>`;
-  }).join('');
-
-  root.innerHTML = `<div class="modal-backdrop"><div class="bg-white rounded-lg shadow-xl w-full max-w-md mx-4 my-8 p-5 max-h-[90vh] overflow-y-auto">
-    <h3 class="font-semibold text-slate-900 mb-1">Crea sottotask Jira — ${esc(commessaNome)}</h3>
-    <p class="text-xs text-slate-500 mb-3">Alcuni campi possono essere obbligatori in creazione su questo progetto Jira. Valori di esempio precompilati, modificabili o lasciabili vuoti.</p>
-    <div id="pw-jira-extra-fields">${rowsHtml}</div>
-    <div class="flex justify-end gap-2 mt-4">
-      <button onclick="closeModal()" class="px-3 py-1.5 text-sm border border-slate-300 rounded">Annulla</button>
-      <button id="pw-jira-extra-continua" class="px-3 py-1.5 text-sm bg-teal-600 text-white rounded hover:bg-teal-700">Continua</button>
-    </div>
-  </div></div>`;
-  root.querySelector('.modal-backdrop').addEventListener('click', e => { if (e.target.classList.contains('modal-backdrop')) closeModal(); });
-
-  document.getElementById('pw-jira-extra-continua').onclick = () => {
-    const extraFields = {};
-    root.querySelectorAll('[data-extra-key]').forEach(el => {
-      const key = el.dataset.extraKey;
-      if (el.value !== '') extraFields[key] = el.value;
-    });
-    pwJiraSubtaskPreview(commessaNome, items, skippedComuni, extraFields);
+    pwJiraSubtaskPreview(commessaNome, items, skipped);
   };
 }
 
 /* ----- Step 2: anteprima (dryRun) ----- */
-async function pwJiraSubtaskPreview(commessaNome, items, skippedComuni, extraFields) {
+async function pwJiraSubtaskPreview(commessaNome, items, skippedComuni) {
   const root = document.getElementById('modal-root');
   root.innerHTML = `<div class="modal-backdrop"><div class="bg-white rounded-lg shadow-xl w-full max-w-xl mx-4 my-8 p-5 max-h-[90vh] overflow-y-auto">
     <h3 class="font-semibold text-slate-900 mb-3">Crea sottotask Jira — ${esc(commessaNome)}</h3>
@@ -9360,17 +9242,17 @@ async function pwJiraSubtaskPreview(commessaNome, items, skippedComuni, extraFie
 
   let results;
   try {
-    results = await pwJiraCreateSubtasks(items, true, extraFields);
+    results = await pwJiraCreateSubtasks(items, true);
   } catch (e) {
     const body = document.getElementById('pw-jira-preview-body');
     if (body) body.innerHTML = `<div class="text-red-600 text-sm">Errore durante il controllo su Jira: ${esc(e.message || String(e))}</div><div class="flex justify-end mt-4"><button onclick="closeModal()" class="px-3 py-1.5 text-sm border border-slate-300 rounded">Chiudi</button></div>`;
     return;
   }
 
-  pwJiraSubtaskRenderPreview(commessaNome, items, results, skippedComuni, extraFields);
+  pwJiraSubtaskRenderPreview(commessaNome, items, results, skippedComuni);
 }
 
-function pwJiraSubtaskRenderPreview(commessaNome, items, results, skippedComuni, extraFields) {
+function pwJiraSubtaskRenderPreview(commessaNome, items, results, skippedComuni) {
   const root = document.getElementById('modal-root');
   const wouldCreate = results.filter(r => r.status === 'would_create').length;
 
@@ -9409,12 +9291,12 @@ function pwJiraSubtaskRenderPreview(commessaNome, items, results, skippedComuni,
   root.querySelector('.modal-backdrop').addEventListener('click', e => { if (e.target.classList.contains('modal-backdrop')) closeModal(); });
 
   if (wouldCreate > 0) {
-    document.getElementById('pw-jira-confirm-create').onclick = () => pwJiraSubtaskConfirmCreate(commessaNome, items, extraFields);
+    document.getElementById('pw-jira-confirm-create').onclick = () => pwJiraSubtaskConfirmCreate(commessaNome, items);
   }
 }
 
 /* ----- Step 3: creazione reale + riepilogo ----- */
-async function pwJiraSubtaskConfirmCreate(commessaNome, items, extraFields) {
+async function pwJiraSubtaskConfirmCreate(commessaNome, items) {
   const root = document.getElementById('modal-root');
   root.innerHTML = `<div class="modal-backdrop"><div class="bg-white rounded-lg shadow-xl w-full max-w-md mx-4 p-5">
     <div class="text-sm text-slate-600">⏳ Creazione sottotask su Jira in corso…</div>
@@ -9422,7 +9304,7 @@ async function pwJiraSubtaskConfirmCreate(commessaNome, items, extraFields) {
 
   let results;
   try {
-    results = await pwJiraCreateSubtasks(items, false, extraFields);
+    results = await pwJiraCreateSubtasks(items, false);
   } catch (e) {
     showAlertModal('Errore durante la creazione: ' + (e.message || e));
     return;

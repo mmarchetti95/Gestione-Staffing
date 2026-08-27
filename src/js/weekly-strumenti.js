@@ -190,9 +190,11 @@ async function pwRemoveSquadra(btn) {
   const { cidx, sidx } = btn.dataset;
   const data = pwGetWeekData();
   if (!data[cidx]) return;
-  if (data[cidx].squadre.length <= 1) {
-    if (!await showConfirmAsync('Rimuovere l\'unica squadra? La commessa rimarrà senza squadre.', 'Rimuovi squadra')) return;
-  }
+  const sq = data[cidx].squadre[sidx];
+  const msg = data[cidx].squadre.length <= 1
+    ? 'Rimuovere l\'unica squadra? La commessa rimarrà senza squadre.'
+    : `Rimuovere "${sq?.nome || 'la squadra'}" e le assegnazioni della settimana dei suoi operatori?`;
+  if (!await showConfirmAsync(msg, 'Rimuovi squadra')) return;
   data[cidx].squadre.splice(parseInt(sidx), 1);
   pwRinumeraSquadreDefault(parseInt(cidx));
   await pwSave(); pwRender();
@@ -211,6 +213,10 @@ async function pwRemoveOp(btn) {
   const sq = data[cidx]?.squadre[sidx];
   if (!sq) return;
   if (sq.operatori.length <= 1) { showAlertModal('Ogni squadra deve avere almeno un operatore.'); return; }
+  const op = sq.operatori[oidx];
+  const nome = (op?.nome || '').trim();
+  const msg = nome ? `Rimuovere "${nome}" e le sue assegnazioni della settimana da questa squadra?` : 'Rimuovere questo operatore dalla squadra?';
+  if (!await showConfirmAsync(msg, 'Rimuovi operatore')) return;
   sq.operatori.splice(parseInt(oidx), 1);
   await pwSave(); pwRender();
 }
