@@ -99,10 +99,10 @@
       "source_location": "L515",
       "_callable": true,
       "_origin": "ast",
+      "id": "src_js_weekly_mail_core_formatdate",
       "community": 0,
       "community_name": "weekly-mail-core.js",
-      "norm_label": "formatdate()",
-      "id": "src_js_weekly_mail_core_formatdate"
+      "norm_label": "formatdate()"
     },
     {
       "label": "formatDateFull()",
@@ -111,10 +111,10 @@
       "source_location": "L519",
       "_callable": true,
       "_origin": "ast",
+      "id": "src_js_weekly_mail_core_formatdatefull",
       "community": 0,
       "community_name": "weekly-mail-core.js",
-      "norm_label": "formatdatefull()",
-      "id": "src_js_weekly_mail_core_formatdatefull"
+      "norm_label": "formatdatefull()"
     },
     {
       "label": "isoWeekToMonday()",
@@ -123,10 +123,10 @@
       "source_location": "L500",
       "_callable": true,
       "_origin": "ast",
+      "id": "src_js_weekly_mail_core_isoweektomonday",
       "community": 0,
       "community_name": "weekly-mail-core.js",
-      "norm_label": "isoweektomonday()",
-      "id": "src_js_weekly_mail_core_isoweektomonday"
+      "norm_label": "isoweektomonday()"
     },
     {
       "label": "isoWeekYear()",
@@ -135,10 +135,10 @@
       "source_location": "L488",
       "_callable": true,
       "_origin": "ast",
+      "id": "src_js_weekly_mail_core_isoweekyear",
       "community": 0,
       "community_name": "weekly-mail-core.js",
-      "norm_label": "isoweekyear()",
-      "id": "src_js_weekly_mail_core_isoweekyear"
+      "norm_label": "isoweekyear()"
     },
     {
       "label": "pwCellCantieri()",
@@ -147,10 +147,10 @@
       "source_location": "L534",
       "_callable": true,
       "_origin": "ast",
+      "id": "src_js_weekly_mail_core_pwcellcantieri",
       "community": 0,
       "community_name": "weekly-mail-core.js",
-      "norm_label": "pwcellcantieri()",
-      "id": "src_js_weekly_mail_core_pwcellcantieri"
+      "norm_label": "pwcellcantieri()"
     },
     {
       "label": "pwCellCantieriRaw()",
@@ -159,10 +159,10 @@
       "source_location": "L544",
       "_callable": true,
       "_origin": "ast",
+      "id": "src_js_weekly_mail_core_pwcellcantieriraw",
       "community": 0,
       "community_name": "weekly-mail-core.js",
-      "norm_label": "pwcellcantieriraw()",
-      "id": "src_js_weekly_mail_core_pwcellcantieriraw"
+      "norm_label": "pwcellcantieriraw()"
     },
     {
       "label": "pwDwCount()",
@@ -171,10 +171,10 @@
       "source_location": "L592",
       "_callable": true,
       "_origin": "ast",
+      "id": "src_js_weekly_mail_core_pwdwcount",
       "community": 0,
       "community_name": "weekly-mail-core.js",
-      "norm_label": "pwdwcount()",
-      "id": "src_js_weekly_mail_core_pwdwcount"
+      "norm_label": "pwdwcount()"
     },
     {
       "label": "pwDwLoad()",
@@ -183,10 +183,10 @@
       "source_location": "L620",
       "_callable": true,
       "_origin": "ast",
+      "id": "src_js_weekly_mail_core_pwdwload",
       "community": 0,
       "community_name": "weekly-mail-core.js",
-      "norm_label": "pwdwload()",
-      "id": "src_js_weekly_mail_core_pwdwload"
+      "norm_label": "pwdwload()"
     },
     {
       "label": "pwFerieLoad()",
@@ -195,10 +195,10 @@
       "source_location": "L616",
       "_callable": true,
       "_origin": "ast",
+      "id": "src_js_weekly_mail_core_pwferieload",
       "community": 0,
       "community_name": "weekly-mail-core.js",
-      "norm_label": "pwferieload()",
-      "id": "src_js_weekly_mail_core_pwferieload"
+      "norm_label": "pwferieload()"
     },
     {
       "label": "pwFerieRender()",
@@ -207,10 +207,10 @@
       "source_location": "L681",
       "_callable": true,
       "_origin": "ast",
+      "id": "src_js_weekly_mail_core_pwferierender",
       "community": 0,
       "community_name": "weekly-mail-core.js",
-      "norm_label": "pwferierender()",
-      "id": "src_js_weekly_mail_core_pwferierender"
+      "norm_label": "pwferierender()"
     },
     {
       "label": "pwFerieSave()",
@@ -219,10 +219,10 @@
       "source_location": "L624",
       "_callable": true,
       "_origin": "ast",
+      "id": "src_js_weekly_mail_core_pwferiesave",
       "community": 0,
       "community_name": "weekly-mail-core.js",
-      "norm_label": "pwferiesave()",
-      "id": "src_js_weekly_mail_core_pwferiesave"
+      "norm_label": "pwferiesave()"
     },
     {
       "label": "pwFerieSummaryRender()",
@@ -231,10 +231,10 @@
       "source_location": "L749",
       "_callable": true,
       "_origin": "ast",
+      "id": "src_js_weekly_mail_core_pwferiesummaryrender",
       "community": 0,
       "community_name": "weekly-mail-core.js",
-      "norm_label": "pwferiesummaryrender()",
-      "id": "src_js_weekly_mail_core_pwferiesummaryrender"
+      "norm_label": "pwferiesummaryrender()"
     },
     {
       "label": "pwFerieToggleWeek()",
@@ -243,10 +243,10 @@
       "source_location": "L805",
       "_callable": true,
       "_origin": "ast",
+      "id": "src_js_weekly_mail_core_pwferietoggleweek",
       "community": 0,
       "community_name": "weekly-mail-core.js",
-      "norm_label": "pwferietoggleweek()",
-      "id": "src_js_weekly_mail_core_pwferietoggleweek"
+      "norm_label": "pwferietoggleweek()"
     },
     {
       "label": "pwGeneraMail()",
@@ -255,10 +255,10 @@
       "source_location": "L2",
       "_callable": true,
       "_origin": "ast",
+      "id": "src_js_weekly_mail_core_pwgeneramail",
       "community": 0,
       "community_name": "weekly-mail-core.js",
-      "norm_label": "pwgeneramail()",
-      "id": "src_js_weekly_mail_core_pwgeneramail"
+      "norm_label": "pwgeneramail()"
     },
     {
       "label": "componiTesto()",
@@ -267,10 +267,10 @@
       "source_location": "L196",
       "_callable": true,
       "_origin": "ast",
+      "id": "src_js_weekly_mail_core_pwgeneramail_componitesto",
       "community": 0,
       "community_name": "weekly-mail-core.js",
-      "norm_label": "componitesto()",
-      "id": "src_js_weekly_mail_core_pwgeneramail_componitesto"
+      "norm_label": "componitesto()"
     },
     {
       "label": "salvaNoteSq()",
@@ -279,10 +279,10 @@
       "source_location": "L335",
       "_callable": true,
       "_origin": "ast",
+      "id": "src_js_weekly_mail_core_pwgeneramail_salvanotesq",
       "community": 0,
       "community_name": "weekly-mail-core.js",
-      "norm_label": "salvanotesq()",
-      "id": "src_js_weekly_mail_core_pwgeneramail_salvanotesq"
+      "norm_label": "salvanotesq()"
     },
     {
       "label": "pwGetCommesseValide()",
@@ -291,10 +291,10 @@
       "source_location": "L840",
       "_callable": true,
       "_origin": "ast",
+      "id": "src_js_weekly_mail_core_pwgetcommessevalide",
       "community": 0,
       "community_name": "weekly-mail-core.js",
-      "norm_label": "pwgetcommessevalide()",
-      "id": "src_js_weekly_mail_core_pwgetcommessevalide"
+      "norm_label": "pwgetcommessevalide()"
     },
     {
       "label": "pwGetFerieWeek()",
@@ -303,10 +303,10 @@
       "source_location": "L634",
       "_callable": true,
       "_origin": "ast",
+      "id": "src_js_weekly_mail_core_pwgetferieweek",
       "community": 0,
       "community_name": "weekly-mail-core.js",
-      "norm_label": "pwgetferieweek()",
-      "id": "src_js_weekly_mail_core_pwgetferieweek"
+      "norm_label": "pwgetferieweek()"
     },
     {
       "label": "pwGetOperatoriPerCommessa()",
@@ -315,10 +315,10 @@
       "source_location": "L875",
       "_callable": true,
       "_origin": "ast",
+      "id": "src_js_weekly_mail_core_pwgetoperatoripercommessa",
       "community": 0,
       "community_name": "weekly-mail-core.js",
-      "norm_label": "pwgetoperatoripercommessa()",
-      "id": "src_js_weekly_mail_core_pwgetoperatoripercommessa"
+      "norm_label": "pwgetoperatoripercommessa()"
     },
     {
       "label": "pwGetWeekData()",
@@ -327,10 +327,10 @@
       "source_location": "L833",
       "_callable": true,
       "_origin": "ast",
+      "id": "src_js_weekly_mail_core_pwgetweekdata",
       "community": 0,
       "community_name": "weekly-mail-core.js",
-      "norm_label": "pwgetweekdata()",
-      "id": "src_js_weekly_mail_core_pwgetweekdata"
+      "norm_label": "pwgetweekdata()"
     },
     {
       "label": "pwHasFeriaWeek()",
@@ -339,10 +339,10 @@
       "source_location": "L568",
       "_callable": true,
       "_origin": "ast",
+      "id": "src_js_weekly_mail_core_pwhasferiaweek",
       "community": 0,
       "community_name": "weekly-mail-core.js",
-      "norm_label": "pwhasferiaweek()",
-      "id": "src_js_weekly_mail_core_pwhasferiaweek"
+      "norm_label": "pwhasferiaweek()"
     },
     {
       "label": "pwIsDwStart()",
@@ -351,10 +351,10 @@
       "source_location": "L576",
       "_callable": true,
       "_origin": "ast",
+      "id": "src_js_weekly_mail_core_pwisdwstart",
       "community": 0,
       "community_name": "weekly-mail-core.js",
-      "norm_label": "pwisdwstart()",
-      "id": "src_js_weekly_mail_core_pwisdwstart"
+      "norm_label": "pwisdwstart()"
     },
     {
       "label": "pwIsGiaAssegnato()",
@@ -363,10 +363,10 @@
       "source_location": "L653",
       "_callable": true,
       "_origin": "ast",
+      "id": "src_js_weekly_mail_core_pwisgiaassegnato",
       "community": 0,
       "community_name": "weekly-mail-core.js",
-      "norm_label": "pwisgiaassegnato()",
-      "id": "src_js_weekly_mail_core_pwisgiaassegnato"
+      "norm_label": "pwisgiaassegnato()"
     },
     {
       "label": "pwIsInFerie()",
@@ -375,10 +375,10 @@
       "source_location": "L641",
       "_callable": true,
       "_origin": "ast",
+      "id": "src_js_weekly_mail_core_pwisinferie",
       "community": 0,
       "community_name": "weekly-mail-core.js",
-      "norm_label": "pwisinferie()",
-      "id": "src_js_weekly_mail_core_pwisinferie"
+      "norm_label": "pwisinferie()"
     },
     {
       "label": "pwLoad()",
@@ -387,10 +387,10 @@
       "source_location": "L814",
       "_callable": true,
       "_origin": "ast",
+      "id": "src_js_weekly_mail_core_pwload",
       "community": 0,
       "community_name": "weekly-mail-core.js",
-      "norm_label": "pwload()",
-      "id": "src_js_weekly_mail_core_pwload"
+      "norm_label": "pwload()"
     },
     {
       "label": "pwMonthWeeks()",
@@ -399,10 +399,10 @@
       "source_location": "L604",
       "_callable": true,
       "_origin": "ast",
+      "id": "src_js_weekly_mail_core_pwmonthweeks",
       "community": 0,
       "community_name": "weekly-mail-core.js",
-      "norm_label": "pwmonthweeks()",
-      "id": "src_js_weekly_mail_core_pwmonthweeks"
+      "norm_label": "pwmonthweeks()"
     },
     {
       "label": "pwSave()",
@@ -411,10 +411,10 @@
       "source_location": "L823",
       "_callable": true,
       "_origin": "ast",
+      "id": "src_js_weekly_mail_core_pwsave",
       "community": 0,
       "community_name": "weekly-mail-core.js",
-      "norm_label": "pwsave()",
-      "id": "src_js_weekly_mail_core_pwsave"
+      "norm_label": "pwsave()"
     },
     {
       "label": "pwSetDwStart()",
@@ -423,10 +423,10 @@
       "source_location": "L580",
       "_callable": true,
       "_origin": "ast",
+      "id": "src_js_weekly_mail_core_pwsetdwstart",
       "community": 0,
       "community_name": "weekly-mail-core.js",
-      "norm_label": "pwsetdwstart()",
-      "id": "src_js_weekly_mail_core_pwsetdwstart"
+      "norm_label": "pwsetdwstart()"
     },
     {
       "label": "pwStatoOperatore()",
@@ -435,10 +435,10 @@
       "source_location": "L673",
       "_callable": true,
       "_origin": "ast",
+      "id": "src_js_weekly_mail_core_pwstatooperatore",
       "community": 0,
       "community_name": "weekly-mail-core.js",
-      "norm_label": "pwstatooperatore()",
-      "id": "src_js_weekly_mail_core_pwstatooperatore"
+      "norm_label": "pwstatooperatore()"
     },
     {
       "label": "pwToggleFeria()",
@@ -447,10 +447,10 @@
       "source_location": "L781",
       "_callable": true,
       "_origin": "ast",
+      "id": "src_js_weekly_mail_core_pwtoggleferia",
       "community": 0,
       "community_name": "weekly-mail-core.js",
-      "norm_label": "pwtoggleferia()",
-      "id": "src_js_weekly_mail_core_pwtoggleferia"
+      "norm_label": "pwtoggleferia()"
     },
     {
       "label": "pwWeekAdd()",
@@ -459,10 +459,10 @@
       "source_location": "L560",
       "_callable": true,
       "_origin": "ast",
+      "id": "src_js_weekly_mail_core_pwweekadd",
       "community": 0,
       "community_name": "weekly-mail-core.js",
-      "norm_label": "pwweekadd()",
-      "id": "src_js_weekly_mail_core_pwweekadd"
+      "norm_label": "pwweekadd()"
     },
     {
       "label": "weeksInYear()",
@@ -471,10 +471,10 @@
       "source_location": "L509",
       "_callable": true,
       "_origin": "ast",
+      "id": "src_js_weekly_mail_core_weeksinyear",
       "community": 0,
       "community_name": "weekly-mail-core.js",
-      "norm_label": "weeksinyear()",
-      "id": "src_js_weekly_mail_core_weeksinyear"
+      "norm_label": "weeksinyear()"
     },
     {
       "label": "assegnaOperatore()",
@@ -483,10 +483,10 @@
       "source_location": "L2",
       "_callable": true,
       "_origin": "ast",
+      "id": "src_js_dashboard_assegnazioni_assegnaoperatore",
       "community": 10,
       "community_name": "dashboard-assegnazioni.js",
-      "norm_label": "assegnaoperatore()",
-      "id": "src_js_dashboard_assegnazioni_assegnaoperatore"
+      "norm_label": "assegnaoperatore()"
     },
     {
       "label": "calcolaConfrontoCommessa()",
@@ -495,10 +495,10 @@
       "source_location": "L171",
       "_callable": true,
       "_origin": "ast",
+      "id": "src_js_dashboard_assegnazioni_calcolaconfrontocommessa",
       "community": 10,
       "community_name": "dashboard-assegnazioni.js",
-      "norm_label": "calcolaconfrontocommessa()",
-      "id": "src_js_dashboard_assegnazioni_calcolaconfrontocommessa"
+      "norm_label": "calcolaconfrontocommessa()"
     },
     {
       "label": "calcolaFabbisognoCommessa()",
@@ -507,10 +507,10 @@
       "source_location": "L90",
       "_callable": true,
       "_origin": "ast",
+      "id": "src_js_dashboard_assegnazioni_calcolafabbisognocommessa",
       "community": 10,
       "community_name": "dashboard-assegnazioni.js",
-      "norm_label": "calcolafabbisognocommessa()",
-      "id": "src_js_dashboard_assegnazioni_calcolafabbisognocommessa"
+      "norm_label": "calcolafabbisognocommessa()"
     },
     {
       "label": "calcolaImpegniEffettiviAnnoOperatore()",
@@ -519,10 +519,10 @@
       "source_location": "L229",
       "_callable": true,
       "_origin": "ast",
+      "id": "src_js_dashboard_assegnazioni_calcolaimpegnieffettiviannooperatore",
       "community": 10,
       "community_name": "dashboard-assegnazioni.js",
-      "norm_label": "calcolaimpegnieffettiviannooperatore()",
-      "id": "src_js_dashboard_assegnazioni_calcolaimpegnieffettiviannooperatore"
+      "norm_label": "calcolaimpegnieffettiviannooperatore()"
     },
     {
       "label": "eliminaCommessaChiusa()",
@@ -531,10 +531,10 @@
       "source_location": "L55",
       "_callable": true,
       "_origin": "ast",
+      "id": "src_js_dashboard_assegnazioni_eliminacommessachiusa",
       "community": 10,
       "community_name": "dashboard-assegnazioni.js",
-      "norm_label": "eliminacommessachiusa()",
-      "id": "src_js_dashboard_assegnazioni_eliminacommessachiusa"
+      "norm_label": "eliminacommessachiusa()"
     },
     {
       "label": "openAddAllocazioneModal()",
@@ -543,10 +543,10 @@
       "source_location": "L285",
       "_callable": true,
       "_origin": "ast",
+      "id": "src_js_dashboard_assegnazioni_openaddallocazionemodal",
       "community": 10,
       "community_name": "dashboard-assegnazioni.js",
-      "norm_label": "openaddallocazionemodal()",
-      "id": "src_js_dashboard_assegnazioni_openaddallocazionemodal"
+      "norm_label": "openaddallocazionemodal()"
     },
     {
       "label": "openEditCellModal()",
@@ -555,10 +555,10 @@
       "source_location": "L524",
       "_callable": true,
       "_origin": "ast",
+      "id": "src_js_dashboard_assegnazioni_openeditcellmodal",
       "community": 10,
       "community_name": "dashboard-assegnazioni.js",
-      "norm_label": "openeditcellmodal()",
-      "id": "src_js_dashboard_assegnazioni_openeditcellmodal"
+      "norm_label": "openeditcellmodal()"
     },
     {
       "label": "openOperatoreImpegniModal()",
@@ -567,10 +567,10 @@
       "source_location": "L559",
       "_callable": true,
       "_origin": "ast",
+      "id": "src_js_dashboard_assegnazioni_openoperatoreimpegnimodal",
       "community": 10,
       "community_name": "dashboard-assegnazioni.js",
-      "norm_label": "openoperatoreimpegnimodal()",
-      "id": "src_js_dashboard_assegnazioni_openoperatoreimpegnimodal"
+      "norm_label": "openoperatoreimpegnimodal()"
     },
     {
       "label": "rimuoviAssegnazione()",
@@ -579,10 +579,10 @@
       "source_location": "L39",
       "_callable": true,
       "_origin": "ast",
+      "id": "src_js_dashboard_assegnazioni_rimuoviassegnazione",
       "community": 10,
       "community_name": "dashboard-assegnazioni.js",
-      "norm_label": "rimuoviassegnazione()",
-      "id": "src_js_dashboard_assegnazioni_rimuoviassegnazione"
+      "norm_label": "rimuoviassegnazione()"
     },
     {
       "label": "rimuoviMeseAllocazione()",
@@ -591,10 +591,10 @@
       "source_location": "L271",
       "_callable": true,
       "_origin": "ast",
+      "id": "src_js_dashboard_assegnazioni_rimuovimeseallocazione",
       "community": 10,
       "community_name": "dashboard-assegnazioni.js",
-      "norm_label": "rimuovimeseallocazione()",
-      "id": "src_js_dashboard_assegnazioni_rimuovimeseallocazione"
+      "norm_label": "rimuovimeseallocazione()"
     },
     {
       "label": "rimuoviRigaStaffing()",
@@ -603,10 +603,10 @@
       "source_location": "L260",
       "_callable": true,
       "_origin": "ast",
+      "id": "src_js_dashboard_assegnazioni_rimuovirigastaffing",
       "community": 10,
       "community_name": "dashboard-assegnazioni.js",
-      "norm_label": "rimuovirigastaffing()",
-      "id": "src_js_dashboard_assegnazioni_rimuovirigastaffing"
+      "norm_label": "rimuovirigastaffing()"
     },
     {
       "label": "spostaAssegnazione()",
@@ -615,10 +615,10 @@
       "source_location": "L48",
       "_callable": true,
       "_origin": "ast",
+      "id": "src_js_dashboard_assegnazioni_spostaassegnazione",
       "community": 10,
       "community_name": "dashboard-assegnazioni.js",
-      "norm_label": "spostaassegnazione()",
-      "id": "src_js_dashboard_assegnazioni_spostaassegnazione"
+      "norm_label": "spostaassegnazione()"
     },
     {
       "label": "fmtDate()",
@@ -2487,10 +2487,10 @@
       "source_location": "L203",
       "_callable": true,
       "_origin": "ast",
+      "id": "src_js_weekly_strumenti_pwaddop",
       "community": 5,
       "community_name": "Griglia Squadre & Strumenti",
-      "norm_label": "pwaddop()",
-      "id": "src_js_weekly_strumenti_pwaddop"
+      "norm_label": "pwaddop()"
     },
     {
       "label": "pwAddSquadra()",
@@ -2499,10 +2499,10 @@
       "source_location": "L178",
       "_callable": true,
       "_origin": "ast",
+      "id": "src_js_weekly_strumenti_pwaddsquadra",
       "community": 5,
       "community_name": "Griglia Squadre & Strumenti",
-      "norm_label": "pwaddsquadra()",
-      "id": "src_js_weekly_strumenti_pwaddsquadra"
+      "norm_label": "pwaddsquadra()"
     },
     {
       "label": "pwAddStrumento()",
@@ -2511,10 +2511,10 @@
       "source_location": "L50",
       "_callable": true,
       "_origin": "ast",
+      "id": "src_js_weekly_strumenti_pwaddstrumento",
       "community": 5,
       "community_name": "Griglia Squadre & Strumenti",
-      "norm_label": "pwaddstrumento()",
-      "id": "src_js_weekly_strumenti_pwaddstrumento"
+      "norm_label": "pwaddstrumento()"
     },
     {
       "label": "pwFetchStrumenti()",
@@ -2523,10 +2523,10 @@
       "source_location": "L6",
       "_callable": true,
       "_origin": "ast",
+      "id": "src_js_weekly_strumenti_pwfetchstrumenti",
       "community": 5,
       "community_name": "Griglia Squadre & Strumenti",
-      "norm_label": "pwfetchstrumenti()",
-      "id": "src_js_weekly_strumenti_pwfetchstrumenti"
+      "norm_label": "pwfetchstrumenti()"
     },
     {
       "label": "pwMoveCommessaDown()",
@@ -2535,10 +2535,10 @@
       "source_location": "L241",
       "_callable": true,
       "_origin": "ast",
+      "id": "src_js_weekly_strumenti_pwmovecommessadown",
       "community": 5,
       "community_name": "Griglia Squadre & Strumenti",
-      "norm_label": "pwmovecommessadown()",
-      "id": "src_js_weekly_strumenti_pwmovecommessadown"
+      "norm_label": "pwmovecommessadown()"
     },
     {
       "label": "pwMoveCommessaUp()",
@@ -2547,10 +2547,10 @@
       "source_location": "L232",
       "_callable": true,
       "_origin": "ast",
+      "id": "src_js_weekly_strumenti_pwmovecommessaup",
       "community": 5,
       "community_name": "Griglia Squadre & Strumenti",
-      "norm_label": "pwmovecommessaup()",
-      "id": "src_js_weekly_strumenti_pwmovecommessaup"
+      "norm_label": "pwmovecommessaup()"
     },
     {
       "label": "pwRemoveCommessa()",
@@ -2559,10 +2559,10 @@
       "source_location": "L224",
       "_callable": true,
       "_origin": "ast",
+      "id": "src_js_weekly_strumenti_pwremovecommessa",
       "community": 5,
       "community_name": "Griglia Squadre & Strumenti",
-      "norm_label": "pwremovecommessa()",
-      "id": "src_js_weekly_strumenti_pwremovecommessa"
+      "norm_label": "pwremovecommessa()"
     },
     {
       "label": "pwRemoveOp()",
@@ -2571,10 +2571,10 @@
       "source_location": "L210",
       "_callable": true,
       "_origin": "ast",
+      "id": "src_js_weekly_strumenti_pwremoveop",
       "community": 5,
       "community_name": "Griglia Squadre & Strumenti",
-      "norm_label": "pwremoveop()",
-      "id": "src_js_weekly_strumenti_pwremoveop"
+      "norm_label": "pwremoveop()"
     },
     {
       "label": "pwRemoveSquadra()",
@@ -2583,10 +2583,10 @@
       "source_location": "L189",
       "_callable": true,
       "_origin": "ast",
+      "id": "src_js_weekly_strumenti_pwremovesquadra",
       "community": 5,
       "community_name": "Griglia Squadre & Strumenti",
-      "norm_label": "pwremovesquadra()",
-      "id": "src_js_weekly_strumenti_pwremovesquadra"
+      "norm_label": "pwremovesquadra()"
     },
     {
       "label": "pwRemoveStrumento()",
@@ -2595,10 +2595,10 @@
       "source_location": "L61",
       "_callable": true,
       "_origin": "ast",
+      "id": "src_js_weekly_strumenti_pwremovestrumento",
       "community": 5,
       "community_name": "Griglia Squadre & Strumenti",
-      "norm_label": "pwremovestrumento()",
-      "id": "src_js_weekly_strumenti_pwremovestrumento"
+      "norm_label": "pwremovestrumento()"
     },
     {
       "label": "pwRinumeraSquadreDefault()",
@@ -2607,10 +2607,10 @@
       "source_location": "L165",
       "_callable": true,
       "_origin": "ast",
+      "id": "src_js_weekly_strumenti_pwrinumerasquadredefault",
       "community": 5,
       "community_name": "Griglia Squadre & Strumenti",
-      "norm_label": "pwrinumerasquadredefault()",
-      "id": "src_js_weekly_strumenti_pwrinumerasquadredefault"
+      "norm_label": "pwrinumerasquadredefault()"
     },
     {
       "label": "pwSetSqStrumentiJira()",
@@ -2619,10 +2619,10 @@
       "source_location": "L31",
       "_callable": true,
       "_origin": "ast",
+      "id": "src_js_weekly_strumenti_pwsetsqstrumentijira",
       "community": 5,
       "community_name": "Griglia Squadre & Strumenti",
-      "norm_label": "pwsetsqstrumentijira()",
-      "id": "src_js_weekly_strumenti_pwsetsqstrumentijira"
+      "norm_label": "pwsetsqstrumentijira()"
     },
     {
       "label": "pwSqStrumentiJira()",
@@ -2631,10 +2631,10 @@
       "source_location": "L26",
       "_callable": true,
       "_origin": "ast",
+      "id": "src_js_weekly_strumenti_pwsqstrumentijira",
       "community": 5,
       "community_name": "Griglia Squadre & Strumenti",
-      "norm_label": "pwsqstrumentijira()",
-      "id": "src_js_weekly_strumenti_pwsqstrumentijira"
+      "norm_label": "pwsqstrumentijira()"
     },
     {
       "label": "pwStrClose()",
@@ -2643,10 +2643,10 @@
       "source_location": "L91",
       "_callable": true,
       "_origin": "ast",
+      "id": "src_js_weekly_strumenti_pwstrclose",
       "community": 5,
       "community_name": "Griglia Squadre & Strumenti",
-      "norm_label": "pwstrclose()",
-      "id": "src_js_weekly_strumenti_pwstrclose"
+      "norm_label": "pwstrclose()"
     },
     {
       "label": "pwStrEnsurePanel()",
@@ -2655,10 +2655,10 @@
       "source_location": "L74",
       "_callable": true,
       "_origin": "ast",
+      "id": "src_js_weekly_strumenti_pwstrensurepanel",
       "community": 5,
       "community_name": "Griglia Squadre & Strumenti",
-      "norm_label": "pwstrensurepanel()",
-      "id": "src_js_weekly_strumenti_pwstrensurepanel"
+      "norm_label": "pwstrensurepanel()"
     },
     {
       "label": "pwStrLabel()",
@@ -2667,10 +2667,10 @@
       "source_location": "L36",
       "_callable": true,
       "_origin": "ast",
+      "id": "src_js_weekly_strumenti_pwstrlabel",
       "community": 5,
       "community_name": "Griglia Squadre & Strumenti",
-      "norm_label": "pwstrlabel()",
-      "id": "src_js_weekly_strumenti_pwstrlabel"
+      "norm_label": "pwstrlabel()"
     },
     {
       "label": "pwStrOpen()",
@@ -2679,10 +2679,10 @@
       "source_location": "L96",
       "_callable": true,
       "_origin": "ast",
+      "id": "src_js_weekly_strumenti_pwstropen",
       "community": 5,
       "community_name": "Griglia Squadre & Strumenti",
-      "norm_label": "pwstropen()",
-      "id": "src_js_weekly_strumenti_pwstropen"
+      "norm_label": "pwstropen()"
     },
     {
       "label": "pwStrPick()",
@@ -2691,10 +2691,10 @@
       "source_location": "L128",
       "_callable": true,
       "_origin": "ast",
+      "id": "src_js_weekly_strumenti_pwstrpick",
       "community": 5,
       "community_name": "Griglia Squadre & Strumenti",
-      "norm_label": "pwstrpick()",
-      "id": "src_js_weekly_strumenti_pwstrpick"
+      "norm_label": "pwstrpick()"
     },
     {
       "label": "pwStrRenderList()",
@@ -2703,10 +2703,10 @@
       "source_location": "L111",
       "_callable": true,
       "_origin": "ast",
+      "id": "src_js_weekly_strumenti_pwstrrenderlist",
       "community": 5,
       "community_name": "Griglia Squadre & Strumenti",
-      "norm_label": "pwstrrenderlist()",
-      "id": "src_js_weekly_strumenti_pwstrrenderlist"
+      "norm_label": "pwstrrenderlist()"
     },
     {
       "label": "pwStrumentoCounts()",
@@ -2715,10 +2715,10 @@
       "source_location": "L42",
       "_callable": true,
       "_origin": "ast",
+      "id": "src_js_weekly_strumenti_pwstrumentocounts",
       "community": 5,
       "community_name": "Griglia Squadre & Strumenti",
-      "norm_label": "pwstrumentocounts()",
-      "id": "src_js_weekly_strumenti_pwstrumentocounts"
+      "norm_label": "pwstrumentocounts()"
     },
     {
       "label": "pwUpdateCommessa()",
@@ -2727,10 +2727,10 @@
       "source_location": "L149",
       "_callable": true,
       "_origin": "ast",
+      "id": "src_js_weekly_strumenti_pwupdatecommessa",
       "community": 5,
       "community_name": "Griglia Squadre & Strumenti",
-      "norm_label": "pwupdatecommessa()",
-      "id": "src_js_weekly_strumenti_pwupdatecommessa"
+      "norm_label": "pwupdatecommessa()"
     },
     {
       "label": "pwUpdateSquadraNome()",
@@ -2739,10 +2739,10 @@
       "source_location": "L142",
       "_callable": true,
       "_origin": "ast",
+      "id": "src_js_weekly_strumenti_pwupdatesquadranome",
       "community": 5,
       "community_name": "Griglia Squadre & Strumenti",
-      "norm_label": "pwupdatesquadranome()",
-      "id": "src_js_weekly_strumenti_pwupdatesquadranome"
+      "norm_label": "pwupdatesquadranome()"
     },
     {
       "label": "closeModal()",
@@ -3060,7 +3060,7 @@
       "label": "pwJiraBuildSubtaskItem()",
       "file_type": "code",
       "source_file": "src/js/weekly-jira-subtask.js",
-      "source_location": "L154",
+      "source_location": "L152",
       "_callable": true,
       "_origin": "ast",
       "id": "src_js_weekly_jira_subtask_pwjirabuildsubtaskitem",
@@ -3072,7 +3072,7 @@
       "label": "pwJiraCreateSubtasks()",
       "file_type": "code",
       "source_file": "src/js/weekly-jira-subtask.js",
-      "source_location": "L122",
+      "source_location": "L120",
       "_callable": true,
       "_origin": "ast",
       "id": "src_js_weekly_jira_subtask_pwjiracreatesubtasks",
@@ -3084,7 +3084,7 @@
       "label": "pwJiraFetchEpics()",
       "file_type": "code",
       "source_file": "src/js/weekly-jira-subtask.js",
-      "source_location": "L106",
+      "source_location": "L104",
       "_callable": true,
       "_origin": "ast",
       "id": "src_js_weekly_jira_subtask_pwjirafetchepics",
@@ -3096,7 +3096,7 @@
       "label": "pwJiraFetchExtraFields()",
       "file_type": "code",
       "source_file": "src/js/weekly-jira-subtask.js",
-      "source_location": "L136",
+      "source_location": "L134",
       "_callable": true,
       "_origin": "ast",
       "id": "src_js_weekly_jira_subtask_pwjirafetchextrafields",
@@ -3108,7 +3108,7 @@
       "label": "pwJiraFetchTasks()",
       "file_type": "code",
       "source_file": "src/js/weekly-jira-subtask.js",
-      "source_location": "L114",
+      "source_location": "L112",
       "_callable": true,
       "_origin": "ast",
       "id": "src_js_weekly_jira_subtask_pwjirafetchtasks",
@@ -3120,7 +3120,7 @@
       "label": "pwJiraResolveCognome()",
       "file_type": "code",
       "source_file": "src/js/weekly-jira-subtask.js",
-      "source_location": "L148",
+      "source_location": "L146",
       "_callable": true,
       "_origin": "ast",
       "id": "src_js_weekly_jira_subtask_pwjiraresolvecognome",
@@ -3132,7 +3132,7 @@
       "label": "pwJiraSearchPanel()",
       "file_type": "code",
       "source_file": "src/js/weekly-jira-subtask.js",
-      "source_location": "L55",
+      "source_location": "L53",
       "_callable": true,
       "_origin": "ast",
       "id": "src_js_weekly_jira_subtask_pwjirasearchpanel",
@@ -3144,7 +3144,7 @@
       "label": "pwJiraSearchPanelClose()",
       "file_type": "code",
       "source_file": "src/js/weekly-jira-subtask.js",
-      "source_location": "L47",
+      "source_location": "L45",
       "_callable": true,
       "_origin": "ast",
       "id": "src_js_weekly_jira_subtask_pwjirasearchpanelclose",
@@ -3156,7 +3156,7 @@
       "label": "pwJiraSearchPanelEnsure()",
       "file_type": "code",
       "source_file": "src/js/weekly-jira-subtask.js",
-      "source_location": "L24",
+      "source_location": "L22",
       "_callable": true,
       "_origin": "ast",
       "id": "src_js_weekly_jira_subtask_pwjirasearchpanelensure",
@@ -3168,7 +3168,7 @@
       "label": "pwJiraSearchPanelLoad()",
       "file_type": "code",
       "source_file": "src/js/weekly-jira-subtask.js",
-      "source_location": "L71",
+      "source_location": "L69",
       "_callable": true,
       "_origin": "ast",
       "id": "src_js_weekly_jira_subtask_pwjirasearchpanelload",
@@ -3180,7 +3180,7 @@
       "label": "pwJiraSubtaskConfirmCreate()",
       "file_type": "code",
       "source_file": "src/js/weekly-jira-subtask.js",
-      "source_location": "L523",
+      "source_location": "L476",
       "_callable": true,
       "_origin": "ast",
       "id": "src_js_weekly_jira_subtask_pwjirasubtaskconfirmcreate",
@@ -3192,7 +3192,7 @@
       "label": "pwJiraSubtaskInit()",
       "file_type": "code",
       "source_file": "src/js/weekly-jira-subtask.js",
-      "source_location": "L171",
+      "source_location": "L169",
       "_callable": true,
       "_origin": "ast",
       "id": "src_js_weekly_jira_subtask_pwjirasubtaskinit",
@@ -3204,7 +3204,7 @@
       "label": "pwJiraSubtaskOpenComuniModal()",
       "file_type": "code",
       "source_file": "src/js/weekly-jira-subtask.js",
-      "source_location": "L211",
+      "source_location": "L209",
       "_callable": true,
       "_origin": "ast",
       "id": "src_js_weekly_jira_subtask_pwjirasubtaskopencomunimodal",
@@ -3216,7 +3216,7 @@
       "label": "taskTriggerFor()",
       "file_type": "code",
       "source_file": "src/js/weekly-jira-subtask.js",
-      "source_location": "L244",
+      "source_location": "L242",
       "_callable": true,
       "_origin": "ast",
       "id": "src_js_weekly_jira_subtask_pwjirasubtaskopencomunimodal_tasktriggerfor",
@@ -3228,7 +3228,7 @@
       "label": "pwJiraSubtaskOpenExtraFieldsModal()",
       "file_type": "code",
       "source_file": "src/js/weekly-jira-subtask.js",
-      "source_location": "L387",
+      "source_location": "L340",
       "_callable": true,
       "_origin": "ast",
       "id": "src_js_weekly_jira_subtask_pwjirasubtaskopenextrafieldsmodal",
@@ -3237,22 +3237,10 @@
       "norm_label": "pwjirasubtaskopenextrafieldsmodal()"
     },
     {
-      "label": "pwJiraSubtaskOpenSelectItemsModal()",
-      "file_type": "code",
-      "source_file": "src/js/weekly-jira-subtask.js",
-      "source_location": "L341",
-      "_callable": true,
-      "_origin": "ast",
-      "id": "src_js_weekly_jira_subtask_pwjirasubtaskopenselectitemsmodal",
-      "community": 60,
-      "community_name": "weekly-jira-subtask.js",
-      "norm_label": "pwjirasubtaskopenselectitemsmodal()"
-    },
-    {
       "label": "pwJiraSubtaskPreview()",
       "file_type": "code",
       "source_file": "src/js/weekly-jira-subtask.js",
-      "source_location": "L460",
+      "source_location": "L413",
       "_callable": true,
       "_origin": "ast",
       "id": "src_js_weekly_jira_subtask_pwjirasubtaskpreview",
@@ -3264,7 +3252,7 @@
       "label": "pwJiraSubtaskRenderPreview()",
       "file_type": "code",
       "source_file": "src/js/weekly-jira-subtask.js",
-      "source_location": "L479",
+      "source_location": "L432",
       "_callable": true,
       "_origin": "ast",
       "id": "src_js_weekly_jira_subtask_pwjirasubtaskrenderpreview",
@@ -3734,10 +3722,10 @@
       "source_file": "src/js/weekly-mail-core.js",
       "source_location": "L1",
       "_origin": "ast",
+      "id": "src_js_weekly_mail_core",
       "community": 0,
       "community_name": "weekly-mail-core.js",
-      "norm_label": "weekly-mail-core.js",
-      "id": "src_js_weekly_mail_core"
+      "norm_label": "weekly-mail-core.js"
     },
     {
       "label": "pwData",
@@ -3745,10 +3733,10 @@
       "source_file": "src/js/weekly-mail-core.js",
       "source_location": "L528",
       "_origin": "ast",
+      "id": "src_js_weekly_mail_core_pwdata",
       "community": 0,
       "community_name": "weekly-mail-core.js",
-      "norm_label": "pwdata",
-      "id": "src_js_weekly_mail_core_pwdata"
+      "norm_label": "pwdata"
     },
     {
       "label": "pwDoppiaWeek",
@@ -3756,10 +3744,10 @@
       "source_file": "src/js/weekly-mail-core.js",
       "source_location": "L557",
       "_origin": "ast",
+      "id": "src_js_weekly_mail_core_pwdoppiaweek",
       "community": 0,
       "community_name": "weekly-mail-core.js",
-      "norm_label": "pwdoppiaweek",
-      "id": "src_js_weekly_mail_core_pwdoppiaweek"
+      "norm_label": "pwdoppiaweek"
     },
     {
       "label": "pwFerie",
@@ -3767,10 +3755,10 @@
       "source_file": "src/js/weekly-mail-core.js",
       "source_location": "L553",
       "_origin": "ast",
+      "id": "src_js_weekly_mail_core_pwferie",
       "community": 0,
       "community_name": "weekly-mail-core.js",
-      "norm_label": "pwferie",
-      "id": "src_js_weekly_mail_core_pwferie"
+      "norm_label": "pwferie"
     },
     {
       "label": "dashboard-assegnazioni.js",
@@ -3778,10 +3766,10 @@
       "source_file": "src/js/dashboard-assegnazioni.js",
       "source_location": "L1",
       "_origin": "ast",
+      "id": "src_js_dashboard_assegnazioni",
       "community": 10,
       "community_name": "dashboard-assegnazioni.js",
-      "norm_label": "dashboard-assegnazioni.js",
-      "id": "src_js_dashboard_assegnazioni"
+      "norm_label": "dashboard-assegnazioni.js"
     },
     {
       "label": "storage-utils.js",
@@ -4372,10 +4360,10 @@
       "source_file": "src/js/weekly-strumenti.js",
       "source_location": "L1",
       "_origin": "ast",
+      "id": "src_js_weekly_strumenti",
       "community": 5,
       "community_name": "Griglia Squadre & Strumenti",
-      "norm_label": "weekly-strumenti.js",
-      "id": "src_js_weekly_strumenti"
+      "norm_label": "weekly-strumenti.js"
     },
     {
       "label": "pwStrumenti",
@@ -4383,10 +4371,10 @@
       "source_file": "src/js/weekly-strumenti.js",
       "source_location": "L3",
       "_origin": "ast",
+      "id": "src_js_weekly_strumenti_pwstrumenti",
       "community": 5,
       "community_name": "Griglia Squadre & Strumenti",
-      "norm_label": "pwstrumenti",
-      "id": "src_js_weekly_strumenti_pwstrumenti"
+      "norm_label": "pwstrumenti"
     },
     {
       "label": "dashboard-crud-helpers.js",
@@ -6603,9 +6591,9 @@
       "source_location": "L734",
       "weight": 1.0,
       "_origin": "ast",
-      "confidence_score": 1.0,
       "source": "src_js_dashboard_assegnazioni_openoperatoreimpegnimodal",
-      "target": "src_js_dashboard_assegnazioni_rimuovimeseallocazione"
+      "target": "src_js_dashboard_assegnazioni_rimuovimeseallocazione",
+      "confidence_score": 1.0
     },
     {
       "relation": "calls",
@@ -6615,9 +6603,9 @@
       "source_location": "L741",
       "weight": 1.0,
       "_origin": "ast",
-      "confidence_score": 1.0,
       "source": "src_js_dashboard_assegnazioni_openoperatoreimpegnimodal",
-      "target": "src_js_dashboard_assegnazioni_rimuovirigastaffing"
+      "target": "src_js_dashboard_assegnazioni_rimuovirigastaffing",
+      "confidence_score": 1.0
     },
     {
       "relation": "calls",
@@ -6627,9 +6615,9 @@
       "source_location": "L749",
       "weight": 1.0,
       "_origin": "ast",
-      "confidence_score": 1.0,
       "source": "src_js_dashboard_assegnazioni_openoperatoreimpegnimodal",
-      "target": "src_js_dashboard_assegnazioni_rimuoviassegnazione"
+      "target": "src_js_dashboard_assegnazioni_rimuoviassegnazione",
+      "confidence_score": 1.0
     },
     {
       "relation": "calls",
@@ -6639,9 +6627,9 @@
       "source_location": "L51",
       "weight": 1.0,
       "_origin": "ast",
-      "confidence_score": 1.0,
       "source": "src_js_dashboard_assegnazioni_spostaassegnazione",
-      "target": "src_js_dashboard_assegnazioni_assegnaoperatore"
+      "target": "src_js_dashboard_assegnazioni_assegnaoperatore",
+      "confidence_score": 1.0
     },
     {
       "relation": "calls",
@@ -8220,7 +8208,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/js/weekly-jira-subtask.js",
-      "source_location": "L158",
+      "source_location": "L156",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_js_weekly_jira_subtask_pwjirabuildsubtaskitem",
@@ -8232,7 +8220,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/js/weekly-jira-subtask.js",
-      "source_location": "L56",
+      "source_location": "L54",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_js_weekly_jira_subtask_pwjirasearchpanel",
@@ -8244,7 +8232,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/js/weekly-jira-subtask.js",
-      "source_location": "L67",
+      "source_location": "L65",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_js_weekly_jira_subtask_pwjirasearchpanel",
@@ -8256,7 +8244,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/js/weekly-jira-subtask.js",
-      "source_location": "L37",
+      "source_location": "L35",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_js_weekly_jira_subtask_pwjirasearchpanelensure",
@@ -8268,7 +8256,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/js/weekly-jira-subtask.js",
-      "source_location": "L41",
+      "source_location": "L39",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_js_weekly_jira_subtask_pwjirasearchpanelensure",
@@ -8280,7 +8268,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/js/weekly-jira-subtask.js",
-      "source_location": "L100",
+      "source_location": "L98",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_js_weekly_jira_subtask_pwjirasearchpanelload",
@@ -8292,7 +8280,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/js/weekly-jira-subtask.js",
-      "source_location": "L531",
+      "source_location": "L484",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_js_weekly_jira_subtask_pwjirasubtaskconfirmcreate",
@@ -8304,7 +8292,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/js/weekly-jira-subtask.js",
-      "source_location": "L204",
+      "source_location": "L202",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_js_weekly_jira_subtask_pwjirasubtaskinit",
@@ -8316,7 +8304,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/js/weekly-jira-subtask.js",
-      "source_location": "L256",
+      "source_location": "L254",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_js_weekly_jira_subtask_pwjirasubtaskopencomunimodal",
@@ -8328,7 +8316,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/js/weekly-jira-subtask.js",
-      "source_location": "L257",
+      "source_location": "L255",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_js_weekly_jira_subtask_pwjirasubtaskopencomunimodal",
@@ -8340,7 +8328,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/js/weekly-jira-subtask.js",
-      "source_location": "L283",
+      "source_location": "L281",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_js_weekly_jira_subtask_pwjirasubtaskopencomunimodal",
@@ -8352,7 +8340,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/js/weekly-jira-subtask.js",
-      "source_location": "L326",
+      "source_location": "L324",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_js_weekly_jira_subtask_pwjirasubtaskopencomunimodal",
@@ -8364,11 +8352,11 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/js/weekly-jira-subtask.js",
-      "source_location": "L332",
+      "source_location": "L330",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_js_weekly_jira_subtask_pwjirasubtaskopencomunimodal",
-      "target": "src_js_weekly_jira_subtask_pwjirasubtaskopenselectitemsmodal",
+      "target": "src_js_weekly_jira_subtask_pwjirasubtaskopenextrafieldsmodal",
       "confidence_score": 1.0
     },
     {
@@ -8376,7 +8364,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/js/weekly-jira-subtask.js",
-      "source_location": "L395",
+      "source_location": "L348",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_js_weekly_jira_subtask_pwjirasubtaskopenextrafieldsmodal",
@@ -8388,7 +8376,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/js/weekly-jira-subtask.js",
-      "source_location": "L403",
+      "source_location": "L356",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_js_weekly_jira_subtask_pwjirasubtaskopenextrafieldsmodal",
@@ -8400,19 +8388,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/js/weekly-jira-subtask.js",
-      "source_location": "L377",
-      "weight": 1.0,
-      "_origin": "ast",
-      "source": "src_js_weekly_jira_subtask_pwjirasubtaskopenselectitemsmodal",
-      "target": "src_js_weekly_jira_subtask_pwjirasubtaskopenextrafieldsmodal",
-      "confidence_score": 1.0
-    },
-    {
-      "relation": "calls",
-      "context": "call",
-      "confidence": "EXTRACTED",
-      "source_file": "src/js/weekly-jira-subtask.js",
-      "source_location": "L469",
+      "source_location": "L422",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_js_weekly_jira_subtask_pwjirasubtaskpreview",
@@ -8424,7 +8400,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/js/weekly-jira-subtask.js",
-      "source_location": "L476",
+      "source_location": "L429",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_js_weekly_jira_subtask_pwjirasubtaskpreview",
@@ -8436,7 +8412,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/js/weekly-jira-subtask.js",
-      "source_location": "L518",
+      "source_location": "L471",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_js_weekly_jira_subtask_pwjirasubtaskrenderpreview",
@@ -8451,9 +8427,9 @@
       "source_location": "L594",
       "weight": 1.0,
       "_origin": "ast",
-      "confidence_score": 1.0,
       "source": "src_js_weekly_mail_core_pwdwcount",
-      "target": "src_js_weekly_mail_core_pwisdwstart"
+      "target": "src_js_weekly_mail_core_pwisdwstart",
+      "confidence_score": 1.0
     },
     {
       "relation": "calls",
@@ -8463,9 +8439,9 @@
       "source_location": "L682",
       "weight": 1.0,
       "_origin": "ast",
-      "confidence_score": 1.0,
       "source": "src_js_weekly_mail_core_pwferierender",
-      "target": "src_js_weekly_mail_core_pwgetferieweek"
+      "target": "src_js_weekly_mail_core_pwgetferieweek",
+      "confidence_score": 1.0
     },
     {
       "relation": "calls",
@@ -8475,9 +8451,9 @@
       "source_location": "L683",
       "weight": 1.0,
       "_origin": "ast",
-      "confidence_score": 1.0,
       "source": "src_js_weekly_mail_core_pwferierender",
-      "target": "src_js_weekly_mail_core_isoweektomonday"
+      "target": "src_js_weekly_mail_core_isoweektomonday",
+      "confidence_score": 1.0
     },
     {
       "relation": "calls",
@@ -8487,9 +8463,9 @@
       "source_location": "L695",
       "weight": 1.0,
       "_origin": "ast",
-      "confidence_score": 1.0,
       "source": "src_js_weekly_mail_core_pwferierender",
-      "target": "src_js_weekly_mail_core_formatdate"
+      "target": "src_js_weekly_mail_core_formatdate",
+      "confidence_score": 1.0
     },
     {
       "relation": "calls",
@@ -8499,9 +8475,9 @@
       "source_location": "L746",
       "weight": 1.0,
       "_origin": "ast",
-      "confidence_score": 1.0,
       "source": "src_js_weekly_mail_core_pwferierender",
-      "target": "src_js_weekly_mail_core_pwferiesummaryrender"
+      "target": "src_js_weekly_mail_core_pwferiesummaryrender",
+      "confidence_score": 1.0
     },
     {
       "relation": "calls",
@@ -8511,9 +8487,9 @@
       "source_location": "L750",
       "weight": 1.0,
       "_origin": "ast",
-      "confidence_score": 1.0,
       "source": "src_js_weekly_mail_core_pwferiesummaryrender",
-      "target": "src_js_weekly_mail_core_pwgetferieweek"
+      "target": "src_js_weekly_mail_core_pwgetferieweek",
+      "confidence_score": 1.0
     },
     {
       "relation": "calls",
@@ -8523,9 +8499,9 @@
       "source_location": "L765",
       "weight": 1.0,
       "_origin": "ast",
-      "confidence_score": 1.0,
       "source": "src_js_weekly_mail_core_pwferiesummaryrender",
-      "target": "src_js_weekly_mail_core_formatdate"
+      "target": "src_js_weekly_mail_core_formatdate",
+      "confidence_score": 1.0
     },
     {
       "relation": "calls",
@@ -8535,9 +8511,9 @@
       "source_location": "L806",
       "weight": 1.0,
       "_origin": "ast",
-      "confidence_score": 1.0,
       "source": "src_js_weekly_mail_core_pwferietoggleweek",
-      "target": "src_js_weekly_mail_core_pwgetferieweek"
+      "target": "src_js_weekly_mail_core_pwgetferieweek",
+      "confidence_score": 1.0
     },
     {
       "relation": "calls",
@@ -8547,9 +8523,9 @@
       "source_location": "L810",
       "weight": 1.0,
       "_origin": "ast",
-      "confidence_score": 1.0,
       "source": "src_js_weekly_mail_core_pwferietoggleweek",
-      "target": "src_js_weekly_mail_core_pwferiesave"
+      "target": "src_js_weekly_mail_core_pwferiesave",
+      "confidence_score": 1.0
     },
     {
       "relation": "calls",
@@ -8559,9 +8535,9 @@
       "source_location": "L811",
       "weight": 1.0,
       "_origin": "ast",
-      "confidence_score": 1.0,
       "source": "src_js_weekly_mail_core_pwferietoggleweek",
-      "target": "src_js_weekly_mail_core_pwferierender"
+      "target": "src_js_weekly_mail_core_pwferierender",
+      "confidence_score": 1.0
     },
     {
       "relation": "calls",
@@ -8571,9 +8547,9 @@
       "source_location": "L3",
       "weight": 1.0,
       "_origin": "ast",
-      "confidence_score": 1.0,
       "source": "src_js_weekly_mail_core_pwgeneramail",
-      "target": "src_js_weekly_mail_core_pwgetweekdata"
+      "target": "src_js_weekly_mail_core_pwgetweekdata",
+      "confidence_score": 1.0
     },
     {
       "relation": "calls",
@@ -8583,9 +8559,9 @@
       "source_location": "L357",
       "weight": 1.0,
       "_origin": "ast",
-      "confidence_score": 1.0,
       "source": "src_js_weekly_mail_core_pwgeneramail",
-      "target": "src_js_weekly_mail_core_pwsave"
+      "target": "src_js_weekly_mail_core_pwsave",
+      "confidence_score": 1.0
     },
     {
       "relation": "calls",
@@ -8595,9 +8571,9 @@
       "source_location": "L4",
       "weight": 1.0,
       "_origin": "ast",
-      "confidence_score": 1.0,
       "source": "src_js_weekly_mail_core_pwgeneramail",
-      "target": "src_js_weekly_mail_core_isoweektomonday"
+      "target": "src_js_weekly_mail_core_isoweektomonday",
+      "confidence_score": 1.0
     },
     {
       "relation": "calls",
@@ -8607,9 +8583,9 @@
       "source_location": "L407",
       "weight": 1.0,
       "_origin": "ast",
-      "confidence_score": 1.0,
       "source": "src_js_weekly_mail_core_pwgeneramail",
-      "target": "src_js_weekly_mail_core_pwgetferieweek"
+      "target": "src_js_weekly_mail_core_pwgetferieweek",
+      "confidence_score": 1.0
     },
     {
       "relation": "calls",
@@ -8619,9 +8595,9 @@
       "source_location": "L94",
       "weight": 1.0,
       "_origin": "ast",
-      "confidence_score": 1.0,
       "source": "src_js_weekly_mail_core_pwgeneramail",
-      "target": "src_js_weekly_mail_core_formatdate"
+      "target": "src_js_weekly_mail_core_formatdate",
+      "confidence_score": 1.0
     },
     {
       "relation": "calls",
@@ -8631,9 +8607,9 @@
       "source_location": "L201",
       "weight": 1.0,
       "_origin": "ast",
-      "confidence_score": 1.0,
       "source": "src_js_weekly_mail_core_pwgeneramail_componitesto",
-      "target": "src_js_weekly_mail_core_pwweekadd"
+      "target": "src_js_weekly_mail_core_pwweekadd",
+      "confidence_score": 1.0
     },
     {
       "relation": "calls",
@@ -8643,9 +8619,9 @@
       "source_location": "L203",
       "weight": 1.0,
       "_origin": "ast",
-      "confidence_score": 1.0,
       "source": "src_js_weekly_mail_core_pwgeneramail_componitesto",
-      "target": "src_js_weekly_mail_core_pwisdwstart"
+      "target": "src_js_weekly_mail_core_pwisdwstart",
+      "confidence_score": 1.0
     },
     {
       "relation": "calls",
@@ -8655,9 +8631,9 @@
       "source_location": "L209",
       "weight": 1.0,
       "_origin": "ast",
-      "confidence_score": 1.0,
       "source": "src_js_weekly_mail_core_pwgeneramail_componitesto",
-      "target": "src_js_weekly_mail_core_formatdate"
+      "target": "src_js_weekly_mail_core_formatdate",
+      "confidence_score": 1.0
     },
     {
       "relation": "calls",
@@ -8667,9 +8643,9 @@
       "source_location": "L258",
       "weight": 1.0,
       "_origin": "ast",
-      "confidence_score": 1.0,
       "source": "src_js_weekly_mail_core_pwgeneramail_componitesto",
-      "target": "src_js_weekly_mail_core_pwcellcantieri"
+      "target": "src_js_weekly_mail_core_pwcellcantieri",
+      "confidence_score": 1.0
     },
     {
       "relation": "calls",
@@ -8679,9 +8655,9 @@
       "source_location": "L286",
       "weight": 1.0,
       "_origin": "ast",
-      "confidence_score": 1.0,
       "source": "src_js_weekly_mail_core_pwgeneramail_componitesto",
-      "target": "src_js_weekly_mail_core_pwgetferieweek"
+      "target": "src_js_weekly_mail_core_pwgetferieweek",
+      "confidence_score": 1.0
     },
     {
       "relation": "calls",
@@ -8691,9 +8667,9 @@
       "source_location": "L344",
       "weight": 1.0,
       "_origin": "ast",
-      "confidence_score": 1.0,
       "source": "src_js_weekly_mail_core_pwgeneramail_salvanotesq",
-      "target": "src_js_weekly_mail_core_pwsave"
+      "target": "src_js_weekly_mail_core_pwsave",
+      "confidence_score": 1.0
     },
     {
       "relation": "calls",
@@ -8703,9 +8679,9 @@
       "source_location": "L841",
       "weight": 1.0,
       "_origin": "ast",
-      "confidence_score": 1.0,
       "source": "src_js_weekly_mail_core_pwgetcommessevalide",
-      "target": "src_js_weekly_mail_core_isoweektomonday"
+      "target": "src_js_weekly_mail_core_isoweektomonday",
+      "confidence_score": 1.0
     },
     {
       "relation": "calls",
@@ -8715,9 +8691,9 @@
       "source_location": "L876",
       "weight": 1.0,
       "_origin": "ast",
-      "confidence_score": 1.0,
       "source": "src_js_weekly_mail_core_pwgetoperatoripercommessa",
-      "target": "src_js_weekly_mail_core_isoweektomonday"
+      "target": "src_js_weekly_mail_core_isoweektomonday",
+      "confidence_score": 1.0
     },
     {
       "relation": "calls",
@@ -8727,9 +8703,9 @@
       "source_location": "L655",
       "weight": 1.0,
       "_origin": "ast",
-      "confidence_score": 1.0,
       "source": "src_js_weekly_mail_core_pwisgiaassegnato",
-      "target": "src_js_weekly_mail_core_pwgetweekdata"
+      "target": "src_js_weekly_mail_core_pwgetweekdata",
+      "confidence_score": 1.0
     },
     {
       "relation": "calls",
@@ -8739,9 +8715,9 @@
       "source_location": "L642",
       "weight": 1.0,
       "_origin": "ast",
-      "confidence_score": 1.0,
       "source": "src_js_weekly_mail_core_pwisinferie",
-      "target": "src_js_weekly_mail_core_pwgetferieweek"
+      "target": "src_js_weekly_mail_core_pwgetferieweek",
+      "confidence_score": 1.0
     },
     {
       "relation": "calls",
@@ -8751,9 +8727,9 @@
       "source_location": "L819",
       "weight": 1.0,
       "_origin": "ast",
-      "confidence_score": 1.0,
       "source": "src_js_weekly_mail_core_pwload",
-      "target": "src_js_weekly_mail_core_pwferieload"
+      "target": "src_js_weekly_mail_core_pwferieload",
+      "confidence_score": 1.0
     },
     {
       "relation": "calls",
@@ -8763,9 +8739,9 @@
       "source_location": "L820",
       "weight": 1.0,
       "_origin": "ast",
-      "confidence_score": 1.0,
       "source": "src_js_weekly_mail_core_pwload",
-      "target": "src_js_weekly_mail_core_pwdwload"
+      "target": "src_js_weekly_mail_core_pwdwload",
+      "confidence_score": 1.0
     },
     {
       "relation": "calls",
@@ -8775,9 +8751,9 @@
       "source_location": "L609",
       "weight": 1.0,
       "_origin": "ast",
-      "confidence_score": 1.0,
       "source": "src_js_weekly_mail_core_pwmonthweeks",
-      "target": "src_js_weekly_mail_core_isoweekyear"
+      "target": "src_js_weekly_mail_core_isoweekyear",
+      "confidence_score": 1.0
     },
     {
       "relation": "calls",
@@ -8787,9 +8763,9 @@
       "source_location": "L675",
       "weight": 1.0,
       "_origin": "ast",
-      "confidence_score": 1.0,
       "source": "src_js_weekly_mail_core_pwstatooperatore",
-      "target": "src_js_weekly_mail_core_pwisinferie"
+      "target": "src_js_weekly_mail_core_pwisinferie",
+      "confidence_score": 1.0
     },
     {
       "relation": "calls",
@@ -8799,9 +8775,9 @@
       "source_location": "L676",
       "weight": 1.0,
       "_origin": "ast",
-      "confidence_score": 1.0,
       "source": "src_js_weekly_mail_core_pwstatooperatore",
-      "target": "src_js_weekly_mail_core_pwisgiaassegnato"
+      "target": "src_js_weekly_mail_core_pwisgiaassegnato",
+      "confidence_score": 1.0
     },
     {
       "relation": "calls",
@@ -8811,9 +8787,9 @@
       "source_location": "L784",
       "weight": 1.0,
       "_origin": "ast",
-      "confidence_score": 1.0,
       "source": "src_js_weekly_mail_core_pwtoggleferia",
-      "target": "src_js_weekly_mail_core_pwgetferieweek"
+      "target": "src_js_weekly_mail_core_pwgetferieweek",
+      "confidence_score": 1.0
     },
     {
       "relation": "calls",
@@ -8823,9 +8799,9 @@
       "source_location": "L793",
       "weight": 1.0,
       "_origin": "ast",
-      "confidence_score": 1.0,
       "source": "src_js_weekly_mail_core_pwtoggleferia",
-      "target": "src_js_weekly_mail_core_pwferiesave"
+      "target": "src_js_weekly_mail_core_pwferiesave",
+      "confidence_score": 1.0
     },
     {
       "relation": "calls",
@@ -8835,9 +8811,9 @@
       "source_location": "L796",
       "weight": 1.0,
       "_origin": "ast",
-      "confidence_score": 1.0,
       "source": "src_js_weekly_mail_core_pwtoggleferia",
-      "target": "src_js_weekly_mail_core_isoweektomonday"
+      "target": "src_js_weekly_mail_core_isoweektomonday",
+      "confidence_score": 1.0
     },
     {
       "relation": "calls",
@@ -8847,9 +8823,9 @@
       "source_location": "L801",
       "weight": 1.0,
       "_origin": "ast",
-      "confidence_score": 1.0,
       "source": "src_js_weekly_mail_core_pwtoggleferia",
-      "target": "src_js_weekly_mail_core_pwferiesummaryrender"
+      "target": "src_js_weekly_mail_core_pwferiesummaryrender",
+      "confidence_score": 1.0
     },
     {
       "relation": "calls",
@@ -8859,9 +8835,9 @@
       "source_location": "L562",
       "weight": 1.0,
       "_origin": "ast",
-      "confidence_score": 1.0,
       "source": "src_js_weekly_mail_core_pwweekadd",
-      "target": "src_js_weekly_mail_core_weeksinyear"
+      "target": "src_js_weekly_mail_core_weeksinyear",
+      "confidence_score": 1.0
     },
     {
       "relation": "calls",
@@ -8871,9 +8847,9 @@
       "source_location": "L512",
       "weight": 1.0,
       "_origin": "ast",
-      "confidence_score": 1.0,
       "source": "src_js_weekly_mail_core_weeksinyear",
-      "target": "src_js_weekly_mail_core_isoweekyear"
+      "target": "src_js_weekly_mail_core_isoweekyear",
+      "confidence_score": 1.0
     },
     {
       "relation": "calls",
@@ -9303,9 +9279,9 @@
       "source_location": "L184",
       "weight": 1.0,
       "_origin": "ast",
-      "confidence_score": 1.0,
       "source": "src_js_weekly_strumenti_pwaddsquadra",
-      "target": "src_js_weekly_strumenti_pwrinumerasquadredefault"
+      "target": "src_js_weekly_strumenti_pwrinumerasquadredefault",
+      "confidence_score": 1.0
     },
     {
       "relation": "calls",
@@ -9315,9 +9291,9 @@
       "source_location": "L54",
       "weight": 1.0,
       "_origin": "ast",
-      "confidence_score": 1.0,
       "source": "src_js_weekly_strumenti_pwaddstrumento",
-      "target": "src_js_weekly_strumenti_pwsqstrumentijira"
+      "target": "src_js_weekly_strumenti_pwsqstrumentijira",
+      "confidence_score": 1.0
     },
     {
       "relation": "calls",
@@ -9327,9 +9303,9 @@
       "source_location": "L56",
       "weight": 1.0,
       "_origin": "ast",
-      "confidence_score": 1.0,
       "source": "src_js_weekly_strumenti_pwaddstrumento",
-      "target": "src_js_weekly_strumenti_pwsetsqstrumentijira"
+      "target": "src_js_weekly_strumenti_pwsetsqstrumentijira",
+      "confidence_score": 1.0
     },
     {
       "relation": "calls",
@@ -9339,9 +9315,9 @@
       "source_location": "L199",
       "weight": 1.0,
       "_origin": "ast",
-      "confidence_score": 1.0,
       "source": "src_js_weekly_strumenti_pwremovesquadra",
-      "target": "src_js_weekly_strumenti_pwrinumerasquadredefault"
+      "target": "src_js_weekly_strumenti_pwrinumerasquadredefault",
+      "confidence_score": 1.0
     },
     {
       "relation": "calls",
@@ -9351,9 +9327,9 @@
       "source_location": "L65",
       "weight": 1.0,
       "_origin": "ast",
-      "confidence_score": 1.0,
       "source": "src_js_weekly_strumenti_pwremovestrumento",
-      "target": "src_js_weekly_strumenti_pwsqstrumentijira"
+      "target": "src_js_weekly_strumenti_pwsqstrumentijira",
+      "confidence_score": 1.0
     },
     {
       "relation": "calls",
@@ -9363,9 +9339,9 @@
       "source_location": "L67",
       "weight": 1.0,
       "_origin": "ast",
-      "confidence_score": 1.0,
       "source": "src_js_weekly_strumenti_pwremovestrumento",
-      "target": "src_js_weekly_strumenti_pwsetsqstrumentijira"
+      "target": "src_js_weekly_strumenti_pwsetsqstrumentijira",
+      "confidence_score": 1.0
     },
     {
       "relation": "calls",
@@ -9375,9 +9351,9 @@
       "source_location": "L83",
       "weight": 1.0,
       "_origin": "ast",
-      "confidence_score": 1.0,
       "source": "src_js_weekly_strumenti_pwstrensurepanel",
-      "target": "src_js_weekly_strumenti_pwstrrenderlist"
+      "target": "src_js_weekly_strumenti_pwstrrenderlist",
+      "confidence_score": 1.0
     },
     {
       "relation": "calls",
@@ -9387,9 +9363,9 @@
       "source_location": "L86",
       "weight": 1.0,
       "_origin": "ast",
-      "confidence_score": 1.0,
       "source": "src_js_weekly_strumenti_pwstrensurepanel",
-      "target": "src_js_weekly_strumenti_pwstrclose"
+      "target": "src_js_weekly_strumenti_pwstrclose",
+      "confidence_score": 1.0
     },
     {
       "relation": "calls",
@@ -9399,9 +9375,9 @@
       "source_location": "L108",
       "weight": 1.0,
       "_origin": "ast",
-      "confidence_score": 1.0,
       "source": "src_js_weekly_strumenti_pwstropen",
-      "target": "src_js_weekly_strumenti_pwstrrenderlist"
+      "target": "src_js_weekly_strumenti_pwstrrenderlist",
+      "confidence_score": 1.0
     },
     {
       "relation": "calls",
@@ -9411,9 +9387,9 @@
       "source_location": "L97",
       "weight": 1.0,
       "_origin": "ast",
-      "confidence_score": 1.0,
       "source": "src_js_weekly_strumenti_pwstropen",
-      "target": "src_js_weekly_strumenti_pwstrensurepanel"
+      "target": "src_js_weekly_strumenti_pwstrensurepanel",
+      "confidence_score": 1.0
     },
     {
       "relation": "calls",
@@ -9423,9 +9399,9 @@
       "source_location": "L133",
       "weight": 1.0,
       "_origin": "ast",
-      "confidence_score": 1.0,
       "source": "src_js_weekly_strumenti_pwstrpick",
-      "target": "src_js_weekly_strumenti_pwsqstrumentijira"
+      "target": "src_js_weekly_strumenti_pwsqstrumentijira",
+      "confidence_score": 1.0
     },
     {
       "relation": "calls",
@@ -9435,9 +9411,9 @@
       "source_location": "L135",
       "weight": 1.0,
       "_origin": "ast",
-      "confidence_score": 1.0,
       "source": "src_js_weekly_strumenti_pwstrpick",
-      "target": "src_js_weekly_strumenti_pwsetsqstrumentijira"
+      "target": "src_js_weekly_strumenti_pwsetsqstrumentijira",
+      "confidence_score": 1.0
     },
     {
       "relation": "calls",
@@ -9447,9 +9423,9 @@
       "source_location": "L138",
       "weight": 1.0,
       "_origin": "ast",
-      "confidence_score": 1.0,
       "source": "src_js_weekly_strumenti_pwstrpick",
-      "target": "src_js_weekly_strumenti_pwstrclose"
+      "target": "src_js_weekly_strumenti_pwstrclose",
+      "confidence_score": 1.0
     },
     {
       "relation": "calls",
@@ -9459,9 +9435,9 @@
       "source_location": "L126",
       "weight": 1.0,
       "_origin": "ast",
-      "confidence_score": 1.0,
       "source": "src_js_weekly_strumenti_pwstrrenderlist",
-      "target": "src_js_weekly_strumenti_pwstrpick"
+      "target": "src_js_weekly_strumenti_pwstrpick",
+      "confidence_score": 1.0
     },
     {
       "relation": "calls",
@@ -9471,9 +9447,9 @@
       "source_location": "L44",
       "weight": 1.0,
       "_origin": "ast",
-      "confidence_score": 1.0,
       "source": "src_js_weekly_strumenti_pwstrumentocounts",
-      "target": "src_js_weekly_strumenti_pwsqstrumentijira"
+      "target": "src_js_weekly_strumenti_pwsqstrumentijira",
+      "confidence_score": 1.0
     },
     {
       "relation": "contains",
@@ -9564,7 +9540,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/js/weekly-jira-subtask.js",
-      "source_location": "L244",
+      "source_location": "L242",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_js_weekly_jira_subtask_pwjirasubtaskopencomunimodal",
@@ -9579,9 +9555,9 @@
       "source_location": "L196",
       "weight": 1.0,
       "_origin": "ast",
-      "confidence_score": 1.0,
       "source": "src_js_weekly_mail_core_pwgeneramail",
-      "target": "src_js_weekly_mail_core_pwgeneramail_componitesto"
+      "target": "src_js_weekly_mail_core_pwgeneramail_componitesto",
+      "confidence_score": 1.0
     },
     {
       "relation": "contains",
@@ -9591,9 +9567,9 @@
       "source_location": "L335",
       "weight": 1.0,
       "_origin": "ast",
-      "confidence_score": 1.0,
       "source": "src_js_weekly_mail_core_pwgeneramail",
-      "target": "src_js_weekly_mail_core_pwgeneramail_salvanotesq"
+      "target": "src_js_weekly_mail_core_pwgeneramail_salvanotesq",
+      "confidence_score": 1.0
     },
     {
       "relation": "contains",
@@ -9901,9 +9877,9 @@
       "source_location": "L171",
       "weight": 1.0,
       "_origin": "ast",
-      "confidence_score": 1.0,
       "source": "src_js_dashboard_assegnazioni",
-      "target": "src_js_dashboard_assegnazioni_calcolaconfrontocommessa"
+      "target": "src_js_dashboard_assegnazioni_calcolaconfrontocommessa",
+      "confidence_score": 1.0
     },
     {
       "relation": "contains",
@@ -9912,9 +9888,9 @@
       "source_location": "L2",
       "weight": 1.0,
       "_origin": "ast",
-      "confidence_score": 1.0,
       "source": "src_js_dashboard_assegnazioni",
-      "target": "src_js_dashboard_assegnazioni_assegnaoperatore"
+      "target": "src_js_dashboard_assegnazioni_assegnaoperatore",
+      "confidence_score": 1.0
     },
     {
       "relation": "contains",
@@ -9923,9 +9899,9 @@
       "source_location": "L229",
       "weight": 1.0,
       "_origin": "ast",
-      "confidence_score": 1.0,
       "source": "src_js_dashboard_assegnazioni",
-      "target": "src_js_dashboard_assegnazioni_calcolaimpegnieffettiviannooperatore"
+      "target": "src_js_dashboard_assegnazioni_calcolaimpegnieffettiviannooperatore",
+      "confidence_score": 1.0
     },
     {
       "relation": "contains",
@@ -9934,9 +9910,9 @@
       "source_location": "L260",
       "weight": 1.0,
       "_origin": "ast",
-      "confidence_score": 1.0,
       "source": "src_js_dashboard_assegnazioni",
-      "target": "src_js_dashboard_assegnazioni_rimuovirigastaffing"
+      "target": "src_js_dashboard_assegnazioni_rimuovirigastaffing",
+      "confidence_score": 1.0
     },
     {
       "relation": "contains",
@@ -9945,9 +9921,9 @@
       "source_location": "L271",
       "weight": 1.0,
       "_origin": "ast",
-      "confidence_score": 1.0,
       "source": "src_js_dashboard_assegnazioni",
-      "target": "src_js_dashboard_assegnazioni_rimuovimeseallocazione"
+      "target": "src_js_dashboard_assegnazioni_rimuovimeseallocazione",
+      "confidence_score": 1.0
     },
     {
       "relation": "contains",
@@ -9956,9 +9932,9 @@
       "source_location": "L285",
       "weight": 1.0,
       "_origin": "ast",
-      "confidence_score": 1.0,
       "source": "src_js_dashboard_assegnazioni",
-      "target": "src_js_dashboard_assegnazioni_openaddallocazionemodal"
+      "target": "src_js_dashboard_assegnazioni_openaddallocazionemodal",
+      "confidence_score": 1.0
     },
     {
       "relation": "contains",
@@ -9967,9 +9943,9 @@
       "source_location": "L39",
       "weight": 1.0,
       "_origin": "ast",
-      "confidence_score": 1.0,
       "source": "src_js_dashboard_assegnazioni",
-      "target": "src_js_dashboard_assegnazioni_rimuoviassegnazione"
+      "target": "src_js_dashboard_assegnazioni_rimuoviassegnazione",
+      "confidence_score": 1.0
     },
     {
       "relation": "contains",
@@ -9978,9 +9954,9 @@
       "source_location": "L48",
       "weight": 1.0,
       "_origin": "ast",
-      "confidence_score": 1.0,
       "source": "src_js_dashboard_assegnazioni",
-      "target": "src_js_dashboard_assegnazioni_spostaassegnazione"
+      "target": "src_js_dashboard_assegnazioni_spostaassegnazione",
+      "confidence_score": 1.0
     },
     {
       "relation": "contains",
@@ -9989,9 +9965,9 @@
       "source_location": "L524",
       "weight": 1.0,
       "_origin": "ast",
-      "confidence_score": 1.0,
       "source": "src_js_dashboard_assegnazioni",
-      "target": "src_js_dashboard_assegnazioni_openeditcellmodal"
+      "target": "src_js_dashboard_assegnazioni_openeditcellmodal",
+      "confidence_score": 1.0
     },
     {
       "relation": "contains",
@@ -10000,9 +9976,9 @@
       "source_location": "L55",
       "weight": 1.0,
       "_origin": "ast",
-      "confidence_score": 1.0,
       "source": "src_js_dashboard_assegnazioni",
-      "target": "src_js_dashboard_assegnazioni_eliminacommessachiusa"
+      "target": "src_js_dashboard_assegnazioni_eliminacommessachiusa",
+      "confidence_score": 1.0
     },
     {
       "relation": "contains",
@@ -10011,9 +9987,9 @@
       "source_location": "L559",
       "weight": 1.0,
       "_origin": "ast",
-      "confidence_score": 1.0,
       "source": "src_js_dashboard_assegnazioni",
-      "target": "src_js_dashboard_assegnazioni_openoperatoreimpegnimodal"
+      "target": "src_js_dashboard_assegnazioni_openoperatoreimpegnimodal",
+      "confidence_score": 1.0
     },
     {
       "relation": "contains",
@@ -10022,9 +9998,9 @@
       "source_location": "L90",
       "weight": 1.0,
       "_origin": "ast",
-      "confidence_score": 1.0,
       "source": "src_js_dashboard_assegnazioni",
-      "target": "src_js_dashboard_assegnazioni_calcolafabbisognocommessa"
+      "target": "src_js_dashboard_assegnazioni_calcolafabbisognocommessa",
+      "confidence_score": 1.0
     },
     {
       "relation": "contains",
@@ -11845,7 +11821,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/js/weekly-jira-subtask.js",
-      "source_location": "L106",
+      "source_location": "L104",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_js_weekly_jira_subtask",
@@ -11856,7 +11832,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/js/weekly-jira-subtask.js",
-      "source_location": "L114",
+      "source_location": "L112",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_js_weekly_jira_subtask",
@@ -11867,7 +11843,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/js/weekly-jira-subtask.js",
-      "source_location": "L122",
+      "source_location": "L120",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_js_weekly_jira_subtask",
@@ -11878,7 +11854,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/js/weekly-jira-subtask.js",
-      "source_location": "L136",
+      "source_location": "L134",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_js_weekly_jira_subtask",
@@ -11889,7 +11865,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/js/weekly-jira-subtask.js",
-      "source_location": "L148",
+      "source_location": "L146",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_js_weekly_jira_subtask",
@@ -11900,7 +11876,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/js/weekly-jira-subtask.js",
-      "source_location": "L154",
+      "source_location": "L152",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_js_weekly_jira_subtask",
@@ -11911,7 +11887,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/js/weekly-jira-subtask.js",
-      "source_location": "L171",
+      "source_location": "L169",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_js_weekly_jira_subtask",
@@ -11922,7 +11898,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/js/weekly-jira-subtask.js",
-      "source_location": "L211",
+      "source_location": "L209",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_js_weekly_jira_subtask",
@@ -11933,7 +11909,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/js/weekly-jira-subtask.js",
-      "source_location": "L24",
+      "source_location": "L22",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_js_weekly_jira_subtask",
@@ -11944,18 +11920,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/js/weekly-jira-subtask.js",
-      "source_location": "L341",
-      "weight": 1.0,
-      "_origin": "ast",
-      "source": "src_js_weekly_jira_subtask",
-      "target": "src_js_weekly_jira_subtask_pwjirasubtaskopenselectitemsmodal",
-      "confidence_score": 1.0
-    },
-    {
-      "relation": "contains",
-      "confidence": "EXTRACTED",
-      "source_file": "src/js/weekly-jira-subtask.js",
-      "source_location": "L387",
+      "source_location": "L340",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_js_weekly_jira_subtask",
@@ -11966,7 +11931,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/js/weekly-jira-subtask.js",
-      "source_location": "L460",
+      "source_location": "L413",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_js_weekly_jira_subtask",
@@ -11977,18 +11942,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/js/weekly-jira-subtask.js",
-      "source_location": "L47",
-      "weight": 1.0,
-      "_origin": "ast",
-      "source": "src_js_weekly_jira_subtask",
-      "target": "src_js_weekly_jira_subtask_pwjirasearchpanelclose",
-      "confidence_score": 1.0
-    },
-    {
-      "relation": "contains",
-      "confidence": "EXTRACTED",
-      "source_file": "src/js/weekly-jira-subtask.js",
-      "source_location": "L479",
+      "source_location": "L432",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_js_weekly_jira_subtask",
@@ -11999,7 +11953,18 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/js/weekly-jira-subtask.js",
-      "source_location": "L523",
+      "source_location": "L45",
+      "weight": 1.0,
+      "_origin": "ast",
+      "source": "src_js_weekly_jira_subtask",
+      "target": "src_js_weekly_jira_subtask_pwjirasearchpanelclose",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "src/js/weekly-jira-subtask.js",
+      "source_location": "L476",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_js_weekly_jira_subtask",
@@ -12010,7 +11975,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/js/weekly-jira-subtask.js",
-      "source_location": "L55",
+      "source_location": "L53",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_js_weekly_jira_subtask",
@@ -12021,7 +11986,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/js/weekly-jira-subtask.js",
-      "source_location": "L71",
+      "source_location": "L69",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_js_weekly_jira_subtask",
@@ -12035,9 +12000,9 @@
       "source_location": "L2",
       "weight": 1.0,
       "_origin": "ast",
-      "confidence_score": 1.0,
       "source": "src_js_weekly_mail_core",
-      "target": "src_js_weekly_mail_core_pwgeneramail"
+      "target": "src_js_weekly_mail_core_pwgeneramail",
+      "confidence_score": 1.0
     },
     {
       "relation": "contains",
@@ -12046,9 +12011,9 @@
       "source_location": "L488",
       "weight": 1.0,
       "_origin": "ast",
-      "confidence_score": 1.0,
       "source": "src_js_weekly_mail_core",
-      "target": "src_js_weekly_mail_core_isoweekyear"
+      "target": "src_js_weekly_mail_core_isoweekyear",
+      "confidence_score": 1.0
     },
     {
       "relation": "contains",
@@ -12057,9 +12022,9 @@
       "source_location": "L500",
       "weight": 1.0,
       "_origin": "ast",
-      "confidence_score": 1.0,
       "source": "src_js_weekly_mail_core",
-      "target": "src_js_weekly_mail_core_isoweektomonday"
+      "target": "src_js_weekly_mail_core_isoweektomonday",
+      "confidence_score": 1.0
     },
     {
       "relation": "contains",
@@ -12068,9 +12033,9 @@
       "source_location": "L509",
       "weight": 1.0,
       "_origin": "ast",
-      "confidence_score": 1.0,
       "source": "src_js_weekly_mail_core",
-      "target": "src_js_weekly_mail_core_weeksinyear"
+      "target": "src_js_weekly_mail_core_weeksinyear",
+      "confidence_score": 1.0
     },
     {
       "relation": "contains",
@@ -12079,9 +12044,9 @@
       "source_location": "L515",
       "weight": 1.0,
       "_origin": "ast",
-      "confidence_score": 1.0,
       "source": "src_js_weekly_mail_core",
-      "target": "src_js_weekly_mail_core_formatdate"
+      "target": "src_js_weekly_mail_core_formatdate",
+      "confidence_score": 1.0
     },
     {
       "relation": "contains",
@@ -12090,9 +12055,9 @@
       "source_location": "L519",
       "weight": 1.0,
       "_origin": "ast",
-      "confidence_score": 1.0,
       "source": "src_js_weekly_mail_core",
-      "target": "src_js_weekly_mail_core_formatdatefull"
+      "target": "src_js_weekly_mail_core_formatdatefull",
+      "confidence_score": 1.0
     },
     {
       "relation": "contains",
@@ -12101,9 +12066,9 @@
       "source_location": "L528",
       "weight": 1.0,
       "_origin": "ast",
-      "confidence_score": 1.0,
       "source": "src_js_weekly_mail_core",
-      "target": "src_js_weekly_mail_core_pwdata"
+      "target": "src_js_weekly_mail_core_pwdata",
+      "confidence_score": 1.0
     },
     {
       "relation": "contains",
@@ -12112,9 +12077,9 @@
       "source_location": "L534",
       "weight": 1.0,
       "_origin": "ast",
-      "confidence_score": 1.0,
       "source": "src_js_weekly_mail_core",
-      "target": "src_js_weekly_mail_core_pwcellcantieri"
+      "target": "src_js_weekly_mail_core_pwcellcantieri",
+      "confidence_score": 1.0
     },
     {
       "relation": "contains",
@@ -12123,9 +12088,9 @@
       "source_location": "L544",
       "weight": 1.0,
       "_origin": "ast",
-      "confidence_score": 1.0,
       "source": "src_js_weekly_mail_core",
-      "target": "src_js_weekly_mail_core_pwcellcantieriraw"
+      "target": "src_js_weekly_mail_core_pwcellcantieriraw",
+      "confidence_score": 1.0
     },
     {
       "relation": "contains",
@@ -12134,9 +12099,9 @@
       "source_location": "L553",
       "weight": 1.0,
       "_origin": "ast",
-      "confidence_score": 1.0,
       "source": "src_js_weekly_mail_core",
-      "target": "src_js_weekly_mail_core_pwferie"
+      "target": "src_js_weekly_mail_core_pwferie",
+      "confidence_score": 1.0
     },
     {
       "relation": "contains",
@@ -12145,9 +12110,9 @@
       "source_location": "L557",
       "weight": 1.0,
       "_origin": "ast",
-      "confidence_score": 1.0,
       "source": "src_js_weekly_mail_core",
-      "target": "src_js_weekly_mail_core_pwdoppiaweek"
+      "target": "src_js_weekly_mail_core_pwdoppiaweek",
+      "confidence_score": 1.0
     },
     {
       "relation": "contains",
@@ -12156,9 +12121,9 @@
       "source_location": "L560",
       "weight": 1.0,
       "_origin": "ast",
-      "confidence_score": 1.0,
       "source": "src_js_weekly_mail_core",
-      "target": "src_js_weekly_mail_core_pwweekadd"
+      "target": "src_js_weekly_mail_core_pwweekadd",
+      "confidence_score": 1.0
     },
     {
       "relation": "contains",
@@ -12167,9 +12132,9 @@
       "source_location": "L568",
       "weight": 1.0,
       "_origin": "ast",
-      "confidence_score": 1.0,
       "source": "src_js_weekly_mail_core",
-      "target": "src_js_weekly_mail_core_pwhasferiaweek"
+      "target": "src_js_weekly_mail_core_pwhasferiaweek",
+      "confidence_score": 1.0
     },
     {
       "relation": "contains",
@@ -12178,9 +12143,9 @@
       "source_location": "L576",
       "weight": 1.0,
       "_origin": "ast",
-      "confidence_score": 1.0,
       "source": "src_js_weekly_mail_core",
-      "target": "src_js_weekly_mail_core_pwisdwstart"
+      "target": "src_js_weekly_mail_core_pwisdwstart",
+      "confidence_score": 1.0
     },
     {
       "relation": "contains",
@@ -12189,9 +12154,9 @@
       "source_location": "L580",
       "weight": 1.0,
       "_origin": "ast",
-      "confidence_score": 1.0,
       "source": "src_js_weekly_mail_core",
-      "target": "src_js_weekly_mail_core_pwsetdwstart"
+      "target": "src_js_weekly_mail_core_pwsetdwstart",
+      "confidence_score": 1.0
     },
     {
       "relation": "contains",
@@ -12200,9 +12165,9 @@
       "source_location": "L592",
       "weight": 1.0,
       "_origin": "ast",
-      "confidence_score": 1.0,
       "source": "src_js_weekly_mail_core",
-      "target": "src_js_weekly_mail_core_pwdwcount"
+      "target": "src_js_weekly_mail_core_pwdwcount",
+      "confidence_score": 1.0
     },
     {
       "relation": "contains",
@@ -12211,9 +12176,9 @@
       "source_location": "L604",
       "weight": 1.0,
       "_origin": "ast",
-      "confidence_score": 1.0,
       "source": "src_js_weekly_mail_core",
-      "target": "src_js_weekly_mail_core_pwmonthweeks"
+      "target": "src_js_weekly_mail_core_pwmonthweeks",
+      "confidence_score": 1.0
     },
     {
       "relation": "contains",
@@ -12222,9 +12187,9 @@
       "source_location": "L616",
       "weight": 1.0,
       "_origin": "ast",
-      "confidence_score": 1.0,
       "source": "src_js_weekly_mail_core",
-      "target": "src_js_weekly_mail_core_pwferieload"
+      "target": "src_js_weekly_mail_core_pwferieload",
+      "confidence_score": 1.0
     },
     {
       "relation": "contains",
@@ -12233,9 +12198,9 @@
       "source_location": "L620",
       "weight": 1.0,
       "_origin": "ast",
-      "confidence_score": 1.0,
       "source": "src_js_weekly_mail_core",
-      "target": "src_js_weekly_mail_core_pwdwload"
+      "target": "src_js_weekly_mail_core_pwdwload",
+      "confidence_score": 1.0
     },
     {
       "relation": "contains",
@@ -12244,9 +12209,9 @@
       "source_location": "L624",
       "weight": 1.0,
       "_origin": "ast",
-      "confidence_score": 1.0,
       "source": "src_js_weekly_mail_core",
-      "target": "src_js_weekly_mail_core_pwferiesave"
+      "target": "src_js_weekly_mail_core_pwferiesave",
+      "confidence_score": 1.0
     },
     {
       "relation": "contains",
@@ -12255,9 +12220,9 @@
       "source_location": "L634",
       "weight": 1.0,
       "_origin": "ast",
-      "confidence_score": 1.0,
       "source": "src_js_weekly_mail_core",
-      "target": "src_js_weekly_mail_core_pwgetferieweek"
+      "target": "src_js_weekly_mail_core_pwgetferieweek",
+      "confidence_score": 1.0
     },
     {
       "relation": "contains",
@@ -12266,9 +12231,9 @@
       "source_location": "L641",
       "weight": 1.0,
       "_origin": "ast",
-      "confidence_score": 1.0,
       "source": "src_js_weekly_mail_core",
-      "target": "src_js_weekly_mail_core_pwisinferie"
+      "target": "src_js_weekly_mail_core_pwisinferie",
+      "confidence_score": 1.0
     },
     {
       "relation": "contains",
@@ -12277,9 +12242,9 @@
       "source_location": "L653",
       "weight": 1.0,
       "_origin": "ast",
-      "confidence_score": 1.0,
       "source": "src_js_weekly_mail_core",
-      "target": "src_js_weekly_mail_core_pwisgiaassegnato"
+      "target": "src_js_weekly_mail_core_pwisgiaassegnato",
+      "confidence_score": 1.0
     },
     {
       "relation": "contains",
@@ -12288,9 +12253,9 @@
       "source_location": "L673",
       "weight": 1.0,
       "_origin": "ast",
-      "confidence_score": 1.0,
       "source": "src_js_weekly_mail_core",
-      "target": "src_js_weekly_mail_core_pwstatooperatore"
+      "target": "src_js_weekly_mail_core_pwstatooperatore",
+      "confidence_score": 1.0
     },
     {
       "relation": "contains",
@@ -12299,9 +12264,9 @@
       "source_location": "L681",
       "weight": 1.0,
       "_origin": "ast",
-      "confidence_score": 1.0,
       "source": "src_js_weekly_mail_core",
-      "target": "src_js_weekly_mail_core_pwferierender"
+      "target": "src_js_weekly_mail_core_pwferierender",
+      "confidence_score": 1.0
     },
     {
       "relation": "contains",
@@ -12310,9 +12275,9 @@
       "source_location": "L749",
       "weight": 1.0,
       "_origin": "ast",
-      "confidence_score": 1.0,
       "source": "src_js_weekly_mail_core",
-      "target": "src_js_weekly_mail_core_pwferiesummaryrender"
+      "target": "src_js_weekly_mail_core_pwferiesummaryrender",
+      "confidence_score": 1.0
     },
     {
       "relation": "contains",
@@ -12321,9 +12286,9 @@
       "source_location": "L781",
       "weight": 1.0,
       "_origin": "ast",
-      "confidence_score": 1.0,
       "source": "src_js_weekly_mail_core",
-      "target": "src_js_weekly_mail_core_pwtoggleferia"
+      "target": "src_js_weekly_mail_core_pwtoggleferia",
+      "confidence_score": 1.0
     },
     {
       "relation": "contains",
@@ -12332,9 +12297,9 @@
       "source_location": "L805",
       "weight": 1.0,
       "_origin": "ast",
-      "confidence_score": 1.0,
       "source": "src_js_weekly_mail_core",
-      "target": "src_js_weekly_mail_core_pwferietoggleweek"
+      "target": "src_js_weekly_mail_core_pwferietoggleweek",
+      "confidence_score": 1.0
     },
     {
       "relation": "contains",
@@ -12343,9 +12308,9 @@
       "source_location": "L814",
       "weight": 1.0,
       "_origin": "ast",
-      "confidence_score": 1.0,
       "source": "src_js_weekly_mail_core",
-      "target": "src_js_weekly_mail_core_pwload"
+      "target": "src_js_weekly_mail_core_pwload",
+      "confidence_score": 1.0
     },
     {
       "relation": "contains",
@@ -12354,9 +12319,9 @@
       "source_location": "L823",
       "weight": 1.0,
       "_origin": "ast",
-      "confidence_score": 1.0,
       "source": "src_js_weekly_mail_core",
-      "target": "src_js_weekly_mail_core_pwsave"
+      "target": "src_js_weekly_mail_core_pwsave",
+      "confidence_score": 1.0
     },
     {
       "relation": "contains",
@@ -12365,9 +12330,9 @@
       "source_location": "L833",
       "weight": 1.0,
       "_origin": "ast",
-      "confidence_score": 1.0,
       "source": "src_js_weekly_mail_core",
-      "target": "src_js_weekly_mail_core_pwgetweekdata"
+      "target": "src_js_weekly_mail_core_pwgetweekdata",
+      "confidence_score": 1.0
     },
     {
       "relation": "contains",
@@ -12376,9 +12341,9 @@
       "source_location": "L840",
       "weight": 1.0,
       "_origin": "ast",
-      "confidence_score": 1.0,
       "source": "src_js_weekly_mail_core",
-      "target": "src_js_weekly_mail_core_pwgetcommessevalide"
+      "target": "src_js_weekly_mail_core_pwgetcommessevalide",
+      "confidence_score": 1.0
     },
     {
       "relation": "contains",
@@ -12387,9 +12352,9 @@
       "source_location": "L875",
       "weight": 1.0,
       "_origin": "ast",
-      "confidence_score": 1.0,
       "source": "src_js_weekly_mail_core",
-      "target": "src_js_weekly_mail_core_pwgetoperatoripercommessa"
+      "target": "src_js_weekly_mail_core_pwgetoperatoripercommessa",
+      "confidence_score": 1.0
     },
     {
       "relation": "contains",
@@ -12948,9 +12913,9 @@
       "source_location": "L111",
       "weight": 1.0,
       "_origin": "ast",
-      "confidence_score": 1.0,
       "source": "src_js_weekly_strumenti",
-      "target": "src_js_weekly_strumenti_pwstrrenderlist"
+      "target": "src_js_weekly_strumenti_pwstrrenderlist",
+      "confidence_score": 1.0
     },
     {
       "relation": "contains",
@@ -12959,9 +12924,9 @@
       "source_location": "L128",
       "weight": 1.0,
       "_origin": "ast",
-      "confidence_score": 1.0,
       "source": "src_js_weekly_strumenti",
-      "target": "src_js_weekly_strumenti_pwstrpick"
+      "target": "src_js_weekly_strumenti_pwstrpick",
+      "confidence_score": 1.0
     },
     {
       "relation": "contains",
@@ -12970,9 +12935,9 @@
       "source_location": "L142",
       "weight": 1.0,
       "_origin": "ast",
-      "confidence_score": 1.0,
       "source": "src_js_weekly_strumenti",
-      "target": "src_js_weekly_strumenti_pwupdatesquadranome"
+      "target": "src_js_weekly_strumenti_pwupdatesquadranome",
+      "confidence_score": 1.0
     },
     {
       "relation": "contains",
@@ -12981,9 +12946,9 @@
       "source_location": "L149",
       "weight": 1.0,
       "_origin": "ast",
-      "confidence_score": 1.0,
       "source": "src_js_weekly_strumenti",
-      "target": "src_js_weekly_strumenti_pwupdatecommessa"
+      "target": "src_js_weekly_strumenti_pwupdatecommessa",
+      "confidence_score": 1.0
     },
     {
       "relation": "contains",
@@ -12992,9 +12957,9 @@
       "source_location": "L165",
       "weight": 1.0,
       "_origin": "ast",
-      "confidence_score": 1.0,
       "source": "src_js_weekly_strumenti",
-      "target": "src_js_weekly_strumenti_pwrinumerasquadredefault"
+      "target": "src_js_weekly_strumenti_pwrinumerasquadredefault",
+      "confidence_score": 1.0
     },
     {
       "relation": "contains",
@@ -13003,9 +12968,9 @@
       "source_location": "L178",
       "weight": 1.0,
       "_origin": "ast",
-      "confidence_score": 1.0,
       "source": "src_js_weekly_strumenti",
-      "target": "src_js_weekly_strumenti_pwaddsquadra"
+      "target": "src_js_weekly_strumenti_pwaddsquadra",
+      "confidence_score": 1.0
     },
     {
       "relation": "contains",
@@ -13014,9 +12979,9 @@
       "source_location": "L189",
       "weight": 1.0,
       "_origin": "ast",
-      "confidence_score": 1.0,
       "source": "src_js_weekly_strumenti",
-      "target": "src_js_weekly_strumenti_pwremovesquadra"
+      "target": "src_js_weekly_strumenti_pwremovesquadra",
+      "confidence_score": 1.0
     },
     {
       "relation": "contains",
@@ -13025,9 +12990,9 @@
       "source_location": "L203",
       "weight": 1.0,
       "_origin": "ast",
-      "confidence_score": 1.0,
       "source": "src_js_weekly_strumenti",
-      "target": "src_js_weekly_strumenti_pwaddop"
+      "target": "src_js_weekly_strumenti_pwaddop",
+      "confidence_score": 1.0
     },
     {
       "relation": "contains",
@@ -13036,9 +13001,9 @@
       "source_location": "L210",
       "weight": 1.0,
       "_origin": "ast",
-      "confidence_score": 1.0,
       "source": "src_js_weekly_strumenti",
-      "target": "src_js_weekly_strumenti_pwremoveop"
+      "target": "src_js_weekly_strumenti_pwremoveop",
+      "confidence_score": 1.0
     },
     {
       "relation": "contains",
@@ -13047,9 +13012,9 @@
       "source_location": "L224",
       "weight": 1.0,
       "_origin": "ast",
-      "confidence_score": 1.0,
       "source": "src_js_weekly_strumenti",
-      "target": "src_js_weekly_strumenti_pwremovecommessa"
+      "target": "src_js_weekly_strumenti_pwremovecommessa",
+      "confidence_score": 1.0
     },
     {
       "relation": "contains",
@@ -13058,9 +13023,9 @@
       "source_location": "L232",
       "weight": 1.0,
       "_origin": "ast",
-      "confidence_score": 1.0,
       "source": "src_js_weekly_strumenti",
-      "target": "src_js_weekly_strumenti_pwmovecommessaup"
+      "target": "src_js_weekly_strumenti_pwmovecommessaup",
+      "confidence_score": 1.0
     },
     {
       "relation": "contains",
@@ -13069,9 +13034,9 @@
       "source_location": "L241",
       "weight": 1.0,
       "_origin": "ast",
-      "confidence_score": 1.0,
       "source": "src_js_weekly_strumenti",
-      "target": "src_js_weekly_strumenti_pwmovecommessadown"
+      "target": "src_js_weekly_strumenti_pwmovecommessadown",
+      "confidence_score": 1.0
     },
     {
       "relation": "contains",
@@ -13080,9 +13045,9 @@
       "source_location": "L26",
       "weight": 1.0,
       "_origin": "ast",
-      "confidence_score": 1.0,
       "source": "src_js_weekly_strumenti",
-      "target": "src_js_weekly_strumenti_pwsqstrumentijira"
+      "target": "src_js_weekly_strumenti_pwsqstrumentijira",
+      "confidence_score": 1.0
     },
     {
       "relation": "contains",
@@ -13091,9 +13056,9 @@
       "source_location": "L3",
       "weight": 1.0,
       "_origin": "ast",
-      "confidence_score": 1.0,
       "source": "src_js_weekly_strumenti",
-      "target": "src_js_weekly_strumenti_pwstrumenti"
+      "target": "src_js_weekly_strumenti_pwstrumenti",
+      "confidence_score": 1.0
     },
     {
       "relation": "contains",
@@ -13102,9 +13067,9 @@
       "source_location": "L31",
       "weight": 1.0,
       "_origin": "ast",
-      "confidence_score": 1.0,
       "source": "src_js_weekly_strumenti",
-      "target": "src_js_weekly_strumenti_pwsetsqstrumentijira"
+      "target": "src_js_weekly_strumenti_pwsetsqstrumentijira",
+      "confidence_score": 1.0
     },
     {
       "relation": "contains",
@@ -13113,9 +13078,9 @@
       "source_location": "L36",
       "weight": 1.0,
       "_origin": "ast",
-      "confidence_score": 1.0,
       "source": "src_js_weekly_strumenti",
-      "target": "src_js_weekly_strumenti_pwstrlabel"
+      "target": "src_js_weekly_strumenti_pwstrlabel",
+      "confidence_score": 1.0
     },
     {
       "relation": "contains",
@@ -13124,9 +13089,9 @@
       "source_location": "L42",
       "weight": 1.0,
       "_origin": "ast",
-      "confidence_score": 1.0,
       "source": "src_js_weekly_strumenti",
-      "target": "src_js_weekly_strumenti_pwstrumentocounts"
+      "target": "src_js_weekly_strumenti_pwstrumentocounts",
+      "confidence_score": 1.0
     },
     {
       "relation": "contains",
@@ -13135,9 +13100,9 @@
       "source_location": "L50",
       "weight": 1.0,
       "_origin": "ast",
-      "confidence_score": 1.0,
       "source": "src_js_weekly_strumenti",
-      "target": "src_js_weekly_strumenti_pwaddstrumento"
+      "target": "src_js_weekly_strumenti_pwaddstrumento",
+      "confidence_score": 1.0
     },
     {
       "relation": "contains",
@@ -13146,9 +13111,9 @@
       "source_location": "L6",
       "weight": 1.0,
       "_origin": "ast",
-      "confidence_score": 1.0,
       "source": "src_js_weekly_strumenti",
-      "target": "src_js_weekly_strumenti_pwfetchstrumenti"
+      "target": "src_js_weekly_strumenti_pwfetchstrumenti",
+      "confidence_score": 1.0
     },
     {
       "relation": "contains",
@@ -13157,9 +13122,9 @@
       "source_location": "L61",
       "weight": 1.0,
       "_origin": "ast",
-      "confidence_score": 1.0,
       "source": "src_js_weekly_strumenti",
-      "target": "src_js_weekly_strumenti_pwremovestrumento"
+      "target": "src_js_weekly_strumenti_pwremovestrumento",
+      "confidence_score": 1.0
     },
     {
       "relation": "contains",
@@ -13168,9 +13133,9 @@
       "source_location": "L74",
       "weight": 1.0,
       "_origin": "ast",
-      "confidence_score": 1.0,
       "source": "src_js_weekly_strumenti",
-      "target": "src_js_weekly_strumenti_pwstrensurepanel"
+      "target": "src_js_weekly_strumenti_pwstrensurepanel",
+      "confidence_score": 1.0
     },
     {
       "relation": "contains",
@@ -13179,9 +13144,9 @@
       "source_location": "L91",
       "weight": 1.0,
       "_origin": "ast",
-      "confidence_score": 1.0,
       "source": "src_js_weekly_strumenti",
-      "target": "src_js_weekly_strumenti_pwstrclose"
+      "target": "src_js_weekly_strumenti_pwstrclose",
+      "confidence_score": 1.0
     },
     {
       "relation": "contains",
@@ -13190,9 +13155,9 @@
       "source_location": "L96",
       "weight": 1.0,
       "_origin": "ast",
-      "confidence_score": 1.0,
       "source": "src_js_weekly_strumenti",
-      "target": "src_js_weekly_strumenti_pwstropen"
+      "target": "src_js_weekly_strumenti_pwstropen",
+      "confidence_score": 1.0
     },
     {
       "relation": "rationale_for",
@@ -13281,7 +13246,7 @@
       "confidence": "INFERRED",
       "confidence_score": 0.8,
       "source_file": "src/js/weekly-jira-subtask.js",
-      "source_location": "L222",
+      "source_location": "L220",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_js_weekly_jira_subtask_pwjirasubtaskopencomunimodal",
@@ -13293,7 +13258,7 @@
       "confidence": "INFERRED",
       "confidence_score": 0.8,
       "source_file": "src/js/weekly-jira-subtask.js",
-      "source_location": "L503",
+      "source_location": "L456",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_js_weekly_jira_subtask_pwjirasubtaskrenderpreview",
@@ -14653,5 +14618,5 @@
       "source_file": "README.md"
     }
   ],
-  "built_at_commit": "45d510d5dd6d709a2a37cb05a91c873c836d7724"
+  "built_at_commit": "f452f82c97cc62c559e8e6df676590a0307b5808"
 }

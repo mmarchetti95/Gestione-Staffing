@@ -1,16 +1,16 @@
-# Graph Report - Gestione-Staffing  (2026-08-27)
+# Graph Report - Gestione-Staffing  (2026-08-26)
 
 ## Corpus Check
-- 37 files · ~131,163 words
+- 36 files · ~127,375 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
-- 502 nodes · 714 edges · 62 communities (33 shown, 29 thin omitted)
-- Extraction: 98% EXTRACTED · 2% INFERRED · 0% AMBIGUOUS · INFERRED: 13 edges (avg confidence: 0.72)
+- 489 nodes · 690 edges · 61 communities (32 shown, 29 thin omitted)
+- Extraction: 98% EXTRACTED · 2% INFERRED · 0% AMBIGUOUS · INFERRED: 12 edges (avg confidence: 0.74)
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `45d510d5`
+- Built from commit: `77ca3639`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -75,31 +75,30 @@
 - Griglia Commesse Reorder
 - Login Screen Overlay
 - weekly-jira-subtask.js
-- weekly-clipboard-cantiere.js
 
 ## God Nodes (most connected - your core abstractions)
 1. `esc()` - 11 edges
 2. `closeModal()` - 10 edges
-3. `pwJiraSubtaskOpenComuniModal()` - 9 edges
-4. `sbOnLoggedIn()` - 9 edges
-5. `pwApplyProduzioneColors()` - 9 edges
+3. `pwApplyProduzioneColors()` - 9 edges
+4. `pwJiraSubtaskOpenComuniModal()` - 9 edges
+5. `sbOnLoggedIn()` - 9 edges
 6. `pwGeneraMail()` - 8 edges
 7. `pwGetFerieWeek()` - 8 edges
-8. `sbPull()` - 7 edges
+8. `pwControlloRender()` - 7 edges
 9. `cpRereadTicket()` - 7 edges
-10. `pwControlloRender()` - 7 edges
+10. `sbPull()` - 7 edges
 
 ## Surprising Connections (you probably didn't know these)
 - `Legacy sessionStorage keys migration` --semantically_similar_to--> `INITIAL_DATA fallback constant`  [INFERRED] [semantically similar]
   SETUP_SUPABASE_GITHUB.md → CLAUDE.md
 - `Creative North Star: The Site Foreman's Whiteboard` --semantically_similar_to--> `Principle: information density over whitespace`  [INFERRED] [semantically similar]
   DESIGN.md → PRODUCT.md
+- `Product Purpose (staffing + pipeline commerciale)` --references--> `Pianificazione Settimanale screen (#screen-weekly)`  [EXTRACTED]
+  PRODUCT.md → src/head.html
 - `:root CSS design tokens (--accent, --shadow-*, --radius-*)` --shares_data_with--> `Deep Teal accent (#0d9488)`  [EXTRACTED]
   src/head.html → DESIGN.md
-- `Rationale: .skill-badge/.att-badge structure deduplicated` --conceptually_related_to--> `KPI Tile component`  [INFERRED]
-  src/head.html → DESIGN.md
-- `Modal cambio password (#sb-pwd-modal)` --shares_data_with--> `Modale su misura (--shadow-lg family)`  [EXTRACTED]
-  src/head.html → DESIGN.md
+- `index.html generated build artifact` --shares_data_with--> `:root CSS design tokens (--accent, --shadow-*, --radius-*)`  [EXTRACTED]
+  index.html → src/head.html
 
 ## Import Cycles
 - None detected.
@@ -112,7 +111,7 @@
 - **Multi-domain sync persistence bug-fix cluster** — readme_v18_15_multi_domain_sync, readme_v18_47_2_sbpull_localstorage_bug, readme_v18_49_2_doppia_week_local_cache_fix, readme_v18_50_sbpush_conflict_bug_fix [INFERRED 0.85]
 - **Jira Actual Production delta-model pipeline** — readme_v18_29_jira_actual_production_write, readme_v18_30_jira_read_before_upload, readme_v18_31_delta_model, readme_v18_32_km_per_ticket_model [INFERRED 0.90]
 
-## Communities (62 total, 29 thin omitted)
+## Communities (61 total, 29 thin omitted)
 
 ### Community 0 - "weekly-mail-core.js"
 Cohesion: 0.11
@@ -127,8 +126,8 @@ Cohesion: 0.12
 Nodes (25): sbChangePwd(), sbClosePwdModal(), _sbDirty, sbGenerateSessionId(), sbInit(), sbInitAndCheck(), sbIsAdmin(), sbLoadLog() (+17 more)
 
 ### Community 3 - "Categorical Color System (colori categorici)"
-Cohesion: 0.08
-Nodes (27): Alarm Rose (gap risorse/alert), Categorical Color System (colori categorici), Circuit Indigo (operatori/Jira sync), Creative North Star: The Site Foreman's Whiteboard, Deep Teal accent (#0d9488), Foreman Amber (saturazione/carico), KPI Tile component, Ledger Blue (commesse attive) (+19 more)
+Cohesion: 0.07
+Nodes (31): Alarm Rose (gap risorse/alert), Categorical Color System (colori categorici), Circuit Indigo (operatori/Jira sync), Creative North Star: The Site Foreman's Whiteboard, Deep Teal accent (#0d9488), Foreman Amber (saturazione/carico), KPI Tile component, Ledger Blue (commesse attive) (+23 more)
 
 ### Community 4 - "Controllo Produzione Core"
 Cohesion: 0.18
@@ -151,8 +150,8 @@ Cohesion: 0.19
 Nodes (14): aggiornaGgOpVistaCommessa(), apriVistaOperatore(), checkCoerenzaOperatori(), EMAIL_SEED, renderAttestatiFilters(), renderEmailOperatori(), renderOperatori(), renderProvinciaFilterOptions() (+6 more)
 
 ### Community 9 - "v18.33.0 feature Doppia Week (tab trasferte consecutive)"
-Cohesion: 0.07
-Nodes (29): Operating Context (GitHub Pages + Supabase + iframe), Product Purpose (staffing + pipeline commerciale), v18.0.0 migrazione a Supabase + GitHub Pages, v18.15.0 sync multi-dominio (core/planning/ferie) con conflict detection, v18.17.0 rimozione INITIAL_DATA hardcoded, v18.20.0 tab Email/operatore (mapping email aziendale), v18.21.0 sync worklog Jira in Controllo Produzione, v18.33.0 feature Doppia Week (tab trasferte consecutive) (+21 more)
+Cohesion: 0.08
+Nodes (25): Operating Context (GitHub Pages + Supabase + iframe), v18.0.0 migrazione a Supabase + GitHub Pages, v18.15.0 sync multi-dominio (core/planning/ferie) con conflict detection, v18.17.0 rimozione INITIAL_DATA hardcoded, v18.20.0 tab Email/operatore (mapping email aziendale), v18.21.0 sync worklog Jira in Controllo Produzione, v18.33.0 feature Doppia Week (tab trasferte consecutive), v18.34.2 header sticky Doppia Week (+17 more)
 
 ### Community 10 - "dashboard-assegnazioni.js"
 Cohesion: 0.21
@@ -235,26 +234,24 @@ Cohesion: 0.67
 Nodes (3): v18.49.0 pulsante Apri Outlook (mailto destinatari), v18.51.0 campo Email referente tecnico obbligatorio, v18.56.0 riordino destinatari mailto (To/CC)
 
 ### Community 60 - "weekly-jira-subtask.js"
-Cohesion: 0.22
-Nodes (17): pwJiraBuildSubtaskItem(), pwJiraCreateSubtasks(), pwJiraFetchEpics(), pwJiraFetchExtraFields(), pwJiraFetchTasks(), pwJiraResolveCognome(), pwJiraSearchPanel(), pwJiraSearchPanelClose() (+9 more)
-
-### Community 61 - "weekly-clipboard-cantiere.js"
-Cohesion: 0.40
-Nodes (9): pwCellCtxMenu(), _pwCloseCtxMenu(), pwCopyCell(), pwCopyRow(), _pwCtxMenuEsc(), pwPasteCell(), pwPasteRow(), pwRowCtxMenu() (+1 more)
+Cohesion: 0.26
+Nodes (14): pwJiraBuildSubtaskItem(), pwJiraCreateSubtasks(), pwJiraFetchEpics(), pwJiraFetchTasks(), pwJiraResolveCognome(), pwJiraSearchPanel(), pwJiraSearchPanelClose(), pwJiraSearchPanelEnsure() (+6 more)
 
 ## Knowledge Gaps
-- **87 isolated node(s):** `pwData`, `pwDoppiaWeek`, `pwFerie`, `_geoCache`, `MAP_COLORS` (+82 more)
+- **87 isolated node(s):** `_cpData`, `_pwCollapsedComm`, `_pwCollapsedSq`, `_cpCollapsedComm`, `_cpCollapsedSq` (+82 more)
   These have ≤1 connection - possible missing edges or undocumented components.
 - **29 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
 
 ## Suggested Questions
 _Questions this graph is uniquely positioned to answer:_
 
-- **Why does `v18.69.0 restyling grafico via /impeccable` connect `Categorical Color System (colori categorici)` to `v18.33.0 feature Doppia Week (tab trasferte consecutive)`?**
-  _High betweenness centrality (0.007) - this node is a cross-community bridge._
+- **Why does `Pianificazione Settimanale screen (#screen-weekly)` connect `v18.33.0 feature Doppia Week (tab trasferte consecutive)` to `Categorical Color System (colori categorici)`?**
+  _High betweenness centrality (0.008) - this node is a cross-community bridge._
+- **Why does `Top navigation Dashboard/Weekly (.topnav-btn)` connect `Categorical Color System (colori categorici)` to `v18.33.0 feature Doppia Week (tab trasferte consecutive)`?**
+  _High betweenness centrality (0.006) - this node is a cross-community bridge._
 - **Are the 2 inferred relationships involving `esc()` (e.g. with `pwJiraSubtaskOpenComuniModal()` and `pwJiraSubtaskRenderPreview()`) actually correct?**
   _`esc()` has 2 INFERRED edges - model-reasoned connections that need verification._
-- **What connects `pwData`, `pwDoppiaWeek`, `pwFerie` to the rest of the system?**
+- **What connects `_cpData`, `_pwCollapsedComm`, `_pwCollapsedSq` to the rest of the system?**
   _87 weakly-connected nodes found - possible documentation gaps or missing edges._
 - **Should `weekly-mail-core.js` be split into smaller, more focused modules?**
   _Cohesion score 0.1126984126984127 - nodes in this community are weakly interconnected._
@@ -262,5 +259,3 @@ _Questions this graph is uniquely positioned to answer:_
   _Cohesion score 0.0846774193548387 - nodes in this community are weakly interconnected._
 - **Should `Supabase Admin & Sessions` be split into smaller, more focused modules?**
   _Cohesion score 0.12315270935960591 - nodes in this community are weakly interconnected._
-- **Should `Categorical Color System (colori categorici)` be split into smaller, more focused modules?**
-  _Cohesion score 0.08262108262108261 - nodes in this community are weakly interconnected._
