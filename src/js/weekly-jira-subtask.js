@@ -3,11 +3,13 @@
    Griglia -> pwJiraSubtaskInit(cIdx). Richiede che la commessa abbia "Codice
    progetto Jira" ed "Epic Jira" configurati in anagrafica (dashboard-commessa-attiva.js).
    Per ogni comune/cantiere pianificato questa settimana si sceglie un Task Jira
-   (sotto l'Epic della commessa, scelta da rifare ogni volta, non cacheata), poi si
-   compilano gli eventuali campi extra obbligatori in creazione su quel progetto
-   (Data scadenza, Stima originale, Activity Type, Target Production, Start date
-   pianificato, Tempo Team — vedi pwJiraFetchExtraFields), infine si crea un
-   sottotask per ogni operatore assegnato: "[Attività] - [Comune] - [Cognome]".
+   (sotto l'Epic della commessa, scelta da rifare ogni volta, non cacheata), poi
+   si seleziona puntualmente quali dei sottotask proposti creare davvero (per
+   operatore/comune, non solo per comune intero), poi si compilano gli eventuali
+   campi extra obbligatori in creazione su quel progetto (Data scadenza, Stima
+   originale, Activity Type, Target Production, Start date pianificato, Tempo
+   Team — vedi pwJiraFetchExtraFields), infine si crea un sottotask per ogni
+   operatore assegnato: "[Attività] - [Comune] - [Cognome]".
    Anteprima obbligatoria (dryRun) prima di ogni creazione reale — vedi jira-create-subtask
    Edge Function per il contratto e il check di idempotenza per assignee/Task.
 */
@@ -327,7 +329,52 @@ function pwJiraSubtaskOpenComuniModal(commessaNome, meta, comuneNames, comuni) {
     });
     if (items.length === 0) { showAlertModal('Nessun sottotask da creare' + (skipped.length ? ':\n' + skipped.join('\n') : '.')); return; }
     closeModal();
-    pwJiraSubtaskOpenExtraFieldsModal(commessaNome, meta, items, skipped);
+    pwJiraSubtaskOpenSelectItemsModal(commessaNome, meta, items, skipped);
+  };
+}
+
+/* ----- Step 1.4: selezione puntuale di quali sottotask creare -----
+   La scelta "salta" dello step precedente esclude un intero comune; qui si
+   sceglie invece a livello di singolo operatore/comune/task, utile quando
+   solo alcuni degli operatori pianificati in un comune necessitano davvero
+   del sottotask. Tutto selezionato di default. */
+function pwJiraSubtaskOpenSelectItemsModal(commessaNome, meta, items, skippedComuni) {
+  const root = document.getElementById('modal-root');
+  const rows = items.map((item, i) => `<label class="flex items-center gap-2 border-b border-slate-100 py-1.5 text-sm cursor-pointer">
+      <input type="checkbox" class="pw-jira-select-item" data-idx="${i}" checked>
+      <div class="min-w-0">
+        <div class="truncate">${esc(item._comune || '')} — ${esc(item._operatore || '')} <span class="text-[11px] text-slate-400">(${esc(item.taskKey || '')})</span></div>
+        <div class="text-[11px] text-slate-400 truncate">${esc(item.summary || '')}</div>
+      </div>
+    </label>`).join('');
+
+  root.innerHTML = `<div class="modal-backdrop"><div class="bg-white rounded-lg shadow-xl w-full max-w-xl mx-4 my-8 p-5 max-h-[90vh] overflow-y-auto">
+    <h3 class="font-semibold text-slate-900 mb-1">Crea sottotask Jira — ${esc(commessaNome)}</h3>
+    <div class="flex items-center justify-between mb-2">
+      <p class="text-xs text-slate-500">Seleziona i sottotask da creare (${items.length} totali).</p>
+      <div class="flex gap-2">
+        <button type="button" id="pw-jira-select-all" class="text-[11px] text-teal-700 hover:underline">Seleziona tutti</button>
+        <button type="button" id="pw-jira-select-none" class="text-[11px] text-slate-500 hover:underline">Deseleziona tutti</button>
+      </div>
+    </div>
+    <div id="pw-jira-select-list">${rows}</div>
+    <div class="flex justify-end gap-2 mt-4">
+      <button onclick="closeModal()" class="px-3 py-1.5 text-sm border border-slate-300 rounded">Annulla</button>
+      <button id="pw-jira-select-continua" class="px-3 py-1.5 text-sm bg-teal-600 text-white rounded hover:bg-teal-700">Continua</button>
+    </div>
+  </div></div>`;
+  root.querySelector('.modal-backdrop').addEventListener('click', e => { if (e.target.classList.contains('modal-backdrop')) closeModal(); });
+
+  document.getElementById('pw-jira-select-all').onclick = () => root.querySelectorAll('.pw-jira-select-item').forEach(chk => chk.checked = true);
+  document.getElementById('pw-jira-select-none').onclick = () => root.querySelectorAll('.pw-jira-select-item').forEach(chk => chk.checked = false);
+
+  document.getElementById('pw-jira-select-continua').onclick = () => {
+    const selected = [];
+    root.querySelectorAll('.pw-jira-select-item').forEach(chk => {
+      if (chk.checked) selected.push(items[parseInt(chk.dataset.idx)]);
+    });
+    if (selected.length === 0) { showAlertModal('Seleziona almeno un sottotask da creare.'); return; }
+    pwJiraSubtaskOpenExtraFieldsModal(commessaNome, meta, selected, skippedComuni);
   };
 }
 

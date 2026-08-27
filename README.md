@@ -1,3 +1,6 @@
+## v18.95.0
+- feat: **Sottotask Jira — selezione puntuale dei sottotask da creare** (issue #1, seguito v18.93.0) — nel flusso "🎫 Sottotask Jira" aggiunto uno step tra la scelta di Epic/Task e i campi extra: una lista con checkbox di tutti i sottotask proposti (comune/operatore/task), con "Seleziona tutti"/"Deseleziona tutti", per escludere puntualmente singoli operatori senza dover saltare l'intero comune (la spunta "salta" dello step precedente resta per escludere un comune intero già prima della scelta Epic/Task). Nessuna modifica allo schema Supabase.
+
 ## v18.94.0
 - fix: **Conferma mancante su alcune azioni distruttive** (issue #2) — aggiunta una richiesta di conferma, prima assente, per: rimozione di un'assegnazione operatore↔commessa (chip "×" in Pipeline e riga nel modal impegni operatore), rimozione di un singolo mese di allocazione gg-uomo (icona 🗑 nel modal impegni operatore), rimozione di una squadra dalla Griglia settimanale (prima confermava solo se era l'unica squadra rimasta) e rimozione di un operatore da una squadra della Griglia settimanale. Nessuna modifica allo schema Supabase.
 
