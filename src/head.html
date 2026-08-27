@@ -789,7 +789,12 @@
   .pw-map-day-btn.active { background: var(--accent); color: white; border-color: var(--accent); }
   .pw-map-day-btn.is-today { border-color: #f59e0b; }
   .pw-map-day-btn.active.is-today { background: #f59e0b; border-color: #f59e0b; }
-  .pw-squad-card { padding: 8px; border-radius: 6px; border: 1px solid #e2e8f0; margin-bottom: 4px; }
+  .pw-squad-card {
+    padding: 8px; border-radius: 6px; border: 1px solid #e2e8f0; margin-bottom: 4px;
+    cursor: pointer; transition: background .15s, border-color .15s, box-shadow .15s;
+  }
+  .pw-squad-card:hover { background: #f8fafc; border-color: #cbd5e1; }
+  .pw-squad-card.active { background: #eef2ff; border-color: #6366f1; box-shadow: 0 0 0 1px #6366f1 inset; }
   .pw-squad-card.not-found { border-color: #fb923c; background: #fff7ed; }
   .pw-squad-card .sq-name { font-size: 11px; font-weight: 700; color: #1e293b; }
   .pw-squad-card .sq-commessa { font-size: 10px; color: #64748b; }
@@ -798,6 +803,26 @@
   .pw-squad-card .sq-move { font-size: 10px; color: #d97706; font-weight: 600; margin-top: 2px; }
   .pw-squad-card .sq-same { font-size: 10px; color: #94a3b8; margin-top: 2px; }
   .pw-squad-card .sq-warn { font-size: 10px; color: #ea580c; font-weight: 600; margin-top: 3px; }
+  .pw-squad-group { margin-bottom: 8px; }
+  .pw-squad-group-header {
+    display: flex; align-items: center; gap: 6px; cursor: pointer;
+    padding: 4px 2px; border-radius: 4px; user-select: none;
+  }
+  .pw-squad-group-header:hover { background: #f1f5f9; }
+  .pw-squad-group-arrow { font-size: 10px; color: #94a3b8; width: 10px; flex-shrink: 0; }
+  .pw-squad-group-dot { width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0; }
+  .pw-squad-group-name {
+    font-size: 11px; font-weight: 700; color: #1e293b; flex: 1;
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
+  .pw-squad-group-count { font-size: 10px; color: #94a3b8; background: #f1f5f9; border-radius: 8px; padding: 0 6px; }
+  .pw-squad-group-body { padding-left: 14px; margin-top: 2px; }
+  .pw-map-marker.active { z-index: 1000 !important; }
+  .pw-map-marker.active > div { animation: pwMarkerPulse 1.2s ease-in-out infinite; }
+  @keyframes pwMarkerPulse {
+    0%, 100% { box-shadow: 0 0 0 4px rgba(99,102,241,.4), 0 2px 6px rgba(0,0,0,.4); }
+    50% { box-shadow: 0 0 0 9px rgba(99,102,241,.12), 0 2px 6px rgba(0,0,0,.4); }
+  }
   .pw-fix-input {
     margin-top: 3px; width: 100%;
     border: 1px solid #fb923c; border-radius: 3px;
@@ -907,7 +932,7 @@
     <div class="flex items-center gap-2">
       <button id="btn-presentation" class="px-3 py-1.5 text-sm rounded hover:bg-white/10" style="border:1px solid var(--dark-border-strong);color:var(--dark-text);visibility:visible;">📊 Modalità presentazione</button>
       <div class="text-xs pl-2" style="border-left:1px solid var(--dark-border-strong);color:var(--dark-text-muted);">
-        <span class="font-medium" style="color:var(--accent);">v18.95.0</span> · Michele Marchetti
+        <span class="font-medium" style="color:var(--accent);">v18.96.0</span> · Michele Marchetti
       </div>
     </div>
   </div>

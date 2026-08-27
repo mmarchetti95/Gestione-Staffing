@@ -1,3 +1,6 @@
+## v18.96.0
+- feat: **Mappa Squadre — colonna "Squadre & spostamenti" raggruppata per commessa e cliccabile** — le card squadra nella colonna a destra della mappa sono ora raggruppate sotto un header per commessa, espandibile/comprimibile con un click (stato mantenuto mentre si cambia giorno); cliccando su una card la mappa si centra e zooma sul marker corrispondente, ne apre il popup e lo evidenzia con un alone pulsante, sincronizzando anche l'evidenziazione della card. Nessuna modifica allo schema Supabase.
+
 ## v18.95.0
 - feat: **Sottotask Jira — selezione puntuale dei sottotask da creare** (issue #1, seguito v18.93.0) — nel flusso "🎫 Sottotask Jira" aggiunto uno step tra la scelta di Epic/Task e i campi extra: una lista con checkbox di tutti i sottotask proposti (comune/operatore/task), con "Seleziona tutti"/"Deseleziona tutti", per escludere puntualmente singoli operatori senza dover saltare l'intero comune (la spunta "salta" dello step precedente resta per escludere un comune intero già prima della scelta Epic/Task). Nessuna modifica allo schema Supabase.
 

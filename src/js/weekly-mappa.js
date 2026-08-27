@@ -44,6 +44,7 @@ async function geocodifica(nome) {
 let _map = null;
 let _mapMarkers = [];
 let _mapDay = 0;
+let _mapCollapsedCommesse = new Set();
 
 function pwMapInit() {
   if (!_map) {
@@ -176,7 +177,7 @@ async function pwMapRender(dayIdx) {
       ? `<div style="${dotStyle}">⚠</div>`
       : `<div style="${dotStyle}"></div>`;
 
-    const icon = L.divIcon({ html: iconHtml, className: '', iconSize: [22, 22], iconAnchor: [11, 11] });
+    const icon = L.divIcon({ html: iconHtml, className: 'pw-map-marker', iconSize: [22, 22], iconAnchor: [11, 11] });
 
     const popup = `<div style="font-family:system-ui;min-width:170px;font-size:12px;">
       <div style="font-weight:700;margin-bottom:3px;">${item.squadra}</div>
@@ -188,6 +189,7 @@ async function pwMapRender(dayIdx) {
     </div>`;
 
     const marker = L.marker([lat, lng], { icon }).addTo(_map).bindPopup(popup);
+    marker.on('click', () => pwMapFocusItem(i));
     _mapMarkers.push(marker);
   });
 
@@ -211,41 +213,103 @@ async function pwMapRender(dayIdx) {
     }
   }
 
-  /* Riepilogo squadre */
+  /* Riepilogo squadre, raggruppato per commessa (espandibile/comprimibile) */
   const sumEl = document.getElementById('pw-map-summary');
   if (sumEl) {
     if (!items.length) {
       sumEl.innerHTML = '<div class="text-slate-400 italic" style="font-size:11px">Nessuna squadra per questo giorno</div>';
     } else {
-      sumEl.innerHTML = items.map((item, i) => {
-        const geo = coords[i];
-        const missing = !geo;
-        let moveHtml = '';
-        if (dayIdx > 0 && item.cantierePrev) {
-          if (item.cantierePrev === item.cantiere) {
-            moveHtml = '<div class="sq-same">↔ stessa sede</div>';
-          } else {
-            moveHtml = `<div class="sq-move">↗ ${item.cantierePrev} → ${item.cantiere}</div>`;
+      const groupOrder = [];
+      const groups = {};
+      items.forEach((item, i) => {
+        if (!groups[item.commessa]) { groups[item.commessa] = []; groupOrder.push(item.commessa); }
+        groups[item.commessa].push(i);
+      });
+
+      sumEl.innerHTML = groupOrder.map(commessa => {
+        const idxs = groups[commessa];
+        const collapsed = _mapCollapsedCommesse.has(commessa);
+        const cardsHtml = idxs.map(i => {
+          const item = items[i];
+          const geo = coords[i];
+          const missing = !geo;
+          let moveHtml = '';
+          if (dayIdx > 0 && item.cantierePrev) {
+            if (item.cantierePrev === item.cantiere) {
+              moveHtml = '<div class="sq-same">↔ stessa sede</div>';
+            } else {
+              moveHtml = `<div class="sq-move">↗ ${item.cantierePrev} → ${item.cantiere}</div>`;
+            }
           }
-        }
-        const warnHtml = missing ? `
-          <div class="sq-warn">⚠ Luogo non trovato
-            <input class="pw-fix-input" type="text" placeholder="Cerca alternativo (Invio)"
-              data-original="${item.cantiere.replace(/"/g,'&quot;')}"
-              onkeydown="if(event.key==='Enter')pwMapFixLuogo(this)">
-          </div>` : '';
-        return `<div class="pw-squad-card ${missing ? 'not-found' : ''}">
-          <div style="display:flex;align-items:center;gap:5px;">
-            <div style="width:8px;height:8px;border-radius:50%;background:${item.color};flex-shrink:0;"></div>
-            <span class="sq-name">${item.squadra}</span>
-            <span class="sq-commessa">· ${item.commessa}</span>
+          const warnHtml = missing ? `
+            <div class="sq-warn">⚠ Luogo non trovato
+              <input class="pw-fix-input" type="text" placeholder="Cerca alternativo (Invio)"
+                data-original="${item.cantiere.replace(/"/g,'&quot;')}"
+                onkeydown="if(event.key==='Enter')pwMapFixLuogo(this)" onclick="event.stopPropagation()">
+            </div>` : '';
+          return `<div class="pw-squad-card ${missing ? 'not-found' : ''}" data-idx="${i}">
+            <div style="display:flex;align-items:center;gap:5px;">
+              <div style="width:8px;height:8px;border-radius:50%;background:${item.color};flex-shrink:0;"></div>
+              <span class="sq-name">${item.squadra}</span>
+            </div>
+            <div class="sq-cantiere">📍 ${item.cantiere}</div>
+            <div class="sq-ops">👷 ${item.operatori.join(' · ')}</div>
+            ${warnHtml}${moveHtml}
+          </div>`;
+        }).join('');
+        return `<div class="pw-squad-group">
+          <div class="pw-squad-group-header${collapsed ? ' collapsed' : ''}" data-commessa="${esc(commessa)}">
+            <span class="pw-squad-group-arrow">${collapsed ? '▸' : '▾'}</span>
+            <div class="pw-squad-group-dot" style="background:${_mapColor(commessa)}"></div>
+            <span class="pw-squad-group-name">${esc(commessa)}</span>
+            <span class="pw-squad-group-count">${idxs.length}</span>
           </div>
-          <div class="sq-cantiere">📍 ${item.cantiere}</div>
-          <div class="sq-ops">👷 ${item.operatori.join(' · ')}</div>
-          ${warnHtml}${moveHtml}
+          <div class="pw-squad-group-body" style="${collapsed ? 'display:none;' : ''}">${cardsHtml}</div>
         </div>`;
       }).join('');
+
+      sumEl.querySelectorAll('.pw-squad-group-header').forEach(h => {
+        h.onclick = () => pwMapToggleGroup(h);
+      });
+      sumEl.querySelectorAll('.pw-squad-card').forEach(card => {
+        card.onclick = () => pwMapFocusItem(parseInt(card.dataset.idx, 10));
+      });
     }
+  }
+}
+
+/* Centra la mappa su una squadra/cantiere e la evidenzia, in sync con la card cliccata */
+function pwMapFocusItem(idx) {
+  if (!_map || !_mapMarkers[idx]) return;
+  const marker = _mapMarkers[idx];
+  const latlng = marker.getLatLng();
+  _map.setView(latlng, Math.max(_map.getZoom(), 15), { animate: true });
+  marker.openPopup();
+
+  _mapMarkers.forEach(m => { const el = m.getElement(); if (el) el.classList.remove('active'); });
+  const markerEl = marker.getElement();
+  if (markerEl) markerEl.classList.add('active');
+
+  document.querySelectorAll('#pw-map-summary .pw-squad-card.active').forEach(c => c.classList.remove('active'));
+  const card = document.querySelector('#pw-map-summary .pw-squad-card[data-idx="' + idx + '"]');
+  if (card) card.classList.add('active');
+}
+
+/* Espande/comprime il gruppo squadre di una commessa nella colonna Squadre & spostamenti */
+function pwMapToggleGroup(headerEl) {
+  const commessa = headerEl.dataset.commessa;
+  const body = headerEl.nextElementSibling;
+  const arrow = headerEl.querySelector('.pw-squad-group-arrow');
+  if (_mapCollapsedCommesse.has(commessa)) {
+    _mapCollapsedCommesse.delete(commessa);
+    headerEl.classList.remove('collapsed');
+    if (body) body.style.display = '';
+    if (arrow) arrow.textContent = '▾';
+  } else {
+    _mapCollapsedCommesse.add(commessa);
+    headerEl.classList.add('collapsed');
+    if (body) body.style.display = 'none';
+    if (arrow) arrow.textContent = '▸';
   }
 }
 
