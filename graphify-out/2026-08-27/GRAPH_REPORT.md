@@ -1,16 +1,16 @@
 # Graph Report - Gestione-Staffing  (2026-08-27)
 
 ## Corpus Check
-- 37 files · ~130,560 words
+- 37 files · ~131,163 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
-- 501 nodes · 712 edges · 62 communities (33 shown, 29 thin omitted)
+- 502 nodes · 714 edges · 62 communities (33 shown, 29 thin omitted)
 - Extraction: 98% EXTRACTED · 2% INFERRED · 0% AMBIGUOUS · INFERRED: 13 edges (avg confidence: 0.72)
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `f452f82c`
+- Built from commit: `45d510d5`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -235,15 +235,15 @@ Cohesion: 0.67
 Nodes (3): v18.49.0 pulsante Apri Outlook (mailto destinatari), v18.51.0 campo Email referente tecnico obbligatorio, v18.56.0 riordino destinatari mailto (To/CC)
 
 ### Community 60 - "weekly-jira-subtask.js"
-Cohesion: 0.23
-Nodes (16): pwJiraBuildSubtaskItem(), pwJiraCreateSubtasks(), pwJiraFetchEpics(), pwJiraFetchExtraFields(), pwJiraFetchTasks(), pwJiraResolveCognome(), pwJiraSearchPanel(), pwJiraSearchPanelClose() (+8 more)
+Cohesion: 0.22
+Nodes (17): pwJiraBuildSubtaskItem(), pwJiraCreateSubtasks(), pwJiraFetchEpics(), pwJiraFetchExtraFields(), pwJiraFetchTasks(), pwJiraResolveCognome(), pwJiraSearchPanel(), pwJiraSearchPanelClose() (+9 more)
 
 ### Community 61 - "weekly-clipboard-cantiere.js"
 Cohesion: 0.40
 Nodes (9): pwCellCtxMenu(), _pwCloseCtxMenu(), pwCopyCell(), pwCopyRow(), _pwCtxMenuEsc(), pwPasteCell(), pwPasteRow(), pwRowCtxMenu() (+1 more)
 
 ## Knowledge Gaps
-- **87 isolated node(s):** `pwData`, `pwFerie`, `pwDoppiaWeek`, `pwStrumenti`, `_geoCache` (+82 more)
+- **87 isolated node(s):** `pwData`, `pwDoppiaWeek`, `pwFerie`, `_geoCache`, `MAP_COLORS` (+82 more)
   These have ≤1 connection - possible missing edges or undocumented components.
 - **29 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
 
@@ -254,7 +254,7 @@ _Questions this graph is uniquely positioned to answer:_
   _High betweenness centrality (0.007) - this node is a cross-community bridge._
 - **Are the 2 inferred relationships involving `esc()` (e.g. with `pwJiraSubtaskOpenComuniModal()` and `pwJiraSubtaskRenderPreview()`) actually correct?**
   _`esc()` has 2 INFERRED edges - model-reasoned connections that need verification._
-- **What connects `pwData`, `pwFerie`, `pwDoppiaWeek` to the rest of the system?**
+- **What connects `pwData`, `pwDoppiaWeek`, `pwFerie` to the rest of the system?**
   _87 weakly-connected nodes found - possible documentation gaps or missing edges._
 - **Should `weekly-mail-core.js` be split into smaller, more focused modules?**
   _Cohesion score 0.1126984126984127 - nodes in this community are weakly interconnected._
