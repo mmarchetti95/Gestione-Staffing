@@ -933,7 +933,7 @@
     <div class="flex items-center gap-2">
       <button id="btn-presentation" class="px-3 py-1.5 text-sm rounded hover:bg-white/10" style="border:1px solid var(--dark-border-strong);color:var(--dark-text);visibility:visible;">📊 Modalità presentazione</button>
       <div class="text-xs pl-2" style="border-left:1px solid var(--dark-border-strong);color:var(--dark-text-muted);">
-        <span id="app-version" class="font-medium" style="color:var(--accent);">v18.99.0</span> · Michele Marchetti
+        <span class="font-medium" style="color:var(--accent);">v18.98.0</span> · Michele Marchetti
       </div>
     </div>
   </div>
@@ -995,14 +995,6 @@
       Esci
     </button>
   </div>
-</div>
-
-<!-- Banner Nuova Versione disponibile -->
-<div id="version-banner" class="no-print px-4 py-2 flex items-center justify-center gap-3 text-sm" style="display:none;background:#0f766e;color:white;">
-  <span id="version-banner-text">🔄 È disponibile una nuova versione.</span>
-  <button onclick="reloadForNewVersion()" class="text-xs px-3 py-1 bg-white text-teal-700 rounded font-semibold hover:bg-teal-50">
-    Aggiorna ora
-  </button>
 </div>
 
 <!-- Modal cambio password -->
@@ -2092,47 +2084,7 @@ function sbSetLocal(k, v) {
   }
 }
 
-/* ===================== CONTROLLO NUOVA VERSIONE ===================== */
-// Le schede già aperte quando viene pubblicata una nuova versione continuano
-// a eseguire il JS vecchio finché non ricaricano: questo poll periodico
-// confronta la versione nell'header con quella del file pubblicato e avvisa
-// l'utente con un banner, invece di lasciare che scopra di essere disallineato
-// solo quando qualcosa si comporta in modo strano.
-let _versionCheckTimer = null;
-const VERSION_CHECK_INTERVAL_MS = 5 * 60 * 1000;
-
-async function checkForNewVersion() {
-  try {
-    const current = document.getElementById('app-version')?.textContent.trim();
-    if (!current) return;
-    const res = await fetch(location.pathname + '?_v=' + Date.now(), { cache: 'no-store' });
-    if (!res.ok) return;
-    const html = await res.text();
-    const m = html.match(/id="app-version"[^>]*>\s*([^<]+?)\s*</);
-    const remote = m && m[1];
-    if (remote && remote !== current) showVersionBanner(remote);
-  } catch(e) { console.warn('checkForNewVersion error:', e); }
-}
-
-function showVersionBanner(remoteVersion) {
-  const el = document.getElementById('version-banner');
-  if (!el || el.dataset.shown === '1') return;
-  el.dataset.shown = '1';
-  const txt = document.getElementById('version-banner-text');
-  if (txt) txt.textContent = '🔄 È disponibile una nuova versione (' + remoteVersion + ') — aggiorna quando vuoi.';
-  el.style.display = 'flex';
-}
-
-function reloadForNewVersion() { location.reload(); }
-
-function startVersionCheck() {
-  if (_versionCheckTimer) return;
-  checkForNewVersion();
-  _versionCheckTimer = setInterval(checkForNewVersion, VERSION_CHECK_INTERVAL_MS);
-}
-
 async function sbInitAndCheck() {
-  startVersionCheck();
   // Mostra sempre il login screen come primo step
   document.getElementById('sb-login-screen').style.display = 'flex';
 

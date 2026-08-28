@@ -933,7 +933,7 @@
     <div class="flex items-center gap-2">
       <button id="btn-presentation" class="px-3 py-1.5 text-sm rounded hover:bg-white/10" style="border:1px solid var(--dark-border-strong);color:var(--dark-text);visibility:visible;">📊 Modalità presentazione</button>
       <div class="text-xs pl-2" style="border-left:1px solid var(--dark-border-strong);color:var(--dark-text-muted);">
-        <span class="font-medium" style="color:var(--accent);">v18.98.0</span> · Michele Marchetti
+        <span id="app-version" class="font-medium" style="color:var(--accent);">v18.99.0</span> · Michele Marchetti
       </div>
     </div>
   </div>
@@ -995,6 +995,14 @@
       Esci
     </button>
   </div>
+</div>
+
+<!-- Banner Nuova Versione disponibile -->
+<div id="version-banner" class="no-print px-4 py-2 flex items-center justify-center gap-3 text-sm" style="display:none;background:#0f766e;color:white;">
+  <span id="version-banner-text">🔄 È disponibile una nuova versione.</span>
+  <button onclick="reloadForNewVersion()" class="text-xs px-3 py-1 bg-white text-teal-700 rounded font-semibold hover:bg-teal-50">
+    Aggiorna ora
+  </button>
 </div>
 
 <!-- Modal cambio password -->

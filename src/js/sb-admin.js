@@ -523,7 +523,47 @@ function sbSetLocal(k, v) {
   }
 }
 
+/* ===================== CONTROLLO NUOVA VERSIONE ===================== */
+// Le schede già aperte quando viene pubblicata una nuova versione continuano
+// a eseguire il JS vecchio finché non ricaricano: questo poll periodico
+// confronta la versione nell'header con quella del file pubblicato e avvisa
+// l'utente con un banner, invece di lasciare che scopra di essere disallineato
+// solo quando qualcosa si comporta in modo strano.
+let _versionCheckTimer = null;
+const VERSION_CHECK_INTERVAL_MS = 5 * 60 * 1000;
+
+async function checkForNewVersion() {
+  try {
+    const current = document.getElementById('app-version')?.textContent.trim();
+    if (!current) return;
+    const res = await fetch(location.pathname + '?_v=' + Date.now(), { cache: 'no-store' });
+    if (!res.ok) return;
+    const html = await res.text();
+    const m = html.match(/id="app-version"[^>]*>\s*([^<]+?)\s*</);
+    const remote = m && m[1];
+    if (remote && remote !== current) showVersionBanner(remote);
+  } catch(e) { console.warn('checkForNewVersion error:', e); }
+}
+
+function showVersionBanner(remoteVersion) {
+  const el = document.getElementById('version-banner');
+  if (!el || el.dataset.shown === '1') return;
+  el.dataset.shown = '1';
+  const txt = document.getElementById('version-banner-text');
+  if (txt) txt.textContent = '🔄 È disponibile una nuova versione (' + remoteVersion + ') — aggiorna quando vuoi.';
+  el.style.display = 'flex';
+}
+
+function reloadForNewVersion() { location.reload(); }
+
+function startVersionCheck() {
+  if (_versionCheckTimer) return;
+  checkForNewVersion();
+  _versionCheckTimer = setInterval(checkForNewVersion, VERSION_CHECK_INTERVAL_MS);
+}
+
 async function sbInitAndCheck() {
+  startVersionCheck();
   // Mostra sempre il login screen come primo step
   document.getElementById('sb-login-screen').style.display = 'flex';
 
