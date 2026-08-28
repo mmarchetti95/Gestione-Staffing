@@ -302,6 +302,14 @@ function pwJiraSubtaskInit(cIdx) {
 function pwJiraSubtaskOpenComuniModal(cIdx, commessaNome, meta, comuneNames, comuni, comuneSquadra, squadreOrder) {
   const root = document.getElementById('modal-root');
 
+  // Comuni per cui TUTTI gli operatori hanno già un sottotask (creato o già
+  // esistente, vedi bc.jiraSubtask) partono con "salta" pre-selezionato e i
+  // trigger Epic/Task disattivati: non ha senso riproporre la scelta
+  // Epic/Task per un comune già completamente coperto solo per poi doverlo
+  // saltare a mano. Resta comunque deselezionabile per rifare la verifica.
+  const bcForBadges = pwGetWeekData()[cIdx];
+  const jiraMap = (bcForBadges && bcForBadges.jiraSubtask) || {};
+
   const bySquadra = {};
   (squadreOrder || []).forEach(sq => { bySquadra[sq] = []; });
   comuneNames.forEach(comune => {
@@ -313,16 +321,22 @@ function pwJiraSubtaskOpenComuniModal(cIdx, commessaNome, meta, comuneNames, com
 
   function rowHtml(comune, i) {
     const operatori = Object.keys(comuni[comune]);
+    const doneOperatori = operatori.filter(op => jiraMap[comune + '|||' + op]);
+    const allDone = operatori.length > 0 && doneOperatori.length === operatori.length;
+    const someDone = doneOperatori.length > 0 && !allDone;
+    const operatoriNote = someDone ? ` <span class="text-blue-600">(${doneOperatori.length}/${operatori.length} già con sottotask)</span>` : '';
+    const doneNote = allDone ? '<div class="text-[11px] text-blue-700 mb-1">🎫 Sottotask già presenti per tutti gli operatori — "salta" pre-selezionato, deseleziona per rifare la verifica.</div>' : '';
     return `<div class="border border-slate-200 rounded p-2 mb-2" data-comune-idx="${i}">
       <div class="flex items-center justify-between gap-2 mb-1">
         <div class="text-sm font-medium text-slate-800">${esc(comune)}</div>
         <label class="text-[11px] text-slate-500 flex items-center gap-1 cursor-pointer">
-          <input type="checkbox" class="pw-jira-skip-comune" data-idx="${i}"> salta
+          <input type="checkbox" class="pw-jira-skip-comune" data-idx="${i}"${allDone ? ' checked' : ''}> salta
         </label>
       </div>
-      <div class="text-[11px] text-slate-500 mb-1">Operatori: ${operatori.map(esc).join(', ')}</div>
+      <div class="text-[11px] text-slate-500 mb-1">Operatori: ${operatori.map(esc).join(', ')}${operatoriNote}</div>
+      ${doneNote}
       <div class="grid grid-cols-2 gap-2">
-        <button type="button" class="pw-jira-panel-trigger pw-jira-epic-trigger w-full text-left border border-slate-300 rounded px-2 py-1.5 text-sm bg-white hover:bg-slate-50 truncate block" data-idx="${i}">— scegli Epic —</button>
+        <button type="button" class="pw-jira-panel-trigger pw-jira-epic-trigger w-full text-left border border-slate-300 rounded px-2 py-1.5 text-sm bg-white hover:bg-slate-50 truncate block" data-idx="${i}"${allDone ? ' disabled style="opacity:0.5;"' : ''}>— scegli Epic —</button>
         <button type="button" class="pw-jira-panel-trigger pw-jira-task-trigger w-full text-left border border-slate-300 rounded px-2 py-1.5 text-sm bg-white hover:bg-slate-50 truncate block" data-idx="${i}" disabled style="opacity:0.5;">— scegli prima l'Epic —</button>
       </div>
       <div class="pw-jira-comune-status text-[11px] mt-1.5 min-h-[14px]" data-idx="${i}"></div>
@@ -549,16 +563,26 @@ function pwJiraSubtaskOpenComuniModal(cIdx, commessaNome, meta, comuneNames, com
    La scelta "salta" dello step precedente esclude un intero comune; qui si
    sceglie invece a livello di singolo operatore/comune/task, utile quando
    solo alcuni degli operatori pianificati in un comune necessitano davvero
-   del sottotask. Tutto selezionato di default. */
+   del sottotask. Selezionato di default, tranne le righe già coperte da un
+   sottotask esistente (vedi bc.jiraSubtask), che partono deselezionate. */
 function pwJiraSubtaskOpenSelectItemsModal(cIdx, commessaNome, meta, items, skippedComuni) {
   const root = document.getElementById('modal-root');
-  const rows = items.map((item, i) => `<label class="flex items-center gap-2 border-b border-slate-100 py-1.5 text-sm cursor-pointer">
-      <input type="checkbox" class="pw-jira-select-item" data-idx="${i}" checked>
+  const bcForBadges = pwGetWeekData()[cIdx];
+  const jiraMap = (bcForBadges && bcForBadges.jiraSubtask) || {};
+  // Un operatore/comune che ha già un sottotask (creato o già esistente) parte
+  // deselezionato: inutile riproporlo per poi doverlo scartare a mano. Resta
+  // comunque visibile e riselezionabile (es. per rifare la verifica).
+  const rows = items.map((item, i) => {
+    const already = jiraMap[(item._comune || '') + '|||' + (item._operatore || '')];
+    const noteHtml = already ? ` <span class="text-blue-600">🎫 già presente${already.key ? ' · ' + esc(already.key) : ''}</span>` : '';
+    return `<label class="flex items-center gap-2 border-b border-slate-100 py-1.5 text-sm cursor-pointer${already ? ' opacity-70' : ''}">
+      <input type="checkbox" class="pw-jira-select-item" data-idx="${i}"${already ? '' : ' checked'}>
       <div class="min-w-0">
-        <div class="truncate">${esc(item._comune || '')} — ${esc(item._operatore || '')} <span class="text-[11px] text-slate-400">(${esc(item.taskKey || '')})</span></div>
+        <div class="truncate">${esc(item._comune || '')} — ${esc(item._operatore || '')} <span class="text-[11px] text-slate-400">(${esc(item.taskKey || '')})</span>${noteHtml}</div>
         <div class="text-[11px] text-slate-400 truncate">${esc(item.summary || '')}</div>
       </div>
-    </label>`).join('');
+    </label>`;
+  }).join('');
 
   root.innerHTML = `<div class="modal-backdrop"><div class="bg-white rounded-lg shadow-xl w-full max-w-xl mx-4 my-8 p-5 max-h-[90vh] overflow-y-auto">
     <h3 class="font-semibold text-slate-900 mb-1">Crea sottotask Jira — ${esc(commessaNome)}</h3>
