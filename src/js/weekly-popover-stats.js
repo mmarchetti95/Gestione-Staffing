@@ -166,6 +166,10 @@ async function pwUpdateCantiere(inp) {
   // Fire-and-forget: aggiorna subito il meteo per il nuovo cantiere, senza un pwRender()
   // completo (perderebbe il focus appena rilasciato dal campo che ha appena scatenato onchange).
   pwRefreshMeteoWeek();
+  // Il badge "sottotask Jira" di questa riga è legato al vecchio testo del cantiere
+  // (chiave comune+operatore): va ricalcolato subito sul nuovo testo, altrimenti
+  // resterebbe visibile lo stato del cantiere di prima della rinomina.
+  pwJiraSubtaskApplyBadgesToDom();
 }
 
 async function pwAddCantiereField(btn) {

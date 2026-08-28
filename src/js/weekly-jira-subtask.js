@@ -167,6 +167,83 @@ function pwJiraBuildSubtaskItem(meta, task, comune, nomeOperatore, attivita) {
   };
 }
 
+/* ----- Badge persistente in Griglia (stato "sottotask già esistente/creato") -----
+   Il dato vive in bc.jiraSubtask (oggetto sibling di `squadre` sul blocco
+   commessa), chiave "<comune>|||<operatore>" -> {status, key, url, ts}.
+   Volutamente NON dentro giorni/cantieri della cella, per due motivi:
+   - rinominare il cantiere in una cella fa sparire da solo il vecchio badge:
+      la chiave vecchia non è più referenziata da nessuna cella (vedi
+      pwJiraSubtaskApplyBadgesToDom, richiamata da pwUpdateCantiere).
+   - copia/incolla di una cella o dell'intera settimana di un operatore
+      (weekly-clipboard-cantiere.js) copia solo {cantieri, attivita}, mai
+      bc.jiraSubtask: il badge non segue mai il copia/incolla su un altro
+      operatore/cantiere. */
+function pwJiraSubtaskMarkBadge(cIdx, comune, operatoreNome, status, key, url) {
+  const bc = pwGetWeekData()[cIdx];
+  if (!bc || !comune || !operatoreNome) return;
+  if (!bc.jiraSubtask) bc.jiraSubtask = {};
+  bc.jiraSubtask[comune + '|||' + operatoreNome] = { status, key: key || '', url: url || '', ts: new Date().toISOString() };
+  pwSave();
+  pwJiraSubtaskApplyBadgesToDom();
+}
+
+function pwJiraSubtaskBadgeRemove(cIdx, mapKey) {
+  const bc = pwGetWeekData()[cIdx];
+  if (!bc || !bc.jiraSubtask) return;
+  delete bc.jiraSubtask[mapKey];
+  pwSave();
+  pwJiraSubtaskApplyBadgesToDom();
+}
+
+// includeCreated=false per le verifiche dryRun (Step 1 per-comune e Step 2
+// anteprima): marcano solo gli "already_exists" già trovati su Jira, mai i
+// "would_create" (non ancora creati per davvero). includeCreated=true solo
+// dopo la creazione reale (Step 3), dove va marcato anche "created".
+function pwJiraSubtaskApplyResultsToBadges(cIdx, items, results, includeCreated) {
+  (results || []).forEach((r, i) => {
+    const item = items[i];
+    if (!item) return;
+    if (r.status === 'already_exists' || (includeCreated && r.status === 'created')) {
+      pwJiraSubtaskMarkBadge(cIdx, item._comune, item._operatore, r.status, r.key, r.url);
+    }
+  });
+}
+
+function pwJiraSubtaskBadgeInnerHtml(cIdx, bc, operatoreNome, cantiere) {
+  const c = (cantiere || '').trim();
+  if (!c || !operatoreNome || !bc || !bc.jiraSubtask) return '';
+  const mapKey = c + '|||' + operatoreNome;
+  const entry = bc.jiraSubtask[mapKey];
+  if (!entry) return '';
+  const label = entry.status === 'created' ? 'creato' : 'già esistente';
+  const title = `Sottotask Jira ${label}${entry.key ? ': ' + entry.key : ''}`;
+  const body = '🎫' + (entry.key ? ' ' + esc(entry.key) : '');
+  const linkHtml = entry.url
+    ? `<a href="${esc(entry.url)}" target="_blank" rel="noopener" class="pw-jira-sub-link" title="${esc(title)}" onclick="event.stopPropagation()">${body}</a>`
+    : `<span class="pw-jira-sub-link" title="${esc(title)}">${body}</span>`;
+  return `${linkHtml}<button type="button" class="pw-jira-sub-remove" title="Rimuovi indicatore sottotask Jira" onclick="event.stopPropagation();pwJiraSubtaskBadgeRemove(${cIdx},'${jsAttr(mapKey)}')">✕</button>`;
+}
+
+// Wrapper con data-* usato in pwRender() (weekly-operatore-modal.js): stesso
+// pattern del badge meteo (pwWeatherBadgeHtml/pwApplyMeteoBadgesToDom in
+// weekly-meteo.js), per poter aggiornare il singolo badge senza un pwRender()
+// completo (che farebbe perdere il focus a un input cantiere/attività).
+function pwJiraSubtaskBadgeHtml(cIdx, sIdx, oIdx, dKey, ci, bc, operatoreNome, cantiere) {
+  return `<span class="pw-jira-sub-slot" data-cidx="${cIdx}" data-sidx="${sIdx}" data-oidx="${oIdx}" data-day="${dKey}" data-idx="${ci}">${pwJiraSubtaskBadgeInnerHtml(cIdx, bc, operatoreNome, cantiere)}</span>`;
+}
+
+function pwJiraSubtaskApplyBadgesToDom() {
+  const data = pwGetWeekData();
+  document.querySelectorAll('.pw-jira-sub-slot').forEach(slot => {
+    const cIdx = Number(slot.dataset.cidx), sIdx = Number(slot.dataset.sidx), oIdx = Number(slot.dataset.oidx), dKey = Number(slot.dataset.day), ci = Number(slot.dataset.idx);
+    const bc = data[cIdx];
+    const op = bc && bc.squadre && bc.squadre[sIdx] && bc.squadre[sIdx].operatori[oIdx];
+    if (!bc || !op) { slot.innerHTML = ''; return; }
+    const cantieri = pwCellCantieriRaw(op.giorni && op.giorni[dKey]);
+    slot.innerHTML = pwJiraSubtaskBadgeInnerHtml(cIdx, bc, op.nome, cantieri[ci] || '');
+  });
+}
+
 /* ----- Entry point dal bottone in Griglia ----- */
 function pwJiraSubtaskInit(cIdx) {
   const data = pwGetWeekData();
@@ -181,15 +258,24 @@ function pwJiraSubtaskInit(cIdx) {
 
   // Comuni distinti pianificati questa settimana per questa commessa, con gli
   // operatori distinti assegnati e la prima attività non vuota trovata per coppia.
+  // Ogni comune viene inoltre attribuito alla prima squadra in cui compare, per
+  // poter raggruppare la UI per squadra (vedi pwJiraSubtaskOpenComuniModal).
   const comuni = {};
+  const comuneSquadra = {}; // comune -> nome squadra
+  const squadreOrder = []; // ordine di comparsa delle squadre che hanno almeno un comune
   (bc.squadre || []).forEach(sq => {
+    const sqNome = sq.nome || 'Squadra';
     (sq.operatori || []).forEach(op => {
       if (!op.nome) return;
       const giorni = op.giorni || {};
       Object.keys(giorni).forEach(dKey => {
         const attivita = (giorni[dKey] || {}).attivita || '';
         pwCellCantieri(giorni[dKey]).forEach(cantiere => {
-          if (!comuni[cantiere]) comuni[cantiere] = {};
+          if (!comuni[cantiere]) {
+            comuni[cantiere] = {};
+            comuneSquadra[cantiere] = sqNome;
+            if (!squadreOrder.includes(sqNome)) squadreOrder.push(sqNome);
+          }
           if (!(op.nome in comuni[cantiere]) || (!comuni[cantiere][op.nome] && attivita)) {
             comuni[cantiere][op.nome] = attivita;
           }
@@ -201,16 +287,31 @@ function pwJiraSubtaskInit(cIdx) {
   const comuneNames = Object.keys(comuni);
   if (comuneNames.length === 0) { showAlertModal('Nessun cantiere pianificato questa settimana per questa commessa.'); return; }
 
-  pwJiraSubtaskOpenComuniModal(bc.commessa, meta, comuneNames, comuni);
+  pwJiraSubtaskOpenComuniModal(cIdx, bc.commessa, meta, comuneNames, comuni, comuneSquadra, squadreOrder);
 }
 
 /* ----- Step 1: scelta, per ciascun comune, dell'Epic e poi del Task Jira sotto quell'Epic -----
    Una commessa può avere più Epic (aree/lotti diversi), quindi non è fissato in
    anagrafica: si sceglie qui, comune per comune, a cascata (prima Epic poi Task,
-   il Task si azzera se si cambia Epic). */
-function pwJiraSubtaskOpenComuniModal(commessaNome, meta, comuneNames, comuni) {
+   il Task si azzera se si cambia Epic). I comuni sono raggruppati per squadra
+   (accordion collassabile) per ridurre il rumore visivo quando ci sono molti
+   comuni/squadre nella stessa commessa. Appena si sceglie il Task per un comune
+   parte in automatico una verifica dryRun che mostra, riga per riga, quanti
+   sottotask sono già presenti su Jira — senza dover arrivare fino all'anteprima
+   finale (vedi pwJiraSubtaskCheckExisting). */
+function pwJiraSubtaskOpenComuniModal(cIdx, commessaNome, meta, comuneNames, comuni, comuneSquadra, squadreOrder) {
   const root = document.getElementById('modal-root');
-  const rows = comuneNames.map((comune, i) => {
+
+  const bySquadra = {};
+  (squadreOrder || []).forEach(sq => { bySquadra[sq] = []; });
+  comuneNames.forEach(comune => {
+    const sq = (comuneSquadra && comuneSquadra[comune]) || 'Squadra';
+    if (!bySquadra[sq]) bySquadra[sq] = [];
+    bySquadra[sq].push(comune);
+  });
+  const squadreNames = (squadreOrder && squadreOrder.length) ? squadreOrder : Object.keys(bySquadra);
+
+  function rowHtml(comune, i) {
     const operatori = Object.keys(comuni[comune]);
     return `<div class="border border-slate-200 rounded p-2 mb-2" data-comune-idx="${i}">
       <div class="flex items-center justify-between gap-2 mb-1">
@@ -224,13 +325,39 @@ function pwJiraSubtaskOpenComuniModal(commessaNome, meta, comuneNames, comuni) {
         <button type="button" class="pw-jira-panel-trigger pw-jira-epic-trigger w-full text-left border border-slate-300 rounded px-2 py-1.5 text-sm bg-white hover:bg-slate-50 truncate block" data-idx="${i}">— scegli Epic —</button>
         <button type="button" class="pw-jira-panel-trigger pw-jira-task-trigger w-full text-left border border-slate-300 rounded px-2 py-1.5 text-sm bg-white hover:bg-slate-50 truncate block" data-idx="${i}" disabled style="opacity:0.5;">— scegli prima l'Epic —</button>
       </div>
+      <div class="pw-jira-comune-status text-[11px] mt-1.5 min-h-[14px]" data-idx="${i}"></div>
+    </div>`;
+  }
+
+  const groupsHtml = squadreNames.map((sqNome, gi) => {
+    const list = bySquadra[sqNome] || [];
+    if (!list.length) return '';
+    const rows = list.map(comune => rowHtml(comune, comuneNames.indexOf(comune))).join('');
+    return `<div class="pw-jira-squadra-group border border-slate-200 rounded mb-2 overflow-hidden">
+      <div class="w-full flex items-center justify-between gap-2 px-2.5 py-2 bg-slate-50 hover:bg-slate-100">
+        <button type="button" class="pw-jira-squadra-toggle flex items-center gap-1.5 text-sm font-medium text-slate-700 flex-1 min-w-0 text-left" data-squadra-idx="${gi}">
+          <span class="pw-jira-squadra-arrow text-slate-400 shrink-0">▾</span>
+          <span class="truncate">${esc(sqNome)} <span class="text-slate-400 font-normal">(${list.length} comun${list.length === 1 ? 'e' : 'i'})</span></span>
+        </button>
+        <div class="flex gap-2 shrink-0 text-[11px]">
+          <button type="button" class="pw-jira-squadra-skip-all text-slate-500 hover:underline whitespace-nowrap" data-squadra-idx="${gi}">salta tutti</button>
+          <button type="button" class="pw-jira-squadra-skip-none text-teal-700 hover:underline whitespace-nowrap" data-squadra-idx="${gi}">includi tutti</button>
+        </div>
+      </div>
+      <div class="pw-jira-squadra-body px-2.5 pt-2 pb-1" data-squadra-idx="${gi}">${rows}</div>
     </div>`;
   }).join('');
 
   root.innerHTML = `<div class="modal-backdrop"><div class="bg-white rounded-lg shadow-xl w-full max-w-xl mx-4 my-8 p-5 max-h-[90vh] overflow-y-auto">
     <h3 class="font-semibold text-slate-900 mb-1">Crea sottotask Jira — ${esc(commessaNome)}</h3>
-    <p class="text-xs text-slate-500 mb-3">Per ciascun comune scegli Epic e Task Jira sotto cui creare i sottotask, oppure spunta "salta".</p>
-    <div id="pw-jira-comuni-list">${rows}</div>
+    <div class="flex items-center justify-between mb-3">
+      <p class="text-xs text-slate-500">Per ciascun comune scegli Epic e Task Jira, oppure spunta "salta".</p>
+      <div class="flex gap-2 shrink-0">
+        <button type="button" id="pw-jira-expand-all" class="text-[11px] text-teal-700 hover:underline whitespace-nowrap">Espandi tutto</button>
+        <button type="button" id="pw-jira-collapse-all" class="text-[11px] text-slate-500 hover:underline whitespace-nowrap">Comprimi tutto</button>
+      </div>
+    </div>
+    <div id="pw-jira-comuni-list">${groupsHtml}</div>
     <div class="flex justify-end gap-2 mt-4">
       <button onclick="closeModal()" class="px-3 py-1.5 text-sm border border-slate-300 rounded">Annulla</button>
       <button id="pw-jira-continua" class="px-3 py-1.5 text-sm bg-teal-600 text-white rounded hover:bg-teal-700">Continua</button>
@@ -238,11 +365,77 @@ function pwJiraSubtaskOpenComuniModal(commessaNome, meta, comuneNames, comuni) {
   </div></div>`;
   root.querySelector('.modal-backdrop').addEventListener('click', e => { if (e.target.classList.contains('modal-backdrop')) closeModal(); });
 
+  root.querySelectorAll('.pw-jira-squadra-toggle').forEach(btn => {
+    btn.onclick = () => {
+      const gi = btn.dataset.squadraIdx;
+      const body = root.querySelector(`.pw-jira-squadra-body[data-squadra-idx="${gi}"]`);
+      const arrow = btn.querySelector('.pw-jira-squadra-arrow');
+      const collapsed = body.style.display === 'none';
+      body.style.display = collapsed ? '' : 'none';
+      if (arrow) arrow.textContent = collapsed ? '▾' : '▸';
+    };
+  });
+  document.getElementById('pw-jira-expand-all').onclick = () => {
+    root.querySelectorAll('.pw-jira-squadra-body').forEach(b => { b.style.display = ''; });
+    root.querySelectorAll('.pw-jira-squadra-arrow').forEach(a => { a.textContent = '▾'; });
+  };
+  document.getElementById('pw-jira-collapse-all').onclick = () => {
+    root.querySelectorAll('.pw-jira-squadra-body').forEach(b => { b.style.display = 'none'; });
+    root.querySelectorAll('.pw-jira-squadra-arrow').forEach(a => { a.textContent = '▸'; });
+  };
+
   const chosenEpics = {}; // idx -> {key, summary}
   const chosenTasks = {}; // idx -> {key, summary}
+  const existingReqIds = {}; // idx -> ultimo numero di richiesta (per scartare risposte superate)
 
   function taskTriggerFor(idx) {
     return root.querySelector(`.pw-jira-task-trigger[data-idx="${idx}"]`);
+  }
+  function statusElFor(idx) {
+    return root.querySelector(`.pw-jira-comune-status[data-idx="${idx}"]`);
+  }
+
+  // Verifica dryRun immediata (senza campi extra: non servono per determinare
+  // se il sottotask esiste già) dei sottotask che risulterebbero da questo
+  // comune con il Task appena scelto. Puramente informativa: eventuali errori
+  // qui non bloccano il flusso, l'utente li rivede comunque nell'anteprima finale.
+  async function pwJiraSubtaskCheckExisting(idx) {
+    const statusEl = statusElFor(idx);
+    // Ogni chiamata invalida subito qualunque richiesta precedente ancora in
+    // volo per lo stesso idx, anche quando questa esce da un ramo che non fa
+    // fetch (task/email mancante) — altrimenti una risposta tardiva di una
+    // verifica precedente potrebbe sovrascrivere uno stato già azzerato qui.
+    const myReq = (existingReqIds[idx] || 0) + 1;
+    existingReqIds[idx] = myReq;
+    const task = chosenTasks[idx];
+    if (!task) { if (statusEl) statusEl.innerHTML = ''; return; }
+    const comune = comuneNames[idx];
+    const items = [];
+    Object.keys(comuni[comune]).forEach(nomeOp => {
+      const built = pwJiraBuildSubtaskItem(meta, task, comune, nomeOp, comuni[comune][nomeOp]);
+      if (built) items.push(built);
+    });
+    if (items.length === 0) {
+      if (statusEl) statusEl.innerHTML = '<span class="text-amber-600">Nessuna email operatore trovata in anagrafica.</span>';
+      return;
+    }
+    if (statusEl) statusEl.innerHTML = '<span class="text-slate-400">⏳ verifica su Jira…</span>';
+    try {
+      const results = await pwJiraCreateSubtasks(items, true, {});
+      if (existingReqIds[idx] !== myReq) return; // superata da una scelta più recente
+      pwJiraSubtaskApplyResultsToBadges(cIdx, items, results, false);
+      const already = results.filter(r => r.status === 'already_exists').length;
+      const toCreate = results.filter(r => r.status === 'would_create').length;
+      const errors = results.filter(r => r.status === 'error').length;
+      let html = '';
+      if (already) html += `<span class="text-blue-700">🔵 ${already} già esistenti</span>&nbsp; `;
+      if (toCreate) html += `<span class="text-emerald-700">🟢 ${toCreate} da creare</span>&nbsp; `;
+      if (errors) html += `<span class="text-red-700">⚠️ ${errors} errori</span>`;
+      if (statusEl) statusEl.innerHTML = html || '<span class="text-slate-400">—</span>';
+    } catch (e) {
+      if (existingReqIds[idx] !== myReq) return;
+      if (statusEl) statusEl.innerHTML = `<span class="text-red-600">Errore verifica: ${esc(e.message || String(e))}</span>`;
+    }
   }
 
   // NB: il bottone va catturato in una variabile locale (non letto da
@@ -267,6 +460,7 @@ function pwJiraSubtaskOpenComuniModal(commessaNome, meta, comuneNames, comuni) {
             triggerEl.textContent = '— scegli Epic —';
             if (taskTrigger) { taskTrigger.disabled = true; taskTrigger.style.opacity = '0.5'; taskTrigger.textContent = '— scegli prima l\'Epic —'; }
           }
+          pwJiraSubtaskCheckExisting(idx);
         },
         emptyLabel: '— nessun Epic —',
       });
@@ -289,6 +483,7 @@ function pwJiraSubtaskOpenComuniModal(commessaNome, meta, comuneNames, comuni) {
             delete chosenTasks[idx];
             triggerEl.textContent = '— scegli Task —';
           }
+          pwJiraSubtaskCheckExisting(idx);
         },
         emptyLabel: '— nessun Task —',
       });
@@ -305,6 +500,23 @@ function pwJiraSubtaskOpenComuniModal(commessaNome, meta, comuneNames, comuni) {
         trigger.style.opacity = e.target.checked ? '0.5' : '1';
       });
     };
+  });
+
+  // "salta tutti"/"includi tutti" per squadra: riusa il change handler dei
+  // singoli checkbox appena registrato sopra (dispatchEvent), invece di
+  // duplicare la logica di disabilitazione dei trigger Epic/Task.
+  function setSquadraSkip(gi, val) {
+    const body = root.querySelector(`.pw-jira-squadra-body[data-squadra-idx="${gi}"]`);
+    if (!body) return;
+    body.querySelectorAll('.pw-jira-skip-comune').forEach(chk => {
+      if (chk.checked !== val) { chk.checked = val; chk.dispatchEvent(new Event('change')); }
+    });
+  }
+  root.querySelectorAll('.pw-jira-squadra-skip-all').forEach(btn => {
+    btn.onclick = () => setSquadraSkip(btn.dataset.squadraIdx, true);
+  });
+  root.querySelectorAll('.pw-jira-squadra-skip-none').forEach(btn => {
+    btn.onclick = () => setSquadraSkip(btn.dataset.squadraIdx, false);
   });
 
   document.getElementById('pw-jira-continua').onclick = () => {
@@ -329,7 +541,7 @@ function pwJiraSubtaskOpenComuniModal(commessaNome, meta, comuneNames, comuni) {
     });
     if (items.length === 0) { showAlertModal('Nessun sottotask da creare' + (skipped.length ? ':\n' + skipped.join('\n') : '.')); return; }
     closeModal();
-    pwJiraSubtaskOpenSelectItemsModal(commessaNome, meta, items, skipped);
+    pwJiraSubtaskOpenSelectItemsModal(cIdx, commessaNome, meta, items, skipped);
   };
 }
 
@@ -338,7 +550,7 @@ function pwJiraSubtaskOpenComuniModal(commessaNome, meta, comuneNames, comuni) {
    sceglie invece a livello di singolo operatore/comune/task, utile quando
    solo alcuni degli operatori pianificati in un comune necessitano davvero
    del sottotask. Tutto selezionato di default. */
-function pwJiraSubtaskOpenSelectItemsModal(commessaNome, meta, items, skippedComuni) {
+function pwJiraSubtaskOpenSelectItemsModal(cIdx, commessaNome, meta, items, skippedComuni) {
   const root = document.getElementById('modal-root');
   const rows = items.map((item, i) => `<label class="flex items-center gap-2 border-b border-slate-100 py-1.5 text-sm cursor-pointer">
       <input type="checkbox" class="pw-jira-select-item" data-idx="${i}" checked>
@@ -374,7 +586,7 @@ function pwJiraSubtaskOpenSelectItemsModal(commessaNome, meta, items, skippedCom
       if (chk.checked) selected.push(items[parseInt(chk.dataset.idx)]);
     });
     if (selected.length === 0) { showAlertModal('Seleziona almeno un sottotask da creare.'); return; }
-    pwJiraSubtaskOpenExtraFieldsModal(commessaNome, meta, selected, skippedComuni);
+    pwJiraSubtaskOpenExtraFieldsModal(cIdx, commessaNome, meta, selected, skippedComuni);
   };
 }
 
@@ -384,7 +596,7 @@ function pwJiraSubtaskOpenSelectItemsModal(commessaNome, meta, items, skippedCom
    l'intero batch (si applica a tutti i sottotask creati in questa sessione),
    con un valore di esempio precompilato ma sempre modificabile. Se il
    progetto non ha nessuno di questi campi si salta direttamente all'anteprima. */
-async function pwJiraSubtaskOpenExtraFieldsModal(commessaNome, meta, items, skippedComuni) {
+async function pwJiraSubtaskOpenExtraFieldsModal(cIdx, commessaNome, meta, items, skippedComuni) {
   const root = document.getElementById('modal-root');
   root.innerHTML = `<div class="modal-backdrop"><div class="bg-white rounded-lg shadow-xl w-full max-w-md mx-4 p-5">
     <div class="text-sm text-slate-600">⏳ Verifica campi obbligatori Jira…</div>
@@ -400,7 +612,7 @@ async function pwJiraSubtaskOpenExtraFieldsModal(commessaNome, meta, items, skip
   }
 
   if (fields.length === 0) {
-    pwJiraSubtaskPreview(commessaNome, items, skippedComuni, {});
+    pwJiraSubtaskPreview(cIdx, commessaNome, items, skippedComuni, {});
     return;
   }
 
@@ -452,12 +664,12 @@ async function pwJiraSubtaskOpenExtraFieldsModal(commessaNome, meta, items, skip
       const key = el.dataset.extraKey;
       if (el.value !== '') extraFields[key] = el.value;
     });
-    pwJiraSubtaskPreview(commessaNome, items, skippedComuni, extraFields);
+    pwJiraSubtaskPreview(cIdx, commessaNome, items, skippedComuni, extraFields);
   };
 }
 
 /* ----- Step 2: anteprima (dryRun) ----- */
-async function pwJiraSubtaskPreview(commessaNome, items, skippedComuni, extraFields) {
+async function pwJiraSubtaskPreview(cIdx, commessaNome, items, skippedComuni, extraFields) {
   const root = document.getElementById('modal-root');
   root.innerHTML = `<div class="modal-backdrop"><div class="bg-white rounded-lg shadow-xl w-full max-w-xl mx-4 my-8 p-5 max-h-[90vh] overflow-y-auto">
     <h3 class="font-semibold text-slate-900 mb-3">Crea sottotask Jira — ${esc(commessaNome)}</h3>
@@ -473,10 +685,11 @@ async function pwJiraSubtaskPreview(commessaNome, items, skippedComuni, extraFie
     return;
   }
 
-  pwJiraSubtaskRenderPreview(commessaNome, items, results, skippedComuni, extraFields);
+  pwJiraSubtaskApplyResultsToBadges(cIdx, items, results, false);
+  pwJiraSubtaskRenderPreview(cIdx, commessaNome, items, results, skippedComuni, extraFields);
 }
 
-function pwJiraSubtaskRenderPreview(commessaNome, items, results, skippedComuni, extraFields) {
+function pwJiraSubtaskRenderPreview(cIdx, commessaNome, items, results, skippedComuni, extraFields) {
   const root = document.getElementById('modal-root');
   const wouldCreate = results.filter(r => r.status === 'would_create').length;
 
@@ -515,12 +728,12 @@ function pwJiraSubtaskRenderPreview(commessaNome, items, results, skippedComuni,
   root.querySelector('.modal-backdrop').addEventListener('click', e => { if (e.target.classList.contains('modal-backdrop')) closeModal(); });
 
   if (wouldCreate > 0) {
-    document.getElementById('pw-jira-confirm-create').onclick = () => pwJiraSubtaskConfirmCreate(commessaNome, items, extraFields);
+    document.getElementById('pw-jira-confirm-create').onclick = () => pwJiraSubtaskConfirmCreate(cIdx, commessaNome, items, extraFields);
   }
 }
 
 /* ----- Step 3: creazione reale + riepilogo ----- */
-async function pwJiraSubtaskConfirmCreate(commessaNome, items, extraFields) {
+async function pwJiraSubtaskConfirmCreate(cIdx, commessaNome, items, extraFields) {
   const root = document.getElementById('modal-root');
   root.innerHTML = `<div class="modal-backdrop"><div class="bg-white rounded-lg shadow-xl w-full max-w-md mx-4 p-5">
     <div class="text-sm text-slate-600">⏳ Creazione sottotask su Jira in corso…</div>
@@ -533,6 +746,8 @@ async function pwJiraSubtaskConfirmCreate(commessaNome, items, extraFields) {
     showAlertModal('Errore durante la creazione: ' + (e.message || e));
     return;
   }
+
+  pwJiraSubtaskApplyResultsToBadges(cIdx, items, results, true);
 
   const created = results.filter(r => r.status === 'created');
   const already = results.filter(r => r.status === 'already_exists');
