@@ -910,10 +910,10 @@
       "source_location": "L195",
       "_callable": true,
       "_origin": "ast",
-      "id": "src_js_weekly_operatore_modal_pwcloseopmodal",
       "community": 16,
       "community_name": "weekly-operatore-modal.js",
-      "norm_label": "pwcloseopmodal()"
+      "norm_label": "pwcloseopmodal()",
+      "id": "src_js_weekly_operatore_modal_pwcloseopmodal"
     },
     {
       "label": "pwConfirmOpModal()",
@@ -922,10 +922,10 @@
       "source_location": "L200",
       "_callable": true,
       "_origin": "ast",
-      "id": "src_js_weekly_operatore_modal_pwconfirmopmodal",
       "community": 16,
       "community_name": "weekly-operatore-modal.js",
-      "norm_label": "pwconfirmopmodal()"
+      "norm_label": "pwconfirmopmodal()",
+      "id": "src_js_weekly_operatore_modal_pwconfirmopmodal"
     },
     {
       "label": "pwOpenOpModal()",
@@ -934,10 +934,10 @@
       "source_location": "L3",
       "_callable": true,
       "_origin": "ast",
-      "id": "src_js_weekly_operatore_modal_pwopenopmodal",
       "community": 16,
       "community_name": "weekly-operatore-modal.js",
-      "norm_label": "pwopenopmodal()"
+      "norm_label": "pwopenopmodal()",
+      "id": "src_js_weekly_operatore_modal_pwopenopmodal"
     },
     {
       "label": "buildList()",
@@ -946,10 +946,10 @@
       "source_location": "L107",
       "_callable": true,
       "_origin": "ast",
-      "id": "src_js_weekly_operatore_modal_pwopenopmodal_buildlist",
       "community": 16,
       "community_name": "weekly-operatore-modal.js",
-      "norm_label": "buildlist()"
+      "norm_label": "buildlist()",
+      "id": "src_js_weekly_operatore_modal_pwopenopmodal_buildlist"
     },
     {
       "label": "passaFiltroGeo()",
@@ -958,10 +958,10 @@
       "source_location": "L99",
       "_callable": true,
       "_origin": "ast",
-      "id": "src_js_weekly_operatore_modal_pwopenopmodal_passafiltrogeo",
       "community": 16,
       "community_name": "weekly-operatore-modal.js",
-      "norm_label": "passafiltrogeo()"
+      "norm_label": "passafiltrogeo()",
+      "id": "src_js_weekly_operatore_modal_pwopenopmodal_passafiltrogeo"
     },
     {
       "label": "rebuildProvinciaOptions()",
@@ -970,10 +970,10 @@
       "source_location": "L75",
       "_callable": true,
       "_origin": "ast",
-      "id": "src_js_weekly_operatore_modal_pwopenopmodal_rebuildprovinciaoptions",
       "community": 16,
       "community_name": "weekly-operatore-modal.js",
-      "norm_label": "rebuildprovinciaoptions()"
+      "norm_label": "rebuildprovinciaoptions()",
+      "id": "src_js_weekly_operatore_modal_pwopenopmodal_rebuildprovinciaoptions"
     },
     {
       "label": "pwOperatoreGeoLabel()",
@@ -982,10 +982,10 @@
       "source_location": "L228",
       "_callable": true,
       "_origin": "ast",
-      "id": "src_js_weekly_operatore_modal_pwoperatoregeolabel",
       "community": 16,
       "community_name": "weekly-operatore-modal.js",
-      "norm_label": "pwoperatoregeolabel()"
+      "norm_label": "pwoperatoregeolabel()",
+      "id": "src_js_weekly_operatore_modal_pwoperatoregeolabel"
     },
     {
       "label": "pwPopulateWeekSelect()",
@@ -994,10 +994,10 @@
       "source_location": "L257",
       "_callable": true,
       "_origin": "ast",
-      "id": "src_js_weekly_operatore_modal_pwpopulateweekselect",
       "community": 16,
       "community_name": "weekly-operatore-modal.js",
-      "norm_label": "pwpopulateweekselect()"
+      "norm_label": "pwpopulateweekselect()",
+      "id": "src_js_weekly_operatore_modal_pwpopulateweekselect"
     },
     {
       "label": "pwRender()",
@@ -1006,10 +1006,10 @@
       "source_location": "L272",
       "_callable": true,
       "_origin": "ast",
-      "id": "src_js_weekly_operatore_modal_pwrender",
       "community": 16,
       "community_name": "weekly-operatore-modal.js",
-      "norm_label": "pwrender()"
+      "norm_label": "pwrender()",
+      "id": "src_js_weekly_operatore_modal_pwrender"
     },
     {
       "label": "pwRenderOpDropdown()",
@@ -1018,10 +1018,10 @@
       "source_location": "L236",
       "_callable": true,
       "_origin": "ast",
-      "id": "src_js_weekly_operatore_modal_pwrenderopdropdown",
       "community": 16,
       "community_name": "weekly-operatore-modal.js",
-      "norm_label": "pwrenderopdropdown()"
+      "norm_label": "pwrenderopdropdown()",
+      "id": "src_js_weekly_operatore_modal_pwrenderopdropdown"
     },
     {
       "label": "pwRenderStats()",
@@ -1030,10 +1030,10 @@
       "source_location": "L513",
       "_callable": true,
       "_origin": "ast",
-      "id": "src_js_weekly_operatore_modal_pwrenderstats",
       "community": 16,
       "community_name": "weekly-operatore-modal.js",
-      "norm_label": "pwrenderstats()"
+      "norm_label": "pwrenderstats()",
+      "id": "src_js_weekly_operatore_modal_pwrenderstats"
     },
     {
       "label": "pwSquadraCognomi()",
@@ -1042,10 +1042,10 @@
       "source_location": "L214",
       "_callable": true,
       "_origin": "ast",
-      "id": "src_js_weekly_operatore_modal_pwsquadracognomi",
       "community": 16,
       "community_name": "weekly-operatore-modal.js",
-      "norm_label": "pwsquadracognomi()"
+      "norm_label": "pwsquadracognomi()",
+      "id": "src_js_weekly_operatore_modal_pwsquadracognomi"
     },
     {
       "label": "fmtDate()",
@@ -1294,10 +1294,10 @@
       "source_location": "L175",
       "_callable": true,
       "_origin": "ast",
-      "id": "src_js_weekly_popover_stats_pwaddcantierefield",
       "community": 19,
       "community_name": "weekly-popover-stats.js",
-      "norm_label": "pwaddcantierefield()"
+      "norm_label": "pwaddcantierefield()",
+      "id": "src_js_weekly_popover_stats_pwaddcantierefield"
     },
     {
       "label": "pwCantiereCellOf()",
@@ -1306,10 +1306,10 @@
       "source_location": "L145",
       "_callable": true,
       "_origin": "ast",
-      "id": "src_js_weekly_popover_stats_pwcantierecellof",
       "community": 19,
       "community_name": "weekly-popover-stats.js",
-      "norm_label": "pwcantierecellof()"
+      "norm_label": "pwcantierecellof()",
+      "id": "src_js_weekly_popover_stats_pwcantierecellof"
     },
     {
       "label": "pwRemoveCantiereField()",
@@ -1318,10 +1318,10 @@
       "source_location": "L188",
       "_callable": true,
       "_origin": "ast",
-      "id": "src_js_weekly_popover_stats_pwremovecantierefield",
       "community": 19,
       "community_name": "weekly-popover-stats.js",
-      "norm_label": "pwremovecantierefield()"
+      "norm_label": "pwremovecantierefield()",
+      "id": "src_js_weekly_popover_stats_pwremovecantierefield"
     },
     {
       "label": "pwSearchOp()",
@@ -1330,10 +1330,10 @@
       "source_location": "L73",
       "_callable": true,
       "_origin": "ast",
-      "id": "src_js_weekly_popover_stats_pwsearchop",
       "community": 19,
       "community_name": "weekly-popover-stats.js",
-      "norm_label": "pwsearchop()"
+      "norm_label": "pwsearchop()",
+      "id": "src_js_weekly_popover_stats_pwsearchop"
     },
     {
       "label": "pwTitleCase()",
@@ -1342,10 +1342,10 @@
       "source_location": "L127",
       "_callable": true,
       "_origin": "ast",
-      "id": "src_js_weekly_popover_stats_pwtitlecase",
       "community": 19,
       "community_name": "weekly-popover-stats.js",
-      "norm_label": "pwtitlecase()"
+      "norm_label": "pwtitlecase()",
+      "id": "src_js_weekly_popover_stats_pwtitlecase"
     },
     {
       "label": "pwToggleStatPopover()",
@@ -1354,10 +1354,10 @@
       "source_location": "L2",
       "_callable": true,
       "_origin": "ast",
-      "id": "src_js_weekly_popover_stats_pwtogglestatpopover",
       "community": 19,
       "community_name": "weekly-popover-stats.js",
-      "norm_label": "pwtogglestatpopover()"
+      "norm_label": "pwtogglestatpopover()",
+      "id": "src_js_weekly_popover_stats_pwtogglestatpopover"
     },
     {
       "label": "renderRow()",
@@ -1366,10 +1366,10 @@
       "source_location": "L22",
       "_callable": true,
       "_origin": "ast",
-      "id": "src_js_weekly_popover_stats_pwtogglestatpopover_renderrow",
       "community": 19,
       "community_name": "weekly-popover-stats.js",
-      "norm_label": "renderrow()"
+      "norm_label": "renderrow()",
+      "id": "src_js_weekly_popover_stats_pwtogglestatpopover_renderrow"
     },
     {
       "label": "pwUpdateCantiere()",
@@ -1378,10 +1378,10 @@
       "source_location": "L158",
       "_callable": true,
       "_origin": "ast",
-      "id": "src_js_weekly_popover_stats_pwupdatecantiere",
       "community": 19,
       "community_name": "weekly-popover-stats.js",
-      "norm_label": "pwupdatecantiere()"
+      "norm_label": "pwupdatecantiere()",
+      "id": "src_js_weekly_popover_stats_pwupdatecantiere"
     },
     {
       "label": "pwUpdateCell()",
@@ -1390,10 +1390,10 @@
       "source_location": "L131",
       "_callable": true,
       "_origin": "ast",
-      "id": "src_js_weekly_popover_stats_pwupdatecell",
       "community": 19,
       "community_name": "weekly-popover-stats.js",
-      "norm_label": "pwupdatecell()"
+      "norm_label": "pwupdatecell()",
+      "id": "src_js_weekly_popover_stats_pwupdatecell"
     },
     {
       "label": "pwUpdateOpNome()",
@@ -1402,10 +1402,10 @@
       "source_location": "L197",
       "_callable": true,
       "_origin": "ast",
-      "id": "src_js_weekly_popover_stats_pwupdateopnome",
       "community": 19,
       "community_name": "weekly-popover-stats.js",
-      "norm_label": "pwupdateopnome()"
+      "norm_label": "pwupdateopnome()",
+      "id": "src_js_weekly_popover_stats_pwupdateopnome"
     },
     {
       "label": "cpCaricaReportSquadra()",
@@ -3595,7 +3595,7 @@
       "label": "pwJiraSubtaskConfirmCreate()",
       "file_type": "code",
       "source_file": "src/js/weekly-jira-subtask.js",
-      "source_location": "L736",
+      "source_location": "L760",
       "_callable": true,
       "_origin": "ast",
       "id": "src_js_weekly_jira_subtask_pwjirasubtaskconfirmcreate",
@@ -3643,7 +3643,7 @@
       "label": "pwJiraSubtaskCheckExisting()",
       "file_type": "code",
       "source_file": "src/js/weekly-jira-subtask.js",
-      "source_location": "L402",
+      "source_location": "L416",
       "_callable": true,
       "_origin": "ast",
       "id": "src_js_weekly_jira_subtask_pwjirasubtaskopencomunimodal_pwjirasubtaskcheckexisting",
@@ -3655,7 +3655,7 @@
       "label": "rowHtml()",
       "file_type": "code",
       "source_file": "src/js/weekly-jira-subtask.js",
-      "source_location": "L314",
+      "source_location": "L322",
       "_callable": true,
       "_origin": "ast",
       "id": "src_js_weekly_jira_subtask_pwjirasubtaskopencomunimodal_rowhtml",
@@ -3667,7 +3667,7 @@
       "label": "setSquadraSkip()",
       "file_type": "code",
       "source_file": "src/js/weekly-jira-subtask.js",
-      "source_location": "L508",
+      "source_location": "L522",
       "_callable": true,
       "_origin": "ast",
       "id": "src_js_weekly_jira_subtask_pwjirasubtaskopencomunimodal_setsquadraskip",
@@ -3679,7 +3679,7 @@
       "label": "statusElFor()",
       "file_type": "code",
       "source_file": "src/js/weekly-jira-subtask.js",
-      "source_location": "L394",
+      "source_location": "L408",
       "_callable": true,
       "_origin": "ast",
       "id": "src_js_weekly_jira_subtask_pwjirasubtaskopencomunimodal_statuselfor",
@@ -3691,7 +3691,7 @@
       "label": "taskTriggerFor()",
       "file_type": "code",
       "source_file": "src/js/weekly-jira-subtask.js",
-      "source_location": "L391",
+      "source_location": "L405",
       "_callable": true,
       "_origin": "ast",
       "id": "src_js_weekly_jira_subtask_pwjirasubtaskopencomunimodal_tasktriggerfor",
@@ -3703,7 +3703,7 @@
       "label": "pwJiraSubtaskOpenExtraFieldsModal()",
       "file_type": "code",
       "source_file": "src/js/weekly-jira-subtask.js",
-      "source_location": "L599",
+      "source_location": "L623",
       "_callable": true,
       "_origin": "ast",
       "id": "src_js_weekly_jira_subtask_pwjirasubtaskopenextrafieldsmodal",
@@ -3715,7 +3715,7 @@
       "label": "pwJiraSubtaskOpenSelectItemsModal()",
       "file_type": "code",
       "source_file": "src/js/weekly-jira-subtask.js",
-      "source_location": "L553",
+      "source_location": "L568",
       "_callable": true,
       "_origin": "ast",
       "id": "src_js_weekly_jira_subtask_pwjirasubtaskopenselectitemsmodal",
@@ -3727,7 +3727,7 @@
       "label": "pwJiraSubtaskPreview()",
       "file_type": "code",
       "source_file": "src/js/weekly-jira-subtask.js",
-      "source_location": "L672",
+      "source_location": "L696",
       "_callable": true,
       "_origin": "ast",
       "id": "src_js_weekly_jira_subtask_pwjirasubtaskpreview",
@@ -3739,7 +3739,7 @@
       "label": "pwJiraSubtaskRenderPreview()",
       "file_type": "code",
       "source_file": "src/js/weekly-jira-subtask.js",
-      "source_location": "L692",
+      "source_location": "L716",
       "_callable": true,
       "_origin": "ast",
       "id": "src_js_weekly_jira_subtask_pwjirasubtaskrenderpreview",
@@ -4110,10 +4110,10 @@
       "source_file": "src/js/weekly-operatore-modal.js",
       "source_location": "L1",
       "_origin": "ast",
-      "id": "src_js_weekly_operatore_modal",
       "community": 16,
       "community_name": "weekly-operatore-modal.js",
-      "norm_label": "weekly-operatore-modal.js"
+      "norm_label": "weekly-operatore-modal.js",
+      "id": "src_js_weekly_operatore_modal"
     },
     {
       "label": "storage-utils.js",
@@ -4154,10 +4154,10 @@
       "source_file": "src/js/weekly-popover-stats.js",
       "source_location": "L1",
       "_origin": "ast",
-      "id": "src_js_weekly_popover_stats",
       "community": 19,
       "community_name": "weekly-popover-stats.js",
-      "norm_label": "weekly-popover-stats.js"
+      "norm_label": "weekly-popover-stats.js",
+      "id": "src_js_weekly_popover_stats"
     },
     {
       "label": "produzione-report.js",
@@ -9000,7 +9000,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/js/weekly-jira-subtask.js",
-      "source_location": "L744",
+      "source_location": "L768",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_js_weekly_jira_subtask_pwjirasubtaskconfirmcreate",
@@ -9012,7 +9012,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/js/weekly-jira-subtask.js",
-      "source_location": "L750",
+      "source_location": "L774",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_js_weekly_jira_subtask_pwjirasubtaskconfirmcreate",
@@ -9048,7 +9048,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/js/weekly-jira-subtask.js",
-      "source_location": "L449",
+      "source_location": "L463",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_js_weekly_jira_subtask_pwjirasubtaskopencomunimodal",
@@ -9060,7 +9060,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/js/weekly-jira-subtask.js",
-      "source_location": "L450",
+      "source_location": "L464",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_js_weekly_jira_subtask_pwjirasubtaskopencomunimodal",
@@ -9072,7 +9072,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/js/weekly-jira-subtask.js",
-      "source_location": "L477",
+      "source_location": "L491",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_js_weekly_jira_subtask_pwjirasubtaskopencomunimodal",
@@ -9084,7 +9084,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/js/weekly-jira-subtask.js",
-      "source_location": "L538",
+      "source_location": "L552",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_js_weekly_jira_subtask_pwjirasubtaskopencomunimodal",
@@ -9096,7 +9096,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/js/weekly-jira-subtask.js",
-      "source_location": "L544",
+      "source_location": "L558",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_js_weekly_jira_subtask_pwjirasubtaskopencomunimodal",
@@ -9108,7 +9108,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/js/weekly-jira-subtask.js",
-      "source_location": "L403",
+      "source_location": "L417",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_js_weekly_jira_subtask_pwjirasubtaskopencomunimodal_pwjirasubtaskcheckexisting",
@@ -9120,7 +9120,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/js/weekly-jira-subtask.js",
-      "source_location": "L415",
+      "source_location": "L429",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_js_weekly_jira_subtask_pwjirasubtaskopencomunimodal_pwjirasubtaskcheckexisting",
@@ -9132,7 +9132,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/js/weekly-jira-subtask.js",
-      "source_location": "L424",
+      "source_location": "L438",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_js_weekly_jira_subtask_pwjirasubtaskopencomunimodal_pwjirasubtaskcheckexisting",
@@ -9144,7 +9144,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/js/weekly-jira-subtask.js",
-      "source_location": "L426",
+      "source_location": "L440",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_js_weekly_jira_subtask_pwjirasubtaskopencomunimodal_pwjirasubtaskcheckexisting",
@@ -9156,7 +9156,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/js/weekly-jira-subtask.js",
-      "source_location": "L607",
+      "source_location": "L631",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_js_weekly_jira_subtask_pwjirasubtaskopenextrafieldsmodal",
@@ -9168,7 +9168,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/js/weekly-jira-subtask.js",
-      "source_location": "L615",
+      "source_location": "L639",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_js_weekly_jira_subtask_pwjirasubtaskopenextrafieldsmodal",
@@ -9180,7 +9180,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/js/weekly-jira-subtask.js",
-      "source_location": "L589",
+      "source_location": "L613",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_js_weekly_jira_subtask_pwjirasubtaskopenselectitemsmodal",
@@ -9192,7 +9192,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/js/weekly-jira-subtask.js",
-      "source_location": "L681",
+      "source_location": "L705",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_js_weekly_jira_subtask_pwjirasubtaskpreview",
@@ -9204,7 +9204,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/js/weekly-jira-subtask.js",
-      "source_location": "L688",
+      "source_location": "L712",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_js_weekly_jira_subtask_pwjirasubtaskpreview",
@@ -9216,7 +9216,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/js/weekly-jira-subtask.js",
-      "source_location": "L689",
+      "source_location": "L713",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_js_weekly_jira_subtask_pwjirasubtaskpreview",
@@ -9228,7 +9228,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/js/weekly-jira-subtask.js",
-      "source_location": "L731",
+      "source_location": "L755",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_js_weekly_jira_subtask_pwjirasubtaskrenderpreview",
@@ -9951,9 +9951,9 @@
       "source_location": "L201",
       "weight": 1.0,
       "_origin": "ast",
+      "confidence_score": 1.0,
       "source": "src_js_weekly_operatore_modal_pwconfirmopmodal",
-      "target": "src_js_weekly_operatore_modal_pwcloseopmodal",
-      "confidence_score": 1.0
+      "target": "src_js_weekly_operatore_modal_pwcloseopmodal"
     },
     {
       "relation": "calls",
@@ -9963,9 +9963,9 @@
       "source_location": "L207",
       "weight": 1.0,
       "_origin": "ast",
+      "confidence_score": 1.0,
       "source": "src_js_weekly_operatore_modal_pwconfirmopmodal",
-      "target": "src_js_weekly_operatore_modal_pwrender",
-      "confidence_score": 1.0
+      "target": "src_js_weekly_operatore_modal_pwrender"
     },
     {
       "relation": "calls",
@@ -9975,9 +9975,9 @@
       "source_location": "L187",
       "weight": 1.0,
       "_origin": "ast",
+      "confidence_score": 1.0,
       "source": "src_js_weekly_operatore_modal_pwopenopmodal",
-      "target": "src_js_weekly_operatore_modal_pwcloseopmodal",
-      "confidence_score": 1.0
+      "target": "src_js_weekly_operatore_modal_pwcloseopmodal"
     },
     {
       "relation": "calls",
@@ -9987,9 +9987,9 @@
       "source_location": "L114",
       "weight": 1.0,
       "_origin": "ast",
+      "confidence_score": 1.0,
       "source": "src_js_weekly_operatore_modal_pwopenopmodal_buildlist",
-      "target": "src_js_weekly_operatore_modal_pwconfirmopmodal",
-      "confidence_score": 1.0
+      "target": "src_js_weekly_operatore_modal_pwconfirmopmodal"
     },
     {
       "relation": "calls",
@@ -9999,9 +9999,9 @@
       "source_location": "L117",
       "weight": 1.0,
       "_origin": "ast",
+      "confidence_score": 1.0,
       "source": "src_js_weekly_operatore_modal_pwopenopmodal_buildlist",
-      "target": "src_js_weekly_operatore_modal_pwopenopmodal_passafiltrogeo",
-      "confidence_score": 1.0
+      "target": "src_js_weekly_operatore_modal_pwopenopmodal_passafiltrogeo"
     },
     {
       "relation": "calls",
@@ -10011,9 +10011,9 @@
       "source_location": "L278",
       "weight": 1.0,
       "_origin": "ast",
+      "confidence_score": 1.0,
       "source": "src_js_weekly_operatore_modal_pwrender",
-      "target": "src_js_weekly_operatore_modal_pwpopulateweekselect",
-      "confidence_score": 1.0
+      "target": "src_js_weekly_operatore_modal_pwpopulateweekselect"
     },
     {
       "relation": "calls",
@@ -10023,9 +10023,9 @@
       "source_location": "L312",
       "weight": 1.0,
       "_origin": "ast",
+      "confidence_score": 1.0,
       "source": "src_js_weekly_operatore_modal_pwrender",
-      "target": "src_js_weekly_operatore_modal_pwrenderstats",
-      "confidence_score": 1.0
+      "target": "src_js_weekly_operatore_modal_pwrenderstats"
     },
     {
       "relation": "calls",
@@ -10035,9 +10035,9 @@
       "source_location": "L403",
       "weight": 1.0,
       "_origin": "ast",
+      "confidence_score": 1.0,
       "source": "src_js_weekly_operatore_modal_pwrender",
-      "target": "src_js_weekly_operatore_modal_pwrenderopdropdown",
-      "confidence_score": 1.0
+      "target": "src_js_weekly_operatore_modal_pwrenderopdropdown"
     },
     {
       "relation": "calls",
@@ -10047,9 +10047,9 @@
       "source_location": "L414",
       "weight": 1.0,
       "_origin": "ast",
+      "confidence_score": 1.0,
       "source": "src_js_weekly_operatore_modal_pwrender",
-      "target": "src_js_weekly_operatore_modal_pwsquadracognomi",
-      "confidence_score": 1.0
+      "target": "src_js_weekly_operatore_modal_pwsquadracognomi"
     },
     {
       "relation": "calls",
@@ -10059,9 +10059,9 @@
       "source_location": "L243",
       "weight": 1.0,
       "_origin": "ast",
+      "confidence_score": 1.0,
       "source": "src_js_weekly_operatore_modal_pwrenderopdropdown",
-      "target": "src_js_weekly_operatore_modal_pwoperatoregeolabel",
-      "confidence_score": 1.0
+      "target": "src_js_weekly_operatore_modal_pwoperatoregeolabel"
     },
     {
       "relation": "calls",
@@ -10071,9 +10071,9 @@
       "source_location": "L176",
       "weight": 1.0,
       "_origin": "ast",
+      "confidence_score": 1.0,
       "source": "src_js_weekly_popover_stats_pwaddcantierefield",
-      "target": "src_js_weekly_popover_stats_pwcantierecellof",
-      "confidence_score": 1.0
+      "target": "src_js_weekly_popover_stats_pwcantierecellof"
     },
     {
       "relation": "calls",
@@ -10083,9 +10083,9 @@
       "source_location": "L189",
       "weight": 1.0,
       "_origin": "ast",
+      "confidence_score": 1.0,
       "source": "src_js_weekly_popover_stats_pwremovecantierefield",
-      "target": "src_js_weekly_popover_stats_pwcantierecellof",
-      "confidence_score": 1.0
+      "target": "src_js_weekly_popover_stats_pwcantierecellof"
     },
     {
       "relation": "calls",
@@ -10095,9 +10095,9 @@
       "source_location": "L159",
       "weight": 1.0,
       "_origin": "ast",
+      "confidence_score": 1.0,
       "source": "src_js_weekly_popover_stats_pwupdatecantiere",
-      "target": "src_js_weekly_popover_stats_pwcantierecellof",
-      "confidence_score": 1.0
+      "target": "src_js_weekly_popover_stats_pwcantierecellof"
     },
     {
       "relation": "calls",
@@ -10107,9 +10107,9 @@
       "source_location": "L162",
       "weight": 1.0,
       "_origin": "ast",
+      "confidence_score": 1.0,
       "source": "src_js_weekly_popover_stats_pwupdatecantiere",
-      "target": "src_js_weekly_popover_stats_pwtitlecase",
-      "confidence_score": 1.0
+      "target": "src_js_weekly_popover_stats_pwtitlecase"
     },
     {
       "relation": "calls",
@@ -10119,9 +10119,9 @@
       "source_location": "L138",
       "weight": 1.0,
       "_origin": "ast",
+      "confidence_score": 1.0,
       "source": "src_js_weekly_popover_stats_pwupdatecell",
-      "target": "src_js_weekly_popover_stats_pwtitlecase",
-      "confidence_score": 1.0
+      "target": "src_js_weekly_popover_stats_pwtitlecase"
     },
     {
       "relation": "calls",
@@ -10392,7 +10392,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/js/weekly-jira-subtask.js",
-      "source_location": "L314",
+      "source_location": "L322",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_js_weekly_jira_subtask_pwjirasubtaskopencomunimodal",
@@ -10404,7 +10404,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/js/weekly-jira-subtask.js",
-      "source_location": "L391",
+      "source_location": "L405",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_js_weekly_jira_subtask_pwjirasubtaskopencomunimodal",
@@ -10416,7 +10416,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/js/weekly-jira-subtask.js",
-      "source_location": "L402",
+      "source_location": "L416",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_js_weekly_jira_subtask_pwjirasubtaskopencomunimodal",
@@ -10428,7 +10428,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/js/weekly-jira-subtask.js",
-      "source_location": "L508",
+      "source_location": "L522",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_js_weekly_jira_subtask_pwjirasubtaskopencomunimodal",
@@ -10467,9 +10467,9 @@
       "source_location": "L107",
       "weight": 1.0,
       "_origin": "ast",
+      "confidence_score": 1.0,
       "source": "src_js_weekly_operatore_modal_pwopenopmodal",
-      "target": "src_js_weekly_operatore_modal_pwopenopmodal_buildlist",
-      "confidence_score": 1.0
+      "target": "src_js_weekly_operatore_modal_pwopenopmodal_buildlist"
     },
     {
       "relation": "contains",
@@ -10479,9 +10479,9 @@
       "source_location": "L75",
       "weight": 1.0,
       "_origin": "ast",
+      "confidence_score": 1.0,
       "source": "src_js_weekly_operatore_modal_pwopenopmodal",
-      "target": "src_js_weekly_operatore_modal_pwopenopmodal_rebuildprovinciaoptions",
-      "confidence_score": 1.0
+      "target": "src_js_weekly_operatore_modal_pwopenopmodal_rebuildprovinciaoptions"
     },
     {
       "relation": "contains",
@@ -12940,7 +12940,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/js/weekly-jira-subtask.js",
-      "source_location": "L553",
+      "source_location": "L568",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_js_weekly_jira_subtask",
@@ -12951,7 +12951,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/js/weekly-jira-subtask.js",
-      "source_location": "L599",
+      "source_location": "L623",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_js_weekly_jira_subtask",
@@ -12962,22 +12962,11 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/js/weekly-jira-subtask.js",
-      "source_location": "L672",
+      "source_location": "L696",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_js_weekly_jira_subtask",
       "target": "src_js_weekly_jira_subtask_pwjirasubtaskpreview",
-      "confidence_score": 1.0
-    },
-    {
-      "relation": "contains",
-      "confidence": "EXTRACTED",
-      "source_file": "src/js/weekly-jira-subtask.js",
-      "source_location": "L692",
-      "weight": 1.0,
-      "_origin": "ast",
-      "source": "src_js_weekly_jira_subtask",
-      "target": "src_js_weekly_jira_subtask_pwjirasubtaskrenderpreview",
       "confidence_score": 1.0
     },
     {
@@ -12995,7 +12984,18 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/js/weekly-jira-subtask.js",
-      "source_location": "L736",
+      "source_location": "L716",
+      "weight": 1.0,
+      "_origin": "ast",
+      "source": "src_js_weekly_jira_subtask",
+      "target": "src_js_weekly_jira_subtask_pwjirasubtaskrenderpreview",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "src/js/weekly-jira-subtask.js",
+      "source_location": "L760",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_js_weekly_jira_subtask",
@@ -13006,7 +13006,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/js/weekly-jira-subtask.js",
-      "source_location": "L394",
+      "source_location": "L408",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_js_weekly_jira_subtask_pwjirasubtaskopencomunimodal",
@@ -13768,9 +13768,9 @@
       "source_location": "L195",
       "weight": 1.0,
       "_origin": "ast",
+      "confidence_score": 1.0,
       "source": "src_js_weekly_operatore_modal",
-      "target": "src_js_weekly_operatore_modal_pwcloseopmodal",
-      "confidence_score": 1.0
+      "target": "src_js_weekly_operatore_modal_pwcloseopmodal"
     },
     {
       "relation": "contains",
@@ -13779,9 +13779,9 @@
       "source_location": "L200",
       "weight": 1.0,
       "_origin": "ast",
+      "confidence_score": 1.0,
       "source": "src_js_weekly_operatore_modal",
-      "target": "src_js_weekly_operatore_modal_pwconfirmopmodal",
-      "confidence_score": 1.0
+      "target": "src_js_weekly_operatore_modal_pwconfirmopmodal"
     },
     {
       "relation": "contains",
@@ -13790,9 +13790,9 @@
       "source_location": "L214",
       "weight": 1.0,
       "_origin": "ast",
+      "confidence_score": 1.0,
       "source": "src_js_weekly_operatore_modal",
-      "target": "src_js_weekly_operatore_modal_pwsquadracognomi",
-      "confidence_score": 1.0
+      "target": "src_js_weekly_operatore_modal_pwsquadracognomi"
     },
     {
       "relation": "contains",
@@ -13801,9 +13801,9 @@
       "source_location": "L228",
       "weight": 1.0,
       "_origin": "ast",
+      "confidence_score": 1.0,
       "source": "src_js_weekly_operatore_modal",
-      "target": "src_js_weekly_operatore_modal_pwoperatoregeolabel",
-      "confidence_score": 1.0
+      "target": "src_js_weekly_operatore_modal_pwoperatoregeolabel"
     },
     {
       "relation": "contains",
@@ -13812,9 +13812,9 @@
       "source_location": "L236",
       "weight": 1.0,
       "_origin": "ast",
+      "confidence_score": 1.0,
       "source": "src_js_weekly_operatore_modal",
-      "target": "src_js_weekly_operatore_modal_pwrenderopdropdown",
-      "confidence_score": 1.0
+      "target": "src_js_weekly_operatore_modal_pwrenderopdropdown"
     },
     {
       "relation": "contains",
@@ -13823,9 +13823,9 @@
       "source_location": "L257",
       "weight": 1.0,
       "_origin": "ast",
+      "confidence_score": 1.0,
       "source": "src_js_weekly_operatore_modal",
-      "target": "src_js_weekly_operatore_modal_pwpopulateweekselect",
-      "confidence_score": 1.0
+      "target": "src_js_weekly_operatore_modal_pwpopulateweekselect"
     },
     {
       "relation": "contains",
@@ -13834,9 +13834,9 @@
       "source_location": "L272",
       "weight": 1.0,
       "_origin": "ast",
+      "confidence_score": 1.0,
       "source": "src_js_weekly_operatore_modal",
-      "target": "src_js_weekly_operatore_modal_pwrender",
-      "confidence_score": 1.0
+      "target": "src_js_weekly_operatore_modal_pwrender"
     },
     {
       "relation": "contains",
@@ -13845,9 +13845,9 @@
       "source_location": "L3",
       "weight": 1.0,
       "_origin": "ast",
+      "confidence_score": 1.0,
       "source": "src_js_weekly_operatore_modal",
-      "target": "src_js_weekly_operatore_modal_pwopenopmodal",
-      "confidence_score": 1.0
+      "target": "src_js_weekly_operatore_modal_pwopenopmodal"
     },
     {
       "relation": "contains",
@@ -13856,9 +13856,9 @@
       "source_location": "L513",
       "weight": 1.0,
       "_origin": "ast",
+      "confidence_score": 1.0,
       "source": "src_js_weekly_operatore_modal",
-      "target": "src_js_weekly_operatore_modal_pwrenderstats",
-      "confidence_score": 1.0
+      "target": "src_js_weekly_operatore_modal_pwrenderstats"
     },
     {
       "relation": "contains",
@@ -13867,9 +13867,9 @@
       "source_location": "L99",
       "weight": 1.0,
       "_origin": "ast",
+      "confidence_score": 1.0,
       "source": "src_js_weekly_operatore_modal_pwopenopmodal",
-      "target": "src_js_weekly_operatore_modal_pwopenopmodal_passafiltrogeo",
-      "confidence_score": 1.0
+      "target": "src_js_weekly_operatore_modal_pwopenopmodal_passafiltrogeo"
     },
     {
       "relation": "contains",
@@ -13878,9 +13878,9 @@
       "source_location": "L127",
       "weight": 1.0,
       "_origin": "ast",
+      "confidence_score": 1.0,
       "source": "src_js_weekly_popover_stats",
-      "target": "src_js_weekly_popover_stats_pwtitlecase",
-      "confidence_score": 1.0
+      "target": "src_js_weekly_popover_stats_pwtitlecase"
     },
     {
       "relation": "contains",
@@ -13889,9 +13889,9 @@
       "source_location": "L131",
       "weight": 1.0,
       "_origin": "ast",
+      "confidence_score": 1.0,
       "source": "src_js_weekly_popover_stats",
-      "target": "src_js_weekly_popover_stats_pwupdatecell",
-      "confidence_score": 1.0
+      "target": "src_js_weekly_popover_stats_pwupdatecell"
     },
     {
       "relation": "contains",
@@ -13900,9 +13900,9 @@
       "source_location": "L145",
       "weight": 1.0,
       "_origin": "ast",
+      "confidence_score": 1.0,
       "source": "src_js_weekly_popover_stats",
-      "target": "src_js_weekly_popover_stats_pwcantierecellof",
-      "confidence_score": 1.0
+      "target": "src_js_weekly_popover_stats_pwcantierecellof"
     },
     {
       "relation": "contains",
@@ -13911,9 +13911,9 @@
       "source_location": "L158",
       "weight": 1.0,
       "_origin": "ast",
+      "confidence_score": 1.0,
       "source": "src_js_weekly_popover_stats",
-      "target": "src_js_weekly_popover_stats_pwupdatecantiere",
-      "confidence_score": 1.0
+      "target": "src_js_weekly_popover_stats_pwupdatecantiere"
     },
     {
       "relation": "contains",
@@ -13922,9 +13922,9 @@
       "source_location": "L175",
       "weight": 1.0,
       "_origin": "ast",
+      "confidence_score": 1.0,
       "source": "src_js_weekly_popover_stats",
-      "target": "src_js_weekly_popover_stats_pwaddcantierefield",
-      "confidence_score": 1.0
+      "target": "src_js_weekly_popover_stats_pwaddcantierefield"
     },
     {
       "relation": "contains",
@@ -13933,9 +13933,9 @@
       "source_location": "L188",
       "weight": 1.0,
       "_origin": "ast",
+      "confidence_score": 1.0,
       "source": "src_js_weekly_popover_stats",
-      "target": "src_js_weekly_popover_stats_pwremovecantierefield",
-      "confidence_score": 1.0
+      "target": "src_js_weekly_popover_stats_pwremovecantierefield"
     },
     {
       "relation": "contains",
@@ -13944,9 +13944,9 @@
       "source_location": "L197",
       "weight": 1.0,
       "_origin": "ast",
+      "confidence_score": 1.0,
       "source": "src_js_weekly_popover_stats",
-      "target": "src_js_weekly_popover_stats_pwupdateopnome",
-      "confidence_score": 1.0
+      "target": "src_js_weekly_popover_stats_pwupdateopnome"
     },
     {
       "relation": "contains",
@@ -13955,9 +13955,9 @@
       "source_location": "L2",
       "weight": 1.0,
       "_origin": "ast",
+      "confidence_score": 1.0,
       "source": "src_js_weekly_popover_stats",
-      "target": "src_js_weekly_popover_stats_pwtogglestatpopover",
-      "confidence_score": 1.0
+      "target": "src_js_weekly_popover_stats_pwtogglestatpopover"
     },
     {
       "relation": "contains",
@@ -13966,9 +13966,9 @@
       "source_location": "L73",
       "weight": 1.0,
       "_origin": "ast",
+      "confidence_score": 1.0,
       "source": "src_js_weekly_popover_stats",
-      "target": "src_js_weekly_popover_stats_pwsearchop",
-      "confidence_score": 1.0
+      "target": "src_js_weekly_popover_stats_pwsearchop"
     },
     {
       "relation": "contains",
@@ -14300,9 +14300,9 @@
       "weight": 1.0,
       "_origin": "ast",
       "context": "argument",
+      "confidence_score": 0.5,
       "source": "src_js_weekly_popover_stats_pwtogglestatpopover",
-      "target": "src_js_weekly_popover_stats_pwtogglestatpopover_renderrow",
-      "confidence_score": 0.5
+      "target": "src_js_weekly_popover_stats_pwtogglestatpopover_renderrow"
     },
     {
       "relation": "indirect_call",
@@ -14310,7 +14310,7 @@
       "confidence": "INFERRED",
       "confidence_score": 0.8,
       "source_file": "src/js/weekly-jira-subtask.js",
-      "source_location": "L323",
+      "source_location": "L336",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_js_weekly_jira_subtask_pwjirasubtaskopencomunimodal_rowhtml",
@@ -14322,7 +14322,7 @@
       "confidence": "INFERRED",
       "confidence_score": 0.8,
       "source_file": "src/js/weekly-jira-subtask.js",
-      "source_location": "L716",
+      "source_location": "L740",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_js_weekly_jira_subtask_pwjirasubtaskrenderpreview",
@@ -15931,5 +15931,5 @@
       "source_file": "index.html"
     }
   ],
-  "built_at_commit": "1e8b5d9f5a7b469d950f68c30789d043cc0674ce"
+  "built_at_commit": "d8647f1f590bbdc478738813df79ee27528facc5"
 }

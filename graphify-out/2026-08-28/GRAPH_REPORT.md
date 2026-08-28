@@ -1,16 +1,16 @@
 # Graph Report - Gestione-Staffing  (2026-08-28)
 
 ## Corpus Check
-- 38 files · ~136,621 words
+- 38 files · ~139,530 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
-- 536 nodes · 751 edges · 70 communities (33 shown, 37 thin omitted)
+- 546 nodes · 772 edges · 70 communities (33 shown, 37 thin omitted)
 - Extraction: 94% EXTRACTED · 6% INFERRED · 0% AMBIGUOUS · INFERRED: 47 edges (avg confidence: 0.84)
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `5bf93af2`
+- Built from commit: `1e8b5d9f`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -85,16 +85,16 @@
 - v18.96.0 - Mappa Squadre colonna raggruppata per commessa
 
 ## God Nodes (most connected - your core abstractions)
-1. `esc()` - 11 edges
-2. `closeModal()` - 10 edges
-3. `Dashboard Staffing (Eagleprojects app)` - 10 edges
-4. `sbOnLoggedIn()` - 9 edges
-5. `pwApplyProduzioneColors()` - 9 edges
-6. `pwJiraSubtaskOpenComuniModal()` - 9 edges
+1. `pwJiraSubtaskOpenComuniModal()` - 12 edges
+2. `esc()` - 11 edges
+3. `closeModal()` - 10 edges
+4. `Dashboard Staffing (Eagleprojects app)` - 10 edges
+5. `sbOnLoggedIn()` - 9 edges
+6. `pwApplyProduzioneColors()` - 9 edges
 7. `pwGeneraMail()` - 8 edges
 8. `pwGetFerieWeek()` - 8 edges
 9. `Atlante Campi Jira (Eagleprojects)` - 8 edges
-10. `sbPull()` - 7 edges
+10. `pwMapRender()` - 7 edges
 
 ## Surprising Connections (you probably didn't know these)
 - `Atlante Campi Jira (Eagleprojects)` --semantically_similar_to--> `Sottotask Jira flow: extra required-fields discovery step`  [INFERRED] [semantically similar]
@@ -154,8 +154,8 @@ Cohesion: 0.16
 Nodes (18): ANNO, distanzaLavorazione(), distanzaProvince(), haversineKm(), INDUSTRIES, INITIAL_DATA, meseCorrente(), MESI (+10 more)
 
 ### Community 8 - "weekly-jira-subtask.js"
-Cohesion: 0.22
-Nodes (17): pwJiraBuildSubtaskItem(), pwJiraCreateSubtasks(), pwJiraFetchEpics(), pwJiraFetchExtraFields(), pwJiraFetchTasks(), pwJiraResolveCognome(), pwJiraSearchPanel(), pwJiraSearchPanelClose() (+9 more)
+Cohesion: 0.14
+Nodes (26): pwJiraBuildSubtaskItem(), pwJiraCreateSubtasks(), pwJiraFetchEpics(), pwJiraFetchExtraFields(), pwJiraFetchTasks(), pwJiraResolveCognome(), pwJiraSearchPanel(), pwJiraSearchPanelClose() (+18 more)
 
 ### Community 9 - "dashboard-operatori.js"
 Cohesion: 0.19
@@ -250,7 +250,7 @@ Nodes (3): Section: CARICA REPORT PRODUZIONE (per squadra), Section: CONTROLLO P
   src/head.html · relation: conceptually_related_to
 
 ## Knowledge Gaps
-- **103 isolated node(s):** `_sbRemoteTs`, `_sbDirty`, `pwData`, `pwDoppiaWeek`, `pwFerie` (+98 more)
+- **103 isolated node(s):** `pwData`, `pwDoppiaWeek`, `pwFerie`, `METEO_FASCE`, `METEO_ICONS` (+98 more)
   These have ≤1 connection - possible missing edges or undocumented components.
 - **37 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
 
@@ -260,12 +260,12 @@ _Questions this graph is uniquely positioned to answer:_
 - **What is the exact relationship between `pwJiraResolveCognome(op)` and `Operator selection modal styles (.op-modal, .op-trigger-btn)`?**
   _Edge tagged AMBIGUOUS (relation: conceptually_related_to) - confidence is low._
 - **Why does `esc()` connect `dashboard-crud-helpers.js` to `weekly-jira-subtask.js`?**
-  _High betweenness centrality (0.004) - this node is a cross-community bridge._
-- **Why does `pwJiraSubtaskOpenComuniModal()` connect `weekly-jira-subtask.js` to `dashboard-crud-helpers.js`?**
-  _High betweenness centrality (0.002) - this node is a cross-community bridge._
-- **Are the 2 inferred relationships involving `esc()` (e.g. with `pwJiraSubtaskOpenComuniModal()` and `pwJiraSubtaskRenderPreview()`) actually correct?**
+  _High betweenness centrality (0.005) - this node is a cross-community bridge._
+- **Why does `pwJiraSubtaskRenderPreview()` connect `weekly-jira-subtask.js` to `dashboard-crud-helpers.js`?**
+  _High betweenness centrality (0.003) - this node is a cross-community bridge._
+- **Are the 2 inferred relationships involving `esc()` (e.g. with `rowHtml()` and `pwJiraSubtaskRenderPreview()`) actually correct?**
   _`esc()` has 2 INFERRED edges - model-reasoned connections that need verification._
-- **What connects `_sbRemoteTs`, `_sbDirty`, `pwData` to the rest of the system?**
+- **What connects `pwData`, `pwDoppiaWeek`, `pwFerie` to the rest of the system?**
   _103 weakly-connected nodes found - possible documentation gaps or missing edges._
 - **Should `weekly-mail-core.js` be split into smaller, more focused modules?**
   _Cohesion score 0.1126984126984127 - nodes in this community are weakly interconnected._
