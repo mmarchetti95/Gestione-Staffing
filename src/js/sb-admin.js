@@ -483,6 +483,12 @@ async function sbPush() {
       if (error) throw error;
       _sbRemoteTs[d.id] = (pushed && pushed.updated_at) ? pushed.updated_at : ts;
       _sbDirty[d.key] = false;
+      // Log attività per Griglia/Ferie/Doppia Week: questi domini non passano da saveState()
+      // (che logga solo le azioni "core"), quindi finora un cambio qui non lasciava traccia
+      // nel Log Attività admin — vedi anche pwAnno/pwWeek, la settimana attualmente aperta.
+      if (d.key === 'planning') sbLogActivity('Modifica Griglia', { anno: pwAnno, week: pwWeek });
+      else if (d.key === 'ferie') sbLogActivity('Modifica Ferie', { anno: pwAnno, week: pwWeek });
+      else if (d.key === 'dw') sbLogActivity('Modifica Doppia Week', { anno: pwAnno, week: pwWeek });
     }
 
     if (conflicting.length > 0) {
