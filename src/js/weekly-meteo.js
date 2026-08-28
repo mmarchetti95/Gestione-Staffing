@@ -57,6 +57,16 @@ function pwMeteoInfoFor(cantiere, dateISO) {
   return { cantiere, code: m.code, tmax: m.tmax, tmin: m.tmin, pop: m.pop, hourly: m.hourly || [] };
 }
 
+/* Motivo per cui pwMeteoInfoFor ha restituito null, per mostrare nel modal un messaggio
+   diagnostico invece del generico "Meteo non disponibile" — utile per distinguere un
+   cantiere non geocodificabile da un servizio meteo momentaneamente irraggiungibile. */
+function pwMeteoMissingReason(cantiere) {
+  const key = cantiere.toLowerCase().trim().replace(/\s+/g, ' ');
+  if (!(key in _geoCache)) return 'Localizzazione in corso…';
+  if (!_geoCache[key]) return 'Località non riconosciuta (geocoding non riuscito)';
+  return 'Servizio meteo momentaneamente non raggiungibile';
+}
+
 /* Sottoinsieme di ore rappresentative (METEO_FASCE) dal dettaglio orario di un cantiere. */
 function pwFasceOrarieFor(info) {
   if (!info || !Array.isArray(info.hourly) || !info.hourly.length) return [];
@@ -111,7 +121,10 @@ async function pwFetchMeteoRange(lat, lon, startISO, endISO) {
     });
     await _meteoCacheSave();
   } catch (e) {
-    // Meteo non essenziale: nessun blocco, semplicemente niente badge per questa località.
+    // Meteo non essenziale: nessun blocco, ma logghiamo per poter diagnosticare
+    // un servizio Open-Meteo irraggiungibile (es. bloccato da proxy/firewall aziendale)
+    // invece di far sparire il badge senza traccia.
+    console.warn('[meteo] fetch Open-Meteo fallita per', lat, lon, e);
   }
 }
 
@@ -184,7 +197,13 @@ function pwWeatherBadgeInnerHtml(cIdx, sIdx, squadra, dayIdx, dateISO) {
   const cantieri = pwSquadraCantieriGiorno(squadra, dayIdx);
   if (!cantieri.length) return '';
   const infos = cantieri.map(c => pwMeteoInfoFor(c, dateISO)).filter(Boolean);
-  if (!infos.length) return '';
+  if (!infos.length) {
+    // Cantieri pianificati ma meteo non ancora disponibile (geocoding/fetch in corso o
+    // falliti): badge segnaposto cliccabile invece di sparire senza lasciare traccia,
+    // il modal spiega il motivo per ciascun cantiere.
+    return `<span class="pw-weather-badge pw-weather-badge-pending" title="Clicca per il dettaglio meteo per fasce orarie"
+      onclick="event.stopPropagation();pwOpenMeteoModal(${cIdx},${sIdx},${dayIdx})">🌡️ …</span>`;
+  }
   const main = infos[0];
   const icon = pwMeteoIconFor(main.code);
   const tempTxt = Math.round(main.tmax) + '°';
@@ -227,7 +246,7 @@ function pwOpenMeteoModal(cIdx, sIdx, dayIdx) {
     if (!info) {
       return `<div class="pw-meteo-modal-block">
         <div class="pw-meteo-modal-cantiere">${esc(cantiere)}</div>
-        <div class="pw-meteo-modal-missing">Meteo non disponibile</div>
+        <div class="pw-meteo-modal-missing">${esc(pwMeteoMissingReason(cantiere))}</div>
       </div>`;
     }
     const fasce = pwFasceOrarieFor(info);
