@@ -1013,7 +1013,7 @@
     <div class="flex items-center gap-2">
       <button id="btn-presentation" class="px-3 py-1.5 text-sm rounded hover:bg-white/10" style="border:1px solid var(--dark-border-strong);color:var(--dark-text);visibility:visible;">📊 Modalità presentazione</button>
       <div class="text-xs pl-2" style="border-left:1px solid var(--dark-border-strong);color:var(--dark-text-muted);">
-        <span id="app-version" class="font-medium" style="color:var(--accent);">v18.109.0</span> · Michele Marchetti
+        <span id="app-version" class="font-medium" style="color:var(--accent);">v18.108.0</span> · Michele Marchetti
       </div>
     </div>
   </div>
@@ -7848,10 +7848,6 @@ function pwFerieSummaryRender(allOps, days, DAY_NAMES, today) {
 async function pwToggleFeria(cb) {
   const nome = cb.dataset.op;
   const day = parseInt(cb.dataset.day);
-  if (!cb.checked) {
-    const ok = await showConfirmAsync(`Rimuovere l'assenza di ${nome}?`, 'Rimuovi');
-    if (!ok) { cb.checked = true; return; }
-  }
   const fw = pwGetFerieWeek();
   if (!fw[nome]) fw[nome] = {};
   fw[nome][day] = cb.checked ? 'ferie' : false;

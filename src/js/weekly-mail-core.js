@@ -854,6 +854,10 @@ function pwFerieSummaryRender(allOps, days, DAY_NAMES, today) {
 async function pwToggleFeria(cb) {
   const nome = cb.dataset.op;
   const day = parseInt(cb.dataset.day);
+  if (!cb.checked) {
+    const ok = await showConfirmAsync(`Rimuovere l'assenza di ${nome}?`, 'Rimuovi');
+    if (!ok) { cb.checked = true; return; }
+  }
   const fw = pwGetFerieWeek();
   if (!fw[nome]) fw[nome] = {};
   fw[nome][day] = cb.checked ? 'ferie' : false;

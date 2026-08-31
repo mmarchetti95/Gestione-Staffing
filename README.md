@@ -1,3 +1,6 @@
+## v18.109.0
+- feat: **Ferie & Permessi — conferma prima di togliere la spunta** — nella Vista Ferie, deselezionare il checkbox di un giorno già assente ora chiede conferma ("Rimuovere l'assenza di [nome]?") prima di eliminare l'assenza, per evitare click accidentali su una griglia densa. Annullando, la spunta resta. Nessuna modifica allo schema Supabase.
+
 ## v18.108.0
 - feat: **Import ferie da Excel — campo di ricerca nell'elenco nominativi non riconosciuti/ambigui** (seguito v18.107.0) — nel modal di conferma pre-import, sopra i riquadri scrollabili "non riconosciuti"/"ambigui", un campo di ricerca filtra dal vivo le righe per nome (contiene, case-insensitive) e mostra "N/tot" trovati, utile per verificare al volo se un nominativo specifico compare tra quelli scartati senza dover scorrere a mano centinaia di righe. Nessuna modifica allo schema Supabase.
 
