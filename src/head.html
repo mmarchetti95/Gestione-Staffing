@@ -870,6 +870,10 @@
   .pw-map-day-btn.active { background: var(--accent); color: white; border-color: var(--accent); }
   .pw-map-day-btn.is-today { border-color: #f59e0b; }
   .pw-map-day-btn.active.is-today { background: #f59e0b; border-color: #f59e0b; }
+  /* Bottone "Tutta la settimana": separato visivamente dai giorni perché non è
+     un giorno ma una vista aggregata sull'intera week. */
+  .pw-map-day-btn.pw-map-week-btn { border-color: #c7d2fe; color: #4f46e5; margin-left: 6px; }
+  .pw-map-day-btn.pw-map-week-btn.active { background: #4f46e5; border-color: #4f46e5; color: white; }
   .pw-squad-card {
     padding: 8px; border-radius: 6px; border: 1px solid #e2e8f0; margin-bottom: 4px;
     cursor: pointer; transition: background .15s, border-color .15s, box-shadow .15s;
@@ -884,6 +888,13 @@
   .pw-squad-card .sq-move { font-size: 10px; color: #d97706; font-weight: 600; margin-top: 2px; }
   .pw-squad-card .sq-same { font-size: 10px; color: #94a3b8; margin-top: 2px; }
   .pw-squad-card .sq-warn { font-size: 10px; color: #ea580c; font-weight: 600; margin-top: 3px; }
+  /* Chip dei giorni, visibili solo nella vista "Tutta la settimana": indicano in
+     quali giorni la squadra/operatore è su quel cantiere. */
+  .pw-squad-card .sq-days { display: flex; flex-wrap: wrap; gap: 3px; margin-top: 4px; }
+  .pw-squad-card .sq-day-chip {
+    font-size: 9px; font-weight: 700; color: #4f46e5; background: #eef2ff;
+    border: 1px solid #c7d2fe; border-radius: 4px; padding: 0 4px; line-height: 14px;
+  }
   .pw-squad-group { margin-bottom: 8px; }
   .pw-squad-group-header {
     display: flex; align-items: center; gap: 6px; cursor: pointer;
@@ -1022,7 +1033,7 @@
     <div class="flex items-center gap-2">
       <button id="btn-presentation" class="px-3 py-1.5 text-sm rounded hover:bg-white/10" style="border:1px solid var(--dark-border-strong);color:var(--dark-text);visibility:visible;">📊 Modalità presentazione</button>
       <div class="text-xs pl-2" style="border-left:1px solid var(--dark-border-strong);color:var(--dark-text-muted);">
-        <span id="app-version" class="font-medium" style="color:var(--accent);">v18.111.0</span> · Michele Marchetti
+        <span id="app-version" class="font-medium" style="color:var(--accent);">v18.112.0</span> · Michele Marchetti
       </div>
     </div>
   </div>
@@ -1448,8 +1459,8 @@
     <div class="bg-white border border-slate-200 rounded-lg p-3 mb-4 no-print">
       <div class="flex items-center gap-2 flex-wrap justify-between">
         <div class="flex items-center gap-2 flex-wrap">
-          <span class="text-xs font-semibold text-slate-600">Giorno:</span>
-          <div id="pw-map-days" class="flex gap-1 flex-wrap"></div>
+          <span class="text-xs font-semibold text-slate-600">Vista:</span>
+          <div id="pw-map-days" class="flex gap-1 flex-wrap items-center"></div>
           <span class="text-xs text-slate-400 ml-2" id="pw-map-geocoding-status"></span>
         </div>
         <div class="flex items-center gap-2 flex-wrap">

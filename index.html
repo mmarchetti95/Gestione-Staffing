@@ -870,6 +870,10 @@
   .pw-map-day-btn.active { background: var(--accent); color: white; border-color: var(--accent); }
   .pw-map-day-btn.is-today { border-color: #f59e0b; }
   .pw-map-day-btn.active.is-today { background: #f59e0b; border-color: #f59e0b; }
+  /* Bottone "Tutta la settimana": separato visivamente dai giorni perché non è
+     un giorno ma una vista aggregata sull'intera week. */
+  .pw-map-day-btn.pw-map-week-btn { border-color: #c7d2fe; color: #4f46e5; margin-left: 6px; }
+  .pw-map-day-btn.pw-map-week-btn.active { background: #4f46e5; border-color: #4f46e5; color: white; }
   .pw-squad-card {
     padding: 8px; border-radius: 6px; border: 1px solid #e2e8f0; margin-bottom: 4px;
     cursor: pointer; transition: background .15s, border-color .15s, box-shadow .15s;
@@ -884,6 +888,13 @@
   .pw-squad-card .sq-move { font-size: 10px; color: #d97706; font-weight: 600; margin-top: 2px; }
   .pw-squad-card .sq-same { font-size: 10px; color: #94a3b8; margin-top: 2px; }
   .pw-squad-card .sq-warn { font-size: 10px; color: #ea580c; font-weight: 600; margin-top: 3px; }
+  /* Chip dei giorni, visibili solo nella vista "Tutta la settimana": indicano in
+     quali giorni la squadra/operatore è su quel cantiere. */
+  .pw-squad-card .sq-days { display: flex; flex-wrap: wrap; gap: 3px; margin-top: 4px; }
+  .pw-squad-card .sq-day-chip {
+    font-size: 9px; font-weight: 700; color: #4f46e5; background: #eef2ff;
+    border: 1px solid #c7d2fe; border-radius: 4px; padding: 0 4px; line-height: 14px;
+  }
   .pw-squad-group { margin-bottom: 8px; }
   .pw-squad-group-header {
     display: flex; align-items: center; gap: 6px; cursor: pointer;
@@ -1022,7 +1033,7 @@
     <div class="flex items-center gap-2">
       <button id="btn-presentation" class="px-3 py-1.5 text-sm rounded hover:bg-white/10" style="border:1px solid var(--dark-border-strong);color:var(--dark-text);visibility:visible;">📊 Modalità presentazione</button>
       <div class="text-xs pl-2" style="border-left:1px solid var(--dark-border-strong);color:var(--dark-text-muted);">
-        <span id="app-version" class="font-medium" style="color:var(--accent);">v18.111.0</span> · Michele Marchetti
+        <span id="app-version" class="font-medium" style="color:var(--accent);">v18.112.0</span> · Michele Marchetti
       </div>
     </div>
   </div>
@@ -1448,8 +1459,8 @@
     <div class="bg-white border border-slate-200 rounded-lg p-3 mb-4 no-print">
       <div class="flex items-center gap-2 flex-wrap justify-between">
         <div class="flex items-center gap-2 flex-wrap">
-          <span class="text-xs font-semibold text-slate-600">Giorno:</span>
-          <div id="pw-map-days" class="flex gap-1 flex-wrap"></div>
+          <span class="text-xs font-semibold text-slate-600">Vista:</span>
+          <div id="pw-map-days" class="flex gap-1 flex-wrap items-center"></div>
           <span class="text-xs text-slate-400 ml-2" id="pw-map-geocoding-status"></span>
         </div>
         <div class="flex items-center gap-2 flex-wrap">
@@ -12488,9 +12499,28 @@ function commessaRegione(nomeCommessa) {
   return meta.regione || (meta.provincia && provinciaInfo(meta.provincia)?.regione) || '';
 }
 
+/* Etichette brevi dei giorni, usate sia dai bottoni vista sia dai chip giorno
+   della vista "Tutta la settimana". */
+const PW_MAP_DAY_SHORT = ['Lun', 'Mar', 'Mer', 'Gio', 'Ven', 'Sab'];
+
+/* dayIdx === PW_MAP_WEEK indica la vista aggregata sull'intera settimana
+   (nessun giorno selezionato) invece del singolo giorno 0..5. */
+const PW_MAP_WEEK = -1;
+
+/* Chip "Lun Mar Gio…" con i giorni in cui la squadra/operatore è su quel cantiere.
+   Reso solo in vista settimana: nella vista giorno l'informazione è implicita. */
+function pwMapGiorniChips(giorni) {
+  if (!giorni || !giorni.length) return '';
+  return '<div class="sq-days">' +
+    giorni.map(d => '<span class="sq-day-chip">' + PW_MAP_DAY_SHORT[d] + '</span>').join('') +
+    '</div>';
+}
+
 /* Costruisce la lista delle squadre attive per il giorno indicato, con relativo
-   cantiere/attività/colore. Condivisa dalla mappa Cantieri e dalla mappa Residenze. */
+   cantiere/attività/colore. Condivisa dalla mappa Cantieri e dalla mappa Residenze.
+   Con dayIdx === PW_MAP_WEEK aggrega l'intera settimana. */
 function pwMapBuildSquadItems(dayIdx) {
+  if (dayIdx === PW_MAP_WEEK) return pwMapBuildSquadItemsWeek();
   const data = pwGetWeekData();
   const items = []; // { commessa, squadra, operatori, cantiere, attivita, cantierePrev, color }
 
@@ -12532,6 +12562,59 @@ function pwMapBuildSquadItems(dayIdx) {
   return items;
 }
 
+/* Variante "Tutta la settimana": stessa forma di item di pwMapBuildSquadItems(),
+   ma una sola voce per (commessa, squadra, cantiere) con l'elenco dei giorni in
+   `giorni`. Lo spostamento giorno-precedente (`cantierePrev`) non ha senso qui:
+   la sequenza dei cantieri della squadra si legge dai chip dei giorni. */
+function pwMapBuildSquadItemsWeek() {
+  const data = pwGetWeekData();
+  const order = [];
+  const byKey = {};
+
+  data.forEach(bc => {
+    if (!bc.commessa) return;
+    const color = _mapColor(bc.commessa);
+    (bc.squadre || []).forEach(sq => {
+      const ops = (sq.operatori || []).filter(o => o.nome && o.nome.trim());
+      const squadra = sq.nome || 'Squadra';
+
+      for (let d = 0; d < 6; d++) {
+        const cantieriGiorno = new Set();
+        const attvGiorno = new Set();
+        ops.forEach(op => {
+          const g = (op.giorni || {})[d] || {};
+          pwCellCantieri(g).forEach(c => cantieriGiorno.add(c));
+          if (g.attivita && g.attivita.trim()) attvGiorno.add(g.attivita.trim());
+        });
+        if (!cantieriGiorno.size) continue;
+
+        cantieriGiorno.forEach(cantiere => {
+          const key = bc.commessa + ' ' + squadra + ' ' + cantiere;
+          if (!byKey[key]) {
+            byKey[key] = {
+              commessa: bc.commessa, squadra, operatori: [], cantiere,
+              _attivita: new Set(), attivita: '', cantierePrev: null, color, giorni: []
+            };
+            order.push(key);
+          }
+          const it = byKey[key];
+          if (!it.giorni.includes(d)) it.giorni.push(d);
+          attvGiorno.forEach(a => it._attivita.add(a));
+          ops.forEach(o => { if (!it.operatori.includes(o.nome)) it.operatori.push(o.nome); });
+        });
+      }
+    });
+  });
+
+  return order.map(k => {
+    const it = byKey[k];
+    it.giorni.sort((a, b) => a - b);
+    it.attivita = [...it._attivita].join(', ');
+    delete it._attivita;
+    return it;
+  });
+}
+
 async function pwMapRender(dayIdx) {
   _mapDay = dayIdx;
   if (!_map || !_mapOp) return;
@@ -12545,7 +12628,6 @@ async function pwMapRender(dayIdx) {
     d.setUTCDate(monday.getUTCDate() + i);
     days.push(d);
   }
-  const DAY_SHORT = ['Lun', 'Mar', 'Mer', 'Gio', 'Ven', 'Sab'];
   const todayStr = new Date().toISOString().slice(0, 10);
 
   /* Aggiorna label settimana */
@@ -12560,8 +12642,9 @@ async function pwMapRender(dayIdx) {
       const isToday = ds === todayStr;
       const active = i === dayIdx ? 'active' : '';
       const today = isToday ? 'is-today' : '';
-      return `<button class="pw-map-day-btn ${active} ${today}" data-di="${i}">${DAY_SHORT[i]} ${formatDate(d)}</button>`;
-    }).join('');
+      return `<button class="pw-map-day-btn ${active} ${today}" data-di="${i}">${PW_MAP_DAY_SHORT[i]} ${formatDate(d)}</button>`;
+    }).join('') +
+      `<button class="pw-map-day-btn pw-map-week-btn ${dayIdx === PW_MAP_WEEK ? 'active' : ''}" data-di="${PW_MAP_WEEK}">📅 Tutta la settimana</button>`;
     daysEl.querySelectorAll('.pw-map-day-btn').forEach(b => {
       b.onclick = () => pwMapRender(parseInt(b.dataset.di));
     });
@@ -12634,6 +12717,7 @@ async function pwMapRenderCantieri(itemsAll, dayIdx) {
       <div style="color:var(--accent);font-weight:600;margin:2px 0;">📍 ${item.cantiere}</div>
       <div style="color:#64748b;font-size:11px;">👷 ${item.operatori.join(', ')}</div>
       ${item.attivita ? `<div style="color:#64748b;font-style:italic;font-size:10px;">${item.attivita}</div>` : ''}
+      ${dayIdx === PW_MAP_WEEK && item.giorni ? `<div style="color:#4f46e5;font-weight:600;font-size:10px;margin-top:2px;">📅 ${item.giorni.map(d => PW_MAP_DAY_SHORT[d]).join(' · ')}</div>` : ''}
       ${missing ? `<div style="color:#ea580c;font-weight:600;font-size:10px;margin-top:3px;">⚠ Luogo non trovato</div>` : ''}
     </div>`;
 
@@ -12652,7 +12736,7 @@ async function pwMapRenderCantieri(itemsAll, dayIdx) {
   if (legendEl) {
     const uniq = [...new Set(items.map(i => i.commessa))];
     if (!uniq.length) {
-      legendEl.innerHTML = '<div class="text-slate-400 italic" style="font-size:11px">Nessuna commessa attiva oggi</div>';
+      legendEl.innerHTML = `<div class="text-slate-400 italic" style="font-size:11px">Nessuna commessa attiva ${dayIdx === PW_MAP_WEEK ? 'questa settimana' : 'oggi'}</div>`;
     } else {
       legendEl.innerHTML = uniq.map(c => `
         <div style="display:flex;align-items:center;gap:6px;font-size:11px;color:#334155;">
@@ -12666,7 +12750,7 @@ async function pwMapRenderCantieri(itemsAll, dayIdx) {
   const sumEl = document.getElementById('pw-map-summary');
   if (sumEl) {
     if (!items.length) {
-      sumEl.innerHTML = '<div class="text-slate-400 italic" style="font-size:11px">Nessuna squadra per questo giorno</div>';
+      sumEl.innerHTML = `<div class="text-slate-400 italic" style="font-size:11px">Nessuna squadra per ${dayIdx === PW_MAP_WEEK ? 'questa settimana' : 'questo giorno'}</div>`;
     } else {
       const groupOrder = [];
       const groups = {};
@@ -12703,7 +12787,7 @@ async function pwMapRenderCantieri(itemsAll, dayIdx) {
             </div>
             <div class="sq-cantiere">📍 ${item.cantiere}</div>
             <div class="sq-ops">👷 ${item.operatori.join(' · ')}</div>
-            ${warnHtml}${moveHtml}
+            ${warnHtml}${moveHtml}${dayIdx === PW_MAP_WEEK ? pwMapGiorniChips(item.giorni) : ''}
           </div>`;
         }).join('');
         return `<div class="pw-squad-group">
@@ -12787,8 +12871,12 @@ async function pwMapFixLuogo(inp) {
 /* ==================== MAPPA RESIDENZE OPERATORI ==================== */
 /* Deriva dagli item-squadra una lista per-operatore con relativa posizione di
    residenza (provincia se nota, altrimenti centroide regione, altrimenti "non trovato") */
-function pwMapBuildOperatorItems(itemsAll) {
+/* Con weekMode = true l'operatore compare una sola volta, con commesse/cantieri
+   della settimana accorpati: la sua residenza è una sola, quindi più marker sullo
+   stesso punto non aggiungerebbero informazione, solo rumore. */
+function pwMapBuildOperatorItems(itemsAll, weekMode) {
   const out = []; // { operatore, commessa, squadra, cantiere, regione, provincia, geo, color }
+  const byOp = {};
   itemsAll.forEach(item => {
     item.operatori.forEach(nome => {
       const op = state.operatori.find(o => (o.nome_esteso || o.nome_breve) === nome);
@@ -12802,17 +12890,44 @@ function pwMapBuildOperatorItems(itemsAll) {
         const c = regioneCentroid(regione);
         if (c) geo = { lat: c.lat, lng: c.lng, label: regione };
       }
-      out.push({
-        operatore: nome, commessa: item.commessa, squadra: item.squadra, cantiere: item.cantiere,
-        regione, provincia: op ? op.provincia : '', geo, color: _mapColorRegione(regione)
-      });
+
+      if (weekMode) {
+        let e = byOp[nome];
+        if (!e) {
+          e = {
+            operatore: nome, commessa: '', squadra: item.squadra, cantiere: '',
+            regione, provincia: op ? op.provincia : '', geo, color: _mapColorRegione(regione),
+            _commesse: [], _cantieri: [], giorni: []
+          };
+          byOp[nome] = e;
+          out.push(e);
+        }
+        if (!e._commesse.includes(item.commessa)) e._commesse.push(item.commessa);
+        if (!e._cantieri.includes(item.cantiere)) e._cantieri.push(item.cantiere);
+        (item.giorni || []).forEach(d => { if (!e.giorni.includes(d)) e.giorni.push(d); });
+      } else {
+        out.push({
+          operatore: nome, commessa: item.commessa, squadra: item.squadra, cantiere: item.cantiere,
+          regione, provincia: op ? op.provincia : '', geo, color: _mapColorRegione(regione)
+        });
+      }
     });
   });
+
+  if (weekMode) {
+    out.forEach(e => {
+      e.giorni.sort((a, b) => a - b);
+      e.commessa = e._commesse.join(', ');
+      e.cantiere = e._cantieri.join(' · ');
+      delete e._commesse;
+      delete e._cantieri;
+    });
+  }
   return out;
 }
 
 async function pwMapRenderResidenze(itemsAll, dayIdx) {
-  const items = pwMapBuildOperatorItems(itemsAll);
+  const items = pwMapBuildOperatorItems(itemsAll, dayIdx === PW_MAP_WEEK);
 
   /* Rimuovi marker precedenti */
   _mapOpMarkers.forEach(m => _mapOp.removeLayer(m));
@@ -12857,6 +12972,7 @@ async function pwMapRenderResidenze(itemsAll, dayIdx) {
       <div style="color:#475569;font-size:11px;">📋 ${esc(item.commessa)} · ${esc(item.squadra)}</div>
       <div style="color:var(--accent);font-weight:600;margin:2px 0;">🏠 ${esc(provinciaLabel)}</div>
       <div style="color:#64748b;font-size:11px;">📍 cantiere: ${esc(item.cantiere)}</div>
+      ${dayIdx === PW_MAP_WEEK && item.giorni ? `<div style="color:#4f46e5;font-weight:600;font-size:10px;margin-top:2px;">📅 ${item.giorni.map(d => PW_MAP_DAY_SHORT[d]).join(' · ')}</div>` : ''}
       ${missing ? `<div style="color:#ea580c;font-weight:600;font-size:10px;margin-top:3px;">⚠ Regione/provincia non impostata</div>` : ''}
     </div>`;
 
@@ -12875,7 +12991,7 @@ async function pwMapRenderResidenze(itemsAll, dayIdx) {
   if (legendEl) {
     const uniq = [...new Set(items.map(i => i.regione))].sort((a,b) => (a||'zzz').localeCompare(b||'zzz'));
     if (!uniq.length) {
-      legendEl.innerHTML = '<div class="text-slate-400 italic" style="font-size:11px">Nessun operatore assegnato oggi</div>';
+      legendEl.innerHTML = `<div class="text-slate-400 italic" style="font-size:11px">Nessun operatore assegnato ${dayIdx === PW_MAP_WEEK ? 'questa settimana' : 'oggi'}</div>`;
     } else {
       legendEl.innerHTML = uniq.map(r => `
         <div style="display:flex;align-items:center;gap:6px;font-size:11px;color:#334155;">
@@ -12889,7 +13005,7 @@ async function pwMapRenderResidenze(itemsAll, dayIdx) {
   const sumEl = document.getElementById('pw-map-op-summary');
   if (sumEl) {
     if (!items.length) {
-      sumEl.innerHTML = '<div class="text-slate-400 italic" style="font-size:11px">Nessun operatore per questo giorno</div>';
+      sumEl.innerHTML = `<div class="text-slate-400 italic" style="font-size:11px">Nessun operatore per ${dayIdx === PW_MAP_WEEK ? 'questa settimana' : 'questo giorno'}</div>`;
     } else {
       const groupOrder = [];
       const groups = {};
@@ -12915,7 +13031,7 @@ async function pwMapRenderResidenze(itemsAll, dayIdx) {
             </div>
             ${provinciaLabel ? `<div class="sq-cantiere">🏠 ${esc(provinciaLabel)}</div>` : ''}
             <div class="sq-ops">📋 ${esc(item.commessa)} · 📍 ${esc(item.cantiere)}</div>
-            ${warnHtml}
+            ${warnHtml}${dayIdx === PW_MAP_WEEK ? pwMapGiorniChips(item.giorni) : ''}
           </div>`;
         }).join('');
         return `<div class="pw-squad-group">
