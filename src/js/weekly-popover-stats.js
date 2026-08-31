@@ -22,8 +22,14 @@ function pwToggleStatPopover(key, cardEl) {
   function renderRow(it) {
     const tags = (it.commesse || []).map(c =>
       `<span class="psp-tag ${cfg.cls}" title="${c}">${c}</span>`).join('');
-    const giorni = (it.giorni || []).map(g =>
-      `<span class="psp-tag rosso">${g}</span>`).join('');
+    const giorni = (it.giorni || []).map(g => {
+      // it.giorni per la card "In ferie o permesso" porta {label, tipo}; per compatibilità
+      // con eventuali altri chiamanti futuri, se arriva ancora una stringa la tratto come 'ferie'.
+      const label = (typeof g === 'object') ? g.label : g;
+      const tipo  = (typeof g === 'object') ? g.tipo : 'ferie';
+      const cls   = tipo === 'non_disponibile' ? 'viola' : 'rosso';
+      return `<span class="psp-tag ${cls}">${esc(label)}</span>`;
+    }).join('');
     const extra = tags || giorni;
     return `<div class="psp-row">
       <span class="psp-nome">${esc(it.nome)}</span>

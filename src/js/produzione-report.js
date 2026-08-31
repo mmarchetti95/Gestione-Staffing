@@ -114,7 +114,7 @@ function cpGetSquadraOpsByDay(commessa, squadra) {
           const opG = op.giorni && op.giorni[g] ? op.giorni[g] : {};
           const cantieri = pwCellCantieri(opG);
           if (cantieri.length === 0) return;
-          if (fw[op.nome] && fw[op.nome][g] === true) return;
+          if (fw[op.nome] && pwFerieTipo(fw[op.nome][g])) return;
           ops.push({ nome: op.nome, cantiere: cantieri.join(', '), attivita: opG.attivita || '' });
         });
         if (ops.length > 0) perDay[g] = ops;
@@ -443,8 +443,8 @@ function pwControlloExportPDF() {
           const opG = op.giorni && op.giorni[g] ? op.giorni[g] : {};
           const cant = pwCellCantieri(opG).join(', ');
           if (cant) anyCantiereByDay[g].add(op.nome);
-          const isFerie = fw[op.nome] && fw[op.nome][g] === true;
-          if (!cant || isFerie) return; // righa normale solo se cantiere e non ferie
+          const isFerie = fw[op.nome] && !!pwFerieTipo(fw[op.nome][g]);
+          if (!cant || isFerie) return; // righa normale solo se cantiere e non ferie/non disponibile
           const k = `${bc.commessa}|||${sqNome}|||${op.nome}|||${g}`;
           const saved = _cpData[k] || {};
           const tickets = Array.isArray(saved.jira_tickets) ? saved.jira_tickets : [];
@@ -476,13 +476,15 @@ function pwControlloExportPDF() {
           const opG = op.giorni && op.giorni[g] ? op.giorni[g] : {};
           const cant = pwCellCantieri(opG).join(', ');
           const att  = (opG.attivita || '').trim();
-          const isFerie = fw[op.nome] && fw[op.nome][g] === true;
+          const tipoFerie = fw[op.nome] ? pwFerieTipo(fw[op.nome][g]) : null;
+          const isFerie = !!tipoFerie;
           if (cant) return;                              // questa cella ha cantiere -> non speciale
           if (anyCantiereByDay[g].has(op.nome)) return;  // ha cantiere altrove quel giorno
           if (!isFerie && !att) return;                  // niente da mostrare
           if (specialSeen[g].has(op.nome)) return;       // dedup per operatore/giorno
           specialSeen[g].add(op.nome);
-          const altre = isFerie ? ('🌴 Ferie' + (att ? ' · ' + att : '')) : att;
+          const etichettaFerie = tipoFerie === 'non_disponibile' ? '🚫 Non disponibile' : '🌴 Ferie';
+          const altre = isFerie ? (etichettaFerie + (att ? ' · ' + att : '')) : att;
           rowsByDay[g].push({
             operatore: op.nome,
             cantiere:  '—',

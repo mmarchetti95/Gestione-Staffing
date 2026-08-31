@@ -530,7 +530,6 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    gap: 5px;
     border-right: 1px solid #e2e8f0;
     padding: 4px;
     min-width: 100px;
@@ -544,37 +543,11 @@
     accent-color: #e11d48;
     border-radius: 4px;
   }
-  /* Badge ore/descrizione importate da Excel (weekly-ferie-import.js) */
-  .pw-ferie-badge {
-    font-size: 9px; font-weight: 700; line-height: 1;
-    padding: 2px 5px; border-radius: 9999px;
-    background: #fecdd3; color: #9f1239; border: none;
-    cursor: pointer; white-space: nowrap;
-  }
-  .pw-ferie-badge:hover { background: #fda4af; }
   .pw-ferie-cell.assente {
     background: #fee2e2;
   }
   .pw-ferie-cell.assente.sabato {
     background: #ffd6c4;
-  }
-  /* Tipo "Non disponibile" (malattia, indisponibilità a trasferta...): stessa logica di
-     blocco assegnazione di "Ferie" ma colore distinto (viola) per riconoscerlo a colpo
-     d'occhio — impostabile solo a mano col click destro, vedi pwFerieCellCtxMenu(). */
-  .pw-ferie-cell.assente.non-disponibile {
-    background: #ede9fe;
-  }
-  .pw-ferie-cell.assente.non-disponibile.sabato {
-    background: #ddd6fe;
-  }
-  .pw-ferie-cell.non-disponibile .pw-ferie-cb {
-    accent-color: #7c3aed;
-  }
-  /* Origine "importata da Excel" (weekly-ferie-import.js): barra colorata sempre visibile,
-     indipendente dal tipo, per distinguere a colpo d'occhio le assenze importate da quelle
-     inserite a mano (che non hanno questa barra). */
-  .pw-ferie-cell.importata {
-    box-shadow: inset 3px 0 0 #0891b2;
   }
 
   /* Badge stato operatore */
@@ -589,7 +562,6 @@
     letter-spacing: .3px;
   }
   .op-stato-badge.ferie    { background: #fee2e2; color: #991b1b; border: 1px solid #fca5a5; }
-  .op-stato-badge.non_disponibile { background: #ede9fe; color: #5b21b6; border: 1px solid #c4b5fd; }
   .op-stato-badge.assegnato{ background: #fef9c3; color: #854d0e; border: 1px solid #fde047; }
   .op-stato-badge.libero   { background: #dcfce7; color: #166534; border: 1px solid #86efac; }
 
@@ -684,7 +656,6 @@
   .op-modal-item.stato-libero    { background: #f0fdf4; color: #166534; }
   .op-modal-item.stato-assegnato { background: #fefce8; color: #854d0e; }
   .op-modal-item.stato-ferie     { background: #fff1f2; color: #991b1b; }
-  .op-modal-item.stato-non_disponibile { background: #f5f3ff; color: #5b21b6; }
   .op-modal-item.stato-nessuno   { background: #f8fafc; color: #64748b; font-style: italic; }
   .op-modal-dot {
     width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0;
@@ -692,7 +663,6 @@
   .op-modal-dot.stato-libero    { background: #22c55e; }
   .op-modal-dot.stato-assegnato { background: #eab308; }
   .op-modal-dot.stato-ferie     { background: #ef4444; }
-  .op-modal-dot.stato-non_disponibile { background: #7c3aed; }
   .op-modal-dot.stato-nessuno   { background: #cbd5e1; }
   .op-modal-tag {
     margin-left: auto; flex-shrink: 0;
@@ -702,7 +672,6 @@
   .op-modal-tag.stato-libero    { background: #dcfce7; color: #166534; }
   .op-modal-tag.stato-assegnato { background: #fef9c3; color: #854d0e; }
   .op-modal-tag.stato-ferie     { background: #fee2e2; color: #991b1b; }
-  .op-modal-tag.stato-non_disponibile { background: #ede9fe; color: #5b21b6; }
   .op-modal-legend {
     display: flex; gap: 12px; padding: 8px 14px;
     border-top: 1px solid #e2e8f0;
@@ -724,7 +693,6 @@
   .op-trigger-btn.stato-libero    { background: #dcfce7; color: #166534; border-color: #86efac; }
   .op-trigger-btn.stato-assegnato { background: #fef9c3; color: #854d0e; border-color: #fde047; }
   .op-trigger-btn.stato-ferie     { background: #fee2e2; color: #991b1b; border-color: #fca5a5; }
-  .op-trigger-btn.stato-non_disponibile { background: #ede9fe; color: #5b21b6; border-color: #c4b5fd; }
   .op-trigger-label { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .op-trigger-geo { font-size: 9px; opacity: .6; margin-left: 4px; white-space: nowrap; flex-shrink: 0; }
   .op-trigger-arrow { font-size: 8px; margin-left: 4px; opacity: .5; flex-shrink: 0; }
@@ -777,7 +745,6 @@
   .psp-tag.verde  { background:#f0fdf4; color:#16a34a; }
   .psp-tag.rosso  { background:#fff1f2; color:#dc2626; }
   .psp-tag.giallo { background:#fefce8; color:#ca8a04; }
-  .psp-tag.viola  { background:#f5f3ff; color:#7c3aed; }
   /* ---- Controllo Produzione ---- */
   .cp-table { width:100%; border-collapse:collapse; font-size:11px; }
   .cp-table th { background:var(--accent-dark); color:#fff; font-weight:700; padding:5px 6px; text-align:left; white-space:normal; line-height:1.25; position:sticky; top:0; z-index:2; }
@@ -817,31 +784,6 @@
   .pw-day-cell.in-ferie .pw-cantiere-input::placeholder,
   .pw-day-cell.in-ferie .pw-attivita-input::placeholder {
     color: #fda4af;
-  }
-  /* Variante "Non disponibile" (malattia, indisponibile a trasferta...): stesso trattamento
-     di "in-ferie" ma colore viola, per distinguerla a colpo d'occhio anche nella Griglia
-     principale (non solo nella Vista Ferie), coerente con pwFerieTipo(). */
-  .pw-day-cell.non-disponibile {
-    background: #f5f3ff !important;
-    position: relative;
-  }
-  .pw-day-cell.non-disponibile::after {
-    content: '🚫';
-    position: absolute;
-    top: 2px; right: 3px;
-    font-size: 10px;
-    pointer-events: none;
-    opacity: .75;
-  }
-  .pw-day-cell.non-disponibile .pw-cantiere-input,
-  .pw-day-cell.non-disponibile .pw-attivita-input {
-    background: #f5f3ff;
-    color: #5b21b6;
-    font-style: italic;
-  }
-  .pw-day-cell.non-disponibile .pw-cantiere-input::placeholder,
-  .pw-day-cell.non-disponibile .pw-attivita-input::placeholder {
-    color: #c4b5fd;
   }
 
   /* ===== CELLE CON PRODUZIONE GIA' INSERITA (Controllo Produzione) ===== */
@@ -1013,7 +955,7 @@
     <div class="flex items-center gap-2">
       <button id="btn-presentation" class="px-3 py-1.5 text-sm rounded hover:bg-white/10" style="border:1px solid var(--dark-border-strong);color:var(--dark-text);visibility:visible;">📊 Modalità presentazione</button>
       <div class="text-xs pl-2" style="border-left:1px solid var(--dark-border-strong);color:var(--dark-text-muted);">
-        <span id="app-version" class="font-medium" style="color:var(--accent);">v18.108.0</span> · Michele Marchetti
+        <span id="app-version" class="font-medium" style="color:var(--accent);">v18.103.0</span> · Michele Marchetti
       </div>
     </div>
   </div>
@@ -1382,19 +1324,7 @@
           <span class="font-semibold" style="font-family:var(--font-display);">🏖 Ferie &amp; Permessi</span>
           <span class="ml-3 text-rose-200 text-sm" id="pw-ferie-week-label"></span>
         </div>
-        <div class="flex items-center gap-3">
-          <button id="pw-ferie-import-btn" class="px-3 py-1.5 text-sm bg-white/10 hover:bg-white/20 border border-white/30 rounded text-white no-print whitespace-nowrap"
-            onclick="document.getElementById('pw-ferie-import-file').click()"
-            title="Importa da Excel l'export ferie/permessi (colonne: Dipendente, descrizione, dataintervento, Somma di durata)">📥 Importa Excel</button>
-          <input type="file" id="pw-ferie-import-file" accept=".xlsx" class="hidden" onchange="pwFerieImportPick(this)">
-        </div>
-      </div>
-      <div class="px-4 py-2 bg-rose-50 border-b border-rose-100 flex flex-wrap items-center gap-x-4 gap-y-1 text-[11px] text-slate-600 no-print">
-        <span class="flex items-center gap-1.5"><span class="inline-block w-3 h-3 rounded" style="background:#fee2e2;border:1px solid #fca5a5;"></span>Ferie</span>
-        <span class="flex items-center gap-1.5"><span class="inline-block w-3 h-3 rounded" style="background:#ede9fe;border:1px solid #c4b5fd;"></span>Non disponibile</span>
-        <span class="flex items-center gap-1.5"><span class="inline-block w-3 h-3 rounded" style="background:#fff;border:1px solid #e2e8f0;box-shadow:inset 3px 0 0 #0891b2;"></span>Importato da Excel</span>
-        <span class="text-slate-400">·</span>
-        <span>Click sul checkbox = Ferie · <b>click destro</b> sulla cella = scegli il tipo o rimuovi l'assenza</span>
+        <div class="text-xs text-rose-200">Spunta i giorni di assenza per ogni operatore</div>
       </div>
       <div class="overflow-x-auto">
         <div id="pw-ferie-grid"></div>
@@ -2060,10 +1990,6 @@ async function sbPull() {
       pwFerie = rows[SB_ROW_FERIE].payload.pw_ferie;
       sbSetLocal('pw_ferie', pwFerie);
     }
-    if (rows[SB_ROW_FERIE] && rows[SB_ROW_FERIE].payload && rows[SB_ROW_FERIE].payload.pw_ferie_dettagli) {
-      pwFerieDettagli = rows[SB_ROW_FERIE].payload.pw_ferie_dettagli;
-      sbSetLocal('pw_ferie_dettagli', pwFerieDettagli);
-    }
     // Applica doppia week (stesso motivo di planning/ferie: senza sbSetLocal, un reload
     // prima che sbPull() finisca mostrerebbe doppia-week vuota invece dell'ultima copia nota)
     if (rows[SB_ROW_DW] && rows[SB_ROW_DW].payload && rows[SB_ROW_DW].payload.pw_doppia_week) {
@@ -2113,7 +2039,7 @@ async function sbPush() {
       domains.push({ id: SB_ROW_PLANNING, payload: { pw_data: pwData, _savedBy: _sbUser.email }, key: 'planning' });
     }
     if (_sbDirty.ferie) {
-      domains.push({ id: SB_ROW_FERIE, payload: { pw_ferie: pwFerie, pw_ferie_dettagli: pwFerieDettagli, _savedBy: _sbUser.email }, key: 'ferie' });
+      domains.push({ id: SB_ROW_FERIE, payload: { pw_ferie: pwFerie, _savedBy: _sbUser.email }, key: 'ferie' });
     }
     if (_sbDirty.dw) {
       domains.push({ id: SB_ROW_DW, payload: { pw_doppia_week: pwDoppiaWeek, _savedBy: _sbUser.email }, key: 'dw' });
@@ -3944,7 +3870,7 @@ function calcolaConfrontoCommessa(commessaNome, meseIdx) {
             if (d.getUTCFullYear() !== ANNO || d.getUTCMonth() !== meseIdx) continue; // giorno fuori dal mese target (settimana a cavallo)
             const opG = (op.giorni && op.giorni[g]) || {};
             if (pwCellCantieri(opG).length === 0) continue;
-            const inFerie = !!(pwFerie[wa] && pwFerie[wa][ww] && pwFerie[wa][ww][nome] && pwFerieTipo(pwFerie[wa][ww][nome][g]));
+            const inFerie = pwFerie[wa] && pwFerie[wa][ww] && pwFerie[wa][ww][nome] && pwFerie[wa][ww][nome][g] === true;
             if (inFerie) continue;
             effettivo[nome] = (effettivo[nome] || 0) + 1;
           }
@@ -3994,7 +3920,7 @@ function calcolaImpegniEffettiviAnnoOperatore(nomeOperatore) {
               if (d.getUTCFullYear() !== ANNO || d.getUTCMonth() !== meseIdx) continue;
               const opG = (op.giorni && op.giorni[g]) || {};
               if (!opG.cantiere || !opG.cantiere.trim()) continue;
-              const inFerie = !!(pwFerie[wa] && pwFerie[wa][ww] && pwFerie[wa][ww][nome] && pwFerieTipo(pwFerie[wa][ww][nome][g]));
+              const inFerie = pwFerie[wa] && pwFerie[wa][ww] && pwFerie[wa][ww][nome] && pwFerie[wa][ww][nome][g] === true;
               if (inFerie) continue;
               if (!perCommessa[bc.commessa]) perCommessa[bc.commessa] = new Array(12).fill(0);
               perCommessa[bc.commessa][meseIdx] += 1;
@@ -7282,18 +7208,16 @@ function pwGeneraMail() {
     const righeF = [];
     Object.entries(fw).forEach(([nome, giorni]) => {
       const giorniAssenti = Object.entries(giorni)
-        .filter(([, v]) => pwFerieTipo(v))
+        .filter(([, v]) => v === true)
         .map(([di]) => parseInt(di));
       if (giorniAssenti.length === 0) return;
-      const tuttiFerie = giorniAssenti.every(di => pwFerieTipo(giorni[di]) === 'ferie');
-      if (giorniAssenti.length === 6 && tuttiFerie) {
+      if (giorniAssenti.length === 6) {
         righeF.push(`• ${nome} → tutta la settimana`);
       } else {
         const etichette = giorniAssenti.map(di => {
           const d = new Date(monday);
           d.setUTCDate(monday.getUTCDate() + di);
-          const tag = pwFerieTipo(giorni[di]) === 'non_disponibile' ? ' (non disponibile)' : '';
-          return `${DAY_NAMES_FERIE[di]} ${formatDate(d)}${tag}`;
+          return `${DAY_NAMES_FERIE[di]} ${formatDate(d)}`;
         });
         righeF.push(`• ${nome} → ${etichette.join(', ')}`);
       }
@@ -7387,16 +7311,10 @@ function pwGeneraMail() {
     const testo = document.getElementById('mail-testo').value;
     try { await navigator.clipboard.writeText(testo); } catch(e) {}
 
-    // Solo operatori attivi/registrati in Anagrafica (esclude licenziati/scaduti e nomi
-    // non corrispondenti a un operatore reale) possono finire in copia conoscenza, sia che
-    // provengano dalla Griglia sia dalla lista Ferie.
-    const nomiAttivi = new Set();
     const emailByNome = {};
-    getOperatoriAttivi().forEach(o => {
+    (state.operatori || []).forEach(o => {
       const n = o.nome_esteso || o.nome_breve || o.nome;
-      if (!n) return;
-      nomiAttivi.add(n);
-      if (o.email && o.email.trim()) emailByNome[n] = o.email.trim();
+      if (n && o.email && o.email.trim()) emailByNome[n] = o.email.trim();
     });
     const nomiSettimana = new Set();
     data.forEach(bc => {
@@ -7405,15 +7323,13 @@ function pwGeneraMail() {
         if (op.nome && op.nome.trim()) nomiSettimana.add(op.nome.trim());
       }));
     });
-    // Operatori in ferie/permesso/non disponibili questa settimana: inclusi tra i destinatari
+    // Operatori in ferie/permesso questa settimana: inclusi anche loro tra i destinatari
     Object.entries(pwGetFerieWeek()).forEach(([nome, giorni]) => {
-      if (nome && nome.trim() && Object.values(giorni).some(v => pwFerieTipo(v))) nomiSettimana.add(nome.trim());
+      if (nome && nome.trim() && Object.values(giorni).some(v => v === true)) nomiSettimana.add(nome.trim());
     });
     const senzaEmail = [];
-    const nonAttivi = [];
     const emailDipendenti = [];
     nomiSettimana.forEach(n => {
-      if (!nomiAttivi.has(n)) { nonAttivi.push(n); return; }
       if (emailByNome[n]) emailDipendenti.push(emailByNome[n]);
       else senzaEmail.push(n);
     });
@@ -7455,13 +7371,10 @@ function pwGeneraMail() {
     a.click();
     a.remove();
 
-    if (senzaEmail.length > 0 || nonAttivi.length > 0 || commesseSenzaRef.length > 0) {
+    if (senzaEmail.length > 0 || commesseSenzaRef.length > 0) {
       let warn = 'Testo copiato negli appunti (incollalo nel corpo della mail).';
       if (senzaEmail.length > 0) {
         warn += `\n\n⚠ ${senzaEmail.length} operatore/i senza email assegnata, non inclusi in copia conoscenza: ${senzaEmail.join(', ')}.`;
-      }
-      if (nonAttivi.length > 0) {
-        warn += `\n\n⚠ ${nonAttivi.length} nome/i in Griglia/Ferie non corrispondenti a un operatore attivo in Anagrafica, non inclusi in copia conoscenza: ${nonAttivi.join(', ')}.`;
       }
       if (commesseSenzaRef.length > 0) {
         warn += `\n\n⚠ Referente tecnico non impostato per: ${commesseSenzaRef.join(', ')} (Dashboard → Commesse attive → Modifica). Non incluso in copia conoscenza.`;
@@ -7556,26 +7469,8 @@ function pwCellCantieriRaw(g) {
 }
 
 /* ----- Stato ferie ----- */
-// Struttura: pwFerie[anno][week][nomeOperatore] = { 0: tipo, 1: tipo, ..., 5: tipo }
-// dove tipo è 'ferie' | 'non_disponibile' (assente, blocca l'assegnazione in Griglia esattamente
-// come 'ferie') oppure false/assente (disponibile). Le settimane salvate prima di questa
-// versione hanno ancora `true` booleano puro per i giorni di ferie: si legge sempre tramite
-// pwFerieTipo()/troth-check (mai `=== true`), che tratta `true` come equivalente a 'ferie'.
+// Struttura: pwFerie[anno][week][nomeOperatore] = { 0: bool, 1: bool, ..., 5: bool }
 let pwFerie = {};
-
-// Normalizza il valore di una cella pwFerie in un tipo canonico, gestendo la retrocompatibilità
-// col vecchio formato booleano. Ritorna null se il giorno non è segnato come assente.
-function pwFerieTipo(v) {
-  if (v === true || v === 'ferie') return 'ferie';
-  if (v === 'non_disponibile') return 'non_disponibile';
-  return null;
-}
-
-// Dettaglio ferie/permessi importato da Excel (ore + descrizione), a corredo del flag
-// booleano pwFerie: pwFerieDettagli[anno][week][nomeOperatore][giorno] = [{ ore, descrizione }, ...]
-// (array perché nello stesso giorno possono coesistere più voci, es. permesso + ferie).
-// Vive nello stesso dominio di sync di pwFerie (row "ferie"), vedi pwFerieSave/pwFerieLoad.
-let pwFerieDettagli = {};
 
 // Doppia week (Opzione 1, a blocco): pwDoppiaWeek[anno][week][nomeOperatore] = true
 // significa che un blocco doppia-week INIZIA in (anno, week) e copre week e week+1.
@@ -7589,11 +7484,11 @@ function pwWeekAdd(anno, week, delta) {
   return { anno: y, week: w };
 }
 
-// True se l'operatore ha almeno un giorno di ferie/non disponibilità nella settimana indicata
+// True se l'operatore ha almeno un giorno di ferie nella settimana indicata
 function pwHasFeriaWeek(anno, week, nome) {
   const wk = pwFerie[anno] && pwFerie[anno][week] ? pwFerie[anno][week][nome] : null;
   if (!wk) return false;
-  for (let i = 0; i < 6; i++) if (wk[i]) return true;
+  for (let i = 0; i < 6; i++) if (wk[i] === true) return true;
   return false;
 }
 
@@ -7640,7 +7535,6 @@ function pwMonthWeeks(anno, mese) {
 
 async function pwFerieLoad() {
   try { const r = await sget('pw_ferie'); if (r) pwFerie = r; } catch(e) { pwFerie = {}; }
-  try { const r = await sget('pw_ferie_dettagli'); if (r) pwFerieDettagli = r; } catch(e) { pwFerieDettagli = {}; }
 }
 
 async function pwDwLoad() {
@@ -7650,20 +7544,11 @@ async function pwDwLoad() {
 async function pwFerieSave() {
   _sbDirty.ferie = true;
   try { await sset('pw_ferie', pwFerie); } catch(e) { console.warn('pwFerieSave error', e); }
-  try { await sset('pw_ferie_dettagli', pwFerieDettagli); } catch(e) { console.warn('pwFerieSave dettagli error', e); }
   // Push immediato su Supabase con debounce breve (500ms) per evitare perdita dati al refresh
   if (typeof _sbUser !== 'undefined' && _sbUser) {
     clearTimeout(_sbPwPushTimer);
     _sbPwPushTimer = setTimeout(() => sbPush(), 500);
   }
-}
-
-// Ritorna (creandolo se serve) l'array di dettagli [{ore, descrizione}] per operatore/giorno
-// nella settimana correntemente aperta (pwAnno/pwWeek).
-function pwGetFerieDettagliWeek() {
-  if (!pwFerieDettagli[pwAnno]) pwFerieDettagli[pwAnno] = {};
-  if (!pwFerieDettagli[pwAnno][pwWeek]) pwFerieDettagli[pwAnno][pwWeek] = {};
-  return pwFerieDettagli[pwAnno][pwWeek];
 }
 
 function pwGetFerieWeek() {
@@ -7672,12 +7557,12 @@ function pwGetFerieWeek() {
   return pwFerie[pwAnno][pwWeek];
 }
 
-/* Restituisce true se l'operatore è in ferie/non disponibile almeno un giorno della settimana corrente */
+/* Restituisce true se l'operatore è in ferie almeno un giorno della settimana corrente */
 function pwIsInFerie(nomeOp) {
   const fw = pwGetFerieWeek();
   const days = fw[nomeOp];
   if (!days) return false;
-  return Object.values(days).some(v => !!pwFerieTipo(v));
+  return Object.values(days).some(v => v === true);
 }
 
 /* Restituisce true se l'operatore è già assegnato in qualsiasi commessa/squadra/cella
@@ -7703,30 +7588,11 @@ function pwIsGiaAssegnato(nomeOp, excludeCidx, excludeSidx, excludeOidx) {
   return false;
 }
 
-// Tipo di assenza prevalente dell'operatore nella settimana corrente, per badge/status: se
-// anche un solo giorno è 'non_disponibile' lo segnala come tale (più specifico e rilevante
-// da vedere in fase di assegnazione di quanto lo sia il generico 'ferie'), altrimenti 'ferie'
-// se presente, altrimenti null. Non distingue i singoli giorni: per quello si legge la cella
-// pwFerie del giorno specifico (vedi pwFerieTipo() nella Griglia).
-function pwFerieTipoWeek(nomeOp) {
-  const fw = pwGetFerieWeek();
-  const days = fw[nomeOp];
-  if (!days) return null;
-  let hasFerie = false;
-  for (const v of Object.values(days)) {
-    const t = pwFerieTipo(v);
-    if (t === 'non_disponibile') return 'non_disponibile';
-    if (t === 'ferie') hasFerie = true;
-  }
-  return hasFerie ? 'ferie' : null;
-}
-
-/* Calcola stato operatore: 'ferie' | 'non_disponibile' | 'assegnato' | 'libero'
+/* Calcola stato operatore: 'ferie' | 'assegnato' | 'libero'
    excludeCidx/excludeSidx/excludeOidx = cella corrente, esclusa dal check assegnato */
 function pwStatoOperatore(nomeOp, excludeCidx, excludeSidx, excludeOidx) {
   if (!nomeOp || !nomeOp.trim()) return 'libero';
-  const tipo = pwFerieTipoWeek(nomeOp);
-  if (tipo) return tipo;
+  if (pwIsInFerie(nomeOp)) return 'ferie';
   if (pwIsGiaAssegnato(nomeOp, excludeCidx, excludeSidx, excludeOidx)) return 'assegnato';
   return 'libero';
 }
@@ -7769,29 +7635,19 @@ function pwFerieRender() {
   </div>`;
 
   // Righe operatori
-  const dw = pwGetFerieDettagliWeek();
   allOps.forEach(nome => {
     const row = (fw[nome] || {});
-    const allSet = [0,1,2,3,4,5].every(i => !!row[i]);
-    const dettRow = dw[nome] || {};
+    const allSet = [0,1,2,3,4,5].every(i => row[i] === true);
     html += `<div class="pw-ferie-row" style="grid-template-columns:${cols};">
       <div class="pw-ferie-op-cell">${nome}</div>
       ${days.map((d, i) => {
-        const tipo = pwFerieTipo(row[i]);
-        const checked = !!tipo;
+        const checked = row[i] === true;
         const isSab = i === 5;
-        const dett = checked ? dettRow[i] : null;
-        const importata = !!(dett && dett.length > 0);
-        const badge = importata ? pwFerieDettaglioBadge(nome, i, dett) : '';
-        const cls = ['pw-ferie-cell', isSab ? 'sabato' : '', checked ? 'assente' : '',
-          tipo === 'non_disponibile' ? 'non-disponibile' : '', importata ? 'importata' : ''].filter(Boolean).join(' ');
-        return `<div class="${cls}" oncontextmenu="return pwFerieCellCtxMenu(event, '${jsAttr(nome)}', ${i})"
-            title="${importata ? '' : (tipo ? 'Click destro per cambiare tipo assenza' : '')}">
+        return `<div class="pw-ferie-cell ${isSab ? 'sabato' : ''} ${checked ? 'assente' : ''}">
           <input type="checkbox" class="pw-ferie-cb"
             data-op="${nome.replace(/"/g, '&quot;')}" data-day="${i}"
             ${checked ? 'checked' : ''}
             onchange="pwToggleFeria(this)">
-          ${badge}
         </div>`;
       }).join('')}
       <div class="pw-ferie-cell" style="padding:2px 6px;">
@@ -7821,7 +7677,7 @@ function pwFerieSummaryRender(allOps, days, DAY_NAMES, today) {
     const ds = d.toISOString().slice(0, 10);
     const isSab = i === 5;
     const isTod = ds === today;
-    const inFerie = allOps.filter(nome => pwFerieTipo((fw[nome] || {})[i]));
+    const inFerie = allOps.filter(nome => (fw[nome] || {})[i] === true);
     const disponibili = allOps.length - inFerie.length;
     const borderColor = isTod ? '#f59e0b' : isSab ? '#fb923c' : '#e2e8f0';
     html += `<div style="border:1px solid ${borderColor};border-radius:8px;padding:10px 8px;text-align:center;background:${isTod ? '#fef9c7' : isSab ? '#fff7ed' : '#f8fafc'}">
@@ -7842,28 +7698,17 @@ function pwFerieSummaryRender(allOps, days, DAY_NAMES, today) {
   sumEl.innerHTML = html;
 }
 
-// Toggle rapido (checkbox, click sinistro): spunta = tipo 'ferie', deseleziona = libero.
-// Per scegliere "Non disponibile" (o rimuovere l'assenza lasciando la spunta) si usa il
-// click destro sulla cella, vedi pwFerieCellCtxMenu()/pwSetFeriaTipo().
 async function pwToggleFeria(cb) {
   const nome = cb.dataset.op;
   const day = parseInt(cb.dataset.day);
   const fw = pwGetFerieWeek();
   if (!fw[nome]) fw[nome] = {};
-  fw[nome][day] = cb.checked ? 'ferie' : false;
-  // Se l'assenza viene tolta a mano, il dettaglio ore/descrizione importato da Excel
-  // (se presente) non ha più senso: lo scarto per non mostrare un badge "fantasma".
-  const dw = pwGetFerieDettagliWeek();
-  if (!cb.checked && dw[nome]) delete dw[nome][day];
-  // Aggiorna classi/badge della cella senza re-render completo della griglia (194 righe)
+  fw[nome][day] = cb.checked;
+  // Aggiorna sfondo cella
   const cell = cb.closest('.pw-ferie-cell');
   if (cell) {
-    cell.classList.toggle('assente', cb.checked);
-    // Il checkbox imposta sempre 'ferie' senza dettaglio: eventuali classi/badge residui
-    // di uno stato precedente (non disponibile, importato) non sono più validi.
-    cell.classList.remove('non-disponibile', 'importata');
-    const badgeEl = cell.querySelector('.pw-ferie-badge');
-    if (badgeEl) badgeEl.remove();
+    if (cb.checked) cell.classList.add('assente');
+    else cell.classList.remove('assente');
   }
   await pwFerieSave();
   // Aggiorna summary senza re-render completo
@@ -7880,41 +7725,8 @@ async function pwToggleFeria(cb) {
 async function pwFerieToggleWeek(nome) {
   const fw = pwGetFerieWeek();
   if (!fw[nome]) fw[nome] = {};
-  const allSet = [0,1,2,3,4,5].every(i => !!fw[nome][i]);
-  for (let i = 0; i < 6; i++) fw[nome][i] = allSet ? false : 'ferie'; // se tutta piena -> svuota, altrimenti riempi di 'ferie'
-  // Come pwToggleFeria: svuotando la settimana si scartano anche i dettagli importati.
-  if (allSet) {
-    const dw = pwGetFerieDettagliWeek();
-    delete dw[nome];
-  }
-  await pwFerieSave();
-  pwFerieRender();
-}
-
-/* ----- Click destro su una cella Ferie: scelta del tipo di assenza -----
-   Coerente con il pattern già usato in Griglia (weekly-clipboard-cantiere.js): click
-   sinistro/checkbox resta il toggle rapido "Ferie", click destro apre un mini-menu per
-   scegliere esplicitamente "Ferie" / "Non disponibile" o rimuovere l'assenza. */
-function pwFerieCellCtxMenu(ev, nome, day) {
-  ev.preventDefault();
-  const fw = pwGetFerieWeek();
-  const tipoAttuale = pwFerieTipo((fw[nome] || {})[day]);
-  _pwShowCtxMenu(ev.clientX, ev.clientY, [
-    { label: (tipoAttuale === 'ferie' ? '✓ ' : '') + '🏖 Ferie', onClick: () => pwSetFeriaTipo(nome, day, 'ferie') },
-    { label: (tipoAttuale === 'non_disponibile' ? '✓ ' : '') + '🚫 Non disponibile', onClick: () => pwSetFeriaTipo(nome, day, 'non_disponibile') },
-    { label: '✕ Rimuovi assenza', disabled: !tipoAttuale, onClick: () => pwSetFeriaTipo(nome, day, null) },
-  ]);
-  return false;
-}
-
-async function pwSetFeriaTipo(nome, day, tipo) {
-  const fw = pwGetFerieWeek();
-  if (!fw[nome]) fw[nome] = {};
-  fw[nome][day] = tipo || false;
-  if (!tipo) {
-    const dw = pwGetFerieDettagliWeek();
-    if (dw[nome]) delete dw[nome][day];
-  }
+  const allSet = [0,1,2,3,4,5].every(i => fw[nome][i] === true);
+  for (let i = 0; i < 6; i++) fw[nome][i] = !allSet; // se tutta piena -> svuota, altrimenti riempi
   await pwFerieSave();
   pwFerieRender();
 }
@@ -8002,336 +7814,6 @@ function pwGetOperatoriPerCommessa(commessaNome) {
   return [...nomi].sort();
 }
 
-/* ===== IMPORT FERIE/PERMESSI DA EXCEL ===== */
-// Importa un export "ORE NON LAVORATE" (pivot Dipendente x giorno x descrizione, tipicamente
-// generato dal gestionale presenze) e popola pwFerie (flag booleano per operatore/giorno,
-// usato ovunque nell'app per capire chi è disponibile) + pwFerieDettagli (ore e descrizione
-// del tipo di assenza, mostrati come badge/tooltip nella Vista Ferie).
-// Copre TUTTE le settimane presenti nel file, non solo quella aperta in griglia.
-
-const PW_FERIE_MESI = {
-  gennaio: 0, febbraio: 1, marzo: 2, aprile: 3, maggio: 4, giugno: 5,
-  luglio: 6, agosto: 7, settembre: 8, ottobre: 9, novembre: 10, dicembre: 11,
-};
-
-const PW_FERIE_ACCENTI = { 'à':'a', 'á':'a', 'è':'e', 'é':'e', 'ì':'i', 'í':'i', 'ò':'o', 'ó':'o', 'ù':'u', 'ú':'u' };
-
-function pwFerieNormTokens(s) {
-  return (s || '')
-    .toString()
-    .toLowerCase()
-    .replace(/[àáèéìíòóùú]/g, ch => PW_FERIE_ACCENTI[ch] || ch)
-    // Il gestionale presenze traslittera i nomi con vocale accentata finale in ASCII +
-    // apostrofo (es. "Nicolò" -> "Nicolo'", "Calò" -> "Calo'"): rimuovendo l'apostrofo
-    // il token torna identico a quello ottenuto dal nome_esteso con l'accento vero.
-    .replace(/['’]/g, '')
-    .replace(/[_,.]/g, ' ')
-    .split(/\s+/)
-    .filter(Boolean);
-}
-
-// Abbina il nome "Dipendente" dell'export (spesso "Cognome Nome", a volte con refusi tipo
-// underscore/spazi doppi) al nome_esteso di un operatore attivo, confrontando gli insiemi di
-// parole così da non dipendere dall'ordine Nome/Cognome usato nell'anagrafica operatori.
-function pwFerieMatchOperatore(nomeExcel, operatori) {
-  const tokEx = pwFerieNormTokens(nomeExcel);
-  if (tokEx.length === 0) return { match: null, ambiguous: false };
-  const setEx = new Set(tokEx);
-
-  const exact = operatori.filter(op => {
-    const tokOp = pwFerieNormTokens(op.nome_esteso || op.nome);
-    return tokOp.length === setEx.size && tokOp.every(t => setEx.has(t));
-  });
-  if (exact.length === 1) return { match: exact[0], ambiguous: false };
-  if (exact.length > 1) return { match: null, ambiguous: true, candidates: exact };
-
-  // Fallback: un insieme di parole è incluso nell'altro (nomi composti/parziali)
-  const partial = operatori.filter(op => {
-    const tokOp = new Set(pwFerieNormTokens(op.nome_esteso || op.nome));
-    return tokEx.every(t => tokOp.has(t)) || [...tokOp].every(t => setEx.has(t));
-  });
-  if (partial.length === 1) return { match: partial[0], ambiguous: false };
-  if (partial.length > 1) return { match: null, ambiguous: true, candidates: partial };
-
-  return { match: null, ambiguous: false };
-}
-
-// Handler onchange dell'<input type=file>: estrae il file e resetta subito il campo per
-// permettere di riselezionare lo stesso file (es. dopo aver corretto un'anagrafica) senza
-// che il browser ignori il change perché il value non è cambiato.
-function pwFerieImportPick(inputEl) {
-  const file = inputEl.files && inputEl.files[0];
-  inputEl.value = '';
-  if (file) pwFerieImportFile(file);
-}
-
-// Riepilogo pre-import in un modal dedicato (invece di showConfirmAsync): un file con molti
-// nominativi non riconosciuti — normale, capita spesso di importare l'intero elenco dipendenti
-// anche di chi non è del reparto — produceva un testo lunghissimo dentro il modal generico
-// (senza scroll interno), che finiva per uscire dallo schermo. Qui il corpo scorre e i due
-// elenchi nominativi (non riconosciuti/ambigui) hanno ciascuno un riquadro con scrollbar
-// propria, un nome per riga, invece di una singola riga di testo con la virgola.
-function pwFerieImportShowConfirm({ fileName, righeLette, batchLength, nOpCoinvolti, nSettimane, righeDomenica, righeSenzaData, unmatched, ambiguous }) {
-  return new Promise(resolve => {
-    const root = document.getElementById('modal-root');
-
-    function listBox(map, title, colorClass) {
-      if (map.size === 0) return '';
-      const righe = [...map.entries()].sort((a, b) => a[0].localeCompare(b[0]));
-      const items = righe.map(([nome, extra]) => {
-        const nota = Array.isArray(extra)
-          ? ` <span class="text-slate-400">(${extra.map(esc).join(', ')})</span>` // ambigui: candidati
-          : (extra > 1 ? ` <span class="text-slate-400">×${extra}</span>` : '');   // non riconosciuti: n. righe
-        return `<div class="pfi-row px-2 py-1 border-b border-slate-100 last:border-b-0" data-nome="${esc(nome.toLowerCase())}">${esc(nome)}${nota}</div>`;
-      }).join('');
-      return `
-        <div class="mt-3">
-          <div class="text-xs font-semibold ${colorClass} mb-1">⚠ ${map.size} ${title}</div>
-          <div class="border border-slate-200 rounded text-xs" style="max-height:160px;overflow-y:auto;">${items}</div>
-        </div>`;
-    }
-
-    const nNomiTotali = unmatched.size + ambiguous.size;
-    const html = `
-      <div class="modal-backdrop">
-        <div class="bg-white rounded-lg shadow-xl w-full max-w-lg mx-4 flex flex-col" style="max-height:85vh;">
-          <div class="px-5 py-4 border-b border-slate-100">
-            <div class="font-semibold text-slate-900 text-sm">Importazione ferie/permessi</div>
-            <div class="text-xs text-slate-500 mt-0.5">${esc(fileName)}</div>
-          </div>
-          <div class="px-5 py-4 text-sm text-slate-700" style="overflow-y:auto;">
-            <ul class="text-xs space-y-1 text-slate-600">
-              <li>• ${righeLette} righe lette dal file</li>
-              <li>• <b>${batchLength}</b> giorni di assenza applicabili, per <b>${nOpCoinvolti}</b> operatori, su ${nSettimane} settiman${nSettimane === 1 ? 'a' : 'e'}</li>
-              ${righeDomenica > 0 ? `<li>• ${righeDomenica} righe ignorate (domenica, non gestita nella griglia Ferie)</li>` : ''}
-              ${righeSenzaData > 0 ? `<li>• ${righeSenzaData} righe ignorate (data non valida)</li>` : ''}
-            </ul>
-            ${nNomiTotali > 0 ? `
-            <div class="relative mt-3">
-              <input type="text" id="pfi-search" placeholder="Cerca un nominativo nell'elenco qui sotto…"
-                class="w-full text-xs border border-slate-300 rounded px-2 py-1.5 pr-16 focus:outline-none focus:border-teal-400"
-                oninput="pwFerieImportFilter(this.value)">
-              <span id="pfi-search-count" class="absolute right-2 top-1/2 -translate-y-1/2 text-[10px] text-slate-400"></span>
-            </div>` : ''}
-            ${listBox(unmatched, 'nominativi NON riconosciuti (righe saltate)', 'text-amber-700')}
-            ${listBox(ambiguous, 'nominativi ambigui, più operatori corrispondenti (righe saltate)', 'text-amber-700')}
-            <div class="text-xs text-slate-500 mt-3">Per gli operatori riconosciuti verranno spuntati i giorni di assenza indicati nel file (i giorni già segnati manualmente e non presenti nel file restano invariati).</div>
-          </div>
-          <div class="px-5 py-3 border-t border-slate-100 flex justify-end gap-2">
-            <button id="pfi-cancel" class="px-3 py-1.5 text-sm border border-slate-300 rounded hover:bg-slate-50">Annulla</button>
-            <button id="pfi-confirm" class="px-3 py-1.5 text-sm bg-teal-600 text-white rounded hover:bg-teal-700">Importa</button>
-          </div>
-        </div>
-      </div>`;
-
-    root.innerHTML = html;
-    document.getElementById('pfi-cancel').onclick = () => { closeModal(); resolve(false); };
-    document.getElementById('pfi-confirm').onclick = () => { closeModal(); resolve(true); };
-    root.querySelector('.modal-backdrop').addEventListener('click', e => { if (e.target.classList.contains('modal-backdrop')) { closeModal(); resolve(false); } });
-  });
-}
-
-// Filtra dal vivo le righe degli elenchi "non riconosciuti"/"ambigui" del modal di conferma
-// import — utile per verificare al volo se un nominativo specifico compare tra quelli
-// scartati, senza dover scorrere a mano centinaia di righe (es. import dell'intero elenco
-// dipendenti aziendale, di cui solo una parte è del reparto).
-function pwFerieImportFilter(query) {
-  const q = (query || '').trim().toLowerCase();
-  const rows = document.querySelectorAll('#modal-root .pfi-row');
-  let shown = 0;
-  rows.forEach(row => {
-    const match = !q || row.dataset.nome.includes(q);
-    row.classList.toggle('hidden', !match);
-    if (match) shown++;
-  });
-  const countEl = document.getElementById('pfi-search-count');
-  if (countEl) countEl.textContent = q ? `${shown}/${rows.length}` : '';
-}
-
-async function pwFerieImportFile(file) {
-  if (typeof XLSX === 'undefined') { showAlertModal('Libreria XLSX non caricata. Verifica la connessione internet e ricarica la pagina.'); return; }
-
-  let rows;
-  try {
-    const buf = await file.arrayBuffer();
-    const wb = XLSX.read(buf, { type: 'array' });
-    const ws = wb.Sheets[wb.SheetNames[0]];
-    rows = XLSX.utils.sheet_to_json(ws, { header: 1, defval: null, raw: true });
-  } catch (err) {
-    showAlertModal('Errore nella lettura del file:\n\n' + err.message);
-    return;
-  }
-
-  // L'header vero e proprio non è detto sia in riga 1: il file ha spesso una riga
-  // "Filtri applicati: ..." e una vuota prima della tabella dati. Lo cerco per contenuto.
-  let headerIdx = -1;
-  for (let i = 0; i < Math.min(10, rows.length); i++) {
-    const r = rows[i] || [];
-    if (r.some(c => ('' + (c || '')).trim().toLowerCase() === 'dipendente')) { headerIdx = i; break; }
-  }
-  if (headerIdx < 0) { showAlertModal('Colonna "Dipendente" non trovata nel file.\n\nVerifica che sia l\'export corretto (ore non lavorate/ferie).'); return; }
-
-  const header = rows[headerIdx].map(h => ('' + (h || '')).trim().toLowerCase());
-  const col = name => header.indexOf(name.toLowerCase());
-  const iDip = col('Dipendente');
-  const iCommessa = col('commessa');
-  const iDescr = col('descrizione');
-  const iAnno = col('dataintervento - Anno');
-  const iMese = col('dataintervento - Mese');
-  const iGiorno = col('dataintervento - Giorno');
-  const iDurata = col('Somma di durata');
-  if (iDip < 0 || iAnno < 0 || iMese < 0 || iGiorno < 0) {
-    showAlertModal('Colonne attese non trovate ("Dipendente", "dataintervento - Anno/Mese/Giorno").');
-    return;
-  }
-
-  const operatori = getOperatoriAttivi();
-  const unmatched = new Map();  // nome excel -> n. righe
-  const ambiguous = new Map();  // nome excel -> nomi candidati
-  let righeLette = 0, righeDomenica = 0, righeSenzaData = 0;
-  const batch = []; // { nome, anno, week, day, ore, descrizione }
-  const settimaneCoinvolte = new Set();
-
-  for (let r = headerIdx + 1; r < rows.length; r++) {
-    const row = rows[r];
-    if (!row || !row[iDip]) continue;
-    // Filtro difensivo: importiamo solo righe di "ore non lavorate" (ferie/permessi/104/
-    // congedi/chiusura aziendale...), non voci di produzione — se la colonna "commessa" è
-    // presente e non lo indica, la riga viene saltata.
-    if (iCommessa >= 0 && row[iCommessa] && !/non lavorat/i.test('' + row[iCommessa])) continue;
-
-    righeLette++;
-    const nomeExcel = ('' + row[iDip]).trim();
-    const anno = parseInt(row[iAnno], 10);
-    const meseNome = ('' + (row[iMese] || '')).trim().toLowerCase();
-    const meseIdx = PW_FERIE_MESI[meseNome];
-    const giorno = parseInt(row[iGiorno], 10);
-    if (!anno || meseIdx === undefined || !giorno) { righeSenzaData++; continue; }
-
-    const data = new Date(Date.UTC(anno, meseIdx, giorno));
-    const dow = data.getUTCDay(); // 0 = domenica
-    if (dow === 0) { righeDomenica++; continue; }
-    const day = dow - 1; // Lun=0 ... Sab=5, come nella griglia Ferie
-
-    const { match, ambiguous: isAmbig, candidates } = pwFerieMatchOperatore(nomeExcel, operatori);
-    if (!match) {
-      if (isAmbig) ambiguous.set(nomeExcel, (candidates || []).map(c => c.nome_esteso || c.nome));
-      else unmatched.set(nomeExcel, (unmatched.get(nomeExcel) || 0) + 1);
-      continue;
-    }
-
-    const { week, year } = isoWeekYear(data);
-    const nome = match.nome_esteso || match.nome;
-    const ore = Number(row[iDurata]) || 0;
-    const descrizione = (iDescr >= 0 && row[iDescr]) ? ('' + row[iDescr]).trim() : '';
-
-    batch.push({ nome, anno: year, week, day, ore, descrizione });
-    settimaneCoinvolte.add(year + '-W' + week);
-  }
-
-  if (batch.length === 0) {
-    let msg = 'Nessuna riga applicabile trovata nel file.';
-    if (unmatched.size > 0) {
-      const nomi = [...unmatched.keys()].sort();
-      const preview = nomi.slice(0, 20).join(', ') + (nomi.length > 20 ? `, … e altri ${nomi.length - 20}` : '');
-      msg += `\n\n${unmatched.size} nominativi non riconosciuti:\n` + preview;
-    }
-    showAlertModal(msg);
-    return;
-  }
-
-  const nOpCoinvolti = new Set(batch.map(b => b.nome)).size;
-  const ok = await pwFerieImportShowConfirm({
-    fileName: file.name, righeLette, batchLength: batch.length, nOpCoinvolti,
-    nSettimane: settimaneCoinvolte.size, righeDomenica, righeSenzaData, unmatched, ambiguous,
-  });
-  if (!ok) return;
-
-  // Rimpiazza (invece di accodare) il dettaglio delle celle toccate in QUESTA importazione,
-  // così un reimport dello stesso file (o di un file corretto) non raddoppia ore/descrizioni;
-  // celle non toccate da questo file restano invece invariate.
-  const celleReimportate = new Set();
-  batch.forEach(({ nome, anno, week, day, ore, descrizione }) => {
-    if (!pwFerie[anno]) pwFerie[anno] = {};
-    if (!pwFerie[anno][week]) pwFerie[anno][week] = {};
-    if (!pwFerie[anno][week][nome]) pwFerie[anno][week][nome] = {};
-    pwFerie[anno][week][nome][day] = 'ferie'; // il tipo "Non disponibile" è una scelta solo manuale (click destro)
-
-    if (!pwFerieDettagli[anno]) pwFerieDettagli[anno] = {};
-    if (!pwFerieDettagli[anno][week]) pwFerieDettagli[anno][week] = {};
-    if (!pwFerieDettagli[anno][week][nome]) pwFerieDettagli[anno][week][nome] = {};
-    const cellKey = anno + '|' + week + '|' + nome + '|' + day;
-    if (!celleReimportate.has(cellKey)) {
-      celleReimportate.add(cellKey);
-      pwFerieDettagli[anno][week][nome][day] = [];
-    }
-    pwFerieDettagli[anno][week][nome][day].push({ ore, descrizione });
-  });
-
-  await pwFerieSave();
-  if (typeof _pwActiveTab !== 'undefined' && _pwActiveTab === 'ferie') pwFerieRender();
-
-  showAlertModal(`✓ Importazione completata: ${batch.length} giorni di assenza applicati su ${settimaneCoinvolte.size} settiman${settimaneCoinvolte.size === 1 ? 'a' : 'e'}.`);
-}
-
-/* ----- Badge/popover dettaglio (ore + descrizione) nella cella Ferie ----- */
-function pwFerieDettaglioBadge(nome, day, dett) {
-  const totOre = dett.reduce((s, d) => s + (Number(d.ore) || 0), 0);
-  const tip = dett.map(d => `${d.descrizione || '—'}${d.ore ? ' (' + d.ore + 'h)' : ''}`).join(' · ');
-  return `<button type="button" class="pw-ferie-badge" title="${esc(tip)}"
-    onclick="event.stopPropagation(); pwFerieDettaglioPopover('${jsAttr(nome)}', ${day}, this)">${esc(String(totOre))}h</button>`;
-}
-
-function pwFerieDettaglioPopover(nome, day, btnEl) {
-  const existing = document.getElementById('pw-ferie-dett-popover');
-  const key = nome + '|' + day;
-  if (existing) {
-    const sameKey = existing.dataset.key === key;
-    existing.remove();
-    if (sameKey) return; // click sullo stesso badge già aperto → chiudi e basta
-  }
-
-  const dw = pwGetFerieDettagliWeek();
-  const dett = (dw[nome] && dw[nome][day]) || [];
-  const DAY_NAMES_FULL = ['Lunedì', 'Martedì', 'Mercoledì', 'Giovedì', 'Venerdì', 'Sabato'];
-
-  const rect = btnEl.getBoundingClientRect();
-  const pop = document.createElement('div');
-  pop.id = 'pw-ferie-dett-popover';
-  pop.className = 'pw-popover';
-  pop.dataset.key = key;
-  pop.style.cssText = [
-    'position:fixed',
-    `top:${rect.bottom + 6}px`,
-    `left:${Math.min(rect.left, window.innerWidth - 330)}px`,
-    'z-index:9999',
-  ].join(';');
-
-  const totOre = dett.reduce((s, d) => s + (Number(d.ore) || 0), 0);
-  pop.innerHTML = `
-    <div class="pw-popover-header">
-      <span class="pw-popover-title">${esc(nome)} · ${DAY_NAMES_FULL[day] || ''}</span>
-      <span class="pw-popover-count">${esc(String(totOre))}h</span>
-    </div>
-    <div class="pw-popover-body">
-      ${dett.length === 0 ? '<div class="pw-popover-empty">Nessun dettaglio</div>' : dett.map(d => `
-        <div class="psp-row">
-          <span class="psp-nome">${esc(d.descrizione || '—')}</span>
-          <span class="psp-tags"><span class="psp-tag rosso">${esc(String(d.ore || 0))}h</span></span>
-        </div>`).join('')}
-    </div>`;
-
-  document.body.appendChild(pop);
-
-  setTimeout(() => {
-    document.addEventListener('click', function _pfdClose(e) {
-      if (!pop.contains(e.target) && e.target !== btnEl) {
-        pop.remove();
-        document.removeEventListener('click', _pfdClose);
-      }
-    });
-  }, 0);
-}
 /* ===== MODAL SELEZIONE OPERATORE ===== */
 
 function pwOpenOpModal(cidx, sidx, oidx) {
@@ -8460,17 +7942,14 @@ function pwOpenOpModal(cidx, sidx, oidx) {
 
     // Ordina per precedenza: prima i liberi e già assegnati alla commessa (staffing del
     // mese), poi i liberi ma non assegnati alla commessa (per vicinanza alla zona di
-    // lavorazione), poi gli assegnati altrove questa settimana, poi chi e' in ferie,
-    // infine chi e' non disponibile (malattia/indisponibile a trasferta: meno "recuperabile"
-    // di una ferie pianificata, quindi in fondo); in generale, ordine alfabetico come
-    // criterio finale.
+    // lavorazione), poi gli assegnati altrove questa settimana, infine chi e' in ferie;
+    // in generale, ordine alfabetico come criterio finale.
     const distanzaDi = nome => distanzaLavorazione(regioneCommessa, provinciaCommessa, opByNome[nome]?.provincia, opByNome[nome]?.regione);
     const rangoDi = nome => {
       const stato = pwStatoOperatore(nome, cidx, sidx, oidx);
       if (stato === 'libero') return fromStaffing.has(nome) ? 0 : 1;
       if (stato === 'assegnato') return 2;
-      if (stato === 'ferie') return 3;
-      return 4; // non_disponibile
+      return 3; // ferie
     };
     const ordinati = [...filtrati].sort((a, b) => {
       const dRango = rangoDi(a) - rangoDi(b);
@@ -8486,9 +7965,7 @@ function pwOpenOpModal(cidx, sidx, oidx) {
 
     ordinati.forEach(nome => {
       const stato     = pwStatoOperatore(nome, cidx, sidx, oidx);
-      const tagLabel  = stato === 'ferie' ? 'FERIE'
-        : stato === 'non_disponibile' ? 'NON DISP.'
-        : stato === 'assegnato' ? 'ASSEGNATO' : 'LIBERO';
+      const tagLabel  = stato === 'ferie' ? 'FERIE' : stato === 'assegnato' ? 'ASSEGNATO' : 'LIBERO';
       const inCommessa = fromStaffing.has(nome);
       const provInfo = provinciaInfo(opByNome[nome]?.provincia);
       const geoLabel = provInfo ? provInfo.nome : operatoreRegione(opByNome[nome]);
@@ -8516,8 +7993,7 @@ function pwOpenOpModal(cidx, sidx, oidx) {
   legend.innerHTML = `
     <div class="op-modal-legend-item"><div class="op-modal-dot stato-libero"></div> Libero</div>
     <div class="op-modal-legend-item"><div class="op-modal-dot stato-assegnato"></div> Assegnato altrove</div>
-    <div class="op-modal-legend-item"><div class="op-modal-dot stato-ferie"></div> In ferie</div>
-    <div class="op-modal-legend-item"><div class="op-modal-dot stato-non_disponibile"></div> Non disponibile</div>`;
+    <div class="op-modal-legend-item"><div class="op-modal-dot stato-ferie"></div> In ferie</div>`;
   modal.appendChild(legend);
 
   backdrop.appendChild(modal);
@@ -8687,10 +8163,9 @@ function pwRender() {
           const cantiereList = cantieriArr.length ? cantieriArr : [''];
           const attivita = (giorni[dKey] || {}).attivita || '';
           const isSab    = di === 5;
-          const tipoGiorno = pwFerieTipo(opFerie[di]);
-          const isInFerie = !!tipoGiorno;
-          const ferieClass = tipoGiorno === 'non_disponibile' ? ' non-disponibile' : tipoGiorno === 'ferie' ? ' in-ferie' : '';
-          const cantierePlaceholder = tipoGiorno === 'non_disponibile' ? '🚫 non disponibile' : tipoGiorno === 'ferie' ? '🏖 ferie' : 'cantiere…';
+          const isInFerie = opFerie[di] === true;
+          const ferieClass = isInFerie ? ' in-ferie' : '';
+          const cantierePlaceholder = isInFerie ? '🏖 ferie' : 'cantiere…';
           const attivitaPlaceholder = isInFerie ? '' : 'attività (facolt.)';
           const cantiereRowsHtml = cantiereList.map((c, ci) => `
             <div class="pw-cantiere-row">
@@ -8720,7 +8195,6 @@ function pwRender() {
         // Stato operatore corrente (con esclusione della sola cella corrente)
         const statoAttuale = op.nome ? pwStatoOperatore(op.nome, cIdx, sIdx, oIdx) : '';
         const badgeLabel = statoAttuale === 'ferie' ? 'FERIE'
-          : statoAttuale === 'non_disponibile' ? 'NON DISPONIBILE'
           : statoAttuale === 'assegnato' ? 'ASSEGNATO'
           : op.nome ? 'LIBERO' : '';
         const badgeHtml = op.nome
@@ -8860,15 +8334,12 @@ function pwRenderStats() {
   const fw     = pwGetFerieWeek();
   const allOps = getOperatoriAttivi().map(o => o.nome_esteso || o.nome).filter(Boolean);
 
-  // Operatori in ferie/non disponibili (almeno 1 giorno) + giorni (con tipo, per il popover)
+  // Operatori in ferie (almeno 1 giorno) + giorni
   const DAY_ABBR = ['Lun','Mar','Mer','Gio','Ven','Sab'];
   const inFerie     = new Set();
   const ferieGiorni = {};
   Object.entries(fw).forEach(([nome, giorni]) => {
-    const gg = Object.entries(giorni)
-      .map(([k, v]) => ({ k, tipo: pwFerieTipo(v) }))
-      .filter(g => g.tipo)
-      .map(g => ({ label: DAY_ABBR[parseInt(g.k)] || g.k, tipo: g.tipo }));
+    const gg = Object.entries(giorni).filter(([,v]) => v === true).map(([k]) => DAY_ABBR[parseInt(k)] || k);
     if (gg.length) { inFerie.add(nome); ferieGiorni[nome] = gg; }
   });
 
@@ -8947,14 +8418,8 @@ function pwToggleStatPopover(key, cardEl) {
   function renderRow(it) {
     const tags = (it.commesse || []).map(c =>
       `<span class="psp-tag ${cfg.cls}" title="${c}">${c}</span>`).join('');
-    const giorni = (it.giorni || []).map(g => {
-      // it.giorni per la card "In ferie o permesso" porta {label, tipo}; per compatibilità
-      // con eventuali altri chiamanti futuri, se arriva ancora una stringa la tratto come 'ferie'.
-      const label = (typeof g === 'object') ? g.label : g;
-      const tipo  = (typeof g === 'object') ? g.tipo : 'ferie';
-      const cls   = tipo === 'non_disponibile' ? 'viola' : 'rosso';
-      return `<span class="psp-tag ${cls}">${esc(label)}</span>`;
-    }).join('');
+    const giorni = (it.giorni || []).map(g =>
+      `<span class="psp-tag rosso">${g}</span>`).join('');
     const extra = tags || giorni;
     return `<div class="psp-row">
       <span class="psp-nome">${esc(it.nome)}</span>
@@ -10978,7 +10443,7 @@ function pwControlloRender() {
           const cantieri = pwCellCantieri(opG);
           if (cantieri.length === 0) return;
           const fw = pwGetFerieWeek();
-          if (fw[op.nome] && pwFerieTipo(fw[op.nome][g])) return;
+          if (fw[op.nome] && fw[op.nome][g] === true) return;
           ops.push({ nome: op.nome, cantiere: cantieri.join(', '), attivita: opG.attivita || '' });
         });
         if (ops.length > 0) giorni.push({ giornoIdx: g, ops });
@@ -11214,7 +10679,7 @@ async function pwControlloSyncJira(scopeCommessa, scopeSquadra, btnEl) {
             const opG = op.giorni && op.giorni[g] ? op.giorni[g] : {};
             const cantieri = pwCellCantieri(opG);
             if (cantieri.length === 0) return;
-            if (fw[op.nome] && pwFerieTipo(fw[op.nome][g])) return;
+            if (fw[op.nome] && fw[op.nome][g] === true) return;
             cells.push({
               commessa: bc.commessa, squadra: sqNome, operatore: op.nome, giorno: g,
               dataISO: isoDates[g], cantiere: cantieri.join(', '), attivita: opG.attivita || '',
@@ -11799,7 +11264,7 @@ function cpGetSquadraOpsByDay(commessa, squadra) {
           const opG = op.giorni && op.giorni[g] ? op.giorni[g] : {};
           const cantieri = pwCellCantieri(opG);
           if (cantieri.length === 0) return;
-          if (fw[op.nome] && pwFerieTipo(fw[op.nome][g])) return;
+          if (fw[op.nome] && fw[op.nome][g] === true) return;
           ops.push({ nome: op.nome, cantiere: cantieri.join(', '), attivita: opG.attivita || '' });
         });
         if (ops.length > 0) perDay[g] = ops;
@@ -12128,8 +11593,8 @@ function pwControlloExportPDF() {
           const opG = op.giorni && op.giorni[g] ? op.giorni[g] : {};
           const cant = pwCellCantieri(opG).join(', ');
           if (cant) anyCantiereByDay[g].add(op.nome);
-          const isFerie = fw[op.nome] && !!pwFerieTipo(fw[op.nome][g]);
-          if (!cant || isFerie) return; // righa normale solo se cantiere e non ferie/non disponibile
+          const isFerie = fw[op.nome] && fw[op.nome][g] === true;
+          if (!cant || isFerie) return; // righa normale solo se cantiere e non ferie
           const k = `${bc.commessa}|||${sqNome}|||${op.nome}|||${g}`;
           const saved = _cpData[k] || {};
           const tickets = Array.isArray(saved.jira_tickets) ? saved.jira_tickets : [];
@@ -12161,15 +11626,13 @@ function pwControlloExportPDF() {
           const opG = op.giorni && op.giorni[g] ? op.giorni[g] : {};
           const cant = pwCellCantieri(opG).join(', ');
           const att  = (opG.attivita || '').trim();
-          const tipoFerie = fw[op.nome] ? pwFerieTipo(fw[op.nome][g]) : null;
-          const isFerie = !!tipoFerie;
+          const isFerie = fw[op.nome] && fw[op.nome][g] === true;
           if (cant) return;                              // questa cella ha cantiere -> non speciale
           if (anyCantiereByDay[g].has(op.nome)) return;  // ha cantiere altrove quel giorno
           if (!isFerie && !att) return;                  // niente da mostrare
           if (specialSeen[g].has(op.nome)) return;       // dedup per operatore/giorno
           specialSeen[g].add(op.nome);
-          const etichettaFerie = tipoFerie === 'non_disponibile' ? '🚫 Non disponibile' : '🌴 Ferie';
-          const altre = isFerie ? (etichettaFerie + (att ? ' · ' + att : '')) : att;
+          const altre = isFerie ? ('🌴 Ferie' + (att ? ' · ' + att : '')) : att;
           rowsByDay[g].push({
             operatore: op.nome,
             cantiere:  '—',

@@ -182,7 +182,7 @@ function pwControlloRender() {
           const cantieri = pwCellCantieri(opG);
           if (cantieri.length === 0) return;
           const fw = pwGetFerieWeek();
-          if (fw[op.nome] && fw[op.nome][g] === true) return;
+          if (fw[op.nome] && pwFerieTipo(fw[op.nome][g])) return;
           ops.push({ nome: op.nome, cantiere: cantieri.join(', '), attivita: opG.attivita || '' });
         });
         if (ops.length > 0) giorni.push({ giornoIdx: g, ops });
@@ -418,7 +418,7 @@ async function pwControlloSyncJira(scopeCommessa, scopeSquadra, btnEl) {
             const opG = op.giorni && op.giorni[g] ? op.giorni[g] : {};
             const cantieri = pwCellCantieri(opG);
             if (cantieri.length === 0) return;
-            if (fw[op.nome] && fw[op.nome][g] === true) return;
+            if (fw[op.nome] && pwFerieTipo(fw[op.nome][g])) return;
             cells.push({
               commessa: bc.commessa, squadra: sqNome, operatore: op.nome, giorno: g,
               dataISO: isoDates[g], cantiere: cantieri.join(', '), attivita: opG.attivita || '',

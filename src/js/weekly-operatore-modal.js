@@ -126,14 +126,17 @@ function pwOpenOpModal(cidx, sidx, oidx) {
 
     // Ordina per precedenza: prima i liberi e già assegnati alla commessa (staffing del
     // mese), poi i liberi ma non assegnati alla commessa (per vicinanza alla zona di
-    // lavorazione), poi gli assegnati altrove questa settimana, infine chi e' in ferie;
-    // in generale, ordine alfabetico come criterio finale.
+    // lavorazione), poi gli assegnati altrove questa settimana, poi chi e' in ferie,
+    // infine chi e' non disponibile (malattia/indisponibile a trasferta: meno "recuperabile"
+    // di una ferie pianificata, quindi in fondo); in generale, ordine alfabetico come
+    // criterio finale.
     const distanzaDi = nome => distanzaLavorazione(regioneCommessa, provinciaCommessa, opByNome[nome]?.provincia, opByNome[nome]?.regione);
     const rangoDi = nome => {
       const stato = pwStatoOperatore(nome, cidx, sidx, oidx);
       if (stato === 'libero') return fromStaffing.has(nome) ? 0 : 1;
       if (stato === 'assegnato') return 2;
-      return 3; // ferie
+      if (stato === 'ferie') return 3;
+      return 4; // non_disponibile
     };
     const ordinati = [...filtrati].sort((a, b) => {
       const dRango = rangoDi(a) - rangoDi(b);
@@ -149,7 +152,9 @@ function pwOpenOpModal(cidx, sidx, oidx) {
 
     ordinati.forEach(nome => {
       const stato     = pwStatoOperatore(nome, cidx, sidx, oidx);
-      const tagLabel  = stato === 'ferie' ? 'FERIE' : stato === 'assegnato' ? 'ASSEGNATO' : 'LIBERO';
+      const tagLabel  = stato === 'ferie' ? 'FERIE'
+        : stato === 'non_disponibile' ? 'NON DISP.'
+        : stato === 'assegnato' ? 'ASSEGNATO' : 'LIBERO';
       const inCommessa = fromStaffing.has(nome);
       const provInfo = provinciaInfo(opByNome[nome]?.provincia);
       const geoLabel = provInfo ? provInfo.nome : operatoreRegione(opByNome[nome]);
@@ -177,7 +182,8 @@ function pwOpenOpModal(cidx, sidx, oidx) {
   legend.innerHTML = `
     <div class="op-modal-legend-item"><div class="op-modal-dot stato-libero"></div> Libero</div>
     <div class="op-modal-legend-item"><div class="op-modal-dot stato-assegnato"></div> Assegnato altrove</div>
-    <div class="op-modal-legend-item"><div class="op-modal-dot stato-ferie"></div> In ferie</div>`;
+    <div class="op-modal-legend-item"><div class="op-modal-dot stato-ferie"></div> In ferie</div>
+    <div class="op-modal-legend-item"><div class="op-modal-dot stato-non_disponibile"></div> Non disponibile</div>`;
   modal.appendChild(legend);
 
   backdrop.appendChild(modal);
@@ -347,9 +353,10 @@ function pwRender() {
           const cantiereList = cantieriArr.length ? cantieriArr : [''];
           const attivita = (giorni[dKey] || {}).attivita || '';
           const isSab    = di === 5;
-          const isInFerie = opFerie[di] === true;
-          const ferieClass = isInFerie ? ' in-ferie' : '';
-          const cantierePlaceholder = isInFerie ? '🏖 ferie' : 'cantiere…';
+          const tipoGiorno = pwFerieTipo(opFerie[di]);
+          const isInFerie = !!tipoGiorno;
+          const ferieClass = tipoGiorno === 'non_disponibile' ? ' non-disponibile' : tipoGiorno === 'ferie' ? ' in-ferie' : '';
+          const cantierePlaceholder = tipoGiorno === 'non_disponibile' ? '🚫 non disponibile' : tipoGiorno === 'ferie' ? '🏖 ferie' : 'cantiere…';
           const attivitaPlaceholder = isInFerie ? '' : 'attività (facolt.)';
           const cantiereRowsHtml = cantiereList.map((c, ci) => `
             <div class="pw-cantiere-row">
@@ -379,6 +386,7 @@ function pwRender() {
         // Stato operatore corrente (con esclusione della sola cella corrente)
         const statoAttuale = op.nome ? pwStatoOperatore(op.nome, cIdx, sIdx, oIdx) : '';
         const badgeLabel = statoAttuale === 'ferie' ? 'FERIE'
+          : statoAttuale === 'non_disponibile' ? 'NON DISPONIBILE'
           : statoAttuale === 'assegnato' ? 'ASSEGNATO'
           : op.nome ? 'LIBERO' : '';
         const badgeHtml = op.nome
@@ -518,12 +526,15 @@ function pwRenderStats() {
   const fw     = pwGetFerieWeek();
   const allOps = getOperatoriAttivi().map(o => o.nome_esteso || o.nome).filter(Boolean);
 
-  // Operatori in ferie (almeno 1 giorno) + giorni
+  // Operatori in ferie/non disponibili (almeno 1 giorno) + giorni (con tipo, per il popover)
   const DAY_ABBR = ['Lun','Mar','Mer','Gio','Ven','Sab'];
   const inFerie     = new Set();
   const ferieGiorni = {};
   Object.entries(fw).forEach(([nome, giorni]) => {
-    const gg = Object.entries(giorni).filter(([,v]) => v === true).map(([k]) => DAY_ABBR[parseInt(k)] || k);
+    const gg = Object.entries(giorni)
+      .map(([k, v]) => ({ k, tipo: pwFerieTipo(v) }))
+      .filter(g => g.tipo)
+      .map(g => ({ label: DAY_ABBR[parseInt(g.k)] || g.k, tipo: g.tipo }));
     if (gg.length) { inFerie.add(nome); ferieGiorni[nome] = gg; }
   });
 

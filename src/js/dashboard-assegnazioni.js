@@ -194,7 +194,7 @@ function calcolaConfrontoCommessa(commessaNome, meseIdx) {
             if (d.getUTCFullYear() !== ANNO || d.getUTCMonth() !== meseIdx) continue; // giorno fuori dal mese target (settimana a cavallo)
             const opG = (op.giorni && op.giorni[g]) || {};
             if (pwCellCantieri(opG).length === 0) continue;
-            const inFerie = pwFerie[wa] && pwFerie[wa][ww] && pwFerie[wa][ww][nome] && pwFerie[wa][ww][nome][g] === true;
+            const inFerie = !!(pwFerie[wa] && pwFerie[wa][ww] && pwFerie[wa][ww][nome] && pwFerieTipo(pwFerie[wa][ww][nome][g]));
             if (inFerie) continue;
             effettivo[nome] = (effettivo[nome] || 0) + 1;
           }
@@ -244,7 +244,7 @@ function calcolaImpegniEffettiviAnnoOperatore(nomeOperatore) {
               if (d.getUTCFullYear() !== ANNO || d.getUTCMonth() !== meseIdx) continue;
               const opG = (op.giorni && op.giorni[g]) || {};
               if (!opG.cantiere || !opG.cantiere.trim()) continue;
-              const inFerie = pwFerie[wa] && pwFerie[wa][ww] && pwFerie[wa][ww][nome] && pwFerie[wa][ww][nome][g] === true;
+              const inFerie = !!(pwFerie[wa] && pwFerie[wa][ww] && pwFerie[wa][ww][nome] && pwFerieTipo(pwFerie[wa][ww][nome][g]));
               if (inFerie) continue;
               if (!perCommessa[bc.commessa]) perCommessa[bc.commessa] = new Array(12).fill(0);
               perCommessa[bc.commessa][meseIdx] += 1;

@@ -34,6 +34,7 @@ JS_FILES = [
     'dashboard-dettaglio-mese.js',
     'dashboard-alerts-render.js',
     'weekly-mail-core.js',
+    'weekly-ferie-import.js',
     'weekly-operatore-modal.js',
     'weekly-popover-stats.js',
     'weekly-clipboard-cantiere.js',

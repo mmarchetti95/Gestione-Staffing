@@ -399,6 +399,10 @@ async function sbPull() {
       pwFerie = rows[SB_ROW_FERIE].payload.pw_ferie;
       sbSetLocal('pw_ferie', pwFerie);
     }
+    if (rows[SB_ROW_FERIE] && rows[SB_ROW_FERIE].payload && rows[SB_ROW_FERIE].payload.pw_ferie_dettagli) {
+      pwFerieDettagli = rows[SB_ROW_FERIE].payload.pw_ferie_dettagli;
+      sbSetLocal('pw_ferie_dettagli', pwFerieDettagli);
+    }
     // Applica doppia week (stesso motivo di planning/ferie: senza sbSetLocal, un reload
     // prima che sbPull() finisca mostrerebbe doppia-week vuota invece dell'ultima copia nota)
     if (rows[SB_ROW_DW] && rows[SB_ROW_DW].payload && rows[SB_ROW_DW].payload.pw_doppia_week) {
@@ -448,7 +452,7 @@ async function sbPush() {
       domains.push({ id: SB_ROW_PLANNING, payload: { pw_data: pwData, _savedBy: _sbUser.email }, key: 'planning' });
     }
     if (_sbDirty.ferie) {
-      domains.push({ id: SB_ROW_FERIE, payload: { pw_ferie: pwFerie, _savedBy: _sbUser.email }, key: 'ferie' });
+      domains.push({ id: SB_ROW_FERIE, payload: { pw_ferie: pwFerie, pw_ferie_dettagli: pwFerieDettagli, _savedBy: _sbUser.email }, key: 'ferie' });
     }
     if (_sbDirty.dw) {
       domains.push({ id: SB_ROW_DW, payload: { pw_doppia_week: pwDoppiaWeek, _savedBy: _sbUser.email }, key: 'dw' });

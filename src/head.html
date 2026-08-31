@@ -530,6 +530,7 @@
     display: flex;
     align-items: center;
     justify-content: center;
+    gap: 5px;
     border-right: 1px solid #e2e8f0;
     padding: 4px;
     min-width: 100px;
@@ -543,11 +544,37 @@
     accent-color: #e11d48;
     border-radius: 4px;
   }
+  /* Badge ore/descrizione importate da Excel (weekly-ferie-import.js) */
+  .pw-ferie-badge {
+    font-size: 9px; font-weight: 700; line-height: 1;
+    padding: 2px 5px; border-radius: 9999px;
+    background: #fecdd3; color: #9f1239; border: none;
+    cursor: pointer; white-space: nowrap;
+  }
+  .pw-ferie-badge:hover { background: #fda4af; }
   .pw-ferie-cell.assente {
     background: #fee2e2;
   }
   .pw-ferie-cell.assente.sabato {
     background: #ffd6c4;
+  }
+  /* Tipo "Non disponibile" (malattia, indisponibilità a trasferta...): stessa logica di
+     blocco assegnazione di "Ferie" ma colore distinto (viola) per riconoscerlo a colpo
+     d'occhio — impostabile solo a mano col click destro, vedi pwFerieCellCtxMenu(). */
+  .pw-ferie-cell.assente.non-disponibile {
+    background: #ede9fe;
+  }
+  .pw-ferie-cell.assente.non-disponibile.sabato {
+    background: #ddd6fe;
+  }
+  .pw-ferie-cell.non-disponibile .pw-ferie-cb {
+    accent-color: #7c3aed;
+  }
+  /* Origine "importata da Excel" (weekly-ferie-import.js): barra colorata sempre visibile,
+     indipendente dal tipo, per distinguere a colpo d'occhio le assenze importate da quelle
+     inserite a mano (che non hanno questa barra). */
+  .pw-ferie-cell.importata {
+    box-shadow: inset 3px 0 0 #0891b2;
   }
 
   /* Badge stato operatore */
@@ -562,6 +589,7 @@
     letter-spacing: .3px;
   }
   .op-stato-badge.ferie    { background: #fee2e2; color: #991b1b; border: 1px solid #fca5a5; }
+  .op-stato-badge.non_disponibile { background: #ede9fe; color: #5b21b6; border: 1px solid #c4b5fd; }
   .op-stato-badge.assegnato{ background: #fef9c3; color: #854d0e; border: 1px solid #fde047; }
   .op-stato-badge.libero   { background: #dcfce7; color: #166534; border: 1px solid #86efac; }
 
@@ -656,6 +684,7 @@
   .op-modal-item.stato-libero    { background: #f0fdf4; color: #166534; }
   .op-modal-item.stato-assegnato { background: #fefce8; color: #854d0e; }
   .op-modal-item.stato-ferie     { background: #fff1f2; color: #991b1b; }
+  .op-modal-item.stato-non_disponibile { background: #f5f3ff; color: #5b21b6; }
   .op-modal-item.stato-nessuno   { background: #f8fafc; color: #64748b; font-style: italic; }
   .op-modal-dot {
     width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0;
@@ -663,6 +692,7 @@
   .op-modal-dot.stato-libero    { background: #22c55e; }
   .op-modal-dot.stato-assegnato { background: #eab308; }
   .op-modal-dot.stato-ferie     { background: #ef4444; }
+  .op-modal-dot.stato-non_disponibile { background: #7c3aed; }
   .op-modal-dot.stato-nessuno   { background: #cbd5e1; }
   .op-modal-tag {
     margin-left: auto; flex-shrink: 0;
@@ -672,6 +702,7 @@
   .op-modal-tag.stato-libero    { background: #dcfce7; color: #166534; }
   .op-modal-tag.stato-assegnato { background: #fef9c3; color: #854d0e; }
   .op-modal-tag.stato-ferie     { background: #fee2e2; color: #991b1b; }
+  .op-modal-tag.stato-non_disponibile { background: #ede9fe; color: #5b21b6; }
   .op-modal-legend {
     display: flex; gap: 12px; padding: 8px 14px;
     border-top: 1px solid #e2e8f0;
@@ -693,6 +724,7 @@
   .op-trigger-btn.stato-libero    { background: #dcfce7; color: #166534; border-color: #86efac; }
   .op-trigger-btn.stato-assegnato { background: #fef9c3; color: #854d0e; border-color: #fde047; }
   .op-trigger-btn.stato-ferie     { background: #fee2e2; color: #991b1b; border-color: #fca5a5; }
+  .op-trigger-btn.stato-non_disponibile { background: #ede9fe; color: #5b21b6; border-color: #c4b5fd; }
   .op-trigger-label { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .op-trigger-geo { font-size: 9px; opacity: .6; margin-left: 4px; white-space: nowrap; flex-shrink: 0; }
   .op-trigger-arrow { font-size: 8px; margin-left: 4px; opacity: .5; flex-shrink: 0; }
@@ -745,6 +777,7 @@
   .psp-tag.verde  { background:#f0fdf4; color:#16a34a; }
   .psp-tag.rosso  { background:#fff1f2; color:#dc2626; }
   .psp-tag.giallo { background:#fefce8; color:#ca8a04; }
+  .psp-tag.viola  { background:#f5f3ff; color:#7c3aed; }
   /* ---- Controllo Produzione ---- */
   .cp-table { width:100%; border-collapse:collapse; font-size:11px; }
   .cp-table th { background:var(--accent-dark); color:#fff; font-weight:700; padding:5px 6px; text-align:left; white-space:normal; line-height:1.25; position:sticky; top:0; z-index:2; }
@@ -784,6 +817,31 @@
   .pw-day-cell.in-ferie .pw-cantiere-input::placeholder,
   .pw-day-cell.in-ferie .pw-attivita-input::placeholder {
     color: #fda4af;
+  }
+  /* Variante "Non disponibile" (malattia, indisponibile a trasferta...): stesso trattamento
+     di "in-ferie" ma colore viola, per distinguerla a colpo d'occhio anche nella Griglia
+     principale (non solo nella Vista Ferie), coerente con pwFerieTipo(). */
+  .pw-day-cell.non-disponibile {
+    background: #f5f3ff !important;
+    position: relative;
+  }
+  .pw-day-cell.non-disponibile::after {
+    content: '🚫';
+    position: absolute;
+    top: 2px; right: 3px;
+    font-size: 10px;
+    pointer-events: none;
+    opacity: .75;
+  }
+  .pw-day-cell.non-disponibile .pw-cantiere-input,
+  .pw-day-cell.non-disponibile .pw-attivita-input {
+    background: #f5f3ff;
+    color: #5b21b6;
+    font-style: italic;
+  }
+  .pw-day-cell.non-disponibile .pw-cantiere-input::placeholder,
+  .pw-day-cell.non-disponibile .pw-attivita-input::placeholder {
+    color: #c4b5fd;
   }
 
   /* ===== CELLE CON PRODUZIONE GIA' INSERITA (Controllo Produzione) ===== */
@@ -955,7 +1013,7 @@
     <div class="flex items-center gap-2">
       <button id="btn-presentation" class="px-3 py-1.5 text-sm rounded hover:bg-white/10" style="border:1px solid var(--dark-border-strong);color:var(--dark-text);visibility:visible;">📊 Modalità presentazione</button>
       <div class="text-xs pl-2" style="border-left:1px solid var(--dark-border-strong);color:var(--dark-text-muted);">
-        <span id="app-version" class="font-medium" style="color:var(--accent);">v18.103.0</span> · Michele Marchetti
+        <span id="app-version" class="font-medium" style="color:var(--accent);">v18.108.0</span> · Michele Marchetti
       </div>
     </div>
   </div>
@@ -1324,7 +1382,19 @@
           <span class="font-semibold" style="font-family:var(--font-display);">🏖 Ferie &amp; Permessi</span>
           <span class="ml-3 text-rose-200 text-sm" id="pw-ferie-week-label"></span>
         </div>
-        <div class="text-xs text-rose-200">Spunta i giorni di assenza per ogni operatore</div>
+        <div class="flex items-center gap-3">
+          <button id="pw-ferie-import-btn" class="px-3 py-1.5 text-sm bg-white/10 hover:bg-white/20 border border-white/30 rounded text-white no-print whitespace-nowrap"
+            onclick="document.getElementById('pw-ferie-import-file').click()"
+            title="Importa da Excel l'export ferie/permessi (colonne: Dipendente, descrizione, dataintervento, Somma di durata)">📥 Importa Excel</button>
+          <input type="file" id="pw-ferie-import-file" accept=".xlsx" class="hidden" onchange="pwFerieImportPick(this)">
+        </div>
+      </div>
+      <div class="px-4 py-2 bg-rose-50 border-b border-rose-100 flex flex-wrap items-center gap-x-4 gap-y-1 text-[11px] text-slate-600 no-print">
+        <span class="flex items-center gap-1.5"><span class="inline-block w-3 h-3 rounded" style="background:#fee2e2;border:1px solid #fca5a5;"></span>Ferie</span>
+        <span class="flex items-center gap-1.5"><span class="inline-block w-3 h-3 rounded" style="background:#ede9fe;border:1px solid #c4b5fd;"></span>Non disponibile</span>
+        <span class="flex items-center gap-1.5"><span class="inline-block w-3 h-3 rounded" style="background:#fff;border:1px solid #e2e8f0;box-shadow:inset 3px 0 0 #0891b2;"></span>Importato da Excel</span>
+        <span class="text-slate-400">·</span>
+        <span>Click sul checkbox = Ferie · <b>click destro</b> sulla cella = scegli il tipo o rimuovi l'assenza</span>
       </div>
       <div class="overflow-x-auto">
         <div id="pw-ferie-grid"></div>
