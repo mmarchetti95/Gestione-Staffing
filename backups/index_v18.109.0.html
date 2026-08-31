@@ -898,15 +898,6 @@
   }
   .pw-squad-group-count { font-size: 10px; color: #94a3b8; background: #f1f5f9; border-radius: 8px; padding: 0 6px; }
   .pw-squad-group-body { padding-left: 14px; margin-top: 2px; }
-  /* Colonna laterale (Legenda + riepilogo) vincolata alla stessa altezza della
-     mappa affiancata: senza questo limite, con molte squadre/operatori la colonna
-     cresce oltre la mappa e spinge il blocco successivo (l'altra mappa) troppo in
-     basso, perdendo il confronto visivo immediato fra le due mappe. */
-  .pw-map-side { display: flex; flex-direction: column; gap: 10px; height: 410px; }
-  .pw-map-card { display: flex; flex-direction: column; min-height: 0; }
-  .pw-map-card-legend { flex: 0 1 35%; }
-  .pw-map-card-summary { flex: 1 1 auto; }
-  .pw-map-card-body { overflow-y: auto; min-height: 0; }
   .pw-map-marker.active { z-index: 1000 !important; }
   .pw-map-marker.active > div { animation: pwMarkerPulse 1.2s ease-in-out infinite; }
   @keyframes pwMarkerPulse {
@@ -1022,7 +1013,7 @@
     <div class="flex items-center gap-2">
       <button id="btn-presentation" class="px-3 py-1.5 text-sm rounded hover:bg-white/10" style="border:1px solid var(--dark-border-strong);color:var(--dark-text);visibility:visible;">📊 Modalità presentazione</button>
       <div class="text-xs pl-2" style="border-left:1px solid var(--dark-border-strong);color:var(--dark-text-muted);">
-        <span id="app-version" class="font-medium" style="color:var(--accent);">v18.110.0</span> · Michele Marchetti
+        <span id="app-version" class="font-medium" style="color:var(--accent);">v18.109.0</span> · Michele Marchetti
       </div>
     </div>
   </div>
@@ -1451,46 +1442,23 @@
           <div id="pw-map-days" class="flex gap-1 flex-wrap"></div>
           <span class="text-xs text-slate-400 ml-2" id="pw-map-geocoding-status"></span>
         </div>
-        <div class="flex items-center gap-2 flex-wrap">
-          <span class="text-xs font-semibold text-slate-600">Regione:</span>
-          <select id="pw-map-regione-filter" class="text-xs border border-slate-300 rounded px-2 py-1"></select>
-          <span class="text-xs font-semibold text-slate-500 ml-2" id="pw-map-week-label"></span>
-        </div>
+        <span class="text-xs font-semibold text-slate-500" id="pw-map-week-label"></span>
       </div>
     </div>
-    <div class="grid grid-cols-1 lg:grid-cols-4 gap-4 mb-4 items-start">
+    <div class="grid grid-cols-1 lg:grid-cols-4 gap-4">
       <div class="lg:col-span-3">
-        <div class="text-xs font-semibold text-slate-700 mb-2 uppercase tracking-wide">🏗️ Cantieri</div>
         <div class="bg-white border border-slate-200 rounded-lg overflow-hidden shadow-sm">
-          <div id="pw-map" style="height:380px;width:100%;"></div>
+          <div id="pw-map" style="height:520px;width:100%;"></div>
         </div>
       </div>
-      <div class="pw-map-side">
-        <div class="bg-white border border-slate-200 rounded-lg p-3 shadow-sm pw-map-card pw-map-card-legend">
-          <div class="text-xs font-semibold text-slate-700 mb-2 uppercase tracking-wide flex-shrink-0">Legenda</div>
-          <div id="pw-map-legend" class="space-y-1 text-xs pw-map-card-body"></div>
+      <div class="space-y-3">
+        <div class="bg-white border border-slate-200 rounded-lg p-3 shadow-sm">
+          <div class="text-xs font-semibold text-slate-700 mb-2 uppercase tracking-wide">Legenda</div>
+          <div id="pw-map-legend" class="space-y-1 text-xs"></div>
         </div>
-        <div class="bg-white border border-slate-200 rounded-lg p-3 shadow-sm pw-map-card pw-map-card-summary">
-          <div class="text-xs font-semibold text-slate-700 mb-2 uppercase tracking-wide flex-shrink-0">Squadre & spostamenti</div>
-          <div id="pw-map-summary" class="space-y-2 pw-map-card-body"></div>
-        </div>
-      </div>
-    </div>
-    <div class="grid grid-cols-1 lg:grid-cols-4 gap-4 items-start">
-      <div class="lg:col-span-3">
-        <div class="text-xs font-semibold text-slate-700 mb-2 uppercase tracking-wide">🏠 Residenze operatori</div>
-        <div class="bg-white border border-slate-200 rounded-lg overflow-hidden shadow-sm">
-          <div id="pw-map-op" style="height:380px;width:100%;"></div>
-        </div>
-      </div>
-      <div class="pw-map-side">
-        <div class="bg-white border border-slate-200 rounded-lg p-3 shadow-sm pw-map-card pw-map-card-legend">
-          <div class="text-xs font-semibold text-slate-700 mb-2 uppercase tracking-wide flex-shrink-0">Legenda regioni</div>
-          <div id="pw-map-op-legend" class="space-y-1 text-xs pw-map-card-body"></div>
-        </div>
-        <div class="bg-white border border-slate-200 rounded-lg p-3 shadow-sm pw-map-card pw-map-card-summary">
-          <div class="text-xs font-semibold text-slate-700 mb-2 uppercase tracking-wide flex-shrink-0">Operatori & provenienza</div>
-          <div id="pw-map-op-summary" class="space-y-2 pw-map-card-body"></div>
+        <div class="bg-white border border-slate-200 rounded-lg p-3 shadow-sm">
+          <div class="text-xs font-semibold text-slate-700 mb-2 uppercase tracking-wide">Squadre & spostamenti</div>
+          <div id="pw-map-summary" class="space-y-2"></div>
         </div>
       </div>
     </div>
@@ -10487,14 +10455,6 @@ function pwSwitchTab(tab) {
         }).addTo(_map);
         setTimeout(() => _map.invalidateSize(), 200);
       }
-      if (!_mapOp) {
-        _mapOp = L.map('pw-map-op', { preferCanvas: true }).setView([42.5, 12.5], 6);
-        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-          attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
-          maxZoom: 19
-        }).addTo(_mapOp);
-        setTimeout(() => _mapOp.invalidateSize(), 200);
-      }
       pwMapRender(_mapDay);
     }, 60);
   } else if (tab === 'ferie') {
@@ -12304,25 +12264,12 @@ function pwControlloExportPDF() {
 }
 /* ==================== MAPPA LEAFLET + NOMINATIM ==================== */
 const MAP_COLORS = ['#0d9488','#6366f1','#f59e0b','#ef4444','#10b981','#8b5cf6','#ec4899','#0ea5e9','#f97316','#84cc16'];
-const MAP_COLOR_SCONOSCIUTA = '#94a3b8';
 let _mapColors = {};
 function _mapColor(commessa) {
   if (!_mapColors[commessa]) {
     _mapColors[commessa] = MAP_COLORS[Object.keys(_mapColors).length % MAP_COLORS.length];
   }
   return _mapColors[commessa];
-}
-
-/* Colore per regione (mappa Residenze operatori: raggruppa/colora per regione,
-   non per commessa, dato che la commessa è già distinguibile sulla mappa Cantieri
-   sopra). Le regioni ignote condividono un grigio neutro fisso, fuori dal ciclo. */
-let _mapColorsRegione = {};
-function _mapColorRegione(regione) {
-  if (!regione) return MAP_COLOR_SCONOSCIUTA;
-  if (!_mapColorsRegione[regione]) {
-    _mapColorsRegione[regione] = MAP_COLORS[Object.keys(_mapColorsRegione).length % MAP_COLORS.length];
-  }
-  return _mapColorsRegione[regione];
 }
 
 /* Rubrica luoghi persistente */
@@ -12357,19 +12304,11 @@ async function geocodifica(nome) {
   }
 }
 
-/* Istanza Leaflet cantieri */
+/* Istanza Leaflet */
 let _map = null;
 let _mapMarkers = [];
 let _mapDay = 0;
 let _mapCollapsedCommesse = new Set();
-
-/* Istanza Leaflet residenze operatori */
-let _mapOp = null;
-let _mapOpMarkers = [];
-let _mapCollapsedRegioniOp = new Set();
-
-/* Filtro regione, condiviso dalle due mappe */
-let _mapRegioneFilter = '';
 
 function pwMapInit() {
   if (!_map) {
@@ -12380,40 +12319,48 @@ function pwMapInit() {
     }).addTo(_map);
     setTimeout(() => _map.invalidateSize(), 200);
   }
-  if (!_mapOp) {
-    _mapOp = L.map('pw-map-op', { preferCanvas: true }).setView([42.5, 12.5], 6);
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-      attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
-      maxZoom: 19
-    }).addTo(_mapOp);
-    setTimeout(() => _mapOp.invalidateSize(), 200);
-  }
   pwMapRender(_mapDay);
 }
 
-/* Popola (una tantum) la select del filtro regione, condivisa dalle due mappe */
-function pwMapPopulateRegioneFilter() {
-  const sel = document.getElementById('pw-map-regione-filter');
-  if (!sel) return;
-  if (sel.options.length <= 1) {
-    sel.innerHTML = '<option value="">Tutte le regioni</option>' +
-      REGIONI_ITALIA.map(r => `<option value="${esc(r)}">${esc(r)}</option>`).join('');
-    sel.onchange = () => { _mapRegioneFilter = sel.value; pwMapRender(_mapDay); };
+async function pwMapRender(dayIdx) {
+  _mapDay = dayIdx;
+  if (!_map) return;
+  _mapColors = {};
+
+  const monday = isoWeekToMonday(pwAnno, pwWeek);
+  const days = [];
+  for (let i = 0; i < 6; i++) {
+    const d = new Date(monday);
+    d.setUTCDate(monday.getUTCDate() + i);
+    days.push(d);
   }
-  sel.value = _mapRegioneFilter;
-}
+  const DAY_SHORT = ['Lun', 'Mar', 'Mer', 'Gio', 'Ven', 'Sab'];
+  const todayStr = new Date().toISOString().slice(0, 10);
 
-/* Regione "di lavorazione" di una commessa, con lo stesso fallback provincia→regione
-   usato per gli operatori (operatoreRegione) */
-function commessaRegione(nomeCommessa) {
-  const meta = state.commesse_attive_meta[nomeCommessa];
-  if (!meta) return '';
-  return meta.regione || (meta.provincia && provinciaInfo(meta.provincia)?.regione) || '';
-}
+  /* Aggiorna label settimana */
+  const mapWeekLabel = document.getElementById('pw-map-week-label');
+  if (mapWeekLabel) mapWeekLabel.textContent = `WEEK ${pwWeek} · ${formatDate(days[0])} — ${formatDate(days[5])} ${pwAnno}`;
 
-/* Costruisce la lista delle squadre attive per il giorno indicato, con relativo
-   cantiere/attività/colore. Condivisa dalla mappa Cantieri e dalla mappa Residenze. */
-function pwMapBuildSquadItems(dayIdx) {
+  /* Aggiorna bottoni giorni */
+  const daysEl = document.getElementById('pw-map-days');
+  if (daysEl) {
+    daysEl.innerHTML = days.map((d, i) => {
+      const ds = d.toISOString().slice(0, 10);
+      const isToday = ds === todayStr;
+      const active = i === dayIdx ? 'active' : '';
+      const today = isToday ? 'is-today' : '';
+      return `<button class="pw-map-day-btn ${active} ${today}" data-di="${i}">${DAY_SHORT[i]} ${formatDate(d)}</button>`;
+    }).join('');
+    daysEl.querySelectorAll('.pw-map-day-btn').forEach(b => {
+      b.onclick = () => pwMapRender(parseInt(b.dataset.di));
+    });
+  }
+
+  /* Rimuovi marker precedenti */
+  _mapMarkers.forEach(m => _map.removeLayer(m));
+  _mapMarkers = [];
+
+  /* Raccoglie squadre attive oggi */
   const data = pwGetWeekData();
   const items = []; // { commessa, squadra, operatori, cantiere, attivita, cantierePrev, color }
 
@@ -12451,61 +12398,6 @@ function pwMapBuildSquadItems(dayIdx) {
       });
     });
   });
-
-  return items;
-}
-
-async function pwMapRender(dayIdx) {
-  _mapDay = dayIdx;
-  if (!_map || !_mapOp) return;
-  _mapColors = {};
-  _mapColorsRegione = {};
-
-  const monday = isoWeekToMonday(pwAnno, pwWeek);
-  const days = [];
-  for (let i = 0; i < 6; i++) {
-    const d = new Date(monday);
-    d.setUTCDate(monday.getUTCDate() + i);
-    days.push(d);
-  }
-  const DAY_SHORT = ['Lun', 'Mar', 'Mer', 'Gio', 'Ven', 'Sab'];
-  const todayStr = new Date().toISOString().slice(0, 10);
-
-  /* Aggiorna label settimana */
-  const mapWeekLabel = document.getElementById('pw-map-week-label');
-  if (mapWeekLabel) mapWeekLabel.textContent = `WEEK ${pwWeek} · ${formatDate(days[0])} — ${formatDate(days[5])} ${pwAnno}`;
-
-  /* Aggiorna bottoni giorni */
-  const daysEl = document.getElementById('pw-map-days');
-  if (daysEl) {
-    daysEl.innerHTML = days.map((d, i) => {
-      const ds = d.toISOString().slice(0, 10);
-      const isToday = ds === todayStr;
-      const active = i === dayIdx ? 'active' : '';
-      const today = isToday ? 'is-today' : '';
-      return `<button class="pw-map-day-btn ${active} ${today}" data-di="${i}">${DAY_SHORT[i]} ${formatDate(d)}</button>`;
-    }).join('');
-    daysEl.querySelectorAll('.pw-map-day-btn').forEach(b => {
-      b.onclick = () => pwMapRender(parseInt(b.dataset.di));
-    });
-  }
-
-  pwMapPopulateRegioneFilter();
-
-  const items = pwMapBuildSquadItems(dayIdx);
-  await pwMapRenderCantieri(items, dayIdx);
-  await pwMapRenderResidenze(items, dayIdx);
-}
-
-/* ==================== MAPPA CANTIERI ==================== */
-async function pwMapRenderCantieri(itemsAll, dayIdx) {
-  const items = _mapRegioneFilter
-    ? itemsAll.filter(it => commessaRegione(it.commessa) === _mapRegioneFilter)
-    : itemsAll;
-
-  /* Rimuovi marker precedenti */
-  _mapMarkers.forEach(m => _map.removeLayer(m));
-  _mapMarkers = [];
 
   /* Geocodifica (sequenziale per rispettare rate limit Nominatim) */
   const coords = [];
@@ -12650,7 +12542,7 @@ async function pwMapRenderCantieri(itemsAll, dayIdx) {
   }
 }
 
-/* Centra la mappa cantieri su una squadra/cantiere e la evidenzia, in sync con la card cliccata */
+/* Centra la mappa su una squadra/cantiere e la evidenzia, in sync con la card cliccata */
 function pwMapFocusItem(idx) {
   if (!_map || !_mapMarkers[idx]) return;
   const marker = _mapMarkers[idx];
@@ -12707,195 +12599,6 @@ async function pwMapFixLuogo(inp) {
   } catch(e) { inp.disabled = false; inp.placeholder = 'Errore rete'; }
 }
 
-/* ==================== MAPPA RESIDENZE OPERATORI ==================== */
-/* Deriva dagli item-squadra una lista per-operatore con relativa posizione di
-   residenza (provincia se nota, altrimenti centroide regione, altrimenti "non trovato") */
-function pwMapBuildOperatorItems(itemsAll) {
-  const out = []; // { operatore, commessa, squadra, cantiere, regione, provincia, geo, color }
-  itemsAll.forEach(item => {
-    item.operatori.forEach(nome => {
-      const op = state.operatori.find(o => (o.nome_esteso || o.nome_breve) === nome);
-      const regione = op ? operatoreRegione(op) : '';
-      if (_mapRegioneFilter && regione !== _mapRegioneFilter) return;
-      let geo = null;
-      if (op && op.provincia) {
-        const p = provinciaInfo(op.provincia);
-        if (p) geo = { lat: p.lat, lng: p.lng, label: `${p.nome} (${p.sigla})` };
-      } else if (regione) {
-        const c = regioneCentroid(regione);
-        if (c) geo = { lat: c.lat, lng: c.lng, label: regione };
-      }
-      out.push({
-        operatore: nome, commessa: item.commessa, squadra: item.squadra, cantiere: item.cantiere,
-        regione, provincia: op ? op.provincia : '', geo, color: _mapColorRegione(regione)
-      });
-    });
-  });
-  return out;
-}
-
-async function pwMapRenderResidenze(itemsAll, dayIdx) {
-  const items = pwMapBuildOperatorItems(itemsAll);
-
-  /* Rimuovi marker precedenti */
-  _mapOpMarkers.forEach(m => _mapOp.removeLayer(m));
-  _mapOpMarkers = [];
-
-  /* Aggiungi marker */
-  const posCount = {};
-  const bounds = [];
-
-  items.forEach((item, i) => {
-    const missing = !item.geo;
-    let lat, lng;
-
-    if (missing) {
-      lat = 42.5 + (i % 5) * 0.6;
-      lng = 12.5 + Math.floor(i / 5) * 0.8;
-    } else {
-      lat = item.geo.lat; lng = item.geo.lng;
-      const pk = lat.toFixed(2) + '_' + lng.toFixed(2);
-      posCount[pk] = (posCount[pk] || 0) + 1;
-      const offset = posCount[pk] - 1;
-      if (offset > 0) {
-        lat += Math.cos(offset * 1.1) * 0.009;
-        lng += Math.sin(offset * 1.1) * 0.009;
-      }
-      bounds.push([lat, lng]);
-    }
-
-    const dotStyle = missing
-      ? `width:22px;height:22px;border-radius:50%;background:${item.color};border:3px dashed white;box-shadow:0 2px 6px rgba(0,0,0,.5);display:flex;align-items:center;justify-content:center;color:white;font-size:11px;`
-      : `width:18px;height:18px;border-radius:50%;background:${item.color};border:3px solid white;box-shadow:0 2px 6px rgba(0,0,0,.4);`;
-
-    const iconHtml = missing
-      ? `<div style="${dotStyle}">⚠</div>`
-      : `<div style="${dotStyle}"></div>`;
-
-    const icon = L.divIcon({ html: iconHtml, className: 'pw-map-marker', iconSize: [22, 22], iconAnchor: [11, 11] });
-
-    const provinciaLabel = item.geo && !missing ? item.geo.label : (item.regione || 'provenienza sconosciuta');
-    const popup = `<div style="font-family:system-ui;min-width:170px;font-size:12px;">
-      <div style="font-weight:700;margin-bottom:3px;">👷 ${esc(item.operatore)}</div>
-      <div style="color:#475569;font-size:11px;">📋 ${esc(item.commessa)} · ${esc(item.squadra)}</div>
-      <div style="color:var(--accent);font-weight:600;margin:2px 0;">🏠 ${esc(provinciaLabel)}</div>
-      <div style="color:#64748b;font-size:11px;">📍 cantiere: ${esc(item.cantiere)}</div>
-      ${missing ? `<div style="color:#ea580c;font-weight:600;font-size:10px;margin-top:3px;">⚠ Regione/provincia non impostata</div>` : ''}
-    </div>`;
-
-    const marker = L.marker([lat, lng], { icon }).addTo(_mapOp).bindPopup(popup);
-    marker.on('click', () => pwMapOpFocusItem(i));
-    _mapOpMarkers.push(marker);
-  });
-
-  if (bounds.length === 1) _mapOp.setView(bounds[0], 11);
-  else if (bounds.length > 1) _mapOp.fitBounds(bounds, { padding: [50, 50] });
-  setTimeout(() => _mapOp.invalidateSize(), 100);
-
-  /* Legenda per regione (non per commessa: la commessa è già distinguibile
-     sulla mappa Cantieri sopra) */
-  const legendEl = document.getElementById('pw-map-op-legend');
-  if (legendEl) {
-    const uniq = [...new Set(items.map(i => i.regione))].sort((a,b) => (a||'zzz').localeCompare(b||'zzz'));
-    if (!uniq.length) {
-      legendEl.innerHTML = '<div class="text-slate-400 italic" style="font-size:11px">Nessun operatore assegnato oggi</div>';
-    } else {
-      legendEl.innerHTML = uniq.map(r => `
-        <div style="display:flex;align-items:center;gap:6px;font-size:11px;color:#334155;">
-          <div style="width:10px;height:10px;border-radius:50%;background:${_mapColorRegione(r)};flex-shrink:0;"></div>
-          <span>${esc(r || 'Provenienza non impostata')}</span>
-        </div>`).join('');
-    }
-  }
-
-  /* Riepilogo operatori, raggruppato per regione di provenienza (espandibile/comprimibile) */
-  const sumEl = document.getElementById('pw-map-op-summary');
-  if (sumEl) {
-    if (!items.length) {
-      sumEl.innerHTML = '<div class="text-slate-400 italic" style="font-size:11px">Nessun operatore per questo giorno</div>';
-    } else {
-      const groupOrder = [];
-      const groups = {};
-      items.forEach((item, i) => {
-        const key = item.regione || '';
-        if (!(key in groups)) { groups[key] = []; groupOrder.push(key); }
-        groups[key].push(i);
-      });
-      groupOrder.sort((a,b) => (a||'zzz').localeCompare(b||'zzz'));
-
-      sumEl.innerHTML = groupOrder.map(regione => {
-        const idxs = groups[regione];
-        const collapsed = _mapCollapsedRegioniOp.has(regione);
-        const cardsHtml = idxs.map(i => {
-          const item = items[i];
-          const missing = !item.geo;
-          const provinciaLabel = item.geo && !missing ? item.geo.label : '';
-          const warnHtml = missing ? `<div class="sq-warn">⚠ Regione/provincia non impostata</div>` : '';
-          return `<div class="pw-squad-card ${missing ? 'not-found' : ''}" data-idx="${i}">
-            <div style="display:flex;align-items:center;gap:5px;">
-              <div style="width:8px;height:8px;border-radius:50%;background:${item.color};flex-shrink:0;"></div>
-              <span class="sq-name">${esc(item.operatore)}</span>
-            </div>
-            ${provinciaLabel ? `<div class="sq-cantiere">🏠 ${esc(provinciaLabel)}</div>` : ''}
-            <div class="sq-ops">📋 ${esc(item.commessa)} · 📍 ${esc(item.cantiere)}</div>
-            ${warnHtml}
-          </div>`;
-        }).join('');
-        return `<div class="pw-squad-group">
-          <div class="pw-squad-group-header${collapsed ? ' collapsed' : ''}" data-group="${esc(regione)}">
-            <span class="pw-squad-group-arrow">${collapsed ? '▸' : '▾'}</span>
-            <div class="pw-squad-group-dot" style="background:${_mapColorRegione(regione)}"></div>
-            <span class="pw-squad-group-name">${esc(regione || 'Provenienza non impostata')}</span>
-            <span class="pw-squad-group-count">${idxs.length}</span>
-          </div>
-          <div class="pw-squad-group-body" style="${collapsed ? 'display:none;' : ''}">${cardsHtml}</div>
-        </div>`;
-      }).join('');
-
-      sumEl.querySelectorAll('.pw-squad-group-header').forEach(h => {
-        h.onclick = () => pwMapOpToggleGroup(h);
-      });
-      sumEl.querySelectorAll('.pw-squad-card').forEach(card => {
-        card.onclick = () => pwMapOpFocusItem(parseInt(card.dataset.idx, 10));
-      });
-    }
-  }
-}
-
-/* Centra la mappa residenze su un operatore e lo evidenzia, in sync con la card cliccata */
-function pwMapOpFocusItem(idx) {
-  if (!_mapOp || !_mapOpMarkers[idx]) return;
-  const marker = _mapOpMarkers[idx];
-  const latlng = marker.getLatLng();
-  _mapOp.setView(latlng, Math.max(_mapOp.getZoom(), 15), { animate: true });
-  marker.openPopup();
-
-  _mapOpMarkers.forEach(m => { const el = m.getElement(); if (el) el.classList.remove('active'); });
-  const markerEl = marker.getElement();
-  if (markerEl) markerEl.classList.add('active');
-
-  document.querySelectorAll('#pw-map-op-summary .pw-squad-card.active').forEach(c => c.classList.remove('active'));
-  const card = document.querySelector('#pw-map-op-summary .pw-squad-card[data-idx="' + idx + '"]');
-  if (card) card.classList.add('active');
-}
-
-/* Espande/comprime il gruppo operatori di una regione nella colonna Operatori & provenienza */
-function pwMapOpToggleGroup(headerEl) {
-  const regione = headerEl.dataset.group;
-  const body = headerEl.nextElementSibling;
-  const arrow = headerEl.querySelector('.pw-squad-group-arrow');
-  if (_mapCollapsedRegioniOp.has(regione)) {
-    _mapCollapsedRegioniOp.delete(regione);
-    headerEl.classList.remove('collapsed');
-    if (body) body.style.display = '';
-    if (arrow) arrow.textContent = '▾';
-  } else {
-    _mapCollapsedRegioniOp.add(regione);
-    headerEl.classList.add('collapsed');
-    if (body) body.style.display = 'none';
-    if (arrow) arrow.textContent = '▸';
-  }
-}
 /* ==================== METEO CANTIERI (Open-Meteo, gratuito senza API key) ====================
    Badge meteo per squadra/giorno nella Griglia settimanale, basato sui cantieri pianificati
    quel giorno. Riusa il geocoder Nominatim + _geoCache già presenti in weekly-mappa.js: un

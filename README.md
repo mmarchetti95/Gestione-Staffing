@@ -1,3 +1,6 @@
+## v18.110.0
+- feat: **Mappa Squadre — doppia mappa Cantieri / Residenze operatori, filtro per regione** (issue #4) — la vista Mappa della Pianificazione Settimanale mostra ora due mappe impilate: quella già esistente dei cantieri assegnati (geocodificati via Nominatim) e una nuova mappa "Residenze operatori" che posiziona ciascun operatore assegnato quel giorno sul capoluogo della propria provincia di provenienza (o sul centroide della regione, se solo quella è nota) — dati già presenti in scheda operatore, nessun nuovo campo né nuova geocodifica. I marker usano lo stesso colore per commessa su entrambe le mappe, per confrontare a colpo d'occhio dove vive un operatore rispetto al cantiere assegnato. Aggiunto un filtro "Regione" condiviso dalle due mappe: per i cantieri filtra in base alla regione di lavorazione della commessa, per gli operatori in base alla loro regione di provenienza. Nessuna modifica allo schema Supabase.
+
 ## v18.109.0
 - feat: **Ferie & Permessi — conferma prima di togliere la spunta** — nella Vista Ferie, deselezionare il checkbox di un giorno già assente ora chiede conferma ("Rimuovere l'assenza di [nome]?") prima di eliminare l'assenza, per evitare click accidentali su una griglia densa. Annullando, la spunta resta. Nessuna modifica allo schema Supabase.
 
