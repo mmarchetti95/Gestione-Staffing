@@ -122,10 +122,10 @@ document.addEventListener('DOMContentLoaded', async () => {
   if (gHistoric) gHistoric.addEventListener('change', e => { _ganttCfg.historic = e.target.checked; renderGantt(); });
   if (gSort) gSort.addEventListener('change', e => { _ganttCfg.sort = e.target.value; renderGantt(); });
 
-  const _dashTabBtns = '#pw-tab-griglia, #pw-tab-ferie, #pw-tab-mappa, #pw-tab-controllo, #pw-tab-doppia';
-  document.querySelectorAll(`.tab-btn:not(#pw-tab-griglia):not(#pw-tab-ferie):not(#pw-tab-mappa):not(#pw-tab-controllo):not(#pw-tab-doppia)`).forEach(b => {
+  const _dashTabBtns = '#pw-tab-griglia, #pw-tab-ferie, #pw-tab-mappa, #pw-tab-spostamenti, #pw-tab-controllo, #pw-tab-doppia';
+  document.querySelectorAll(`.tab-btn:not(#pw-tab-griglia):not(#pw-tab-ferie):not(#pw-tab-mappa):not(#pw-tab-spostamenti):not(#pw-tab-controllo):not(#pw-tab-doppia)`).forEach(b => {
     b.onclick = () => {
-      document.querySelectorAll(`.tab-btn:not(#pw-tab-griglia):not(#pw-tab-ferie):not(#pw-tab-mappa):not(#pw-tab-doppia)`).forEach(x => x.classList.remove('active'));
+      document.querySelectorAll(`.tab-btn:not(#pw-tab-griglia):not(#pw-tab-ferie):not(#pw-tab-mappa):not(#pw-tab-spostamenti):not(#pw-tab-controllo):not(#pw-tab-doppia)`).forEach(x => x.classList.remove('active'));
       b.classList.add('active');
       state.activeTab = b.dataset.tab;
       renderCommesse();
@@ -184,6 +184,11 @@ document.addEventListener('DOMContentLoaded', async () => {
   document.getElementById('pw-tab-griglia').onclick = () => pwSwitchTab('griglia');
   document.getElementById('pw-tab-ferie').onclick   = () => pwSwitchTab('ferie');
   document.getElementById('pw-tab-mappa').onclick   = () => pwSwitchTab('mappa');
+  document.getElementById('pw-tab-spostamenti').onclick = () => pwSwitchTab('spostamenti');
+  const _spostCalc  = document.getElementById('pw-spost-calcola');
+  const _spostClear = document.getElementById('pw-spost-clear');
+  if (_spostCalc)  _spostCalc.onclick  = () => pwSpostCalcola();
+  if (_spostClear) _spostClear.onclick = () => pwSpostClear();
   document.getElementById('pw-tab-controllo').onclick = () => pwSwitchTab('controllo');
   document.getElementById('pw-tab-doppia').onclick = () => pwSwitchTab('doppia');
 

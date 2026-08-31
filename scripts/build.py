@@ -46,6 +46,7 @@ JS_FILES = [
     'produzione-core.js',
     'produzione-report.js',
     'weekly-mappa.js',
+    'weekly-spostamenti.js',
     'weekly-meteo.js',
 ]
 
