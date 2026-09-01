@@ -162,7 +162,7 @@ function openFabbisognoModal(commessaId, commessaNome) {
       const matchSkill = riga.skills.length === 0 || riga.skills.every(s => op.skills.includes(s));
       const sat = mesiC.length ? operatoreSatPeriodo(op, mesiC) : 0;
       const skillMancanti = riga.skills.filter(s => !op.skills.includes(s));
-      const attestatiMancanti = attestatiRichiesti.filter(a => !(op.attestati||[]).includes(a));
+      const attestatiMancanti = attNonCoperti(op, attestatiRichiesti);
       const matchCompleto = matchSkill && attestatiMancanti.length === 0;
       // null = ne' regione ne' provincia della commessa (o provincia dell'operatore) note,
       // nessun criterio di vicinanza applicabile
@@ -205,7 +205,7 @@ function openFabbisognoModal(commessaId, commessaNome) {
               ? `<span class="text-[9px] bg-emerald-100 text-emerald-700 px-1 rounded">✓ skill OK</span>`
               : `<span class="text-[9px] bg-red-100 text-red-700 px-1 rounded">manca skill: ${skillMancanti.join(', ')}</span>`;
             const attBadge = attestatiMancanti.length > 0
-              ? `<span class="text-[9px] bg-purple-100 text-purple-700 px-1 rounded" title="Attestati richiesti dalla commessa">manca attestato: ${attestatiMancanti.join(', ')}</span>`
+              ? '<span class="text-[9px] bg-purple-100 text-purple-700 px-1 rounded" title="Attestati richiesti dalla commessa, mancanti o scaduti">manca attestato: ' + esc(attestatiMancanti.map(a => attEtichettaMancanza(op, a)).join(', ')) + '</span>'
               : '';
             const geoBadge = distanza === null ? '' : distanza === 0
               ? (provinciaCommessa
@@ -359,7 +359,7 @@ async function promuoviCommessa(id) {
 }
 
 function openOperatoreModal(id) {
-  const op = id ? state.operatori.find(o => o.id === id) : { id:'op_new_'+Date.now(), nome_breve:'', nome_esteso:'', nome:'', cognome:'', email:'', regione:'', provincia:'', contratto_tipo:'indeterminato', data_inizio_rapporto:'', data_fine_rapporto:'', skills:[], attestati:[], alloc_mensile:new Array(12).fill(0), data_aggiunta: new Date().toISOString().slice(0,10) };
+  const op = id ? state.operatori.find(o => o.id === id) : { id:'op_new_'+Date.now(), nome_breve:'', nome_esteso:'', nome:'', cognome:'', email:'', regione:'', provincia:'', contratto_tipo:'indeterminato', data_inizio_rapporto:'', data_fine_rapporto:'', skills:[], attestati:[], attestati_dett:{}, alloc_mensile:new Array(12).fill(0), data_aggiunta: new Date().toISOString().slice(0,10) };
   const opAtt = op.attestati || [];
   const regioneIniziale = op.regione || (op.provincia && provinciaInfo(op.provincia)?.regione) || '';
   const root = document.getElementById('modal-root');
@@ -410,8 +410,11 @@ function openOperatoreModal(id) {
             <button type="button" id="mo-att-none" class="text-[10px] px-2 py-0.5 bg-slate-100 text-slate-700 rounded border border-slate-300 hover:bg-slate-200">Nessuno</button>
           </div>
         </div>
-        <div class="grid grid-cols-2 gap-1 p-2 bg-purple-50 rounded border border-purple-200 max-h-56 overflow-y-auto">
-          ${ATTESTATI.map(a => `<label class="flex items-center gap-1 text-xs hover:bg-white rounded px-1 cursor-pointer"><input type="checkbox" class="mo-att" value="${a.replace(/"/g, '&quot;')}" ${opAtt.includes(a)?'checked':''}><span>${a}</span></label>`).join('') || '<div class="text-[10px] text-slate-400 italic col-span-2">Nessun attestato definito nel sistema.</div>'}
+        <div class="space-y-0.5 p-2 bg-purple-50 rounded border border-purple-200 max-h-56 overflow-y-auto">
+          <div class="flex items-center gap-1.5 text-[10px] text-slate-500 uppercase tracking-wider px-1 pb-0.5">
+            <span class="w-3"></span><span class="flex-1">Attestato</span><span class="w-[118px]">Data del corso</span><span class="w-[86px] text-right">Scadenza</span>
+          </div>
+          ${ATTESTATI.map(a => attRigaModaleOperatore(op, a)).join('') || '<div class="text-[10px] text-slate-400 italic">Nessun attestato definito nel sistema.</div>'}
         </div>
       </div>
     </div>
@@ -441,6 +444,20 @@ function openOperatoreModal(id) {
   document.getElementById('mo-att-all').onclick = () => document.querySelectorAll('.mo-att').forEach(x => x.checked = true);
   document.getElementById('mo-att-none').onclick = () => document.querySelectorAll('.mo-att').forEach(x => x.checked = false);
 
+  // Compilando la data del corso l'attestato si spunta da solo e la scadenza calcolata
+  // compare subito accanto: evita la combinazione incoerente "data valorizzata, spunta no".
+  document.querySelectorAll('.mo-att-corso').forEach(inp => {
+    inp.addEventListener('change', () => {
+      const riga = inp.closest('.mo-att-riga');
+      if (!riga) return;
+      const cb = riga.querySelector('.mo-att');
+      const out = riga.querySelector('.mo-att-scad');
+      if (inp.value && cb) cb.checked = true;
+      const scad = attScadenzaDaCorso(inp.dataset.att, inp.value);
+      if (out) out.textContent = scad ? fmtDate(scad) : (inp.value ? 'senza scadenza' : '');
+    });
+  });
+
   const contrattoDateBox = document.getElementById('mo-contratto-date');
   document.querySelectorAll('input[name="mo-contratto"]').forEach(r => {
     r.onchange = () => contrattoDateBox.classList.toggle('hidden', !document.getElementById('mo-contratto-det').checked);
@@ -451,6 +468,22 @@ function openOperatoreModal(id) {
     if (!nomeEsteso) { showAlertModal('Nome obbligatorio.'); return; }
     const skills = [...document.querySelectorAll('.mo-skill:checked')].map(x => x.value);
     const attestati = [...document.querySelectorAll('.mo-att:checked')].map(x => x.value);
+    // Dettaglio date: una voce gia' presente e non modificata conserva la sua fonte
+    // (tipicamente 'import'); se la data viene cambiata a mano diventa 'manuale' e da quel
+    // momento sopravvive ai reimport del file aziendale.
+    const dettPrec = op.attestati_dett || {};
+    const attestatiDett = {};
+    document.querySelectorAll('.mo-att-riga').forEach(riga => {
+      const cb = riga.querySelector('.mo-att');
+      if (!cb || !cb.checked) return;
+      const nomeAtt = cb.value;
+      const inpCorso = riga.querySelector('.mo-att-corso');
+      const corso = inpCorso ? inpCorso.value : '';
+      const prec = dettPrec[nomeAtt];
+      if (!corso) { if (prec) attestatiDett[nomeAtt] = prec; return; }
+      if (prec && prec.corso === corso) { attestatiDett[nomeAtt] = prec; return; }
+      attestatiDett[nomeAtt] = { corso: corso, scad: attScadenzaDaCorso(nomeAtt, corso), fonte: 'manuale' };
+    });
     const nome = (document.getElementById('mo-nome')?.value || '').trim();
     const cognome = (document.getElementById('mo-cognome')?.value || '').trim();
     const email = (document.getElementById('mo-email')?.value || '').trim();
@@ -464,8 +497,8 @@ function openOperatoreModal(id) {
     }
     const dataInizioRapporto = contrattoTipo === 'determinato' ? dataInizio : '';
     const dataFineRapporto = contrattoTipo === 'determinato' ? dataFine : '';
-    if (id) { Object.assign(op, { nome_esteso: nomeEsteso, nome, cognome, email, regione, provincia, contratto_tipo: contrattoTipo, data_inizio_rapporto: dataInizioRapporto, data_fine_rapporto: dataFineRapporto, skills, attestati }); await saveState('Modifica operatore', {operatore: nomeEsteso}, true); }
-    else { state.operatori.push({ ...op, nome_esteso: nomeEsteso, nome_breve: nomeEsteso, nome, cognome, email, regione, provincia, contratto_tipo: contrattoTipo, data_inizio_rapporto: dataInizioRapporto, data_fine_rapporto: dataFineRapporto, skills, attestati }); await saveState('Nuovo operatore', {operatore: nomeEsteso}, true); }
+    if (id) { Object.assign(op, { nome_esteso: nomeEsteso, nome, cognome, email, regione, provincia, contratto_tipo: contrattoTipo, data_inizio_rapporto: dataInizioRapporto, data_fine_rapporto: dataFineRapporto, skills, attestati, attestati_dett: attestatiDett }); await saveState('Modifica operatore', {operatore: nomeEsteso}, true); }
+    else { state.operatori.push({ ...op, nome_esteso: nomeEsteso, nome_breve: nomeEsteso, nome, cognome, email, regione, provincia, contratto_tipo: contrattoTipo, data_inizio_rapporto: dataInizioRapporto, data_fine_rapporto: dataFineRapporto, skills, attestati, attestati_dett: attestatiDett }); await saveState('Nuovo operatore', {operatore: nomeEsteso}, true); }
     renderAll(); closeModal();
   };
 }

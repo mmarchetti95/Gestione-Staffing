@@ -189,45 +189,6 @@
   .att-badge { background: #ede9fe; color: #5b21b6; border: 1px solid #ddd6fe; }
   .att-badge.req { background: #fce7f3; color: #9d174d; border-color: #fbcfe8; }
   .skill-badge.miss, .att-badge.miss { background: #fee2e2; color: #991b1b; border-color: #fecaca; }
-  /* Badge attestato colorato per stato di scadenza (scheda operatore e raccomandazioni).
-     Il badge viola "neutro" resta per gli attestati senza data nota. */
-  .att-badge.ko   { background: #fee2e2; color: #991b1b; border-color: #fecaca; }
-  .att-badge.warn { background: #fef3c7; color: #92400e; border-color: #fde68a; }
-  .att-badge.ok   { background: #dcfce7; color: #166534; border-color: #bbf7d0; }
-
-  /* ---- Sezione "Attestati & scadenze" ---- */
-  .att-pill {
-    display: inline-block; margin-left: 6px; padding: 1px 7px; border-radius: 999px;
-    font-size: var(--text-2xs); font-weight: 600;
-  }
-  .att-pill.ko   { background: #fee2e2; color: #991b1b; border: 1px solid #fecaca; }
-  .att-pill.warn { background: #fef3c7; color: #92400e; border: 1px solid #fde68a; }
-  .att-pill.ok   { background: #f1f5f9; color: #475569; border: 1px solid #e2e8f0; }
-  .att-scroll { max-height: 62vh; overflow: auto; border: 1px solid #e2e8f0; border-radius: 6px; }
-  .att-matrix { border-collapse: separate; border-spacing: 0; font-size: var(--text-2xs); width: max-content; min-width: 100%; }
-  .att-matrix th, .att-matrix td { border-bottom: 1px solid #eef2f7; padding: 3px 7px; white-space: nowrap; text-align: center; }
-  /* Intestazione e colonna nome restano visibili durante lo scroll: con 150 dipendenti e
-     11 colonne senza sticky non si capisce piu' di chi/di cosa sia la cella che si guarda. */
-  .att-matrix thead th {
-    position: sticky; top: 0; z-index: 2; background: #f8fafc; color: #475569;
-    font-weight: 600; vertical-align: bottom; border-bottom: 1px solid #e2e8f0;
-  }
-  .att-matrix .att-nome { position: sticky; left: 0; z-index: 1; background: #fff; text-align: left; font-weight: 500; color: #0f172a; }
-  .att-matrix thead .att-nome { z-index: 3; background: #f8fafc; }
-  .att-matrix tbody tr:hover td { background: #f1f5f9; }
-  .att-matrix tbody tr:hover .att-nome { background: #f1f5f9; }
-  .att-th-lbl { font-size: var(--text-2xs); }
-  .att-th-sub { font-size: 9px; font-weight: 400; color: #94a3b8; }
-  .att-cell { display: inline-flex; align-items: center; gap: 3px; }
-  .att-dot { width: 7px; height: 7px; border-radius: 50%; display: inline-block; flex: none; }
-  .att-dot.ok { background: #10b981; }
-  .att-dot.warn { background: #f59e0b; }
-  .att-dot.ko { background: #ef4444; }
-  .att-dot.nodate { background: #94a3b8; }
-  .att-sigla { font-size: 9px; padding: 0 3px; border-radius: 3px; background: #ede9fe; color: #5b21b6; border: 1px solid #ddd6fe; }
-  .att-vuoto { color: #cbd5e1; }
-  .att-tot { color: #64748b; font-variant-numeric: tabular-nums; }
-  .att-fuoripool { font-size: 9px; padding: 0 4px; border-radius: 3px; background: #f1f5f9; color: #64748b; border: 1px solid #e2e8f0; }
   .op-card {
     cursor: grab; user-select: none;
     transition: all .15s;
@@ -278,7 +239,7 @@
   .commessa-card summary:hover { background: rgba(13,148,136,.04); border-radius: 4px; }
   .modal-backdrop {
     position: fixed; inset: 0; background: var(--backdrop);
-    display: flex; align-items: center; justify-content: center; z-index: 10050;
+    display: flex; align-items: center; justify-content: center; z-index: 50;
   }
   .industry-pill {
     display: inline-block; padding: 1px 8px; border-radius: 999px;
@@ -913,30 +874,6 @@
      un giorno ma una vista aggregata sull'intera week. */
   .pw-map-day-btn.pw-map-week-btn { border-color: #c7d2fe; color: #4f46e5; margin-left: 6px; }
   .pw-map-day-btn.pw-map-week-btn.active { background: #4f46e5; border-color: #4f46e5; color: white; }
-  /* Switch "👷 Operatori / 🔧 Strumenti" della sola mappa Cantieri */
-  .pw-map-mode-btn {
-    padding: 4px 12px; border-radius: 6px; font-size: 12px; font-weight: 600;
-    border: 1px solid #e2e8f0; cursor: pointer; background: white; color: #475569;
-    transition: all .15s;
-  }
-  .pw-map-mode-btn:hover { background: #f1f5f9; }
-  .pw-map-mode-btn.active { background: #0d9488; color: white; border-color: #0d9488; }
-  /* Bottone filtro multi-strumento: attivo = evidenziato ma distinto dal
-     riempimento pieno dello switch Operatori/Strumenti, per non confondere i due. */
-  .pw-map-str-filter-btn.active { border-color: #0d9488; color: #0d9488; background: #f0fdfa; }
-  /* Overlay di caricamento sulla mappa Cantieri durante la geocodifica
-     (sequenziale, rate-limited) al cambio vista/giorno/filtro. */
-  .pw-map-loading-overlay {
-    position: absolute; inset: 0; background: rgba(255,255,255,.78);
-    display: none; flex-direction: column; align-items: center; justify-content: center;
-    gap: 8px; font-size: 12px; font-weight: 600; color: #475569; z-index: 1000;
-  }
-  .pw-map-spinner {
-    width: 26px; height: 26px; border-radius: 50%;
-    border: 3px solid #e2e8f0; border-top-color: #0d9488;
-    animation: pwMapSpin .8s linear infinite;
-  }
-  @keyframes pwMapSpin { to { transform: rotate(360deg); } }
   .pw-squad-card {
     padding: 8px; border-radius: 6px; border: 1px solid #e2e8f0; margin-bottom: 4px;
     cursor: pointer; transition: background .15s, border-color .15s, box-shadow .15s;
@@ -993,14 +930,6 @@
     padding: 2px 6px; font-size: 10px; background: white;
   }
   .pw-fix-input:focus { outline: none; border-color: var(--accent); }
-  /* Icona ✏️ per correggere manualmente la posizione di un cantiere (nome o
-     coordinate dirette): input neutro di default, arancio solo nel caso
-     "luogo non trovato" dove serve più urgenza visiva (stesso .pw-fix-input). */
-  .pw-geo-edit-btn { cursor: pointer; font-size: 10px; opacity: .55; margin-left: 2px; }
-  .pw-geo-edit-btn:hover { opacity: 1; }
-  .pw-geo-edit-row { margin-top: 3px; }
-  .pw-geo-edit-row .pw-fix-input { border-color: #cbd5e1; }
-  .sq-warn .pw-geo-edit-row .pw-fix-input { border-color: #fb923c; margin-top: 3px; }
 
   /* ===== NAVIGAZIONE SCHERMATA (Dashboard / Pianificazione settimanale) ===== */
   /* Prima l'attivo/inattivo era deciso da style inline scritti una volta
@@ -1104,7 +1033,7 @@
     <div class="flex items-center gap-2">
       <button id="btn-presentation" class="px-3 py-1.5 text-sm rounded hover:bg-white/10" style="border:1px solid var(--dark-border-strong);color:var(--dark-text);visibility:visible;">📊 Modalità presentazione</button>
       <div class="text-xs pl-2" style="border-left:1px solid var(--dark-border-strong);color:var(--dark-text-muted);">
-        <span id="app-version" class="font-medium" style="color:var(--accent);">v18.114.0</span> · Michele Marchetti
+        <span id="app-version" class="font-medium" style="color:var(--accent);">v18.112.0</span> · Michele Marchetti
       </div>
     </div>
   </div>
@@ -1378,51 +1307,6 @@
     </div>
   </section>
 
-  <!-- 3b. Attestati & scadenze (collassata: la matrice si costruisce solo all'apertura) -->
-  <section id="section-attestati" class="bg-white rounded-lg border border-slate-200 p-4 no-present">
-    <details id="att-details" ontoggle="attToggleSezione()">
-      <summary class="font-semibold text-slate-900 cursor-pointer select-none">
-        🎓 Attestati &amp; scadenze <span id="att-summary-badges" class="font-normal"></span>
-      </summary>
-      <div class="mt-3">
-        <div class="flex flex-wrap items-center gap-2 mb-2">
-          <input id="att-search" type="text" placeholder="Cerca dipendente…" class="flex-1 min-w-[180px] px-2 py-1.5 text-sm border border-slate-300 rounded" oninput="attSetFiltro('search', this.value)">
-          <select id="att-filter-tipo" class="text-xs border border-slate-300 rounded px-1.5 py-1.5" onchange="attSetFiltro('tipo', this.value)">
-            <option value="">Tutti i tipi</option>
-          </select>
-          <select id="att-filter-stato" class="text-xs border border-slate-300 rounded px-1.5 py-1.5" onchange="attSetFiltro('stato', this.value)">
-            <option value="">Tutti gli stati</option>
-            <option value="scaduto">Con almeno uno scaduto</option>
-            <option value="scadenza">Con almeno uno in scadenza</option>
-            <option value="nessuno">Senza alcun attestato</option>
-          </select>
-          <select id="att-filter-ordine" class="text-xs border border-slate-300 rounded px-1.5 py-1.5" onchange="attSetFiltro('ordine', this.value)">
-            <option value="nome">Ordina per nome</option>
-            <option value="scadenza">Ordina per urgenza</option>
-          </select>
-          <label class="flex items-center gap-1 text-xs text-slate-600 whitespace-nowrap">
-            <input type="checkbox" id="att-filter-pool" onchange="attSetFiltro('soloPool', this.checked)"> Solo pool operatori
-          </label>
-          <span id="att-count" class="text-[10px] text-slate-400 whitespace-nowrap"></span>
-          <div class="ml-auto flex gap-1">
-            <button onclick="exportAttestatiXlsx()" class="text-xs px-2 py-1 bg-white text-slate-500 rounded border border-slate-200 hover:bg-slate-50 hover:text-slate-700 whitespace-nowrap" title="Scarica il registro attestati in Excel">⬇ Excel</button>
-            <button onclick="document.getElementById('att-import-file').click()" class="text-xs px-2 py-1 bg-teal-50 text-teal-700 rounded border border-teal-200 hover:bg-teal-100 whitespace-nowrap" title="Importa il file &quot;EP - Elenco attestati dei dipendenti&quot;">⬆ Importa Excel</button>
-            <input type="file" id="att-import-file" accept=".xlsx" class="hidden" onchange="attImportPick(this)">
-          </div>
-        </div>
-        <div id="att-meta" class="text-[10px] text-slate-400 mb-2"></div>
-        <div class="att-scroll"><div id="att-matrix"></div></div>
-        <div class="flex flex-wrap items-center gap-3 mt-2 text-[10px] text-slate-500">
-          <span><span class="att-dot ok"></span> valido</span>
-          <span><span class="att-dot warn"></span> in scadenza entro 90 giorni</span>
-          <span><span class="att-dot ko"></span> scaduto</span>
-          <span><span class="att-dot nodate"></span> scadenza non nota</span>
-          <span class="text-slate-400">· la data in cella è la scadenza (mm/aa); il dettaglio completo è nel tooltip</span>
-        </div>
-      </div>
-    </details>
-  </section>
-
   <!-- 4. Suggerimenti & Gap -->
   <section class="bg-white rounded-lg border border-slate-200 p-5">
     <h2 class="font-semibold text-slate-900 mb-1">Gap risorse &amp; raccomandazioni assunzione</h2>
@@ -1588,19 +1472,9 @@
     </div>
     <div class="grid grid-cols-1 lg:grid-cols-4 gap-4 mb-4 items-start">
       <div class="lg:col-span-3">
-        <div class="flex items-center justify-between flex-wrap gap-2 mb-2">
-          <div class="text-xs font-semibold text-slate-700 uppercase tracking-wide">🏗️ Cantieri</div>
-          <div class="flex items-center gap-2 flex-wrap">
-            <button id="pw-map-strumento-filter-btn" type="button" class="pw-map-mode-btn pw-map-str-filter-btn" style="visibility:hidden;">🔧 Strumenti: tutti</button>
-            <div id="pw-map-cantieri-mode" class="flex gap-1"></div>
-          </div>
-        </div>
-        <div class="bg-white border border-slate-200 rounded-lg overflow-hidden shadow-sm" style="position:relative;">
+        <div class="text-xs font-semibold text-slate-700 mb-2 uppercase tracking-wide">🏗️ Cantieri</div>
+        <div class="bg-white border border-slate-200 rounded-lg overflow-hidden shadow-sm">
           <div id="pw-map" style="height:380px;width:100%;"></div>
-          <div id="pw-map-loading" class="pw-map-loading-overlay">
-            <div class="pw-map-spinner"></div>
-            <span>Aggiornamento mappa…</span>
-          </div>
         </div>
       </div>
       <div class="pw-map-side">
@@ -1609,7 +1483,7 @@
           <div id="pw-map-legend" class="space-y-1 text-xs pw-map-card-body"></div>
         </div>
         <div class="bg-white border border-slate-200 rounded-lg p-3 shadow-sm pw-map-card pw-map-card-summary">
-          <div id="pw-map-summary-title" class="text-xs font-semibold text-slate-700 mb-2 uppercase tracking-wide flex-shrink-0">Squadre & spostamenti</div>
+          <div class="text-xs font-semibold text-slate-700 mb-2 uppercase tracking-wide flex-shrink-0">Squadre & spostamenti</div>
           <div id="pw-map-summary" class="space-y-2 pw-map-card-body"></div>
         </div>
       </div>
@@ -1738,54 +1612,6 @@ let ATTESTATI = INITIAL_DATA.attestati_disponibili || [];
 const MESI = ['Gen','Feb','Mar','Apr','Mag','Giu','Lug','Ago','Set','Ott','Nov','Dic'];
 const MESI_LONG = ['Gennaio','Febbraio','Marzo','Aprile','Maggio','Giugno','Luglio','Agosto','Settembre','Ottobre','Novembre','Dicembre'];
 const INDUSTRIES = ['Altre infrastrutture','Telco','Energy','Water','Robotica e AI','Trasporti','Altro'];
-
-/* ===================== ATTESTATI: VALIDITA' E COLONNE MATRICE ===================== */
-/* Durata di validita' in anni per tipo di attestato, come indicata tra parentesi nelle
-   intestazioni del file "EP - Elenco attestati dei dipendenti": quel file riporta la data
-   del CORSO, non la scadenza, quindi la scadenza viene calcolata (corso + N anni - 1 giorno,
-   coerente con i fogli PES/Segnaletica che la scadenza ce l'hanno esplicita).
-   Una voce senza durata qui viene trattata come "senza scadenza nota". */
-const ATTESTATI_DURATA = {
-  'RSPP': 5,
-  'ASPP': 5,
-  'Preposto': 2,
-  'RLS': 1,
-  'Primo soccorso': 3,
-  'Defibrillatore BLS-D': 2,
-  'Antincendio': 3,
-  'Ambienti confinati': 5,
-  'Lavori in quota': 5,
-  'Segnaletica stradale - Preposto': 5,
-  'Segnaletica stradale - Addetto': 5,
-  'PES-PAV-PEI': 5,
-  'ENEL 1A': 5,
-  'ENEL 1B': 5,
-  'ENEL 2A': 5,
-  'ENEL 2B': 5,
-};
-
-/* Giorni di preavviso entro cui un attestato ancora valido viene mostrato "in scadenza". */
-const ATTESTATI_PREAVVISO_GG = 90;
-
-/* Colonne della matrice Attestati. Alcune voci del vocabolario ATTESTATI sono
-   specializzazioni della stessa abilitazione (Segnaletica Preposto/Addetto, ENEL 1A..2B):
-   come colonne a se' stanti sarebbero quasi tutte vuote, quindi vengono accorpate in
-   un'unica colonna e la variante compare come sigla dentro la cella. */
-const ATTESTATI_COLONNE = [
-  { label: 'Ambienti confinati',  voci: ['Ambienti confinati'] },
-  { label: 'Antincendio',         voci: ['Antincendio'] },
-  { label: 'ASPP',                voci: ['ASPP'] },
-  { label: 'Defibrillatore',      voci: ['Defibrillatore BLS-D'] },
-  { label: 'Lavori in quota',     voci: ['Lavori in quota'] },
-  { label: 'PES-PAV-PEI',         voci: ['PES-PAV-PEI', 'ENEL 1A', 'ENEL 1B', 'ENEL 2A', 'ENEL 2B'],
-    sigle: { 'ENEL 1A': '1A', 'ENEL 1B': '1B', 'ENEL 2A': '2A', 'ENEL 2B': '2B' } },
-  { label: 'Preposto',            voci: ['Preposto'] },
-  { label: 'Primo soccorso',      voci: ['Primo soccorso'] },
-  { label: 'RLS',                 voci: ['RLS'] },
-  { label: 'RSPP',                voci: ['RSPP'] },
-  { label: 'Segnaletica',         voci: ['Segnaletica stradale - Preposto', 'Segnaletica stradale - Addetto'],
-    sigle: { 'Segnaletica stradale - Preposto': 'Prep', 'Segnaletica stradale - Addetto': 'Add' } },
-];
 
 /* ===================== ANAGRAFICA PROVINCE/REGIONI ===================== */
 /* Usata per la provenienza geografica degli operatori (filtro regione/provincia
@@ -1939,11 +1765,6 @@ let state = {
   activeTab: 'pipeline',
   filters: { search:'', skills:new Set(), attestati:new Set(), lowSat:false, regione:'', provincia:'', showEx:false },
   searchCommesse: '',
-  // Registro attestati importato da Excel: archivio grezzo dell'ultimo import, che copre
-  // TUTTI i dipendenti del file (anche chi non e' nel pool operatori del reparto rilievi).
-  // Per chi e' nel pool la fonte autorevole resta op.attestati_dett, che puo' contenere
-  // anche correzioni manuali fatte dalla scheda operatore. Vedi dashboard-attestati.js.
-  attestati_registro: { aggiornato_il: '', file: '', da: '', dipendenti: [] },
 };
 
 /* ===================== ACTIVITY LOG ===================== */
@@ -2328,8 +2149,7 @@ async function sbPull() {
     if (rows[SB_ROW_CORE] && rows[SB_ROW_CORE].payload) {
       const snap = rows[SB_ROW_CORE].payload;
       const keys = ['commesse_pipeline','operatori','assegnazioni','commesse_attive_extra',
-                    'staffing_modificato','commesse_chiuse','commesse_attive_meta','commesse_escluse',
-                    'attestati_registro'];
+                    'staffing_modificato','commesse_chiuse','commesse_attive_meta','commesse_escluse'];
       keys.forEach(k => { if (snap[k] !== undefined) sbSetLocal(k, snap[k]); });
       await loadState();
       renderAll();
@@ -2392,8 +2212,7 @@ async function sbPush() {
     const domains = [];
     if (_sbDirty.core) {
       const keys = ['commesse_pipeline','operatori','assegnazioni','commesse_attive_extra',
-                    'staffing_modificato','commesse_chiuse','commesse_attive_meta','commesse_escluse',
-                    'attestati_registro'];
+                    'staffing_modificato','commesse_chiuse','commesse_attive_meta','commesse_escluse'];
       const snap = { _savedAt: new Date().toISOString(), _version: '18', _savedBy: _sbUser.email };
       for (const k of keys) { try { snap[k] = await sget(k); } catch{} }
       domains.push({ id: SB_ROW_CORE, payload: snap, key: 'core' });
@@ -2564,8 +2383,8 @@ async function sget(k) {
 }
 
 async function loadState() {
-  const keys = ['commesse_pipeline','operatori','assegnazioni','commesse_attive_extra','staffing_modificato','commesse_chiuse','commesse_attive_meta','commesse_escluse','attestati_registro'];
-  const [p, o, a, ce, sm, cc, cam, cesc, areg] = await Promise.all(keys.map(sget));
+  const keys = ['commesse_pipeline','operatori','assegnazioni','commesse_attive_extra','staffing_modificato','commesse_chiuse','commesse_attive_meta','commesse_escluse'];
+  const [p, o, a, ce, sm, cc, cam, cesc] = await Promise.all(keys.map(sget));
   state.pipeline = p || JSON.parse(JSON.stringify(INITIAL_DATA.pipeline));
   state.operatori = o || JSON.parse(JSON.stringify(INITIAL_DATA.operatori));
   state.commesse_chiuse = cc || INITIAL_DATA._chiuse || [];
@@ -2589,7 +2408,6 @@ async function loadState() {
 
   state.assegnazioni = a || INITIAL_DATA._assegnazioni || [];
   state.commesse_attive_meta = cam || INITIAL_DATA._meta || {};
-  state.attestati_registro = areg || { aggiornato_il: '', file: '', da: '', dipendenti: [] };
   ricalcolaAllocOperatori();
 
   // Seed email operatori una-tantum (solo su quelli ancora senza email)
@@ -2607,7 +2425,6 @@ async function saveState(logAction, logDetails, immediate) {
     sset('commesse_chiuse', state.commesse_chiuse),
     sset('commesse_attive_meta', state.commesse_attive_meta),
     sset('commesse_escluse', state.commesse_escluse),
-    sset('attestati_registro', state.attestati_registro),
   ]);
   // Log attività se specificata
   if (logAction) sbLogActivity(logAction, logDetails || {});
@@ -2623,7 +2440,7 @@ async function saveState(logAction, logDetails, immediate) {
 async function resetAll() {
   if (!await showConfirmAsync('Reset completo: tutte le modifiche manuali andranno perse. Procedere?', 'Reset')) return;
   if (hasStorage) {
-    for (const k of ['commesse_pipeline','operatori','assegnazioni','commesse_attive_extra','staffing_modificato','commesse_chiuse','commesse_attive_meta','commesse_escluse','attestati_registro']) {
+    for (const k of ['commesse_pipeline','operatori','assegnazioni','commesse_attive_extra','staffing_modificato','commesse_chiuse','commesse_attive_meta','commesse_escluse']) {
       try { await window.storage.delete(k); } catch{}
     }
   } else {
@@ -2705,7 +2522,10 @@ function fmtDate(s) {
 
 /* ===================== RENDER KPI ===================== */
 function calcKPI() {
-  const nAttive = getNomiCommesseAttive().length;
+  // commesse attive = uniche dallo staffing corrente, escludendo ORE NON LAVORATE
+  const commesseFromStaffing = new Set();
+  state.staffing.forEach(r => { if (r.commessa && r.commessa !== 'ORE NON LAVORATE') commesseFromStaffing.add(r.commessa); });
+  const nAttive = commesseFromStaffing.size;
   const nPipeline = state.pipeline.length;
   const nOperatori = getOperatoriAttivi().length;
 
@@ -2737,12 +2557,7 @@ function calcKPI() {
     }
   });
 
-  // attestati scaduti / in scadenza (operatori del pool)
-  const scadenzeAtt = attScadenzeOperatori();
-  const nAttScaduti = scadenzeAtt.filter(s => s.stato === 'scaduto').length;
-  const nAttInScadenza = scadenzeAtt.length - nAttScaduti;
-
-  return { nAttive, nPipeline, nOperatori, satMedia, gapTot, alertCritici, nAttScaduti, nAttInScadenza };
+  return { nAttive, nPipeline, nOperatori, satMedia, gapTot, alertCritici };
 }
 
 function renderKPI() {
@@ -2776,22 +2591,16 @@ function renderKPI() {
     saturazione: { bg: '#fffbeb', border: '#fde68a', iconBg: '#fef3c7' },
     gap:         { bg: '#fef2f2', border: '#fecaca', iconBg: '#fee2e2' },
     alert:       { bg: '#fef2f2', border: '#fecaca', iconBg: '#fee2e2' },
-    attScaduti:  { bg: '#fef2f2', border: '#fecaca', iconBg: '#fee2e2' },
-    attScadenza: { bg: '#fffbeb', border: '#fde68a', iconBg: '#fef3c7' },
   };
   const satColor = k.satMedia>1.0?'#dc2626':(k.satMedia>0.9?'#c2410c':'#047857');
   const gapColor = k.gapTot>0?'#dc2626':'#047857';
-  const nAttTot = k.nAttScaduti + k.nAttInScadenza;
-  const attColor = k.nAttScaduti>0 ? '#dc2626' : (k.nAttInScadenza>0 ? '#c2410c' : '#047857');
-  const attPal = k.nAttScaduti>0 ? PAL.attScaduti : (k.nAttInScadenza>0 ? PAL.attScadenza : null);
   const html =
     kpiCard('📋', 'Commesse attive', k.nAttive, '#1e40af', 'attive', PAL.attive) +
     kpiCard('🚀', 'Commesse in partenza', k.nPipeline, 'var(--accent-dark)', 'pipeline', PAL.pipeline) +
     kpiCard('🗂', 'Totale commesse', tot, '#0f172a', null, null) +
     kpiCard('👷', 'Operatori', k.nOperatori, '#4338ca', 'operatori', PAL.operatori) +
     kpiCard('📊', 'Saturazione 3 mesi', (k.satMedia*100).toFixed(0)+'%', satColor, 'saturazione', PAL.saturazione) +
-    kpiCard('📉', 'Gap risorse', k.gapTot, gapColor, 'gap', PAL.gap) +
-    kpiCard('🎓', 'Attestati scaduti/in scadenza', nAttTot, attColor, 'attestatiKpi', attPal);
+    kpiCard('📉', 'Gap risorse', k.gapTot, gapColor, 'gap', PAL.gap);
   document.getElementById('kpi-grid').innerHTML = html +
     kpiCard('🚨', 'Alert critici', k.alertCritici, k.alertCritici>0?'#dc2626':'#0f172a', 'alert',
             k.alertCritici>0?PAL.alert:null, 'col-span-2 md:col-span-1');
@@ -2828,13 +2637,17 @@ function showKpiModal(type) {
   if (type === 'attive') {
     title = '📋 Commesse attive';
     headerBg = '#1e40af';
-    const rows = getNomiCommesseAttive().map(nome => {
+    const seen = new Set();
+    const rows = [];
+    state.commesse_attive.forEach(ca => {
+      const nome = ca.progetto || ca.nome || '';
+      if (!nome || nome === 'ORE NON LAVORATE' || seen.has(nome)) return;
+      seen.add(nome);
       const meta  = (state.commesse_attive_meta || {})[nome] || {};
-      const righe = state.staffing.filter(r => r.commessa === nome);
-      const nOp   = new Set(righe.filter(r => (r.mesi || []).some((v,i) => Number(v) > 0 && i >= mese0)).map(r => r.risorsa)).size;
+      const nOp   = (ca.allocazioni || []).filter(a => (a.mesi || []).some((v,i) => v > 0 && i >= mese0)).length;
       const inizio = meta.inizio ? fmtDate(meta.inizio) : '';
       const fine   = meta.fine   ? fmtDate(meta.fine)   : '';
-      return { nome, cliente: meta.cliente||'', periodo: inizio&&fine?`${inizio} → ${fine}`:(inizio||fine||'—'), nOp };
+      rows.push({ nome, cliente: meta.cliente||'', periodo: inizio&&fine?`${inizio} → ${fine}`:(inizio||fine||'—'), nOp });
     });
     bodyHtml = `<div style="font-size:12px;color:#64748b;margin-bottom:12px;">${rows.length} commesse attive</div>
     <table style="width:100%;border-collapse:collapse;font-size:13px;">
@@ -3027,39 +2840,6 @@ function showKpiModal(type) {
     }
   }
 
-  /* ── ATTESTATI SCADUTI/IN SCADENZA ────────────────── */
-  else if (type === 'attestatiKpi') {
-    title = '🎓 Attestati scaduti o in scadenza';
-    headerBg = '#b45309';
-    const scadenze = attScadenzeOperatori();
-    const scaduti = scadenze.filter(s => s.stato === 'scaduto');
-    const inScadenza = scadenze.filter(s => s.stato === 'scadenza');
-    const riga = s => `<tr style="background:${s.stato==='scaduto'?'#fff5f5':'#fffbeb'};">
-      <td style="padding:7px 10px;font-weight:600;color:#1e293b;">${esc(s.op.nome_esteso||s.op.nome||'')}</td>
-      <td style="padding:7px 10px;color:#475569;">${esc(s.nome)}</td>
-      <td style="padding:7px 10px;color:#64748b;white-space:nowrap;">${fmtDate(s.scad)}</td>
-      <td style="padding:7px 10px;text-align:center;font-weight:700;color:${s.stato==='scaduto'?'#dc2626':'#c2410c'};">${s.stato==='scaduto' ? ('scaduto da '+Math.abs(s.giorni)+'gg') : ('tra '+s.giorni+'gg')}</td>
-    </tr>`;
-    if (scadenze.length === 0) {
-      bodyHtml = `<div style="text-align:center;padding:32px;color:#16a34a;font-size:14px;">✅ Nessun attestato scaduto o in scadenza</div>`;
-    } else {
-      bodyHtml = `<div style="font-size:12px;color:#64748b;margin-bottom:12px;">${scaduti.length} scaduti, ${inScadenza.length} in scadenza entro ${ATTESTATI_PREAVVISO_GG} giorni</div>
-      <table style="width:100%;border-collapse:collapse;font-size:13px;">
-        <thead><tr style="background:#fef3c7;">
-          <th style="text-align:left;padding:8px 10px;font-size:11px;color:#475569;font-weight:700;border-bottom:2px solid #fde68a;">Operatore</th>
-          <th style="text-align:left;padding:8px 10px;font-size:11px;color:#475569;font-weight:700;border-bottom:2px solid #fde68a;">Attestato</th>
-          <th style="text-align:left;padding:8px 10px;font-size:11px;color:#475569;font-weight:700;border-bottom:2px solid #fde68a;">Scadenza</th>
-          <th style="text-align:center;padding:8px 10px;font-size:11px;color:#475569;font-weight:700;border-bottom:2px solid #fde68a;">Stato</th>
-        </tr></thead><tbody>
-        ${scaduti.concat(inScadenza).map(riga).join('')}
-        </tbody></table>
-      <div style="margin-top:14px;text-align:right;">
-        <button onclick="closeModal(); const d=document.getElementById('att-details'); if(d){ d.open=true; attToggleSezione(); d.scrollIntoView({behavior:'smooth'}); }"
-          style="font-size:12px;padding:6px 12px;background:#0f172a;color:#fff;border:none;border-radius:6px;cursor:pointer;">Apri sezione Attestati &amp; scadenze →</button>
-      </div>`;
-    }
-  }
-
   root.innerHTML = `<div class="modal-backdrop">
     <div style="background:#fff;border-radius:var(--radius-lg);box-shadow:var(--shadow-lg);width:100%;max-width:760px;margin:2rem auto;display:flex;flex-direction:column;max-height:85vh;">
       <div style="background:${headerBg};border-radius:var(--radius-lg) var(--radius-lg) 0 0;padding:14px 18px;display:flex;justify-content:space-between;align-items:center;flex-shrink:0;">
@@ -3208,9 +2988,7 @@ function renderOperatori() {
       : (op.licenziato ? 'Segnato manualmente come ex collega' : '');
     const exBadge = modoEx ? `<span class="op-ex-tag" title="${esc(exReason)}">ex</span>` : '';
     const skillBadges = op.skills.map(s => `<span class="skill-badge">${s}</span>`).join('');
-    // Il badge attestato porta il colore dello stato di scadenza (verde/ambra/rosso) e nel
-    // tooltip data corso + data scadenza; resta viola neutro se la scadenza non e' nota.
-    const attBadges = attBadgesHtml(op);
+    const attBadges = (op.attestati||[]).map(a => `<span class="att-badge" title="${a}">${a.length>14 ? a.substring(0,13)+'…' : a}</span>`).join('');
     // mini sat bar 12 mesi
     let extraPerMese = new Array(12).fill(0);
     state.assegnazioni.filter(a => a.operatore_id === op.id).forEach(a => {
@@ -3278,17 +3056,12 @@ function renderOperatori() {
    il campo esiste; per i precedenti la cella resta vuota). */
 function exportOperatoriXlsx() {
   if (typeof XLSX === 'undefined') { showAlertModal('Libreria XLSX non caricata. Verifica la connessione internet e ricarica la pagina.'); return; }
-  const header = ['Nome', 'Email', 'Stato', 'Provincia', 'Regione', 'Tipo contratto', 'Data inizio rapporto', 'Data fine rapporto', 'Skill', 'Attestati e certificazioni', 'Attestati scaduti', 'Prima scadenza', 'Data aggiunta al pool'];
+  const header = ['Nome', 'Email', 'Stato', 'Provincia', 'Regione', 'Tipo contratto', 'Data inizio rapporto', 'Data fine rapporto', 'Skill', 'Attestati e certificazioni', 'Data aggiunta al pool'];
   const rows = [...state.operatori]
     .sort((a, b) => (a.nome_esteso || '').localeCompare(b.nome_esteso || ''))
     .map(op => {
       const provInfo = provinciaInfo(op.provincia);
       const stato = (op.licenziato || isOperatoreScaduto(op)) ? 'Ex collega' : 'Attivo';
-      const scadenzeOp = (op.attestati || [])
-        .map(a => (attVoceOperatore(op, a) || {}).scad)
-        .filter(Boolean)
-        .sort();
-      const primaScadenza = scadenzeOp.length ? scadenzeOp[0] : '';
       return [
         op.nome_esteso || '',
         op.email || '',
@@ -3299,19 +3072,12 @@ function exportOperatoriXlsx() {
         op.data_inizio_rapporto ? fmtDate(op.data_inizio_rapporto) : '',
         op.data_fine_rapporto ? fmtDate(op.data_fine_rapporto) : '',
         (op.skills || []).join(', '),
-        // gli attestati con scadenza nota la portano tra parentesi, per non dover
-        // incrociare questo export con quello del registro attestati
-        (op.attestati || []).map(a => {
-          const voce = attVoceOperatore(op, a);
-          return (voce && voce.scad) ? a + ' (scad. ' + fmtDate(voce.scad) + ')' : a;
-        }).join(', '),
-        (op.attestati || []).filter(a => attStatoOperatore(op, a) === 'scaduto').join(', '),
-        primaScadenza ? fmtDate(primaScadenza) : '',
+        (op.attestati || []).join(', '),
         op.data_aggiunta ? fmtDate(op.data_aggiunta) : ''
       ];
     });
   const ws = XLSX.utils.aoa_to_sheet([header, ...rows]);
-  ws['!cols'] = [{wch:28},{wch:26},{wch:12},{wch:18},{wch:16},{wch:16},{wch:14},{wch:14},{wch:35},{wch:50},{wch:30},{wch:14},{wch:16}];
+  ws['!cols'] = [{wch:28},{wch:26},{wch:12},{wch:18},{wch:16},{wch:16},{wch:14},{wch:14},{wch:35},{wch:35},{wch:16}];
   const wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, ws, 'Operatori');
   const ts = new Date();
@@ -3685,762 +3451,21 @@ async function aggiornaGgOpVistaCommessa(inp) {
   renderAlerts();
 }
 
-/* ===================== ATTESTATI: SCADENZE, REGISTRO E IMPORT ===================== */
-/* Mappa gli attestati di sicurezza posseduti dai dipendenti con la relativa data di corso
-   e di scadenza, alimentando due consumatori diversi:
-
-   1. la sezione "Attestati & scadenze" della dashboard, consultabile per TUTTI i dipendenti
-      presenti nel file aziendale (non solo per gli operatori del reparto rilievi);
-   2. gli operatori gia' in anagrafica, di cui riempie op.attestati (che era, ed e' rimasta,
-      la lista piatta di nomi usata da filtri, matching commessa/operatore ed export).
-
-   MODELLO DATI (tutto nel dominio "core", nessuna modifica allo schema Supabase):
-   - op.attestati        lista piatta di nomi. INVARIATA: nessun call site esistente si rompe.
-   - op.attestati_dett   { "<nome attestato>": { corso, scad, fonte } } con date ISO.
-                         E' la fonte autorevole per chi e' nel pool, perche' puo' contenere
-                         anche correzioni fatte a mano dalla scheda operatore.
-   - state.attestati_registro  archivio grezzo dell'ultimo import, che copre anche i
-                         dipendenti fuori dal pool. Serve alla sola consultazione e a
-                         riabbinare qualcuno che venga aggiunto al pool in seguito.
-
-   Un attestato senza data (inserito a mano prima che esistesse questa funzione, oppure
-   spuntato senza compilare il campo data) vale "senza scadenza nota" e NON viene mai
-   trattato come scaduto: cosi' l'introduzione delle scadenze non invalida da sola dati
-   preesistenti. */
-
-/* ---------------------------------------------------------------- date e stati ----- */
-
-/* Converte una cella Excel in data ISO 'YYYY-MM-DD'. Il file arriva come seriale numerico
-   (si legge con raw:true, senza cellDates, perche' la conversione automatica di SheetJS
-   sposta la data di qualche ora a seconda del fuso del browser e puo' far slittare il
-   giorno). L'epoca dei seriali e' 1899-12-30: tiene gia' conto del bug del 1900 bisestile
-   di Excel. Accetta anche date gia' testuali (gg/mm/aaaa o ISO) per robustezza. */
-function attExcelData(v) {
-  if (v === null || v === undefined || v === '') return '';
-  if (typeof v === 'number' && isFinite(v)) {
-    if (v < 1 || v > 100000) return '';
-    const d = new Date(Date.UTC(1899, 11, 30) + Math.round(v) * 86400000);
-    return isNaN(d.getTime()) ? '' : d.toISOString().slice(0, 10);
-  }
-  if (v instanceof Date) {
-    return isNaN(v.getTime()) ? '' : new Date(Date.UTC(v.getFullYear(), v.getMonth(), v.getDate())).toISOString().slice(0, 10);
-  }
-  const s = ('' + v).trim();
-  const iso = s.match(/^(\d{4})-(\d{2})-(\d{2})/);
-  if (iso) return iso[0];
-  const ita = s.match(/^(\d{1,2})[\/\-.](\d{1,2})[\/\-.](\d{2,4})$/);
-  if (ita) {
-    let anno = parseInt(ita[3], 10);
-    if (anno < 100) anno += anno < 50 ? 2000 : 1900;
-    const mm = ('0' + ita[2]).slice(-2), gg = ('0' + ita[1]).slice(-2);
-    return anno + '-' + mm + '-' + gg;
-  }
-  return '';
-}
-
-/* Scadenza = data corso + N anni - 1 giorno, con N preso da ATTESTATI_DURATA.
-   Il "-1 giorno" riproduce esattamente le date di scadenza esplicite dei fogli
-   PES-PAV-PEI e Segnaletica stradale (es. corso 26/10/2018 -> scadenza 25/10/2023). */
-function attScadenzaDaCorso(nome, corsoIso) {
-  const anni = ATTESTATI_DURATA[nome];
-  if (!anni || !corsoIso) return '';
-  const p = corsoIso.split('-');
-  const d = new Date(Date.UTC(parseInt(p[0], 10) + anni, parseInt(p[1], 10) - 1, parseInt(p[2], 10)));
-  if (isNaN(d.getTime())) return '';
-  d.setUTCDate(d.getUTCDate() - 1);
-  return d.toISOString().slice(0, 10);
-}
-
-function attOggiIso() { return new Date().toISOString().slice(0, 10); }
-
-/* Giorni che mancano alla scadenza (negativi se gia' scaduto), null se data assente. */
-function attGiorniAllaScadenza(scadIso) {
-  if (!scadIso) return null;
-  const oggi = new Date(attOggiIso() + 'T00:00:00Z').getTime();
-  const scad = new Date(scadIso + 'T00:00:00Z').getTime();
-  if (isNaN(scad)) return null;
-  return Math.round((scad - oggi) / 86400000);
-}
-
-/* Stato di una singola voce { corso, scad }: 'valido' | 'scadenza' | 'scaduto' | 'senza-data'. */
-function attStatoVoce(voce) {
-  if (!voce || !voce.scad) return 'senza-data';
-  const gg = attGiorniAllaScadenza(voce.scad);
-  if (gg === null) return 'senza-data';
-  if (gg < 0) return 'scaduto';
-  if (gg <= ATTESTATI_PREAVVISO_GG) return 'scadenza';
-  return 'valido';
-}
-
-/* Dettaglio (con date) di un attestato per un operatore, o null se non lo possiede. */
-function attVoceOperatore(op, nome) {
-  if (!op) return null;
-  const dett = op.attestati_dett || {};
-  if (dett[nome]) return dett[nome];
-  if ((op.attestati || []).includes(nome)) return { corso: '', scad: '', fonte: 'manuale' };
-  return null;
-}
-
-/* Stato di un attestato per un operatore, 'assente' incluso. */
-function attStatoOperatore(op, nome) {
-  const voce = attVoceOperatore(op, nome);
-  if (!voce) return 'assente';
-  return attStatoVoce(voce);
-}
-
-/* Un attestato "copre" un requisito di commessa se e' posseduto e non scaduto.
-   Senza data di scadenza nota lo si considera valido (vedi nota in testa al file). */
-function attIsValido(op, nome) {
-  const st = attStatoOperatore(op, nome);
-  return st === 'valido' || st === 'scadenza' || st === 'senza-data';
-}
-
-/* Sostituisce il vecchio  attReq.filter(a => !(op.attestati||[]).includes(a))
-   distinguendo pero' "mai avuto" da "scaduto". Ritorna i soli nomi. */
-function attNonCoperti(op, richiesti) {
-  return (richiesti || []).filter(a => !attIsValido(op, a));
-}
-
-/* Etichetta di un attestato non coperto, per i messaggi di assegnazione:
-   "Preposto" se manca del tutto, "Preposto (scaduto il 12 mar 2025)" se e' scaduto. */
-function attEtichettaMancanza(op, nome) {
-  const voce = attVoceOperatore(op, nome);
-  if (voce && voce.scad && attStatoVoce(voce) === 'scaduto') return nome + ' (scaduto il ' + fmtDate(voce.scad) + ')';
-  return nome;
-}
-
-/* Tooltip completo di una voce, usato nei badge della scheda operatore e nella matrice. */
-function attTooltipVoce(nome, voce) {
-  if (!voce) return nome + ' — non posseduto';
-  const st = attStatoVoce(voce);
-  const parti = [nome];
-  if (voce.corso) parti.push('corso del ' + fmtDate(voce.corso));
-  if (voce.scad) {
-    const gg = attGiorniAllaScadenza(voce.scad);
-    if (st === 'scaduto') parti.push('SCADUTO il ' + fmtDate(voce.scad) + ' (' + Math.abs(gg) + ' giorni fa)');
-    else parti.push('scade il ' + fmtDate(voce.scad) + ' (tra ' + gg + ' giorni)');
-  } else {
-    parti.push('scadenza non nota');
-  }
-  return parti.join(' · ');
-}
-
-/* Classe CSS del pallino/badge per stato. */
-function attClasseStato(st) {
-  if (st === 'scaduto') return 'ko';
-  if (st === 'scadenza') return 'warn';
-  if (st === 'valido') return 'ok';
-  return 'nodate';
-}
-
-/* Badge di un attestato posseduto: colore per stato di scadenza e dettaglio nel tooltip.
-   Un attestato senza scadenza nota resta viola neutro come prima di questa funzione.
-   Condiviso da scheda operatore, modal di allocazione e vista impegni, che prima
-   ripetevano tre volte lo stesso markup. */
-function attBadgeHtml(op, nome) {
-  const voce = attVoceOperatore(op, nome);
-  const st = attStatoVoce(voce);
-  const cls = st === 'senza-data' ? '' : ' ' + attClasseStato(st);
-  const marker = st === 'scaduto' ? ' ✕' : (st === 'scadenza' ? ' ⏳' : '');
-  const label = nome.length > 14 ? nome.substring(0, 13) + '…' : nome;
-  return '<span class="att-badge' + cls + '" title="' + esc(attTooltipVoce(nome, voce)) + '">' + esc(label) + marker + '</span>';
-}
-
-/* Elenco completo dei badge di un operatore; `vuoto` e' l'HTML da mostrare se non ne ha. */
-function attBadgesHtml(op, vuoto) {
-  const lista = (op && op.attestati) || [];
-  if (lista.length === 0) return vuoto === undefined ? '' : vuoto;
-  return lista.map(a => attBadgeHtml(op, a)).join('');
-}
-
-/* Riga della griglia attestati nella scheda operatore: spunta, nome, data del corso
-   modificabile e scadenza calcolata. Costruita per concatenazione (niente template literal
-   annidati dentro quello del modal, che in questo file hanno gia' causato errori di parse). */
-function attRigaModaleOperatore(op, nome) {
-  const voce = attVoceOperatore(op, nome) || {};
-  const posseduto = (op.attestati || []).includes(nome) || !!(op.attestati_dett || {})[nome];
-  const durata = ATTESTATI_DURATA[nome];
-  const tip = durata
-    ? 'Data del corso — validità ' + durata + (durata === 1 ? ' anno' : ' anni') + ', la scadenza si calcola da sola'
-    : 'Data del corso';
-  const scadTxt = voce.scad ? fmtDate(voce.scad) : '';
-  const clsScad = attStatoVoce(voce) === 'scaduto' ? ' text-red-600 font-semibold' : '';
-  return '<div class="mo-att-riga flex items-center gap-1.5 text-xs hover:bg-white rounded px-1 py-0.5">' +
-    '<input type="checkbox" class="mo-att" value="' + esc(nome) + '"' + (posseduto ? ' checked' : '') + '>' +
-    '<span class="flex-1 truncate" title="' + esc(nome) + '">' + esc(nome) + '</span>' +
-    '<input type="date" class="mo-att-corso w-[118px] border border-slate-300 rounded px-1 py-0.5 text-[11px]" ' +
-      'data-att="' + esc(nome) + '" value="' + esc(voce.corso || '') + '" title="' + esc(tip) + '">' +
-    '<span class="mo-att-scad w-[86px] text-right text-[10px] text-slate-500' + clsScad + '">' + esc(scadTxt) + '</span>' +
-  '</div>';
-}
-
-/* Tutte le voci in scadenza o scadute degli operatori del pool, ordinate per urgenza.
-   Usata dal pannello alert e dal contatore nell'intestazione della sezione. */
-function attScadenzeOperatori(giorniPreavviso) {
-  const soglia = giorniPreavviso === undefined ? ATTESTATI_PREAVVISO_GG : giorniPreavviso;
-  const out = [];
-  getOperatoriAttivi().forEach(op => {
-    const dett = op.attestati_dett || {};
-    Object.keys(dett).forEach(nome => {
-      const voce = dett[nome];
-      if (!voce || !voce.scad) return;
-      const gg = attGiorniAllaScadenza(voce.scad);
-      if (gg === null || gg > soglia) return;
-      out.push({ op: op, nome: nome, scad: voce.scad, giorni: gg, stato: gg < 0 ? 'scaduto' : 'scadenza' });
-    });
-  });
-  out.sort((a, b) => a.giorni - b.giorni);
-  return out;
-}
-
-/* ------------------------------------------------------- righe della matrice ----- */
-
-const _attFiltri = { search: '', tipo: '', stato: '', soloPool: false, ordine: 'nome' };
-
-/* Unisce pool operatori e registro importato in un'unica lista di righe
-   { nome, op, voci, inPool }. Per chi e' nel pool vince sempre op.attestati_dett
-   (che include le eventuali correzioni manuali); il registro copre solo chi nel
-   pool non c'e'. */
-function attRigheRegistro() {
-  const righe = [];
-  const nomiPool = new Set();
-
-  (state.operatori || []).forEach(op => {
-    if (op.licenziato || isOperatoreScaduto(op)) return;
-    const nome = op.nome_esteso || op.nome || '';
-    if (!nome) return;
-    nomiPool.add(pwFerieNormTokens(nome).sort().join(' '));
-    const voci = {};
-    const dett = op.attestati_dett || {};
-    (op.attestati || []).forEach(a => { voci[a] = dett[a] || { corso: '', scad: '', fonte: 'manuale' }; });
-    Object.keys(dett).forEach(a => { voci[a] = dett[a]; });
-    righe.push({ nome: nome, op: op, voci: voci, inPool: true });
-  });
-
-  const reg = state.attestati_registro || {};
-  (reg.dipendenti || []).forEach(d => {
-    const chiave = pwFerieNormTokens(d.nome || '').sort().join(' ');
-    if (!chiave || nomiPool.has(chiave)) return;
-    righe.push({ nome: d.nome, op: null, voci: d.voci || {}, inPool: false });
-  });
-
-  return righe;
-}
-
-/* Voce "principale" di una colonna per una riga: se la colonna accorpa piu' varianti
-   (ENEL, Segnaletica Preposto/Addetto) vince quella con la scadenza piu' lontana, cosi'
-   la cella riflette lo stato migliore effettivamente in corso. */
-function attVocePrincipaleColonna(voci, col) {
-  let best = null;
-  col.voci.forEach(nome => {
-    const v = voci[nome];
-    if (!v) return;
-    if (!best || (v.scad || '') > (best.voce.scad || '')) best = { nome: nome, voce: v };
-  });
-  return best;
-}
-
-function attSetFiltro(chiave, valore) {
-  _attFiltri[chiave] = valore;
-  renderAttestati();
-}
-
-/* Data breve mm/aa per stare dentro una cella stretta. */
-function attDataBreve(iso) {
-  if (!iso) return '';
-  return iso.slice(5, 7) + '/' + iso.slice(2, 4);
-}
-
-/* --------------------------------------------------------------- render vista ----- */
-
-function renderAttestati() {
-  const box = document.getElementById('att-matrix');
-  const badge = document.getElementById('att-summary-badges');
-
-  const scadenze = attScadenzeOperatori();
-  const nScaduti = scadenze.filter(s => s.stato === 'scaduto').length;
-  const nInScadenza = scadenze.length - nScaduti;
-  if (badge) {
-    let b = '';
-    if (nScaduti > 0) b += '<span class="att-pill ko">' + nScaduti + ' scadut' + (nScaduti === 1 ? 'o' : 'i') + '</span>';
-    if (nInScadenza > 0) b += '<span class="att-pill warn">' + nInScadenza + ' in scadenza</span>';
-    if (!b) b = '<span class="att-pill ok">nessuna scadenza entro ' + ATTESTATI_PREAVVISO_GG + ' giorni</span>';
-    badge.innerHTML = b;
-  }
-
-  if (!box) return;
-  // Sezione collassata: niente render della matrice (150+ righe x 11 colonne ad ogni
-  // renderAll() sarebbero sprecate finche' nessuno la apre).
-  const det = document.getElementById('att-details');
-  if (det && !det.open) { box.innerHTML = ''; return; }
-
-  const meta = state.attestati_registro || {};
-  const metaEl = document.getElementById('att-meta');
-  if (metaEl) {
-    metaEl.textContent = meta.aggiornato_il
-      ? 'Ultimo import: ' + fmtDate(meta.aggiornato_il) + (meta.file ? ' — ' + meta.file : '') + (meta.da ? ' (' + meta.da + ')' : '')
-      : 'Nessun import effettuato: la tabella mostra solo gli attestati inseriti a mano nelle schede operatore.';
-  }
-
-  // Popola una-tantum la tendina dei tipi
-  const selTipo = document.getElementById('att-filter-tipo');
-  if (selTipo && selTipo.options.length <= 1) {
-    selTipo.innerHTML = '<option value="">Tutti i tipi</option>' +
-      ATTESTATI_COLONNE.map(c => '<option value="' + esc(c.label) + '">' + esc(c.label) + '</option>').join('');
-  }
-
-  const q = (_attFiltri.search || '').trim().toLowerCase();
-  const colFiltro = _attFiltri.tipo ? ATTESTATI_COLONNE.find(c => c.label === _attFiltri.tipo) : null;
-
-  const righe = attRigheRegistro().filter(r => {
-    if (_attFiltri.soloPool && !r.inPool) return false;
-    if (q && !r.nome.toLowerCase().includes(q)) return false;
-    if (colFiltro && !attVocePrincipaleColonna(r.voci, colFiltro)) return false;
-    if (_attFiltri.stato) {
-      const stati = Object.keys(r.voci).map(n => attStatoVoce(r.voci[n]));
-      if (_attFiltri.stato === 'scaduto' && !stati.includes('scaduto')) return false;
-      if (_attFiltri.stato === 'scadenza' && !stati.includes('scadenza')) return false;
-      if (_attFiltri.stato === 'nessuno' && stati.length > 0) return false;
-    }
-    return true;
-  });
-
-  // Scadenza piu' vicina della riga, per l'ordinamento "per urgenza"
-  function urgenzaRiga(r) {
-    let best = null;
-    Object.keys(r.voci).forEach(n => {
-      const gg = attGiorniAllaScadenza(r.voci[n].scad);
-      if (gg === null) return;
-      if (best === null || gg < best) best = gg;
-    });
-    return best === null ? 999999 : best;
-  }
-
-  if (_attFiltri.ordine === 'scadenza') righe.sort((a, b) => urgenzaRiga(a) - urgenzaRiga(b) || a.nome.localeCompare(b.nome));
-  else righe.sort((a, b) => a.nome.localeCompare(b.nome));
-
-  const colonne = colFiltro ? [colFiltro] : ATTESTATI_COLONNE;
-
-  const countEl = document.getElementById('att-count');
-  if (countEl) countEl.textContent = righe.length + ' dipendenti';
-
-  if (righe.length === 0) {
-    box.innerHTML = '<div class="text-center text-sm text-slate-400 py-6">Nessun dipendente corrisponde ai filtri.</div>';
-    return;
-  }
-
-  // Totale per colonna: quanti hanno la voce e non e' scaduta
-  const totali = colonne.map(col => righe.filter(r => {
-    const b = attVocePrincipaleColonna(r.voci, col);
-    return b && attStatoVoce(b.voce) !== 'scaduto';
-  }).length);
-
-  let html = '<table class="att-matrix"><thead><tr>';
-  html += '<th class="att-nome">Dipendente</th>';
-  colonne.forEach((col, i) => {
-    const durata = ATTESTATI_DURATA[col.voci[0]];
-    const tip = col.label + (durata ? ' — validità ' + durata + (durata === 1 ? ' anno' : ' anni') : '');
-    html += '<th title="' + esc(tip) + '"><div class="att-th-lbl">' + esc(col.label) + '</div>' +
-      '<div class="att-th-sub">' + totali[i] + (durata ? ' · ' + durata + 'a' : '') + '</div></th>';
-  });
-  html += '<th title="Attestati non scaduti / totale posseduti">Validi</th></tr></thead><tbody>';
-
-  righe.forEach(r => {
-    const nVal = Object.keys(r.voci).filter(n => attStatoVoce(r.voci[n]) !== 'scaduto').length;
-    const nTot = Object.keys(r.voci).length;
-    const tagPool = r.inPool ? '' : '<span class="att-fuoripool" title="Presente nel file attestati ma non nel pool operatori del reparto">fuori pool</span>';
-    html += '<tr><td class="att-nome">' + esc(r.nome) + ' ' + tagPool + '</td>';
-    colonne.forEach(col => {
-      const best = attVocePrincipaleColonna(r.voci, col);
-      if (!best) { html += '<td class="att-vuoto">·</td>'; return; }
-      const st = attStatoVoce(best.voce);
-      // sigle delle varianti effettivamente possedute (ENEL 1A/1B..., Prep/Add)
-      let sigle = '';
-      if (col.sigle) {
-        Object.keys(col.sigle).forEach(nomeVar => {
-          if (r.voci[nomeVar]) sigle += '<span class="att-sigla">' + esc(col.sigle[nomeVar]) + '</span>';
-        });
-      }
-      html += '<td title="' + esc(attTooltipVoce(best.nome, best.voce)) + '"><span class="att-cell">' +
-        '<span class="att-dot ' + attClasseStato(st) + '"></span>' +
-        '<span>' + (best.voce.scad ? attDataBreve(best.voce.scad) : '—') + '</span>' + sigle + '</span></td>';
-    });
-    html += '<td class="att-tot">' + nVal + '/' + nTot + '</td></tr>';
-  });
-  html += '</tbody></table>';
-  box.innerHTML = html;
-}
-
-/* Chiamata dall'attributo ontoggle del <details>: alla prima apertura la matrice non
-   e' ancora stata costruita. */
-function attToggleSezione() {
-  renderAttestati();
-}
-
-/* -------------------------------------------------------------------- import ----- */
-
-/* Normalizza un'intestazione del foglio principale ("Preposto \n(2 anni)", "PES-PAV-PEI** ")
-   nel nome canonico del vocabolario ATTESTATI. Ritorna '' se la colonna non e' un attestato
-   (es. "n. attestati", colonne vuote). */
-function attNomeDaIntestazione(h) {
-  let s = ('' + (h || '')).replace(/\s+/g, ' ').trim();
-  s = s.replace(/\(.*?\)/g, '').replace(/[*]+/g, '').trim();
-  if (!s) return '';
-  const norm = v => v.toLowerCase().replace(/[^a-z0-9]/g, '');
-  const target = norm(s);
-  if (!target || target.indexOf('attestat') === 0 || target.indexOf('nattestat') === 0) return '';
-  // "Segnaletica stradale" e "PES-PAV-PEI" sul foglio principale sono generici: la variante
-  // (Preposto/Addetto, ENEL 1A..2B) si legge nei fogli dedicati, che sono un soprainsieme
-  // di quello principale — quindi qui vengono ignorati di proposito.
-  if (target.indexOf('segnaletica') === 0) return '';
-  if (target.indexOf('pespav') === 0) return '';
-  const trovato = ATTESTATI.find(a => norm(a) === target);
-  return trovato || '';
-}
-
-function attFoglio(wb, frammento) {
-  const nome = wb.SheetNames.find(n => n.toLowerCase().replace(/[^a-z]/g, '').includes(frammento));
-  return nome ? wb.Sheets[nome] : null;
-}
-
-function attImportPick(inputEl) {
-  const file = inputEl.files && inputEl.files[0];
-  inputEl.value = ''; // consente di riselezionare lo stesso file dopo una correzione
-  if (file) attImportFile(file);
-}
-
-/* Riepilogo pre-import: stesso schema del modal ferie (elenchi scrollabili + ricerca),
-   perche' anche qui il file copre tutta l'azienda e la gran parte dei nominativi non
-   appartiene al pool del reparto. */
-function attImportShowConfirm(info) {
-  return new Promise(resolve => {
-    const root = document.getElementById('modal-root');
-
-    function attListBox(items, titolo, colorClass) {
-      if (items.length === 0) return '';
-      const righe = items.slice().sort((a, b) => a.nome.localeCompare(b.nome)).map(it => {
-        const nota = it.nota ? ' <span class="text-slate-400">(' + esc(it.nota) + ')</span>' : '';
-        return '<div class="ati-row px-2 py-1 border-b border-slate-100 last:border-b-0" data-nome="' +
-          esc(it.nome.toLowerCase()) + '">' + esc(it.nome) + nota + '</div>';
-      }).join('');
-      return '<div class="mt-3"><div class="text-xs font-semibold ' + colorClass + ' mb-1">' + titolo +
-        ' (' + items.length + ')</div><div class="border border-slate-200 rounded text-xs" style="max-height:160px;overflow-y:auto;">' +
-        righe + '</div></div>';
-    }
-
-    const nElencati = info.matched.length + info.unmatched.length + info.ambiguous.length;
-    const html =
-      '<div class="modal-backdrop"><div class="bg-white rounded-lg shadow-xl w-full max-w-lg mx-4 flex flex-col" style="max-height:85vh;">' +
-        '<div class="px-5 py-4 border-b border-slate-100">' +
-          '<div class="font-semibold text-slate-900 text-sm">Importazione attestati</div>' +
-          '<div class="text-xs text-slate-500 mt-0.5">' + esc(info.fileName) + '</div>' +
-        '</div>' +
-        '<div class="px-5 py-4 text-sm text-slate-700" style="overflow-y:auto;">' +
-          '<ul class="text-xs space-y-1 text-slate-600">' +
-            '<li>• <b>' + info.nDipendenti + '</b> dipendenti letti dal file, <b>' + info.nVoci + '</b> attestati in totale</li>' +
-            '<li>• <b>' + info.matched.length + '</b> abbinati a operatori del pool: le loro schede verranno aggiornate</li>' +
-            '<li>• ' + (info.nDipendenti - info.matched.length) + ' resteranno solo nel registro consultabile</li>' +
-            (info.nScartati > 0 ? '<li>• ' + info.nScartati + ' celle ignorate (data non leggibile)</li>' : '') +
-          '</ul>' +
-          (nElencati > 0 ?
-            '<div class="relative mt-3">' +
-              '<input type="text" id="ati-search" placeholder="Cerca un nominativo negli elenchi qui sotto…" ' +
-              'class="w-full text-xs border border-slate-300 rounded px-2 py-1.5 pr-16 focus:outline-none focus:border-teal-400" ' +
-              'oninput="attImportFilter(this.value)">' +
-              '<span id="ati-search-count" class="absolute right-2 top-1/2 -translate-y-1/2 text-[10px] text-slate-400"></span>' +
-            '</div>' : '') +
-          attListBox(info.matched, '✓ Abbinati al pool operatori', 'text-emerald-700') +
-          attListBox(info.ambiguous, '⚠ Ambigui, più operatori corrispondenti (solo registro)', 'text-amber-700') +
-          attListBox(info.unmatched, 'Non nel pool operatori (solo registro)', 'text-slate-600') +
-          '<div class="text-xs text-slate-500 mt-3">Per gli operatori abbinati gli attestati provenienti da un import precedente ' +
-          'vengono riallineati al file; quelli aggiunti a mano dalla scheda operatore restano invariati.</div>' +
-        '</div>' +
-        '<div class="px-5 py-3 border-t border-slate-100 flex justify-end gap-2">' +
-          '<button id="ati-cancel" class="px-3 py-1.5 text-sm border border-slate-300 rounded hover:bg-slate-50">Annulla</button>' +
-          '<button id="ati-confirm" class="px-3 py-1.5 text-sm bg-teal-600 text-white rounded hover:bg-teal-700">Importa</button>' +
-        '</div>' +
-      '</div></div>';
-
-    root.innerHTML = html;
-    document.getElementById('ati-cancel').onclick = () => { closeModal(); resolve(false); };
-    document.getElementById('ati-confirm').onclick = () => { closeModal(); resolve(true); };
-    root.querySelector('.modal-backdrop').addEventListener('click', e => {
-      if (e.target.classList.contains('modal-backdrop')) { closeModal(); resolve(false); }
-    });
-  });
-}
-
-function attImportFilter(query) {
-  const q = (query || '').trim().toLowerCase();
-  const rows = document.querySelectorAll('#modal-root .ati-row');
-  let shown = 0;
-  rows.forEach(row => {
-    const match = !q || row.dataset.nome.includes(q);
-    row.classList.toggle('hidden', !match);
-    if (match) shown++;
-  });
-  const countEl = document.getElementById('ati-search-count');
-  if (countEl) countEl.textContent = q ? shown + '/' + rows.length : '';
-}
-
-/* Legge un foglio di dettaglio (PES / Segnaletica): riga intestazione con "Dipendente",
-   una colonna X per variante e le colonne "Data ultimo corso"/"Data corso" e
-   "Data di scadenza". Ritorna il numero di righe scartate. */
-function attImportFoglioDettaglio(rows, mappaColonne, aggiungiVoce) {
-  let scartate = 0;
-  let hIdx = -1;
-  for (let i = 0; i < Math.min(15, rows.length); i++) {
-    const r = rows[i] || [];
-    if (r.some(c => /^dipendente$/i.test(('' + (c || '')).trim()))) { hIdx = i; break; }
-  }
-  if (hIdx < 0) return 0;
-  const header = (rows[hIdx] || []).map(c => ('' + (c || '')).toLowerCase().replace(/[^a-z0-9]/g, ''));
-  const iNome = header.findIndex(h => h === 'dipendente');
-  const iCorso = header.findIndex(h => h.indexOf('dataultimocorso') === 0 || h.indexOf('datacorso') === 0);
-  const iScad = header.findIndex(h => h.indexOf('datadiscadenza') === 0 || h.indexOf('datascadenza') === 0);
-  const colVar = [];
-  header.forEach((h, i) => { if (mappaColonne[h]) colVar.push({ i: i, nome: mappaColonne[h] }); });
-  if (iNome < 0 || colVar.length === 0) return 0;
-
-  for (let r = hIdx + 1; r < rows.length; r++) {
-    const row = rows[r] || [];
-    const nomeDip = ('' + (row[iNome] === null || row[iNome] === undefined ? '' : row[iNome])).replace(/\s+/g, ' ').trim();
-    // scarta la riga "Totale" e le righe di legenda ("1A - Conoscenze teoriche", ...)
-    if (!nomeDip || /^totale$/i.test(nomeDip) || /^legenda/i.test(nomeDip) || /^\d[ab]?\s*-/i.test(nomeDip)) continue;
-    const corso = iCorso >= 0 ? attExcelData(row[iCorso]) : '';
-    const scad = iScad >= 0 ? attExcelData(row[iScad]) : '';
-    let almenoUna = false;
-    colVar.forEach(c => {
-      const cella = row[c.i];
-      const v = ('' + (cella === null || cella === undefined ? '' : cella)).trim();
-      if (!v) return;
-      almenoUna = true;
-      aggiungiVoce(nomeDip, c.nome, corso, scad);
-    });
-    if (!almenoUna && (corso || scad)) scartate++;
-  }
-  return scartate;
-}
-
-/* Estrae dal workbook la mappa "chiave nome normalizzata -> { nome, voci }".
-   E' separata dall'handler perche' contiene tutta la logica non banale dell'import
-   (riconoscimento colonne, conversione date, precedenza fra foglio principale e fogli di
-   dettaglio) e cosi' e' verificabile fuori dal browser, senza DOM ne' modali.
-   Ritorna { perDip, nScartati, errore }: `errore` valorizzato = file non riconosciuto. */
-function attImportParseWorkbook(wb) {
-  // chiave nome normalizzata -> { nome, voci }
-  const perDip = new Map();
-  let nScartati = 0;
-
-  function aggiungiVoce(nomeDip, nomeAtt, corsoIso, scadIso) {
-    const nome = ('' + nomeDip).replace(/\s+/g, ' ').trim();
-    if (!nome || !nomeAtt) return;
-    const chiave = pwFerieNormTokens(nome).sort().join(' ');
-    if (!chiave) return;
-    if (!perDip.has(chiave)) perDip.set(chiave, { nome: nome, voci: {} });
-    const scad = scadIso || attScadenzaDaCorso(nomeAtt, corsoIso);
-    // Se lo stesso attestato compare piu' volte (foglio principale + foglio dedicato)
-    // vince la scadenza piu' recente: i fogli di dettaglio sono i piu' aggiornati.
-    const gia = perDip.get(chiave).voci[nomeAtt];
-    if (gia && (gia.scad || '') >= (scad || '')) return;
-    perDip.get(chiave).voci[nomeAtt] = { corso: corsoIso || '', scad: scad || '', fonte: 'import' };
-  }
-
-  /* --- foglio principale: una colonna per attestato, la cella e' la data del CORSO --- */
-  const wsMain = attFoglio(wb, 'elencoattestati') || wb.Sheets[wb.SheetNames[0]];
-  if (wsMain) {
-    const rows = XLSX.utils.sheet_to_json(wsMain, { header: 1, defval: null, raw: true });
-    let hIdx = -1;
-    for (let i = 0; i < Math.min(15, rows.length); i++) {
-      const r = rows[i] || [];
-      if (r.some(c => /dipendent/i.test('' + (c || '')))) { hIdx = i; break; }
-    }
-    if (hIdx < 0) {
-      return { perDip: perDip, nScartati: nScartati,
-        errore: 'Intestazione "Dipendenti" non trovata nel foglio "Elenco attestati".\n\nVerifica di aver selezionato il file corretto.' };
-    }
-    const header = rows[hIdx] || [];
-    const iNome = header.findIndex(c => /dipendent/i.test('' + (c || '')));
-    const colAtt = [];
-    header.forEach((h, i) => {
-      if (i === iNome) return;
-      const nomeAtt = attNomeDaIntestazione(h);
-      if (nomeAtt) colAtt.push({ i: i, nome: nomeAtt });
-    });
-    for (let r = hIdx + 1; r < rows.length; r++) {
-      const row = rows[r] || [];
-      const cellaNome = row[iNome];
-      const nomeDip = ('' + (cellaNome === null || cellaNome === undefined ? '' : cellaNome)).replace(/\s+/g, ' ').trim();
-      // salta la riga "Totale" e il blocco legenda in coda al foglio
-      if (!nomeDip || /^totale$/i.test(nomeDip) || /^legenda/i.test(nomeDip) || /^[*]/.test(nomeDip) || /^(p\.iva|personale)/i.test(nomeDip)) continue;
-      colAtt.forEach(c => {
-        const cella = row[c.i];
-        if (cella === null || cella === undefined || cella === '') return;
-        const corso = attExcelData(cella);
-        if (!corso) { nScartati++; return; }
-        aggiungiVoce(nomeDip, c.nome, corso, '');
-      });
-    }
-  }
-
-  /* --- foglio PES-PAV-PEI: colonne X per variante + data corso e scadenza esplicite --- */
-  const wsPes = attFoglio(wb, 'pespavpei');
-  if (wsPes) {
-    const rows = XLSX.utils.sheet_to_json(wsPes, { header: 1, defval: null, raw: true });
-    const mapPes = { pespavpei: 'PES-PAV-PEI', enel1a: 'ENEL 1A', enel1b: 'ENEL 1B', enel2a: 'ENEL 2A', enel2b: 'ENEL 2B' };
-    nScartati += attImportFoglioDettaglio(rows, mapPes, aggiungiVoce);
-  }
-
-  /* --- foglio Segnaletica stradale: colonne X Preposto/Addetto + date esplicite --- */
-  const wsSeg = attFoglio(wb, 'segnaleticastradale');
-  if (wsSeg) {
-    const rows = XLSX.utils.sheet_to_json(wsSeg, { header: 1, defval: null, raw: true });
-    const mapSeg = { preposto: 'Segnaletica stradale - Preposto', addetto: 'Segnaletica stradale - Addetto' };
-    nScartati += attImportFoglioDettaglio(rows, mapSeg, aggiungiVoce);
-  }
-
-
-  return { perDip: perDip, nScartati: nScartati, errore: '' };
-}
-
-async function attImportFile(file) {
-  if (typeof XLSX === 'undefined') { showAlertModal('Libreria XLSX non caricata. Verifica la connessione internet e ricarica la pagina.'); return; }
-
-  let wb;
-  try {
-    const buf = await file.arrayBuffer();
-    wb = XLSX.read(buf, { type: 'array' });
-  } catch (err) {
-    showAlertModal('Errore nella lettura del file:\n\n' + err.message);
-    return;
-  }
-
-  const parsed = attImportParseWorkbook(wb);
-  if (parsed.errore) { showAlertModal(parsed.errore); return; }
-  const perDip = parsed.perDip;
-  const nScartati = parsed.nScartati;
-
-  if (perDip.size === 0) {
-    showAlertModal('Nessun attestato leggibile trovato nel file.\n\nVerifica che sia l’export "Elenco attestati dei dipendenti".');
-    return;
-  }
-
-  /* --- abbinamento con il pool operatori --- */
-  const operatori = getOperatoriAttivi();
-  const matched = [], unmatched = [], ambiguous = [];
-  const dipendenti = [];
-  let nVoci = 0;
-
-  perDip.forEach(d => {
-    const nVociDip = Object.keys(d.voci).length;
-    nVoci += nVociDip;
-    const res = pwFerieMatchOperatore(d.nome, operatori);
-    let opId = null;
-    if (res.match) {
-      opId = res.match.id;
-      matched.push({ nome: d.nome, nota: nVociDip + ' attestati → ' + (res.match.nome_esteso || res.match.nome) });
-    } else if (res.ambiguous) {
-      ambiguous.push({ nome: d.nome, nota: (res.candidates || []).map(c => c.nome_esteso || c.nome).join(', ') });
-    } else {
-      unmatched.push({ nome: d.nome, nota: nVociDip + ' attestati' });
-    }
-    dipendenti.push({ nome: d.nome, op_id: opId, voci: d.voci });
-  });
-
-  const ok = await attImportShowConfirm({
-    fileName: file.name, nDipendenti: perDip.size, nVoci: nVoci, nScartati: nScartati,
-    matched: matched, unmatched: unmatched, ambiguous: ambiguous,
-  });
-  if (!ok) return;
-
-  /* --- applicazione --- */
-  state.attestati_registro = {
-    aggiornato_il: attOggiIso(),
-    file: file.name,
-    da: (typeof _sbUser !== 'undefined' && _sbUser) ? _sbUser.email : '',
-    dipendenti: dipendenti,
-  };
-
-  let nOpAggiornati = 0;
-  dipendenti.forEach(d => {
-    if (!d.op_id) return;
-    const op = state.operatori.find(o => o.id === d.op_id);
-    if (!op) return;
-    const dett = op.attestati_dett || {};
-    // Le voci di un import precedente vengono sostituite in blocco da quelle del nuovo file
-    // (cosi' una correzione a monte si propaga, anche in cancellazione); quelle inserite a
-    // mano dalla scheda operatore sopravvivono.
-    Object.keys(dett).forEach(nome => { if (dett[nome] && dett[nome].fonte === 'import') delete dett[nome]; });
-    Object.keys(d.voci).forEach(nome => { dett[nome] = d.voci[nome]; });
-    op.attestati_dett = dett;
-    // op.attestati resta la lista piatta: nomi del vocabolario in ordine canonico piu'
-    // eventuali voci fuori vocabolario gia' presenti sulla scheda.
-    const fuoriVocabolario = (op.attestati || []).filter(a => ATTESTATI.indexOf(a) < 0 && !dett[a]);
-    op.attestati = ATTESTATI.filter(a => dett[a]).concat(fuoriVocabolario);
-    nOpAggiornati++;
-  });
-
-  await saveState('Import attestati', { file: file.name, dipendenti: perDip.size, operatori: nOpAggiornati }, true);
-  const det = document.getElementById('att-details');
-  if (det) det.open = true;
-  renderAll();
-  showAlertModal('✓ Import completato: ' + perDip.size + ' dipendenti nel registro, ' + nOpAggiornati + ' operatori del pool aggiornati.');
-}
-
-/* -------------------------------------------------------------------- export ----- */
-
-/* Esporta il registro in formato lungo (una riga per dipendente x attestato): piu' comodo
-   della matrice per filtrare e ordinare in Excel su scadenze e stati. */
-function exportAttestatiXlsx() {
-  if (typeof XLSX === 'undefined') { showAlertModal('Libreria XLSX non caricata. Verifica la connessione internet e ricarica la pagina.'); return; }
-  const header = ['Dipendente', 'Nel pool operatori', 'Attestato', 'Data corso', 'Data scadenza', 'Stato', 'Giorni alla scadenza', 'Fonte'];
-  const etichettaStato = { valido: 'Valido', scadenza: 'In scadenza', scaduto: 'Scaduto', 'senza-data': 'Scadenza non nota' };
-  const righe = [header];
-  attRigheRegistro()
-    .sort((a, b) => a.nome.localeCompare(b.nome))
-    .forEach(r => {
-      const nomi = Object.keys(r.voci).sort();
-      const inPool = r.inPool ? 'Sì' : 'No';
-      if (nomi.length === 0) { righe.push([r.nome, inPool, '', '', '', 'Nessun attestato', '', '']); return; }
-      nomi.forEach(n => {
-        const v = r.voci[n];
-        const gg = attGiorniAllaScadenza(v.scad);
-        righe.push([r.nome, inPool, n, v.corso || '', v.scad || '',
-          etichettaStato[attStatoVoce(v)] || '', gg === null ? '' : gg, v.fonte || '']);
-      });
-    });
-  const ws = XLSX.utils.aoa_to_sheet(righe);
-  ws['!cols'] = [{ wch: 28 }, { wch: 8 }, { wch: 30 }, { wch: 12 }, { wch: 13 }, { wch: 18 }, { wch: 10 }, { wch: 10 }];
-  const wb = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb, ws, 'Attestati');
-  XLSX.writeFile(wb, 'attestati_dipendenti_' + attOggiIso() + '.xlsx');
-}
 /* ===================== COMMESSE ===================== */
 // Mese selezionato per il box "Confronto Preventivo/Effettivo" di ogni commessa attiva
 // (nomeCommessa -> indice mese 0-11). Solo stato di vista, non persistito.
 let _confrontoMeseSel = {};
 
-/* Nomi univoci delle commesse attive: unione di quelle con righe staffing, quelle
-   promosse/create in commesse_attive e quelle presenti solo nei meta, esclusi
-   "ORE NON LAVORATE" e le commesse chiuse (state.commesse_escluse). Fonte unica per
-   il badge del tab, la KPI "Commesse attive" e il relativo modal di dettaglio: prima
-   ognuno rifaceva il conteggio a modo suo e potevano non coincidere (es. il modal
-   leggeva solo state.commesse_attive, che copre solo le commesse promosse esplicitamente
-   e non quelle con semplici righe di staffing). */
-function getNomiCommesseAttive() {
-  const set = new Set();
-  state.staffing.forEach(r => { if (r.commessa && r.commessa !== 'ORE NON LAVORATE') set.add(r.commessa); });
-  state.commesse_attive.forEach(ca => { const n = ca.progetto||ca.nome; if (n && n !== 'ORE NON LAVORATE') set.add(n); });
-  Object.keys(state.commesse_attive_meta||{}).forEach(n => { if (n && n !== 'ORE NON LAVORATE') set.add(n); });
-  const nomiChiuse = new Set((state.commesse_escluse||[]).map(n => (n||'').trim()).filter(Boolean));
-  return [...set].filter(n => !nomiChiuse.has(n.trim())).sort((a,b) => a.localeCompare(b));
-}
-
 function renderCommesse() {
   const list = document.getElementById('commesse-list');
 
   document.getElementById('count-pipeline').textContent = `(${state.pipeline.length})`;
-  document.getElementById('count-attive').textContent = `(${getNomiCommesseAttive().length})`;
+  // Conta commesse attive: da staffing + da commesse_attive + da meta
+  const commesseAttiveSet = new Set();
+  state.staffing.forEach(r => { if (r.commessa && r.commessa !== 'ORE NON LAVORATE') commesseAttiveSet.add(r.commessa); });
+  state.commesse_attive.forEach(ca => { const n = ca.progetto||ca.nome; if (n && n !== 'ORE NON LAVORATE') commesseAttiveSet.add(n); });
+  Object.keys(state.commesse_attive_meta||{}).forEach(n => { if (n && n !== 'ORE NON LAVORATE') commesseAttiveSet.add(n); });
+  document.getElementById('count-attive').textContent = `(${commesseAttiveSet.size})`;
 
   if (state.activeTab === 'pipeline') {
     // NOTA: a differenza della vista Attive, qui NON si filtra per state.commesse_escluse.
@@ -4845,7 +3870,7 @@ async function assegnaOperatore(commessaId, operatoreId) {
   const skillMancanti = c.skills.filter(s => !op.skills.includes(s));
   // verifica attestati richiesti (coerente con il pannello Raccomandazioni)
   const attestatiRichiesti = c.attestati_richiesti || [];
-  const attestatiMancanti = attNonCoperti(op, attestatiRichiesti);
+  const attestatiMancanti = attestatiRichiesti.filter(a => !(op.attestati||[]).includes(a));
   // verifica saturazione
   const mesi = monthsBetween(c.inizio, c.fine);
   const sat = operatoreSatPeriodo(op, mesi);
@@ -4855,7 +3880,7 @@ async function assegnaOperatore(commessaId, operatoreId) {
   if (skillMancanti.length > 0 || attestatiMancanti.length > 0 || saturo) {
     const msg = [];
     if (skillMancanti.length>0) msg.push(`⚠ Skill mancanti: ${skillMancanti.join(', ')}`);
-    if (attestatiMancanti.length>0) msg.push('⚠ Attestati mancanti o scaduti: ' + attestatiMancanti.map(a => attEtichettaMancanza(op, a)).join(', '));
+    if (attestatiMancanti.length>0) msg.push(`⚠ Attestati mancanti: ${attestatiMancanti.join(', ')}`);
     if (saturo) msg.push(`⚠ Operatore saturo (${(sat*100).toFixed(0)}%) nella finestra della commessa`);
     msg.push('\nConfermi comunque l\'assegnazione?');
     // flash
@@ -5128,7 +4153,7 @@ function openAddAllocazioneModal(commessaNome, opts = {}) {
   // poi - a parita' di validita' - chi e' della provincia/regione della commessa o il
   // piu' vicino, infine in generale ordine alfabetico come criterio finale
   const validoOp = op => (skillReq.length === 0 || skillReq.every(s => op.skills.includes(s)))
-    && (attReq.length === 0 || attReq.every(s => attIsValido(op, s)));
+    && (attReq.length === 0 || attReq.every(s => (op.attestati||[]).includes(s)));
   const ops = [...getOperatoriAttivi()].sort((a, b) => {
     const validoA = validoOp(a), validoB = validoOp(b);
     if (validoA !== validoB) return validoA ? -1 : 1;
@@ -5143,7 +4168,7 @@ function openAddAllocazioneModal(commessaNome, opts = {}) {
 
   const opOptions = ops.map(op => {
     const hasAllSkill = skillReq.length === 0 || skillReq.every(s => op.skills.includes(s));
-    const hasAllAtt = attReq.length === 0 || attReq.every(s => attIsValido(op, s));
+    const hasAllAtt = attReq.length === 0 || attReq.every(s => (op.attestati||[]).includes(s));
     const valido = hasAllSkill && hasAllAtt;
     const sat = mesiSuggeriti.length > 0 ? operatoreSatPeriodo(op, mesiSuggeriti) : 0;
     const satTag = mesiSuggeriti.length > 0 ? ` [sat ${(sat*100).toFixed(0)}%]` : '';
@@ -5234,11 +4259,11 @@ function openAddAllocazioneModal(commessaNome, opts = {}) {
     if (!op) { opInfo.innerHTML = ''; return; }
     const skillHtml = op.skills.length > 0 ? op.skills.map(s => `<span class="skill-badge">${s}</span>`).join('') : '<i>nessuna skill</i>';
     const skillMancanti = skillReq.filter(s => !op.skills.includes(s));
-    const attMancanti = attNonCoperti(op, attReq);
+    const attMancanti = attReq.filter(s => !(op.attestati||[]).includes(s));
     const warns = [];
     if (skillMancanti.length > 0) warns.push(`<span class="text-red-600">⚠ Skill mancanti: ${skillMancanti.join(', ')}</span>`);
-    if (attMancanti.length > 0) warns.push('<span class="text-red-600">⚠ Attestati mancanti o scaduti: ' + esc(attMancanti.map(a => attEtichettaMancanza(op, a)).join(', ')) + '</span>');
-    const attHtml = attBadgesHtml(op, '<i>nessun attestato</i>');
+    if (attMancanti.length > 0) warns.push(`<span class="text-red-600">⚠ Attestati mancanti: ${attMancanti.join(', ')}</span>`);
+    const attHtml = (op.attestati && op.attestati.length > 0) ? op.attestati.map(a => `<span class="att-badge" title="${a}">${a.length>14?a.substring(0,13)+'…':a}</span>`).join('') : '<i>nessun attestato</i>';
     opInfo.innerHTML = `<div>Skill: ${skillHtml}</div><div class="mt-1">Attestati: ${attHtml}</div>${warns.length>0?'<div class="mt-1">'+warns.join('<br>')+'</div>':''}`;
   };
   opSelect.addEventListener('change', updateOpInfo);
@@ -5307,11 +4332,11 @@ function openAddAllocazioneModal(commessaNome, opts = {}) {
     if (mesi.every(v => v === 0)) { showAlertModal('Specifica almeno un giorno-uomo in un mese.'); return; }
     // warning skill e attestati mancanti
     const skillMancanti = skillReq.filter(s => !op.skills.includes(s));
-    const attMancanti = attNonCoperti(op, attReq);
+    const attMancanti = attReq.filter(s => !(op.attestati||[]).includes(s));
     if (skillMancanti.length > 0 || attMancanti.length > 0) {
       const msg = [];
       if (skillMancanti.length > 0) msg.push(`⚠ Skill mancanti: ${skillMancanti.join(', ')}`);
-      if (attMancanti.length > 0) msg.push('⚠ Attestati mancanti o scaduti: ' + attMancanti.map(a => attEtichettaMancanza(op, a)).join(', '));
+      if (attMancanti.length > 0) msg.push(`⚠ Attestati mancanti: ${attMancanti.join(', ')}`);
       msg.push('\nConfermare comunque l\'allocazione?');
       if (!await showConfirmAsync(msg.join('\n'))) return;
     }
@@ -5468,7 +4493,7 @@ function openOperatoreImpegniModal(opId) {
             <h3 class="font-semibold text-slate-900 text-lg">Impegni di ${op.nome_esteso}</h3>
             <div class="text-xs text-slate-500 mt-1">
               <div>Skill: ${op.skills.length ? op.skills.map(s => `<span class="skill-badge">${s}</span>`).join('') : '<i>nessuna skill censita</i>'}</div>
-              <div class="mt-1">Attestati: ${attBadgesHtml(op, '<i>nessun attestato censito</i>')}</div>
+              <div class="mt-1">Attestati: ${(op.attestati||[]).length ? op.attestati.map(a => `<span class="att-badge" title="${a}">${a.length>14?a.substring(0,13)+'…':a}</span>`).join('') : '<i>nessun attestato</i>'}</div>
             </div>
           </div>
           <button onclick="closeModal()" class="text-slate-400 hover:text-slate-700 text-xl leading-none">×</button>
@@ -5749,7 +4774,7 @@ function openFabbisognoModal(commessaId, commessaNome) {
       const matchSkill = riga.skills.length === 0 || riga.skills.every(s => op.skills.includes(s));
       const sat = mesiC.length ? operatoreSatPeriodo(op, mesiC) : 0;
       const skillMancanti = riga.skills.filter(s => !op.skills.includes(s));
-      const attestatiMancanti = attNonCoperti(op, attestatiRichiesti);
+      const attestatiMancanti = attestatiRichiesti.filter(a => !(op.attestati||[]).includes(a));
       const matchCompleto = matchSkill && attestatiMancanti.length === 0;
       // null = ne' regione ne' provincia della commessa (o provincia dell'operatore) note,
       // nessun criterio di vicinanza applicabile
@@ -5792,7 +4817,7 @@ function openFabbisognoModal(commessaId, commessaNome) {
               ? `<span class="text-[9px] bg-emerald-100 text-emerald-700 px-1 rounded">✓ skill OK</span>`
               : `<span class="text-[9px] bg-red-100 text-red-700 px-1 rounded">manca skill: ${skillMancanti.join(', ')}</span>`;
             const attBadge = attestatiMancanti.length > 0
-              ? '<span class="text-[9px] bg-purple-100 text-purple-700 px-1 rounded" title="Attestati richiesti dalla commessa, mancanti o scaduti">manca attestato: ' + esc(attestatiMancanti.map(a => attEtichettaMancanza(op, a)).join(', ')) + '</span>'
+              ? `<span class="text-[9px] bg-purple-100 text-purple-700 px-1 rounded" title="Attestati richiesti dalla commessa">manca attestato: ${attestatiMancanti.join(', ')}</span>`
               : '';
             const geoBadge = distanza === null ? '' : distanza === 0
               ? (provinciaCommessa
@@ -5946,7 +4971,7 @@ async function promuoviCommessa(id) {
 }
 
 function openOperatoreModal(id) {
-  const op = id ? state.operatori.find(o => o.id === id) : { id:'op_new_'+Date.now(), nome_breve:'', nome_esteso:'', nome:'', cognome:'', email:'', regione:'', provincia:'', contratto_tipo:'indeterminato', data_inizio_rapporto:'', data_fine_rapporto:'', skills:[], attestati:[], attestati_dett:{}, alloc_mensile:new Array(12).fill(0), data_aggiunta: new Date().toISOString().slice(0,10) };
+  const op = id ? state.operatori.find(o => o.id === id) : { id:'op_new_'+Date.now(), nome_breve:'', nome_esteso:'', nome:'', cognome:'', email:'', regione:'', provincia:'', contratto_tipo:'indeterminato', data_inizio_rapporto:'', data_fine_rapporto:'', skills:[], attestati:[], alloc_mensile:new Array(12).fill(0), data_aggiunta: new Date().toISOString().slice(0,10) };
   const opAtt = op.attestati || [];
   const regioneIniziale = op.regione || (op.provincia && provinciaInfo(op.provincia)?.regione) || '';
   const root = document.getElementById('modal-root');
@@ -5997,11 +5022,8 @@ function openOperatoreModal(id) {
             <button type="button" id="mo-att-none" class="text-[10px] px-2 py-0.5 bg-slate-100 text-slate-700 rounded border border-slate-300 hover:bg-slate-200">Nessuno</button>
           </div>
         </div>
-        <div class="space-y-0.5 p-2 bg-purple-50 rounded border border-purple-200 max-h-56 overflow-y-auto">
-          <div class="flex items-center gap-1.5 text-[10px] text-slate-500 uppercase tracking-wider px-1 pb-0.5">
-            <span class="w-3"></span><span class="flex-1">Attestato</span><span class="w-[118px]">Data del corso</span><span class="w-[86px] text-right">Scadenza</span>
-          </div>
-          ${ATTESTATI.map(a => attRigaModaleOperatore(op, a)).join('') || '<div class="text-[10px] text-slate-400 italic">Nessun attestato definito nel sistema.</div>'}
+        <div class="grid grid-cols-2 gap-1 p-2 bg-purple-50 rounded border border-purple-200 max-h-56 overflow-y-auto">
+          ${ATTESTATI.map(a => `<label class="flex items-center gap-1 text-xs hover:bg-white rounded px-1 cursor-pointer"><input type="checkbox" class="mo-att" value="${a.replace(/"/g, '&quot;')}" ${opAtt.includes(a)?'checked':''}><span>${a}</span></label>`).join('') || '<div class="text-[10px] text-slate-400 italic col-span-2">Nessun attestato definito nel sistema.</div>'}
         </div>
       </div>
     </div>
@@ -6031,20 +5053,6 @@ function openOperatoreModal(id) {
   document.getElementById('mo-att-all').onclick = () => document.querySelectorAll('.mo-att').forEach(x => x.checked = true);
   document.getElementById('mo-att-none').onclick = () => document.querySelectorAll('.mo-att').forEach(x => x.checked = false);
 
-  // Compilando la data del corso l'attestato si spunta da solo e la scadenza calcolata
-  // compare subito accanto: evita la combinazione incoerente "data valorizzata, spunta no".
-  document.querySelectorAll('.mo-att-corso').forEach(inp => {
-    inp.addEventListener('change', () => {
-      const riga = inp.closest('.mo-att-riga');
-      if (!riga) return;
-      const cb = riga.querySelector('.mo-att');
-      const out = riga.querySelector('.mo-att-scad');
-      if (inp.value && cb) cb.checked = true;
-      const scad = attScadenzaDaCorso(inp.dataset.att, inp.value);
-      if (out) out.textContent = scad ? fmtDate(scad) : (inp.value ? 'senza scadenza' : '');
-    });
-  });
-
   const contrattoDateBox = document.getElementById('mo-contratto-date');
   document.querySelectorAll('input[name="mo-contratto"]').forEach(r => {
     r.onchange = () => contrattoDateBox.classList.toggle('hidden', !document.getElementById('mo-contratto-det').checked);
@@ -6055,22 +5063,6 @@ function openOperatoreModal(id) {
     if (!nomeEsteso) { showAlertModal('Nome obbligatorio.'); return; }
     const skills = [...document.querySelectorAll('.mo-skill:checked')].map(x => x.value);
     const attestati = [...document.querySelectorAll('.mo-att:checked')].map(x => x.value);
-    // Dettaglio date: una voce gia' presente e non modificata conserva la sua fonte
-    // (tipicamente 'import'); se la data viene cambiata a mano diventa 'manuale' e da quel
-    // momento sopravvive ai reimport del file aziendale.
-    const dettPrec = op.attestati_dett || {};
-    const attestatiDett = {};
-    document.querySelectorAll('.mo-att-riga').forEach(riga => {
-      const cb = riga.querySelector('.mo-att');
-      if (!cb || !cb.checked) return;
-      const nomeAtt = cb.value;
-      const inpCorso = riga.querySelector('.mo-att-corso');
-      const corso = inpCorso ? inpCorso.value : '';
-      const prec = dettPrec[nomeAtt];
-      if (!corso) { if (prec) attestatiDett[nomeAtt] = prec; return; }
-      if (prec && prec.corso === corso) { attestatiDett[nomeAtt] = prec; return; }
-      attestatiDett[nomeAtt] = { corso: corso, scad: attScadenzaDaCorso(nomeAtt, corso), fonte: 'manuale' };
-    });
     const nome = (document.getElementById('mo-nome')?.value || '').trim();
     const cognome = (document.getElementById('mo-cognome')?.value || '').trim();
     const email = (document.getElementById('mo-email')?.value || '').trim();
@@ -6084,8 +5076,8 @@ function openOperatoreModal(id) {
     }
     const dataInizioRapporto = contrattoTipo === 'determinato' ? dataInizio : '';
     const dataFineRapporto = contrattoTipo === 'determinato' ? dataFine : '';
-    if (id) { Object.assign(op, { nome_esteso: nomeEsteso, nome, cognome, email, regione, provincia, contratto_tipo: contrattoTipo, data_inizio_rapporto: dataInizioRapporto, data_fine_rapporto: dataFineRapporto, skills, attestati, attestati_dett: attestatiDett }); await saveState('Modifica operatore', {operatore: nomeEsteso}, true); }
-    else { state.operatori.push({ ...op, nome_esteso: nomeEsteso, nome_breve: nomeEsteso, nome, cognome, email, regione, provincia, contratto_tipo: contrattoTipo, data_inizio_rapporto: dataInizioRapporto, data_fine_rapporto: dataFineRapporto, skills, attestati, attestati_dett: attestatiDett }); await saveState('Nuovo operatore', {operatore: nomeEsteso}, true); }
+    if (id) { Object.assign(op, { nome_esteso: nomeEsteso, nome, cognome, email, regione, provincia, contratto_tipo: contrattoTipo, data_inizio_rapporto: dataInizioRapporto, data_fine_rapporto: dataFineRapporto, skills, attestati }); await saveState('Modifica operatore', {operatore: nomeEsteso}, true); }
+    else { state.operatori.push({ ...op, nome_esteso: nomeEsteso, nome_breve: nomeEsteso, nome, cognome, email, regione, provincia, contratto_tipo: contrattoTipo, data_inizio_rapporto: dataInizioRapporto, data_fine_rapporto: dataFineRapporto, skills, attestati }); await saveState('Nuovo operatore', {operatore: nomeEsteso}, true); }
     renderAll(); closeModal();
   };
 }
@@ -7906,11 +6898,6 @@ function apriDettaglioMeseCommessa(ev, commessaEnc, meseIdx) {
 }
 
 /* ===================== ALERT SOVRA-ALLOCAZIONE E CARENZE ===================== */
-// La sezione "problemi rilevati" parte sempre chiusa e si apre solo su click: renderAlerts()
-// viene richiamata ad ogni renderAll() (quindi ad ogni modifica), e senza questo stato
-// tracciato a parte l'innerHTML rigenerato riapriva la sezione ogni volta.
-let _alertBoxAperto = false;
-
 function renderAlerts() {
   const mc = meseCorrente();
   const errori = [];
@@ -7961,22 +6948,6 @@ function renderAlerts() {
     if (mesiKO.length) errori.push({ tipo: 'exImpiegato', testo: '<b>' + op.nome_esteso + '</b> (rapporto terminato il ' + fmtDate(op.data_fine_rapporto) + '): ancora impiegato in ' + mesiKO.join(', ') });
   });
 
-  // Attestati scaduti o in scadenza entro il preavviso (solo operatori del pool).
-  // L'elenco viene troncato: con 40+ operatori un giro di rinnovi puo' produrre decine di
-  // righe che sommergerebbero gli altri alert — il dettaglio completo sta nella sezione
-  // "Attestati & scadenze".
-  const scadenzeAtt = attScadenzeOperatori();
-  const MAX_ALERT_ATT = 12;
-  scadenzeAtt.slice(0, MAX_ALERT_ATT).forEach(sc => {
-    const quando = sc.stato === 'scaduto'
-      ? 'scaduto il ' + fmtDate(sc.scad) + ' (' + Math.abs(sc.giorni) + ' giorni fa)'
-      : 'scade il ' + fmtDate(sc.scad) + ' (tra ' + sc.giorni + ' giorni)';
-    errori.push({ tipo: 'attestato', testo: '<b>' + esc(sc.op.nome_esteso || '') + '</b>: ' + esc(sc.nome) + ' ' + quando });
-  });
-  if (scadenzeAtt.length > MAX_ALERT_ATT) {
-    errori.push({ tipo: 'attestato', testo: '<i>… e altri ' + (scadenzeAtt.length - MAX_ALERT_ATT) + ' attestati: vedi la sezione "Attestati &amp; scadenze"</i>' });
-  }
-
   const el = document.getElementById('alert-box');
   if (!el) return;
   if (!errori.length) { el.innerHTML = ''; return; }
@@ -7984,14 +6955,12 @@ function renderAlerts() {
   const sovra       = errori.filter(e => e.tipo === 'sovra');
   const carenze     = errori.filter(e => e.tipo === 'carenza');
   const exImpiegati = errori.filter(e => e.tipo === 'exImpiegato');
-  const attScaduti  = errori.filter(e => e.tipo === 'attestato');
   let inner = '';
   if (sovra.length)       inner += '<div class="text-xs font-semibold text-red-700 mb-1">Sovra-allocazioni (' + sovra.length + '):</div>'   + sovra.map(e   => '<div class="text-xs text-red-700 pl-2 mb-0.5">• ' + e.testo + '</div>').join('');
   if (carenze.length)     inner += '<div class="text-xs font-semibold text-orange-700 mb-1 mt-2">Carenze FTE (' + carenze.length + '):</div>' + carenze.map(e => '<div class="text-xs text-orange-700 pl-2 mb-0.5">• ' + e.testo + '</div>').join('');
   if (exImpiegati.length) inner += '<div class="text-xs font-semibold text-purple-700 mb-1 mt-2">🚪 Ex collega ancora impiegato (' + exImpiegati.length + '):</div>' + exImpiegati.map(e => '<div class="text-xs text-purple-700 pl-2 mb-0.5">• ' + e.testo + '</div>').join('');
-  if (attScaduti.length)  inner += '<div class="text-xs font-semibold text-amber-700 mb-1 mt-2">🎓 Attestati scaduti o in scadenza (' + scadenzeAtt.length + '):</div>' + attScaduti.map(e => '<div class="text-xs text-amber-700 pl-2 mb-0.5">• ' + e.testo + '</div>').join('');
 
-  el.innerHTML = '<div class="bg-red-50 border border-red-200 rounded-lg p-3 mb-4"><div class="flex items-center justify-between mb-2"><span class="font-semibold text-red-800 text-sm">⚠ ' + errori.length + ' problema/i rilevato/i</span><button onclick="_alertBoxAperto = !_alertBoxAperto; this.closest(\'.bg-red-50\').querySelector(\'.ab-body\').classList.toggle(\'hidden\')" class="text-xs text-red-600 hover:underline">mostra/nascondi</button></div><div class="ab-body' + (_alertBoxAperto ? '' : ' hidden') + '">' + inner + '</div></div>';
+  el.innerHTML = '<div class="bg-red-50 border border-red-200 rounded-lg p-3 mb-4"><div class="flex items-center justify-between mb-2"><span class="font-semibold text-red-800 text-sm">⚠ ' + errori.length + ' problema/i rilevato/i</span><button onclick="this.closest(\'.bg-red-50\').querySelector(\'.ab-body\').classList.toggle(\'hidden\')" class="text-xs text-red-600 hover:underline">mostra/nascondi</button></div><div class="ab-body">' + inner + '</div></div>';
 }
 
 /* ===================== RENDER ALL ===================== */
@@ -8002,7 +6971,6 @@ function renderAll() {
   renderSkillFilters();
   renderAttestatiFilters();
   renderOperatori();
-  renderAttestati();
   renderCommesse();
   renderGap();
   // Se la vista operatore è aperta, aggiornala
@@ -13445,18 +12413,6 @@ function _mapColorRegione(regione) {
   return _mapColorsRegione[regione];
 }
 
-/* Colore per strumento (mappa Cantieri in modalità Strumenti: raggruppa/colora
-   per strumento invece che per commessa, per leggere a colpo d'occhio dove si
-   trova un dato strumento). */
-let _mapColorsStrumento = {};
-function _mapColorStrumento(key) {
-  if (!key) return MAP_COLOR_SCONOSCIUTA;
-  if (!_mapColorsStrumento[key]) {
-    _mapColorsStrumento[key] = MAP_COLORS[Object.keys(_mapColorsStrumento).length % MAP_COLORS.length];
-  }
-  return _mapColorsStrumento[key];
-}
-
 /* Rubrica luoghi persistente */
 let _geoCache = {};
 async function _geoCacheLoad() {
@@ -13494,14 +12450,6 @@ let _map = null;
 let _mapMarkers = [];
 let _mapDay = 0;
 let _mapCollapsedCommesse = new Set();
-
-/* Modalità mappa Cantieri: 'operatori' (default) oppure 'strumenti' (pannello
-   destro e colore marker riorganizzati per evidenziare dove si trova ogni
-   strumento). */
-let _mapCantieriMode = 'operatori';
-/* Filtro multi-strumento (checkbox), attivo solo in modalità 'strumenti'.
-   Set vuoto = nessun filtro (mostra tutti gli strumenti assegnati). */
-let _mapStrumentiFilter = new Set();
 
 /* Istanza Leaflet residenze operatori */
 let _mapOp = null;
@@ -13543,101 +12491,6 @@ function pwMapPopulateRegioneFilter() {
   sel.value = _mapRegioneFilter;
 }
 
-/* Bottone + pannello a checkbox per il filtro multi-strumento della mappa
-   Cantieri, visibile (in modalità Strumenti) accanto allo switch Operatori/
-   Strumenti. Il bottone resta nel DOM anche in modalità Operatori (solo
-   visibility:hidden, non display:none) così lo spazio riservato non cambia
-   e il layout non "salta" passando da una modalità all'altra. */
-function pwMapRenderStrumentoFilterButton() {
-  const btn = document.getElementById('pw-map-strumento-filter-btn');
-  if (!btn) return;
-  const show = _mapCantieriMode === 'strumenti';
-  btn.style.visibility = show ? 'visible' : 'hidden';
-  btn.onclick = () => pwMapStrFilterOpen(btn);
-  pwMapStrFilterUpdateBtnLabel();
-  const panel = document.getElementById('pw-map-str-filter-panel');
-  if (panel && panel.style.display !== 'none') pwMapStrFilterRenderList();
-}
-
-function pwMapStrFilterUpdateBtnLabel() {
-  const btn = document.getElementById('pw-map-strumento-filter-btn');
-  if (!btn) return;
-  const n = _mapStrumentiFilter.size;
-  btn.textContent = n ? `🔧 Strumenti: ${n} selezionat${n === 1 ? 'o' : 'i'}` : '🔧 Strumenti: tutti';
-  btn.classList.toggle('active', n > 0);
-}
-
-function pwMapStrFilterEnsurePanel() {
-  let p = document.getElementById('pw-map-str-filter-panel');
-  if (p) return p;
-  p = document.createElement('div');
-  p.id = 'pw-map-str-filter-panel';
-  p.className = 'pw-str-panel';
-  p.style.cssText = 'position:fixed;z-index:9999;width:260px;display:none;overflow:hidden;';
-  p.innerHTML = `
-    <div style="padding:6px 8px;border-bottom:1px solid #e2e8f0;display:flex;justify-content:space-between;align-items:center;">
-      <span style="font-size:11px;font-weight:700;color:#334155;">Filtra per strumento</span>
-      <button type="button" id="pw-map-str-filter-clear" style="font-size:10px;color:#0d9488;font-weight:600;background:none;border:none;cursor:pointer;padding:0;">Nessun filtro</button>
-    </div>
-    <div id="pw-map-str-filter-list" style="max-height:240px;overflow-y:auto;"></div>`;
-  document.body.appendChild(p);
-  p.querySelector('#pw-map-str-filter-clear').onclick = () => {
-    _mapStrumentiFilter.clear();
-    pwMapStrFilterRenderList();
-    pwMapRenderCantieri(pwMapBuildSquadItems(_mapDay), _mapDay);
-  };
-  document.addEventListener('mousedown', e => {
-    const pan = document.getElementById('pw-map-str-filter-panel');
-    if (pan && pan.style.display !== 'none' && !pan.contains(e.target) && e.target.id !== 'pw-map-strumento-filter-btn') pwMapStrFilterClose();
-  }, true);
-  document.addEventListener('keydown', e => { if (e.key === 'Escape') pwMapStrFilterClose(); });
-  return p;
-}
-function pwMapStrFilterClose() {
-  const p = document.getElementById('pw-map-str-filter-panel');
-  if (p) p.style.display = 'none';
-}
-function pwMapStrFilterOpen(btn) {
-  const p = pwMapStrFilterEnsurePanel();
-  const r = btn.getBoundingClientRect();
-  p.style.display = 'block';
-  p.style.left = Math.max(6, Math.min(r.left, window.innerWidth - 270)) + 'px';
-  p.style.top = (r.bottom + 2) + 'px';
-  pwMapStrFilterRenderList();
-}
-function pwMapStrFilterRenderList() {
-  const list = document.getElementById('pw-map-str-filter-list');
-  if (!list) return;
-  const counts = pwStrumentoCounts();
-  const keys = Object.keys(counts).sort((a, b) => pwStrLabel(a).localeCompare(pwStrLabel(b)));
-  if (!keys.length) {
-    list.innerHTML = '<div style="padding:8px;font-size:11px;color:#94a3b8;">Nessuno strumento assegnato questa settimana.</div>';
-  } else {
-    list.innerHTML = keys.map(k => `
-      <label style="display:flex;align-items:center;gap:6px;padding:6px 8px;font-size:12px;cursor:pointer;">
-        <input type="checkbox" data-key="${esc(k)}" ${_mapStrumentiFilter.has(k) ? 'checked' : ''}>
-        <span>${esc(pwStrLabel(k))} <span style="color:#94a3b8;">(${counts[k]})</span></span>
-      </label>`).join('');
-    list.querySelectorAll('input[type=checkbox]').forEach(cb => {
-      cb.onchange = () => {
-        if (cb.checked) _mapStrumentiFilter.add(cb.dataset.key); else _mapStrumentiFilter.delete(cb.dataset.key);
-        pwMapStrFilterUpdateBtnLabel();
-        pwMapRenderCantieri(pwMapBuildSquadItems(_mapDay), _mapDay);
-      };
-    });
-  }
-  pwMapStrFilterUpdateBtnLabel();
-}
-
-/* Sottoinsieme di strumenti di un item da mostrare (marker, popup, legenda,
-   riepilogo) in modalità Strumenti: se un filtro è attivo, solo gli strumenti
-   selezionati; altrimenti tutti quelli della squadra. In modalità Operatori
-   ritorna sempre l'elenco completo (il filtro non si applica lì). */
-function pwMapDisplayStrumenti(item) {
-  if (_mapCantieriMode !== 'strumenti') return item.strumenti;
-  return _mapStrumentiFilter.size ? item.strumenti.filter(k => _mapStrumentiFilter.has(k)) : item.strumenti;
-}
-
 /* Regione "di lavorazione" di una commessa, con lo stesso fallback provincia→regione
    usato per gli operatori (operatoreRegione) */
 function commessaRegione(nomeCommessa) {
@@ -13676,7 +12529,6 @@ function pwMapBuildSquadItems(dayIdx) {
     const color = _mapColor(bc.commessa);
     (bc.squadre || []).forEach(sq => {
       const ops = (sq.operatori || []).filter(o => o.nome && o.nome.trim());
-      const strumenti = pwSqStrumentiJira(sq).filter(k => k);
       const cantieriOggi = new Set();
       const attvOggi = new Set();
       ops.forEach(op => {
@@ -13701,7 +12553,7 @@ function pwMapBuildSquadItems(dayIdx) {
           cantiere,
           attivita: [...attvOggi].join(', '),
           cantierePrev: cantieriPrec.size ? [...cantieriPrec].join('/') : null,
-          color, strumenti
+          color
         });
       });
     });
@@ -13725,7 +12577,6 @@ function pwMapBuildSquadItemsWeek() {
     (bc.squadre || []).forEach(sq => {
       const ops = (sq.operatori || []).filter(o => o.nome && o.nome.trim());
       const squadra = sq.nome || 'Squadra';
-      const strumenti = pwSqStrumentiJira(sq).filter(k => k);
 
       for (let d = 0; d < 6; d++) {
         const cantieriGiorno = new Set();
@@ -13742,8 +12593,7 @@ function pwMapBuildSquadItemsWeek() {
           if (!byKey[key]) {
             byKey[key] = {
               commessa: bc.commessa, squadra, operatori: [], cantiere,
-              _attivita: new Set(), attivita: '', cantierePrev: null, color, giorni: [],
-              strumenti
+              _attivita: new Set(), attivita: '', cantierePrev: null, color, giorni: []
             };
             order.push(key);
           }
@@ -13770,7 +12620,6 @@ async function pwMapRender(dayIdx) {
   if (!_map || !_mapOp) return;
   _mapColors = {};
   _mapColorsRegione = {};
-  _mapColorsStrumento = {};
 
   const monday = isoWeekToMonday(pwAnno, pwWeek);
   const days = [];
@@ -13809,45 +12658,10 @@ async function pwMapRender(dayIdx) {
 }
 
 /* ==================== MAPPA CANTIERI ==================== */
-
-/* Bottoni "👷 Operatori / 🔧 Strumenti": scelgono cosa evidenziare sulla sola
-   mappa Cantieri (Residenze operatori non è toccata, non ha senso lì). */
-function pwMapRenderCantieriModeButtons() {
-  const el = document.getElementById('pw-map-cantieri-mode');
-  if (!el) return;
-  el.innerHTML = `
-    <button class="pw-map-mode-btn ${_mapCantieriMode === 'operatori' ? 'active' : ''}" data-mode="operatori">👷 Operatori</button>
-    <button class="pw-map-mode-btn ${_mapCantieriMode === 'strumenti' ? 'active' : ''}" data-mode="strumenti">🔧 Strumenti</button>`;
-  el.querySelectorAll('.pw-map-mode-btn').forEach(b => {
-    b.onclick = () => {
-      if (_mapCantieriMode === b.dataset.mode) return;
-      _mapCantieriMode = b.dataset.mode;
-      pwMapRenderCantieri(pwMapBuildSquadItems(_mapDay), _mapDay);
-    };
-  });
-  pwMapRenderStrumentoFilterButton();
-}
-
 async function pwMapRenderCantieri(itemsAll, dayIdx) {
-  pwMapRenderCantieriModeButtons();
-
-  const loadingEl = document.getElementById('pw-map-loading');
-  if (loadingEl) loadingEl.style.display = 'flex';
-
-  const itemsRegione = _mapRegioneFilter
+  const items = _mapRegioneFilter
     ? itemsAll.filter(it => commessaRegione(it.commessa) === _mapRegioneFilter)
     : itemsAll;
-  /* In modalità Strumenti mostra solo i cantieri della squadra a cui è
-     assegnato almeno uno strumento Jira (eventualmente ristretto agli
-     strumenti selezionati via _mapStrumentiFilter): gli strumenti sono legati
-     alla squadra (non al singolo cantiere), quindi uno strumento compare su
-     tutti i cantieri toccati dalla sua squadra nel periodo mostrato. */
-  const items = _mapCantieriMode === 'strumenti'
-    ? itemsRegione.filter(it => it.strumenti && it.strumenti.length && (!_mapStrumentiFilter.size || it.strumenti.some(k => _mapStrumentiFilter.has(k))))
-    : itemsRegione;
-
-  const sumTitleEl = document.getElementById('pw-map-summary-title');
-  if (sumTitleEl) sumTitleEl.textContent = _mapCantieriMode === 'strumenti' ? '🔧 Strumenti: dove sono' : 'Squadre & spostamenti';
 
   /* Rimuovi marker precedenti */
   _mapMarkers.forEach(m => _map.removeLayer(m));
@@ -13887,17 +12701,9 @@ async function pwMapRenderCantieri(itemsAll, dayIdx) {
       bounds.push([lat, lng]);
     }
 
-    const itemStrumenti = pwMapDisplayStrumenti(item);
-
-    /* In modalità Strumenti il colore riflette il primo strumento mostrato
-       (invece della commessa), per leggerlo a colpo d'occhio insieme alla
-       legenda "per strumento" qui sotto. */
-    const dotColor = (_mapCantieriMode === 'strumenti' && itemStrumenti.length)
-      ? _mapColorStrumento(itemStrumenti[0])
-      : item.color;
     const dotStyle = missing
-      ? `width:22px;height:22px;border-radius:50%;background:${dotColor};border:3px dashed white;box-shadow:0 2px 6px rgba(0,0,0,.5);display:flex;align-items:center;justify-content:center;color:white;font-size:11px;`
-      : `width:18px;height:18px;border-radius:50%;background:${dotColor};border:3px solid white;box-shadow:0 2px 6px rgba(0,0,0,.4);`;
+      ? `width:22px;height:22px;border-radius:50%;background:${item.color};border:3px dashed white;box-shadow:0 2px 6px rgba(0,0,0,.5);display:flex;align-items:center;justify-content:center;color:white;font-size:11px;`
+      : `width:18px;height:18px;border-radius:50%;background:${item.color};border:3px solid white;box-shadow:0 2px 6px rgba(0,0,0,.4);`;
 
     const iconHtml = missing
       ? `<div style="${dotStyle}">⚠</div>`
@@ -13905,14 +12711,10 @@ async function pwMapRenderCantieri(itemsAll, dayIdx) {
 
     const icon = L.divIcon({ html: iconHtml, className: 'pw-map-marker', iconSize: [22, 22], iconAnchor: [11, 11] });
 
-    const strumentiHtml = itemStrumenti.length
-      ? `<div style="color:#0d9488;font-weight:600;margin:2px 0;">🔧 ${itemStrumenti.map(k => esc(pwStrLabel(k))).join(', ')}</div>`
-      : '';
     const popup = `<div style="font-family:system-ui;min-width:170px;font-size:12px;">
       <div style="font-weight:700;margin-bottom:3px;">${item.squadra}</div>
       <div style="color:#475569;font-size:11px;">📋 ${esc(item.commessa)}</div>
       <div style="color:var(--accent);font-weight:600;margin:2px 0;">📍 ${item.cantiere}</div>
-      ${strumentiHtml}
       <div style="color:#64748b;font-size:11px;">👷 ${item.operatori.join(', ')}</div>
       ${item.attivita ? `<div style="color:#64748b;font-style:italic;font-size:10px;">${item.attivita}</div>` : ''}
       ${dayIdx === PW_MAP_WEEK && item.giorni ? `<div style="color:#4f46e5;font-weight:600;font-size:10px;margin-top:2px;">📅 ${item.giorni.map(d => PW_MAP_DAY_SHORT[d]).join(' · ')}</div>` : ''}
@@ -13929,98 +12731,26 @@ async function pwMapRenderCantieri(itemsAll, dayIdx) {
   else if (bounds.length > 1) _map.fitBounds(bounds, { padding: [50, 50] });
   setTimeout(() => _map.invalidateSize(), 100);
 
-  if (loadingEl) loadingEl.style.display = 'none';
-
-  /* Legenda: per commessa in modalità Operatori, per strumento in modalità Strumenti */
+  /* Legenda */
   const legendEl = document.getElementById('pw-map-legend');
   if (legendEl) {
-    if (_mapCantieriMode === 'strumenti') {
-      const uniqStr = [...new Set(items.flatMap(i => pwMapDisplayStrumenti(i)))].sort((a, b) => pwStrLabel(a).localeCompare(pwStrLabel(b)));
-      if (!uniqStr.length) {
-        legendEl.innerHTML = `<div class="text-slate-400 italic" style="font-size:11px">Nessuno strumento assegnato ${dayIdx === PW_MAP_WEEK ? 'questa settimana' : 'oggi'}</div>`;
-      } else {
-        legendEl.innerHTML = uniqStr.map(k => `
-          <div style="display:flex;align-items:center;gap:6px;font-size:11px;color:#334155;">
-            <div style="width:10px;height:10px;border-radius:50%;background:${_mapColorStrumento(k)};flex-shrink:0;"></div>
-            <span>${esc(pwStrLabel(k))}</span>
-          </div>`).join('');
-      }
+    const uniq = [...new Set(items.map(i => i.commessa))];
+    if (!uniq.length) {
+      legendEl.innerHTML = `<div class="text-slate-400 italic" style="font-size:11px">Nessuna commessa attiva ${dayIdx === PW_MAP_WEEK ? 'questa settimana' : 'oggi'}</div>`;
     } else {
-      const uniq = [...new Set(items.map(i => i.commessa))];
-      if (!uniq.length) {
-        legendEl.innerHTML = `<div class="text-slate-400 italic" style="font-size:11px">Nessuna commessa attiva ${dayIdx === PW_MAP_WEEK ? 'questa settimana' : 'oggi'}</div>`;
-      } else {
-        legendEl.innerHTML = uniq.map(c => `
-          <div style="display:flex;align-items:center;gap:6px;font-size:11px;color:#334155;">
-            <div style="width:10px;height:10px;border-radius:50%;background:${_mapColor(c)};flex-shrink:0;"></div>
-            <span>${c}</span>
-          </div>`).join('');
-      }
+      legendEl.innerHTML = uniq.map(c => `
+        <div style="display:flex;align-items:center;gap:6px;font-size:11px;color:#334155;">
+          <div style="width:10px;height:10px;border-radius:50%;background:${_mapColor(c)};flex-shrink:0;"></div>
+          <span>${c}</span>
+        </div>`).join('');
     }
   }
 
-  /* Riepilogo: raggruppato per commessa. In modalità Operatori, una card per
-     squadra/cantiere (comportamento storico, con l'eventuale strumento
-     assegnato indicato in una riga). In modalità Strumenti, il pannello
-     cambia focus: per ogni commessa elenca gli strumenti usati e, per
-     ciascuno, dove si trova (cantiere/squadra) — la vista squadra-centrica
-     lascia il posto a una vista strumento-centrica. */
+  /* Riepilogo squadre, raggruppato per commessa (espandibile/comprimibile) */
   const sumEl = document.getElementById('pw-map-summary');
   if (sumEl) {
     if (!items.length) {
-      const emptyLabel = _mapCantieriMode === 'strumenti' ? 'Nessuno strumento assegnato' : 'Nessuna squadra';
-      sumEl.innerHTML = `<div class="text-slate-400 italic" style="font-size:11px">${emptyLabel} per ${dayIdx === PW_MAP_WEEK ? 'questa settimana' : 'questo giorno'}</div>`;
-    } else if (_mapCantieriMode === 'strumenti') {
-      const commessaOrder = [];
-      const byCommessa = {};
-      items.forEach((item, i) => {
-        if (!byCommessa[item.commessa]) { byCommessa[item.commessa] = {}; commessaOrder.push(item.commessa); }
-        const byStr = byCommessa[item.commessa];
-        pwMapDisplayStrumenti(item).forEach(k => {
-          if (!byStr[k]) byStr[k] = [];
-          byStr[k].push(i);
-        });
-      });
-
-      sumEl.innerHTML = commessaOrder.map(commessa => {
-        const byStr = byCommessa[commessa];
-        const strKeys = Object.keys(byStr).sort((a, b) => pwStrLabel(a).localeCompare(pwStrLabel(b)));
-        const collapsed = _mapCollapsedCommesse.has(commessa);
-        const bodyHtml = strKeys.map(k => {
-          const locHtml = byStr[k].map(i => {
-            const item = items[i];
-            const missing = !coords[i];
-            return `<div class="pw-squad-card ${missing ? 'not-found' : ''}" data-idx="${i}">
-              ${pwMapCantiereRowHtml(item, missing)}
-              <div class="sq-ops">👷 ${esc(item.squadra)} · ${item.operatori.join(' · ')}</div>
-              ${dayIdx === PW_MAP_WEEK ? pwMapGiorniChips(item.giorni) : ''}
-            </div>`;
-          }).join('');
-          return `<div style="margin-bottom:6px;">
-            <div style="display:flex;align-items:center;gap:5px;font-size:11px;font-weight:700;color:#0d9488;margin-bottom:3px;">
-              <div style="width:8px;height:8px;border-radius:50%;background:${_mapColorStrumento(k)};flex-shrink:0;"></div>
-              🔧 ${esc(pwStrLabel(k))}
-            </div>
-            ${locHtml}
-          </div>`;
-        }).join('');
-        return `<div class="pw-squad-group">
-          <div class="pw-squad-group-header${collapsed ? ' collapsed' : ''}" data-commessa="${esc(commessa)}">
-            <span class="pw-squad-group-arrow">${collapsed ? '▸' : '▾'}</span>
-            <div class="pw-squad-group-dot" style="background:${_mapColor(commessa)}"></div>
-            <span class="pw-squad-group-name">${esc(commessa)}</span>
-            <span class="pw-squad-group-count">${strKeys.length}</span>
-          </div>
-          <div class="pw-squad-group-body" style="${collapsed ? 'display:none;' : ''}">${bodyHtml}</div>
-        </div>`;
-      }).join('');
-
-      sumEl.querySelectorAll('.pw-squad-group-header').forEach(h => {
-        h.onclick = () => pwMapToggleGroup(h);
-      });
-      sumEl.querySelectorAll('.pw-squad-card').forEach(card => {
-        card.onclick = () => pwMapFocusItem(parseInt(card.dataset.idx, 10));
-      });
+      sumEl.innerHTML = `<div class="text-slate-400 italic" style="font-size:11px">Nessuna squadra per ${dayIdx === PW_MAP_WEEK ? 'questa settimana' : 'questo giorno'}</div>`;
     } else {
       const groupOrder = [];
       const groups = {};
@@ -14044,17 +12774,20 @@ async function pwMapRenderCantieri(itemsAll, dayIdx) {
               moveHtml = `<div class="sq-move">↗ ${item.cantierePrev} → ${item.cantiere}</div>`;
             }
           }
-          const strumentiLine = (item.strumenti && item.strumenti.length)
-            ? `<div class="sq-ops" style="color:#0d9488;">🔧 ${item.strumenti.map(k => esc(pwStrLabel(k))).join(' · ')}</div>` : '';
+          const warnHtml = missing ? `
+            <div class="sq-warn">⚠ Luogo non trovato
+              <input class="pw-fix-input" type="text" placeholder="Cerca alternativo (Invio)"
+                data-original="${item.cantiere.replace(/"/g,'&quot;')}"
+                onkeydown="if(event.key==='Enter')pwMapFixLuogo(this)" onclick="event.stopPropagation()">
+            </div>` : '';
           return `<div class="pw-squad-card ${missing ? 'not-found' : ''}" data-idx="${i}">
             <div style="display:flex;align-items:center;gap:5px;">
               <div style="width:8px;height:8px;border-radius:50%;background:${item.color};flex-shrink:0;"></div>
               <span class="sq-name">${item.squadra}</span>
             </div>
-            ${pwMapCantiereRowHtml(item, missing)}
-            ${strumentiLine}
+            <div class="sq-cantiere">📍 ${item.cantiere}</div>
             <div class="sq-ops">👷 ${item.operatori.join(' · ')}</div>
-            ${moveHtml}${dayIdx === PW_MAP_WEEK ? pwMapGiorniChips(item.giorni) : ''}
+            ${warnHtml}${moveHtml}${dayIdx === PW_MAP_WEEK ? pwMapGiorniChips(item.giorni) : ''}
           </div>`;
         }).join('');
         return `<div class="pw-squad-group">
@@ -14113,94 +12846,26 @@ function pwMapToggleGroup(headerEl) {
   }
 }
 
-/* Correzione manuale della posizione di un cantiere: apre/chiude la riga con
-   l'input dedicato (vedi pwMapCantiereRowHtml). Chiude anche ogni altra riga
-   già aperta, per evitare più correzioni in sospeso contemporaneamente. */
-function pwMapGeoEditToggle(btn) {
-  const wrap = btn.closest('.pw-geo-wrap');
-  const row = wrap ? wrap.querySelector('.pw-geo-edit-row') : null;
-  if (!row) return;
-  document.querySelectorAll('.pw-geo-edit-row').forEach(r => { if (r !== row) r.style.display = 'none'; });
-  const opening = row.style.display === 'none';
-  row.style.display = opening ? 'block' : 'none';
-  if (opening) {
-    const inp = row.querySelector('input');
-    if (inp) {
-      inp.value = ''; inp.disabled = false; inp.style.borderColor = '';
-      inp.placeholder = 'Comune o "lat, lng" (Invio)';
-      setTimeout(() => inp.focus(), 0);
-    }
-  }
-}
-
-/* Riconosce "lat, lng" (o "lat lng"/"lat;lng", con decimali e segno) come
-   coordinate dirette; altrimenti l'input va trattato come nome da geocodificare. */
-function pwMapParseCoords(text) {
-  const m = text.trim().match(/^(-?\d{1,2}(?:\.\d+)?)\s*[,;\s]\s*(-?\d{1,3}(?:\.\d+)?)$/);
-  if (!m) return null;
-  const lat = parseFloat(m[1]), lng = parseFloat(m[2]);
-  if (isNaN(lat) || isNaN(lng) || lat < -90 || lat > 90 || lng < -180 || lng > 180) return null;
-  return { lat, lng };
-}
-
-/* Applica la correzione di posizione digitata (nome comune o coordinate
-   dirette) all'input `data-cantiere` corrispondente. Aggiorna la rubrica
-   luoghi condivisa (geo_cache_v1) solo dopo conferma esplicita dell'utente,
-   perché la modifica vale per tutte le settimane in cui compare quel nome
-   cantiere, non solo per la card corrente. */
-async function pwMapGeoEditSubmit(inp) {
-  const cantiere = inp.dataset.cantiere;
+/* Ricerca manuale per luogo non trovato */
+async function pwMapFixLuogo(inp) {
   const query = inp.value.trim();
-  if (!cantiere || !query) return;
-  const key = cantiere.toLowerCase().trim().replace(/\s+/g, ' ');
-
-  let result = pwMapParseCoords(query);
-  if (result) {
-    result = { lat: result.lat, lng: result.lng, label: `Coordinate manuali (${result.lat}, ${result.lng})` };
-  } else {
-    inp.disabled = true; inp.value = 'Ricerca…';
-    try {
-      const url = 'https://nominatim.openstreetmap.org/search?format=json&limit=1&q=' + encodeURIComponent(query);
-      const res = await fetch(url, { headers: { 'Accept-Language': 'it', 'User-Agent': 'StaffingDashboard/1.0' } });
-      const data = await res.json();
-      if (!data || !data.length) {
-        inp.disabled = false; inp.value = ''; inp.style.borderColor = '#ef4444';
-        inp.placeholder = 'Non trovato, riprova…';
-        return;
-      }
-      result = { lat: parseFloat(data[0].lat), lng: parseFloat(data[0].lon), label: data[0].display_name };
-    } catch (e) {
-      inp.disabled = false; inp.placeholder = 'Errore rete';
-      return;
+  const original = inp.dataset.original;
+  if (!query || !original) return;
+  const key = original.toLowerCase().trim().replace(/\s+/g, ' ');
+  inp.disabled = true; inp.value = 'Ricerca…';
+  try {
+    const url = 'https://nominatim.openstreetmap.org/search?format=json&limit=1&q=' + encodeURIComponent(query);
+    const res = await fetch(url, { headers: { 'Accept-Language': 'it', 'User-Agent': 'StaffingDashboard/1.0' } });
+    const data = await res.json();
+    if (data && data.length > 0) {
+      _geoCache[key] = { lat: parseFloat(data[0].lat), lng: parseFloat(data[0].lon), label: data[0].display_name };
+      await _geoCacheSave();
+      pwMapRender(_mapDay);
+    } else {
+      inp.disabled = false; inp.value = ''; inp.style.borderColor = '#ef4444';
+      inp.placeholder = 'Non trovato, riprova…';
     }
-  }
-
-  const msg = `Impostare la posizione di "${cantiere}" su:\n${result.label}\n(${result.lat.toFixed(5)}, ${result.lng.toFixed(5)})?`;
-  if (!await showConfirmAsync(msg, 'Correggi posizione')) {
-    inp.disabled = false; inp.value = query;
-    return;
-  }
-  _geoCache[key] = result;
-  await _geoCacheSave();
-  pwMapRender(_mapDay);
-}
-
-/* Riga "📍 cantiere" con icona ✏️ per correggere manualmente la posizione
-   (nome comune, ri-geocodificato, oppure coordinate dirette "lat, lng"),
-   condivisa dalla vista Operatori e dalla vista Strumenti del riepilogo.
-   Se il luogo non è stato geocodificato l'input è già aperto e in evidenza,
-   dato che in quel caso la posizione mostrata è solo un fallback approssimato. */
-function pwMapCantiereRowHtml(item, missing) {
-  const cantiereAttr = item.cantiere.replace(/"/g, '&quot;');
-  const editInput = `<input type="text" class="pw-fix-input" placeholder='Comune o "lat, lng" (Invio)'
-        data-cantiere="${cantiereAttr}"
-        onkeydown="if(event.key==='Enter'){event.stopPropagation();pwMapGeoEditSubmit(this)}" onclick="event.stopPropagation()">`;
-  return `<div class="pw-geo-wrap">
-    <div class="sq-cantiere">📍 ${esc(item.cantiere)} <span class="pw-geo-edit-btn" onclick="event.stopPropagation();pwMapGeoEditToggle(this)" title="Correggi posizione">✏️</span></div>
-    ${missing
-      ? `<div class="sq-warn">⚠ Luogo non trovato, posizione approssimata<div class="pw-geo-edit-row" style="display:block;">${editInput}</div></div>`
-      : `<div class="pw-geo-edit-row" style="display:none;">${editInput}</div>`}
-  </div>`;
+  } catch(e) { inp.disabled = false; inp.placeholder = 'Errore rete'; }
 }
 
 /* ==================== MAPPA RESIDENZE OPERATORI ==================== */

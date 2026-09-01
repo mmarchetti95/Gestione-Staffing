@@ -3,16 +3,27 @@
 // (nomeCommessa -> indice mese 0-11). Solo stato di vista, non persistito.
 let _confrontoMeseSel = {};
 
+/* Nomi univoci delle commesse attive: unione di quelle con righe staffing, quelle
+   promosse/create in commesse_attive e quelle presenti solo nei meta, esclusi
+   "ORE NON LAVORATE" e le commesse chiuse (state.commesse_escluse). Fonte unica per
+   il badge del tab, la KPI "Commesse attive" e il relativo modal di dettaglio: prima
+   ognuno rifaceva il conteggio a modo suo e potevano non coincidere (es. il modal
+   leggeva solo state.commesse_attive, che copre solo le commesse promosse esplicitamente
+   e non quelle con semplici righe di staffing). */
+function getNomiCommesseAttive() {
+  const set = new Set();
+  state.staffing.forEach(r => { if (r.commessa && r.commessa !== 'ORE NON LAVORATE') set.add(r.commessa); });
+  state.commesse_attive.forEach(ca => { const n = ca.progetto||ca.nome; if (n && n !== 'ORE NON LAVORATE') set.add(n); });
+  Object.keys(state.commesse_attive_meta||{}).forEach(n => { if (n && n !== 'ORE NON LAVORATE') set.add(n); });
+  const nomiChiuse = new Set((state.commesse_escluse||[]).map(n => (n||'').trim()).filter(Boolean));
+  return [...set].filter(n => !nomiChiuse.has(n.trim())).sort((a,b) => a.localeCompare(b));
+}
+
 function renderCommesse() {
   const list = document.getElementById('commesse-list');
 
   document.getElementById('count-pipeline').textContent = `(${state.pipeline.length})`;
-  // Conta commesse attive: da staffing + da commesse_attive + da meta
-  const commesseAttiveSet = new Set();
-  state.staffing.forEach(r => { if (r.commessa && r.commessa !== 'ORE NON LAVORATE') commesseAttiveSet.add(r.commessa); });
-  state.commesse_attive.forEach(ca => { const n = ca.progetto||ca.nome; if (n && n !== 'ORE NON LAVORATE') commesseAttiveSet.add(n); });
-  Object.keys(state.commesse_attive_meta||{}).forEach(n => { if (n && n !== 'ORE NON LAVORATE') commesseAttiveSet.add(n); });
-  document.getElementById('count-attive').textContent = `(${commesseAttiveSet.size})`;
+  document.getElementById('count-attive').textContent = `(${getNomiCommesseAttive().length})`;
 
   if (state.activeTab === 'pipeline') {
     // NOTA: a differenza della vista Attive, qui NON si filtra per state.commesse_escluse.

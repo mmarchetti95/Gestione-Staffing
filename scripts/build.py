@@ -23,6 +23,7 @@ JS_FILES = [
     'storage-utils.js',
     'dashboard-kpi.js',
     'dashboard-operatori.js',
+    'dashboard-attestati.js',
     'dashboard-commesse.js',
     'dashboard-assegnazioni.js',
     'dashboard-crud-helpers.js',

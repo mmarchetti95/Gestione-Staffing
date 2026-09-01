@@ -6,6 +6,54 @@ const MESI = ['Gen','Feb','Mar','Apr','Mag','Giu','Lug','Ago','Set','Ott','Nov',
 const MESI_LONG = ['Gennaio','Febbraio','Marzo','Aprile','Maggio','Giugno','Luglio','Agosto','Settembre','Ottobre','Novembre','Dicembre'];
 const INDUSTRIES = ['Altre infrastrutture','Telco','Energy','Water','Robotica e AI','Trasporti','Altro'];
 
+/* ===================== ATTESTATI: VALIDITA' E COLONNE MATRICE ===================== */
+/* Durata di validita' in anni per tipo di attestato, come indicata tra parentesi nelle
+   intestazioni del file "EP - Elenco attestati dei dipendenti": quel file riporta la data
+   del CORSO, non la scadenza, quindi la scadenza viene calcolata (corso + N anni - 1 giorno,
+   coerente con i fogli PES/Segnaletica che la scadenza ce l'hanno esplicita).
+   Una voce senza durata qui viene trattata come "senza scadenza nota". */
+const ATTESTATI_DURATA = {
+  'RSPP': 5,
+  'ASPP': 5,
+  'Preposto': 2,
+  'RLS': 1,
+  'Primo soccorso': 3,
+  'Defibrillatore BLS-D': 2,
+  'Antincendio': 3,
+  'Ambienti confinati': 5,
+  'Lavori in quota': 5,
+  'Segnaletica stradale - Preposto': 5,
+  'Segnaletica stradale - Addetto': 5,
+  'PES-PAV-PEI': 5,
+  'ENEL 1A': 5,
+  'ENEL 1B': 5,
+  'ENEL 2A': 5,
+  'ENEL 2B': 5,
+};
+
+/* Giorni di preavviso entro cui un attestato ancora valido viene mostrato "in scadenza". */
+const ATTESTATI_PREAVVISO_GG = 90;
+
+/* Colonne della matrice Attestati. Alcune voci del vocabolario ATTESTATI sono
+   specializzazioni della stessa abilitazione (Segnaletica Preposto/Addetto, ENEL 1A..2B):
+   come colonne a se' stanti sarebbero quasi tutte vuote, quindi vengono accorpate in
+   un'unica colonna e la variante compare come sigla dentro la cella. */
+const ATTESTATI_COLONNE = [
+  { label: 'Ambienti confinati',  voci: ['Ambienti confinati'] },
+  { label: 'Antincendio',         voci: ['Antincendio'] },
+  { label: 'ASPP',                voci: ['ASPP'] },
+  { label: 'Defibrillatore',      voci: ['Defibrillatore BLS-D'] },
+  { label: 'Lavori in quota',     voci: ['Lavori in quota'] },
+  { label: 'PES-PAV-PEI',         voci: ['PES-PAV-PEI', 'ENEL 1A', 'ENEL 1B', 'ENEL 2A', 'ENEL 2B'],
+    sigle: { 'ENEL 1A': '1A', 'ENEL 1B': '1B', 'ENEL 2A': '2A', 'ENEL 2B': '2B' } },
+  { label: 'Preposto',            voci: ['Preposto'] },
+  { label: 'Primo soccorso',      voci: ['Primo soccorso'] },
+  { label: 'RLS',                 voci: ['RLS'] },
+  { label: 'RSPP',                voci: ['RSPP'] },
+  { label: 'Segnaletica',         voci: ['Segnaletica stradale - Preposto', 'Segnaletica stradale - Addetto'],
+    sigle: { 'Segnaletica stradale - Preposto': 'Prep', 'Segnaletica stradale - Addetto': 'Add' } },
+];
+
 /* ===================== ANAGRAFICA PROVINCE/REGIONI ===================== */
 /* Usata per la provenienza geografica degli operatori (filtro regione/provincia
    in Pool operatori e nel picker Griglia settimanale, per trovare velocemente
@@ -158,5 +206,10 @@ let state = {
   activeTab: 'pipeline',
   filters: { search:'', skills:new Set(), attestati:new Set(), lowSat:false, regione:'', provincia:'', showEx:false },
   searchCommesse: '',
+  // Registro attestati importato da Excel: archivio grezzo dell'ultimo import, che copre
+  // TUTTI i dipendenti del file (anche chi non e' nel pool operatori del reparto rilievi).
+  // Per chi e' nel pool la fonte autorevole resta op.attestati_dett, che puo' contenere
+  // anche correzioni manuali fatte dalla scheda operatore. Vedi dashboard-attestati.js.
+  attestati_registro: { aggiornato_il: '', file: '', da: '', dipendenti: [] },
 };
 

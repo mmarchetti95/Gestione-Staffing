@@ -1,9 +1,6 @@
 /* ===================== RENDER KPI ===================== */
 function calcKPI() {
-  // commesse attive = uniche dallo staffing corrente, escludendo ORE NON LAVORATE
-  const commesseFromStaffing = new Set();
-  state.staffing.forEach(r => { if (r.commessa && r.commessa !== 'ORE NON LAVORATE') commesseFromStaffing.add(r.commessa); });
-  const nAttive = commesseFromStaffing.size;
+  const nAttive = getNomiCommesseAttive().length;
   const nPipeline = state.pipeline.length;
   const nOperatori = getOperatoriAttivi().length;
 
@@ -35,7 +32,12 @@ function calcKPI() {
     }
   });
 
-  return { nAttive, nPipeline, nOperatori, satMedia, gapTot, alertCritici };
+  // attestati scaduti / in scadenza (operatori del pool)
+  const scadenzeAtt = attScadenzeOperatori();
+  const nAttScaduti = scadenzeAtt.filter(s => s.stato === 'scaduto').length;
+  const nAttInScadenza = scadenzeAtt.length - nAttScaduti;
+
+  return { nAttive, nPipeline, nOperatori, satMedia, gapTot, alertCritici, nAttScaduti, nAttInScadenza };
 }
 
 function renderKPI() {
@@ -69,16 +71,22 @@ function renderKPI() {
     saturazione: { bg: '#fffbeb', border: '#fde68a', iconBg: '#fef3c7' },
     gap:         { bg: '#fef2f2', border: '#fecaca', iconBg: '#fee2e2' },
     alert:       { bg: '#fef2f2', border: '#fecaca', iconBg: '#fee2e2' },
+    attScaduti:  { bg: '#fef2f2', border: '#fecaca', iconBg: '#fee2e2' },
+    attScadenza: { bg: '#fffbeb', border: '#fde68a', iconBg: '#fef3c7' },
   };
   const satColor = k.satMedia>1.0?'#dc2626':(k.satMedia>0.9?'#c2410c':'#047857');
   const gapColor = k.gapTot>0?'#dc2626':'#047857';
+  const nAttTot = k.nAttScaduti + k.nAttInScadenza;
+  const attColor = k.nAttScaduti>0 ? '#dc2626' : (k.nAttInScadenza>0 ? '#c2410c' : '#047857');
+  const attPal = k.nAttScaduti>0 ? PAL.attScaduti : (k.nAttInScadenza>0 ? PAL.attScadenza : null);
   const html =
     kpiCard('📋', 'Commesse attive', k.nAttive, '#1e40af', 'attive', PAL.attive) +
     kpiCard('🚀', 'Commesse in partenza', k.nPipeline, 'var(--accent-dark)', 'pipeline', PAL.pipeline) +
     kpiCard('🗂', 'Totale commesse', tot, '#0f172a', null, null) +
     kpiCard('👷', 'Operatori', k.nOperatori, '#4338ca', 'operatori', PAL.operatori) +
     kpiCard('📊', 'Saturazione 3 mesi', (k.satMedia*100).toFixed(0)+'%', satColor, 'saturazione', PAL.saturazione) +
-    kpiCard('📉', 'Gap risorse', k.gapTot, gapColor, 'gap', PAL.gap);
+    kpiCard('📉', 'Gap risorse', k.gapTot, gapColor, 'gap', PAL.gap) +
+    kpiCard('🎓', 'Attestati scaduti/in scadenza', nAttTot, attColor, 'attestatiKpi', attPal);
   document.getElementById('kpi-grid').innerHTML = html +
     kpiCard('🚨', 'Alert critici', k.alertCritici, k.alertCritici>0?'#dc2626':'#0f172a', 'alert',
             k.alertCritici>0?PAL.alert:null, 'col-span-2 md:col-span-1');
@@ -115,17 +123,13 @@ function showKpiModal(type) {
   if (type === 'attive') {
     title = '📋 Commesse attive';
     headerBg = '#1e40af';
-    const seen = new Set();
-    const rows = [];
-    state.commesse_attive.forEach(ca => {
-      const nome = ca.progetto || ca.nome || '';
-      if (!nome || nome === 'ORE NON LAVORATE' || seen.has(nome)) return;
-      seen.add(nome);
+    const rows = getNomiCommesseAttive().map(nome => {
       const meta  = (state.commesse_attive_meta || {})[nome] || {};
-      const nOp   = (ca.allocazioni || []).filter(a => (a.mesi || []).some((v,i) => v > 0 && i >= mese0)).length;
+      const righe = state.staffing.filter(r => r.commessa === nome);
+      const nOp   = new Set(righe.filter(r => (r.mesi || []).some((v,i) => Number(v) > 0 && i >= mese0)).map(r => r.risorsa)).size;
       const inizio = meta.inizio ? fmtDate(meta.inizio) : '';
       const fine   = meta.fine   ? fmtDate(meta.fine)   : '';
-      rows.push({ nome, cliente: meta.cliente||'', periodo: inizio&&fine?`${inizio} → ${fine}`:(inizio||fine||'—'), nOp });
+      return { nome, cliente: meta.cliente||'', periodo: inizio&&fine?`${inizio} → ${fine}`:(inizio||fine||'—'), nOp };
     });
     bodyHtml = `<div style="font-size:12px;color:#64748b;margin-bottom:12px;">${rows.length} commesse attive</div>
     <table style="width:100%;border-collapse:collapse;font-size:13px;">
@@ -314,6 +318,39 @@ function showKpiModal(type) {
           <div style="font-size:12px;color:#b91c1c;font-weight:600;margin-bottom:6px;">${motivo}</div>
           <div style="display:flex;flex-wrap:wrap;gap:4px;">${(p.skills||[]).map(s => `<span style="background:#fee2e2;color:#dc2626;padding:1px 8px;border-radius:9999px;font-size:10px;font-weight:700;">${esc(s)}</span>`).join('')}</div>
         </div>`).join('')}
+      </div>`;
+    }
+  }
+
+  /* ── ATTESTATI SCADUTI/IN SCADENZA ────────────────── */
+  else if (type === 'attestatiKpi') {
+    title = '🎓 Attestati scaduti o in scadenza';
+    headerBg = '#b45309';
+    const scadenze = attScadenzeOperatori();
+    const scaduti = scadenze.filter(s => s.stato === 'scaduto');
+    const inScadenza = scadenze.filter(s => s.stato === 'scadenza');
+    const riga = s => `<tr style="background:${s.stato==='scaduto'?'#fff5f5':'#fffbeb'};">
+      <td style="padding:7px 10px;font-weight:600;color:#1e293b;">${esc(s.op.nome_esteso||s.op.nome||'')}</td>
+      <td style="padding:7px 10px;color:#475569;">${esc(s.nome)}</td>
+      <td style="padding:7px 10px;color:#64748b;white-space:nowrap;">${fmtDate(s.scad)}</td>
+      <td style="padding:7px 10px;text-align:center;font-weight:700;color:${s.stato==='scaduto'?'#dc2626':'#c2410c'};">${s.stato==='scaduto' ? ('scaduto da '+Math.abs(s.giorni)+'gg') : ('tra '+s.giorni+'gg')}</td>
+    </tr>`;
+    if (scadenze.length === 0) {
+      bodyHtml = `<div style="text-align:center;padding:32px;color:#16a34a;font-size:14px;">✅ Nessun attestato scaduto o in scadenza</div>`;
+    } else {
+      bodyHtml = `<div style="font-size:12px;color:#64748b;margin-bottom:12px;">${scaduti.length} scaduti, ${inScadenza.length} in scadenza entro ${ATTESTATI_PREAVVISO_GG} giorni</div>
+      <table style="width:100%;border-collapse:collapse;font-size:13px;">
+        <thead><tr style="background:#fef3c7;">
+          <th style="text-align:left;padding:8px 10px;font-size:11px;color:#475569;font-weight:700;border-bottom:2px solid #fde68a;">Operatore</th>
+          <th style="text-align:left;padding:8px 10px;font-size:11px;color:#475569;font-weight:700;border-bottom:2px solid #fde68a;">Attestato</th>
+          <th style="text-align:left;padding:8px 10px;font-size:11px;color:#475569;font-weight:700;border-bottom:2px solid #fde68a;">Scadenza</th>
+          <th style="text-align:center;padding:8px 10px;font-size:11px;color:#475569;font-weight:700;border-bottom:2px solid #fde68a;">Stato</th>
+        </tr></thead><tbody>
+        ${scaduti.concat(inScadenza).map(riga).join('')}
+        </tbody></table>
+      <div style="margin-top:14px;text-align:right;">
+        <button onclick="closeModal(); const d=document.getElementById('att-details'); if(d){ d.open=true; attToggleSezione(); d.scrollIntoView({behavior:'smooth'}); }"
+          style="font-size:12px;padding:6px 12px;background:#0f172a;color:#fff;border:none;border-radius:6px;cursor:pointer;">Apri sezione Attestati &amp; scadenze →</button>
       </div>`;
     }
   }

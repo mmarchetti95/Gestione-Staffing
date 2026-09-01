@@ -12,7 +12,7 @@ async function assegnaOperatore(commessaId, operatoreId) {
   const skillMancanti = c.skills.filter(s => !op.skills.includes(s));
   // verifica attestati richiesti (coerente con il pannello Raccomandazioni)
   const attestatiRichiesti = c.attestati_richiesti || [];
-  const attestatiMancanti = attestatiRichiesti.filter(a => !(op.attestati||[]).includes(a));
+  const attestatiMancanti = attNonCoperti(op, attestatiRichiesti);
   // verifica saturazione
   const mesi = monthsBetween(c.inizio, c.fine);
   const sat = operatoreSatPeriodo(op, mesi);
@@ -22,7 +22,7 @@ async function assegnaOperatore(commessaId, operatoreId) {
   if (skillMancanti.length > 0 || attestatiMancanti.length > 0 || saturo) {
     const msg = [];
     if (skillMancanti.length>0) msg.push(`⚠ Skill mancanti: ${skillMancanti.join(', ')}`);
-    if (attestatiMancanti.length>0) msg.push(`⚠ Attestati mancanti: ${attestatiMancanti.join(', ')}`);
+    if (attestatiMancanti.length>0) msg.push('⚠ Attestati mancanti o scaduti: ' + attestatiMancanti.map(a => attEtichettaMancanza(op, a)).join(', '));
     if (saturo) msg.push(`⚠ Operatore saturo (${(sat*100).toFixed(0)}%) nella finestra della commessa`);
     msg.push('\nConfermi comunque l\'assegnazione?');
     // flash
@@ -295,7 +295,7 @@ function openAddAllocazioneModal(commessaNome, opts = {}) {
   // poi - a parita' di validita' - chi e' della provincia/regione della commessa o il
   // piu' vicino, infine in generale ordine alfabetico come criterio finale
   const validoOp = op => (skillReq.length === 0 || skillReq.every(s => op.skills.includes(s)))
-    && (attReq.length === 0 || attReq.every(s => (op.attestati||[]).includes(s)));
+    && (attReq.length === 0 || attReq.every(s => attIsValido(op, s)));
   const ops = [...getOperatoriAttivi()].sort((a, b) => {
     const validoA = validoOp(a), validoB = validoOp(b);
     if (validoA !== validoB) return validoA ? -1 : 1;
@@ -310,7 +310,7 @@ function openAddAllocazioneModal(commessaNome, opts = {}) {
 
   const opOptions = ops.map(op => {
     const hasAllSkill = skillReq.length === 0 || skillReq.every(s => op.skills.includes(s));
-    const hasAllAtt = attReq.length === 0 || attReq.every(s => (op.attestati||[]).includes(s));
+    const hasAllAtt = attReq.length === 0 || attReq.every(s => attIsValido(op, s));
     const valido = hasAllSkill && hasAllAtt;
     const sat = mesiSuggeriti.length > 0 ? operatoreSatPeriodo(op, mesiSuggeriti) : 0;
     const satTag = mesiSuggeriti.length > 0 ? ` [sat ${(sat*100).toFixed(0)}%]` : '';
@@ -401,11 +401,11 @@ function openAddAllocazioneModal(commessaNome, opts = {}) {
     if (!op) { opInfo.innerHTML = ''; return; }
     const skillHtml = op.skills.length > 0 ? op.skills.map(s => `<span class="skill-badge">${s}</span>`).join('') : '<i>nessuna skill</i>';
     const skillMancanti = skillReq.filter(s => !op.skills.includes(s));
-    const attMancanti = attReq.filter(s => !(op.attestati||[]).includes(s));
+    const attMancanti = attNonCoperti(op, attReq);
     const warns = [];
     if (skillMancanti.length > 0) warns.push(`<span class="text-red-600">⚠ Skill mancanti: ${skillMancanti.join(', ')}</span>`);
-    if (attMancanti.length > 0) warns.push(`<span class="text-red-600">⚠ Attestati mancanti: ${attMancanti.join(', ')}</span>`);
-    const attHtml = (op.attestati && op.attestati.length > 0) ? op.attestati.map(a => `<span class="att-badge" title="${a}">${a.length>14?a.substring(0,13)+'…':a}</span>`).join('') : '<i>nessun attestato</i>';
+    if (attMancanti.length > 0) warns.push('<span class="text-red-600">⚠ Attestati mancanti o scaduti: ' + esc(attMancanti.map(a => attEtichettaMancanza(op, a)).join(', ')) + '</span>');
+    const attHtml = attBadgesHtml(op, '<i>nessun attestato</i>');
     opInfo.innerHTML = `<div>Skill: ${skillHtml}</div><div class="mt-1">Attestati: ${attHtml}</div>${warns.length>0?'<div class="mt-1">'+warns.join('<br>')+'</div>':''}`;
   };
   opSelect.addEventListener('change', updateOpInfo);
@@ -474,11 +474,11 @@ function openAddAllocazioneModal(commessaNome, opts = {}) {
     if (mesi.every(v => v === 0)) { showAlertModal('Specifica almeno un giorno-uomo in un mese.'); return; }
     // warning skill e attestati mancanti
     const skillMancanti = skillReq.filter(s => !op.skills.includes(s));
-    const attMancanti = attReq.filter(s => !(op.attestati||[]).includes(s));
+    const attMancanti = attNonCoperti(op, attReq);
     if (skillMancanti.length > 0 || attMancanti.length > 0) {
       const msg = [];
       if (skillMancanti.length > 0) msg.push(`⚠ Skill mancanti: ${skillMancanti.join(', ')}`);
-      if (attMancanti.length > 0) msg.push(`⚠ Attestati mancanti: ${attMancanti.join(', ')}`);
+      if (attMancanti.length > 0) msg.push('⚠ Attestati mancanti o scaduti: ' + attMancanti.map(a => attEtichettaMancanza(op, a)).join(', '));
       msg.push('\nConfermare comunque l\'allocazione?');
       if (!await showConfirmAsync(msg.join('\n'))) return;
     }
@@ -635,7 +635,7 @@ function openOperatoreImpegniModal(opId) {
             <h3 class="font-semibold text-slate-900 text-lg">Impegni di ${op.nome_esteso}</h3>
             <div class="text-xs text-slate-500 mt-1">
               <div>Skill: ${op.skills.length ? op.skills.map(s => `<span class="skill-badge">${s}</span>`).join('') : '<i>nessuna skill censita</i>'}</div>
-              <div class="mt-1">Attestati: ${(op.attestati||[]).length ? op.attestati.map(a => `<span class="att-badge" title="${a}">${a.length>14?a.substring(0,13)+'…':a}</span>`).join('') : '<i>nessun attestato</i>'}</div>
+              <div class="mt-1">Attestati: ${attBadgesHtml(op, '<i>nessun attestato censito</i>')}</div>
             </div>
           </div>
           <button onclick="closeModal()" class="text-slate-400 hover:text-slate-700 text-xl leading-none">×</button>

@@ -1,4 +1,9 @@
 /* ===================== ALERT SOVRA-ALLOCAZIONE E CARENZE ===================== */
+// La sezione "problemi rilevati" parte sempre chiusa e si apre solo su click: renderAlerts()
+// viene richiamata ad ogni renderAll() (quindi ad ogni modifica), e senza questo stato
+// tracciato a parte l'innerHTML rigenerato riapriva la sezione ogni volta.
+let _alertBoxAperto = false;
+
 function renderAlerts() {
   const mc = meseCorrente();
   const errori = [];
@@ -49,6 +54,22 @@ function renderAlerts() {
     if (mesiKO.length) errori.push({ tipo: 'exImpiegato', testo: '<b>' + op.nome_esteso + '</b> (rapporto terminato il ' + fmtDate(op.data_fine_rapporto) + '): ancora impiegato in ' + mesiKO.join(', ') });
   });
 
+  // Attestati scaduti o in scadenza entro il preavviso (solo operatori del pool).
+  // L'elenco viene troncato: con 40+ operatori un giro di rinnovi puo' produrre decine di
+  // righe che sommergerebbero gli altri alert — il dettaglio completo sta nella sezione
+  // "Attestati & scadenze".
+  const scadenzeAtt = attScadenzeOperatori();
+  const MAX_ALERT_ATT = 12;
+  scadenzeAtt.slice(0, MAX_ALERT_ATT).forEach(sc => {
+    const quando = sc.stato === 'scaduto'
+      ? 'scaduto il ' + fmtDate(sc.scad) + ' (' + Math.abs(sc.giorni) + ' giorni fa)'
+      : 'scade il ' + fmtDate(sc.scad) + ' (tra ' + sc.giorni + ' giorni)';
+    errori.push({ tipo: 'attestato', testo: '<b>' + esc(sc.op.nome_esteso || '') + '</b>: ' + esc(sc.nome) + ' ' + quando });
+  });
+  if (scadenzeAtt.length > MAX_ALERT_ATT) {
+    errori.push({ tipo: 'attestato', testo: '<i>… e altri ' + (scadenzeAtt.length - MAX_ALERT_ATT) + ' attestati: vedi la sezione "Attestati &amp; scadenze"</i>' });
+  }
+
   const el = document.getElementById('alert-box');
   if (!el) return;
   if (!errori.length) { el.innerHTML = ''; return; }
@@ -56,12 +77,14 @@ function renderAlerts() {
   const sovra       = errori.filter(e => e.tipo === 'sovra');
   const carenze     = errori.filter(e => e.tipo === 'carenza');
   const exImpiegati = errori.filter(e => e.tipo === 'exImpiegato');
+  const attScaduti  = errori.filter(e => e.tipo === 'attestato');
   let inner = '';
   if (sovra.length)       inner += '<div class="text-xs font-semibold text-red-700 mb-1">Sovra-allocazioni (' + sovra.length + '):</div>'   + sovra.map(e   => '<div class="text-xs text-red-700 pl-2 mb-0.5">• ' + e.testo + '</div>').join('');
   if (carenze.length)     inner += '<div class="text-xs font-semibold text-orange-700 mb-1 mt-2">Carenze FTE (' + carenze.length + '):</div>' + carenze.map(e => '<div class="text-xs text-orange-700 pl-2 mb-0.5">• ' + e.testo + '</div>').join('');
   if (exImpiegati.length) inner += '<div class="text-xs font-semibold text-purple-700 mb-1 mt-2">🚪 Ex collega ancora impiegato (' + exImpiegati.length + '):</div>' + exImpiegati.map(e => '<div class="text-xs text-purple-700 pl-2 mb-0.5">• ' + e.testo + '</div>').join('');
+  if (attScaduti.length)  inner += '<div class="text-xs font-semibold text-amber-700 mb-1 mt-2">🎓 Attestati scaduti o in scadenza (' + scadenzeAtt.length + '):</div>' + attScaduti.map(e => '<div class="text-xs text-amber-700 pl-2 mb-0.5">• ' + e.testo + '</div>').join('');
 
-  el.innerHTML = '<div class="bg-red-50 border border-red-200 rounded-lg p-3 mb-4"><div class="flex items-center justify-between mb-2"><span class="font-semibold text-red-800 text-sm">⚠ ' + errori.length + ' problema/i rilevato/i</span><button onclick="this.closest(\'.bg-red-50\').querySelector(\'.ab-body\').classList.toggle(\'hidden\')" class="text-xs text-red-600 hover:underline">mostra/nascondi</button></div><div class="ab-body">' + inner + '</div></div>';
+  el.innerHTML = '<div class="bg-red-50 border border-red-200 rounded-lg p-3 mb-4"><div class="flex items-center justify-between mb-2"><span class="font-semibold text-red-800 text-sm">⚠ ' + errori.length + ' problema/i rilevato/i</span><button onclick="_alertBoxAperto = !_alertBoxAperto; this.closest(\'.bg-red-50\').querySelector(\'.ab-body\').classList.toggle(\'hidden\')" class="text-xs text-red-600 hover:underline">mostra/nascondi</button></div><div class="ab-body' + (_alertBoxAperto ? '' : ' hidden') + '">' + inner + '</div></div>';
 }
 
 /* ===================== RENDER ALL ===================== */
@@ -72,6 +95,7 @@ function renderAll() {
   renderSkillFilters();
   renderAttestatiFilters();
   renderOperatori();
+  renderAttestati();
   renderCommesse();
   renderGap();
   // Se la vista operatore è aperta, aggiornala

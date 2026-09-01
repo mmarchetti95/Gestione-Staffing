@@ -129,7 +129,9 @@ function renderOperatori() {
       : (op.licenziato ? 'Segnato manualmente come ex collega' : '');
     const exBadge = modoEx ? `<span class="op-ex-tag" title="${esc(exReason)}">ex</span>` : '';
     const skillBadges = op.skills.map(s => `<span class="skill-badge">${s}</span>`).join('');
-    const attBadges = (op.attestati||[]).map(a => `<span class="att-badge" title="${a}">${a.length>14 ? a.substring(0,13)+'…' : a}</span>`).join('');
+    // Il badge attestato porta il colore dello stato di scadenza (verde/ambra/rosso) e nel
+    // tooltip data corso + data scadenza; resta viola neutro se la scadenza non e' nota.
+    const attBadges = attBadgesHtml(op);
     // mini sat bar 12 mesi
     let extraPerMese = new Array(12).fill(0);
     state.assegnazioni.filter(a => a.operatore_id === op.id).forEach(a => {
@@ -197,12 +199,17 @@ function renderOperatori() {
    il campo esiste; per i precedenti la cella resta vuota). */
 function exportOperatoriXlsx() {
   if (typeof XLSX === 'undefined') { showAlertModal('Libreria XLSX non caricata. Verifica la connessione internet e ricarica la pagina.'); return; }
-  const header = ['Nome', 'Email', 'Stato', 'Provincia', 'Regione', 'Tipo contratto', 'Data inizio rapporto', 'Data fine rapporto', 'Skill', 'Attestati e certificazioni', 'Data aggiunta al pool'];
+  const header = ['Nome', 'Email', 'Stato', 'Provincia', 'Regione', 'Tipo contratto', 'Data inizio rapporto', 'Data fine rapporto', 'Skill', 'Attestati e certificazioni', 'Attestati scaduti', 'Prima scadenza', 'Data aggiunta al pool'];
   const rows = [...state.operatori]
     .sort((a, b) => (a.nome_esteso || '').localeCompare(b.nome_esteso || ''))
     .map(op => {
       const provInfo = provinciaInfo(op.provincia);
       const stato = (op.licenziato || isOperatoreScaduto(op)) ? 'Ex collega' : 'Attivo';
+      const scadenzeOp = (op.attestati || [])
+        .map(a => (attVoceOperatore(op, a) || {}).scad)
+        .filter(Boolean)
+        .sort();
+      const primaScadenza = scadenzeOp.length ? scadenzeOp[0] : '';
       return [
         op.nome_esteso || '',
         op.email || '',
@@ -213,12 +220,19 @@ function exportOperatoriXlsx() {
         op.data_inizio_rapporto ? fmtDate(op.data_inizio_rapporto) : '',
         op.data_fine_rapporto ? fmtDate(op.data_fine_rapporto) : '',
         (op.skills || []).join(', '),
-        (op.attestati || []).join(', '),
+        // gli attestati con scadenza nota la portano tra parentesi, per non dover
+        // incrociare questo export con quello del registro attestati
+        (op.attestati || []).map(a => {
+          const voce = attVoceOperatore(op, a);
+          return (voce && voce.scad) ? a + ' (scad. ' + fmtDate(voce.scad) + ')' : a;
+        }).join(', '),
+        (op.attestati || []).filter(a => attStatoOperatore(op, a) === 'scaduto').join(', '),
+        primaScadenza ? fmtDate(primaScadenza) : '',
         op.data_aggiunta ? fmtDate(op.data_aggiunta) : ''
       ];
     });
   const ws = XLSX.utils.aoa_to_sheet([header, ...rows]);
-  ws['!cols'] = [{wch:28},{wch:26},{wch:12},{wch:18},{wch:16},{wch:16},{wch:14},{wch:14},{wch:35},{wch:35},{wch:16}];
+  ws['!cols'] = [{wch:28},{wch:26},{wch:12},{wch:18},{wch:16},{wch:16},{wch:14},{wch:14},{wch:35},{wch:50},{wch:30},{wch:14},{wch:16}];
   const wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, ws, 'Operatori');
   const ts = new Date();

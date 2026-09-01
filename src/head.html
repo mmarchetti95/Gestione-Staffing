@@ -189,6 +189,45 @@
   .att-badge { background: #ede9fe; color: #5b21b6; border: 1px solid #ddd6fe; }
   .att-badge.req { background: #fce7f3; color: #9d174d; border-color: #fbcfe8; }
   .skill-badge.miss, .att-badge.miss { background: #fee2e2; color: #991b1b; border-color: #fecaca; }
+  /* Badge attestato colorato per stato di scadenza (scheda operatore e raccomandazioni).
+     Il badge viola "neutro" resta per gli attestati senza data nota. */
+  .att-badge.ko   { background: #fee2e2; color: #991b1b; border-color: #fecaca; }
+  .att-badge.warn { background: #fef3c7; color: #92400e; border-color: #fde68a; }
+  .att-badge.ok   { background: #dcfce7; color: #166534; border-color: #bbf7d0; }
+
+  /* ---- Sezione "Attestati & scadenze" ---- */
+  .att-pill {
+    display: inline-block; margin-left: 6px; padding: 1px 7px; border-radius: 999px;
+    font-size: var(--text-2xs); font-weight: 600;
+  }
+  .att-pill.ko   { background: #fee2e2; color: #991b1b; border: 1px solid #fecaca; }
+  .att-pill.warn { background: #fef3c7; color: #92400e; border: 1px solid #fde68a; }
+  .att-pill.ok   { background: #f1f5f9; color: #475569; border: 1px solid #e2e8f0; }
+  .att-scroll { max-height: 62vh; overflow: auto; border: 1px solid #e2e8f0; border-radius: 6px; }
+  .att-matrix { border-collapse: separate; border-spacing: 0; font-size: var(--text-2xs); width: max-content; min-width: 100%; }
+  .att-matrix th, .att-matrix td { border-bottom: 1px solid #eef2f7; padding: 3px 7px; white-space: nowrap; text-align: center; }
+  /* Intestazione e colonna nome restano visibili durante lo scroll: con 150 dipendenti e
+     11 colonne senza sticky non si capisce piu' di chi/di cosa sia la cella che si guarda. */
+  .att-matrix thead th {
+    position: sticky; top: 0; z-index: 2; background: #f8fafc; color: #475569;
+    font-weight: 600; vertical-align: bottom; border-bottom: 1px solid #e2e8f0;
+  }
+  .att-matrix .att-nome { position: sticky; left: 0; z-index: 1; background: #fff; text-align: left; font-weight: 500; color: #0f172a; }
+  .att-matrix thead .att-nome { z-index: 3; background: #f8fafc; }
+  .att-matrix tbody tr:hover td { background: #f1f5f9; }
+  .att-matrix tbody tr:hover .att-nome { background: #f1f5f9; }
+  .att-th-lbl { font-size: var(--text-2xs); }
+  .att-th-sub { font-size: 9px; font-weight: 400; color: #94a3b8; }
+  .att-cell { display: inline-flex; align-items: center; gap: 3px; }
+  .att-dot { width: 7px; height: 7px; border-radius: 50%; display: inline-block; flex: none; }
+  .att-dot.ok { background: #10b981; }
+  .att-dot.warn { background: #f59e0b; }
+  .att-dot.ko { background: #ef4444; }
+  .att-dot.nodate { background: #94a3b8; }
+  .att-sigla { font-size: 9px; padding: 0 3px; border-radius: 3px; background: #ede9fe; color: #5b21b6; border: 1px solid #ddd6fe; }
+  .att-vuoto { color: #cbd5e1; }
+  .att-tot { color: #64748b; font-variant-numeric: tabular-nums; }
+  .att-fuoripool { font-size: 9px; padding: 0 4px; border-radius: 3px; background: #f1f5f9; color: #64748b; border: 1px solid #e2e8f0; }
   .op-card {
     cursor: grab; user-select: none;
     transition: all .15s;
@@ -239,7 +278,7 @@
   .commessa-card summary:hover { background: rgba(13,148,136,.04); border-radius: 4px; }
   .modal-backdrop {
     position: fixed; inset: 0; background: var(--backdrop);
-    display: flex; align-items: center; justify-content: center; z-index: 50;
+    display: flex; align-items: center; justify-content: center; z-index: 10050;
   }
   .industry-pill {
     display: inline-block; padding: 1px 8px; border-radius: 999px;
@@ -874,6 +913,30 @@
      un giorno ma una vista aggregata sull'intera week. */
   .pw-map-day-btn.pw-map-week-btn { border-color: #c7d2fe; color: #4f46e5; margin-left: 6px; }
   .pw-map-day-btn.pw-map-week-btn.active { background: #4f46e5; border-color: #4f46e5; color: white; }
+  /* Switch "👷 Operatori / 🔧 Strumenti" della sola mappa Cantieri */
+  .pw-map-mode-btn {
+    padding: 4px 12px; border-radius: 6px; font-size: 12px; font-weight: 600;
+    border: 1px solid #e2e8f0; cursor: pointer; background: white; color: #475569;
+    transition: all .15s;
+  }
+  .pw-map-mode-btn:hover { background: #f1f5f9; }
+  .pw-map-mode-btn.active { background: #0d9488; color: white; border-color: #0d9488; }
+  /* Bottone filtro multi-strumento: attivo = evidenziato ma distinto dal
+     riempimento pieno dello switch Operatori/Strumenti, per non confondere i due. */
+  .pw-map-str-filter-btn.active { border-color: #0d9488; color: #0d9488; background: #f0fdfa; }
+  /* Overlay di caricamento sulla mappa Cantieri durante la geocodifica
+     (sequenziale, rate-limited) al cambio vista/giorno/filtro. */
+  .pw-map-loading-overlay {
+    position: absolute; inset: 0; background: rgba(255,255,255,.78);
+    display: none; flex-direction: column; align-items: center; justify-content: center;
+    gap: 8px; font-size: 12px; font-weight: 600; color: #475569; z-index: 1000;
+  }
+  .pw-map-spinner {
+    width: 26px; height: 26px; border-radius: 50%;
+    border: 3px solid #e2e8f0; border-top-color: #0d9488;
+    animation: pwMapSpin .8s linear infinite;
+  }
+  @keyframes pwMapSpin { to { transform: rotate(360deg); } }
   .pw-squad-card {
     padding: 8px; border-radius: 6px; border: 1px solid #e2e8f0; margin-bottom: 4px;
     cursor: pointer; transition: background .15s, border-color .15s, box-shadow .15s;
@@ -930,6 +993,14 @@
     padding: 2px 6px; font-size: 10px; background: white;
   }
   .pw-fix-input:focus { outline: none; border-color: var(--accent); }
+  /* Icona ✏️ per correggere manualmente la posizione di un cantiere (nome o
+     coordinate dirette): input neutro di default, arancio solo nel caso
+     "luogo non trovato" dove serve più urgenza visiva (stesso .pw-fix-input). */
+  .pw-geo-edit-btn { cursor: pointer; font-size: 10px; opacity: .55; margin-left: 2px; }
+  .pw-geo-edit-btn:hover { opacity: 1; }
+  .pw-geo-edit-row { margin-top: 3px; }
+  .pw-geo-edit-row .pw-fix-input { border-color: #cbd5e1; }
+  .sq-warn .pw-geo-edit-row .pw-fix-input { border-color: #fb923c; margin-top: 3px; }
 
   /* ===== NAVIGAZIONE SCHERMATA (Dashboard / Pianificazione settimanale) ===== */
   /* Prima l'attivo/inattivo era deciso da style inline scritti una volta
@@ -1033,7 +1104,7 @@
     <div class="flex items-center gap-2">
       <button id="btn-presentation" class="px-3 py-1.5 text-sm rounded hover:bg-white/10" style="border:1px solid var(--dark-border-strong);color:var(--dark-text);visibility:visible;">📊 Modalità presentazione</button>
       <div class="text-xs pl-2" style="border-left:1px solid var(--dark-border-strong);color:var(--dark-text-muted);">
-        <span id="app-version" class="font-medium" style="color:var(--accent);">v18.112.0</span> · Michele Marchetti
+        <span id="app-version" class="font-medium" style="color:var(--accent);">v18.114.0</span> · Michele Marchetti
       </div>
     </div>
   </div>
@@ -1307,6 +1378,51 @@
     </div>
   </section>
 
+  <!-- 3b. Attestati & scadenze (collassata: la matrice si costruisce solo all'apertura) -->
+  <section id="section-attestati" class="bg-white rounded-lg border border-slate-200 p-4 no-present">
+    <details id="att-details" ontoggle="attToggleSezione()">
+      <summary class="font-semibold text-slate-900 cursor-pointer select-none">
+        🎓 Attestati &amp; scadenze <span id="att-summary-badges" class="font-normal"></span>
+      </summary>
+      <div class="mt-3">
+        <div class="flex flex-wrap items-center gap-2 mb-2">
+          <input id="att-search" type="text" placeholder="Cerca dipendente…" class="flex-1 min-w-[180px] px-2 py-1.5 text-sm border border-slate-300 rounded" oninput="attSetFiltro('search', this.value)">
+          <select id="att-filter-tipo" class="text-xs border border-slate-300 rounded px-1.5 py-1.5" onchange="attSetFiltro('tipo', this.value)">
+            <option value="">Tutti i tipi</option>
+          </select>
+          <select id="att-filter-stato" class="text-xs border border-slate-300 rounded px-1.5 py-1.5" onchange="attSetFiltro('stato', this.value)">
+            <option value="">Tutti gli stati</option>
+            <option value="scaduto">Con almeno uno scaduto</option>
+            <option value="scadenza">Con almeno uno in scadenza</option>
+            <option value="nessuno">Senza alcun attestato</option>
+          </select>
+          <select id="att-filter-ordine" class="text-xs border border-slate-300 rounded px-1.5 py-1.5" onchange="attSetFiltro('ordine', this.value)">
+            <option value="nome">Ordina per nome</option>
+            <option value="scadenza">Ordina per urgenza</option>
+          </select>
+          <label class="flex items-center gap-1 text-xs text-slate-600 whitespace-nowrap">
+            <input type="checkbox" id="att-filter-pool" onchange="attSetFiltro('soloPool', this.checked)"> Solo pool operatori
+          </label>
+          <span id="att-count" class="text-[10px] text-slate-400 whitespace-nowrap"></span>
+          <div class="ml-auto flex gap-1">
+            <button onclick="exportAttestatiXlsx()" class="text-xs px-2 py-1 bg-white text-slate-500 rounded border border-slate-200 hover:bg-slate-50 hover:text-slate-700 whitespace-nowrap" title="Scarica il registro attestati in Excel">⬇ Excel</button>
+            <button onclick="document.getElementById('att-import-file').click()" class="text-xs px-2 py-1 bg-teal-50 text-teal-700 rounded border border-teal-200 hover:bg-teal-100 whitespace-nowrap" title="Importa il file &quot;EP - Elenco attestati dei dipendenti&quot;">⬆ Importa Excel</button>
+            <input type="file" id="att-import-file" accept=".xlsx" class="hidden" onchange="attImportPick(this)">
+          </div>
+        </div>
+        <div id="att-meta" class="text-[10px] text-slate-400 mb-2"></div>
+        <div class="att-scroll"><div id="att-matrix"></div></div>
+        <div class="flex flex-wrap items-center gap-3 mt-2 text-[10px] text-slate-500">
+          <span><span class="att-dot ok"></span> valido</span>
+          <span><span class="att-dot warn"></span> in scadenza entro 90 giorni</span>
+          <span><span class="att-dot ko"></span> scaduto</span>
+          <span><span class="att-dot nodate"></span> scadenza non nota</span>
+          <span class="text-slate-400">· la data in cella è la scadenza (mm/aa); il dettaglio completo è nel tooltip</span>
+        </div>
+      </div>
+    </details>
+  </section>
+
   <!-- 4. Suggerimenti & Gap -->
   <section class="bg-white rounded-lg border border-slate-200 p-5">
     <h2 class="font-semibold text-slate-900 mb-1">Gap risorse &amp; raccomandazioni assunzione</h2>
@@ -1472,9 +1588,19 @@
     </div>
     <div class="grid grid-cols-1 lg:grid-cols-4 gap-4 mb-4 items-start">
       <div class="lg:col-span-3">
-        <div class="text-xs font-semibold text-slate-700 mb-2 uppercase tracking-wide">🏗️ Cantieri</div>
-        <div class="bg-white border border-slate-200 rounded-lg overflow-hidden shadow-sm">
+        <div class="flex items-center justify-between flex-wrap gap-2 mb-2">
+          <div class="text-xs font-semibold text-slate-700 uppercase tracking-wide">🏗️ Cantieri</div>
+          <div class="flex items-center gap-2 flex-wrap">
+            <button id="pw-map-strumento-filter-btn" type="button" class="pw-map-mode-btn pw-map-str-filter-btn" style="visibility:hidden;">🔧 Strumenti: tutti</button>
+            <div id="pw-map-cantieri-mode" class="flex gap-1"></div>
+          </div>
+        </div>
+        <div class="bg-white border border-slate-200 rounded-lg overflow-hidden shadow-sm" style="position:relative;">
           <div id="pw-map" style="height:380px;width:100%;"></div>
+          <div id="pw-map-loading" class="pw-map-loading-overlay">
+            <div class="pw-map-spinner"></div>
+            <span>Aggiornamento mappa…</span>
+          </div>
         </div>
       </div>
       <div class="pw-map-side">
@@ -1483,7 +1609,7 @@
           <div id="pw-map-legend" class="space-y-1 text-xs pw-map-card-body"></div>
         </div>
         <div class="bg-white border border-slate-200 rounded-lg p-3 shadow-sm pw-map-card pw-map-card-summary">
-          <div class="text-xs font-semibold text-slate-700 mb-2 uppercase tracking-wide flex-shrink-0">Squadre & spostamenti</div>
+          <div id="pw-map-summary-title" class="text-xs font-semibold text-slate-700 mb-2 uppercase tracking-wide flex-shrink-0">Squadre & spostamenti</div>
           <div id="pw-map-summary" class="space-y-2 pw-map-card-body"></div>
         </div>
       </div>
