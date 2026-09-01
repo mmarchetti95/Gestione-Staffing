@@ -1104,7 +1104,7 @@
     <div class="flex items-center gap-2">
       <button id="btn-presentation" class="px-3 py-1.5 text-sm rounded hover:bg-white/10" style="border:1px solid var(--dark-border-strong);color:var(--dark-text);visibility:visible;">📊 Modalità presentazione</button>
       <div class="text-xs pl-2" style="border-left:1px solid var(--dark-border-strong);color:var(--dark-text-muted);">
-        <span id="app-version" class="font-medium" style="color:var(--accent);">v18.114.0</span> · Michele Marchetti
+        <span id="app-version" class="font-medium" style="color:var(--accent);">v18.115.0</span> · Michele Marchetti
       </div>
     </div>
   </div>
@@ -1158,6 +1158,9 @@
     </button>
     <button id="sb-btn-sessions" onclick="sbShowSessions()" class="dark-link-btn text-xs px-2 py-1" style="visibility:hidden;">
       🟢 Sessioni attive
+    </button>
+    <button id="sb-btn-backups" onclick="sbShowBackups()" class="dark-link-btn text-xs px-2 py-1" style="visibility:hidden;">
+      🗄️ Backup dati
     </button>
     <button onclick="sbShowChangePwd()" class="dark-link-btn text-xs px-2 py-1">
       🔑 Cambia password
@@ -1259,6 +1262,38 @@
           <tr><td colspan="4" style="padding:20px;text-align:center;color:#94a3b8;">Caricamento…</td></tr>
         </tbody>
       </table>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Backup dati (solo admin) -->
+<div id="sb-backups-modal" style="display:none;position:fixed;inset:0;z-index:99999;background:var(--backdrop);align-items:center;justify-content:center;">
+  <div style="background:white;border-radius:var(--radius-lg);padding:28px 32px;width:560px;max-width:96vw;max-height:85vh;box-shadow:var(--shadow-lg);display:flex;flex-direction:column;">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">
+      <div>
+        <div style="font-weight:700;font-size:16px;color:#0f172a;font-family:var(--font-display);">🗄️ Backup dati</div>
+        <div style="font-size:11px;color:#94a3b8;margin-top:2px;">Snapshot notturni automatici (retention 30 giorni) — da usare per ripristinare dopo una cancellazione o un'importazione errata</div>
+      </div>
+      <button onclick="sbCloseBackups()" style="padding:5px 12px;font-size:12px;border:1px solid #e2e8f0;border-radius:6px;background:white;cursor:pointer;color:#475569;flex-shrink:0;">Chiudi</button>
+    </div>
+    <div id="sb-backups-error" style="display:none;background:#fef2f2;border:1px solid #fecaca;color:#dc2626;font-size:12px;padding:8px 12px;border-radius:6px;margin:12px 0;"></div>
+    <div id="sb-backups-success" style="display:none;background:#f0fdf4;border:1px solid #86efac;color:#16a34a;font-size:12px;padding:8px 12px;border-radius:6px;margin:12px 0;"></div>
+    <div style="margin-top:16px;">
+      <label style="display:block;font-size:11px;font-weight:600;color:#374151;margin-bottom:4px;">Snapshot da ripristinare</label>
+      <select id="sb-backup-select" style="width:100%;border:1px solid #dde3ea;border-radius:8px;padding:9px 12px;font-size:13px;outline:none;box-sizing:border-box;">
+        <option value="">Caricamento…</option>
+      </select>
+    </div>
+    <label style="display:flex;align-items:center;gap:8px;font-size:12px;color:#374151;margin-top:14px;">
+      <input type="checkbox" id="sb-backup-include-cp" checked>
+      Ripristina anche "Controllo Produzione" (ore/km giornalieri)
+    </label>
+    <div style="background:#fffbeb;border:1px solid #fde68a;color:#92400e;font-size:11.5px;padding:10px 12px;border-radius:8px;margin-top:14px;line-height:1.5;">
+      ⚠️ Il ripristino <strong>sostituisce integralmente</strong> i dati attuali con quelli dello snapshot scelto. Le modifiche fatte dopo quello snapshot (fino ad ora) andranno perse. Dopo il ripristino, tutti gli utenti collegati devono ricaricare la pagina.
+    </div>
+    <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:18px;">
+      <button onclick="sbLoadBackups()" style="padding:8px 16px;font-size:13px;border:1px solid #e2e8f0;border-radius:8px;background:white;cursor:pointer;color:#475569;">↺ Aggiorna elenco</button>
+      <button id="sb-backup-restore-btn" onclick="sbRestoreBackup()" style="padding:8px 18px;font-size:13px;background:#dc2626;color:white;border:none;border-radius:8px;cursor:pointer;font-weight:600;">Ripristina questo backup</button>
     </div>
   </div>
 </div>

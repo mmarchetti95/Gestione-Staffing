@@ -1,3 +1,7 @@
+## v18.115.0
+- feat: **Backup dati — ripristino da UI admin** — nel banner sync, nuovo pulsante "🗄️ Backup dati" (visibile solo agli admin, accanto a Log attività/Sessioni attive) che apre un selettore degli snapshot notturni disponibili (data/ora + conteggio righe). Scelto uno snapshot, il pulsante "Ripristina questo backup" — dopo un doppio avviso esplicito che l'operazione sostituisce integralmente i dati attuali — chiama la nuova RPC Postgres `restore_backup(backup_id, include_cp)`, che tronca e ripopola `staffing_state` (Griglia/Ferie/Doppia Week/Pipeline-Operatori-Staffing) e, se la checkbox è spuntata, anche `controllo_produzione`. La funzione gira `SECURITY DEFINER` ma verifica comunque a livello server che chi chiama sia admin (`auth.jwt() ->> role`), quindi non basta manomettere il JS lato client per attivarla; ogni ripristino viene loggato in `activity_log`. Nuova vista `data_backups_list` (RLS ereditata da `data_backups` via `security_invoker`) per popolare il selettore senza scaricare i payload jsonb completi. Dopo il ripristino la pagina si ricarica in automatico dopo 2,5s; gli altri utenti collegati devono ricaricare a mano (il canale realtime ascolta solo `UPDATE` su `staffing_state`, non `TRUNCATE`/`INSERT`).
+- **Nota**: il meccanismo di backup vero e proprio (tabella `data_backups`, funzione `run_nightly_backup()`, job `pg_cron` giornaliero) era già stato introdotto separatamente lato Supabase il 2026-09-01 — vedi "Backup e ripristino dati" più sotto per i dettagli e la procedura via SQL Editor, ora affiancata da questa UI.
+
 ## v18.114.0
 - feat: **Mappa squadre — toggle "👷 Operatori / 🔧 Strumenti" nella mappa Cantieri** (issue #5) — nella sola mappa Cantieri (non nella mappa Residenze operatori, dove non ha senso) è ora presente uno switch che cambia il focus della mappa e del pannello di destra. Lo strumento eventualmente assegnato alla squadra (dalla Griglia) compare ora sempre nel popup del marker e nella card del riepilogo, **anche in vista "Operatori"** (invariata per il resto). In vista **"Strumenti"** la mappa mostra solo i cantieri con almeno uno strumento assegnato, coi marker colorati per strumento invece che per commessa; il pannello di destra cambia completamente struttura, raggruppando **per commessa → strumento → dove** (cantiere/squadra) invece che per squadra; un bottone "🔧 Strumenti" accanto allo switch apre un pannello con **checkbox multi-selezione** per isolare sulla mappa uno o più strumenti specifici e vedere solo dove si trovano. Un'animazione di caricamento copre la mappa Cantieri durante la geocodifica (rate-limited su Nominatim) al cambio giorno/vista/filtro, così l'attesa non sembra un blocco dell'app. Ogni cantiere in elenco (trovato o no) ha ora un'icona ✏️ che apre un campo per correggerne manualmente la posizione, accettando sia un nome comune (ri-geocodificato su Nominatim) sia coordinate dirette nel formato "lat, lng"; la correzione va sempre confermata in un modale prima di essere salvata nella rubrica luoghi condivisa (`geo_cache_v1`), perché si applica a tutte le settimane in cui compare quel nome cantiere.
 - fix: **z-index del modale di conferma/alert generico** (`showConfirmAsync`/`showAlertModal`, usato in tutta l'app) troppo basso (50) rispetto ai controlli/popup di Leaflet (fino a 1000) e ad altri modal dell'app (context menu 10001, modal operatore 10000): una conferma richiesta mentre la Mappa squadre è a schermo (come quella della correzione posizione qui sopra) restava visivamente coperta e non cliccabile. Portato a 10050, sopra tutto tranne le schermate di login/sessioni attive. Gli strumenti sono assegnati per squadra e non per singolo cantiere/giorno: se una squadra tocca più cantieri nel periodo mostrato, lo strumento compare su tutti — non c'è modo di sapere in quale si trovi fisicamente. Funziona sia nella vista per giorno sia in "Tutta la settimana", ed è compatibile col filtro Regione esistente. Nessuna modifica allo schema Supabase, nessun nuovo dominio di sync (stato UI locale, non persistito).
@@ -333,6 +337,43 @@ UPDATE auth.users SET raw_user_meta_data = raw_user_meta_data || '{"role": "admi
 | Hosting | GitHub Pages |
 | Database / Auth | Supabase (PostgreSQL) |
 | Aggiornamento | Push su branch `main` → deploy automatico |
+
+---
+
+## Backup e ripristino dati
+
+I dati veri (pipeline, operatori, staffing, pianificazione settimanale, controllo produzione) vivono solo in Supabase — non c'è un seed locale recuperabile. `staffing_state` viene sovrascritta a ogni salvataggio (`upsert`, nessuno storico), quindi una cancellazione o un import errato non è di per sé recuperabile dall'app.
+
+**Rete di sicurezza attuale**: un job `pg_cron` (`nightly_staffing_backup`) gira ogni notte alle 02:00 UTC e chiama `run_nightly_backup()`, che salva uno snapshot completo di `staffing_state` + `controllo_produzione` nella tabella `data_backups` (retention 30 giorni). È il minimo indispensabile per poter tornare indietro, non un audit trail completo: se un dato viene cancellato e ripristinato lo stesso giorno prima del backup notturno successivo, si perde comunque quanto scritto tra l'ultimo snapshot buono e il ripristino.
+
+**Ripristino da UI (consigliato, da v18.115.0)**: un admin loggato trova nel banner sync il pulsante "🗄️ Backup dati", che apre un selettore con gli snapshot disponibili (data/ora + conteggio righe) e un pulsante "Ripristina questo backup" (con checkbox per includere o meno `controllo_produzione`). Dopo la conferma la pagina si ricarica da sola; gli altri utenti collegati vanno avvisati di ricaricare a mano. Sotto, la stessa procedura via SQL Editor — utile se l'app non è raggiungibile o per un controllo più fine.
+
+Per vedere i backup disponibili (via SQL Editor su Supabase, utente admin):
+```sql
+select id, created_at, jsonb_array_length(staffing_state) as righe_staffing, jsonb_array_length(controllo_produzione) as righe_cp
+from data_backups order by created_at desc;
+```
+
+Per forzare uno snapshot immediato (es. prima di un'importazione rischiosa):
+```sql
+select run_nightly_backup();
+```
+
+**Ripristino** (sostituisce interamente la tabella scelta con lo snapshot `<ID_BACKUP>` — verificare prima con la query sopra quale snapshot è quello buono):
+```sql
+-- Ripristina staffing_state (pipeline/operatori/staffing + griglia/ferie/doppia week)
+truncate table staffing_state;
+insert into staffing_state
+select * from jsonb_populate_recordset(null::staffing_state, (select staffing_state from data_backups where id = <ID_BACKUP>));
+
+-- Ripristina anche controllo_produzione, solo se necessario
+truncate table controllo_produzione;
+insert into controllo_produzione
+select * from jsonb_populate_recordset(null::controllo_produzione, (select controllo_produzione from data_backups where id = <ID_BACKUP>));
+```
+Dopo il ripristino, ricaricare la pagina dell'app (o attendere il pull realtime) perché gli utenti collegati vedano i dati ripristinati.
+
+Limite noto: il progetto Supabase è sul piano **Free**, che non include backup automatici/PITR nativi di Supabase — questo meccanismo è l'unica rete di sicurezza. Per un ripristino punto-per-punto più fine (non solo giornaliero) o per non avere alcuna finestra di perdita, valutare l'upgrade a Supabase Pro.
 
 ---
 

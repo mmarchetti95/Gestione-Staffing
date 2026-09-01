@@ -169,6 +169,86 @@ async function sbLoadSessions() {
 }
 
 
+/* ===================== BACKUP DATI (admin) ===================== */
+// Snapshot notturni (tabella data_backups, popolata da run_nightly_backup() via
+// pg_cron lato Supabase) — qui solo lettura dell'elenco e chiamata alla RPC di
+// ripristino restore_backup(), che fa il controllo ruolo admin lato server (non
+// fidarsi del solo nascondere il bottone in UI).
+async function sbShowBackups() {
+  document.getElementById('sb-backups-modal').style.display = 'flex';
+  document.getElementById('sb-backups-error').style.display = 'none';
+  document.getElementById('sb-backups-success').style.display = 'none';
+  await sbLoadBackups();
+}
+
+function sbCloseBackups() {
+  document.getElementById('sb-backups-modal').style.display = 'none';
+}
+
+async function sbLoadBackups() {
+  const sel = document.getElementById('sb-backup-select');
+  const errEl = document.getElementById('sb-backups-error');
+  errEl.style.display = 'none';
+  sel.innerHTML = '<option value="">Caricamento…</option>';
+  try {
+    const { data, error } = await _sbClient
+      .from('data_backups_list')
+      .select('*')
+      .order('created_at', { ascending: false })
+      .limit(30);
+    if (error) throw error;
+    if (!data || data.length === 0) {
+      sel.innerHTML = '<option value="">Nessuno snapshot disponibile</option>';
+      return;
+    }
+    sel.innerHTML = data.map(row => {
+      const dt = new Date(row.created_at);
+      const label = dt.toLocaleDateString('it-IT') + ' ' + dt.toLocaleTimeString('it-IT', {hour:'2-digit', minute:'2-digit'}) +
+        ' — ' + row.righe_staffing + ' righe staffing, ' + row.righe_cp + ' righe produzione';
+      return '<option value="' + row.id + '">' + esc(label) + '</option>';
+    }).join('');
+  } catch(e) {
+    sel.innerHTML = '<option value="">—</option>';
+    errEl.textContent = 'Errore caricamento elenco backup: ' + e.message;
+    errEl.style.display = 'block';
+  }
+}
+
+async function sbRestoreBackup() {
+  const sel = document.getElementById('sb-backup-select');
+  const errEl = document.getElementById('sb-backups-error');
+  const okEl = document.getElementById('sb-backups-success');
+  const btn = document.getElementById('sb-backup-restore-btn');
+  const includeCp = document.getElementById('sb-backup-include-cp').checked;
+  errEl.style.display = 'none';
+  okEl.style.display = 'none';
+
+  const backupId = sel.value;
+  if (!backupId) { errEl.textContent = 'Seleziona uno snapshot.'; errEl.style.display = 'block'; return; }
+
+  const label = sel.options[sel.selectedIndex].textContent;
+  const conferma = await showConfirmAsync(
+    'Ripristinare lo snapshot "' + label + '"?\n\nQuesta operazione SOSTITUISCE i dati attuali (Griglia, Ferie, Doppia Week, Pipeline/Operatori/Staffing' +
+    (includeCp ? ', Controllo Produzione' : '') + ') con quelli dello snapshot scelto. Le modifiche fatte dopo quello snapshot andranno perse. Azione irreversibile.',
+    'Ripristina'
+  );
+  if (!conferma) return;
+
+  btn.textContent = 'Ripristino in corso…'; btn.disabled = true;
+  try {
+    const { error } = await _sbClient.rpc('restore_backup', { p_backup_id: Number(backupId), p_include_cp: includeCp });
+    if (error) throw error;
+    okEl.textContent = '✓ Backup ripristinato. Ricarica la pagina per vedere i dati aggiornati (tutti gli altri utenti collegati devono fare lo stesso).';
+    okEl.style.display = 'block';
+    setTimeout(() => location.reload(), 2500);
+  } catch(e) {
+    errEl.textContent = 'Errore durante il ripristino: ' + e.message;
+    errEl.style.display = 'block';
+  } finally {
+    btn.textContent = 'Ripristina questo backup'; btn.disabled = false;
+  }
+}
+
 const SB_URL = 'https://ypbuleyropgoqalwioqb.supabase.co';
 const SB_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlwYnVsZXlyb3Bnb3FhbHdpb3FiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODIzNjYyNTAsImV4cCI6MjA5Nzk0MjI1MH0.FMcI8lvGcuEQEJJLPFBt4BloyTzLPOQ4UZGBGd5G7WM';
 
@@ -245,14 +325,17 @@ async function sbOnLoggedIn() {
   // Mostra pulsante log/sessioni e sezione riconciliazione solo agli admin
   const btnLog = document.getElementById('sb-btn-log');
   const btnSessions = document.getElementById('sb-btn-sessions');
+  const btnBackups = document.getElementById('sb-btn-backups');
   const secRecon = document.getElementById('section-riconciliazione');
   if (sbIsAdmin()) {
     if (btnLog) btnLog.style.visibility = 'visible';
     if (btnSessions) btnSessions.style.visibility = 'visible';
+    if (btnBackups) btnBackups.style.visibility = 'visible';
     if (secRecon) secRecon.style.display = '';
   } else {
     if (btnLog) btnLog.style.visibility = 'hidden';
     if (btnSessions) btnSessions.style.visibility = 'hidden';
+    if (btnBackups) btnBackups.style.visibility = 'hidden';
     if (secRecon) secRecon.style.display = 'none';
   }
   sbUpdateUI('syncing', 'Sync: caricamento dati…');
