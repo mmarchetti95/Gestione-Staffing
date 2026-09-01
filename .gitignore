@@ -2,3 +2,7 @@ __pycache__/
 *.pyc
 node_modules/
 package-lock.json
+
+# Dati personali dei dipendenti (scratch locale per import Attestati, mai da versionare)
+/extra_file/
+/graphify-out/converted/
