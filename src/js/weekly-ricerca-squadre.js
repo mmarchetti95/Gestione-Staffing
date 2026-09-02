@@ -1,18 +1,34 @@
 /* ==================== RICERCA SQUADRE (GEO + SKILL MATCHING) ==================== */
-/* Tab "Ricerca Squadre" della Pianificazione settimanale: propone squadre per nuovi
-   cantieri in base a distanza geografica, disponibilità settimanale, e skill matching.
-   - Geocodifica via Nominatim (riusa la cache di Mappa squadre)
-   - Calcola distanze medie con OSRM
-   - Ranking: distanza (primaria) + disponibilità + skill/strumento matching
-   - NO persistenza Supabase: stato locale in RAM (sessione) */
+/* Tab "Ricerca Squadre" della Pianificazione settimanale: dato uno o più cantieri nuovi
+   da coprire, propone le squadre della settimana ordinate per VICINANZA REALE, cioè la
+   distanza stradale dal punto in cui la squadra sta già lavorando questa settimana (non
+   dalla residenza: a metà settimana conta da dove si sposta, non da dove abita).
+   - Geocodifica via Nominatim, riusando la rubrica condivisa _geoCache (weekly-mappa.js)
+   - Distanze in UNA sola chiamata OSRM /table (sources=squadre, destinations=tappe),
+     con fallback su haversine se OSRM non risponde
+   - Disponibilità giorno per giorno: libero / occupato / ferie / doppia week
+   - NO persistenza: stato locale in RAM (sessione), come Pianifica spostamenti */
 
 let _ricercaSquadre = {
   anno: null,
   week: null,
   tappe: [],
-  risultati: {}
+  risultati: []
 };
 let _ricercaSquadreMap = null;
+let _rsMapLayers = [];
+let _rsSelSkills = new Set();
+let _rsSelStrumenti = new Set();   // chiavi Jira, non label
+let _rsSoloCompatibili = false;
+let _rsBound = false;
+
+/* Stati di disponibilità di una squadra in un giorno, con colore e label del chip */
+const RS_STATI = {
+  libero:   { bg: '#dcfce7', fg: '#15803d', t: 'Libero' },
+  occupato: { bg: '#e0e7ff', fg: '#4338ca', t: 'Su cantiere' },
+  ferie:    { bg: '#fef3c7', fg: '#b45309', t: 'Ferie / non disponibile' },
+  dw:       { bg: '#f3e8ff', fg: '#7e22ce', t: 'Doppia week (fuori sede)' }
+};
 
 /* ---------- utility ---------- */
 function _rsStatus(msg, isError) {
@@ -22,42 +38,340 @@ function _rsStatus(msg, isError) {
   el.className = 'text-xs mt-2 ' + (isError ? 'text-rose-600 font-medium' : 'text-slate-500');
 }
 
+/* Stessa normalizzazione usata da geocodifica(): le chiavi di _geoCache devono coincidere */
+function _rsNorm(s) {
+  return (s || '').toLowerCase().trim().replace(/\s+/g, ' ');
+}
+
 function _rsKm(metri) {
   if (metri == null || isNaN(metri)) return '—';
-  return (metri / 1000).toFixed(1).replace('.', ',') + ' km';
+  const km = metri / 1000;
+  if (km < 10) return km.toFixed(1).replace('.', ',') + ' km';
+  return Math.round(km) + ' km';
 }
 
-function _rsDur(sec) {
-  if (sec == null || isNaN(sec)) return '—';
-  const m = Math.round(sec / 60);
-  if (m < 60) return m + ' min';
-  return Math.floor(m / 60) + 'h ' + String(m % 60).padStart(2, '0') + 'm';
+function _rsOpPool(nome) {
+  return (state.operatori || []).find(o => (o.nome_esteso || o.nome_breve) === nome) || null;
 }
 
-/* ---------- geocodifica tappe ---------- */
+/* Posizione di residenza di un operatore: capoluogo di provincia se noto, altrimenti
+   centroide di regione. Usata solo come ripiego per squadre senza cantieri in settimana. */
+function _rsOpHome(nome) {
+  const op = _rsOpPool(nome);
+  if (!op) return null;
+  if (op.provincia) {
+    const p = provinciaInfo(op.provincia);
+    if (p) return { lat: p.lat, lng: p.lng, label: p.nome + ' (' + p.sigla + ')' };
+  }
+  const reg = operatoreRegione(op);
+  if (reg) {
+    const c = regioneCentroid(reg);
+    if (c) return { lat: c.lat, lng: c.lng, label: reg };
+  }
+  return null;
+}
+
+/* ---------- raccolta dati della settimana ---------- */
+/* Una voce per squadra della settimana, con i cantieri giorno per giorno, le skill
+   dei suoi operatori e gli strumenti Jira assegnati. */
+function _rsBuildSquadre() {
+  const out = [];
+  pwGetWeekData().forEach(bc => {
+    (bc.squadre || []).forEach((sq, si) => {
+      const ops = (sq.operatori || []).filter(o => o.nome && o.nome.trim());
+      if (!ops.length) return;
+      const nomi = ops.map(o => o.nome.trim());
+
+      const cantieriByDay = {};
+      const cantieriSet = new Set();
+      for (let d = 0; d < 6; d++) {
+        const giorno = new Set();
+        ops.forEach(op => {
+          pwCellCantieri((op.giorni || {})[d]).forEach(c => { giorno.add(c); cantieriSet.add(c); });
+        });
+        cantieriByDay[d] = Array.from(giorno);
+      }
+
+      const skills = new Set();
+      nomi.forEach(n => {
+        const p = _rsOpPool(n);
+        if (p) (p.skills || []).forEach(s => skills.add(s));
+      });
+
+      out.push({
+        key: (bc.commessa || '?') + '§' + si,
+        commessa: bc.commessa || '—',
+        nome: sq.nome || 'Squadra',
+        operatori: nomi,
+        cantieriByDay,
+        cantieri: Array.from(cantieriSet),
+        strumenti: pwSqStrumentiJira(sq).filter(Boolean),
+        skills
+      });
+    });
+  });
+  return out;
+}
+
+/* True se la squadra è coinvolta in un blocco doppia week che tocca questa settimana
+   (iniziato ora, oppure la settimana scorsa e quindi ancora in corso). */
+function _rsInDoppiaWeek(sq) {
+  const prev = pwWeekAdd(pwAnno, pwWeek, -1);
+  return sq.operatori.some(n =>
+    pwIsDwStart(pwAnno, pwWeek, n) || pwIsDwStart(prev.anno, prev.week, n));
+}
+
+/* Giorni da considerare per una squadra: il sabato è un giorno lavorativo solo in
+   doppia week (trasferta lunga). Per le altre squadre mostrarlo come "libero" sarebbe
+   fuorviante — non ci si va comunque. Resta però visibile se in Griglia c'è davvero
+   del lavoro programmato di sabato, per non nascondere dati reali. */
+function _rsNumGiorni(sq) {
+  if ((sq.cantieriByDay[5] || []).length) return 6;
+  return _rsInDoppiaWeek(sq) ? 6 : 5;
+}
+
+/* Stato giorno per giorno. La doppia week copre la settimana di inizio (fuori tutta
+   la settimana) e la successiva (rientro giovedì): vedi pwSetDwStart/pwIsDwStart. */
+function _rsDisponibilita(sq) {
+  const prev = pwWeekAdd(pwAnno, pwWeek, -1);
+  const ferieWk = (pwFerie[pwAnno] && pwFerie[pwAnno][pwWeek]) || {};
+  const stati = [];
+  const nGiorni = _rsNumGiorni(sq);
+  for (let d = 0; d < nGiorni; d++) {
+    let away = false;
+    let inFerie = 0;
+    sq.operatori.forEach(n => {
+      if (pwIsDwStart(pwAnno, pwWeek, n)) away = true;
+      else if (pwIsDwStart(prev.anno, prev.week, n) && d <= 2) away = true;
+      const wk = ferieWk[n];
+      if (wk && pwFerieTipo(wk[d])) inFerie++;
+    });
+    if (away) stati.push('dw');
+    else if (inFerie >= sq.operatori.length) stati.push('ferie');
+    else if ((sq.cantieriByDay[d] || []).length) stati.push('occupato');
+    else stati.push('libero');
+  }
+  return stati;
+}
+
+/* Giorno in cui conviene mandare la squadra, dedotto dalla programmazione della
+   Griglia: fra i giorni liberi si preferisce quello che "aggancia" il cantiere già
+   programmato più vicino alla tappa (il giorno prima se c'è, altrimenti il giorno
+   dopo), così lo spostamento parte da dove la squadra si trova comunque. A parità
+   sostanziale di distanza vince il giorno più presto. `distByLuogo` mappa un nome
+   cantiere normalizzato sulla sua distanza minima da una tappa. */
+function _rsGiornoConsigliato(sq, stati, distByLuogo) {
+  const nGiorni = stati.length;
+  const liberi = [];
+  for (let d = 0; d < nGiorni; d++) if (stati[d] === 'libero') liberi.push(d);
+  if (!liberi.length) return null;
+
+  /* Tiene anche il cantiere che ha prodotto il minimo: in un giorno la squadra può
+     stare su più cantieri, e va citato quello da cui parte davvero lo spostamento. */
+  const distDa = cantieri => {
+    let min = null, tappa = null, luogo = null;
+    (cantieri || []).forEach(c => {
+      const e = distByLuogo[_rsNorm(c)];
+      if (e && (min == null || e.dist < min)) { min = e.dist; tappa = e.tappa; luogo = c; }
+    });
+    return min == null ? null : { dist: min, tappa, luogo };
+  };
+
+  let best = null;
+  liberi.forEach(d => {
+    let prevG = null, nextG = null;
+    for (let p = d - 1; p >= 0; p--) if ((sq.cantieriByDay[p] || []).length) { prevG = p; break; }
+    for (let n = d + 1; n < nGiorni; n++) if ((sq.cantieriByDay[n] || []).length) { nextG = n; break; }
+
+    const dPrev = prevG == null ? null : distDa(sq.cantieriByDay[prevG]);
+    const dNext = nextG == null ? null : distDa(sq.cantieriByDay[nextG]);
+
+    let scelta = null;
+    if (dPrev && (!dNext || dPrev.dist <= dNext.dist)) scelta = { info: dPrev, rifGiorno: prevG };
+    else if (dNext) scelta = { info: dNext, rifGiorno: nextG };
+
+    const cand = {
+      giorno: d,
+      dist: scelta ? scelta.info.dist : null,
+      tappa: scelta ? scelta.info.tappa : null,
+      rifGiorno: scelta ? scelta.rifGiorno : null,
+      rifCantiere: scelta ? scelta.info.luogo : null
+    };
+    /* margine di 1 km: differenze minime non giustificano un giorno più tardi */
+    const cur = best && best.dist != null ? best.dist : Infinity;
+    const nuovo = cand.dist != null ? cand.dist : Infinity;
+    if (!best || nuovo < cur - 1000) best = cand;
+  });
+
+  let run = 0;
+  for (let d = best.giorno; d < nGiorni && stati[d] === 'libero'; d++) run++;
+  best.consecutivi = run;
+  return best;
+}
+
+/* ---------- skill / strumenti disponibili nella settimana ---------- */
+function _rsGetSkillsWeek() {
+  const skills = new Set();
+  _rsBuildSquadre().forEach(sq => sq.skills.forEach(s => skills.add(s)));
+  return Array.from(skills).sort();
+}
+
+function _rsGetStrumentiWeek() {
+  const keys = new Set();
+  _rsBuildSquadre().forEach(sq => sq.strumenti.forEach(k => keys.add(k)));
+  return Array.from(keys)
+    .map(key => ({ key, label: pwStrLabel(key) }))
+    .sort((a, b) => a.label.localeCompare(b.label));
+}
+
+/* ---------- dropdown selettori ----------
+   La lista viene costruita SOLO all'apertura e mai ricostruita mentre è aperta: la
+   selezione vive nei Set _rsSelSkills/_rsSelStrumenti e il toggle di una checkbox
+   aggiorna il Set e la sola label del bottone. Ricostruire l'HTML dentro l'onchange
+   (come faceva la versione precedente) rimescolava il DOM sotto il cursore. */
+function _rsCloseDropdowns(except) {
+  ['rs-skills-dropdown', 'rs-strumenti-dropdown'].forEach(id => {
+    if (id === except) return;
+    const el = document.getElementById(id);
+    if (el) el.classList.add('hidden');
+  });
+}
+
+function rsToggleSkillsDropdown() {
+  const dd = document.getElementById('rs-skills-dropdown');
+  if (!dd) return;
+  const opening = dd.classList.contains('hidden');
+  _rsCloseDropdowns('rs-skills-dropdown');
+  if (!opening) { dd.classList.add('hidden'); return; }
+  rsRenderSkillsDropdown();
+  dd.classList.remove('hidden');
+  const s = document.getElementById('rs-skills-search');
+  if (s) { s.value = ''; rsFilterSkills(''); s.focus(); }
+}
+
+function rsToggleStrumentiDropdown() {
+  const dd = document.getElementById('rs-strumenti-dropdown');
+  if (!dd) return;
+  const opening = dd.classList.contains('hidden');
+  _rsCloseDropdowns('rs-strumenti-dropdown');
+  if (!opening) { dd.classList.add('hidden'); return; }
+  rsRenderStrumentiDropdown();
+  dd.classList.remove('hidden');
+  const s = document.getElementById('rs-strumenti-search');
+  if (s) { s.value = ''; rsFilterStrumenti(''); s.focus(); }
+}
+
+/* Nasconde/mostra le righe non corrispondenti. Va rimesso esplicitamente 'flex'
+   (non ''): svuotare la proprietà cancellerebbe il display:flex inline della riga,
+   che tornerebbe 'inline' impilando le voci in orizzontale invece che una per riga. */
+function _rsFilterList(containerId, val) {
+  const container = document.getElementById(containerId);
+  if (!container) return;
+  const q = (val || '').toLowerCase();
+  container.querySelectorAll('label[data-val]').forEach(item => {
+    item.style.display = item.getAttribute('data-val').toLowerCase().includes(q) ? 'flex' : 'none';
+  });
+}
+
+function rsFilterSkills(val) { _rsFilterList('rs-skills-list', val); }
+function rsFilterStrumenti(val) { _rsFilterList('rs-strumenti-list', val); }
+
+function _rsOptionRowHtml(value, label, checked) {
+  const vAttr = esc(value);
+  const mark = checked ? ' checked' : '';
+  return '<label data-val="' + vAttr + '" title="' + esc(label) + '" ' +
+    'style="display:flex;align-items:center;gap:7px;width:100%;padding:6px 9px;cursor:pointer;' +
+    'font-size:12px;color:#334155;border-bottom:1px solid #f1f5f9;box-sizing:border-box;">' +
+    '<input type="checkbox" data-val="' + vAttr + '"' + mark + ' style="flex:none;margin:0;">' +
+    '<span style="flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">' +
+    esc(label) + '</span></label>';
+}
+
+function rsRenderSkillsDropdown() {
+  const container = document.getElementById('rs-skills-list');
+  if (!container) return;
+  const disponibili = _rsGetSkillsWeek();
+  if (!disponibili.length) {
+    container.innerHTML = '<div style="padding:8px;font-size:11px;color:#94a3b8;">Nessuna skill fra gli operatori di questa settimana.</div>';
+    return;
+  }
+  container.innerHTML = disponibili
+    .map(s => _rsOptionRowHtml(s, s, _rsSelSkills.has(s)))
+    .join('');
+  container.querySelectorAll('input[type=checkbox]').forEach(cb => {
+    cb.onchange = () => {
+      const v = cb.dataset.val;
+      if (cb.checked) _rsSelSkills.add(v); else _rsSelSkills.delete(v);
+      _rsUpdateSkillsLabel();
+    };
+  });
+}
+
+function rsRenderStrumentiDropdown() {
+  const container = document.getElementById('rs-strumenti-list');
+  if (!container) return;
+  const disponibili = _rsGetStrumentiWeek();
+  if (!disponibili.length) {
+    container.innerHTML = '<div style="padding:8px;font-size:11px;color:#94a3b8;">Nessuno strumento assegnato alle squadre di questa settimana.</div>';
+    return;
+  }
+  container.innerHTML = disponibili
+    .map(s => _rsOptionRowHtml(s.key, s.label, _rsSelStrumenti.has(s.key)))
+    .join('');
+  container.querySelectorAll('input[type=checkbox]').forEach(cb => {
+    cb.onchange = () => {
+      const v = cb.dataset.val;
+      if (cb.checked) _rsSelStrumenti.add(v); else _rsSelStrumenti.delete(v);
+      _rsUpdateStrumentiLabel();
+    };
+  });
+}
+
+function _rsUpdateSkillsLabel() {
+  const label = document.getElementById('rs-skills-label');
+  if (!label) return;
+  const n = _rsSelSkills.size;
+  label.textContent = n ? n + (n === 1 ? ' skill selezionata' : ' skill selezionate') : 'Seleziona skills…';
+  label.style.color = n ? '#0f172a' : '#64748b';
+}
+
+function _rsUpdateStrumentiLabel() {
+  const label = document.getElementById('rs-strumenti-label');
+  if (!label) return;
+  const n = _rsSelStrumenti.size;
+  label.textContent = n ? n + (n === 1 ? ' strumento selezionato' : ' strumenti selezionati') : 'Seleziona strumenti…';
+  label.style.color = n ? '#0f172a' : '#64748b';
+}
+
+/* ---------- tappe ---------- */
 async function rsAddTappa() {
   const nomeEl = document.getElementById('rs-tappa-nome');
-  const skillEl = document.getElementById('rs-tappa-skills');
-  const strumentiEl = document.getElementById('rs-tappa-strumenti');
   if (!nomeEl) return;
   const nome = nomeEl.value.trim();
   if (!nome) {
-    showAlertModal('Inserisci il nome di un comune.');
+    showAlertModal('Inserisci il nome di un comune o cantiere.');
     return;
   }
-  _rsStatus('Geocodifica in corso…');
+  _rsStatus('Localizzo "' + nome + '"…');
   const geo = await geocodifica(nome);
   _rsStatus('');
   if (!geo) {
-    showAlertModal('Comune non trovato. Prova con un nome diverso.');
+    showAlertModal('Località "' + nome + '" non trovata. Prova con un nome diverso (es. "Comune (PROV)").');
     return;
   }
-  const skills = (skillEl.value || '').split(',').map(s => s.trim()).filter(s => s);
-  const strumenti = (strumentiEl.value || '').split(',').map(s => s.trim()).filter(s => s);
-  _ricercaSquadre.tappe.push({ nome, lat: geo.lat, lng: geo.lng, skills, strumenti });
+  _ricercaSquadre.tappe.push({
+    nome,
+    lat: geo.lat,
+    lng: geo.lng,
+    skills: Array.from(_rsSelSkills),
+    strumenti: Array.from(_rsSelStrumenti)
+  });
   nomeEl.value = '';
-  skillEl.value = '';
-  strumentiEl.value = '';
+  _rsSelSkills.clear();
+  _rsSelStrumenti.clear();
+  _rsUpdateSkillsLabel();
+  _rsUpdateStrumentiLabel();
+  _rsCloseDropdowns(null);
   rsRenderTappe();
 }
 
@@ -66,304 +380,510 @@ function rsRemoveTappa(idx) {
   rsRenderTappe();
 }
 
+function rsPulisci() {
+  _ricercaSquadre.tappe = [];
+  _ricercaSquadre.risultati = [];
+  _rsSelSkills.clear();
+  _rsSelStrumenti.clear();
+  _rsUpdateSkillsLabel();
+  _rsUpdateStrumentiLabel();
+  rsRenderTappe();
+  rsRenderRisultati();
+  rsRenderMappa();
+  _rsStatus('');
+}
+
 function rsRenderTappe() {
   const container = document.getElementById('rs-tappe-list');
   if (!container) return;
-  if (_ricercaSquadre.tappe.length === 0) {
+  if (!_ricercaSquadre.tappe.length) {
     container.innerHTML = '<div class="text-xs text-slate-400 italic">Nessuna tappa aggiunta.</div>';
+    _rsSyncAltezze();
     return;
   }
-  container.innerHTML = _ricercaSquadre.tappe.map((t, i) => `
-    <div class="bg-slate-50 border border-slate-200 rounded p-2 mb-2 text-xs">
-      <div class="flex justify-between items-start mb-1">
-        <div class="font-medium text-slate-700">${esc(t.nome)}</div>
-        <button onclick="rsRemoveTappa(${i})"
-          class="text-rose-500 hover:text-rose-700 font-bold">×</button>
-      </div>
-      <div class="text-slate-500 mb-1">${t.lat.toFixed(4)}, ${t.lng.toFixed(4)}</div>
-      ${t.skills.length > 0 ? `<div class="text-slate-600">Skills: ${esc(t.skills.join(', '))}</div>` : ''}
-      ${t.strumenti.length > 0 ? `<div class="text-slate-600">Strumenti: ${esc(t.strumenti.join(', '))}</div>` : ''}
-    </div>
-  `).join('');
+  container.innerHTML = _ricercaSquadre.tappe.map((t, i) => {
+    const skillsLine = t.skills.length
+      ? '<div style="color:#475569;margin-top:2px;">🎓 ' + esc(t.skills.join(', ')) + '</div>' : '';
+    const strLine = t.strumenti.length
+      ? '<div style="color:#0d9488;margin-top:2px;">🔧 ' + esc(t.strumenti.map(k => pwStrLabel(k)).join(', ')) + '</div>' : '';
+    return '<div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:6px;padding:6px 8px;margin-bottom:6px;font-size:11px;">' +
+      '<div style="display:flex;justify-content:space-between;gap:6px;">' +
+        '<span style="font-weight:600;color:#0f172a;">📍 ' + esc(t.nome) + '</span>' +
+        '<button type="button" data-rm="' + i + '" style="color:#f43f5e;font-weight:700;background:none;border:none;cursor:pointer;line-height:1;">×</button>' +
+      '</div>' + skillsLine + strLine + '</div>';
+  }).join('');
+  container.querySelectorAll('button[data-rm]').forEach(b => {
+    b.onclick = () => rsRemoveTappa(parseInt(b.dataset.rm, 10));
+  });
+  /* Aggiungere o togliere tappe cambia l'altezza del pannello: riallinea i risultati */
+  _rsSyncAltezze();
 }
 
-/* ---------- ricerca e ranking ---------- */
-/* Calcola la distanza media fra un punto e una lista di punti via OSRM */
-async function _rsCalcDistMedia(puntoDiPartenza, tappe) {
-  if (!tappe || tappe.length === 0) return 0;
-  const punti = [puntoDiPartenza, ...tappe];
+/* ---------- distanze ---------- */
+/* Geocodifica i nomi non ancora in rubrica, rispettando il rate limit di Nominatim
+   solo quando serve davvero una chiamata di rete (i nomi già in cache non aspettano). */
+async function _rsGeocodeMancanti(nomi) {
+  const daFare = nomi.filter(n => !(_rsNorm(n) in _geoCache));
+  for (let i = 0; i < daFare.length; i++) {
+    _rsStatus('Localizzo cantieri… (' + (i + 1) + '/' + daFare.length + ') ' + daFare[i]);
+    await geocodifica(daFare[i]);
+    await new Promise(r => setTimeout(r, 300));
+  }
+}
+
+/* Matrice distanze origini × tappe in metri. Una sola chiamata OSRM /table con
+   sources/destinations; se fallisce (o è troppo grande) ripiega su haversine, che è
+   sempre meglio di un "—": l'ordine per vicinanza resta sostanzialmente lo stesso. */
+async function _rsMatriceDistanze(origini, tappe) {
+  const n = origini.length, m = tappe.length;
+  const haversineMatrix = () => origini.map(o => tappe.map(t => haversineKm(o.lat, o.lng, t.lat, t.lng) * 1000));
+  if (!n || !m) return [];
+  if (n + m > 90) return haversineMatrix();
   try {
+    const punti = origini.concat(tappe);
     const url = 'https://router.project-osrm.org/table/v1/driving/' +
       punti.map(p => p.lng.toFixed(6) + ',' + p.lat.toFixed(6)).join(';') +
-      '?annotations=distance';
-    const res = await fetch(url, { signal: AbortSignal.timeout(10000) });
+      '?annotations=distance' +
+      '&sources=' + origini.map((_, i) => i).join(';') +
+      '&destinations=' + tappe.map((_, j) => n + j).join(';');
+    const res = await fetch(url, { signal: AbortSignal.timeout(15000) });
     if (!res.ok) throw new Error('HTTP ' + res.status);
     const data = await res.json();
-    if (!data || data.code !== 'Ok' || !data.distances) throw new Error('Risposta non valida');
-    const dist = data.distances[0]; // distanze dal punto 0 agli altri
-    let somma = 0;
-    for (let i = 1; i < dist.length; i++) somma += dist[i];
-    return tappe.length > 0 ? somma / tappe.length : 0;
+    if (!data || data.code !== 'Ok' || !Array.isArray(data.distances)) throw new Error('risposta non valida');
+    return data.distances.map((row, i) => row.map((v, j) =>
+      (v == null ? haversineKm(origini[i].lat, origini[i].lng, tappe[j].lat, tappe[j].lng) * 1000 : v)));
   } catch (e) {
-    console.warn('Errore OSRM:', e);
-    return null; // null = errore di calcolo
+    console.warn('OSRM non disponibile, uso distanze in linea d\'aria:', e);
+    return haversineMatrix();
   }
 }
 
-/* Estrae skills unici dal pool operatori */
-function _rsGetSkillsPool() {
-  const skills = new Set();
-  (state.operatori || []).forEach(op => {
-    (op.skills || []).forEach(s => skills.add(s));
-  });
-  return Array.from(skills).sort();
-}
-
-/* Ricerca squadre disponibili per la settimana */
+/* ---------- calcolo ---------- */
 async function rsCalcola() {
-  if (_ricercaSquadre.tappe.length === 0) {
-    showAlertModal('Aggiungi almeno una tappa.');
+  if (!_ricercaSquadre.tappe.length) {
+    showAlertModal('Aggiungi almeno una tappa da coprire.');
     return;
   }
-  _ricercaSquadre.anno = pwAnno;
-  _ricercaSquadre.week = pwWeek;
-  _ricercaSquadre.risultati = {};
-  _rsStatus('Calcolo ranking squadre…');
-  const weekData = pwGetWeekData();
-  const ferie = pwFerie[pwAnno] && pwFerie[pwAnno][pwWeek] ? pwFerie[pwAnno][pwWeek] : [];
-  const dw = pwDw[pwAnno] && pwDw[pwAnno][pwWeek] ? pwDw[pwAnno][pwWeek] : [];
+  const btn = document.getElementById('rs-calcola-btn');
+  if (btn) btn.disabled = true;
 
-  /* Raccoglie tutte le squadre della settimana con i loro operatori */
-  const squadreMap = {};
-  weekData.forEach(bc => {
-    (bc.squadre || []).forEach((sq, sqIdx) => {
-      const key = (bc.commessa || 'unknown') + '_' + sqIdx;
-      if (!squadreMap[key]) {
-        squadreMap[key] = {
-          commessa: bc.commessa,
-          squadra: sq,
-          operatori: sq.operatori || []
-        };
-      }
-    });
-  });
-
-  /* Per ogni squadra, calcola il ranking */
-  const squadreArray = [];
-  for (const [key, sqData] of Object.entries(squadreMap)) {
-    const sq = sqData.squadra;
-    const ops = sqData.operatori;
-
-    /* 1. Calcola distanza media squadra */
-    let distMedia = null;
-    if (ops.length > 0) {
-      const opLocations = ops.map(op => {
-        const opPool = (state.operatori || []).find(o => o.nome_esteso === op.nome);
-        if (!opPool) return { lat: 42.5, lng: 12.5 }; // fallback Italia centro
-        const prov = opPool.provincia || '';
-        const provKey = prov.toLowerCase().trim().replace(/\s+/g, ' ');
-        const geoCached = _geoCache[provKey];
-        if (geoCached) return { lat: geoCached.lat, lng: geoCached.lng };
-        return null;
-      }).filter(l => l);
-
-      if (opLocations.length > 0) {
-        const mediaLat = opLocations.reduce((s, l) => s + l.lat, 0) / opLocations.length;
-        const mediaLng = opLocations.reduce((s, l) => s + l.lng, 0) / opLocations.length;
-        distMedia = await _rsCalcDistMedia({ lat: mediaLat, lng: mediaLng }, _ricercaSquadre.tappe);
-      }
+  try {
+    _ricercaSquadre.anno = pwAnno;
+    _ricercaSquadre.week = pwWeek;
+    const squadre = _rsBuildSquadre();
+    if (!squadre.length) {
+      _ricercaSquadre.risultati = [];
+      _rsStatus('Nessuna squadra pianificata in questa settimana.', true);
+      rsRenderRisultati();
+      rsRenderMappa();
+      return;
     }
 
-    /* 2. Conta giorni disponibili */
-    let giorniDisponibili = 6;
-    const opIndices = [];
-    ops.forEach((op, idx) => {
-      const opPoolIdx = (state.operatori || []).findIndex(o => o.nome_esteso === op.nome);
-      if (opPoolIdx >= 0) opIndices.push(opPoolIdx);
-    });
-    for (let g = 0; g < 6; g++) {
-      for (const opIdx of opIndices) {
-        if (ferie[opIdx] && ferie[opIdx][g]) { giorniDisponibili--; break; }
-        if (dw[opIdx] && dw[opIdx][g]) { giorniDisponibili--; break; }
-      }
-    }
+    /* Localizza i cantieri già pianificati: sono le origini degli spostamenti */
+    const tuttiCantieri = Array.from(new Set(squadre.flatMap(s => s.cantieri)));
+    await _rsGeocodeMancanti(tuttiCantieri);
 
-    /* 3. Skill matching */
+    /* Un punto di origine per ogni cantiere della squadra; se la squadra non ha
+       cantieri geocodificabili ripiega sulla residenza degli operatori. */
+    const origini = [];
+    squadre.forEach((sq, si) => {
+      let trovata = false;
+      sq.cantieri.forEach(c => {
+        const g = _geoCache[_rsNorm(c)];
+        if (g && g.lat != null) {
+          origini.push({ si, label: c, lat: g.lat, lng: g.lng, residenza: false });
+          trovata = true;
+        }
+      });
+      if (!trovata) {
+        const viste = new Set();
+        sq.operatori.forEach(n => {
+          const h = _rsOpHome(n);
+          if (h && !viste.has(h.label)) {
+            viste.add(h.label);
+            origini.push({ si, label: h.label, lat: h.lat, lng: h.lng, residenza: true });
+          }
+        });
+      }
+    });
+
+    _rsStatus('Calcolo distanze stradali…');
+    const matrice = await _rsMatriceDistanze(origini, _ricercaSquadre.tappe);
+
+    /* Distanza minima di ogni luogo già programmato da una delle tappe: serve a
+       valutare da quale giorno della Griglia conviene far partire lo spostamento. */
+    const distByLuogo = {};
+    origini.forEach((o, oi) => {
+      const k = _rsNorm(o.label);
+      (matrice[oi] || []).forEach((dist, ti) => {
+        if (dist == null || isNaN(dist)) return;
+        if (!distByLuogo[k] || dist < distByLuogo[k].dist) {
+          distByLuogo[k] = { dist, tappa: _ricercaSquadre.tappe[ti].nome };
+        }
+      });
+    });
+
+    /* Requisiti: unione di quanto richiesto su tutte le tappe */
     const skillsRichieste = Array.from(new Set(_ricercaSquadre.tappe.flatMap(t => t.skills)));
-    const skillsDisponibili = new Set();
-    ops.forEach(op => {
-      const opPool = (state.operatori || []).find(o => o.nome_esteso === op.nome);
-      if (opPool) (opPool.skills || []).forEach(s => skillsDisponibili.add(s));
-    });
-    const skillMatching = {
-      richieste: skillsRichieste.length,
-      coperte: skillsRichieste.filter(s => skillsDisponibili.has(s)).length,
-      pct: skillsRichieste.length > 0 ? Math.round(100 * skillsRichieste.filter(s => skillsDisponibili.has(s)).length / skillsRichieste.length) : 100
-    };
-
-    /* 4. Strumento matching */
     const strumentiRichiesti = Array.from(new Set(_ricercaSquadre.tappe.flatMap(t => t.strumenti)));
-    const strumentiDisponibili = new Set();
-    ops.forEach(op => {
-      const opPool = (state.operatori || []).find(o => o.nome_esteso === op.nome);
-      if (opPool) (opPool.strumenti || []).forEach(s => strumentiDisponibili.add(s));
-    });
-    const strumentiMatching = {
-      richiesti: strumentiRichiesti.length,
-      disponibili: strumentiRichiesti.filter(s => strumentiDisponibili.has(s)).length,
-      pct: strumentiRichiesti.length > 0 ? Math.round(100 * strumentiRichiesti.filter(s => strumentiDisponibili.has(s)).length / strumentiRichiesti.length) : 100
-    };
 
-    squadreArray.push({
-      key,
-      commessa: sqData.commessa,
-      squadra: sq,
-      operatori: ops,
-      distMedia: distMedia,
-      giorniDisponibili,
-      skillMatching,
-      strumentiMatching,
-      score: (() => {
-        if (distMedia === null) return Infinity;
-        let s = distMedia / 1000; // distanza in km come base
-        s -= giorniDisponibili * 50; // bonus disponibilità (50 km equivalente per giorno)
-        s -= skillMatching.pct * 10; // bonus skill (fino a 1000 km)
-        s -= strumentiMatching.pct * 5; // bonus strumento (fino a 500 km)
-        return s;
-      })()
+    const risultati = squadre.map((sq, si) => {
+      /* Origine migliore = il punto della squadra più vicino a una delle tappe */
+      let best = null;
+      origini.forEach((o, oi) => {
+        if (o.si !== si) return;
+        (matrice[oi] || []).forEach((dist, ti) => {
+          if (dist == null || isNaN(dist)) return;
+          if (!best || dist < best.dist) {
+            best = { dist, origine: o.label, residenza: o.residenza, tappa: _ricercaSquadre.tappe[ti].nome };
+          }
+        });
+      });
+
+      const skillsCoperte = skillsRichieste.filter(s => sq.skills.has(s));
+      const strCoperti = strumentiRichiesti.filter(k => sq.strumenti.includes(k));
+      const stati = _rsDisponibilita(sq);
+
+      return {
+        sq,
+        stati,
+        consiglio: _rsGiornoConsigliato(sq, stati, distByLuogo),
+        giorniLiberi: stati.filter(s => s === 'libero').length,
+        dist: best ? best.dist : null,
+        origine: best ? best.origine : null,
+        daResidenza: best ? best.residenza : false,
+        tappaVicina: best ? best.tappa : null,
+        skills: {
+          richieste: skillsRichieste.length,
+          coperte: skillsCoperte.length,
+          mancanti: skillsRichieste.filter(s => !sq.skills.has(s))
+        },
+        strumenti: {
+          richiesti: strumentiRichiesti.length,
+          coperti: strCoperti.length,
+          mancanti: strumentiRichiesti.filter(k => !sq.strumenti.includes(k))
+        }
+      };
     });
+
+    /* Ordinamento: la vicinanza è il criterio, punto. Skill e strumenti restano
+       visibili come badge (ed eventualmente filtrano), senza bonus opachi che
+       ribaltavano l'ordine rendendolo incomprensibile. */
+    risultati.sort((a, b) => {
+      if (a.dist == null && b.dist == null) return 0;
+      if (a.dist == null) return 1;
+      if (b.dist == null) return -1;
+      return a.dist - b.dist;
+    });
+
+    _ricercaSquadre.risultati = risultati;
+    _rsStatus(risultati.length + ' squadre valutate.');
+    rsRenderRisultati();
+    rsRenderMappa();
+  } finally {
+    if (btn) btn.disabled = false;
   }
-
-  /* Ordina per score (distanza primaria + bonus) */
-  squadreArray.sort((a, b) => a.score - b.score);
-  squadreArray.forEach(sq => {
-    _ricercaSquadre.risultati[sq.key] = {
-      commessa: sq.commessa,
-      squadra: sq.squadra,
-      operatori: sq.operatori,
-      distMedia: sq.distMedia,
-      giorniDisponibili: sq.giorniDisponibili,
-      skillMatching: sq.skillMatching,
-      strumentiMatching: sq.strumentiMatching
-    };
-  });
-
-  _rsStatus('');
-  rsRenderRisultati();
-  rsRenderMappa(squadreArray.slice(0, 10)); // mappa dei top 10
 }
 
 /* ---------- render risultati ---------- */
+function _rsChipsHtml(stati, consigliato) {
+  return '<div style="display:flex;gap:2px;">' + stati.map((s, d) => {
+    const c = RS_STATI[s];
+    const isCons = consigliato != null && d === consigliato;
+    const ring = isCons ? ';outline:2px solid #0d9488;outline-offset:1px' : '';
+    const tip = PW_MAP_DAY_SHORT[d] + ': ' + c.t + (isCons ? ' — consigliato' : '');
+    return '<span title="' + esc(tip) + '" style="background:' + c.bg + ';color:' + c.fg +
+      ';font-size:9px;font-weight:700;padding:2px 4px;border-radius:3px;line-height:1.2' + ring + ';">' +
+      PW_MAP_DAY_SHORT[d] + '</span>';
+  }).join('') + '</div>';
+}
+
+/* "Mer–Ven · dopo Prato (Mar) · 18 km" — il quando, con il perché */
+function _rsConsiglioHtml(r) {
+  const c = r.consiglio;
+  if (!c) {
+    return '<span style="color:#94a3b8;font-size:11px;font-style:italic;">nessun giorno libero</span>';
+  }
+  const fine = c.giorno + c.consecutivi - 1;
+  const label = c.consecutivi > 1
+    ? PW_MAP_DAY_SHORT[c.giorno] + '–' + PW_MAP_DAY_SHORT[fine]
+    : PW_MAP_DAY_SHORT[c.giorno];
+
+  let motivo;
+  if (c.rifCantiere != null) {
+    motivo = 'dopo ' + esc(c.rifCantiere) + ' (' + PW_MAP_DAY_SHORT[c.rifGiorno] + ')' +
+      (c.dist != null ? ' · ' + _rsKm(c.dist) : '');
+  } else {
+    motivo = 'settimana libera';
+  }
+
+  return '<div style="font-weight:700;color:#0f172a;font-size:12px;">📅 ' + label + '</div>' +
+    '<div style="font-size:10px;color:#64748b;">' + motivo + '</div>' +
+    (c.consecutivi > 1 ? '<div style="font-size:10px;color:#15803d;font-weight:600;">' +
+      c.consecutivi + ' gg consecutivi</div>' : '');
+}
+
+function _rsBadgeHtml(coperti, richiesti, mancanti, icona, cosa) {
+  if (!richiesti) return '<span title="Nessun ' + esc(cosa) + ' richiesto" style="color:#cbd5e1;font-size:11px;">' + icona + '—</span>';
+  const pct = Math.round(100 * coperti / richiesti);
+  const bg = pct === 100 ? '#10b981' : (pct > 0 ? '#f59e0b' : '#ef4444');
+  const tip = mancanti.length
+    ? 'Mancano: ' + mancanti.join(', ')
+    : 'Copre tutti i ' + cosa + ' richiesti';
+  return '<span title="' + esc(tip) + '" style="background:' + bg + ';color:white;padding:2px 5px;border-radius:3px;font-size:10px;font-weight:700;white-space:nowrap;">' +
+    icona + ' ' + coperti + '/' + richiesti + '</span>';
+}
+
+/* Cantieri della squadra con i giorni in cui ci sta: "Prato (Lun·Mar)" */
+function _rsSitiHtml(sq) {
+  const byCantiere = {};
+  const nGiorni = _rsNumGiorni(sq);
+  for (let d = 0; d < nGiorni; d++) {
+    (sq.cantieriByDay[d] || []).forEach(c => {
+      if (!byCantiere[c]) byCantiere[c] = [];
+      byCantiere[c].push(PW_MAP_DAY_SHORT[d]);
+    });
+  }
+  const nomi = Object.keys(byCantiere);
+  if (!nomi.length) return '<span style="color:#94a3b8;font-style:italic;font-size:11px;">nessun cantiere</span>';
+  return nomi.map(c =>
+    '<div style="font-size:11px;color:#0f172a;">📍 ' + esc(c) +
+    ' <span style="color:#94a3b8;">(' + esc(byCantiere[c].join('·')) + ')</span></div>'
+  ).join('');
+}
+
 function rsRenderRisultati() {
+  _rsRenderRisultatiBody();
+  _rsSyncAltezze();
+}
+
+function _rsRenderRisultatiBody() {
   const container = document.getElementById('rs-risultati');
   if (!container) return;
-  const risultati = Object.values(_ricercaSquadre.risultati);
-  if (risultati.length === 0) {
-    container.innerHTML = '<div class="text-xs text-slate-400 italic text-center py-8">Nessun risultato. Usa il pulsante "Calcola" per avviare la ricerca.</div>';
+
+  let risultati = _ricercaSquadre.risultati || [];
+  if (!risultati.length) {
+    container.innerHTML = '<div class="text-xs text-slate-400 italic text-center py-8">Aggiungi almeno una tappa e clicca "Calcola ranking".</div>';
+    return;
+  }
+  if (_rsSoloCompatibili) {
+    risultati = risultati.filter(r =>
+      r.skills.coperte === r.skills.richieste && r.strumenti.coperti === r.strumenti.richiesti);
+  }
+  if (!risultati.length) {
+    container.innerHTML = '<div class="text-xs text-amber-600 italic text-center py-8">Nessuna squadra copre tutti i requisiti. Togli il filtro per vedere le più vicine.</div>';
     return;
   }
 
-  container.innerHTML = `
-    <div class="overflow-x-auto">
-      <table class="w-full text-xs border-collapse">
-        <thead>
-          <tr style="background:#f1f5f9;border-bottom:1px solid #cbd5e1;">
-            <th style="padding:8px;text-align:left;font-weight:600;color:#334155;">Commessa</th>
-            <th style="padding:8px;text-align:left;font-weight:600;color:#334155;">Squadra</th>
-            <th style="padding:8px;text-align:right;font-weight:600;color:#334155;">Dist. media</th>
-            <th style="padding:8px;text-align:center;font-weight:600;color:#334155;">Giorni</th>
-            <th style="padding:8px;text-align:center;font-weight:600;color:#334155;">Skills</th>
-            <th style="padding:8px;text-align:center;font-weight:600;color:#334155;">Strumenti</th>
-          </tr>
-        </thead>
-        <tbody>
-          ${risultati.map((r, i) => `
-            <tr style="border-bottom:1px solid #e2e8f0;${i % 2 === 0 ? 'background:#f8fafc;' : ''}">
-              <td style="padding:8px;color:#334155;">${esc(r.commessa || '—')}</td>
-              <td style="padding:8px;color:#334155;">${esc(r.squadra.nome || 'Squadra senza nome')}</td>
-              <td style="padding:8px;text-align:right;color:#334155;">
-                ${r.distMedia === null ? '❌' : _rsKm(r.distMedia)}
-              </td>
-              <td style="padding:8px;text-align:center;color:#334155;">
-                <span style="background:#teal;color:white;padding:2px 6px;border-radius:3px;display:inline-block;">
-                  ${r.giorniDisponibili}/6
-                </span>
-              </td>
-              <td style="padding:8px;text-align:center;color:#334155;">
-                <span style="background:${r.skillMatching.pct === 100 ? '#10b981' : r.skillMatching.pct >= 50 ? '#f59e0b' : '#ef4444'};color:white;padding:2px 6px;border-radius:3px;display:inline-block;font-weight:600;">
-                  ${r.skillMatching.coperte}/${r.skillMatching.richieste} (${r.skillMatching.pct}%)
-                </span>
-              </td>
-              <td style="padding:8px;text-align:center;color:#334155;">
-                <span style="background:${r.strumentiMatching.pct === 100 ? '#10b981' : r.strumentiMatching.pct >= 50 ? '#f59e0b' : '#ef4444'};color:white;padding:2px 6px;border-radius:3px;display:inline-block;font-weight:600;">
-                  ${r.strumentiMatching.disponibili}/${r.strumentiMatching.richiesti} (${r.strumentiMatching.pct}%)
-                </span>
-              </td>
-            </tr>
-            <tr style="background:#f0fdf4;display:none;" id="rs-detail-${i}">
-              <td colspan="6" style="padding:12px;color:#334155;">
-                <div class="text-xs mb-2"><strong>Operatori:</strong> ${esc((r.operatori || []).map(o => o.nome).join(', '))}</div>
-              </td>
-            </tr>
-          `).join('')}
-        </tbody>
-      </table>
-    </div>
-  `;
+  const righe = risultati.map((r, i) => {
+    const distHtml = r.dist == null
+      ? '<span style="color:#cbd5e1;">—</span>'
+      : '<div style="font-weight:700;color:#0f172a;font-size:13px;">' + _rsKm(r.dist) + '</div>' +
+        '<div style="font-size:10px;color:#64748b;">da ' + esc(r.origine || '') +
+        (r.daResidenza ? ' <span style="color:#b45309;">(residenza)</span>' : '') + '</div>' +
+        (_ricercaSquadre.tappe.length > 1 ? '<div style="font-size:10px;color:#94a3b8;">→ ' + esc(r.tappaVicina || '') + '</div>' : '');
+
+    const rank = i === 0
+      ? '<span style="background:#0d9488;color:white;font-size:10px;font-weight:700;padding:2px 6px;border-radius:10px;">1</span>'
+      : '<span style="color:#94a3b8;font-size:11px;font-weight:600;">' + (i + 1) + '</span>';
+
+    return '<tr style="border-bottom:1px solid #e2e8f0;' + (i % 2 ? '' : 'background:#f8fafc;') + '">' +
+      '<td style="padding:8px 6px;text-align:center;vertical-align:top;">' + rank + '</td>' +
+      '<td style="padding:8px 6px;vertical-align:top;">' +
+        '<div style="font-weight:700;color:#0f172a;font-size:12px;">' + esc(r.sq.nome) + '</div>' +
+        '<div style="font-size:10px;color:#94a3b8;">' + esc(r.sq.commessa) + '</div>' +
+      '</td>' +
+      '<td style="padding:8px 6px;vertical-align:top;font-size:11px;color:#334155;">👷 ' +
+        esc(r.sq.operatori.join(' · ')) + '</td>' +
+      '<td style="padding:8px 6px;vertical-align:top;">' + _rsSitiHtml(r.sq) + '</td>' +
+      '<td style="padding:8px 6px;vertical-align:top;text-align:right;">' + distHtml + '</td>' +
+      '<td style="padding:8px 6px;vertical-align:top;">' + _rsConsiglioHtml(r) + '</td>' +
+      '<td style="padding:8px 6px;vertical-align:top;">' +
+        _rsChipsHtml(r.stati, r.consiglio ? r.consiglio.giorno : null) + '</td>' +
+      '<td style="padding:8px 6px;vertical-align:top;text-align:center;white-space:nowrap;">' +
+        _rsBadgeHtml(r.skills.coperte, r.skills.richieste, r.skills.mancanti, '🎓', 'skill') + ' ' +
+        _rsBadgeHtml(r.strumenti.coperti, r.strumenti.richiesti,
+          r.strumenti.mancanti.map(k => pwStrLabel(k)), '🔧', 'strumenti') + '</td>' +
+    '</tr>';
+  }).join('');
+
+  const th = 'padding:8px 6px;text-align:left;font-weight:700;color:#475569;font-size:10px;text-transform:uppercase;letter-spacing:.03em;';
+  const legenda = Object.keys(RS_STATI).map(k =>
+    '<span style="display:inline-flex;align-items:center;gap:4px;margin-right:10px;">' +
+    '<span style="width:9px;height:9px;border-radius:2px;background:' + RS_STATI[k].bg + ';border:1px solid ' + RS_STATI[k].fg + ';"></span>' +
+    RS_STATI[k].t + '</span>').join('') +
+    '<span style="display:inline-flex;align-items:center;gap:4px;">' +
+    '<span style="width:9px;height:9px;border-radius:2px;background:#dcfce7;outline:2px solid #0d9488;outline-offset:1px;margin:2px;"></span>' +
+    'Giorno consigliato</span>';
+
+  container.innerHTML =
+    '<div style="overflow-x:auto;"><table style="width:100%;border-collapse:collapse;">' +
+      '<thead><tr style="background:#f1f5f9;border-bottom:2px solid #cbd5e1;">' +
+        '<th style="' + th + 'text-align:center;">#</th>' +
+        '<th style="' + th + '">Squadra</th>' +
+        '<th style="' + th + '">Operatori</th>' +
+        '<th style="' + th + '">Dove sono questa settimana</th>' +
+        '<th style="' + th + 'text-align:right;">Distanza</th>' +
+        '<th style="' + th + '">Quando andare</th>' +
+        '<th style="' + th + '">Settimana</th>' +
+        '<th style="' + th + 'text-align:center;">Requisiti</th>' +
+      '</tr></thead><tbody>' + righe + '</tbody></table></div>' +
+    '<div style="font-size:10px;color:#64748b;margin-top:8px;">' + legenda + '</div>';
 }
 
-/* Mappa mostrante le tappe e i marker delle squadre top */
-function rsRenderMappa(topSquadre) {
+/* Allinea l'altezza della card dei risultati a quella del pannello di ricerca, così
+   le due colonne finiscono alla stessa quota invece di lasciare un vuoto accanto a una
+   tabella lunga. Il limite è un max-height: se le squadre sono poche la card resta
+   corta, se sono tante scorre. Sotto il breakpoint lg le card sono impilate e il
+   vincolo va tolto, altrimenti comprimerebbe la tabella senza motivo. */
+function _rsSyncAltezze() {
+  const panel = document.getElementById('rs-input-panel');
+  const card = document.getElementById('rs-risultati-card');
+  const body = document.getElementById('rs-risultati');
+  if (!panel || !card || !body) return;
+
+  if (window.innerWidth < 1024) {
+    body.style.maxHeight = '';
+    body.style.overflowY = '';
+    return;
+  }
+  const h = panel.offsetHeight;
+  if (!h) return; // pannello non ancora visibile (tab nascosto)
+  /* Spazio occupato dalla card oltre al corpo tabella (titolo, filtro, padding).
+     Resta stabile anche a chiamate ripetute, perché entrambe le misure scendono
+     insieme quando il corpo è già limitato. */
+  const chrome = card.offsetHeight - body.offsetHeight;
+  body.style.maxHeight = Math.max(180, h - chrome) + 'px';
+  body.style.overflowY = 'auto';
+}
+
+/* ---------- mappa ---------- */
+/* Mostra le tappe da coprire (verdi) e i cantieri dove le squadre proposte stanno
+   già lavorando (colorati), con una linea che collega la squadra più vicina alla
+   sua tappa: è la risposta visiva a "chi ho già in zona?". */
+function rsRenderMappa() {
   const container = document.getElementById('rs-mappa-container');
   if (!container) return;
-  container.innerHTML = '<div id="rs-mappa" style="height:400px;width:100%;"></div>';
+  if (!document.getElementById('rs-mappa')) {
+    container.innerHTML = '<div id="rs-mappa" style="height:100%;width:100%;border-radius:6px;"></div>';
+  }
+
   setTimeout(() => {
     if (!_ricercaSquadreMap) {
-      _ricercaSquadreMap = L.map('rs-mappa').setView([42.5, 12.5], 6);
+      _ricercaSquadreMap = L.map('rs-mappa', { preferCanvas: true }).setView([42.5, 12.5], 6);
       L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        attribution: '© OpenStreetMap',
+        attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
         maxZoom: 19
       }).addTo(_ricercaSquadreMap);
     }
     _ricercaSquadreMap.invalidateSize();
-    /* Marker tappe */
-    _ricercaSquadre.tappe.forEach((t, i) => {
-      L.circleMarker([t.lat, t.lng], {
-        radius: 6,
-        fillColor: '#0d9488',
-        color: '#0f766e',
-        weight: 2,
-        opacity: 1,
-        fillOpacity: 0.8
-      }).bindPopup(`<strong>${esc(t.nome)}</strong><br/>Tappa ${i+1}`).addTo(_ricercaSquadreMap);
+
+    _rsMapLayers.forEach(l => _ricercaSquadreMap.removeLayer(l));
+    _rsMapLayers = [];
+
+    const bounds = [];
+
+    /* Tappe da coprire */
+    _ricercaSquadre.tappe.forEach(t => {
+      const icon = L.divIcon({
+        html: '<div style="width:20px;height:20px;border-radius:50%;background:#10b981;border:3px solid white;box-shadow:0 2px 6px rgba(0,0,0,.45);"></div>',
+        className: 'pw-map-marker', iconSize: [20, 20], iconAnchor: [10, 10]
+      });
+      const m = L.marker([t.lat, t.lng], { icon }).addTo(_ricercaSquadreMap)
+        .bindPopup('<div style="font-family:system-ui;font-size:12px;"><b>🎯 ' + esc(t.nome) + '</b><br>' +
+          '<span style="color:#64748b;">Cantiere da coprire</span></div>');
+      _rsMapLayers.push(m);
+      bounds.push([t.lat, t.lng]);
     });
-    /* Marker squadre top */
-    topSquadre.slice(0, 5).forEach((sq, i) => {
-      const ops = sq.operatori || [];
-      const mediaLat = ops.reduce((s, op) => {
-        const opPool = (state.operatori || []).find(o => o.nome_esteso === op.nome);
-        return s + (opPool && _geoCache[(opPool.provincia || '').toLowerCase()] ? _geoCache[(opPool.provincia || '').toLowerCase()].lat : 42.5);
-      }, 0) / (ops.length || 1);
-      const mediaLng = ops.reduce((s, op) => {
-        const opPool = (state.operatori || []).find(o => o.nome_esteso === op.nome);
-        return s + (opPool && _geoCache[(opPool.provincia || '').toLowerCase()] ? _geoCache[(opPool.provincia || '').toLowerCase()].lng : 12.5);
-      }, 0) / (ops.length || 1);
-      const colors = ['#6366f1', '#f59e0b', '#10b981', '#ef4444', '#8b5cf6'];
-      L.circleMarker([mediaLat, mediaLng], {
-        radius: 5,
-        fillColor: colors[i % colors.length],
-        color: '#1e293b',
-        weight: 1,
-        opacity: 1,
-        fillOpacity: 0.7
-      }).bindPopup(`<strong>${esc(sq.squadra.nome || 'Squadra')}</strong><br/>${esc(sq.commessa || '—')}`).addTo(_ricercaSquadreMap);
+
+    /* Cantieri delle squadre proposte (prime 8 per vicinanza) */
+    const top = (_ricercaSquadre.risultati || []).slice(0, 8);
+    top.forEach((r, i) => {
+      const color = MAP_COLORS[i % MAP_COLORS.length];
+      let ancora = null;
+
+      r.sq.cantieri.forEach(c => {
+        const g = _geoCache[_rsNorm(c)];
+        if (!g || g.lat == null) return;
+        if (!ancora || c === r.origine) ancora = { lat: g.lat, lng: g.lng };
+        const icon = L.divIcon({
+          html: '<div style="width:15px;height:15px;border-radius:50%;background:' + color + ';border:2px solid white;box-shadow:0 1px 4px rgba(0,0,0,.4);"></div>',
+          className: 'pw-map-marker', iconSize: [15, 15], iconAnchor: [7, 7]
+        });
+        const popup = '<div style="font-family:system-ui;font-size:12px;min-width:160px;">' +
+          '<b>👥 ' + esc(r.sq.nome) + '</b>' +
+          '<div style="color:#0d9488;font-weight:600;margin:2px 0;">📍 ' + esc(c) + '</div>' +
+          '<div style="color:#64748b;font-size:11px;">👷 ' + esc(r.sq.operatori.join(', ')) + '</div>' +
+          '<div style="color:#475569;font-size:11px;">📋 ' + esc(r.sq.commessa) + '</div>' +
+          (r.dist != null ? '<div style="color:#4f46e5;font-weight:600;font-size:11px;margin-top:3px;">↗ ' +
+            _rsKm(r.dist) + ' da ' + esc(r.tappaVicina || '') + '</div>' : '') +
+          '</div>';
+        const m = L.marker([g.lat, g.lng], { icon }).addTo(_ricercaSquadreMap).bindPopup(popup);
+        _rsMapLayers.push(m);
+        bounds.push([g.lat, g.lng]);
+      });
+
+      /* Collegamento squadra → tappa più vicina, solo per le prime 3 */
+      if (i < 3 && ancora && r.tappaVicina) {
+        const t = _ricercaSquadre.tappe.find(x => x.nome === r.tappaVicina);
+        if (t) {
+          const line = L.polyline([[ancora.lat, ancora.lng], [t.lat, t.lng]], {
+            color, weight: 2, opacity: 0.55, dashArray: '5,6'
+          }).addTo(_ricercaSquadreMap);
+          _rsMapLayers.push(line);
+        }
+      }
     });
-  }, 100);
+
+    if (bounds.length === 1) _ricercaSquadreMap.setView(bounds[0], 11);
+    else if (bounds.length > 1) _ricercaSquadreMap.fitBounds(bounds, { padding: [40, 40] });
+  }, 80);
 }
 
 /* ---------- init tab ---------- */
 function rsInit() {
   _ricercaSquadre.anno = pwAnno;
   _ricercaSquadre.week = pwWeek;
+
+  /* Cambiando settimana i risultati non valgono più: la settimana è il contesto */
+  if (_ricercaSquadre.risultati.length &&
+      (_ricercaSquadre.anno !== pwAnno || _ricercaSquadre.week !== pwWeek)) {
+    _ricercaSquadre.risultati = [];
+  }
+
+  _rsUpdateSkillsLabel();
+  _rsUpdateStrumentiLabel();
   rsRenderTappe();
+  rsRenderRisultati();
+  rsRenderMappa();
+  /* Il pannello è appena diventato visibile: le misure sono attendibili solo dopo
+     che il browser ha completato il layout. */
+  setTimeout(_rsSyncAltezze, 80);
+
+  if (!_rsBound) {
+    _rsBound = true;
+    window.addEventListener('resize', _rsSyncAltezze);
+    document.addEventListener('mousedown', e => {
+      const inSkills = e.target.closest && (e.target.closest('#rs-skills-dropdown') || e.target.closest('#rs-tappa-skills-btn'));
+      const inStr = e.target.closest && (e.target.closest('#rs-strumenti-dropdown') || e.target.closest('#rs-tappa-strumenti-btn'));
+      if (!inSkills) {
+        const d = document.getElementById('rs-skills-dropdown');
+        if (d) d.classList.add('hidden');
+      }
+      if (!inStr) {
+        const d = document.getElementById('rs-strumenti-dropdown');
+        if (d) d.classList.add('hidden');
+      }
+    }, true);
+    document.addEventListener('keydown', e => { if (e.key === 'Escape') _rsCloseDropdowns(null); });
+
+    const nomeEl = document.getElementById('rs-tappa-nome');
+    if (nomeEl) nomeEl.addEventListener('keydown', e => { if (e.key === 'Enter') rsAddTappa(); });
+
+    const filtro = document.getElementById('rs-solo-compatibili');
+    if (filtro) filtro.addEventListener('change', () => {
+      _rsSoloCompatibili = filtro.checked;
+      rsRenderRisultati();
+    });
+  }
 }

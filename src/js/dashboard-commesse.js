@@ -163,6 +163,8 @@ function renderCommessaPipelineCard(c) {
   const skillBadges = c.skills.map(s => `<span class="skill-badge req">${s}</span>`).join('');
   const attReq = c.attestati_richiesti || [];
   const attBadges = attReq.map(a => `<span class="att-badge req" title="Attestato richiesto: ${a}">${a.length>14 ? a.substring(0,13)+'…' : a}</span>`).join('');
+  const dpiReq = c.dpi_richiesti || [];
+  const dpiBadges = dpiReq.map(d => `<span class="dpi-badge req" title="DPI richiesto: ${esc(d)}">${esc(d.length>16 ? d.substring(0,15)+'…' : d)}</span>`).join('');
 
   // tabella allocazioni dettagliate (gg per mese)
   let staffingTable = '';
@@ -222,7 +224,7 @@ function renderCommessaPipelineCard(c) {
           <button class="del-c text-xs text-slate-400 hover:text-red-600" data-id="${c.id}" title="Elimina">🗑</button>
         </div>
       </div>
-      <div class="mb-2">${skillBadges || '<span class="text-[10px] text-slate-400">nessuna skill</span>'}${attBadges ? '<div class="mt-1">'+attBadges+'</div>' : ''}</div>
+      <div class="mb-2">${skillBadges || '<span class="text-[10px] text-slate-400">nessuna skill</span>'}${attBadges ? '<div class="mt-1">'+attBadges+'</div>' : ''}${dpiBadges ? '<div class="mt-1">'+dpiBadges+'</div>' : ''}</div>
       <div class="flex items-center justify-between text-xs text-slate-600 mb-1">
         <span class="font-medium">${totRisorseDistinte}/${c.risorse_necessarie} risorse</span>
         <span class="text-[10px] text-slate-400">${Math.round(pct)}%</span>
@@ -391,7 +393,7 @@ function renderCommesseAttive() {
         <div class="mt-2">
           ${fabbisognoBox}
           ${meta.attestati_richiesti && meta.attestati_richiesti.length > 0 ? `<div class="mb-2 flex flex-wrap gap-1">${meta.attestati_richiesti.map(a => `<span class="att-badge req text-[10px] font-medium bg-purple-100 text-purple-700 px-2 py-1 rounded" title="Attestato richiesto: ${a}">${a.length>14 ? a.substring(0,13)+'…' : a}</span>`).join('')}</div>` : ''}
-          ${meta.dpi_richiesti && meta.dpi_richiesti.length > 0 ? `<div class="mb-2 flex flex-wrap gap-1">${meta.dpi_richiesti.map(d => `<span class="dpi-badge req text-[10px] font-medium bg-yellow-100 text-yellow-700 px-2 py-1 rounded" title="DPI richiesto: ${d}">${d}</span>`).join('')}</div>` : ''}
+          ${meta.dpi_richiesti && meta.dpi_richiesti.length > 0 ? `<div class="mb-2 flex flex-wrap gap-1">${meta.dpi_richiesti.map(d => `<span class="dpi-badge req text-[10px] font-medium bg-yellow-100 text-yellow-700 px-2 py-1 rounded" title="DPI richiesto: ${esc(d)}">${esc(d)}</span>`).join('')}</div>` : ''}
           <div class="overflow-x-auto">
             <table class="w-full text-[10px]">
               <thead class="bg-slate-50">

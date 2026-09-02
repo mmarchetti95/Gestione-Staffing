@@ -180,10 +180,11 @@
   /* .skill-badge e .att-badge condividevano identica struttura, ripetuta
      due volte (compreso lo stesso stato "miss" con lo stesso colore) —
      accorpata qui, i soli colori restano specifici per tipo. */
-  .skill-badge, .att-badge {
+  .skill-badge, .att-badge, .dpi-badge {
     display: inline-block; padding: 1px 6px; border-radius: 4px;
     font-size: var(--text-2xs); font-weight: 600; margin: 1px;
   }
+  .dpi-badge, .dpi-badge.req { background: #fef9c3; color: #854d0e; border: 1px solid #fde68a; }
   .skill-badge { background: #e0f2fe; color: #075985; border: 1px solid #bae6fd; }
   .skill-badge.req { background: #fef3c7; color: #92400e; border-color: #fde68a; }
   .att-badge { background: #ede9fe; color: #5b21b6; border: 1px solid #ddd6fe; }
@@ -228,6 +229,9 @@
   .att-vuoto { color: #cbd5e1; }
   .att-tot { color: #64748b; font-variant-numeric: tabular-nums; }
   .att-fuoripool { font-size: 9px; padding: 0 4px; border-radius: 3px; background: #f1f5f9; color: #64748b; border: 1px solid #e2e8f0; }
+  /* ---- Sezione "DPI & scadenze" (riusa .att-matrix, .att-dot, .att-pill) ---- */
+  .dpi-taglia { font-size: 9px; padding: 0 3px; border-radius: 3px; background: #fef9c3; color: #854d0e; border: 1px solid #fde68a; }
+  .dpi-manca { color: #b45309; font-weight: 700; }
   .op-card {
     cursor: grab; user-select: none;
     transition: all .15s;
@@ -1114,7 +1118,7 @@
     <div class="flex items-center gap-2">
       <button id="btn-presentation" class="px-3 py-1.5 text-sm rounded hover:bg-white/10" style="border:1px solid var(--dark-border-strong);color:var(--dark-text);visibility:visible;">📊 Modalità presentazione</button>
       <div class="text-xs pl-2" style="border-left:1px solid var(--dark-border-strong);color:var(--dark-text-muted);">
-        <span id="app-version" class="font-medium" style="color:var(--accent);">v18.118.0</span> · Michele Marchetti
+        <span id="app-version" class="font-medium" style="color:var(--accent);">v18.120.0</span> · Michele Marchetti
       </div>
     </div>
   </div>
@@ -1376,19 +1380,6 @@
                 <div class="mt-1 p-2 bg-slate-50 border border-slate-200 rounded max-h-40 overflow-y-auto" id="att-filters"></div>
               </details>
             </div>
-            <div id="dpi-filter-section">
-              <div class="text-[10px] text-slate-500 uppercase tracking-wider font-medium mb-1">DPI disponibili</div>
-              <details class="text-xs">
-                <summary class="cursor-pointer text-slate-600 hover:text-slate-900 px-2 py-1 bg-yellow-50 rounded border border-yellow-200"><span id="dpi-filter-summary">10 DPI</span> ▾</summary>
-                <div class="mt-1 p-2 bg-yellow-50 border border-yellow-200 rounded max-h-40 overflow-y-auto" id="dpi-list-container">
-                  <div class="mb-2 flex gap-1">
-                    <input id="dpi-input-new" type="text" placeholder="Aggiungi DPI..." class="flex-1 text-xs border border-slate-300 rounded px-1.5 py-1">
-                    <button id="dpi-btn-add" class="text-xs px-2 py-1 bg-yellow-600 text-white rounded hover:bg-yellow-700 whitespace-nowrap">Aggiungi</button>
-                  </div>
-                  <div id="dpi-list" class="space-y-1"></div>
-                </div>
-              </details>
-            </div>
             <div>
               <div class="text-[10px] text-slate-500 uppercase tracking-wider font-medium mb-1">Provenienza</div>
               <div class="flex gap-1">
@@ -1476,6 +1467,59 @@
           <span><span class="att-dot ko"></span> scaduto</span>
           <span><span class="att-dot nodate"></span> scadenza non nota</span>
           <span class="text-slate-400">· la data in cella è la scadenza (mm/aa); il dettaglio completo è nel tooltip</span>
+        </div>
+      </div>
+    </details>
+  </section>
+
+  <!-- 3c. DPI & scadenze (collassata: la matrice si costruisce solo all'apertura) -->
+  <section id="section-dpi" class="bg-white rounded-lg border border-slate-200 p-4 no-present">
+    <details id="dpi-details" ontoggle="dpiToggleSezione()">
+      <summary class="font-semibold text-slate-900 cursor-pointer select-none">
+        🦺 DPI &amp; scadenze <span id="dpi-summary-badges" class="font-normal"></span>
+      </summary>
+      <div class="mt-3">
+        <div class="flex flex-wrap items-center gap-2 mb-2">
+          <input id="dpi-search" type="text" placeholder="Cerca operatore…" class="flex-1 min-w-[180px] px-2 py-1.5 text-sm border border-slate-300 rounded" oninput="dpiSetFiltro('search', this.value)">
+          <select id="dpi-filter-tipo" class="text-xs border border-slate-300 rounded px-1.5 py-1.5" onchange="dpiSetFiltro('tipo', this.value)">
+            <option value="">Tutti i DPI</option>
+          </select>
+          <select id="dpi-filter-stato" class="text-xs border border-slate-300 rounded px-1.5 py-1.5" onchange="dpiSetFiltro('stato', this.value)">
+            <option value="">Tutti gli stati</option>
+            <option value="scaduto">Con almeno uno da sostituire</option>
+            <option value="scadenza">Con almeno uno in scadenza</option>
+            <option value="manca">Con DPI da consegnare</option>
+            <option value="nessuno">Senza alcun DPI</option>
+          </select>
+          <select id="dpi-filter-ordine" class="text-xs border border-slate-300 rounded px-1.5 py-1.5" onchange="dpiSetFiltro('ordine', this.value)">
+            <option value="nome">Ordina per nome</option>
+            <option value="scadenza">Ordina per urgenza</option>
+          </select>
+          <span id="dpi-count" class="text-[10px] text-slate-400 whitespace-nowrap"></span>
+          <div class="ml-auto flex gap-1">
+            <button onclick="exportDpiXlsx()" class="text-xs px-2 py-1 bg-white text-slate-500 rounded border border-slate-200 hover:bg-slate-50 hover:text-slate-700 whitespace-nowrap" title="Scarica la dotazione DPI in Excel">⬇ Excel</button>
+          </div>
+        </div>
+        <details id="dpi-cat-details" class="mb-2">
+          <summary class="text-xs cursor-pointer text-slate-600 hover:text-slate-900 px-2 py-1 bg-yellow-50 rounded border border-yellow-200 inline-block">🧰 Gestione catalogo DPI <span id="dpi-cat-summary" class="text-slate-400"></span></summary>
+          <div class="mt-2 p-2 bg-yellow-50 border border-yellow-200 rounded">
+            <div class="mb-2 flex flex-wrap gap-1 items-center">
+              <input id="dpi-input-new" type="text" placeholder="Nome del DPI…" class="flex-1 min-w-[160px] text-xs border border-slate-300 rounded px-1.5 py-1">
+              <input id="dpi-input-durata" type="number" min="1" max="600" placeholder="mesi" title="Durata di validità in mesi (facoltativa)" class="w-[70px] text-xs border border-slate-300 rounded px-1.5 py-1">
+              <button id="dpi-btn-add" class="text-xs px-2 py-1 bg-yellow-600 text-white rounded hover:bg-yellow-700 whitespace-nowrap">Aggiungi</button>
+            </div>
+            <div id="dpi-list" class="space-y-1 max-h-52 overflow-y-auto"></div>
+            <div class="text-[10px] text-slate-500 mt-2">La durata in mesi è facoltativa: se valorizzata, assegnando il DPI a un operatore la data di scadenza viene precompilata (e resta sempre modificabile a mano). Le scadenze già inserite non vengono ricalcolate.</div>
+          </div>
+        </details>
+        <div class="att-scroll"><div id="dpi-matrix"></div></div>
+        <div class="flex flex-wrap items-center gap-3 mt-2 text-[10px] text-slate-500">
+          <span><span class="att-dot ok"></span> valido</span>
+          <span><span class="att-dot warn"></span> in scadenza entro 30 giorni</span>
+          <span><span class="att-dot ko"></span> da sostituire</span>
+          <span><span class="att-dot nodate"></span> consegnato senza scadenza</span>
+          <span><span class="dpi-manca">!</span> richiesto da una commessa, non ancora consegnato</span>
+          <span class="text-slate-400">· la data in cella è la scadenza (mm/aa); taglia e data di consegna sono nel tooltip</span>
         </div>
       </div>
     </details>
@@ -1761,20 +1805,44 @@
   <div id="pw-view-ricerca-squadre" class="hidden">
     <div class="grid grid-cols-1 lg:grid-cols-4 gap-4 items-start">
       <!-- Pannello input -->
-      <div class="lg:col-span-1 bg-white border border-slate-200 rounded-lg p-3 shadow-sm no-print">
+      <div id="rs-input-panel" class="lg:col-span-1 bg-white border border-slate-200 rounded-lg p-3 shadow-sm no-print">
         <div class="text-xs font-semibold text-slate-700 mb-3 uppercase tracking-wide">🔍 Ricerca Squadre</div>
 
         <label class="block text-xs font-semibold text-slate-600 mb-1">Comune / Cantiere</label>
         <input id="rs-tappa-nome" type="text" placeholder="Es. Firenze, Via Roma 123"
           class="w-full mb-2 px-2 py-1.5 text-sm border border-slate-300 rounded focus:outline-none focus:border-teal-400">
 
-        <label class="block text-xs font-semibold text-slate-600 mb-1">Skills richiesti <span class="text-slate-400 font-normal">(separati da virgola)</span></label>
-        <input id="rs-tappa-skills" type="text" placeholder="Es. Topografia, Rilievo"
-          class="w-full mb-2 px-2 py-1.5 text-sm border border-slate-300 rounded focus:outline-none focus:border-teal-400">
+        <label class="block text-xs font-semibold text-slate-600 mb-1">Skills richieste <span class="text-slate-400 font-normal">(facoltative)</span></label>
+        <div class="relative mb-3" style="z-index:30;">
+          <button id="rs-tappa-skills-btn" type="button" onclick="rsToggleSkillsDropdown()"
+            class="w-full px-2 py-1.5 text-sm border border-slate-300 rounded bg-white hover:bg-slate-50 text-left flex justify-between items-center gap-2">
+            <span id="rs-skills-label" class="truncate" style="color:#64748b;">Seleziona skills…</span>
+            <span class="text-slate-400 text-xs">▾</span>
+          </button>
+          <div id="rs-skills-dropdown" class="hidden absolute left-0 bg-white border border-slate-300 rounded mt-1 shadow-lg"
+            style="z-index:40;min-width:100%;width:max-content;max-width:340px;">
+            <input id="rs-skills-search" type="text" placeholder="Cerca skill…"
+              onkeyup="rsFilterSkills(this.value)"
+              class="w-full px-2 py-1.5 text-xs border-b border-slate-200 focus:outline-none">
+            <div id="rs-skills-list" style="max-height:220px;overflow-y:auto;"></div>
+          </div>
+        </div>
 
-        <label class="block text-xs font-semibold text-slate-600 mb-1">Strumenti richiesti <span class="text-slate-400 font-normal">(separati da virgola)</span></label>
-        <input id="rs-tappa-strumenti" type="text" placeholder="Es. GPS, Drone"
-          class="w-full mb-3 px-2 py-1.5 text-sm border border-slate-300 rounded focus:outline-none focus:border-teal-400">
+        <label class="block text-xs font-semibold text-slate-600 mb-1">Strumenti richiesti <span class="text-slate-400 font-normal">(facoltativi)</span></label>
+        <div class="relative mb-3" style="z-index:20;">
+          <button id="rs-tappa-strumenti-btn" type="button" onclick="rsToggleStrumentiDropdown()"
+            class="w-full px-2 py-1.5 text-sm border border-slate-300 rounded bg-white hover:bg-slate-50 text-left flex justify-between items-center gap-2">
+            <span id="rs-strumenti-label" class="truncate" style="color:#64748b;">Seleziona strumenti…</span>
+            <span class="text-slate-400 text-xs">▾</span>
+          </button>
+          <div id="rs-strumenti-dropdown" class="hidden absolute left-0 bg-white border border-slate-300 rounded mt-1 shadow-lg"
+            style="z-index:40;min-width:100%;width:max-content;max-width:340px;">
+            <input id="rs-strumenti-search" type="text" placeholder="Cerca strumento…"
+              onkeyup="rsFilterStrumenti(this.value)"
+              class="w-full px-2 py-1.5 text-xs border-b border-slate-200 focus:outline-none">
+            <div id="rs-strumenti-list" style="max-height:220px;overflow-y:auto;"></div>
+          </div>
+        </div>
 
         <button onclick="rsAddTappa()"
           class="w-full px-3 py-2 text-sm font-medium bg-teal-600 text-white rounded-lg hover:bg-teal-700 mb-3">
@@ -1789,30 +1857,39 @@
           id="rs-calcola-btn">
           🔍 Calcola ranking
         </button>
-        <button onclick="[_ricercaSquadre.tappe = [], rsRenderTappe(), document.getElementById('rs-risultati').innerHTML = '', document.getElementById('rs-mappa-container').innerHTML = '']"
+        <button onclick="rsPulisci()"
           class="w-full px-3 py-1.5 text-sm border border-slate-300 rounded-lg hover:bg-slate-50">
           🧹 Pulisci
         </button>
 
         <div id="rs-status" class="text-xs text-slate-500 mt-2"></div>
         <div class="text-xs text-slate-400 mt-3 leading-snug">
-          Propone squadre della settimana ordinata per distanza geografica, disponibilità
-          e matching di skill/strumenti.
+          Ordina le squadre di questa settimana per <b>distanza stradale dal cantiere in cui
+          si trovano già</b>, mostrando quando sono libere e se coprono skill e strumenti richiesti.
         </div>
       </div>
 
       <!-- Risultati e mappa -->
       <div class="lg:col-span-3">
-        <div class="bg-white border border-slate-200 rounded-lg p-3 mb-3">
-          <div class="text-xs font-semibold text-slate-700 mb-3 uppercase tracking-wide">📊 Ranking squadre</div>
+        <div id="rs-risultati-card" class="bg-white border border-slate-200 rounded-lg p-3 mb-3">
+          <div class="flex items-center justify-between mb-3 gap-3">
+            <div class="text-xs font-semibold text-slate-700 uppercase tracking-wide">📊 Squadre più vicine</div>
+            <label class="flex items-center gap-1.5 text-xs text-slate-600 cursor-pointer">
+              <input id="rs-solo-compatibili" type="checkbox">
+              Solo squadre che coprono tutti i requisiti
+            </label>
+          </div>
           <div id="rs-risultati" class="text-xs text-slate-400 italic text-center py-8">
             Aggiungi almeno una tappa e clicca "Calcola ranking".
           </div>
         </div>
 
         <div class="bg-white border border-slate-200 rounded-lg p-3 shadow-sm">
-          <div class="text-xs font-semibold text-slate-700 mb-2 uppercase tracking-wide">🗺️ Localizzazioni</div>
-          <div id="rs-mappa-container" style="height:300px;"></div>
+          <div class="text-xs font-semibold text-slate-700 mb-2 uppercase tracking-wide">
+            🗺️ Mappa · <span style="color:#10b981;">●</span> cantieri da coprire ·
+            <span style="color:#6366f1;">●</span> dove sono le squadre
+          </div>
+          <div id="rs-mappa-container" style="height:420px;"></div>
         </div>
       </div>
     </div>

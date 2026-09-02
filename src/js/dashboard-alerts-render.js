@@ -94,9 +94,10 @@ function renderAll() {
   renderGantt();
   renderSkillFilters();
   renderAttestatiFilters();
-  renderDpiAdmin();
+  renderDpiCatalogo();
   renderOperatori();
   renderAttestati();
+  renderDpi();
   renderCommesse();
   renderGap();
   // Se la vista operatore è aperta, aggiornala
@@ -210,6 +211,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   document.getElementById('pw-tab-ferie').onclick   = () => pwSwitchTab('ferie');
   document.getElementById('pw-tab-mappa').onclick   = () => pwSwitchTab('mappa');
   document.getElementById('pw-tab-spostamenti').onclick = () => pwSwitchTab('spostamenti');
+  document.getElementById('pw-tab-ricerca-squadre').onclick = () => pwSwitchTab('ricerca-squadre');
   const _spostCalc  = document.getElementById('pw-spost-calcola');
   const _spostClear = document.getElementById('pw-spost-clear');
   if (_spostCalc)  _spostCalc.onclick  = () => pwSpostCalcola();

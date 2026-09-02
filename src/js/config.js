@@ -34,6 +34,17 @@ const ATTESTATI_DURATA = {
 /* Giorni di preavviso entro cui un attestato ancora valido viene mostrato "in scadenza". */
 const ATTESTATI_PREAVVISO_GG = 90;
 
+/* Giorni di preavviso per i DPI. Piu' corto di quello degli attestati (90) perche' un DPI
+   si sostituisce, non si ri-frequenta: qualche settimana basta per ordinarlo e consegnarlo. */
+const DPI_PREAVVISO_GG = 30;
+
+/* Catalogo DPI di primo avvio. E' solo il seed: da qui in poi il catalogo vive in
+   state.dpi_disponibili, che viene persistito (chiave 'dpi_disponibili' del dominio core)
+   e puo' essere svuotato del tutto senza che questa lista torni a ripopolarlo. */
+const DPI_DEFAULT = ['Casco', 'Occhiali protettivi', 'Guanti di sicurezza', 'Scarpe antinfortunistiche',
+  'Giubbotto di sicurezza', 'Cintura di sicurezza', 'Imbracatura', 'Mascherina/Respiratore',
+  'Camice/Tuta protettiva', 'Altro'];
+
 /* Colonne della matrice Attestati. Alcune voci del vocabolario ATTESTATI sono
    specializzazioni della stessa abilitazione (Segnaletica Preposto/Addetto, ENEL 1A..2B):
    come colonne a se' stanti sarebbero quasi tutte vuote, quindi vengono accorpate in
@@ -203,7 +214,14 @@ let state = {
   commesse_escluse: [], // lista permanente: nomi esclusi per sempre dai dati attivi, anche se rimossi dall'archivio
   commesse_attive_meta: {}, // {[nome]: {cliente,industry,inizio,fine,note,skills,attestati_richiesti,dpi_richiesti}}
   assegnazioni: [],
-  dpi_disponibili: ['Casco', 'Occhiali protettivi', 'Guanti di sicurezza', 'Scarpe antinfortunistiche', 'Giubbotto di sicurezza', 'Cintura di sicurezza', 'Imbracatura', 'Mascherina/Respiratore', 'Camice/Tuta protettiva', 'Altro'],
+  // Catalogo DPI: elenco ordinato dei nomi (colonne della matrice DPI e caselle "DPI
+  // richiesti" delle commesse). Vedi dashboard-dpi-admin.js.
+  dpi_disponibili: DPI_DEFAULT.slice(),
+  // Durata di validita' in mesi per tipo di DPI: {"<nome DPI>": {durata_mesi: N}}.
+  // E' l'equivalente-dato di ATTESTATI_DURATA (che invece e' una costante, perche' il
+  // vocabolario degli attestati e' fisso mentre i DPI li crea l'utente a runtime).
+  // Voce assente o durata nulla = il DPI non scade da solo, la data va messa a mano.
+  dpi_catalogo: {},
   activeTab: 'pipeline',
   filters: { search:'', skills:new Set(), attestati:new Set(), lowSat:false, regione:'', provincia:'', showEx:false },
   searchCommesse: '',

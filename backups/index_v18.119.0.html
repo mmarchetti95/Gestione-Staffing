@@ -1805,7 +1805,7 @@
   <div id="pw-view-ricerca-squadre" class="hidden">
     <div class="grid grid-cols-1 lg:grid-cols-4 gap-4 items-start">
       <!-- Pannello input -->
-      <div id="rs-input-panel" class="lg:col-span-1 bg-white border border-slate-200 rounded-lg p-3 shadow-sm no-print">
+      <div class="lg:col-span-1 bg-white border border-slate-200 rounded-lg p-3 shadow-sm no-print">
         <div class="text-xs font-semibold text-slate-700 mb-3 uppercase tracking-wide">🔍 Ricerca Squadre</div>
 
         <label class="block text-xs font-semibold text-slate-600 mb-1">Comune / Cantiere</label>
@@ -1871,7 +1871,7 @@
 
       <!-- Risultati e mappa -->
       <div class="lg:col-span-3">
-        <div id="rs-risultati-card" class="bg-white border border-slate-200 rounded-lg p-3 mb-3">
+        <div class="bg-white border border-slate-200 rounded-lg p-3 mb-3">
           <div class="flex items-center justify-between mb-3 gap-3">
             <div class="text-xs font-semibold text-slate-700 uppercase tracking-wide">📊 Squadre più vicine</div>
             <label class="flex items-center gap-1.5 text-xs text-slate-600 cursor-pointer">
@@ -4886,8 +4886,6 @@ function renderCommessaPipelineCard(c) {
   const skillBadges = c.skills.map(s => `<span class="skill-badge req">${s}</span>`).join('');
   const attReq = c.attestati_richiesti || [];
   const attBadges = attReq.map(a => `<span class="att-badge req" title="Attestato richiesto: ${a}">${a.length>14 ? a.substring(0,13)+'…' : a}</span>`).join('');
-  const dpiReq = c.dpi_richiesti || [];
-  const dpiBadges = dpiReq.map(d => `<span class="dpi-badge req" title="DPI richiesto: ${esc(d)}">${esc(d.length>16 ? d.substring(0,15)+'…' : d)}</span>`).join('');
 
   // tabella allocazioni dettagliate (gg per mese)
   let staffingTable = '';
@@ -4947,7 +4945,7 @@ function renderCommessaPipelineCard(c) {
           <button class="del-c text-xs text-slate-400 hover:text-red-600" data-id="${c.id}" title="Elimina">🗑</button>
         </div>
       </div>
-      <div class="mb-2">${skillBadges || '<span class="text-[10px] text-slate-400">nessuna skill</span>'}${attBadges ? '<div class="mt-1">'+attBadges+'</div>' : ''}${dpiBadges ? '<div class="mt-1">'+dpiBadges+'</div>' : ''}</div>
+      <div class="mb-2">${skillBadges || '<span class="text-[10px] text-slate-400">nessuna skill</span>'}${attBadges ? '<div class="mt-1">'+attBadges+'</div>' : ''}</div>
       <div class="flex items-center justify-between text-xs text-slate-600 mb-1">
         <span class="font-medium">${totRisorseDistinte}/${c.risorse_necessarie} risorse</span>
         <span class="text-[10px] text-slate-400">${Math.round(pct)}%</span>
@@ -5116,7 +5114,7 @@ function renderCommesseAttive() {
         <div class="mt-2">
           ${fabbisognoBox}
           ${meta.attestati_richiesti && meta.attestati_richiesti.length > 0 ? `<div class="mb-2 flex flex-wrap gap-1">${meta.attestati_richiesti.map(a => `<span class="att-badge req text-[10px] font-medium bg-purple-100 text-purple-700 px-2 py-1 rounded" title="Attestato richiesto: ${a}">${a.length>14 ? a.substring(0,13)+'…' : a}</span>`).join('')}</div>` : ''}
-          ${meta.dpi_richiesti && meta.dpi_richiesti.length > 0 ? `<div class="mb-2 flex flex-wrap gap-1">${meta.dpi_richiesti.map(d => `<span class="dpi-badge req text-[10px] font-medium bg-yellow-100 text-yellow-700 px-2 py-1 rounded" title="DPI richiesto: ${esc(d)}">${esc(d)}</span>`).join('')}</div>` : ''}
+          ${meta.dpi_richiesti && meta.dpi_richiesti.length > 0 ? `<div class="mb-2 flex flex-wrap gap-1">${meta.dpi_richiesti.map(d => `<span class="dpi-badge req text-[10px] font-medium bg-yellow-100 text-yellow-700 px-2 py-1 rounded" title="DPI richiesto: ${d}">${d}</span>`).join('')}</div>` : ''}
           <div class="overflow-x-auto">
             <table class="w-full text-[10px]">
               <thead class="bg-slate-50">
@@ -5960,19 +5958,6 @@ function openCommessaModal(id) {
           ${ATTESTATI.map(a => `<label class="flex items-center gap-1 text-xs hover:bg-white rounded px-1 cursor-pointer"><input type="checkbox" class="m-att" value="${a.replace(/"/g, '&quot;')}" ${cAttReq.includes(a)?'checked':''}><span>${a}</span></label>`).join('')}
         </div>
       </div>
-      <div>
-        <div class="flex items-center justify-between mb-1">
-          <div class="text-xs text-slate-600 font-medium">DPI richiesti</div>
-          <div class="flex gap-1">
-            <button type="button" id="m-dpi-all" class="text-[10px] px-2 py-0.5 bg-slate-100 text-slate-700 rounded border border-slate-300 hover:bg-slate-200">Tutti</button>
-            <button type="button" id="m-dpi-none" class="text-[10px] px-2 py-0.5 bg-slate-100 text-slate-700 rounded border border-slate-300 hover:bg-slate-200">Nessuno</button>
-          </div>
-        </div>
-        <div class="grid grid-cols-2 gap-1 p-2 bg-yellow-50 rounded border border-yellow-200 max-h-56 overflow-y-auto">
-          ${(state.dpi_disponibili || []).map(d => `<label class="flex items-center gap-1 text-xs hover:bg-white rounded px-1 cursor-pointer"><input type="checkbox" class="m-dpi" value="${esc(d)}" ${cDpiReq.includes(d)?'checked':''}><span>${esc(d)}</span></label>`).join('')}
-          ${(state.dpi_disponibili || []).length === 0 ? '<div class="text-[10px] text-yellow-700 italic col-span-2">Catalogo DPI vuoto: aggiungi i tipi di DPI dalla sezione “🦺 DPI &amp; scadenze”.</div>' : ''}
-        </div>
-      </div>
     </div>
     <div class="flex justify-end gap-2 mt-4">
       <button onclick="closeModal()" class="px-3 py-1.5 text-sm border border-slate-300 rounded">Annulla</button>
@@ -5999,8 +5984,6 @@ function openCommessaModal(id) {
 
   document.getElementById('m-att-all').onclick = () => document.querySelectorAll('.m-att').forEach(x => x.checked = true);
   document.getElementById('m-att-none').onclick = () => document.querySelectorAll('.m-att').forEach(x => x.checked = false);
-  document.getElementById('m-dpi-all').onclick = () => document.querySelectorAll('.m-dpi').forEach(x => x.checked = true);
-  document.getElementById('m-dpi-none').onclick = () => document.querySelectorAll('.m-dpi').forEach(x => x.checked = false);
   document.getElementById('m-btn-fabbisogno').onclick = () => {
     // Salva in bozza i dati correnti prima di aprire il sub-modal
     const tempC = state.pipeline.find(p => p.id === c.id);
@@ -6026,7 +6009,6 @@ function openCommessaModal(id) {
       risorse_necessarie: parseInt(document.getElementById('m-risorse').value)||0,
       skills: [...document.querySelectorAll('.m-skill:checked')].map(x => x.value),
       attestati_richiesti: [...document.querySelectorAll('.m-att:checked')].map(x => x.value),
-      dpi_richiesti: [...document.querySelectorAll('.m-dpi:checked')].map(x => x.value),
     };
     if (!newC.progetto || !newC.cliente) { showAlertModal('Cliente e Progetto sono obbligatori.'); return; }
     if (id) { Object.assign(state.pipeline.find(p => p.id === id), newC); await saveState('Modifica commessa pipeline', {commessa: newC.progetto, cliente: newC.cliente}); }
@@ -7606,8 +7588,8 @@ function openCommessaAttivaModal(nome) {
           </div>
         </div>
         <div class="grid grid-cols-2 gap-1 p-2 bg-yellow-50 rounded border border-yellow-200 max-h-48 overflow-y-auto">
-          ${(state.dpi_disponibili||[]).map(d=>`<label class="flex items-center gap-1 text-xs cursor-pointer hover:bg-white rounded px-1"><input type="checkbox" class="ma-dpi" value="${esc(d)}" ${(m.dpi_richiesti||[]).includes(d)?'checked':''}><span>${esc(d)}</span></label>`).join('')}
-          ${(state.dpi_disponibili||[]).length===0?'<div class="text-[10px] text-yellow-700 italic col-span-2">Catalogo DPI vuoto: aggiungi i tipi di DPI dalla sezione “🦺 DPI &amp; scadenze”.</div>':''}
+          ${(state.dpi_disponibili||[]).map(d=>`<label class="flex items-center gap-1 text-xs cursor-pointer hover:bg-white rounded px-1"><input type="checkbox" class="ma-dpi" value="${d.replace(/"/g,'&quot;')}" ${(m.dpi_richiesti||[]).includes(d)?'checked':''}>${d}</label>`).join('')}
+          ${(state.dpi_disponibili||[]).length===0?'<div class="text-[10px] text-yellow-600 italic col-span-2">Nessun DPI disponibile. Aggiungi i DPI dalla sezione admin.</div>':''}
         </div>
       </div>
     </div>
@@ -8124,7 +8106,7 @@ function renderDpi() {
   });
 
   // Scadenza piu' vicina della riga, per l'ordinamento "per urgenza"
-  function dpiUrgenzaRiga(r) {
+  function urgenzaRiga(r) {
     let best = null;
     Object.keys(r.voci).forEach(n => {
       const gg = attGiorniAllaScadenza(r.voci[n].scad);
@@ -8134,7 +8116,7 @@ function renderDpi() {
     return best === null ? 999999 : best;
   }
 
-  if (_dpiFiltri.ordine === 'scadenza') visibili.sort((a, b) => dpiUrgenzaRiga(a) - dpiUrgenzaRiga(b) || a.nome.localeCompare(b.nome));
+  if (_dpiFiltri.ordine === 'scadenza') visibili.sort((a, b) => urgenzaRiga(a) - urgenzaRiga(b) || a.nome.localeCompare(b.nome));
   else visibili.sort((a, b) => a.nome.localeCompare(b.nome));
 
   const countEl = document.getElementById('dpi-count');
@@ -8890,10 +8872,9 @@ function renderAll() {
   renderGantt();
   renderSkillFilters();
   renderAttestatiFilters();
-  renderDpiCatalogo();
+  renderDpiAdmin();
   renderOperatori();
   renderAttestati();
-  renderDpi();
   renderCommesse();
   renderGap();
   // Se la vista operatore è aperta, aggiornala
@@ -16032,31 +16013,13 @@ function _rsBuildSquadre() {
   return out;
 }
 
-/* True se la squadra è coinvolta in un blocco doppia week che tocca questa settimana
-   (iniziato ora, oppure la settimana scorsa e quindi ancora in corso). */
-function _rsInDoppiaWeek(sq) {
-  const prev = pwWeekAdd(pwAnno, pwWeek, -1);
-  return sq.operatori.some(n =>
-    pwIsDwStart(pwAnno, pwWeek, n) || pwIsDwStart(prev.anno, prev.week, n));
-}
-
-/* Giorni da considerare per una squadra: il sabato è un giorno lavorativo solo in
-   doppia week (trasferta lunga). Per le altre squadre mostrarlo come "libero" sarebbe
-   fuorviante — non ci si va comunque. Resta però visibile se in Griglia c'è davvero
-   del lavoro programmato di sabato, per non nascondere dati reali. */
-function _rsNumGiorni(sq) {
-  if ((sq.cantieriByDay[5] || []).length) return 6;
-  return _rsInDoppiaWeek(sq) ? 6 : 5;
-}
-
-/* Stato giorno per giorno. La doppia week copre la settimana di inizio (fuori tutta
-   la settimana) e la successiva (rientro giovedì): vedi pwSetDwStart/pwIsDwStart. */
+/* Stato giorno per giorno (0..5). La doppia week copre la settimana di inizio (fuori
+   tutta la settimana) e la successiva (rientro giovedì): vedi pwSetDwStart/pwIsDwStart. */
 function _rsDisponibilita(sq) {
   const prev = pwWeekAdd(pwAnno, pwWeek, -1);
   const ferieWk = (pwFerie[pwAnno] && pwFerie[pwAnno][pwWeek]) || {};
   const stati = [];
-  const nGiorni = _rsNumGiorni(sq);
-  for (let d = 0; d < nGiorni; d++) {
+  for (let d = 0; d < 6; d++) {
     let away = false;
     let inFerie = 0;
     sq.operatori.forEach(n => {
@@ -16080,9 +16043,8 @@ function _rsDisponibilita(sq) {
    sostanziale di distanza vince il giorno più presto. `distByLuogo` mappa un nome
    cantiere normalizzato sulla sua distanza minima da una tappa. */
 function _rsGiornoConsigliato(sq, stati, distByLuogo) {
-  const nGiorni = stati.length;
   const liberi = [];
-  for (let d = 0; d < nGiorni; d++) if (stati[d] === 'libero') liberi.push(d);
+  for (let d = 0; d < 6; d++) if (stati[d] === 'libero') liberi.push(d);
   if (!liberi.length) return null;
 
   /* Tiene anche il cantiere che ha prodotto il minimo: in un giorno la squadra può
@@ -16100,7 +16062,7 @@ function _rsGiornoConsigliato(sq, stati, distByLuogo) {
   liberi.forEach(d => {
     let prevG = null, nextG = null;
     for (let p = d - 1; p >= 0; p--) if ((sq.cantieriByDay[p] || []).length) { prevG = p; break; }
-    for (let n = d + 1; n < nGiorni; n++) if ((sq.cantieriByDay[n] || []).length) { nextG = n; break; }
+    for (let n = d + 1; n < 6; n++) if ((sq.cantieriByDay[n] || []).length) { nextG = n; break; }
 
     const dPrev = prevG == null ? null : distDa(sq.cantieriByDay[prevG]);
     const dNext = nextG == null ? null : distDa(sq.cantieriByDay[nextG]);
@@ -16123,7 +16085,7 @@ function _rsGiornoConsigliato(sq, stati, distByLuogo) {
   });
 
   let run = 0;
-  for (let d = best.giorno; d < nGiorni && stati[d] === 'libero'; d++) run++;
+  for (let d = best.giorno; d < 6 && stati[d] === 'libero'; d++) run++;
   best.consecutivi = run;
   return best;
 }
@@ -16317,7 +16279,6 @@ function rsRenderTappe() {
   if (!container) return;
   if (!_ricercaSquadre.tappe.length) {
     container.innerHTML = '<div class="text-xs text-slate-400 italic">Nessuna tappa aggiunta.</div>';
-    _rsSyncAltezze();
     return;
   }
   container.innerHTML = _ricercaSquadre.tappe.map((t, i) => {
@@ -16334,8 +16295,6 @@ function rsRenderTappe() {
   container.querySelectorAll('button[data-rm]').forEach(b => {
     b.onclick = () => rsRemoveTappa(parseInt(b.dataset.rm, 10));
   });
-  /* Aggiungere o togliere tappe cambia l'altezza del pannello: riallinea i risultati */
-  _rsSyncAltezze();
 }
 
 /* ---------- distanze ---------- */
@@ -16556,8 +16515,7 @@ function _rsBadgeHtml(coperti, richiesti, mancanti, icona, cosa) {
 /* Cantieri della squadra con i giorni in cui ci sta: "Prato (Lun·Mar)" */
 function _rsSitiHtml(sq) {
   const byCantiere = {};
-  const nGiorni = _rsNumGiorni(sq);
-  for (let d = 0; d < nGiorni; d++) {
+  for (let d = 0; d < 6; d++) {
     (sq.cantieriByDay[d] || []).forEach(c => {
       if (!byCantiere[c]) byCantiere[c] = [];
       byCantiere[c].push(PW_MAP_DAY_SHORT[d]);
@@ -16572,11 +16530,6 @@ function _rsSitiHtml(sq) {
 }
 
 function rsRenderRisultati() {
-  _rsRenderRisultatiBody();
-  _rsSyncAltezze();
-}
-
-function _rsRenderRisultatiBody() {
   const container = document.getElementById('rs-risultati');
   if (!container) return;
 
@@ -16648,32 +16601,6 @@ function _rsRenderRisultatiBody() {
         '<th style="' + th + 'text-align:center;">Requisiti</th>' +
       '</tr></thead><tbody>' + righe + '</tbody></table></div>' +
     '<div style="font-size:10px;color:#64748b;margin-top:8px;">' + legenda + '</div>';
-}
-
-/* Allinea l'altezza della card dei risultati a quella del pannello di ricerca, così
-   le due colonne finiscono alla stessa quota invece di lasciare un vuoto accanto a una
-   tabella lunga. Il limite è un max-height: se le squadre sono poche la card resta
-   corta, se sono tante scorre. Sotto il breakpoint lg le card sono impilate e il
-   vincolo va tolto, altrimenti comprimerebbe la tabella senza motivo. */
-function _rsSyncAltezze() {
-  const panel = document.getElementById('rs-input-panel');
-  const card = document.getElementById('rs-risultati-card');
-  const body = document.getElementById('rs-risultati');
-  if (!panel || !card || !body) return;
-
-  if (window.innerWidth < 1024) {
-    body.style.maxHeight = '';
-    body.style.overflowY = '';
-    return;
-  }
-  const h = panel.offsetHeight;
-  if (!h) return; // pannello non ancora visibile (tab nascosto)
-  /* Spazio occupato dalla card oltre al corpo tabella (titolo, filtro, padding).
-     Resta stabile anche a chiamate ripetute, perché entrambe le misure scendono
-     insieme quando il corpo è già limitato. */
-  const chrome = card.offsetHeight - body.offsetHeight;
-  body.style.maxHeight = Math.max(180, h - chrome) + 'px';
-  body.style.overflowY = 'auto';
 }
 
 /* ---------- mappa ---------- */
@@ -16775,13 +16702,9 @@ function rsInit() {
   rsRenderTappe();
   rsRenderRisultati();
   rsRenderMappa();
-  /* Il pannello è appena diventato visibile: le misure sono attendibili solo dopo
-     che il browser ha completato il layout. */
-  setTimeout(_rsSyncAltezze, 80);
 
   if (!_rsBound) {
     _rsBound = true;
-    window.addEventListener('resize', _rsSyncAltezze);
     document.addEventListener('mousedown', e => {
       const inSkills = e.target.closest && (e.target.closest('#rs-skills-dropdown') || e.target.closest('#rs-tappa-skills-btn'));
       const inStr = e.target.closest && (e.target.closest('#rs-strumenti-dropdown') || e.target.closest('#rs-tappa-strumenti-btn'));

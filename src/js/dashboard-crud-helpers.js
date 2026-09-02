@@ -7,9 +7,10 @@ function openModal(html) {
 function closeModal() { document.getElementById('modal-root').innerHTML = ''; }
 
 function openCommessaModal(id) {
-  const c = id ? state.pipeline.find(p => p.id === id) : { id:'p_new_'+Date.now(), cliente:'', progetto:'', industry: INDUSTRIES[0], inizio:'', fine:'', risorse_necessarie:1, skills:[], attestati_richiesti:[], email_referente:'', regione:'', provincia:'' };
+  const c = id ? state.pipeline.find(p => p.id === id) : { id:'p_new_'+Date.now(), cliente:'', progetto:'', industry: INDUSTRIES[0], inizio:'', fine:'', risorse_necessarie:1, skills:[], attestati_richiesti:[], dpi_richiesti:[], email_referente:'', regione:'', provincia:'' };
   const regioneIniziale = c.regione || (c.provincia && provinciaInfo(c.provincia)?.regione) || '';
   const cAttReq = c.attestati_richiesti || [];
+  const cDpiReq = c.dpi_richiesti || [];
   const root = document.getElementById('modal-root');
   root.innerHTML = `<div class="modal-backdrop"><div class="bg-white rounded-lg shadow-xl w-full max-w-2xl mx-4 my-8 p-5 max-h-[90vh] overflow-y-auto">
     <h3 class="font-semibold text-slate-900 mb-3">${id?'Modifica':'Nuova'} commessa pipeline</h3>
@@ -62,6 +63,19 @@ function openCommessaModal(id) {
           ${ATTESTATI.map(a => `<label class="flex items-center gap-1 text-xs hover:bg-white rounded px-1 cursor-pointer"><input type="checkbox" class="m-att" value="${a.replace(/"/g, '&quot;')}" ${cAttReq.includes(a)?'checked':''}><span>${a}</span></label>`).join('')}
         </div>
       </div>
+      <div>
+        <div class="flex items-center justify-between mb-1">
+          <div class="text-xs text-slate-600 font-medium">DPI richiesti</div>
+          <div class="flex gap-1">
+            <button type="button" id="m-dpi-all" class="text-[10px] px-2 py-0.5 bg-slate-100 text-slate-700 rounded border border-slate-300 hover:bg-slate-200">Tutti</button>
+            <button type="button" id="m-dpi-none" class="text-[10px] px-2 py-0.5 bg-slate-100 text-slate-700 rounded border border-slate-300 hover:bg-slate-200">Nessuno</button>
+          </div>
+        </div>
+        <div class="grid grid-cols-2 gap-1 p-2 bg-yellow-50 rounded border border-yellow-200 max-h-56 overflow-y-auto">
+          ${(state.dpi_disponibili || []).map(d => `<label class="flex items-center gap-1 text-xs hover:bg-white rounded px-1 cursor-pointer"><input type="checkbox" class="m-dpi" value="${esc(d)}" ${cDpiReq.includes(d)?'checked':''}><span>${esc(d)}</span></label>`).join('')}
+          ${(state.dpi_disponibili || []).length === 0 ? '<div class="text-[10px] text-yellow-700 italic col-span-2">Catalogo DPI vuoto: aggiungi i tipi di DPI dalla sezione “🦺 DPI &amp; scadenze”.</div>' : ''}
+        </div>
+      </div>
     </div>
     <div class="flex justify-end gap-2 mt-4">
       <button onclick="closeModal()" class="px-3 py-1.5 text-sm border border-slate-300 rounded">Annulla</button>
@@ -88,6 +102,8 @@ function openCommessaModal(id) {
 
   document.getElementById('m-att-all').onclick = () => document.querySelectorAll('.m-att').forEach(x => x.checked = true);
   document.getElementById('m-att-none').onclick = () => document.querySelectorAll('.m-att').forEach(x => x.checked = false);
+  document.getElementById('m-dpi-all').onclick = () => document.querySelectorAll('.m-dpi').forEach(x => x.checked = true);
+  document.getElementById('m-dpi-none').onclick = () => document.querySelectorAll('.m-dpi').forEach(x => x.checked = false);
   document.getElementById('m-btn-fabbisogno').onclick = () => {
     // Salva in bozza i dati correnti prima di aprire il sub-modal
     const tempC = state.pipeline.find(p => p.id === c.id);
@@ -113,6 +129,7 @@ function openCommessaModal(id) {
       risorse_necessarie: parseInt(document.getElementById('m-risorse').value)||0,
       skills: [...document.querySelectorAll('.m-skill:checked')].map(x => x.value),
       attestati_richiesti: [...document.querySelectorAll('.m-att:checked')].map(x => x.value),
+      dpi_richiesti: [...document.querySelectorAll('.m-dpi:checked')].map(x => x.value),
     };
     if (!newC.progetto || !newC.cliente) { showAlertModal('Cliente e Progetto sono obbligatori.'); return; }
     if (id) { Object.assign(state.pipeline.find(p => p.id === id), newC); await saveState('Modifica commessa pipeline', {commessa: newC.progetto, cliente: newC.cliente}); }
@@ -359,7 +376,7 @@ async function promuoviCommessa(id) {
 }
 
 function openOperatoreModal(id) {
-  const op = id ? state.operatori.find(o => o.id === id) : { id:'op_new_'+Date.now(), nome_breve:'', nome_esteso:'', nome:'', cognome:'', email:'', regione:'', provincia:'', contratto_tipo:'indeterminato', data_inizio_rapporto:'', data_fine_rapporto:'', skills:[], attestati:[], attestati_dett:{}, alloc_mensile:new Array(12).fill(0), data_aggiunta: new Date().toISOString().slice(0,10) };
+  const op = id ? state.operatori.find(o => o.id === id) : { id:'op_new_'+Date.now(), nome_breve:'', nome_esteso:'', nome:'', cognome:'', email:'', regione:'', provincia:'', contratto_tipo:'indeterminato', data_inizio_rapporto:'', data_fine_rapporto:'', skills:[], attestati:[], attestati_dett:{}, dpi:[], dpi_dett:{}, alloc_mensile:new Array(12).fill(0), data_aggiunta: new Date().toISOString().slice(0,10) };
   const opAtt = op.attestati || [];
   const regioneIniziale = op.regione || (op.provincia && provinciaInfo(op.provincia)?.regione) || '';
   const root = document.getElementById('modal-root');
@@ -417,6 +434,21 @@ function openOperatoreModal(id) {
           ${ATTESTATI.map(a => attRigaModaleOperatore(op, a)).join('') || '<div class="text-[10px] text-slate-400 italic">Nessun attestato definito nel sistema.</div>'}
         </div>
       </div>
+      <div>
+        <div class="flex items-center justify-between mb-1">
+          <div class="text-xs text-slate-600 font-medium">DPI in dotazione <span class="text-slate-400 font-normal">(taglia e date facoltative)</span></div>
+          <div class="flex gap-1">
+            <button type="button" id="mo-dpi-all" class="text-[10px] px-2 py-0.5 bg-slate-100 text-slate-700 rounded border border-slate-300 hover:bg-slate-200">Tutti</button>
+            <button type="button" id="mo-dpi-none" class="text-[10px] px-2 py-0.5 bg-slate-100 text-slate-700 rounded border border-slate-300 hover:bg-slate-200">Nessuno</button>
+          </div>
+        </div>
+        <div class="space-y-0.5 p-2 bg-yellow-50 rounded border border-yellow-200 max-h-56 overflow-y-auto">
+          <div class="flex items-center gap-1.5 text-[10px] text-slate-500 uppercase tracking-wider px-1 pb-0.5">
+            <span class="w-3"></span><span class="flex-1">DPI</span><span class="w-[54px]">Taglia</span><span class="w-[112px]">Consegna</span><span class="w-[112px]">Scadenza</span>
+          </div>
+          ${(state.dpi_disponibili || []).map(d => dpiRigaModaleOperatore(op, d)).join('') || '<div class="text-[10px] text-yellow-700 italic">Catalogo DPI vuoto: aggiungi i tipi di DPI dalla sezione “🦺 DPI &amp; scadenze”.</div>'}
+        </div>
+      </div>
     </div>
     <div class="flex justify-end gap-2 mt-4">
       <button onclick="closeModal()" class="px-3 py-1.5 text-sm border border-slate-300 rounded">Annulla</button>
@@ -458,6 +490,8 @@ function openOperatoreModal(id) {
     });
   });
 
+  dpiBindModaleOperatore();
+
   const contrattoDateBox = document.getElementById('mo-contratto-date');
   document.querySelectorAll('input[name="mo-contratto"]').forEach(r => {
     r.onchange = () => contrattoDateBox.classList.toggle('hidden', !document.getElementById('mo-contratto-det').checked);
@@ -484,6 +518,8 @@ function openOperatoreModal(id) {
       if (prec && prec.corso === corso) { attestatiDett[nomeAtt] = prec; return; }
       attestatiDett[nomeAtt] = { corso: corso, scad: attScadenzaDaCorso(nomeAtt, corso), fonte: 'manuale' };
     });
+    const letturaDpi = dpiLeggiModaleOperatore(op);
+    if (letturaDpi.errore) { showAlertModal(letturaDpi.errore); return; }
     const nome = (document.getElementById('mo-nome')?.value || '').trim();
     const cognome = (document.getElementById('mo-cognome')?.value || '').trim();
     const email = (document.getElementById('mo-email')?.value || '').trim();
@@ -497,8 +533,8 @@ function openOperatoreModal(id) {
     }
     const dataInizioRapporto = contrattoTipo === 'determinato' ? dataInizio : '';
     const dataFineRapporto = contrattoTipo === 'determinato' ? dataFine : '';
-    if (id) { Object.assign(op, { nome_esteso: nomeEsteso, nome, cognome, email, regione, provincia, contratto_tipo: contrattoTipo, data_inizio_rapporto: dataInizioRapporto, data_fine_rapporto: dataFineRapporto, skills, attestati, attestati_dett: attestatiDett }); await saveState('Modifica operatore', {operatore: nomeEsteso}, true); }
-    else { state.operatori.push({ ...op, nome_esteso: nomeEsteso, nome_breve: nomeEsteso, nome, cognome, email, regione, provincia, contratto_tipo: contrattoTipo, data_inizio_rapporto: dataInizioRapporto, data_fine_rapporto: dataFineRapporto, skills, attestati, attestati_dett: attestatiDett }); await saveState('Nuovo operatore', {operatore: nomeEsteso}, true); }
+    if (id) { Object.assign(op, { nome_esteso: nomeEsteso, nome, cognome, email, regione, provincia, contratto_tipo: contrattoTipo, data_inizio_rapporto: dataInizioRapporto, data_fine_rapporto: dataFineRapporto, skills, attestati, attestati_dett: attestatiDett, dpi: letturaDpi.dpi, dpi_dett: letturaDpi.dett }); await saveState('Modifica operatore', {operatore: nomeEsteso}, true); }
+    else { state.operatori.push({ ...op, nome_esteso: nomeEsteso, nome_breve: nomeEsteso, nome, cognome, email, regione, provincia, contratto_tipo: contrattoTipo, data_inizio_rapporto: dataInizioRapporto, data_fine_rapporto: dataFineRapporto, skills, attestati, attestati_dett: attestatiDett, dpi: letturaDpi.dpi, dpi_dett: letturaDpi.dett }); await saveState('Nuovo operatore', {operatore: nomeEsteso}, true); }
     renderAll(); closeModal();
   };
 }

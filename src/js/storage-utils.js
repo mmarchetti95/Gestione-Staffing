@@ -14,8 +14,8 @@ async function sget(k) {
 }
 
 async function loadState() {
-  const keys = ['commesse_pipeline','operatori','assegnazioni','commesse_attive_extra','staffing_modificato','commesse_chiuse','commesse_attive_meta','commesse_escluse','attestati_registro'];
-  const [p, o, a, ce, sm, cc, cam, cesc, areg] = await Promise.all(keys.map(sget));
+  const keys = ['commesse_pipeline','operatori','assegnazioni','commesse_attive_extra','staffing_modificato','commesse_chiuse','commesse_attive_meta','commesse_escluse','attestati_registro','dpi_disponibili','dpi_catalogo'];
+  const [p, o, a, ce, sm, cc, cam, cesc, areg, ddisp, dcat] = await Promise.all(keys.map(sget));
   state.pipeline = p || JSON.parse(JSON.stringify(INITIAL_DATA.pipeline));
   state.operatori = o || JSON.parse(JSON.stringify(INITIAL_DATA.operatori));
   state.commesse_chiuse = cc || INITIAL_DATA._chiuse || [];
@@ -40,6 +40,11 @@ async function loadState() {
   state.assegnazioni = a || INITIAL_DATA._assegnazioni || [];
   state.commesse_attive_meta = cam || INITIAL_DATA._meta || {};
   state.attestati_registro = areg || { aggiornato_il: '', file: '', da: '', dipendenti: [] };
+  // Catalogo DPI: prima di v18.120.0 non veniva ne' salvato ne' riletto, quindi ogni DPI
+  // aggiunto spariva al reload. Un array vuoto e' un valore legittimo (catalogo svuotato
+  // di proposito) e non deve far tornare il seed: si distingue con Array.isArray, non con ||.
+  state.dpi_disponibili = Array.isArray(ddisp) ? ddisp : DPI_DEFAULT.slice();
+  state.dpi_catalogo = (dcat && typeof dcat === 'object') ? dcat : {};
   ricalcolaAllocOperatori();
 
   // Seed email operatori una-tantum (solo su quelli ancora senza email)
@@ -58,6 +63,8 @@ async function saveState(logAction, logDetails, immediate) {
     sset('commesse_attive_meta', state.commesse_attive_meta),
     sset('commesse_escluse', state.commesse_escluse),
     sset('attestati_registro', state.attestati_registro),
+    sset('dpi_disponibili', state.dpi_disponibili),
+    sset('dpi_catalogo', state.dpi_catalogo),
   ]);
   // Log attività se specificata
   if (logAction) sbLogActivity(logAction, logDetails || {});
@@ -73,7 +80,7 @@ async function saveState(logAction, logDetails, immediate) {
 async function resetAll() {
   if (!await showConfirmAsync('Reset completo: tutte le modifiche manuali andranno perse. Procedere?', 'Reset')) return;
   if (hasStorage) {
-    for (const k of ['commesse_pipeline','operatori','assegnazioni','commesse_attive_extra','staffing_modificato','commesse_chiuse','commesse_attive_meta','commesse_escluse','attestati_registro']) {
+    for (const k of ['commesse_pipeline','operatori','assegnazioni','commesse_attive_extra','staffing_modificato','commesse_chiuse','commesse_attive_meta','commesse_escluse','attestati_registro','dpi_disponibili','dpi_catalogo']) {
       try { await window.storage.delete(k); } catch{}
     }
   } else {
