@@ -376,7 +376,7 @@ async function promuoviCommessa(id) {
 }
 
 function openOperatoreModal(id) {
-  const op = id ? state.operatori.find(o => o.id === id) : { id:'op_new_'+Date.now(), nome_breve:'', nome_esteso:'', nome:'', cognome:'', email:'', regione:'', provincia:'', contratto_tipo:'indeterminato', data_inizio_rapporto:'', data_fine_rapporto:'', skills:[], attestati:[], attestati_dett:{}, dpi:[], dpi_dett:{}, alloc_mensile:new Array(12).fill(0), data_aggiunta: new Date().toISOString().slice(0,10) };
+  const op = id ? state.operatori.find(o => o.id === id) : { id:'op_new_'+Date.now(), nome_breve:'', nome_esteso:'', nome:'', cognome:'', email:'', regione:'', provincia:'', comune_residenza:'', contratto_tipo:'indeterminato', data_inizio_rapporto:'', data_fine_rapporto:'', skills:[], attestati:[], attestati_dett:{}, dpi:[], dpi_dett:{}, alloc_mensile:new Array(12).fill(0), data_aggiunta: new Date().toISOString().slice(0,10) };
   const opAtt = op.attestati || [];
   const regioneIniziale = op.regione || (op.provincia && provinciaInfo(op.provincia)?.regione) || '';
   const root = document.getElementById('modal-root');
@@ -402,6 +402,8 @@ function openOperatoreModal(id) {
           <select id="mo-provincia" class="mt-0.5 w-full border border-slate-300 rounded px-2 py-1.5 text-sm"></select>
         </label>
       </div>
+      <label class="block text-xs"><span class="text-slate-600">Comune di residenza <span class="text-slate-400 font-normal">(facoltativo, anche da import Excel)</span></span>
+        <input id="mo-comune" class="mt-0.5 w-full border border-slate-300 rounded px-2 py-1.5 text-sm" value="${(op.comune_residenza||'').replace(/"/g, '&quot;')}"></label>
       <div>
         <div class="text-xs text-slate-600 mb-1 font-medium">Tipo di rapporto</div>
         <div class="flex gap-4 text-xs mb-1.5">
@@ -525,6 +527,7 @@ function openOperatoreModal(id) {
     const email = (document.getElementById('mo-email')?.value || '').trim();
     const regione = document.getElementById('mo-regione')?.value || '';
     const provincia = document.getElementById('mo-provincia')?.value || '';
+    const comuneResidenza = (document.getElementById('mo-comune')?.value || '').trim();
     const contrattoTipo = document.getElementById('mo-contratto-det').checked ? 'determinato' : 'indeterminato';
     const dataInizio = document.getElementById('mo-data-inizio')?.value || '';
     const dataFine = document.getElementById('mo-data-fine')?.value || '';
@@ -533,8 +536,8 @@ function openOperatoreModal(id) {
     }
     const dataInizioRapporto = contrattoTipo === 'determinato' ? dataInizio : '';
     const dataFineRapporto = contrattoTipo === 'determinato' ? dataFine : '';
-    if (id) { Object.assign(op, { nome_esteso: nomeEsteso, nome, cognome, email, regione, provincia, contratto_tipo: contrattoTipo, data_inizio_rapporto: dataInizioRapporto, data_fine_rapporto: dataFineRapporto, skills, attestati, attestati_dett: attestatiDett, dpi: letturaDpi.dpi, dpi_dett: letturaDpi.dett }); await saveState('Modifica operatore', {operatore: nomeEsteso}, true); }
-    else { state.operatori.push({ ...op, nome_esteso: nomeEsteso, nome_breve: nomeEsteso, nome, cognome, email, regione, provincia, contratto_tipo: contrattoTipo, data_inizio_rapporto: dataInizioRapporto, data_fine_rapporto: dataFineRapporto, skills, attestati, attestati_dett: attestatiDett, dpi: letturaDpi.dpi, dpi_dett: letturaDpi.dett }); await saveState('Nuovo operatore', {operatore: nomeEsteso}, true); }
+    if (id) { Object.assign(op, { nome_esteso: nomeEsteso, nome, cognome, email, regione, provincia, comune_residenza: comuneResidenza, contratto_tipo: contrattoTipo, data_inizio_rapporto: dataInizioRapporto, data_fine_rapporto: dataFineRapporto, skills, attestati, attestati_dett: attestatiDett, dpi: letturaDpi.dpi, dpi_dett: letturaDpi.dett }); await saveState('Modifica operatore', {operatore: nomeEsteso}, true); }
+    else { state.operatori.push({ ...op, nome_esteso: nomeEsteso, nome_breve: nomeEsteso, nome, cognome, email, regione, provincia, comune_residenza: comuneResidenza, contratto_tipo: contrattoTipo, data_inizio_rapporto: dataInizioRapporto, data_fine_rapporto: dataFineRapporto, skills, attestati, attestati_dett: attestatiDett, dpi: letturaDpi.dpi, dpi_dett: letturaDpi.dett }); await saveState('Nuovo operatore', {operatore: nomeEsteso}, true); }
     renderAll(); closeModal();
   };
 }

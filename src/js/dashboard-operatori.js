@@ -119,8 +119,12 @@ function renderOperatori() {
     const isSaturo = sat3 >= 1.0;
     const provInfo = provinciaInfo(op.provincia);
     const regioneOp = operatoreRegione(op);
-    const provBadge = provInfo
-      ? `<span class="text-[9px] bg-sky-50 text-sky-700 border border-sky-200 px-1 rounded" title="${esc(provInfo.regione)}">📍 ${esc(provInfo.nome)}</span>`
+    // Se noto, il comune di residenza (da anagrafica importata o inserito a mano) e' piu'
+    // specifico della sola provincia e viene mostrato al suo posto nel badge.
+    const localita = op.comune_residenza || (provInfo ? provInfo.nome : '');
+    const localitaTitle = [op.comune_residenza, provInfo ? `${provInfo.nome} (${provInfo.sigla})` : '', provInfo ? provInfo.regione : regioneOp].filter(Boolean).join(' · ');
+    const provBadge = localita
+      ? `<span class="text-[9px] bg-sky-50 text-sky-700 border border-sky-200 px-1 rounded" title="${esc(localitaTitle)}">📍 ${esc(localita)}</span>`
       : (regioneOp ? `<span class="text-[9px] bg-sky-50 text-sky-700 border border-sky-200 px-1 rounded" title="Provincia non specificata">📍 ${esc(regioneOp)}</span>` : '');
     const contrattoBadge = op.contratto_tipo === 'determinato' && op.data_fine_rapporto
       ? `<span class="text-[9px] bg-amber-50 text-amber-700 border border-amber-200 px-1 rounded">📅 fino al ${fmtDate(op.data_fine_rapporto)}</span>` : '';
@@ -199,7 +203,7 @@ function renderOperatori() {
    il campo esiste; per i precedenti la cella resta vuota). */
 function exportOperatoriXlsx() {
   if (typeof XLSX === 'undefined') { showAlertModal('Libreria XLSX non caricata. Verifica la connessione internet e ricarica la pagina.'); return; }
-  const header = ['Nome', 'Email', 'Stato', 'Provincia', 'Regione', 'Tipo contratto', 'Data inizio rapporto', 'Data fine rapporto', 'Skill', 'Attestati e certificazioni', 'Attestati scaduti', 'Prima scadenza', 'Data aggiunta al pool'];
+  const header = ['Nome', 'Email', 'Stato', 'Comune residenza', 'Provincia', 'Regione', 'Tipo contratto', 'Data inizio rapporto', 'Data fine rapporto', 'Skill', 'Attestati e certificazioni', 'Attestati scaduti', 'Prima scadenza', 'Data aggiunta al pool'];
   const rows = [...state.operatori]
     .sort((a, b) => (a.nome_esteso || '').localeCompare(b.nome_esteso || ''))
     .map(op => {
@@ -214,6 +218,7 @@ function exportOperatoriXlsx() {
         op.nome_esteso || '',
         op.email || '',
         stato,
+        op.comune_residenza || '',
         provInfo ? provInfo.nome : '',
         operatoreRegione(op),
         op.contratto_tipo === 'determinato' ? 'A termine' : 'Tempo indeterminato',
@@ -232,7 +237,7 @@ function exportOperatoriXlsx() {
       ];
     });
   const ws = XLSX.utils.aoa_to_sheet([header, ...rows]);
-  ws['!cols'] = [{wch:28},{wch:26},{wch:12},{wch:18},{wch:16},{wch:16},{wch:14},{wch:14},{wch:35},{wch:50},{wch:30},{wch:14},{wch:16}];
+  ws['!cols'] = [{wch:28},{wch:26},{wch:12},{wch:20},{wch:18},{wch:16},{wch:16},{wch:14},{wch:14},{wch:35},{wch:50},{wch:30},{wch:14},{wch:16}];
   const wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, ws, 'Operatori');
   const ts = new Date();

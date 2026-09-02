@@ -24,6 +24,7 @@ JS_FILES = [
     'dashboard-kpi.js',
     'dashboard-operatori.js',
     'dashboard-attestati.js',
+    'dashboard-anagrafica-import.js',
     'dashboard-commesse.js',
     'dashboard-assegnazioni.js',
     'dashboard-crud-helpers.js',

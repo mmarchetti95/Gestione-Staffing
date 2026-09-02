@@ -1118,7 +1118,7 @@
     <div class="flex items-center gap-2">
       <button id="btn-presentation" class="px-3 py-1.5 text-sm rounded hover:bg-white/10" style="border:1px solid var(--dark-border-strong);color:var(--dark-text);visibility:visible;">📊 Modalità presentazione</button>
       <div class="text-xs pl-2" style="border-left:1px solid var(--dark-border-strong);color:var(--dark-text-muted);">
-        <span id="app-version" class="font-medium" style="color:var(--accent);">v18.120.0</span> · Michele Marchetti
+        <span id="app-version" class="font-medium" style="color:var(--accent);">v18.121.0</span> · Michele Marchetti
       </div>
     </div>
   </div>
@@ -1367,6 +1367,8 @@
             <div class="flex items-center justify-between">
               <input id="op-search" type="text" placeholder="Cerca operatore…" class="flex-1 mr-2 px-2 py-1.5 text-sm border border-slate-300 rounded">
               <button id="btn-export-op" class="text-xs px-2 py-1 mr-1 bg-white text-slate-500 rounded border border-slate-200 hover:bg-slate-50 hover:text-slate-700 whitespace-nowrap" title="Scarica Excel del pool operatori">⬇ Excel</button>
+              <button onclick="document.getElementById('anag-import-file').click()" class="text-xs px-2 py-1 mr-1 bg-teal-50 text-teal-700 rounded border border-teal-200 hover:bg-teal-100 whitespace-nowrap" title="Importa comune e provincia di residenza dall'export &quot;Anagrafica dipendenti&quot;">⬆ Importa anagrafica</button>
+              <input type="file" id="anag-import-file" accept=".xlsx" class="hidden" onchange="anagImportPick(this)">
               <button id="btn-add-op" class="text-xs px-2 py-1 bg-teal-50 text-teal-700 rounded border border-teal-200 hover:bg-teal-100 whitespace-nowrap">+ Nuovo</button>
             </div>
             <div>
