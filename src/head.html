@@ -288,6 +288,16 @@
   .scrollbox { max-height: 70vh; overflow-y: auto; }
   .scrollbox::-webkit-scrollbar { width: 6px; }
   .scrollbox::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
+  /* Quando scrollbox è dentro un flex container (colonna operatori o commesse),
+     ridimensionalo per crescere con flex e occupare lo spazio disponibile */
+  .scrollbox-in-flex-col {
+    max-height: none !important;
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+  }
+  .scrollbox-in-flex-col::-webkit-scrollbar { width: 6px; }
+  .scrollbox-in-flex-col::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
 
   /* PRINT */
   @media print {
@@ -1104,7 +1114,7 @@
     <div class="flex items-center gap-2">
       <button id="btn-presentation" class="px-3 py-1.5 text-sm rounded hover:bg-white/10" style="border:1px solid var(--dark-border-strong);color:var(--dark-text);visibility:visible;">📊 Modalità presentazione</button>
       <div class="text-xs pl-2" style="border-left:1px solid var(--dark-border-strong);color:var(--dark-text-muted);">
-        <span id="app-version" class="font-medium" style="color:var(--accent);">v18.117.0</span> · Michele Marchetti
+        <span id="app-version" class="font-medium" style="color:var(--accent);">v18.118.0</span> · Michele Marchetti
       </div>
     </div>
   </div>
@@ -1340,7 +1350,7 @@
     <div class="grid lg:grid-cols-2 gap-4">
 
       <!-- POOL OPERATORI -->
-      <div class="bg-white rounded-lg border border-slate-200">
+      <div class="bg-white rounded-lg border border-slate-200 lg:flex lg:flex-col lg:h-[600px]">
         <div class="p-4 border-b border-slate-200">
           <!-- Tab pool / vista operatore -->
           <div class="flex border-b border-slate-200 mb-3 -mx-4 px-4">
@@ -1399,13 +1409,13 @@
           </div>
         </div>
         <div id="op-coerenza-banner" class="hidden"></div>
-        <div class="p-3 scrollbox space-y-2" id="op-list"></div>
-        <div class="p-3 scrollbox hidden" id="op-email-container"></div>
-        <div class="p-3 scrollbox hidden" id="op-vista-container"></div>
+        <div class="p-3 scrollbox scrollbox-in-flex-col space-y-2" id="op-list"></div>
+        <div class="p-3 scrollbox scrollbox-in-flex-col hidden" id="op-email-container"></div>
+        <div class="p-3 scrollbox scrollbox-in-flex-col hidden" id="op-vista-container"></div>
       </div>
 
       <!-- COMMESSE -->
-      <div class="bg-white rounded-lg border border-slate-200">
+      <div class="bg-white rounded-lg border border-slate-200 lg:flex lg:flex-col lg:h-[600px]">
         <div class="border-b border-slate-200 px-4 pt-3">
           <div class="flex items-center justify-between">
             <div class="flex">
@@ -1420,7 +1430,7 @@
             <button id="btn-collapse-all-commesse" class="text-[11px] px-2 py-1.5 border border-slate-300 rounded text-slate-600 hover:bg-slate-50 whitespace-nowrap" title="Comprimi tutte le commesse">⇕ Comprimi tutte</button>
           </div>
         </div>
-        <div class="p-3 scrollbox space-y-3" id="commesse-list"></div>
+        <div class="p-3 scrollbox scrollbox-in-flex-col space-y-3" id="commesse-list"></div>
       </div>
 
     </div>
