@@ -390,6 +390,8 @@ function renderCommesseAttive() {
         </summary>
         <div class="mt-2">
           ${fabbisognoBox}
+          ${meta.attestati_richiesti && meta.attestati_richiesti.length > 0 ? `<div class="mb-2 flex flex-wrap gap-1">${meta.attestati_richiesti.map(a => `<span class="att-badge req text-[10px] font-medium bg-purple-100 text-purple-700 px-2 py-1 rounded" title="Attestato richiesto: ${a}">${a.length>14 ? a.substring(0,13)+'…' : a}</span>`).join('')}</div>` : ''}
+          ${meta.dpi_richiesti && meta.dpi_richiesti.length > 0 ? `<div class="mb-2 flex flex-wrap gap-1">${meta.dpi_richiesti.map(d => `<span class="dpi-badge req text-[10px] font-medium bg-yellow-100 text-yellow-700 px-2 py-1 rounded" title="DPI richiesto: ${d}">${d}</span>`).join('')}</div>` : ''}
           <div class="overflow-x-auto">
             <table class="w-full text-[10px]">
               <thead class="bg-slate-50">

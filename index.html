@@ -1104,7 +1104,7 @@
     <div class="flex items-center gap-2">
       <button id="btn-presentation" class="px-3 py-1.5 text-sm rounded hover:bg-white/10" style="border:1px solid var(--dark-border-strong);color:var(--dark-text);visibility:visible;">📊 Modalità presentazione</button>
       <div class="text-xs pl-2" style="border-left:1px solid var(--dark-border-strong);color:var(--dark-text-muted);">
-        <span id="app-version" class="font-medium" style="color:var(--accent);">v18.115.0</span> · Michele Marchetti
+        <span id="app-version" class="font-medium" style="color:var(--accent);">v18.116.0</span> · Michele Marchetti
       </div>
     </div>
   </div>
@@ -1770,6 +1770,7 @@
 const INITIAL_DATA = {"pipeline": [], "operatori": [], "staffing": [], "commesse_attive": [], "giorni_lavorativi": [20, 20, 22, 21, 20, 21, 23, 21, 22, 22, 21, 21], "saturazione_baseline": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], "riconciliazione": [], "attestati_disponibili": ["RSPP", "ASPP", "Preposto", "RLS", "Primo soccorso", "Defibrillatore BLS-D", "Antincendio", "Ambienti confinati", "Lavori in quota", "Segnaletica stradale - Preposto", "Segnaletica stradale - Addetto", "PES-PAV-PEI", "ENEL 1A", "ENEL 1B", "ENEL 2A", "ENEL 2B"]};
 const SKILLS = ['DRONE', 'LIXEL', 'WO', 'LASER - STATICO', 'ROBOT', 'GRD', 'GPS', 'MMS', 'ALTRO'];
 let ATTESTATI = INITIAL_DATA.attestati_disponibili || [];
+const DPI = ['Casco', 'Occhiali protettivi', 'Guanti di sicurezza', 'Scarpe antinfortunistiche', 'Giubbotto di sicurezza', 'Cintura di sicurezza', 'Imbracatura', 'Mascherina/Respiratore', 'Camice/Tuta protettiva', 'Altro'];
 const MESI = ['Gen','Feb','Mar','Apr','Mag','Giu','Lug','Ago','Set','Ott','Nov','Dic'];
 const MESI_LONG = ['Gennaio','Febbraio','Marzo','Aprile','Maggio','Giugno','Luglio','Agosto','Settembre','Ottobre','Novembre','Dicembre'];
 const INDUSTRIES = ['Altre infrastrutture','Telco','Energy','Water','Robotica e AI','Trasporti','Altro'];
@@ -4925,6 +4926,8 @@ function renderCommesseAttive() {
         </summary>
         <div class="mt-2">
           ${fabbisognoBox}
+          ${meta.attestati_richiesti && meta.attestati_richiesti.length > 0 ? `<div class="mb-2 flex flex-wrap gap-1">${meta.attestati_richiesti.map(a => `<span class="att-badge req text-[10px] font-medium bg-purple-100 text-purple-700 px-2 py-1 rounded" title="Attestato richiesto: ${a}">${a.length>14 ? a.substring(0,13)+'…' : a}</span>`).join('')}</div>` : ''}
+          ${meta.dpi_richiesti && meta.dpi_richiesti.length > 0 ? `<div class="mb-2 flex flex-wrap gap-1">${meta.dpi_richiesti.map(d => `<span class="dpi-badge req text-[10px] font-medium bg-yellow-100 text-yellow-700 px-2 py-1 rounded" title="DPI richiesto: ${d}">${d}</span>`).join('')}</div>` : ''}
           <div class="overflow-x-auto">
             <table class="w-full text-[10px]">
               <thead class="bg-slate-50">
@@ -7274,6 +7277,7 @@ function getCommessaAttivaMeta(nome) {
     provincia: stored.provincia||'',
     skills: stored.skills||[],
     attestati_richiesti: stored.attestati_richiesti||[],
+    dpi_richiesti: stored.dpi_richiesti||[],
     risorse_necessarie: stored.risorse_necessarie !== undefined ? stored.risorse_necessarie : null,
     jira_project_code: stored.jira_project_code||'',
     _risorseAttuali: risorseAttuali,
@@ -7368,6 +7372,18 @@ function openCommessaAttivaModal(nome) {
           ${ATTESTATI.map(a=>`<label class="flex items-center gap-1 text-xs cursor-pointer hover:bg-white rounded px-1"><input type="checkbox" class="ma-at" value="${a.replace(/"/g,'&quot;')}" ${(m.attestati_richiesti||[]).includes(a)?'checked':''}>${a}</label>`).join('')||'<div class="text-[10px] text-slate-400 italic col-span-2">Nessun attestato nel sistema.</div>'}
         </div>
       </div>
+      <div>
+        <div class="flex items-center justify-between mb-1">
+          <div class="text-xs font-medium text-slate-600">DPI richiesti</div>
+          <div class="flex gap-1">
+            <button type="button" id="ma-dpi-all" class="text-[10px] px-2 py-0.5 bg-slate-100 text-slate-600 rounded border border-slate-300">Tutti</button>
+            <button type="button" id="ma-dpi-none" class="text-[10px] px-2 py-0.5 bg-slate-100 text-slate-600 rounded border border-slate-300">Nessuno</button>
+          </div>
+        </div>
+        <div class="grid grid-cols-2 gap-1 p-2 bg-yellow-50 rounded border border-yellow-200 max-h-48 overflow-y-auto">
+          ${DPI.map(d=>`<label class="flex items-center gap-1 text-xs cursor-pointer hover:bg-white rounded px-1"><input type="checkbox" class="ma-dpi" value="${d.replace(/"/g,'&quot;')}" ${(m.dpi_richiesti||[]).includes(d)?'checked':''}>${d}</label>`).join('')}
+        </div>
+      </div>
     </div>
     <div class="flex justify-between mt-4 gap-2">
       <button id="ma-reset" class="px-3 py-1.5 text-sm border border-slate-300 text-slate-600 rounded hover:bg-slate-50">Reset metadati</button>
@@ -7395,6 +7411,8 @@ function openCommessaAttivaModal(nome) {
   document.getElementById('ma-regione').onchange = () => rebuildProvinciaOptionsCommessaAttiva('');
   document.getElementById('ma-att-all').onclick = () => document.querySelectorAll('.ma-at').forEach(x => x.checked=true);
   document.getElementById('ma-att-none').onclick = () => document.querySelectorAll('.ma-at').forEach(x => x.checked=false);
+  document.getElementById('ma-dpi-all').onclick = () => document.querySelectorAll('.ma-dpi').forEach(x => x.checked=true);
+  document.getElementById('ma-dpi-none').onclick = () => document.querySelectorAll('.ma-dpi').forEach(x => x.checked=false);
   document.getElementById('ma-btn-fabbisogno').onclick = () => {
     const n = nome;
     closeModal();
@@ -7427,6 +7445,7 @@ function openCommessaAttivaModal(nome) {
       provincia: document.getElementById('ma-provincia').value,
       skills: [...document.querySelectorAll('.ma-sk:checked')].map(x=>x.value),
       attestati_richiesti: [...document.querySelectorAll('.ma-at:checked')].map(x=>x.value),
+      dpi_richiesti: [...document.querySelectorAll('.ma-dpi:checked')].map(x=>x.value),
       risorse_necessarie: risDichiarate,
     };
     await saveState('Modifica commessa attiva', {commessa: nome}, true); renderAll(); closeModal();

@@ -20,6 +20,7 @@ function getCommessaAttivaMeta(nome) {
     provincia: stored.provincia||'',
     skills: stored.skills||[],
     attestati_richiesti: stored.attestati_richiesti||[],
+    dpi_richiesti: stored.dpi_richiesti||[],
     risorse_necessarie: stored.risorse_necessarie !== undefined ? stored.risorse_necessarie : null,
     jira_project_code: stored.jira_project_code||'',
     _risorseAttuali: risorseAttuali,
@@ -114,6 +115,18 @@ function openCommessaAttivaModal(nome) {
           ${ATTESTATI.map(a=>`<label class="flex items-center gap-1 text-xs cursor-pointer hover:bg-white rounded px-1"><input type="checkbox" class="ma-at" value="${a.replace(/"/g,'&quot;')}" ${(m.attestati_richiesti||[]).includes(a)?'checked':''}>${a}</label>`).join('')||'<div class="text-[10px] text-slate-400 italic col-span-2">Nessun attestato nel sistema.</div>'}
         </div>
       </div>
+      <div>
+        <div class="flex items-center justify-between mb-1">
+          <div class="text-xs font-medium text-slate-600">DPI richiesti</div>
+          <div class="flex gap-1">
+            <button type="button" id="ma-dpi-all" class="text-[10px] px-2 py-0.5 bg-slate-100 text-slate-600 rounded border border-slate-300">Tutti</button>
+            <button type="button" id="ma-dpi-none" class="text-[10px] px-2 py-0.5 bg-slate-100 text-slate-600 rounded border border-slate-300">Nessuno</button>
+          </div>
+        </div>
+        <div class="grid grid-cols-2 gap-1 p-2 bg-yellow-50 rounded border border-yellow-200 max-h-48 overflow-y-auto">
+          ${DPI.map(d=>`<label class="flex items-center gap-1 text-xs cursor-pointer hover:bg-white rounded px-1"><input type="checkbox" class="ma-dpi" value="${d.replace(/"/g,'&quot;')}" ${(m.dpi_richiesti||[]).includes(d)?'checked':''}>${d}</label>`).join('')}
+        </div>
+      </div>
     </div>
     <div class="flex justify-between mt-4 gap-2">
       <button id="ma-reset" class="px-3 py-1.5 text-sm border border-slate-300 text-slate-600 rounded hover:bg-slate-50">Reset metadati</button>
@@ -141,6 +154,8 @@ function openCommessaAttivaModal(nome) {
   document.getElementById('ma-regione').onchange = () => rebuildProvinciaOptionsCommessaAttiva('');
   document.getElementById('ma-att-all').onclick = () => document.querySelectorAll('.ma-at').forEach(x => x.checked=true);
   document.getElementById('ma-att-none').onclick = () => document.querySelectorAll('.ma-at').forEach(x => x.checked=false);
+  document.getElementById('ma-dpi-all').onclick = () => document.querySelectorAll('.ma-dpi').forEach(x => x.checked=true);
+  document.getElementById('ma-dpi-none').onclick = () => document.querySelectorAll('.ma-dpi').forEach(x => x.checked=false);
   document.getElementById('ma-btn-fabbisogno').onclick = () => {
     const n = nome;
     closeModal();
@@ -173,6 +188,7 @@ function openCommessaAttivaModal(nome) {
       provincia: document.getElementById('ma-provincia').value,
       skills: [...document.querySelectorAll('.ma-sk:checked')].map(x=>x.value),
       attestati_richiesti: [...document.querySelectorAll('.ma-at:checked')].map(x=>x.value),
+      dpi_richiesti: [...document.querySelectorAll('.ma-dpi:checked')].map(x=>x.value),
       risorse_necessarie: risDichiarate,
     };
     await saveState('Modifica commessa attiva', {commessa: nome}, true); renderAll(); closeModal();
