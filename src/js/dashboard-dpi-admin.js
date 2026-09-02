@@ -1,59 +1,54 @@
 /* ===================== GESTIONE DPI DISPONIBILI ===================== */
 function renderDpiAdmin() {
-  const container = document.getElementById('dpi-admin-section');
-  if (!container) return;
+  const filterSection = document.getElementById('dpi-filter-section');
+  const listContainer = document.getElementById('dpi-list-container');
+  if (!filterSection || !listContainer) return;
 
   // Mostra solo agli admin
   if (!sbIsAdmin()) {
-    container.classList.add('hidden');
+    filterSection.classList.add('hidden');
     return;
   }
-  container.classList.remove('hidden');
+  filterSection.classList.remove('hidden');
 
   const dpiList = state.dpi_disponibili || [];
-  const html = `
-    <div class="bg-white border border-yellow-200 rounded-md p-3 mb-3">
-      <div class="flex items-center justify-between mb-2">
-        <h4 class="font-semibold text-slate-800">⚙ DPI disponibili</h4>
-        <span class="text-xs px-2 py-1 bg-yellow-100 text-yellow-700 rounded">${dpiList.length} DPI</span>
-      </div>
-      <div class="mb-2 flex gap-2">
-        <input id="dpi-input-new" type="text" placeholder="Aggiungi nuovo DPI..." class="flex-1 text-sm border border-slate-300 rounded px-2 py-1.5">
-        <button id="dpi-btn-add" class="text-sm px-3 py-1.5 bg-yellow-600 text-white rounded hover:bg-yellow-700">Aggiungi</button>
-      </div>
-      <div class="space-y-1">
-        ${dpiList.length === 0
-          ? '<div class="text-xs text-slate-400 italic py-2">Nessun DPI configurato</div>'
-          : dpiList.map((dpi, idx) => `
-              <div class="flex items-center justify-between p-2 bg-yellow-50 rounded border border-yellow-100 text-sm">
-                <span class="text-slate-700">${esc(dpi)}</span>
-                <button class="dpi-btn-remove text-xs text-slate-400 hover:text-red-600" data-idx="${idx}" title="Rimuovi">🗑</button>
-              </div>
-            `).join('')
-        }
-      </div>
-    </div>
-  `;
+  const summary = document.getElementById('dpi-filter-summary');
+  if (summary) {
+    summary.textContent = dpiList.length === 0 ? 'Nessun DPI' : `${dpiList.length} DPI`;
+  }
 
-  container.innerHTML = html;
+  const listHtml = dpiList.length === 0
+    ? '<div class="text-xs text-slate-400 italic py-2">Nessun DPI configurato</div>'
+    : dpiList.map((dpi, idx) => `
+        <div class="flex items-center justify-between p-1.5 bg-white rounded border border-yellow-100 text-xs">
+          <span class="text-slate-700">${esc(dpi)}</span>
+          <button class="dpi-btn-remove text-xs text-slate-400 hover:text-red-600" data-idx="${idx}" title="Rimuovi">🗑</button>
+        </div>
+      `).join('');
+
+  const listDiv = document.getElementById('dpi-list');
+  if (listDiv) listDiv.innerHTML = listHtml;
 
   // Event handlers
-  document.getElementById('dpi-btn-add').onclick = async () => {
-    const input = document.getElementById('dpi-input-new');
-    const value = input.value.trim();
-    if (!value) {
-      showAlertModal('Inserisci il nome del DPI');
-      return;
-    }
-    if ((state.dpi_disponibili || []).includes(value)) {
-      showAlertModal('Questo DPI esiste già');
-      return;
-    }
-    state.dpi_disponibili.push(value);
-    input.value = '';
-    await saveState('Aggiunto DPI', {dpi: value}, true);
-    renderDpiAdmin();
-  };
+  const btnAdd = document.getElementById('dpi-btn-add');
+  if (btnAdd) {
+    btnAdd.onclick = async () => {
+      const input = document.getElementById('dpi-input-new');
+      const value = input.value.trim();
+      if (!value) {
+        showAlertModal('Inserisci il nome del DPI');
+        return;
+      }
+      if ((state.dpi_disponibili || []).includes(value)) {
+        showAlertModal('Questo DPI esiste già');
+        return;
+      }
+      state.dpi_disponibili.push(value);
+      input.value = '';
+      await saveState('Aggiunto DPI', {dpi: value}, true);
+      renderDpiAdmin();
+    };
+  }
 
   document.querySelectorAll('.dpi-btn-remove').forEach(btn => {
     btn.onclick = async () => {
@@ -79,9 +74,12 @@ function renderDpiAdmin() {
   });
 
   // Enter per aggiungere
-  document.getElementById('dpi-input-new').addEventListener('keydown', e => {
-    if (e.key === 'Enter') {
-      document.getElementById('dpi-btn-add').click();
-    }
-  });
+  const inputNew = document.getElementById('dpi-input-new');
+  if (inputNew) {
+    inputNew.addEventListener('keydown', e => {
+      if (e.key === 'Enter') {
+        document.getElementById('dpi-btn-add').click();
+      }
+    });
+  }
 }

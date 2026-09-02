@@ -1,8 +1,7 @@
 # Graph Report - Gestione-Staffing  (2026-09-01)
 
 ## Corpus Check
-- 43 files · ~184,328 words
-- Verdict: corpus is large enough that graph structure adds value.
+- cluster-only mode — file stats not available
 
 ## Summary
 - 624 nodes · 1030 edges · 54 communities (34 shown, 20 thin omitted)
@@ -71,15 +70,15 @@
 
 ## God Nodes (most connected - your core abstractions)
 1. `pwMapRenderCantieri()` - 14 edges
-2. `esc()` - 12 edges
-3. `pwJiraSubtaskOpenComuniModal()` - 12 edges
-4. `renderAttestati()` - 11 edges
-5. `pwGetFerieWeek()` - 11 edges
+2. `pwJiraSubtaskOpenComuniModal()` - 12 edges
+3. `esc()` - 12 edges
+4. `pwGetFerieWeek()` - 11 edges
+5. `renderAttestati()` - 11 edges
 6. `pwSpostDrawMap()` - 11 edges
 7. `Griglia Settimanale Tab` - 11 edges
 8. `closeModal()` - 10 edges
-9. `attStatoVoce()` - 9 edges
-10. `sbOnLoggedIn()` - 9 edges
+9. `pwFerieRender()` - 9 edges
+10. `pwGeneraMail()` - 9 edges
 
 ## Surprising Connections (you probably didn't know these)
 - `Creative North Star: The Site Foreman's Whiteboard` --semantically_similar_to--> `Principle: information density over whitespace`  [INFERRED] [semantically similar]
@@ -88,9 +87,9 @@
   SETUP_SUPABASE_GITHUB.md → CLAUDE.md
 - `listBox()` --indirect_call--> `esc()`  [INFERRED]
   src/js/weekly-ferie-import.js → src/js/dashboard-crud-helpers.js
-- `jira-update-production Edge Function` --implements--> `Delta model for KM/production sync`  [EXTRACTED]
-  index.html → CLAUDE.md
 - `src/head.html (app shell source)` --implements--> `index.html (generated Gestione-Staffing app)`  [INFERRED]
+  src/head.html → index.html
+- `src/head.html (app shell source)` --implements--> `Gestione Staffing / Dashboard Staffing App`  [EXTRACTED]
   src/head.html → index.html
 
 ## Import Cycles
@@ -240,7 +239,7 @@ Cohesion: 0.67
 Nodes (3): build_bytes(), main(), Ritorna il contenuto di index.html così come lo produrrebbe la build, senza…
 
 ## Knowledge Gaps
-- **77 isolated node(s):** `INITIAL_DATA`, `SKILLS`, `MESI`, `MESI_LONG`, `INDUSTRIES` (+72 more)
+- **77 isolated node(s):** `pwData`, `pwDoppiaWeek`, `pwFerie`, `pwFerieDettagli`, `pwStrumenti` (+72 more)
   These have ≤1 connection - possible missing edges or undocumented components.
 - **20 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
 
@@ -253,7 +252,7 @@ _Questions this graph is uniquely positioned to answer:_
   _High betweenness centrality (0.004) - this node is a cross-community bridge._
 - **Are the 3 inferred relationships involving `esc()` (e.g. with `listBox()` and `rowHtml()`) actually correct?**
   _`esc()` has 3 INFERRED edges - model-reasoned connections that need verification._
-- **What connects `INITIAL_DATA`, `SKILLS`, `MESI` to the rest of the system?**
+- **What connects `pwData`, `pwDoppiaWeek`, `pwFerie` to the rest of the system?**
   _77 weakly-connected nodes found - possible documentation gaps or missing edges._
 - **Should `Griglia Settimanale Tab` be split into smaller, more focused modules?**
   _Cohesion score 0.07188160676532769 - nodes in this community are weakly interconnected._
