@@ -1104,7 +1104,7 @@
     <div class="flex items-center gap-2">
       <button id="btn-presentation" class="px-3 py-1.5 text-sm rounded hover:bg-white/10" style="border:1px solid var(--dark-border-strong);color:var(--dark-text);visibility:visible;">📊 Modalità presentazione</button>
       <div class="text-xs pl-2" style="border-left:1px solid var(--dark-border-strong);color:var(--dark-text-muted);">
-        <span id="app-version" class="font-medium" style="color:var(--accent);">v18.116.0</span> · Michele Marchetti
+        <span id="app-version" class="font-medium" style="color:var(--accent);">v18.117.0</span> · Michele Marchetti
       </div>
     </div>
   </div>
@@ -1522,6 +1522,7 @@
     <button id="pw-tab-ferie" class="tab-btn text-sm py-3">🏖 Ferie / Permessi</button>
     <button id="pw-tab-mappa" class="tab-btn text-sm py-3">🗺 Mappa squadre</button>
     <button id="pw-tab-spostamenti" class="tab-btn text-sm py-3">🧭 Pianifica spostamenti</button>
+    <button id="pw-tab-ricerca-squadre" class="tab-btn text-sm py-3">🔍 Ricerca Squadre</button>
     <button id="pw-tab-controllo" class="tab-btn text-sm py-3">📊 Controllo produzione</button>
     <button id="pw-tab-doppia" class="tab-btn text-sm py-3">🔁 Doppia Week</button>
   </div>
@@ -1729,6 +1730,67 @@
           <div id="pw-spost-map" style="height:420px;width:100%;"></div>
         </div>
         <div id="pw-spost-result"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Vista Ricerca Squadre -->
+  <div id="pw-view-ricerca-squadre" class="hidden">
+    <div class="grid grid-cols-1 lg:grid-cols-4 gap-4 items-start">
+      <!-- Pannello input -->
+      <div class="lg:col-span-1 bg-white border border-slate-200 rounded-lg p-3 shadow-sm no-print">
+        <div class="text-xs font-semibold text-slate-700 mb-3 uppercase tracking-wide">🔍 Ricerca Squadre</div>
+
+        <label class="block text-xs font-semibold text-slate-600 mb-1">Comune / Cantiere</label>
+        <input id="rs-tappa-nome" type="text" placeholder="Es. Firenze, Via Roma 123"
+          class="w-full mb-2 px-2 py-1.5 text-sm border border-slate-300 rounded focus:outline-none focus:border-teal-400">
+
+        <label class="block text-xs font-semibold text-slate-600 mb-1">Skills richiesti <span class="text-slate-400 font-normal">(separati da virgola)</span></label>
+        <input id="rs-tappa-skills" type="text" placeholder="Es. Topografia, Rilievo"
+          class="w-full mb-2 px-2 py-1.5 text-sm border border-slate-300 rounded focus:outline-none focus:border-teal-400">
+
+        <label class="block text-xs font-semibold text-slate-600 mb-1">Strumenti richiesti <span class="text-slate-400 font-normal">(separati da virgola)</span></label>
+        <input id="rs-tappa-strumenti" type="text" placeholder="Es. GPS, Drone"
+          class="w-full mb-3 px-2 py-1.5 text-sm border border-slate-300 rounded focus:outline-none focus:border-teal-400">
+
+        <button onclick="rsAddTappa()"
+          class="w-full px-3 py-2 text-sm font-medium bg-teal-600 text-white rounded-lg hover:bg-teal-700 mb-3">
+          ➕ Aggiungi tappa
+        </button>
+
+        <div class="text-xs font-semibold text-slate-700 mb-2">Tappe aggiunte:</div>
+        <div id="rs-tappe-list" class="mb-3 max-h-40 overflow-y-auto"></div>
+
+        <button onclick="rsCalcola()"
+          class="w-full px-3 py-2 text-sm font-medium bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 mb-2 disabled:opacity-50"
+          id="rs-calcola-btn">
+          🔍 Calcola ranking
+        </button>
+        <button onclick="[_ricercaSquadre.tappe = [], rsRenderTappe(), document.getElementById('rs-risultati').innerHTML = '', document.getElementById('rs-mappa-container').innerHTML = '']"
+          class="w-full px-3 py-1.5 text-sm border border-slate-300 rounded-lg hover:bg-slate-50">
+          🧹 Pulisci
+        </button>
+
+        <div id="rs-status" class="text-xs text-slate-500 mt-2"></div>
+        <div class="text-xs text-slate-400 mt-3 leading-snug">
+          Propone squadre della settimana ordinata per distanza geografica, disponibilità
+          e matching di skill/strumenti.
+        </div>
+      </div>
+
+      <!-- Risultati e mappa -->
+      <div class="lg:col-span-3">
+        <div class="bg-white border border-slate-200 rounded-lg p-3 mb-3">
+          <div class="text-xs font-semibold text-slate-700 mb-3 uppercase tracking-wide">📊 Ranking squadre</div>
+          <div id="rs-risultati" class="text-xs text-slate-400 italic text-center py-8">
+            Aggiungi almeno una tappa e clicca "Calcola ranking".
+          </div>
+        </div>
+
+        <div class="bg-white border border-slate-200 rounded-lg p-3 shadow-sm">
+          <div class="text-xs font-semibold text-slate-700 mb-2 uppercase tracking-wide">🗺️ Localizzazioni</div>
+          <div id="rs-mappa-container" style="height:300px;"></div>
+        </div>
       </div>
     </div>
   </div>

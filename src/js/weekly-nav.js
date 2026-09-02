@@ -26,7 +26,7 @@ function switchScreen(screen) {
 let _pwActiveTab = (function(){ try { return localStorage.getItem('pw_last_tab') || 'griglia'; } catch(_) { return 'griglia'; } })();
 // Ricorda la posizione di scroll di ciascun tab (Griglia/Ferie/Mappa = scroll pagina,
 // Controllo Produzione = scroll interno alla tabella) finché non si fa il refresh.
-let _pwScrollY = { griglia: 0, ferie: 0, mappa: 0, spostamenti: 0, controllo: 0, doppia: 0 };
+let _pwScrollY = { griglia: 0, ferie: 0, mappa: 0, spostamenti: 0, ricerca_squadre: 0, controllo: 0, doppia: 0 };
 let _cpTableScrollTop = 0;
 
 function pwSwitchTab(tab) {
@@ -62,17 +62,19 @@ function pwSwitchTab(tab) {
   const tf = document.getElementById('pw-tab-ferie');
   const tm = document.getElementById('pw-tab-mappa');
   const ts = document.getElementById('pw-tab-spostamenti');
+  const trs = document.getElementById('pw-tab-ricerca-squadre');
   const tc = document.getElementById('pw-tab-controllo');
   const td = document.getElementById('pw-tab-doppia');
   const vg = document.getElementById('pw-view-griglia');
   const vf = document.getElementById('pw-view-ferie');
   const vm = document.getElementById('pw-view-mappa');
   const vs = document.getElementById('pw-view-spostamenti');
+  const vrs = document.getElementById('pw-view-ricerca-squadre');
   const vc = document.getElementById('pw-view-controllo');
   const vd = document.getElementById('pw-view-doppia');
 
-  [tg, tf, tm, ts, tc, td].forEach(t => t && t.classList.remove('active'));
-  [vg, vf, vm, vs, vc, vd].forEach(v => v && v.classList.add('hidden'));
+  [tg, tf, tm, ts, trs, tc, td].forEach(t => t && t.classList.remove('active'));
+  [vg, vf, vm, vs, vrs, vc, vd].forEach(v => v && v.classList.add('hidden'));
 
   if (tab === 'mappa') {
     tm.classList.add('active');
@@ -97,6 +99,11 @@ function pwSwitchTab(tab) {
       }
       pwMapRender(_mapDay);
     }, 60);
+  } else if (tab === 'ricerca-squadre') {
+    trs.classList.add('active');
+    vrs.classList.remove('hidden');
+    rsInit();
+    window.scrollTo(0, _pwScrollY.ricerca_squadre || 0);
   } else if (tab === 'spostamenti') {
     ts.classList.add('active');
     vs.classList.remove('hidden');
