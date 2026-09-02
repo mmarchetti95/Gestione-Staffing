@@ -745,6 +745,7 @@ async function pwMapGeoEditSubmit(inp) {
         return;
       }
       result = { lat: parseFloat(data[0].lat), lng: parseFloat(data[0].lon), label: data[0].display_name };
+      inp.disabled = false; inp.value = query; inp.style.borderColor = '';
     } catch (e) {
       inp.disabled = false; inp.placeholder = 'Errore rete';
       return;
