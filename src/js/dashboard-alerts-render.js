@@ -94,6 +94,7 @@ function renderAll() {
   renderGantt();
   renderSkillFilters();
   renderAttestatiFilters();
+  renderDpiAdmin();
   renderOperatori();
   renderAttestati();
   renderCommesse();

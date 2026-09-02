@@ -1391,6 +1391,9 @@
         <div class="p-3 scrollbox hidden" id="op-vista-container"></div>
       </div>
 
+      <!-- DPI ADMIN (collassato per non operatori) -->
+      <div id="dpi-admin-section" class="hidden"></div>
+
       <!-- COMMESSE -->
       <div class="bg-white rounded-lg border border-slate-200">
         <div class="border-b border-slate-200 px-4 pt-3">
@@ -1832,7 +1835,6 @@
 const INITIAL_DATA = {"pipeline": [], "operatori": [], "staffing": [], "commesse_attive": [], "giorni_lavorativi": [20, 20, 22, 21, 20, 21, 23, 21, 22, 22, 21, 21], "saturazione_baseline": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], "riconciliazione": [], "attestati_disponibili": ["RSPP", "ASPP", "Preposto", "RLS", "Primo soccorso", "Defibrillatore BLS-D", "Antincendio", "Ambienti confinati", "Lavori in quota", "Segnaletica stradale - Preposto", "Segnaletica stradale - Addetto", "PES-PAV-PEI", "ENEL 1A", "ENEL 1B", "ENEL 2A", "ENEL 2B"]};
 const SKILLS = ['DRONE', 'LIXEL', 'WO', 'LASER - STATICO', 'ROBOT', 'GRD', 'GPS', 'MMS', 'ALTRO'];
 let ATTESTATI = INITIAL_DATA.attestati_disponibili || [];
-const DPI = ['Casco', 'Occhiali protettivi', 'Guanti di sicurezza', 'Scarpe antinfortunistiche', 'Giubbotto di sicurezza', 'Cintura di sicurezza', 'Imbracatura', 'Mascherina/Respiratore', 'Camice/Tuta protettiva', 'Altro'];
 const MESI = ['Gen','Feb','Mar','Apr','Mag','Giu','Lug','Ago','Set','Ott','Nov','Dic'];
 const MESI_LONG = ['Gennaio','Febbraio','Marzo','Aprile','Maggio','Giugno','Luglio','Agosto','Settembre','Ottobre','Novembre','Dicembre'];
 const INDUSTRIES = ['Altre infrastrutture','Telco','Energy','Water','Robotica e AI','Trasporti','Altro'];
@@ -2032,8 +2034,9 @@ let state = {
   commesse_attive: [],
   commesse_chiuse: [],
   commesse_escluse: [], // lista permanente: nomi esclusi per sempre dai dati attivi, anche se rimossi dall'archivio
-  commesse_attive_meta: {}, // {[nome]: {cliente,industry,inizio,fine,note,skills,attestati_richiesti}}
+  commesse_attive_meta: {}, // {[nome]: {cliente,industry,inizio,fine,note,skills,attestati_richiesti,dpi_richiesti}}
   assegnazioni: [],
+  dpi_disponibili: ['Casco', 'Occhiali protettivi', 'Guanti di sicurezza', 'Scarpe antinfortunistiche', 'Giubbotto di sicurezza', 'Cintura di sicurezza', 'Imbracatura', 'Mascherina/Respiratore', 'Camice/Tuta protettiva', 'Altro'],
   activeTab: 'pipeline',
   filters: { search:'', skills:new Set(), attestati:new Set(), lowSat:false, regione:'', provincia:'', showEx:false },
   searchCommesse: '',
@@ -7443,7 +7446,8 @@ function openCommessaAttivaModal(nome) {
           </div>
         </div>
         <div class="grid grid-cols-2 gap-1 p-2 bg-yellow-50 rounded border border-yellow-200 max-h-48 overflow-y-auto">
-          ${DPI.map(d=>`<label class="flex items-center gap-1 text-xs cursor-pointer hover:bg-white rounded px-1"><input type="checkbox" class="ma-dpi" value="${d.replace(/"/g,'&quot;')}" ${(m.dpi_richiesti||[]).includes(d)?'checked':''}>${d}</label>`).join('')}
+          ${(state.dpi_disponibili||[]).map(d=>`<label class="flex items-center gap-1 text-xs cursor-pointer hover:bg-white rounded px-1"><input type="checkbox" class="ma-dpi" value="${d.replace(/"/g,'&quot;')}" ${(m.dpi_richiesti||[]).includes(d)?'checked':''}>${d}</label>`).join('')}
+          ${(state.dpi_disponibili||[]).length===0?'<div class="text-[10px] text-yellow-600 italic col-span-2">Nessun DPI disponibile. Aggiungi i DPI dalla sezione admin.</div>':''}
         </div>
       </div>
     </div>
@@ -7652,6 +7656,93 @@ function renderConfrontoBox(commessaNome, meseSel) {
   </details>`;
 }
 
+/* ===================== GESTIONE DPI DISPONIBILI ===================== */
+function renderDpiAdmin() {
+  const container = document.getElementById('dpi-admin-section');
+  if (!container) return;
+
+  // Mostra solo agli admin
+  if (!sbIsAdmin()) {
+    container.classList.add('hidden');
+    return;
+  }
+  container.classList.remove('hidden');
+
+  const dpiList = state.dpi_disponibili || [];
+  const html = `
+    <div class="bg-white border border-yellow-200 rounded-md p-3 mb-3">
+      <div class="flex items-center justify-between mb-2">
+        <h4 class="font-semibold text-slate-800">⚙ DPI disponibili</h4>
+        <span class="text-xs px-2 py-1 bg-yellow-100 text-yellow-700 rounded">${dpiList.length} DPI</span>
+      </div>
+      <div class="mb-2 flex gap-2">
+        <input id="dpi-input-new" type="text" placeholder="Aggiungi nuovo DPI..." class="flex-1 text-sm border border-slate-300 rounded px-2 py-1.5">
+        <button id="dpi-btn-add" class="text-sm px-3 py-1.5 bg-yellow-600 text-white rounded hover:bg-yellow-700">Aggiungi</button>
+      </div>
+      <div class="space-y-1">
+        ${dpiList.length === 0
+          ? '<div class="text-xs text-slate-400 italic py-2">Nessun DPI configurato</div>'
+          : dpiList.map((dpi, idx) => `
+              <div class="flex items-center justify-between p-2 bg-yellow-50 rounded border border-yellow-100 text-sm">
+                <span class="text-slate-700">${esc(dpi)}</span>
+                <button class="dpi-btn-remove text-xs text-slate-400 hover:text-red-600" data-idx="${idx}" title="Rimuovi">🗑</button>
+              </div>
+            `).join('')
+        }
+      </div>
+    </div>
+  `;
+
+  container.innerHTML = html;
+
+  // Event handlers
+  document.getElementById('dpi-btn-add').onclick = async () => {
+    const input = document.getElementById('dpi-input-new');
+    const value = input.value.trim();
+    if (!value) {
+      showAlertModal('Inserisci il nome del DPI');
+      return;
+    }
+    if ((state.dpi_disponibili || []).includes(value)) {
+      showAlertModal('Questo DPI esiste già');
+      return;
+    }
+    state.dpi_disponibili.push(value);
+    input.value = '';
+    await saveState('Aggiunto DPI', {dpi: value}, true);
+    renderDpiAdmin();
+  };
+
+  document.querySelectorAll('.dpi-btn-remove').forEach(btn => {
+    btn.onclick = async () => {
+      const idx = parseInt(btn.dataset.idx);
+      const dpi = state.dpi_disponibili[idx];
+      if (!await showConfirmAsync(`Rimuovere il DPI "${dpi}"?`, 'Rimuovi')) return;
+
+      // Rimuovi dai DPI disponibili
+      state.dpi_disponibili.splice(idx, 1);
+
+      // Rimuovi dalle commesse che lo usano
+      Object.keys(state.commesse_attive_meta || {}).forEach(nome => {
+        const meta = state.commesse_attive_meta[nome];
+        if (meta.dpi_richiesti && meta.dpi_richiesti.includes(dpi)) {
+          meta.dpi_richiesti = meta.dpi_richiesti.filter(d => d !== dpi);
+        }
+      });
+
+      await saveState('Rimosso DPI', {dpi}, true);
+      renderDpiAdmin();
+      renderCommesse();
+    };
+  });
+
+  // Enter per aggiungere
+  document.getElementById('dpi-input-new').addEventListener('keydown', e => {
+    if (e.key === 'Enter') {
+      document.getElementById('dpi-btn-add').click();
+    }
+  });
+}
 /* ===================== COMMIT CELLE INLINE ===================== */
 /* Gestisce la validazione e il salvataggio di una cella inline della griglia staffing.
    Aggiorna lo stato e ricalcola solo il totale riga + il box fabbisogno,
@@ -8200,6 +8291,7 @@ function renderAll() {
   renderGantt();
   renderSkillFilters();
   renderAttestatiFilters();
+  renderDpiAdmin();
   renderOperatori();
   renderAttestati();
   renderCommesse();

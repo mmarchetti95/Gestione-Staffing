@@ -124,7 +124,8 @@ function openCommessaAttivaModal(nome) {
           </div>
         </div>
         <div class="grid grid-cols-2 gap-1 p-2 bg-yellow-50 rounded border border-yellow-200 max-h-48 overflow-y-auto">
-          ${DPI.map(d=>`<label class="flex items-center gap-1 text-xs cursor-pointer hover:bg-white rounded px-1"><input type="checkbox" class="ma-dpi" value="${d.replace(/"/g,'&quot;')}" ${(m.dpi_richiesti||[]).includes(d)?'checked':''}>${d}</label>`).join('')}
+          ${(state.dpi_disponibili||[]).map(d=>`<label class="flex items-center gap-1 text-xs cursor-pointer hover:bg-white rounded px-1"><input type="checkbox" class="ma-dpi" value="${d.replace(/"/g,'&quot;')}" ${(m.dpi_richiesti||[]).includes(d)?'checked':''}>${d}</label>`).join('')}
+          ${(state.dpi_disponibili||[]).length===0?'<div class="text-[10px] text-yellow-600 italic col-span-2">Nessun DPI disponibile. Aggiungi i DPI dalla sezione admin.</div>':''}
         </div>
       </div>
     </div>
