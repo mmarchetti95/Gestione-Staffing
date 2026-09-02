@@ -54,21 +54,15 @@ function _rsOpPool(nome) {
   return (state.operatori || []).find(o => (o.nome_esteso || o.nome_breve) === nome) || null;
 }
 
-/* Posizione di residenza di un operatore: capoluogo di provincia se noto, altrimenti
-   centroide di regione. Usata solo come ripiego per squadre senza cantieri in settimana. */
-function _rsOpHome(nome) {
-  const op = _rsOpPool(nome);
-  if (!op) return null;
-  if (op.provincia) {
-    const p = provinciaInfo(op.provincia);
-    if (p) return { lat: p.lat, lng: p.lng, label: p.nome + ' (' + p.sigla + ')' };
-  }
-  const reg = operatoreRegione(op);
-  if (reg) {
-    const c = regioneCentroid(reg);
-    if (c) return { lat: c.lat, lng: c.lng, label: reg };
-  }
-  return null;
+/* Primo giorno della settimana (0=Lun) da cui proporre un invio: se la settimana
+   mostrata è quella in corso, non ha senso consigliare un giorno già passato (es. lunedì
+   se oggi è mercoledì), quindi si parte da oggi. Per una settimana diversa da quella
+   attuale (passata o futura) non c'è alcun vincolo: si parte da lunedì (0). */
+function _rsStartDay() {
+  const oggi = new Date();
+  const iso = isoWeekYear(oggi);
+  if (iso.year !== pwAnno || iso.week !== pwWeek) return 0;
+  return (oggi.getDay() + 6) % 7; // Lun=0 … Dom=6
 }
 
 /* ---------- raccolta dati della settimana ---------- */
@@ -155,53 +149,47 @@ function _rsDisponibilita(sq) {
 }
 
 /* Giorno in cui conviene mandare la squadra, dedotto dalla programmazione della
-   Griglia: fra i giorni liberi si preferisce quello che "aggancia" il cantiere già
-   programmato più vicino alla tappa (il giorno prima se c'è, altrimenti il giorno
-   dopo), così lo spostamento parte da dove la squadra si trova comunque. A parità
-   sostanziale di distanza vince il giorno più presto. `distByLuogo` mappa un nome
-   cantiere normalizzato sulla sua distanza minima da una tappa. */
-function _rsGiornoConsigliato(sq, stati, distByLuogo) {
+   Griglia: si individua il giorno lavorato in cui la squadra è più vicina in assoluto
+   ai comuni del giro (min su tutti i cantieri della settimana, non solo quelli
+   adiacenti a un giorno libero), poi fra i giorni liberi utili (da `startDay` in poi,
+   per non consigliare un giorno già passato) si sceglie quello cronologicamente più
+   vicino a quel giorno di riferimento — prima o dopo, a parità vince il più presto.
+   `distByLuogo` mappa un nome cantiere normalizzato sulla sua distanza minima da una
+   tappa. Se la squadra non ha nessun cantiere in settimana non c'è alcun riferimento
+   geografico da cui dedurre un giorno migliore di un altro: si propone semplicemente
+   il primo giorno libero utile. */
+function _rsGiornoConsigliato(sq, stati, distByLuogo, startDay) {
   const nGiorni = stati.length;
   const liberi = [];
-  for (let d = 0; d < nGiorni; d++) if (stati[d] === 'libero') liberi.push(d);
+  for (let d = Math.max(0, startDay || 0); d < nGiorni; d++) if (stati[d] === 'libero') liberi.push(d);
   if (!liberi.length) return null;
 
-  /* Tiene anche il cantiere che ha prodotto il minimo: in un giorno la squadra può
-     stare su più cantieri, e va citato quello da cui parte davvero lo spostamento. */
-  const distDa = cantieri => {
+  /* Distanza minima dalla tappa per ciascun giorno lavorato: in un giorno la squadra
+     può stare su più cantieri, tiene quello da cui partirebbe davvero lo spostamento. */
+  const giornoDist = {};
+  for (let d = 0; d < nGiorni; d++) {
     let min = null, tappa = null, luogo = null;
-    (cantieri || []).forEach(c => {
+    (sq.cantieriByDay[d] || []).forEach(c => {
       const e = distByLuogo[_rsNorm(c)];
       if (e && (min == null || e.dist < min)) { min = e.dist; tappa = e.tappa; luogo = c; }
     });
-    return min == null ? null : { dist: min, tappa, luogo };
-  };
+    if (min != null) giornoDist[d] = { dist: min, tappa, luogo };
+  }
 
-  let best = null;
-  liberi.forEach(d => {
-    let prevG = null, nextG = null;
-    for (let p = d - 1; p >= 0; p--) if ((sq.cantieriByDay[p] || []).length) { prevG = p; break; }
-    for (let n = d + 1; n < nGiorni; n++) if ((sq.cantieriByDay[n] || []).length) { nextG = n; break; }
-
-    const dPrev = prevG == null ? null : distDa(sq.cantieriByDay[prevG]);
-    const dNext = nextG == null ? null : distDa(sq.cantieriByDay[nextG]);
-
-    let scelta = null;
-    if (dPrev && (!dNext || dPrev.dist <= dNext.dist)) scelta = { info: dPrev, rifGiorno: prevG };
-    else if (dNext) scelta = { info: dNext, rifGiorno: nextG };
-
-    const cand = {
-      giorno: d,
-      dist: scelta ? scelta.info.dist : null,
-      tappa: scelta ? scelta.info.tappa : null,
-      rifGiorno: scelta ? scelta.rifGiorno : null,
-      rifCantiere: scelta ? scelta.info.luogo : null
-    };
-    /* margine di 1 km: differenze minime non giustificano un giorno più tardi */
-    const cur = best && best.dist != null ? best.dist : Infinity;
-    const nuovo = cand.dist != null ? cand.dist : Infinity;
-    if (!best || nuovo < cur - 1000) best = cand;
-  });
+  const giorniRif = Object.keys(giornoDist).map(Number);
+  let best;
+  if (!giorniRif.length) {
+    best = { giorno: liberi[0], dist: null, tappa: null, rifGiorno: null, rifCantiere: null };
+  } else {
+    const refGiorno = giorniRif.reduce((b, d) => giornoDist[d].dist < giornoDist[b].dist ? d : b, giorniRif[0]);
+    const info = giornoDist[refGiorno];
+    let scelto = liberi[0], gap = Math.abs(liberi[0] - refGiorno);
+    liberi.forEach(d => {
+      const g = Math.abs(d - refGiorno);
+      if (g < gap) { gap = g; scelto = d; }
+    });
+    best = { giorno: scelto, dist: info.dist, tappa: info.tappa, rifGiorno: refGiorno, rifCantiere: info.luogo };
+  }
 
   let run = 0;
   for (let d = best.giorno; d < nGiorni && stati[d] === 'libero'; d++) run++;
@@ -483,28 +471,18 @@ async function rsCalcola() {
     const tuttiCantieri = Array.from(new Set(squadre.flatMap(s => s.cantieri)));
     await _rsGeocodeMancanti(tuttiCantieri);
 
-    /* Un punto di origine per ogni cantiere della squadra; se la squadra non ha
-       cantieri geocodificabili ripiega sulla residenza degli operatori. */
+    /* Un punto di origine per ogni cantiere della squadra. Una squadra senza nessun
+       cantiere in settimana non ha un punto di partenza reale: non si ripiega più
+       sulla residenza degli operatori, perché una settimana "tutta libera" quasi
+       sempre significa che la squadra semplicemente non risulta pianificata (dati
+       mancanti), non che sia davvero disponibile — usare la residenza le avrebbe
+       dato una priorità ingiustificata solo perché abitano vicino alla tappa. */
     const origini = [];
     squadre.forEach((sq, si) => {
-      let trovata = false;
       sq.cantieri.forEach(c => {
         const g = _geoCache[_rsNorm(c)];
-        if (g && g.lat != null) {
-          origini.push({ si, label: c, lat: g.lat, lng: g.lng, residenza: false });
-          trovata = true;
-        }
+        if (g && g.lat != null) origini.push({ si, label: c, lat: g.lat, lng: g.lng });
       });
-      if (!trovata) {
-        const viste = new Set();
-        sq.operatori.forEach(n => {
-          const h = _rsOpHome(n);
-          if (h && !viste.has(h.label)) {
-            viste.add(h.label);
-            origini.push({ si, label: h.label, lat: h.lat, lng: h.lng, residenza: true });
-          }
-        });
-      }
     });
 
     _rsStatus('Calcolo distanze stradali…');
@@ -526,6 +504,7 @@ async function rsCalcola() {
     /* Requisiti: unione di quanto richiesto su tutte le tappe */
     const skillsRichieste = Array.from(new Set(_ricercaSquadre.tappe.flatMap(t => t.skills)));
     const strumentiRichiesti = Array.from(new Set(_ricercaSquadre.tappe.flatMap(t => t.strumenti)));
+    const startDay = _rsStartDay();
 
     const risultati = squadre.map((sq, si) => {
       /* Origine migliore = il punto della squadra più vicino a una delle tappe */
@@ -535,7 +514,7 @@ async function rsCalcola() {
         (matrice[oi] || []).forEach((dist, ti) => {
           if (dist == null || isNaN(dist)) return;
           if (!best || dist < best.dist) {
-            best = { dist, origine: o.label, residenza: o.residenza, tappa: _ricercaSquadre.tappe[ti].nome };
+            best = { dist, origine: o.label, tappa: _ricercaSquadre.tappe[ti].nome };
           }
         });
       });
@@ -547,11 +526,9 @@ async function rsCalcola() {
       return {
         sq,
         stati,
-        consiglio: _rsGiornoConsigliato(sq, stati, distByLuogo),
-        giorniLiberi: stati.filter(s => s === 'libero').length,
+        consiglio: _rsGiornoConsigliato(sq, stati, distByLuogo, startDay),
         dist: best ? best.dist : null,
         origine: best ? best.origine : null,
-        daResidenza: best ? best.residenza : false,
         tappaVicina: best ? best.tappa : null,
         skills: {
           richieste: skillsRichieste.length,
@@ -611,7 +588,8 @@ function _rsConsiglioHtml(r) {
 
   let motivo;
   if (c.rifCantiere != null) {
-    motivo = 'dopo ' + esc(c.rifCantiere) + ' (' + PW_MAP_DAY_SHORT[c.rifGiorno] + ')' +
+    const prep = c.rifGiorno <= c.giorno ? 'dopo ' : 'prima di ';
+    motivo = prep + esc(c.rifCantiere) + ' (' + PW_MAP_DAY_SHORT[c.rifGiorno] + ')' +
       (c.dist != null ? ' · ' + _rsKm(c.dist) : '');
   } else {
     motivo = 'settimana libera';
@@ -679,8 +657,7 @@ function _rsRenderRisultatiBody() {
     const distHtml = r.dist == null
       ? '<span style="color:#cbd5e1;">—</span>'
       : '<div style="font-weight:700;color:#0f172a;font-size:13px;">' + _rsKm(r.dist) + '</div>' +
-        '<div style="font-size:10px;color:#64748b;">da ' + esc(r.origine || '') +
-        (r.daResidenza ? ' <span style="color:#b45309;">(residenza)</span>' : '') + '</div>' +
+        '<div style="font-size:10px;color:#64748b;">da ' + esc(r.origine || '') + '</div>' +
         (_ricercaSquadre.tappe.length > 1 ? '<div style="font-size:10px;color:#94a3b8;">→ ' + esc(r.tappaVicina || '') + '</div>' : '');
 
     const rank = i === 0
@@ -771,10 +748,11 @@ function rsRenderMappa() {
   setTimeout(() => {
     if (!_ricercaSquadreMap) {
       _ricercaSquadreMap = L.map('rs-mappa', { preferCanvas: true }).setView([42.5, 12.5], 6);
-      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      const _rsMapStreet = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
         attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
         maxZoom: 19
       }).addTo(_ricercaSquadreMap);
+      mapAddSatelliteToggle(_ricercaSquadreMap, _rsMapStreet);
     }
     _ricercaSquadreMap.invalidateSize();
 

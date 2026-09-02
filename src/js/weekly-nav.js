@@ -1,3 +1,14 @@
+/* ==================== HELPER MAPPE (toggle stradale/satellite) ==================== */
+// Aggiunge un controllo Leaflet in alto a destra per passare dalla vista stradale
+// (OpenStreetMap) a quella satellitare (Esri World Imagery, gratuita, nessuna API key).
+function mapAddSatelliteToggle(map, streetLayer) {
+  const satLayer = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+    attribution: 'Tiles © Esri — Source: Esri, Maxar, Earthstar Geographics',
+    maxZoom: 19
+  });
+  L.control.layers({ 'Stradale': streetLayer, 'Satellite': satLayer }, null, { position: 'topright' }).addTo(map);
+}
+
 /* ==================== NAVIGAZIONE SCHERMATA ==================== */
 function switchScreen(screen) {
   const mainEl   = document.querySelector('main');
@@ -83,18 +94,20 @@ function pwSwitchTab(tab) {
     setTimeout(() => {
       if (!_map) {
         _map = L.map('pw-map', { preferCanvas: true }).setView([42.5, 12.5], 6);
-        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        const _mapStreet = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
           attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
           maxZoom: 19
         }).addTo(_map);
+        mapAddSatelliteToggle(_map, _mapStreet);
         setTimeout(() => _map.invalidateSize(), 200);
       }
       if (!_mapOp) {
         _mapOp = L.map('pw-map-op', { preferCanvas: true }).setView([42.5, 12.5], 6);
-        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        const _mapOpStreet = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
           attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
           maxZoom: 19
         }).addTo(_mapOp);
+        mapAddSatelliteToggle(_mapOp, _mapOpStreet);
         setTimeout(() => _mapOp.invalidateSize(), 200);
       }
       pwMapRender(_mapDay);

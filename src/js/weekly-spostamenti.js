@@ -559,10 +559,11 @@ function pwSpostRender() {
   setTimeout(() => {
     if (!_pwSpostMap) {
       _pwSpostMap = L.map('pw-spost-map', { preferCanvas: true }).setView([42.5, 12.5], 6);
-      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      const _pwSpostMapStreet = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
         attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
         maxZoom: 19
       }).addTo(_pwSpostMap);
+      mapAddSatelliteToggle(_pwSpostMap, _pwSpostMapStreet);
     }
     _pwSpostMap.invalidateSize();
     pwSpostRenderResult();
