@@ -81,8 +81,28 @@ Supabase Edge Functions (server-side, not in this repo) bridge to Jira:
 - `jira-list-strumenti` — lists "Strumentazione" issues (project GAR) for the tools dropdown in Griglia; cached in `localStorage` (`pw_strumenti_cache`). Read-only.
 - `jira-sync-worklogs` — pulls real worklog hours + ticket/epic links into Controllo Produzione's "Ore Jira" column.
 - `jira-update-production` — writes/reads the "Actual Production" custom field on subtasks. Uses a **delta model**: each cell tracks the last value it wrote (`km_jira_last`); sync applies only `km_cad - km_jira_last` (can be negative) so the app's contribution is replaced rather than re-summed, and values written by other sources are preserved. Operates **per ticket**, since one operator can have production on multiple tickets/comuni the same day.
+- `jira-list-epics`, `jira-list-tasks`, `jira-create-subtask` — used by Griglia's "🎫 Sottotask Jira" feature to create subtasks for planned sites.
 
 When touching this area, read the version history in `README.md` (v18.28–v18.32) — the KM/production-sync design went through several iterations and the delta/per-ticket model replaced an earlier single-cell model; don't regress to summing absolute values.
+
+### Geocoding & Mapping
+Two public, free services power location-based features (no API key needed):
+- **Nominatim** (OpenStreetMap Geocoding, `https://nominatim.openstreetmap.org`) — converts site/city names → lat/lng coordinates. Results cached in `_geoCache` (key: lowercase trimmed name) and persisted in `localStorage` (`geo_cache_v1`) to avoid re-querying. Used by Mappa Squadre (weekly map), Pianifica Spostamenti (route planner), and upcoming "Ricerca Dipendente-Cantiere" feature. When a geocoded location does not match expectation, users can manually correct it in Mappa Squadre (pencil icon ✏️ on each listed site) — corrections are applied to the shared cache, affecting all weeks where that site name appears.
+- **OSRM** (Open Source Routing Machine, `https://router.project-osrm.org`) — real-world driving distances/times (road network) and route geometries. Used only by Pianifica Spostamenti (`/table` for distance matrix, `/route` for polyline to draw on map). Queries are not cached; results are stored locally in `localStorage` (`pw_spost_v1`, per-browser state).
+- **Open-Meteo** (Weather API, `https://open-meteo.com`) — fetches daily and hourly weather for planned sites. Called on-demand when rendering a Griglia day, with 1-hour TTL cache (in-memory, not persistent).
+
+### Data types & structures
+Key data structures to know when working with different modules:
+
+- **`pwData[anno][week]`** — Weekly planning grid (Griglia). Structure: array of commessa blocks, each `{ commessa, commessaId, squadre: [{ nome, operatori: [{ nome, giorni: {0..5: {cantieri: string[], attivita: string}} }] }] }`. Synced to Supabase `staffing_state` row `SB_ROW_PLANNING` (row id 2), domain key `pw_data`.
+
+- **`state.operatori[]`** — Operator pool (Dashboard → Pool operatori). Structure: `{ id, nome_esteso, email, skills: string[], attestati: [...], provincia, regione, contratto_tipo, contratto_inizio, contratto_fine, ... }`. Skills and provincial origin are used for matching when assigning to sites.
+
+- **`state.pipeline[]` / `state.commesse_attive[]` / `state.commesse_attive_meta{}`** — Project pipeline and active commesses (projects). Structure: `{ id, progetto, cliente, skills: [], attestati_richiesti: [], regione, provincia, codice_progetto_jira, ... }`. Region/province are used for geographic distance calculation ("📍 operatori più vicini").
+
+- **`pwFerie[anno][week]`** — Weekly absences (leave, unavailability). Structure: array of arrays, `[operatore_idx][giorno]` = `'ferie'` | `'non_disponibile'` | undefined. Synced to Supabase `staffing_state` row `SB_ROW_FERIE` (row id 3), domain key `pw_ferie`.
+
+- **`_geoCache`** — Persistent geocoding results. Structure: `{ 'lowercase name': { lat, lng, label } | null }`. Null entries mark sites that were searched but not found by Nominatim; they are still cached to avoid re-querying. Persisted in `localStorage` as `geo_cache_v1`.
 
 ### Auth & roles
 Supabase Auth (email+password). Role is read from `auth.jwt() -> 'user_metadata' ->> 'role'` / `_sbUser.user_metadata.role`; `sbIsAdmin()` checks for `'admin'`. Admin-only: activity log (`activity_log` table, via `sbLogActivity`), active-sessions panel (`active_sessions` table, heartbeat every 45s, stale sessions >5min pruned), name-reconciliation debug section. Assigning admin is a manual SQL statement against `auth.users` (documented in `README.md`).
