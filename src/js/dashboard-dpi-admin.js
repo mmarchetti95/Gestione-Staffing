@@ -4,11 +4,6 @@ function renderDpiAdmin() {
   const listContainer = document.getElementById('dpi-list-container');
   if (!filterSection || !listContainer) return;
 
-  // Mostra solo agli admin
-  if (!sbIsAdmin()) {
-    filterSection.classList.add('hidden');
-    return;
-  }
   filterSection.classList.remove('hidden');
 
   const dpiList = state.dpi_disponibili || [];
