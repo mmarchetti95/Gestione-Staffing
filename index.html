@@ -13594,10 +13594,32 @@ function _mapColorStrumento(key) {
   return _mapColorsStrumento[key];
 }
 
-/* Rubrica luoghi persistente */
+/* Rubrica luoghi persistente (sincronizzata su Supabase) */
 let _geoCache = {};
 async function _geoCacheLoad() {
-  try { const r = await sget('geo_cache_v1'); if (r) _geoCache = r; } catch(e) {}
+  try {
+    const { data, error } = await _sbClient.from('geo_cache').select('key, lat, lng, label');
+    if (error) throw error;
+    if (data) {
+      _geoCache = {};
+      data.forEach(row => {
+        _geoCache[row.key] = { lat: row.lat, lng: row.lng, label: row.label };
+      });
+    }
+  } catch(e) {
+    console.warn('Errore caricamento geo_cache da Supabase:', e);
+  }
+}
+async function _geoCacheSaveSingle(key, value) {
+  try {
+    if (value === null) {
+      await _sbClient.from('geo_cache').upsert({ key, lat: 0, lng: 0, label: '[non trovato]' }, { onConflict: 'key' });
+    } else {
+      await _sbClient.from('geo_cache').upsert({ key, lat: value.lat, lng: value.lng, label: value.label }, { onConflict: 'key' });
+    }
+  } catch(e) {
+    console.warn('Errore salvataggio geo_cache su Supabase:', e);
+  }
 }
 async function _geoCacheSave() {
   try { await sset('geo_cache_v1', _geoCache); } catch(e) {}
@@ -13617,7 +13639,7 @@ async function geocodifica(nome) {
     const data = await res.json();
     const val = (data && data.length > 0) ? { lat: parseFloat(data[0].lat), lng: parseFloat(data[0].lon), label: data[0].display_name } : null;
     _geoCache[key] = val;
-    await _geoCacheSave();
+    await _geoCacheSaveSingle(key, val);
     if (statusEl) statusEl.textContent = '';
     return val;
   } catch(e) {
@@ -14319,7 +14341,7 @@ async function pwMapGeoEditSubmit(inp) {
     return;
   }
   _geoCache[key] = result;
-  await _geoCacheSave();
+  await _geoCacheSaveSingle(key, result);
   pwMapRender(_mapDay);
 }
 
