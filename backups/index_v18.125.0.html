@@ -1127,7 +1127,7 @@
     <div class="flex items-center gap-2">
       <button id="btn-presentation" class="px-3 py-1.5 text-sm rounded hover:bg-white/10" style="border:1px solid var(--dark-border-strong);color:var(--dark-text);visibility:visible;">📊 Modalità presentazione</button>
       <div class="text-xs pl-2" style="border-left:1px solid var(--dark-border-strong);color:var(--dark-text-muted);">
-        <span id="app-version" class="font-medium" style="color:var(--accent);">v18.126.0</span> · Michele Marchetti
+        <span id="app-version" class="font-medium" style="color:var(--accent);">v18.125.0</span> · Michele Marchetti
       </div>
     </div>
   </div>
@@ -1855,11 +1855,6 @@
           </div>
         </div>
 
-        <label class="block text-xs font-semibold text-slate-600 mb-1">Data priorità <span class="text-slate-400 font-normal">(facoltativa)</span></label>
-        <input id="rs-tappa-priorita" type="date"
-          title='Se compilata, indica la scadenza entro cui il cantiere va coperto'
-          class="w-full mb-2 px-2 py-1.5 text-sm border border-slate-300 rounded focus:outline-none focus:border-teal-400">
-
         <button onclick="rsAddTappa()"
           class="w-full px-3 py-2 text-sm font-medium bg-teal-600 text-white rounded-lg hover:bg-teal-700 mb-3">
           ➕ Aggiungi tappa
@@ -1880,9 +1875,8 @@
 
         <div id="rs-status" class="text-xs text-slate-500 mt-2"></div>
         <div class="text-xs text-slate-400 mt-3 leading-snug">
-          Ordina le squadre per <b>distanza stradale dal cantiere in cui si trovano</b> nei
-          <b>giorni residui della settimana</b> (da oggi in poi), dicendo quando andare e da
-          quale cantiere partire, e se coprono skill e strumenti richiesti.
+          Ordina le squadre di questa settimana per <b>distanza stradale dal cantiere in cui
+          si trovano già</b>, mostrando quando sono libere e se coprono skill e strumenti richiesti.
         </div>
       </div>
 
@@ -16166,15 +16160,7 @@ function pwSpostRender() {
    - Geocodifica via Nominatim, riusando la rubrica condivisa _geoCache (weekly-mappa.js)
    - Distanze in UNA sola chiamata OSRM /table (sources=squadre, destinations=tappe),
      con fallback su haversine se OSRM non risponde
-   - Disponibilità giorno per giorno: libero / occupato / ferie / doppia week, MA solo
-     per i giorni residui della settimana (da oggi in poi, vedi _rsStartDay/startDay):
-     dove una squadra si trovava nei giorni già passati non è rilevante per una richiesta
-     immediata, quindi non entra né nei cantieri mostrati né nel calcolo delle distanze
-   - Se una squadra ha più cantieri nei giorni residui, il "giorno consigliato" (vedi
-     _rsGiornoConsigliato) sceglie automaticamente quello più vicino a una tappa e dice
-     da quale cantiere converrebbe partire
-   - Le tappe possono avere una "data priorità" (facoltativa): scadenza entro cui il
-     cantiere va coperto, mostrata come avviso se il giorno consigliato la supera
+   - Disponibilità giorno per giorno: libero / occupato / ferie / doppia week
    - NO persistenza: stato locale in RAM (sessione), come Pianifica spostamenti */
 
 let _ricercaSquadre = {
@@ -16222,30 +16208,6 @@ function _rsOpPool(nome) {
   return (state.operatori || []).find(o => (o.nome_esteso || o.nome_breve) === nome) || null;
 }
 
-/* ---------- data priorità (scadenza facoltativa di una tappa) ----------
-   Le date sono confrontate come stringhe ISO 'YYYY-MM-DD': l'ordine lessicografico
-   coincide con l'ordine cronologico, niente bisogno di oggetti Date per confrontarle. */
-function _rsOggiISO() {
-  return new Date().toISOString().slice(0, 10);
-}
-
-/* Data (ISO) del giorno `giorno` (0=Lun) della settimana attualmente calcolata */
-function _rsGiornoISO(giorno) {
-  const mon = isoWeekToMonday(_ricercaSquadre.anno, _ricercaSquadre.week);
-  const d = new Date(mon);
-  d.setUTCDate(mon.getUTCDate() + giorno);
-  return d.toISOString().slice(0, 10);
-}
-
-function _rsFormatDataIt(iso) {
-  const [y, m, d] = iso.split('-');
-  return d + '/' + m + '/' + y;
-}
-
-function _rsTappaByNome(nome) {
-  return (_ricercaSquadre.tappe || []).find(t => t.nome === nome) || null;
-}
-
 /* Primo giorno della settimana (0=Lun) da cui proporre un invio: se la settimana
    mostrata è quella in corso, non ha senso consigliare un giorno già passato (es. lunedì
    se oggi è mercoledì), quindi si parte da oggi. Per una settimana diversa da quella
@@ -16259,12 +16221,8 @@ function _rsStartDay() {
 
 /* ---------- raccolta dati della settimana ---------- */
 /* Una voce per squadra della settimana, con i cantieri giorno per giorno, le skill
-   dei suoi operatori e gli strumenti Jira assegnati.
-   `startDay` (0=Lun) esclude i giorni già passati dai cantieri raccolti: non serve
-   sapere dove stava la squadra prima di oggi, solo da dove può muoversi da qui in
-   avanti. Il sabato (indice 5) resta comunque tracciato per _rsNumGiorni. */
-function _rsBuildSquadre(startDay) {
-  startDay = startDay || 0;
+   dei suoi operatori e gli strumenti Jira assegnati. */
+function _rsBuildSquadre() {
   const out = [];
   pwGetWeekData().forEach(bc => {
     (bc.squadre || []).forEach((sq, si) => {
@@ -16277,9 +16235,7 @@ function _rsBuildSquadre(startDay) {
       for (let d = 0; d < 6; d++) {
         const giorno = new Set();
         ops.forEach(op => {
-          pwCellCantieri((op.giorni || {})[d]).forEach(c => {
-            if (d >= startDay) { giorno.add(c); cantieriSet.add(c); }
-          });
+          pwCellCantieri((op.giorni || {})[d]).forEach(c => { giorno.add(c); cantieriSet.add(c); });
         });
         cantieriByDay[d] = Array.from(giorno);
       }
@@ -16553,18 +16509,14 @@ async function rsAddTappa() {
       return;
     }
   }
-  const prioritaEl = document.getElementById('rs-tappa-priorita');
-  const dataPriorita = (prioritaEl && prioritaEl.value) ? prioritaEl.value : null;
   _ricercaSquadre.tappe.push({
     nome,
     lat: geo.lat,
     lng: geo.lng,
     skills: Array.from(_rsSelSkills),
-    strumenti: Array.from(_rsSelStrumenti),
-    dataPriorita
+    strumenti: Array.from(_rsSelStrumenti)
   });
   nomeEl.value = '';
-  if (prioritaEl) prioritaEl.value = '';
   _rsSelSkills.clear();
   _rsSelStrumenti.clear();
   _rsUpdateSkillsLabel();
@@ -16585,8 +16537,6 @@ function rsPulisci() {
   _rsSelStrumenti.clear();
   _rsUpdateSkillsLabel();
   _rsUpdateStrumentiLabel();
-  const prioritaEl = document.getElementById('rs-tappa-priorita');
-  if (prioritaEl) prioritaEl.value = '';
   rsRenderTappe();
   rsRenderRisultati();
   rsRenderMappa();
@@ -16601,20 +16551,16 @@ function rsRenderTappe() {
     _rsSyncAltezze();
     return;
   }
-  const oggi = _rsOggiISO();
   container.innerHTML = _ricercaSquadre.tappe.map((t, i) => {
     const skillsLine = t.skills.length
       ? '<div style="color:#475569;margin-top:2px;">🎓 ' + esc(t.skills.join(', ')) + '</div>' : '';
     const strLine = t.strumenti.length
       ? '<div style="color:#0d9488;margin-top:2px;">🔧 ' + esc(t.strumenti.map(k => pwStrLabel(k)).join(', ')) + '</div>' : '';
-    const priorLine = t.dataPriorita
-      ? '<div style="margin-top:2px;font-weight:700;color:' + (t.dataPriorita < oggi ? '#e11d48' : '#b45309') + ';">⏰ Entro il ' +
-        esc(_rsFormatDataIt(t.dataPriorita)) + (t.dataPriorita < oggi ? ' (scaduta)' : '') + '</div>' : '';
     return '<div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:6px;padding:6px 8px;margin-bottom:6px;font-size:11px;">' +
       '<div style="display:flex;justify-content:space-between;gap:6px;">' +
         '<span style="font-weight:600;color:#0f172a;">📍 ' + esc(t.nome) + '</span>' +
         '<button type="button" data-rm="' + i + '" style="color:#f43f5e;font-weight:700;background:none;border:none;cursor:pointer;line-height:1;">×</button>' +
-      '</div>' + skillsLine + strLine + priorLine + '</div>';
+      '</div>' + skillsLine + strLine + '</div>';
   }).join('');
   container.querySelectorAll('button[data-rm]').forEach(b => {
     b.onclick = () => rsRemoveTappa(parseInt(b.dataset.rm, 10));
@@ -16674,8 +16620,7 @@ async function rsCalcola() {
   try {
     _ricercaSquadre.anno = pwAnno;
     _ricercaSquadre.week = pwWeek;
-    const startDay = _rsStartDay();
-    const squadre = _rsBuildSquadre(startDay);
+    const squadre = _rsBuildSquadre();
     if (!squadre.length) {
       _ricercaSquadre.risultati = [];
       _rsStatus('Nessuna squadra pianificata in questa settimana.', true);
@@ -16721,6 +16666,7 @@ async function rsCalcola() {
     /* Requisiti: unione di quanto richiesto su tutte le tappe */
     const skillsRichieste = Array.from(new Set(_ricercaSquadre.tappe.flatMap(t => t.skills)));
     const strumentiRichiesti = Array.from(new Set(_ricercaSquadre.tappe.flatMap(t => t.strumenti)));
+    const startDay = _rsStartDay();
 
     const risultati = squadre.map((sq, si) => {
       /* Origine migliore = il punto della squadra più vicino a una delle tappe */
@@ -16779,11 +16725,8 @@ async function rsCalcola() {
 }
 
 /* ---------- render risultati ---------- */
-/* Mostra solo i giorni residui della settimana (da `startDay` in poi): i giorni già
-   passati non servono, la richiesta è "immediata". */
-function _rsChipsHtml(stati, consigliato, startDay) {
+function _rsChipsHtml(stati, consigliato) {
   return '<div style="display:flex;gap:2px;">' + stati.map((s, d) => {
-    if (d < startDay) return '';
     const c = RS_STATI[s];
     const isCons = consigliato != null && d === consigliato;
     const ring = isCons ? ';outline:2px solid #0d9488;outline-offset:1px' : '';
@@ -16794,21 +16737,11 @@ function _rsChipsHtml(stati, consigliato, startDay) {
   }).join('') + '</div>';
 }
 
-/* "Mer–Ven · dopo Prato (Mar) · 18 km" — il quando, con il perché.
-   Se la tappa più vicina (r.tappaVicina) ha una data priorità (scadenza facoltativa),
-   segnala se il giorno consigliato la rispetta o la supera. */
+/* "Mer–Ven · dopo Prato (Mar) · 18 km" — il quando, con il perché */
 function _rsConsiglioHtml(r) {
   const c = r.consiglio;
-  const tappa = _rsTappaByNome(r.tappaVicina);
-  const scadenza = tappa && tappa.dataPriorita ? tappa.dataPriorita : null;
-
   if (!c) {
-    let html = '<span style="color:#94a3b8;font-size:11px;font-style:italic;">nessun giorno libero</span>';
-    if (scadenza) {
-      html += '<div style="font-size:10px;color:#e11d48;font-weight:700;">⚠️ scadenza ' +
-        esc(_rsFormatDataIt(scadenza)) + ' non rispettabile</div>';
-    }
-    return html;
+    return '<span style="color:#94a3b8;font-size:11px;font-style:italic;">nessun giorno libero</span>';
   }
   const fine = c.giorno + c.consecutivi - 1;
   const label = c.consecutivi > 1
@@ -16824,17 +16757,10 @@ function _rsConsiglioHtml(r) {
     motivo = 'settimana libera';
   }
 
-  let scadenzaHtml = '';
-  if (scadenza) {
-    const inRitardo = _rsGiornoISO(c.giorno) > scadenza;
-    scadenzaHtml = '<div style="font-size:10px;font-weight:700;color:' + (inRitardo ? '#e11d48' : '#0d9488') + ';">' +
-      (inRitardo ? '⚠️ oltre la scadenza (' : '⏰ entro la scadenza (') + esc(_rsFormatDataIt(scadenza)) + ')</div>';
-  }
-
   return '<div style="font-weight:700;color:#0f172a;font-size:12px;">📅 ' + label + '</div>' +
     '<div style="font-size:10px;color:#64748b;">' + motivo + '</div>' +
     (c.consecutivi > 1 ? '<div style="font-size:10px;color:#15803d;font-weight:600;">' +
-      c.consecutivi + ' gg consecutivi</div>' : '') + scadenzaHtml;
+      c.consecutivi + ' gg consecutivi</div>' : '');
 }
 
 function _rsBadgeHtml(coperti, richiesti, mancanti, icona, cosa) {
@@ -16889,7 +16815,6 @@ function _rsRenderRisultatiBody() {
     return;
   }
 
-  const startDay = _rsStartDay();
   const righe = risultati.map((r, i) => {
     const distHtml = r.dist == null
       ? '<span style="color:#cbd5e1;">—</span>'
@@ -16913,7 +16838,7 @@ function _rsRenderRisultatiBody() {
       '<td style="padding:8px 6px;vertical-align:top;text-align:right;">' + distHtml + '</td>' +
       '<td style="padding:8px 6px;vertical-align:top;">' + _rsConsiglioHtml(r) + '</td>' +
       '<td style="padding:8px 6px;vertical-align:top;">' +
-        _rsChipsHtml(r.stati, r.consiglio ? r.consiglio.giorno : null, startDay) + '</td>' +
+        _rsChipsHtml(r.stati, r.consiglio ? r.consiglio.giorno : null) + '</td>' +
       '<td style="padding:8px 6px;vertical-align:top;text-align:center;white-space:nowrap;">' +
         _rsBadgeHtml(r.skills.coperte, r.skills.richieste, r.skills.mancanti, '🎓', 'skill') + ' ' +
         _rsBadgeHtml(r.strumenti.coperti, r.strumenti.richiesti,
@@ -16939,7 +16864,7 @@ function _rsRenderRisultatiBody() {
         '<th style="' + th + '">Dove sono questa settimana</th>' +
         '<th style="' + th + 'text-align:right;">Distanza</th>' +
         '<th style="' + th + '">Quando andare</th>' +
-        '<th style="' + th + '">Giorni residui</th>' +
+        '<th style="' + th + '">Settimana</th>' +
         '<th style="' + th + 'text-align:center;">Requisiti</th>' +
       '</tr></thead><tbody>' + righe + '</tbody></table></div>' +
     '<div style="font-size:10px;color:#64748b;margin-top:8px;">' + legenda + '</div>';

@@ -1,3 +1,7 @@
+## v18.126.0
+- feat: **Ricerca Squadre — mostra solo i giorni residui della settimana** — la striscia di chip "Lun–Sab" e la sezione "Dove sono questa settimana" non mostrano più i giorni già passati (es. lunedì/martedì se il ranking parte mercoledì): la richiesta è immediata, quindi contano solo oggi e i giorni successivi. Di conseguenza anche la distanza usata per il ranking e il "giorno consigliato" si basano solo sui cantieri dei giorni residui, non su dove la squadra si trovava a inizio settimana.
+- feat: **Ricerca Squadre — data priorità (facoltativa) sulle tappe** — aggiungendo una tappa si può ora indicare una scadenza entro cui il cantiere va coperto. Se compilata, viene mostrata come avviso sotto la tappa (in rosso se già scaduta) e, nella colonna "Quando andare" di ogni squadra proposta, segnala se il giorno consigliato rispetta la scadenza (⏰) o la supera (⚠️).
+
 ## v18.125.0
 - fix: **cursore invisibile sulle card del Pool operatori** — il cursore "manina" di drag & drop mostrato passando su una card operatore poteva essere reso bianco dal tema cursori del sistema operativo: sulle card a sfondo bianco spariva, diventando visibile solo sopra elementi colorati. Sostituito con un'icona SVG inline (riempimento scuro + contorno chiaro) sempre leggibile su qualunque sfondo, indipendentemente dal tema cursori dell'OS.
 
