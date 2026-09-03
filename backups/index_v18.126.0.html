@@ -1127,7 +1127,7 @@
     <div class="flex items-center gap-2">
       <button id="btn-presentation" class="px-3 py-1.5 text-sm rounded hover:bg-white/10" style="border:1px solid var(--dark-border-strong);color:var(--dark-text);visibility:visible;">📊 Modalità presentazione</button>
       <div class="text-xs pl-2" style="border-left:1px solid var(--dark-border-strong);color:var(--dark-text-muted);">
-        <span id="app-version" class="font-medium" style="color:var(--accent);">v18.127.0</span> · Michele Marchetti
+        <span id="app-version" class="font-medium" style="color:var(--accent);">v18.126.0</span> · Michele Marchetti
       </div>
     </div>
   </div>
@@ -1620,7 +1620,6 @@
       <div id="pw-search-op-info" class="text-xs text-slate-400 hidden"></div>
       <button id="pw-strumenti-refresh" class="px-3 py-1.5 text-sm border border-amber-300 bg-amber-50 text-amber-800 rounded hover:bg-amber-100 no-print whitespace-nowrap" title="Carica/aggiorna l'elenco strumenti dal progetto Jira GAR">🔧 Aggiorna strumenti</button>
       <span id="pw-strumenti-status" class="text-xs text-slate-500 no-print"></span>
-      <button id="pw-weather-week-btn" class="px-3 py-1.5 text-sm border border-slate-200 bg-slate-50 text-slate-400 rounded no-print whitespace-nowrap" title="Criticità meteo nei cantieri pianificati questa settimana" onclick="pwOpenWeatherWeekModal()">⛈️ Meteo settimana…</button>
       <button id="pw-collapse-all" class="ml-auto px-3 py-1.5 text-sm border border-slate-300 rounded hover:bg-slate-50 no-print whitespace-nowrap" title="Collassa / Espandi tutto" onclick="pwCollapseAllToggle()">≡ Collassa</button>
     </div>
     <div id="pw-grid" class="space-y-4"></div>
@@ -11117,7 +11116,6 @@ function pwRender() {
   pwSyncCpDataForGrid();
   // Meteo per squadra/giorno: fire-and-forget, aggiorna i badge già in pagina senza
   // un secondo pwRender() (perderebbe focus/cursore negli input appena renderizzati).
-  pwUpdateWeatherWidget();
   pwRefreshMeteoWeek();
 }
 
@@ -17333,7 +17331,6 @@ function pwApplyMeteoBadgesToDom() {
     if (!squadra) return;
     slot.innerHTML = pwWeatherBadgeInnerHtml(cIdx, sIdx, squadra, dayIdx, dateISO);
   });
-  pwUpdateWeatherWidget();
 }
 
 /* ----- Modal dettaglio meteo per fasce orarie (uno o più cantieri) ----- */
@@ -17379,111 +17376,6 @@ function pwOpenMeteoModal(cIdx, sIdx, dayIdx) {
     <h3 class="font-semibold text-slate-900 mb-1">Meteo — ${esc(squadra.nome || 'Squadra')}</h3>
     <p class="text-xs text-slate-500 mb-3">${DAY_NAMES_FULL[dayIdx]} ${formatDate(d)}</p>
     <div>${blocks || '<div class="text-slate-400 text-sm">Nessun cantiere pianificato.</div>'}</div>
-    <div class="flex justify-end mt-4">
-      <button onclick="closeModal()" class="px-3 py-1.5 text-sm border border-slate-300 rounded">Chiudi</button>
-    </div>
-  </div></div>`;
-  root.querySelector('.modal-backdrop').addEventListener('click', e => {
-    if (e.target.classList.contains('modal-backdrop')) closeModal();
-  });
-}
-
-/* ----- Widget "criticità meteo settimana" (header Griglia, accanto ad Aggiorna strumenti) -----
-   MVP basato solo su soglie sulle previsioni Open-Meteo già in cache (weathercode/probabilità
-   di precipitazione): nessuna integrazione con bollettini Protezione Civile per ora (nessun
-   feed pubblico gratuito confermato disponibile, vedi nota nel README/memoria di progetto). */
-
-/* Severità di un giorno/cantiere dal suo aggregato Open-Meteo, o null se nessuna criticità. */
-function pwMeteoSeverityFor(info) {
-  if (!info) return null;
-  const CODICI_ALTA = [65, 66, 67, 82, 86, 95, 96, 99];   // pioggia intensa/gelata, neve intensa, temporali
-  const CODICI_MEDIA = [56, 57, 63, 73, 75, 77, 81];      // pioggia gelata leggera, pioggia/neve moderate
-  if (CODICI_ALTA.includes(info.code) || (info.pop != null && info.pop >= 80)) return 'alta';
-  if (CODICI_MEDIA.includes(info.code) || (info.pop != null && info.pop >= 55)) return 'media';
-  return null;
-}
-
-/* Scansiona la settimana corrente (tutti i cantieri pianificati, deduplicati per cantiere+data)
-   e restituisce sia la copertura (quanti hanno già un meteo in cache) sia le criticità trovate,
-   ordinate per severità poi data — usato sia dal badge nell'header sia dal modal di dettaglio. */
-function pwWeatherWeekStatus() {
-  const data = pwGetWeekData();
-  const monday = isoWeekToMonday(pwAnno, pwWeek);
-  const SEV_RANK = { alta: 0, media: 1 };
-  const seen = new Set();
-  let total = 0, covered = 0;
-  const crit = [];
-  data.forEach(bc => (bc.squadre || []).forEach(sq => {
-    for (let dayIdx = 0; dayIdx < 6; dayIdx++) {
-      const d = new Date(monday); d.setUTCDate(monday.getUTCDate() + dayIdx);
-      const dateISO = d.toISOString().slice(0, 10);
-      pwSquadraCantieriGiorno(sq, dayIdx).forEach(cantiere => {
-        const key = cantiere.toLowerCase().trim() + '|' + dateISO;
-        if (seen.has(key)) return;
-        seen.add(key);
-        total++;
-        const info = pwMeteoInfoFor(cantiere, dateISO);
-        if (info) covered++;
-        const severity = pwMeteoSeverityFor(info);
-        if (severity) crit.push({ cantiere, dayIdx, dateISO, severity, info });
-      });
-    }
-  }));
-  crit.sort((a, b) => SEV_RANK[a.severity] - SEV_RANK[b.severity] || a.dayIdx - b.dayIdx || a.cantiere.localeCompare(b.cantiere));
-  return { total, covered, crit };
-}
-
-/* Aggiorna aspetto/testo del bottone nell'header in base allo stato corrente (nessun cantiere,
-   dati ancora in caricamento, nessuna criticità, o N criticità). Va richiamata sia subito in
-   pwRender (riflette la cache già presente) sia a fine pwRefreshMeteoWeek (dati freschi). */
-function pwUpdateWeatherWidget() {
-  const btn = document.getElementById('pw-weather-week-btn');
-  if (!btn) return;
-  const { total, covered, crit } = pwWeatherWeekStatus();
-  const BASE = 'px-3 py-1.5 text-sm border rounded no-print whitespace-nowrap ';
-  if (!total) {
-    btn.className = BASE + 'border-slate-200 bg-slate-50 text-slate-400';
-    btn.textContent = '⛈️ Meteo settimana…';
-    btn.title = 'Nessun cantiere pianificato questa settimana';
-  } else if (covered < total) {
-    btn.className = BASE + 'border-slate-200 bg-slate-50 text-slate-400';
-    btn.textContent = '⛈️ Meteo settimana…';
-    btn.title = 'Caricamento previsioni meteo in corso…';
-  } else if (!crit.length) {
-    btn.className = BASE + 'border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100';
-    btn.textContent = '✅ Nessuna criticità meteo';
-    btn.title = 'Clicca per il dettaglio (nessuna criticità rilevata nei cantieri pianificati questa settimana)';
-  } else {
-    const alta = crit.filter(c => c.severity === 'alta').length;
-    const cls = alta ? 'border-red-300 bg-red-50 text-red-800 hover:bg-red-100' : 'border-amber-300 bg-amber-50 text-amber-800 hover:bg-amber-100';
-    btn.className = BASE + cls;
-    btn.textContent = '⚠️ ' + crit.length + (crit.length === 1 ? ' criticità meteo' : ' criticità meteo');
-    btn.title = 'Clicca per il dettaglio delle criticità meteo nei cantieri pianificati questa settimana';
-  }
-}
-
-/* Modal di dettaglio: elenco per giorno/cantiere delle criticità trovate (severità, condizione,
-   temperature, probabilità di pioggia). Apribile anche quando non ci sono criticità, per
-   confermare che il controllo è stato fatto invece di lasciare solo un badge silenzioso. */
-function pwOpenWeatherWeekModal() {
-  const { crit } = pwWeatherWeekStatus();
-  const DAY_NAMES_FULL = ['Lunedì', 'Martedì', 'Mercoledì', 'Giovedì', 'Venerdì', 'Sabato'];
-  const root = document.getElementById('modal-root');
-  if (!root) return;
-  const rows = crit.length
-    ? crit.map(c => {
-        const sevLabel = c.severity === 'alta' ? '🔴 Alta' : '🟠 Media';
-        const [, mm, dd] = c.dateISO.split('-');
-        return `<div class="pw-meteo-modal-block">
-          <div class="pw-meteo-modal-cantiere">${esc(c.cantiere)} — ${DAY_NAMES_FULL[c.dayIdx]} ${dd}/${mm}</div>
-          <div class="pw-meteo-modal-info">${sevLabel} · ${pwMeteoIconFor(c.info.code)} ${Math.round(c.info.tmax)}°/${Math.round(c.info.tmin)}°${c.info.pop != null ? ' · 💧' + Math.round(c.info.pop) + '%' : ''}</div>
-        </div>`;
-      }).join('')
-    : `<div class="text-slate-400 text-sm">Nessuna criticità meteo rilevata nei cantieri pianificati questa settimana.</div>`;
-  root.innerHTML = `<div class="modal-backdrop"><div class="bg-white rounded-lg shadow-xl w-full max-w-lg mx-4 my-8 p-5">
-    <h3 class="font-semibold text-slate-900 mb-1">⛈️ Criticità meteo — settimana</h3>
-    <p class="text-xs text-slate-500 mb-3">Basato su soglie sulle previsioni Open-Meteo (pioggia/temporali); nessuna integrazione con bollettini Protezione Civile.</p>
-    <div>${rows}</div>
     <div class="flex justify-end mt-4">
       <button onclick="closeModal()" class="px-3 py-1.5 text-sm border border-slate-300 rounded">Chiudi</button>
     </div>

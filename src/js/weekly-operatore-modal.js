@@ -514,6 +514,7 @@ function pwRender() {
   pwSyncCpDataForGrid();
   // Meteo per squadra/giorno: fire-and-forget, aggiorna i badge già in pagina senza
   // un secondo pwRender() (perderebbe focus/cursore negli input appena renderizzati).
+  pwUpdateWeatherWidget();
   pwRefreshMeteoWeek();
 }
 
