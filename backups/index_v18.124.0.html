@@ -233,21 +233,12 @@
   .dpi-taglia { font-size: 9px; padding: 0 3px; border-radius: 3px; background: #fef9c3; color: #854d0e; border: 1px solid #fde68a; }
   .dpi-manca { color: #b45309; font-weight: 700; }
   .op-card {
-    /* Il cursore "grab" nativo di sistema puo' essere reso bianco dal tema
-       cursori dell'OS: su queste card a sfondo bianco (bg-white) diventa
-       invisibile finche' non si passa su un elemento colorato. Sostituito
-       con un'icona SVG inline (riempimento scuro + contorno chiaro) sempre
-       visibile su qualunque sfondo, indipendente dal tema cursori dell'OS. */
-    cursor: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24"><g fill="%230f172a" stroke="%23ffffff" stroke-width="1.5" stroke-linejoin="round"><path d="M8 12.5V6.5a1.5 1.5 0 0 1 3 0v4.5M11 11V4.5a1.5 1.5 0 0 1 3 0V11M14 11V6a1.5 1.5 0 0 1 3 0v7.5M17 12v-1a1.5 1.5 0 0 1 3 0v5.5c0 3.31-2.69 6-6 6h-2.5c-1.7 0-3.32-.72-4.46-1.98l-3.02-3.35a1.5 1.5 0 0 1 2.1-2.14l1.88 1.62V12.5"/></g></svg>') 12 12, grab;
-    user-select: none;
+    cursor: grab; user-select: none;
     transition: all .15s;
   }
   .op-card:hover { box-shadow: var(--shadow-md); border-color: var(--accent); }
   .op-card.saturo { opacity: .55; }
-  .op-card.dragging {
-    opacity: .4;
-    cursor: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24"><g fill="%230f172a" stroke="%23ffffff" stroke-width="1.5" stroke-linejoin="round"><path d="M7 13V8.5a1.5 1.5 0 0 1 3-.2M10 13V7a1.5 1.5 0 0 1 3 0v6M13 13V7.5a1.5 1.5 0 0 1 3 0V13M16 13.5v-1a1.5 1.5 0 0 1 3 0V17c0 3.31-2.69 6-6 6h-2.5c-1.7 0-3.32-.72-4.46-1.98l-2.02-2.25a1.4 1.4 0 0 1 1.98-1.98l1.5 1.36"/></g></svg>') 12 12, grabbing;
-  }
+  .op-card.dragging { opacity: .4; }
   .drop-zone {
     min-height: 50px;
     border: 2px dashed var(--border);
@@ -1127,7 +1118,7 @@
     <div class="flex items-center gap-2">
       <button id="btn-presentation" class="px-3 py-1.5 text-sm rounded hover:bg-white/10" style="border:1px solid var(--dark-border-strong);color:var(--dark-text);visibility:visible;">📊 Modalità presentazione</button>
       <div class="text-xs pl-2" style="border-left:1px solid var(--dark-border-strong);color:var(--dark-text-muted);">
-        <span id="app-version" class="font-medium" style="color:var(--accent);">v18.125.0</span> · Michele Marchetti
+        <span id="app-version" class="font-medium" style="color:var(--accent);">v18.124.0</span> · Michele Marchetti
       </div>
     </div>
   </div>

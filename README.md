@@ -1,3 +1,6 @@
+## v18.125.0
+- fix: **cursore invisibile sulle card del Pool operatori** — il cursore "manina" di drag & drop mostrato passando su una card operatore poteva essere reso bianco dal tema cursori del sistema operativo: sulle card a sfondo bianco spariva, diventando visibile solo sopra elementi colorati. Sostituito con un'icona SVG inline (riempimento scuro + contorno chiaro) sempre leggibile su qualunque sfondo, indipendentemente dal tema cursori dell'OS.
+
 ## v18.124.0
 - feat: **Ricerca Squadre — tappe anche per coordinate geografiche dirette** — il campo "Comune / Cantiere" accetta ora, oltre al nome di un comune/cantiere, anche coordinate dirette nel formato `lat, lng` (o `lat lng` / `lat;lng`), riconosciute con la stessa logica già usata per la correzione manuale in Mappa Squadre: in questo caso non viene interrogato Nominatim, la posizione è presa così com'è. Utile per punti senza un nome geocodificabile affidabile.
 
