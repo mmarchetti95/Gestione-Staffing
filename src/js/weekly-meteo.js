@@ -337,11 +337,12 @@ async function pcParseGiorno(url) {
   return out;
 }
 
-/* Trova e scarica il bollettino di oggi: la cartella files/ del repo contiene un file per
-   giorno nominato "YYYYMMDD_HHMM.json" con orario di pubblicazione variabile, quindi va
-   individuato — un'unica chiamata alla Git Trees API elenca l'intero contenuto della cartella
-   senza incorrere nel limite di 1000 elementi/pagina della Contents API. */
-async function pcFetchIndiceOggi() {
+/* Trova e scarica il bollettino pubblicato in un dato giorno (prefisso "YYYYMMDD"): la cartella
+   files/ del repo contiene un file per giorno nominato "YYYYMMDD_HHMM.json" con orario di
+   pubblicazione variabile, quindi va individuato — un'unica chiamata alla Git Trees API elenca
+   l'intero contenuto della cartella senza incorrere nel limite di 1000 elementi/pagina della
+   Contents API. */
+async function pcFetchIndice(datePrefix) {
   const rootRes = await fetch('https://api.github.com/repos/' + PC_REPO + '/contents/');
   if (!rootRes.ok) throw new Error('HTTP ' + rootRes.status);
   const rootEntries = await rootRes.json();
@@ -351,10 +352,9 @@ async function pcFetchIndiceOggi() {
   const treeRes = await fetch('https://api.github.com/repos/' + PC_REPO + '/git/trees/' + filesDir.sha);
   if (!treeRes.ok) throw new Error('HTTP ' + treeRes.status);
   const tree = await treeRes.json();
-  const todayPrefix = new Date().toISOString().slice(0, 10).replace(/-/g, '');
   const candidati = (tree.tree || [])
     .map(t => t.path)
-    .filter(p => new RegExp('^' + todayPrefix + '_\\d{4}\\.json$').test(p))
+    .filter(p => new RegExp('^' + datePrefix + '_\\d{4}\\.json$').test(p))
     .sort(); // l'ultimo in ordine cronologico è l'edizione più recente (aggiornamento/errata corrige)
   if (!candidati.length) return null;
   const name = candidati[candidati.length - 1];
@@ -362,6 +362,22 @@ async function pcFetchIndiceOggi() {
   const idxRes = await fetch('https://raw.githubusercontent.com/' + PC_REPO + '/master/files/' + name);
   if (!idxRes.ok) throw new Error('HTTP ' + idxRes.status);
   return { name, index: await idxRes.json() };
+}
+
+/* Il bollettino di oggi esce di norma entro le 16:00: prima di allora non è ancora su GitHub.
+   In quella finestra usiamo il bollettino di ieri, la cui sezione "domani" copre esattamente
+   oggi (stesso bollettino che un operatore avrebbe consultato ieri pomeriggio per pianificare
+   la giornata odierna) — così il widget non resta "cieco" sul lato PC per metà giornata. */
+async function pcFetchBollettinoUtile() {
+  const todayPrefix = new Date().toISOString().slice(0, 10).replace(/-/g, '');
+  const oggi = await pcFetchIndice(todayPrefix);
+  if (oggi) return { found: oggi, campoPerOggi: 'today', campoPerDomani: 'tomorrow' };
+
+  const yesterdayPrefix = new Date(Date.now() - 86400000).toISOString().slice(0, 10).replace(/-/g, '');
+  const ieri = await pcFetchIndice(yesterdayPrefix);
+  if (ieri) return { found: ieri, campoPerOggi: 'tomorrow', campoPerDomani: null };
+
+  return null;
 }
 
 /* Entry point periodico: aggiorna la cache solo se scaduta o se è cambiato il giorno. Nessun
@@ -374,14 +390,17 @@ async function pcRefreshBollettino() {
   if (_pcCache.dateISO === todayISO && (Date.now() - _pcCache.fetchedAt) < PC_TTL_MS) return;
   _pcRefreshing = true;
   try {
-    const found = await pcFetchIndiceOggi();
+    const risultato = await pcFetchBollettinoUtile();
     const byDate = {};
-    if (found) {
+    if (risultato) {
+      const { found, campoPerOggi, campoPerDomani } = risultato;
       const tomorrowISO = new Date(Date.now() + 86400000).toISOString().slice(0, 10);
-      if (found.index.today && found.index.today.topo_json) byDate[todayISO] = await pcParseGiorno(found.index.today.topo_json);
-      if (found.index.tomorrow && found.index.tomorrow.topo_json) byDate[tomorrowISO] = await pcParseGiorno(found.index.tomorrow.topo_json);
+      const sezOggi = found.index[campoPerOggi];
+      const sezDomani = campoPerDomani && found.index[campoPerDomani];
+      if (sezOggi && sezOggi.topo_json) byDate[todayISO] = await pcParseGiorno(sezOggi.topo_json);
+      if (sezDomani && sezDomani.topo_json) byDate[tomorrowISO] = await pcParseGiorno(sezDomani.topo_json);
     }
-    _pcCache = { dateISO: todayISO, fetchedAt: Date.now(), bollettino: found && found.name, byDate };
+    _pcCache = { dateISO: todayISO, fetchedAt: Date.now(), bollettino: risultato && risultato.found.name, byDate };
     await _pcCacheSave();
   } catch (e) {
     console.warn('[bollettino PC] refresh fallito', e);
