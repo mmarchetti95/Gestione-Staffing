@@ -1,3 +1,6 @@
+## v18.124.0
+- feat: **Ricerca Squadre — tappe anche per coordinate geografiche dirette** — il campo "Comune / Cantiere" accetta ora, oltre al nome di un comune/cantiere, anche coordinate dirette nel formato `lat, lng` (o `lat lng` / `lat;lng`), riconosciute con la stessa logica già usata per la correzione manuale in Mappa Squadre: in questo caso non viene interrogato Nominatim, la posizione è presa così com'è. Utile per punti senza un nome geocodificabile affidabile.
+
 ## v18.123.0
 - feat: **Toggle Stradale/Satellite su tutte le mappe** — ogni mappa dell'app (Mappa Squadre e mappa operatore in Pianificazione settimanale, Pianifica Spostamenti, Ricerca Squadre) ha ora un controllo in alto a destra per passare dalla vista stradale (OpenStreetMap) a quella satellitare e viceversa. Vista satellite fornita da Esri World Imagery, servizio gratuito senza API key, in linea con gli altri servizi di mappe già usati (Nominatim, OSRM).
 

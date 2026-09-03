@@ -337,15 +337,23 @@ async function rsAddTappa() {
   if (!nomeEl) return;
   const nome = nomeEl.value.trim();
   if (!nome) {
-    showAlertModal('Inserisci il nome di un comune o cantiere.');
+    showAlertModal('Inserisci il nome di un comune/cantiere oppure coordinate "lat, lng".');
     return;
   }
-  _rsStatus('Localizzo "' + nome + '"…');
-  const geo = await geocodifica(nome);
-  _rsStatus('');
-  if (!geo) {
-    showAlertModal('Località "' + nome + '" non trovata. Prova con un nome diverso (es. "Comune (PROV)").');
-    return;
+  /* "lat, lng" (o "lat lng"/"lat;lng") va trattato come coordinate dirette,
+     senza passare da Nominatim: stessa logica di pwMapParseCoords (Mappa Squadre) */
+  const coords = pwMapParseCoords(nome);
+  let geo;
+  if (coords) {
+    geo = coords;
+  } else {
+    _rsStatus('Localizzo "' + nome + '"…');
+    geo = await geocodifica(nome);
+    _rsStatus('');
+    if (!geo) {
+      showAlertModal('Località "' + nome + '" non trovata. Prova con un nome diverso (es. "Comune (PROV)") oppure con coordinate "lat, lng".');
+      return;
+    }
   }
   _ricercaSquadre.tappe.push({
     nome,
