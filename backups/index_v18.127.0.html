@@ -1127,7 +1127,7 @@
     <div class="flex items-center gap-2">
       <button id="btn-presentation" class="px-3 py-1.5 text-sm rounded hover:bg-white/10" style="border:1px solid var(--dark-border-strong);color:var(--dark-text);visibility:visible;">📊 Modalità presentazione</button>
       <div class="text-xs pl-2" style="border-left:1px solid var(--dark-border-strong);color:var(--dark-text-muted);">
-        <span id="app-version" class="font-medium" style="color:var(--accent);">v18.128.0</span> · Michele Marchetti
+        <span id="app-version" class="font-medium" style="color:var(--accent);">v18.127.0</span> · Michele Marchetti
       </div>
     </div>
   </div>
@@ -1184,9 +1184,6 @@
     </button>
     <button id="sb-btn-backups" onclick="sbShowBackups()" class="dark-link-btn text-xs px-2 py-1" style="visibility:hidden;">
       🗄️ Backup dati
-    </button>
-    <button id="sb-btn-users" onclick="sbShowUsers()" class="dark-link-btn text-xs px-2 py-1" style="visibility:hidden;">
-      👥 Gestione utenti
     </button>
     <button onclick="sbShowChangePwd()" class="dark-link-btn text-xs px-2 py-1">
       🔑 Cambia password
@@ -1320,62 +1317,6 @@
     <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:18px;">
       <button onclick="sbLoadBackups()" style="padding:8px 16px;font-size:13px;border:1px solid #e2e8f0;border-radius:8px;background:white;cursor:pointer;color:#475569;">↺ Aggiorna elenco</button>
       <button id="sb-backup-restore-btn" onclick="sbRestoreBackup()" style="padding:8px 18px;font-size:13px;background:#dc2626;color:white;border:none;border-radius:8px;cursor:pointer;font-weight:600;">Ripristina questo backup</button>
-    </div>
-  </div>
-</div>
-
-<!-- Modal Gestione utenti (solo admin) -->
-<div id="sb-users-modal" style="display:none;position:fixed;inset:0;z-index:99999;background:var(--backdrop);align-items:center;justify-content:center;">
-  <div style="background:white;border-radius:var(--radius-lg);padding:28px 32px;width:820px;max-width:96vw;max-height:88vh;box-shadow:var(--shadow-lg);display:flex;flex-direction:column;">
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">
-      <div>
-        <div style="font-weight:700;font-size:16px;color:#0f172a;font-family:var(--font-display);">👥 Gestione utenti</div>
-        <div style="font-size:11px;color:#94a3b8;margin-top:2px;">Utenti con accesso alla dashboard e relativo ruolo</div>
-      </div>
-      <div style="display:flex;gap:8px;align-items:center;">
-        <button onclick="sbLoadUsers()" style="padding:5px 12px;font-size:12px;background:var(--accent);color:white;border:none;border-radius:6px;cursor:pointer;">↺ Aggiorna</button>
-        <button onclick="sbCloseUsers()" style="padding:5px 12px;font-size:12px;border:1px solid #e2e8f0;border-radius:6px;background:white;cursor:pointer;color:#475569;">Chiudi</button>
-      </div>
-    </div>
-    <div id="sb-users-error" style="display:none;background:#fef2f2;border:1px solid #fecaca;color:#dc2626;font-size:12px;padding:8px 12px;border-radius:6px;margin:12px 0;"></div>
-    <div id="sb-users-success" style="display:none;background:#f0fdf4;border:1px solid #86efac;color:#16a34a;font-size:12px;padding:8px 12px;border-radius:6px;margin:12px 0;"></div>
-
-    <div style="display:flex;gap:8px;align-items:flex-end;background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:12px;margin-bottom:14px;flex-wrap:wrap;">
-      <div style="flex:1;min-width:160px;">
-        <label style="display:block;font-size:10.5px;font-weight:600;color:#374151;margin-bottom:3px;">Email nuovo utente</label>
-        <input id="sb-users-new-email" type="email" placeholder="nome@eagleprojects.it"
-          style="width:100%;border:1px solid #dde3ea;border-radius:6px;padding:7px 10px;font-size:12.5px;outline:none;box-sizing:border-box;">
-      </div>
-      <div style="flex:1;min-width:140px;">
-        <label style="display:block;font-size:10.5px;font-weight:600;color:#374151;margin-bottom:3px;">Password iniziale</label>
-        <input id="sb-users-new-password" type="text" placeholder="Minimo 6 caratteri"
-          style="width:100%;border:1px solid #dde3ea;border-radius:6px;padding:7px 10px;font-size:12.5px;outline:none;box-sizing:border-box;">
-      </div>
-      <div style="min-width:110px;">
-        <label style="display:block;font-size:10.5px;font-weight:600;color:#374151;margin-bottom:3px;">Ruolo</label>
-        <select id="sb-users-new-role" style="width:100%;border:1px solid #dde3ea;border-radius:6px;padding:7px 10px;font-size:12.5px;outline:none;box-sizing:border-box;">
-          <option value="user">Utente</option>
-          <option value="admin">Admin</option>
-        </select>
-      </div>
-      <button id="sb-users-add-btn" onclick="sbCreateUser()" style="padding:8px 16px;font-size:12.5px;background:var(--accent);color:white;border:none;border-radius:6px;cursor:pointer;font-weight:600;white-space:nowrap;">+ Aggiungi utente</button>
-    </div>
-
-    <div style="overflow-y:auto;flex:1;">
-      <table style="width:100%;border-collapse:collapse;font-size:12px;">
-        <thead>
-          <tr style="background:#f8fafc;position:sticky;top:0;">
-            <th style="text-align:left;padding:8px 12px;border-bottom:1px solid #e2e8f0;color:#64748b;font-weight:600;">Email</th>
-            <th style="text-align:left;padding:8px 12px;border-bottom:1px solid #e2e8f0;color:#64748b;font-weight:600;">Ruolo</th>
-            <th style="text-align:left;padding:8px 12px;border-bottom:1px solid #e2e8f0;color:#64748b;font-weight:600;white-space:nowrap;">Creato il</th>
-            <th style="text-align:left;padding:8px 12px;border-bottom:1px solid #e2e8f0;color:#64748b;font-weight:600;white-space:nowrap;">Ultimo accesso</th>
-            <th style="text-align:right;padding:8px 12px;border-bottom:1px solid #e2e8f0;color:#64748b;font-weight:600;"></th>
-          </tr>
-        </thead>
-        <tbody id="sb-users-tbody">
-          <tr><td colspan="5" style="padding:20px;text-align:center;color:#94a3b8;">Caricamento…</td></tr>
-        </tbody>
-      </table>
     </div>
   </div>
 </div>
@@ -2490,142 +2431,6 @@ async function sbRestoreBackup() {
   }
 }
 
-/* ===================== GESTIONE UTENTI (admin) ===================== */
-// Crea/elenca/modifica ruolo/elimina utenti Supabase Auth. Passa sempre dalla
-// Edge Function 'admin-users' (service_role key, mai esposta al client): il
-// client anon non ha e non deve avere accesso all'Admin API di Supabase Auth.
-async function sbCallAdminUsers(action, extra) {
-  const { data, error } = await _sbClient.functions.invoke('admin-users', {
-    body: { action, ...extra }
-  });
-  if (error) {
-    // Il body dell'errore (messaggio custom della function, es. 403/400) arriva
-    // in error.context; senza questo fallback si vedrebbe solo "FunctionsHttpError".
-    let msg = error.message || 'Errore chiamata funzione';
-    try { const body = await error.context.json(); if (body?.error) msg = body.error; } catch(e) {}
-    throw new Error(msg);
-  }
-  if (data && data.error) throw new Error(data.error);
-  return data;
-}
-
-async function sbShowUsers() {
-  document.getElementById('sb-users-modal').style.display = 'flex';
-  document.getElementById('sb-users-error').style.display = 'none';
-  document.getElementById('sb-users-success').style.display = 'none';
-  document.getElementById('sb-users-new-email').value = '';
-  document.getElementById('sb-users-new-password').value = '';
-  document.getElementById('sb-users-new-role').value = 'user';
-  await sbLoadUsers();
-}
-
-function sbCloseUsers() {
-  document.getElementById('sb-users-modal').style.display = 'none';
-}
-
-function sbUsersMsg(errText, okText) {
-  const errEl = document.getElementById('sb-users-error');
-  const okEl = document.getElementById('sb-users-success');
-  if (errText) { errEl.textContent = errText; errEl.style.display = 'block'; } else { errEl.style.display = 'none'; }
-  if (okText) { okEl.textContent = okText; okEl.style.display = 'block'; } else { okEl.style.display = 'none'; }
-}
-
-async function sbLoadUsers() {
-  const tbody = document.getElementById('sb-users-tbody');
-  tbody.innerHTML = '<tr><td colspan="5" style="padding:20px;text-align:center;color:#94a3b8;">Caricamento…</td></tr>';
-  try {
-    const data = await sbCallAdminUsers('list');
-    const users = data.users || [];
-    if (users.length === 0) {
-      tbody.innerHTML = '<tr><td colspan="5" style="padding:20px;text-align:center;color:#94a3b8;">Nessun utente.</td></tr>';
-      return;
-    }
-    const fmt = iso => {
-      if (!iso) return '—';
-      const dt = new Date(iso);
-      return dt.toLocaleDateString('it-IT') + ' ' + dt.toLocaleTimeString('it-IT', {hour:'2-digit', minute:'2-digit'});
-    };
-    tbody.innerHTML = users.map(u => {
-      const isSelf = _sbUser && u.id === _sbUser.id;
-      return '<tr style="border-bottom:1px solid #f1f5f9;">' +
-        '<td style="padding:7px 12px;color:#374151;">' + esc(u.email || '') + (isSelf ? ' <span style="color:#94a3b8;font-size:10.5px;">(tu)</span>' : '') + '</td>' +
-        '<td style="padding:7px 12px;">' +
-          '<select onchange="sbUpdateUserRole(\'' + jsAttr(u.id) + '\', this.value, \'' + jsAttr(u.email) + '\')" ' +
-            (isSelf ? 'disabled title="Non puoi modificare il tuo stesso ruolo"' : '') +
-            ' style="border:1px solid #dde3ea;border-radius:6px;padding:4px 8px;font-size:11.5px;outline:none;">' +
-            '<option value="user"' + (u.role === 'user' ? ' selected' : '') + '>Utente</option>' +
-            '<option value="admin"' + (u.role === 'admin' ? ' selected' : '') + '>Admin</option>' +
-          '</select>' +
-        '</td>' +
-        '<td style="padding:7px 12px;white-space:nowrap;color:#64748b;">' + fmt(u.created_at) + '</td>' +
-        '<td style="padding:7px 12px;white-space:nowrap;color:#64748b;">' + fmt(u.last_sign_in_at) + '</td>' +
-        '<td style="padding:7px 12px;text-align:right;">' +
-          (isSelf ? '' : '<button onclick="sbDeleteUser(\'' + jsAttr(u.id) + '\', \'' + jsAttr(u.email) + '\')" style="padding:4px 10px;font-size:11px;border:1px solid #fecaca;color:#dc2626;background:white;border-radius:6px;cursor:pointer;">Elimina</button>') +
-        '</td>' +
-        '</tr>';
-    }).join('');
-  } catch(e) {
-    tbody.innerHTML = '<tr><td colspan="5" style="padding:20px;text-align:center;color:#ef4444;">Errore: ' + esc(e.message) + '</td></tr>';
-  }
-}
-
-async function sbCreateUser() {
-  const emailEl = document.getElementById('sb-users-new-email');
-  const pwdEl = document.getElementById('sb-users-new-password');
-  const roleEl = document.getElementById('sb-users-new-role');
-  const btn = document.getElementById('sb-users-add-btn');
-  const email = emailEl.value.trim();
-  const password = pwdEl.value;
-  const role = roleEl.value;
-  sbUsersMsg(null, null);
-
-  if (!email || !password) { sbUsersMsg('Inserisci email e password.'); return; }
-  if (password.length < 6) { sbUsersMsg('La password deve essere di almeno 6 caratteri.'); return; }
-
-  btn.textContent = 'Creazione…'; btn.disabled = true;
-  try {
-    await sbCallAdminUsers('create', { email, password, role });
-    emailEl.value = ''; pwdEl.value = ''; roleEl.value = 'user';
-    sbUsersMsg(null, 'Utente ' + email + ' creato con successo.');
-    sbLogActivity('Creazione utente', { email, role });
-    await sbLoadUsers();
-  } catch(e) {
-    sbUsersMsg('Errore creazione utente: ' + e.message);
-  } finally {
-    btn.textContent = '+ Aggiungi utente'; btn.disabled = false;
-  }
-}
-
-async function sbUpdateUserRole(userId, role, email) {
-  sbUsersMsg(null, null);
-  try {
-    await sbCallAdminUsers('updateRole', { userId, role });
-    sbUsersMsg(null, 'Ruolo di ' + email + ' aggiornato a "' + (role === 'admin' ? 'Admin' : 'Utente') + '".');
-    sbLogActivity('Modifica ruolo utente', { email, role });
-    await sbLoadUsers();
-  } catch(e) {
-    sbUsersMsg('Errore aggiornamento ruolo: ' + e.message);
-    await sbLoadUsers(); // ripristina la select al valore reale
-  }
-}
-
-async function sbDeleteUser(userId, email) {
-  const conferma = await showConfirmAsync(
-    'Eliminare definitivamente l\'utente "' + email + '"?\n\nNon potrà più accedere alla dashboard. Azione irreversibile.',
-    'Elimina utente'
-  );
-  if (!conferma) return;
-  sbUsersMsg(null, null);
-  try {
-    await sbCallAdminUsers('delete', { userId });
-    sbUsersMsg(null, 'Utente ' + email + ' eliminato.');
-    sbLogActivity('Eliminazione utente', { email });
-    await sbLoadUsers();
-  } catch(e) {
-    sbUsersMsg('Errore eliminazione utente: ' + e.message);
-  }
-}
-
 const SB_URL = 'https://ypbuleyropgoqalwioqb.supabase.co';
 const SB_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlwYnVsZXlyb3Bnb3FhbHdpb3FiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODIzNjYyNTAsImV4cCI6MjA5Nzk0MjI1MH0.FMcI8lvGcuEQEJJLPFBt4BloyTzLPOQ4UZGBGd5G7WM';
 
@@ -2703,19 +2508,16 @@ async function sbOnLoggedIn() {
   const btnLog = document.getElementById('sb-btn-log');
   const btnSessions = document.getElementById('sb-btn-sessions');
   const btnBackups = document.getElementById('sb-btn-backups');
-  const btnUsers = document.getElementById('sb-btn-users');
   const secRecon = document.getElementById('section-riconciliazione');
   if (sbIsAdmin()) {
     if (btnLog) btnLog.style.visibility = 'visible';
     if (btnSessions) btnSessions.style.visibility = 'visible';
     if (btnBackups) btnBackups.style.visibility = 'visible';
-    if (btnUsers) btnUsers.style.visibility = 'visible';
     if (secRecon) secRecon.style.display = '';
   } else {
     if (btnLog) btnLog.style.visibility = 'hidden';
     if (btnSessions) btnSessions.style.visibility = 'hidden';
     if (btnBackups) btnBackups.style.visibility = 'hidden';
-    if (btnUsers) btnUsers.style.visibility = 'hidden';
     if (secRecon) secRecon.style.display = 'none';
   }
   sbUpdateUI('syncing', 'Sync: caricamento dati…');
@@ -9445,7 +9247,6 @@ document.addEventListener('DOMContentLoaded', async () => {
   _geoCacheLoad();
   // Carica cache meteo cantieri e avvia il refresh periodico (Griglia settimanale)
   _meteoCacheLoad();
-  _pcCacheLoad();
   pwStartMeteoTimer();
 
   // Ripristina l'ultima schermata (Dashboard / Pianificazione Settimanale) visualizzata,
@@ -17489,7 +17290,6 @@ async function pwRefreshMeteoWeek() {
       await pwFetchMeteoRange(geo.lat, geo.lng, fetchStartISO, fetchEndISO);
     }
 
-    await pcRefreshBollettino();
     pwApplyMeteoBadgesToDom();
   } finally {
     _pwMeteoRefreshing = false;
@@ -17588,141 +17388,10 @@ function pwOpenMeteoModal(cIdx, sIdx, dayIdx) {
   });
 }
 
-/* ==================== BOLLETTINO PROTEZIONE CIVILE (criticità idrogeologica/idraulica) ====================
-   Fonte ufficiale, gratuita, senza API key: repo GitHub pcm-dpc/DPC-Bollettini-Criticita-
-   Idrogeologica-Idraulica (CC-BY-4.0), un bollettino/giorno pubblicato di norma entro le 16:00,
-   con orizzonte di "oggi" + "domani" soltanto (non copre l'intera settimana come Open-Meteo).
-   Ogni zona di allerta nel topojson del bollettino porta già sia l'elenco dei comuni che ne
-   fanno parte sia il livello di allerta (gialla/arancione/rossa) per rischio idraulico,
-   temporali e idrogeologico: il matching cantiere→zona è quindi un confronto testuale sul nome
-   del comune, senza bisogno di librerie di geometria (topojson-client/turf). */
-
-const PC_REPO = 'pcm-dpc/DPC-Bollettini-Criticita-Idrogeologica-Idraulica';
-const PC_TTL_MS = 3 * 60 * 60 * 1000; // 3 ore: il bollettino esce ~1 volta/giorno, con eventuali aggiornamenti pomeridiani
-
-/* Cache persistente: { dateISO (giorno del bollettino corrente), fetchedAt, bollettino (nome file),
-   byDate: { 'YYYY-MM-DD': { 'nome comune normalizzato': {zona, idraulico, temporali, idrogeologico} } } } */
-let _pcCache = { dateISO: null, fetchedAt: 0, byDate: {} };
-async function _pcCacheLoad() {
-  try { const r = await sget('pc_bollettino_cache_v1'); if (r) _pcCache = r; } catch(e) {}
-}
-async function _pcCacheSave() {
-  try { await sset('pc_bollettino_cache_v1', _pcCache); } catch(e) {}
-}
-
-/* Estrae il colore (gialla/arancione/rossa) da una stringa tipo "Ordinaria / ALLERTA GIALLA";
-   null per "Assenza di fenomeni significativi prevedibili / NESSUNA ALLERTA". */
-function pcColorFromLabel(label) {
-  const m = /ALLERTA\s+(GIALLA|ARANCIONE|ROSSA)/i.exec(label || '');
-  return m ? m[1].toLowerCase() : null;
-}
-
-/* Scarica il topojson di un giorno del bollettino (today/tomorrow) e ne ricava una mappa
-   comune→criticità, ignorando del tutto la geometria (arcs/coordinate) — servono solo le
-   proprietà di ciascuna zona. */
-async function pcParseGiorno(url) {
-  const res = await fetch(url);
-  if (!res.ok) throw new Error('HTTP ' + res.status);
-  const topo = await res.json();
-  const objName = Object.keys(topo.objects || {})[0];
-  const geoms = (objName && topo.objects[objName].geometries) || [];
-  const out = {};
-  geoms.forEach(g => {
-    const props = g.properties || {};
-    const info = {
-      zona: props['Nome zona'] || '',
-      idraulico: pcColorFromLabel(props['Per rischio idraulico']),
-      temporali: pcColorFromLabel(props['Per rischio temporali']),
-      idrogeologico: pcColorFromLabel(props['Per rischio idrogeologico']),
-    };
-    (props['Comuni'] || []).forEach(comune => {
-      out[comune.toLowerCase().trim().replace(/\s+/g, ' ')] = info;
-    });
-  });
-  return out;
-}
-
-/* Trova e scarica il bollettino di oggi: la cartella files/ del repo contiene un file per
-   giorno nominato "YYYYMMDD_HHMM.json" con orario di pubblicazione variabile, quindi va
-   individuato — un'unica chiamata alla Git Trees API elenca l'intero contenuto della cartella
-   senza incorrere nel limite di 1000 elementi/pagina della Contents API. */
-async function pcFetchIndiceOggi() {
-  const rootRes = await fetch('https://api.github.com/repos/' + PC_REPO + '/contents/');
-  if (!rootRes.ok) throw new Error('HTTP ' + rootRes.status);
-  const rootEntries = await rootRes.json();
-  const filesDir = (rootEntries || []).find(e => e.name === 'files' && e.type === 'dir');
-  if (!filesDir) return null;
-
-  const treeRes = await fetch('https://api.github.com/repos/' + PC_REPO + '/git/trees/' + filesDir.sha);
-  if (!treeRes.ok) throw new Error('HTTP ' + treeRes.status);
-  const tree = await treeRes.json();
-  const todayPrefix = new Date().toISOString().slice(0, 10).replace(/-/g, '');
-  const candidati = (tree.tree || [])
-    .map(t => t.path)
-    .filter(p => new RegExp('^' + todayPrefix + '_\\d{4}\\.json$').test(p))
-    .sort(); // l'ultimo in ordine cronologico è l'edizione più recente (aggiornamento/errata corrige)
-  if (!candidati.length) return null;
-  const name = candidati[candidati.length - 1];
-
-  const idxRes = await fetch('https://raw.githubusercontent.com/' + PC_REPO + '/master/files/' + name);
-  if (!idxRes.ok) throw new Error('HTTP ' + idxRes.status);
-  return { name, index: await idxRes.json() };
-}
-
-/* Entry point periodico: aggiorna la cache solo se scaduta o se è cambiato il giorno. Nessun
-   blocco in caso di errore (rete aziendale che filtra GitHub, rate limit orario superato, ecc.):
-   pcInfoFor tornerà semplicemente null, il widget mostra solo il segnale Open-Meteo. */
-let _pcRefreshing = false;
-async function pcRefreshBollettino() {
-  if (_pcRefreshing) return;
-  const todayISO = new Date().toISOString().slice(0, 10);
-  if (_pcCache.dateISO === todayISO && (Date.now() - _pcCache.fetchedAt) < PC_TTL_MS) return;
-  _pcRefreshing = true;
-  try {
-    const found = await pcFetchIndiceOggi();
-    const byDate = {};
-    if (found) {
-      const tomorrowISO = new Date(Date.now() + 86400000).toISOString().slice(0, 10);
-      if (found.index.today && found.index.today.topo_json) byDate[todayISO] = await pcParseGiorno(found.index.today.topo_json);
-      if (found.index.tomorrow && found.index.tomorrow.topo_json) byDate[tomorrowISO] = await pcParseGiorno(found.index.tomorrow.topo_json);
-    }
-    _pcCache = { dateISO: todayISO, fetchedAt: Date.now(), bollettino: found && found.name, byDate };
-    await _pcCacheSave();
-  } catch (e) {
-    console.warn('[bollettino PC] refresh fallito', e);
-  } finally {
-    _pcRefreshing = false;
-  }
-}
-
-/* Criticità del bollettino per un cantiere in una data, o null se: giorno fuori dall'orizzonte
-   oggi/domani del bollettino, comune non riconosciuto, o dati non ancora scaricati. Oltre al
-   match esatto sul nome comune prova un contains, per cantieri scritti come "Cantiere - Comune". */
-function pcInfoFor(cantiere, dateISO) {
-  const byComune = _pcCache.byDate && _pcCache.byDate[dateISO];
-  if (!byComune) return null;
-  const key = cantiere.toLowerCase().trim().replace(/\s+/g, ' ');
-  if (byComune[key]) return byComune[key];
-  const found = Object.keys(byComune).find(c => key.indexOf(c) !== -1 || c.indexOf(key) !== -1);
-  return found ? byComune[found] : null;
-}
-
-/* Colore peggiore tra i tre rischi (idraulico/temporali/idrogeologico) di una criticità PC. */
-function pcColorePeggiore(pcInfo) {
-  if (!pcInfo) return null;
-  const RANK = { rossa: 3, arancione: 2, gialla: 1 };
-  let best = null, bestRank = 0;
-  ['idraulico', 'temporali', 'idrogeologico'].forEach(k => {
-    const c = pcInfo[k];
-    if (c && RANK[c] > bestRank) { bestRank = RANK[c]; best = c; }
-  });
-  return best;
-}
-
 /* ----- Widget "criticità meteo settimana" (header Griglia, accanto ad Aggiorna strumenti) -----
-   Combina due segnali: soglie sulle previsioni Open-Meteo (tutta la settimana) e, quando
-   disponibile, il bollettino ufficiale Protezione Civile (solo oggi/domani) — vince il peggiore
-   dei due, ma il modal di dettaglio mostra sempre entrambe le fonti separatamente. */
+   MVP basato solo su soglie sulle previsioni Open-Meteo già in cache (weathercode/probabilità
+   di precipitazione): nessuna integrazione con bollettini Protezione Civile per ora (nessun
+   feed pubblico gratuito confermato disponibile, vedi nota nel README/memoria di progetto). */
 
 /* Severità di un giorno/cantiere dal suo aggregato Open-Meteo, o null se nessuna criticità. */
 function pwMeteoSeverityFor(info) {
@@ -17755,12 +17424,8 @@ function pwWeatherWeekStatus() {
         total++;
         const info = pwMeteoInfoFor(cantiere, dateISO);
         if (info) covered++;
-        const meteoSeverity = pwMeteoSeverityFor(info);
-        const pcInfo = pcInfoFor(cantiere, dateISO);
-        const pcColor = pcColorePeggiore(pcInfo);
-        const pcSeverity = pcColor === 'gialla' ? 'media' : (pcColor ? 'alta' : null);
-        const severity = pcSeverity === 'alta' || meteoSeverity === 'alta' ? 'alta' : (pcSeverity || meteoSeverity);
-        if (severity) crit.push({ cantiere, dayIdx, dateISO, severity, info, pcInfo, pcColor });
+        const severity = pwMeteoSeverityFor(info);
+        if (severity) crit.push({ cantiere, dayIdx, dateISO, severity, info });
       });
     }
   }));
@@ -17809,22 +17474,15 @@ function pwOpenWeatherWeekModal() {
     ? crit.map(c => {
         const sevLabel = c.severity === 'alta' ? '🔴 Alta' : '🟠 Media';
         const [, mm, dd] = c.dateISO.split('-');
-        const meteoLine = c.info
-          ? `${pwMeteoIconFor(c.info.code)} ${Math.round(c.info.tmax)}°/${Math.round(c.info.tmin)}°${c.info.pop != null ? ' · 💧' + Math.round(c.info.pop) + '%' : ''}`
-          : '';
-        const pcLine = c.pcColor
-          ? `📋 Bollettino PC: allerta ${c.pcColor}${c.pcInfo && c.pcInfo.zona ? ' — zona ' + esc(c.pcInfo.zona) : ''}`
-          : '';
-        const righe = [meteoLine, pcLine].filter(Boolean).join('<br>');
         return `<div class="pw-meteo-modal-block">
           <div class="pw-meteo-modal-cantiere">${esc(c.cantiere)} — ${DAY_NAMES_FULL[c.dayIdx]} ${dd}/${mm}</div>
-          <div class="pw-meteo-modal-info">${sevLabel} · ${righe}</div>
+          <div class="pw-meteo-modal-info">${sevLabel} · ${pwMeteoIconFor(c.info.code)} ${Math.round(c.info.tmax)}°/${Math.round(c.info.tmin)}°${c.info.pop != null ? ' · 💧' + Math.round(c.info.pop) + '%' : ''}</div>
         </div>`;
       }).join('')
     : `<div class="text-slate-400 text-sm">Nessuna criticità meteo rilevata nei cantieri pianificati questa settimana.</div>`;
   root.innerHTML = `<div class="modal-backdrop"><div class="bg-white rounded-lg shadow-xl w-full max-w-lg mx-4 my-8 p-5">
     <h3 class="font-semibold text-slate-900 mb-1">⛈️ Criticità meteo — settimana</h3>
-    <p class="text-xs text-slate-500 mb-3">Soglie sulle previsioni Open-Meteo (tutta la settimana) + bollettino ufficiale Protezione Civile quando disponibile (solo oggi/domani).</p>
+    <p class="text-xs text-slate-500 mb-3">Basato su soglie sulle previsioni Open-Meteo (pioggia/temporali); nessuna integrazione con bollettini Protezione Civile.</p>
     <div>${rows}</div>
     <div class="flex justify-end mt-4">
       <button onclick="closeModal()" class="px-3 py-1.5 text-sm border border-slate-300 rounded">Chiudi</button>

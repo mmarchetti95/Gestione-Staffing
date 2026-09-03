@@ -249,6 +249,142 @@ async function sbRestoreBackup() {
   }
 }
 
+/* ===================== GESTIONE UTENTI (admin) ===================== */
+// Crea/elenca/modifica ruolo/elimina utenti Supabase Auth. Passa sempre dalla
+// Edge Function 'admin-users' (service_role key, mai esposta al client): il
+// client anon non ha e non deve avere accesso all'Admin API di Supabase Auth.
+async function sbCallAdminUsers(action, extra) {
+  const { data, error } = await _sbClient.functions.invoke('admin-users', {
+    body: { action, ...extra }
+  });
+  if (error) {
+    // Il body dell'errore (messaggio custom della function, es. 403/400) arriva
+    // in error.context; senza questo fallback si vedrebbe solo "FunctionsHttpError".
+    let msg = error.message || 'Errore chiamata funzione';
+    try { const body = await error.context.json(); if (body?.error) msg = body.error; } catch(e) {}
+    throw new Error(msg);
+  }
+  if (data && data.error) throw new Error(data.error);
+  return data;
+}
+
+async function sbShowUsers() {
+  document.getElementById('sb-users-modal').style.display = 'flex';
+  document.getElementById('sb-users-error').style.display = 'none';
+  document.getElementById('sb-users-success').style.display = 'none';
+  document.getElementById('sb-users-new-email').value = '';
+  document.getElementById('sb-users-new-password').value = '';
+  document.getElementById('sb-users-new-role').value = 'user';
+  await sbLoadUsers();
+}
+
+function sbCloseUsers() {
+  document.getElementById('sb-users-modal').style.display = 'none';
+}
+
+function sbUsersMsg(errText, okText) {
+  const errEl = document.getElementById('sb-users-error');
+  const okEl = document.getElementById('sb-users-success');
+  if (errText) { errEl.textContent = errText; errEl.style.display = 'block'; } else { errEl.style.display = 'none'; }
+  if (okText) { okEl.textContent = okText; okEl.style.display = 'block'; } else { okEl.style.display = 'none'; }
+}
+
+async function sbLoadUsers() {
+  const tbody = document.getElementById('sb-users-tbody');
+  tbody.innerHTML = '<tr><td colspan="5" style="padding:20px;text-align:center;color:#94a3b8;">Caricamento…</td></tr>';
+  try {
+    const data = await sbCallAdminUsers('list');
+    const users = data.users || [];
+    if (users.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="5" style="padding:20px;text-align:center;color:#94a3b8;">Nessun utente.</td></tr>';
+      return;
+    }
+    const fmt = iso => {
+      if (!iso) return '—';
+      const dt = new Date(iso);
+      return dt.toLocaleDateString('it-IT') + ' ' + dt.toLocaleTimeString('it-IT', {hour:'2-digit', minute:'2-digit'});
+    };
+    tbody.innerHTML = users.map(u => {
+      const isSelf = _sbUser && u.id === _sbUser.id;
+      return '<tr style="border-bottom:1px solid #f1f5f9;">' +
+        '<td style="padding:7px 12px;color:#374151;">' + esc(u.email || '') + (isSelf ? ' <span style="color:#94a3b8;font-size:10.5px;">(tu)</span>' : '') + '</td>' +
+        '<td style="padding:7px 12px;">' +
+          '<select onchange="sbUpdateUserRole(\'' + jsAttr(u.id) + '\', this.value, \'' + jsAttr(u.email) + '\')" ' +
+            (isSelf ? 'disabled title="Non puoi modificare il tuo stesso ruolo"' : '') +
+            ' style="border:1px solid #dde3ea;border-radius:6px;padding:4px 8px;font-size:11.5px;outline:none;">' +
+            '<option value="user"' + (u.role === 'user' ? ' selected' : '') + '>Utente</option>' +
+            '<option value="admin"' + (u.role === 'admin' ? ' selected' : '') + '>Admin</option>' +
+          '</select>' +
+        '</td>' +
+        '<td style="padding:7px 12px;white-space:nowrap;color:#64748b;">' + fmt(u.created_at) + '</td>' +
+        '<td style="padding:7px 12px;white-space:nowrap;color:#64748b;">' + fmt(u.last_sign_in_at) + '</td>' +
+        '<td style="padding:7px 12px;text-align:right;">' +
+          (isSelf ? '' : '<button onclick="sbDeleteUser(\'' + jsAttr(u.id) + '\', \'' + jsAttr(u.email) + '\')" style="padding:4px 10px;font-size:11px;border:1px solid #fecaca;color:#dc2626;background:white;border-radius:6px;cursor:pointer;">Elimina</button>') +
+        '</td>' +
+        '</tr>';
+    }).join('');
+  } catch(e) {
+    tbody.innerHTML = '<tr><td colspan="5" style="padding:20px;text-align:center;color:#ef4444;">Errore: ' + esc(e.message) + '</td></tr>';
+  }
+}
+
+async function sbCreateUser() {
+  const emailEl = document.getElementById('sb-users-new-email');
+  const pwdEl = document.getElementById('sb-users-new-password');
+  const roleEl = document.getElementById('sb-users-new-role');
+  const btn = document.getElementById('sb-users-add-btn');
+  const email = emailEl.value.trim();
+  const password = pwdEl.value;
+  const role = roleEl.value;
+  sbUsersMsg(null, null);
+
+  if (!email || !password) { sbUsersMsg('Inserisci email e password.'); return; }
+  if (password.length < 6) { sbUsersMsg('La password deve essere di almeno 6 caratteri.'); return; }
+
+  btn.textContent = 'Creazione…'; btn.disabled = true;
+  try {
+    await sbCallAdminUsers('create', { email, password, role });
+    emailEl.value = ''; pwdEl.value = ''; roleEl.value = 'user';
+    sbUsersMsg(null, 'Utente ' + email + ' creato con successo.');
+    sbLogActivity('Creazione utente', { email, role });
+    await sbLoadUsers();
+  } catch(e) {
+    sbUsersMsg('Errore creazione utente: ' + e.message);
+  } finally {
+    btn.textContent = '+ Aggiungi utente'; btn.disabled = false;
+  }
+}
+
+async function sbUpdateUserRole(userId, role, email) {
+  sbUsersMsg(null, null);
+  try {
+    await sbCallAdminUsers('updateRole', { userId, role });
+    sbUsersMsg(null, 'Ruolo di ' + email + ' aggiornato a "' + (role === 'admin' ? 'Admin' : 'Utente') + '".');
+    sbLogActivity('Modifica ruolo utente', { email, role });
+    await sbLoadUsers();
+  } catch(e) {
+    sbUsersMsg('Errore aggiornamento ruolo: ' + e.message);
+    await sbLoadUsers(); // ripristina la select al valore reale
+  }
+}
+
+async function sbDeleteUser(userId, email) {
+  const conferma = await showConfirmAsync(
+    'Eliminare definitivamente l\'utente "' + email + '"?\n\nNon potrà più accedere alla dashboard. Azione irreversibile.',
+    'Elimina utente'
+  );
+  if (!conferma) return;
+  sbUsersMsg(null, null);
+  try {
+    await sbCallAdminUsers('delete', { userId });
+    sbUsersMsg(null, 'Utente ' + email + ' eliminato.');
+    sbLogActivity('Eliminazione utente', { email });
+    await sbLoadUsers();
+  } catch(e) {
+    sbUsersMsg('Errore eliminazione utente: ' + e.message);
+  }
+}
+
 const SB_URL = 'https://ypbuleyropgoqalwioqb.supabase.co';
 const SB_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlwYnVsZXlyb3Bnb3FhbHdpb3FiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODIzNjYyNTAsImV4cCI6MjA5Nzk0MjI1MH0.FMcI8lvGcuEQEJJLPFBt4BloyTzLPOQ4UZGBGd5G7WM';
 
@@ -326,16 +462,19 @@ async function sbOnLoggedIn() {
   const btnLog = document.getElementById('sb-btn-log');
   const btnSessions = document.getElementById('sb-btn-sessions');
   const btnBackups = document.getElementById('sb-btn-backups');
+  const btnUsers = document.getElementById('sb-btn-users');
   const secRecon = document.getElementById('section-riconciliazione');
   if (sbIsAdmin()) {
     if (btnLog) btnLog.style.visibility = 'visible';
     if (btnSessions) btnSessions.style.visibility = 'visible';
     if (btnBackups) btnBackups.style.visibility = 'visible';
+    if (btnUsers) btnUsers.style.visibility = 'visible';
     if (secRecon) secRecon.style.display = '';
   } else {
     if (btnLog) btnLog.style.visibility = 'hidden';
     if (btnSessions) btnSessions.style.visibility = 'hidden';
     if (btnBackups) btnBackups.style.visibility = 'hidden';
+    if (btnUsers) btnUsers.style.visibility = 'hidden';
     if (secRecon) secRecon.style.display = 'none';
   }
   sbUpdateUI('syncing', 'Sync: caricamento dati…');

@@ -223,6 +223,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   _geoCacheLoad();
   // Carica cache meteo cantieri e avvia il refresh periodico (Griglia settimanale)
   _meteoCacheLoad();
+  _pcCacheLoad();
   pwStartMeteoTimer();
 
   // Ripristina l'ultima schermata (Dashboard / Pianificazione Settimanale) visualizzata,
