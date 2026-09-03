@@ -1,16 +1,16 @@
 # Graph Report - Gestione-Staffing  (2026-09-03)
 
 ## Corpus Check
-- 48 files · ~207,024 words
+- 48 files · ~211,180 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
-- 745 nodes · 1254 edges · 58 communities (38 shown, 20 thin omitted)
+- 763 nodes · 1294 edges · 58 communities (38 shown, 20 thin omitted)
 - Extraction: 99% EXTRACTED · 1% INFERRED · 0% AMBIGUOUS · INFERRED: 13 edges (avg confidence: 0.69)
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `cd5cd1f9`
+- Built from commit: `4c0faa5d`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -125,7 +125,7 @@ Nodes (37): formatDate(), isoWeekToMonday(), isoWeekYear(), pwCellCantieri(), pw
 
 ### Community 3 - "sb-admin.js"
 Cohesion: 0.09
-Nodes (30): checkForNewVersion(), sbChangePwd(), sbClosePwdModal(), _sbDirty, sbGenerateSessionId(), sbInit(), sbInitAndCheck(), sbIsAdmin() (+22 more)
+Nodes (37): checkForNewVersion(), sbCallAdminUsers(), sbChangePwd(), sbClosePwdModal(), sbCreateUser(), sbDeleteUser(), _sbDirty, sbGenerateSessionId() (+29 more)
 
 ### Community 4 - "dashboard-attestati.js"
 Cohesion: 0.12
@@ -164,8 +164,8 @@ Cohesion: 0.19
 Nodes (14): aggiornaGgOpVistaCommessa(), apriVistaOperatore(), checkCoerenzaOperatori(), EMAIL_SEED, renderAttestatiFilters(), renderEmailOperatori(), renderOperatori(), renderProvinciaFilterOptions() (+6 more)
 
 ### Community 13 - "weekly-meteo.js"
-Cohesion: 0.18
-Nodes (20): METEO_FASCE, METEO_ICONS, _meteoCache, _meteoCacheSave(), pwApplyMeteoBadgesToDom(), pwFasceOrarieFor(), pwFetchMeteoRange(), pwMeteoIconFor() (+12 more)
+Cohesion: 0.12
+Nodes (29): METEO_FASCE, METEO_ICONS, _meteoCache, _meteoCacheSave(), _pcCache, _pcCacheSave(), pcColorePeggiore(), pcColorFromLabel() (+21 more)
 
 ### Community 14 - "weekly-ricerca-squadre.js"
 Cohesion: 0.10
@@ -260,7 +260,7 @@ Cohesion: 0.33
 Nodes (5): checkpoint, Gotchas, Resume flow, Save flow, Storage
 
 ## Knowledge Gaps
-- **108 isolated node(s):** `METEO_FASCE`, `_meteoCache`, `METEO_ICONS`, `_geoCache`, `MAP_COLORS` (+103 more)
+- **109 isolated node(s):** `METEO_FASCE`, `_meteoCache`, `METEO_ICONS`, `_pcCache`, `_geoCache` (+104 more)
   These have ≤1 connection - possible missing edges or undocumented components.
 - **20 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
 
@@ -274,7 +274,7 @@ _Questions this graph is uniquely positioned to answer:_
 - **Are the 3 inferred relationships involving `esc()` (e.g. with `listBox()` and `rowHtml()`) actually correct?**
   _`esc()` has 3 INFERRED edges - model-reasoned connections that need verification._
 - **What connects `METEO_FASCE`, `_meteoCache`, `METEO_ICONS` to the rest of the system?**
-  _108 weakly-connected nodes found - possible documentation gaps or missing edges._
+  _109 weakly-connected nodes found - possible documentation gaps or missing edges._
 - **Should `Griglia Settimanale Tab` be split into smaller, more focused modules?**
   _Cohesion score 0.0636734693877551 - nodes in this community are weakly interconnected._
 - **Should `weekly-mappa.js` be split into smaller, more focused modules?**

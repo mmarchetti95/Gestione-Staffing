@@ -1074,10 +1074,10 @@
       "source_location": "L16",
       "_callable": true,
       "_origin": "ast",
+      "id": "src_js_weekly_meteo_meteocacheload",
       "community": 13,
       "community_name": "weekly-meteo.js",
-      "norm_label": "_meteocacheload()",
-      "id": "src_js_weekly_meteo_meteocacheload"
+      "norm_label": "_meteocacheload()"
     },
     {
       "label": "_meteoCacheSave()",
@@ -1086,22 +1086,118 @@
       "source_location": "L19",
       "_callable": true,
       "_origin": "ast",
+      "id": "src_js_weekly_meteo_meteocachesave",
       "community": 13,
       "community_name": "weekly-meteo.js",
-      "norm_label": "_meteocachesave()",
-      "id": "src_js_weekly_meteo_meteocachesave"
+      "norm_label": "_meteocachesave()"
+    },
+    {
+      "label": "_pcCacheLoad()",
+      "file_type": "code",
+      "source_file": "src/js/weekly-meteo.js",
+      "source_location": "L301",
+      "_callable": true,
+      "_origin": "ast",
+      "id": "src_js_weekly_meteo_pccacheload",
+      "community": 13,
+      "community_name": "weekly-meteo.js",
+      "norm_label": "_pccacheload()"
+    },
+    {
+      "label": "_pcCacheSave()",
+      "file_type": "code",
+      "source_file": "src/js/weekly-meteo.js",
+      "source_location": "L304",
+      "_callable": true,
+      "_origin": "ast",
+      "id": "src_js_weekly_meteo_pccachesave",
+      "community": 13,
+      "community_name": "weekly-meteo.js",
+      "norm_label": "_pccachesave()"
+    },
+    {
+      "label": "pcColorePeggiore()",
+      "file_type": "code",
+      "source_file": "src/js/weekly-meteo.js",
+      "source_location": "L406",
+      "_callable": true,
+      "_origin": "ast",
+      "id": "src_js_weekly_meteo_pccolorepeggiore",
+      "community": 13,
+      "community_name": "weekly-meteo.js",
+      "norm_label": "pccolorepeggiore()"
+    },
+    {
+      "label": "pcColorFromLabel()",
+      "file_type": "code",
+      "source_file": "src/js/weekly-meteo.js",
+      "source_location": "L310",
+      "_callable": true,
+      "_origin": "ast",
+      "id": "src_js_weekly_meteo_pccolorfromlabel",
+      "community": 13,
+      "community_name": "weekly-meteo.js",
+      "norm_label": "pccolorfromlabel()"
+    },
+    {
+      "label": "pcFetchIndiceOggi()",
+      "file_type": "code",
+      "source_file": "src/js/weekly-meteo.js",
+      "source_location": "L344",
+      "_callable": true,
+      "_origin": "ast",
+      "id": "src_js_weekly_meteo_pcfetchindiceoggi",
+      "community": 13,
+      "community_name": "weekly-meteo.js",
+      "norm_label": "pcfetchindiceoggi()"
+    },
+    {
+      "label": "pcInfoFor()",
+      "file_type": "code",
+      "source_file": "src/js/weekly-meteo.js",
+      "source_location": "L396",
+      "_callable": true,
+      "_origin": "ast",
+      "id": "src_js_weekly_meteo_pcinfofor",
+      "community": 13,
+      "community_name": "weekly-meteo.js",
+      "norm_label": "pcinfofor()"
+    },
+    {
+      "label": "pcParseGiorno()",
+      "file_type": "code",
+      "source_file": "src/js/weekly-meteo.js",
+      "source_location": "L318",
+      "_callable": true,
+      "_origin": "ast",
+      "id": "src_js_weekly_meteo_pcparsegiorno",
+      "community": 13,
+      "community_name": "weekly-meteo.js",
+      "norm_label": "pcparsegiorno()"
+    },
+    {
+      "label": "pcRefreshBollettino()",
+      "file_type": "code",
+      "source_file": "src/js/weekly-meteo.js",
+      "source_location": "L371",
+      "_callable": true,
+      "_origin": "ast",
+      "id": "src_js_weekly_meteo_pcrefreshbollettino",
+      "community": 13,
+      "community_name": "weekly-meteo.js",
+      "norm_label": "pcrefreshbollettino()"
     },
     {
       "label": "pwApplyMeteoBadgesToDom()",
       "file_type": "code",
       "source_file": "src/js/weekly-meteo.js",
-      "source_location": "L221",
+      "source_location": "L222",
       "_callable": true,
       "_origin": "ast",
+      "id": "src_js_weekly_meteo_pwapplymeteobadgestodom",
       "community": 13,
       "community_name": "weekly-meteo.js",
-      "norm_label": "pwapplymeteobadgestodom()",
-      "id": "src_js_weekly_meteo_pwapplymeteobadgestodom"
+      "norm_label": "pwapplymeteobadgestodom()"
     },
     {
       "label": "pwFasceOrarieFor()",
@@ -1110,10 +1206,10 @@
       "source_location": "L71",
       "_callable": true,
       "_origin": "ast",
+      "id": "src_js_weekly_meteo_pwfasceorariefor",
       "community": 13,
       "community_name": "weekly-meteo.js",
-      "norm_label": "pwfasceorariefor()",
-      "id": "src_js_weekly_meteo_pwfasceorariefor"
+      "norm_label": "pwfasceorariefor()"
     },
     {
       "label": "pwFetchMeteoRange()",
@@ -1122,10 +1218,10 @@
       "source_location": "L81",
       "_callable": true,
       "_origin": "ast",
+      "id": "src_js_weekly_meteo_pwfetchmeteorange",
       "community": 13,
       "community_name": "weekly-meteo.js",
-      "norm_label": "pwfetchmeteorange()",
-      "id": "src_js_weekly_meteo_pwfetchmeteorange"
+      "norm_label": "pwfetchmeteorange()"
     },
     {
       "label": "pwMeteoIconFor()",
@@ -1134,10 +1230,10 @@
       "source_location": "L33",
       "_callable": true,
       "_origin": "ast",
+      "id": "src_js_weekly_meteo_pwmeteoiconfor",
       "community": 13,
       "community_name": "weekly-meteo.js",
-      "norm_label": "pwmeteoiconfor()",
-      "id": "src_js_weekly_meteo_pwmeteoiconfor"
+      "norm_label": "pwmeteoiconfor()"
     },
     {
       "label": "pwMeteoInfoFor()",
@@ -1146,10 +1242,10 @@
       "source_location": "L50",
       "_callable": true,
       "_origin": "ast",
+      "id": "src_js_weekly_meteo_pwmeteoinfofor",
       "community": 13,
       "community_name": "weekly-meteo.js",
-      "norm_label": "pwmeteoinfofor()",
-      "id": "src_js_weekly_meteo_pwmeteoinfofor"
+      "norm_label": "pwmeteoinfofor()"
     },
     {
       "label": "pwMeteoMissingReason()",
@@ -1158,22 +1254,46 @@
       "source_location": "L63",
       "_callable": true,
       "_origin": "ast",
+      "id": "src_js_weekly_meteo_pwmeteomissingreason",
       "community": 13,
       "community_name": "weekly-meteo.js",
-      "norm_label": "pwmeteomissingreason()",
-      "id": "src_js_weekly_meteo_pwmeteomissingreason"
+      "norm_label": "pwmeteomissingreason()"
+    },
+    {
+      "label": "pwMeteoSeverityFor()",
+      "file_type": "code",
+      "source_file": "src/js/weekly-meteo.js",
+      "source_location": "L423",
+      "_callable": true,
+      "_origin": "ast",
+      "id": "src_js_weekly_meteo_pwmeteoseverityfor",
+      "community": 13,
+      "community_name": "weekly-meteo.js",
+      "norm_label": "pwmeteoseverityfor()"
     },
     {
       "label": "pwOpenMeteoModal()",
       "file_type": "code",
       "source_file": "src/js/weekly-meteo.js",
-      "source_location": "L233",
+      "source_location": "L235",
       "_callable": true,
       "_origin": "ast",
+      "id": "src_js_weekly_meteo_pwopenmeteomodal",
       "community": 13,
       "community_name": "weekly-meteo.js",
-      "norm_label": "pwopenmeteomodal()",
-      "id": "src_js_weekly_meteo_pwopenmeteomodal"
+      "norm_label": "pwopenmeteomodal()"
+    },
+    {
+      "label": "pwOpenWeatherWeekModal()",
+      "file_type": "code",
+      "source_file": "src/js/weekly-meteo.js",
+      "source_location": "L498",
+      "_callable": true,
+      "_origin": "ast",
+      "id": "src_js_weekly_meteo_pwopenweatherweekmodal",
+      "community": 13,
+      "community_name": "weekly-meteo.js",
+      "norm_label": "pwopenweatherweekmodal()"
     },
     {
       "label": "pwRefreshMeteoWeek()",
@@ -1182,10 +1302,10 @@
       "source_location": "L135",
       "_callable": true,
       "_origin": "ast",
+      "id": "src_js_weekly_meteo_pwrefreshmeteoweek",
       "community": 13,
       "community_name": "weekly-meteo.js",
-      "norm_label": "pwrefreshmeteoweek()",
-      "id": "src_js_weekly_meteo_pwrefreshmeteoweek"
+      "norm_label": "pwrefreshmeteoweek()"
     },
     {
       "label": "pwSquadraCantieriGiorno()",
@@ -1194,46 +1314,70 @@
       "source_location": "L39",
       "_callable": true,
       "_origin": "ast",
+      "id": "src_js_weekly_meteo_pwsquadracantierigiorno",
       "community": 13,
       "community_name": "weekly-meteo.js",
-      "norm_label": "pwsquadracantierigiorno()",
-      "id": "src_js_weekly_meteo_pwsquadracantierigiorno"
+      "norm_label": "pwsquadracantierigiorno()"
     },
     {
       "label": "pwStartMeteoTimer()",
       "file_type": "code",
       "source_file": "src/js/weekly-meteo.js",
-      "source_location": "L285",
+      "source_location": "L534",
       "_callable": true,
       "_origin": "ast",
+      "id": "src_js_weekly_meteo_pwstartmeteotimer",
       "community": 13,
       "community_name": "weekly-meteo.js",
-      "norm_label": "pwstartmeteotimer()",
-      "id": "src_js_weekly_meteo_pwstartmeteotimer"
+      "norm_label": "pwstartmeteotimer()"
+    },
+    {
+      "label": "pwUpdateWeatherWidget()",
+      "file_type": "code",
+      "source_file": "src/js/weekly-meteo.js",
+      "source_location": "L469",
+      "_callable": true,
+      "_origin": "ast",
+      "id": "src_js_weekly_meteo_pwupdateweatherwidget",
+      "community": 13,
+      "community_name": "weekly-meteo.js",
+      "norm_label": "pwupdateweatherwidget()"
     },
     {
       "label": "pwWeatherBadgeHtml()",
       "file_type": "code",
       "source_file": "src/js/weekly-meteo.js",
-      "source_location": "L215",
+      "source_location": "L216",
       "_callable": true,
       "_origin": "ast",
+      "id": "src_js_weekly_meteo_pwweatherbadgehtml",
       "community": 13,
       "community_name": "weekly-meteo.js",
-      "norm_label": "pwweatherbadgehtml()",
-      "id": "src_js_weekly_meteo_pwweatherbadgehtml"
+      "norm_label": "pwweatherbadgehtml()"
     },
     {
       "label": "pwWeatherBadgeInnerHtml()",
       "file_type": "code",
       "source_file": "src/js/weekly-meteo.js",
-      "source_location": "L196",
+      "source_location": "L197",
       "_callable": true,
       "_origin": "ast",
+      "id": "src_js_weekly_meteo_pwweatherbadgeinnerhtml",
       "community": 13,
       "community_name": "weekly-meteo.js",
-      "norm_label": "pwweatherbadgeinnerhtml()",
-      "id": "src_js_weekly_meteo_pwweatherbadgeinnerhtml"
+      "norm_label": "pwweatherbadgeinnerhtml()"
+    },
+    {
+      "label": "pwWeatherWeekStatus()",
+      "file_type": "code",
+      "source_file": "src/js/weekly-meteo.js",
+      "source_location": "L435",
+      "_callable": true,
+      "_origin": "ast",
+      "id": "src_js_weekly_meteo_pwweatherweekstatus",
+      "community": 13,
+      "community_name": "weekly-meteo.js",
+      "norm_label": "pwweatherweekstatus()"
     },
     {
       "label": "rsAddTappa()",
@@ -1242,10 +1386,10 @@
       "source_location": "L373",
       "_callable": true,
       "_origin": "ast",
-      "id": "src_js_weekly_ricerca_squadre_rsaddtappa",
       "community": 14,
       "community_name": "weekly-ricerca-squadre.js",
-      "norm_label": "rsaddtappa()"
+      "norm_label": "rsaddtappa()",
+      "id": "src_js_weekly_ricerca_squadre_rsaddtappa"
     },
     {
       "label": "_rsBadgeHtml()",
@@ -1254,10 +1398,10 @@
       "source_location": "L680",
       "_callable": true,
       "_origin": "ast",
-      "id": "src_js_weekly_ricerca_squadre_rsbadgehtml",
       "community": 14,
       "community_name": "weekly-ricerca-squadre.js",
-      "norm_label": "_rsbadgehtml()"
+      "norm_label": "_rsbadgehtml()",
+      "id": "src_js_weekly_ricerca_squadre_rsbadgehtml"
     },
     {
       "label": "_rsBuildSquadre()",
@@ -1266,10 +1410,10 @@
       "source_location": "L106",
       "_callable": true,
       "_origin": "ast",
-      "id": "src_js_weekly_ricerca_squadre_rsbuildsquadre",
       "community": 14,
       "community_name": "weekly-ricerca-squadre.js",
-      "norm_label": "_rsbuildsquadre()"
+      "norm_label": "_rsbuildsquadre()",
+      "id": "src_js_weekly_ricerca_squadre_rsbuildsquadre"
     },
     {
       "label": "rsCalcola()",
@@ -1278,10 +1422,10 @@
       "source_location": "L506",
       "_callable": true,
       "_origin": "ast",
-      "id": "src_js_weekly_ricerca_squadre_rscalcola",
       "community": 14,
       "community_name": "weekly-ricerca-squadre.js",
-      "norm_label": "rscalcola()"
+      "norm_label": "rscalcola()",
+      "id": "src_js_weekly_ricerca_squadre_rscalcola"
     },
     {
       "label": "_rsChipsHtml()",
@@ -1290,10 +1434,10 @@
       "source_location": "L624",
       "_callable": true,
       "_origin": "ast",
-      "id": "src_js_weekly_ricerca_squadre_rschipshtml",
       "community": 14,
       "community_name": "weekly-ricerca-squadre.js",
-      "norm_label": "_rschipshtml()"
+      "norm_label": "_rschipshtml()",
+      "id": "src_js_weekly_ricerca_squadre_rschipshtml"
     },
     {
       "label": "_rsCloseDropdowns()",
@@ -1302,10 +1446,10 @@
       "source_location": "L258",
       "_callable": true,
       "_origin": "ast",
-      "id": "src_js_weekly_ricerca_squadre_rsclosedropdowns",
       "community": 14,
       "community_name": "weekly-ricerca-squadre.js",
-      "norm_label": "_rsclosedropdowns()"
+      "norm_label": "_rsclosedropdowns()",
+      "id": "src_js_weekly_ricerca_squadre_rsclosedropdowns"
     },
     {
       "label": "_rsConsiglioHtml()",
@@ -1314,10 +1458,10 @@
       "source_location": "L640",
       "_callable": true,
       "_origin": "ast",
-      "id": "src_js_weekly_ricerca_squadre_rsconsigliohtml",
       "community": 14,
       "community_name": "weekly-ricerca-squadre.js",
-      "norm_label": "_rsconsigliohtml()"
+      "norm_label": "_rsconsigliohtml()",
+      "id": "src_js_weekly_ricerca_squadre_rsconsigliohtml"
     },
     {
       "label": "_rsDisponibilita()",
@@ -1326,10 +1470,10 @@
       "source_location": "L167",
       "_callable": true,
       "_origin": "ast",
-      "id": "src_js_weekly_ricerca_squadre_rsdisponibilita",
       "community": 14,
       "community_name": "weekly-ricerca-squadre.js",
-      "norm_label": "_rsdisponibilita()"
+      "norm_label": "_rsdisponibilita()",
+      "id": "src_js_weekly_ricerca_squadre_rsdisponibilita"
     },
     {
       "label": "_rsFilterList()",
@@ -1338,10 +1482,10 @@
       "source_location": "L293",
       "_callable": true,
       "_origin": "ast",
-      "id": "src_js_weekly_ricerca_squadre_rsfilterlist",
       "community": 14,
       "community_name": "weekly-ricerca-squadre.js",
-      "norm_label": "_rsfilterlist()"
+      "norm_label": "_rsfilterlist()",
+      "id": "src_js_weekly_ricerca_squadre_rsfilterlist"
     },
     {
       "label": "rsFilterSkills()",
@@ -1350,10 +1494,10 @@
       "source_location": "L302",
       "_callable": true,
       "_origin": "ast",
-      "id": "src_js_weekly_ricerca_squadre_rsfilterskills",
       "community": 14,
       "community_name": "weekly-ricerca-squadre.js",
-      "norm_label": "rsfilterskills()"
+      "norm_label": "rsfilterskills()",
+      "id": "src_js_weekly_ricerca_squadre_rsfilterskills"
     },
     {
       "label": "rsFilterStrumenti()",
@@ -1362,10 +1506,10 @@
       "source_location": "L303",
       "_callable": true,
       "_origin": "ast",
-      "id": "src_js_weekly_ricerca_squadre_rsfilterstrumenti",
       "community": 14,
       "community_name": "weekly-ricerca-squadre.js",
-      "norm_label": "rsfilterstrumenti()"
+      "norm_label": "rsfilterstrumenti()",
+      "id": "src_js_weekly_ricerca_squadre_rsfilterstrumenti"
     },
     {
       "label": "_rsFormatDataIt()",
@@ -1374,10 +1518,10 @@
       "source_location": "L80",
       "_callable": true,
       "_origin": "ast",
-      "id": "src_js_weekly_ricerca_squadre_rsformatdatait",
       "community": 14,
       "community_name": "weekly-ricerca-squadre.js",
-      "norm_label": "_rsformatdatait()"
+      "norm_label": "_rsformatdatait()",
+      "id": "src_js_weekly_ricerca_squadre_rsformatdatait"
     },
     {
       "label": "_rsGeocodeMancanti()",
@@ -1386,10 +1530,10 @@
       "source_location": "L469",
       "_callable": true,
       "_origin": "ast",
-      "id": "src_js_weekly_ricerca_squadre_rsgeocodemancanti",
       "community": 14,
       "community_name": "weekly-ricerca-squadre.js",
-      "norm_label": "_rsgeocodemancanti()"
+      "norm_label": "_rsgeocodemancanti()",
+      "id": "src_js_weekly_ricerca_squadre_rsgeocodemancanti"
     },
     {
       "label": "_rsGetSkillsWeek()",
@@ -1398,10 +1542,10 @@
       "source_location": "L239",
       "_callable": true,
       "_origin": "ast",
-      "id": "src_js_weekly_ricerca_squadre_rsgetskillsweek",
       "community": 14,
       "community_name": "weekly-ricerca-squadre.js",
-      "norm_label": "_rsgetskillsweek()"
+      "norm_label": "_rsgetskillsweek()",
+      "id": "src_js_weekly_ricerca_squadre_rsgetskillsweek"
     },
     {
       "label": "_rsGetStrumentiWeek()",
@@ -1410,10 +1554,10 @@
       "source_location": "L245",
       "_callable": true,
       "_origin": "ast",
-      "id": "src_js_weekly_ricerca_squadre_rsgetstrumentiweek",
       "community": 14,
       "community_name": "weekly-ricerca-squadre.js",
-      "norm_label": "_rsgetstrumentiweek()"
+      "norm_label": "_rsgetstrumentiweek()",
+      "id": "src_js_weekly_ricerca_squadre_rsgetstrumentiweek"
     },
     {
       "label": "_rsGiornoConsigliato()",
@@ -1422,10 +1566,10 @@
       "source_location": "L199",
       "_callable": true,
       "_origin": "ast",
-      "id": "src_js_weekly_ricerca_squadre_rsgiornoconsigliato",
       "community": 14,
       "community_name": "weekly-ricerca-squadre.js",
-      "norm_label": "_rsgiornoconsigliato()"
+      "norm_label": "_rsgiornoconsigliato()",
+      "id": "src_js_weekly_ricerca_squadre_rsgiornoconsigliato"
     },
     {
       "label": "_rsGiornoISO()",
@@ -1434,10 +1578,10 @@
       "source_location": "L73",
       "_callable": true,
       "_origin": "ast",
-      "id": "src_js_weekly_ricerca_squadre_rsgiornoiso",
       "community": 14,
       "community_name": "weekly-ricerca-squadre.js",
-      "norm_label": "_rsgiornoiso()"
+      "norm_label": "_rsgiornoiso()",
+      "id": "src_js_weekly_ricerca_squadre_rsgiornoiso"
     },
     {
       "label": "_rsInDoppiaWeek()",
@@ -1446,10 +1590,10 @@
       "source_location": "L150",
       "_callable": true,
       "_origin": "ast",
-      "id": "src_js_weekly_ricerca_squadre_rsindoppiaweek",
       "community": 14,
       "community_name": "weekly-ricerca-squadre.js",
-      "norm_label": "_rsindoppiaweek()"
+      "norm_label": "_rsindoppiaweek()",
+      "id": "src_js_weekly_ricerca_squadre_rsindoppiaweek"
     },
     {
       "label": "rsInit()",
@@ -1458,10 +1602,10 @@
       "source_location": "L899",
       "_callable": true,
       "_origin": "ast",
-      "id": "src_js_weekly_ricerca_squadre_rsinit",
       "community": 14,
       "community_name": "weekly-ricerca-squadre.js",
-      "norm_label": "rsinit()"
+      "norm_label": "rsinit()",
+      "id": "src_js_weekly_ricerca_squadre_rsinit"
     },
     {
       "label": "_rsKm()",
@@ -1470,10 +1614,10 @@
       "source_location": "L54",
       "_callable": true,
       "_origin": "ast",
-      "id": "src_js_weekly_ricerca_squadre_rskm",
       "community": 14,
       "community_name": "weekly-ricerca-squadre.js",
-      "norm_label": "_rskm()"
+      "norm_label": "_rskm()",
+      "id": "src_js_weekly_ricerca_squadre_rskm"
     },
     {
       "label": "_rsMatriceDistanze()",
@@ -1482,10 +1626,10 @@
       "source_location": "L481",
       "_callable": true,
       "_origin": "ast",
-      "id": "src_js_weekly_ricerca_squadre_rsmatricedistanze",
       "community": 14,
       "community_name": "weekly-ricerca-squadre.js",
-      "norm_label": "_rsmatricedistanze()"
+      "norm_label": "_rsmatricedistanze()",
+      "id": "src_js_weekly_ricerca_squadre_rsmatricedistanze"
     },
     {
       "label": "_rsNorm()",
@@ -1494,10 +1638,10 @@
       "source_location": "L50",
       "_callable": true,
       "_origin": "ast",
-      "id": "src_js_weekly_ricerca_squadre_rsnorm",
       "community": 14,
       "community_name": "weekly-ricerca-squadre.js",
-      "norm_label": "_rsnorm()"
+      "norm_label": "_rsnorm()",
+      "id": "src_js_weekly_ricerca_squadre_rsnorm"
     },
     {
       "label": "_rsNumGiorni()",
@@ -1506,10 +1650,10 @@
       "source_location": "L160",
       "_callable": true,
       "_origin": "ast",
-      "id": "src_js_weekly_ricerca_squadre_rsnumgiorni",
       "community": 14,
       "community_name": "weekly-ricerca-squadre.js",
-      "norm_label": "_rsnumgiorni()"
+      "norm_label": "_rsnumgiorni()",
+      "id": "src_js_weekly_ricerca_squadre_rsnumgiorni"
     },
     {
       "label": "_rsOggiISO()",
@@ -1518,10 +1662,10 @@
       "source_location": "L68",
       "_callable": true,
       "_origin": "ast",
-      "id": "src_js_weekly_ricerca_squadre_rsoggiiso",
       "community": 14,
       "community_name": "weekly-ricerca-squadre.js",
-      "norm_label": "_rsoggiiso()"
+      "norm_label": "_rsoggiiso()",
+      "id": "src_js_weekly_ricerca_squadre_rsoggiiso"
     },
     {
       "label": "_rsOpPool()",
@@ -1530,10 +1674,10 @@
       "source_location": "L61",
       "_callable": true,
       "_origin": "ast",
-      "id": "src_js_weekly_ricerca_squadre_rsoppool",
       "community": 14,
       "community_name": "weekly-ricerca-squadre.js",
-      "norm_label": "_rsoppool()"
+      "norm_label": "_rsoppool()",
+      "id": "src_js_weekly_ricerca_squadre_rsoppool"
     },
     {
       "label": "_rsOptionRowHtml()",
@@ -1542,10 +1686,10 @@
       "source_location": "L305",
       "_callable": true,
       "_origin": "ast",
-      "id": "src_js_weekly_ricerca_squadre_rsoptionrowhtml",
       "community": 14,
       "community_name": "weekly-ricerca-squadre.js",
-      "norm_label": "_rsoptionrowhtml()"
+      "norm_label": "_rsoptionrowhtml()",
+      "id": "src_js_weekly_ricerca_squadre_rsoptionrowhtml"
     },
     {
       "label": "rsPulisci()",
@@ -1554,10 +1698,10 @@
       "source_location": "L421",
       "_callable": true,
       "_origin": "ast",
-      "id": "src_js_weekly_ricerca_squadre_rspulisci",
       "community": 14,
       "community_name": "weekly-ricerca-squadre.js",
-      "norm_label": "rspulisci()"
+      "norm_label": "rspulisci()",
+      "id": "src_js_weekly_ricerca_squadre_rspulisci"
     },
     {
       "label": "rsRemoveTappa()",
@@ -1566,10 +1710,10 @@
       "source_location": "L416",
       "_callable": true,
       "_origin": "ast",
-      "id": "src_js_weekly_ricerca_squadre_rsremovetappa",
       "community": 14,
       "community_name": "weekly-ricerca-squadre.js",
-      "norm_label": "rsremovetappa()"
+      "norm_label": "rsremovetappa()",
+      "id": "src_js_weekly_ricerca_squadre_rsremovetappa"
     },
     {
       "label": "rsRenderMappa()",
@@ -1578,10 +1722,10 @@
       "source_location": "L818",
       "_callable": true,
       "_origin": "ast",
-      "id": "src_js_weekly_ricerca_squadre_rsrendermappa",
       "community": 14,
       "community_name": "weekly-ricerca-squadre.js",
-      "norm_label": "rsrendermappa()"
+      "norm_label": "rsrendermappa()",
+      "id": "src_js_weekly_ricerca_squadre_rsrendermappa"
     },
     {
       "label": "rsRenderRisultati()",
@@ -1590,10 +1734,10 @@
       "source_location": "L709",
       "_callable": true,
       "_origin": "ast",
-      "id": "src_js_weekly_ricerca_squadre_rsrenderrisultati",
       "community": 14,
       "community_name": "weekly-ricerca-squadre.js",
-      "norm_label": "rsrenderrisultati()"
+      "norm_label": "rsrenderrisultati()",
+      "id": "src_js_weekly_ricerca_squadre_rsrenderrisultati"
     },
     {
       "label": "_rsRenderRisultatiBody()",
@@ -1602,10 +1746,10 @@
       "source_location": "L714",
       "_callable": true,
       "_origin": "ast",
-      "id": "src_js_weekly_ricerca_squadre_rsrenderrisultatibody",
       "community": 14,
       "community_name": "weekly-ricerca-squadre.js",
-      "norm_label": "_rsrenderrisultatibody()"
+      "norm_label": "_rsrenderrisultatibody()",
+      "id": "src_js_weekly_ricerca_squadre_rsrenderrisultatibody"
     },
     {
       "label": "rsRenderSkillsDropdown()",
@@ -1614,10 +1758,10 @@
       "source_location": "L316",
       "_callable": true,
       "_origin": "ast",
-      "id": "src_js_weekly_ricerca_squadre_rsrenderskillsdropdown",
       "community": 14,
       "community_name": "weekly-ricerca-squadre.js",
-      "norm_label": "rsrenderskillsdropdown()"
+      "norm_label": "rsrenderskillsdropdown()",
+      "id": "src_js_weekly_ricerca_squadre_rsrenderskillsdropdown"
     },
     {
       "label": "rsRenderStrumentiDropdown()",
@@ -1626,10 +1770,10 @@
       "source_location": "L336",
       "_callable": true,
       "_origin": "ast",
-      "id": "src_js_weekly_ricerca_squadre_rsrenderstrumentidropdown",
       "community": 14,
       "community_name": "weekly-ricerca-squadre.js",
-      "norm_label": "rsrenderstrumentidropdown()"
+      "norm_label": "rsrenderstrumentidropdown()",
+      "id": "src_js_weekly_ricerca_squadre_rsrenderstrumentidropdown"
     },
     {
       "label": "rsRenderTappe()",
@@ -1638,10 +1782,10 @@
       "source_location": "L436",
       "_callable": true,
       "_origin": "ast",
-      "id": "src_js_weekly_ricerca_squadre_rsrendertappe",
       "community": 14,
       "community_name": "weekly-ricerca-squadre.js",
-      "norm_label": "rsrendertappe()"
+      "norm_label": "rsrendertappe()",
+      "id": "src_js_weekly_ricerca_squadre_rsrendertappe"
     },
     {
       "label": "_rsSitiHtml()",
@@ -1650,10 +1794,10 @@
       "source_location": "L692",
       "_callable": true,
       "_origin": "ast",
-      "id": "src_js_weekly_ricerca_squadre_rssitihtml",
       "community": 14,
       "community_name": "weekly-ricerca-squadre.js",
-      "norm_label": "_rssitihtml()"
+      "norm_label": "_rssitihtml()",
+      "id": "src_js_weekly_ricerca_squadre_rssitihtml"
     },
     {
       "label": "_rsStartDay()",
@@ -1662,10 +1806,10 @@
       "source_location": "L93",
       "_callable": true,
       "_origin": "ast",
-      "id": "src_js_weekly_ricerca_squadre_rsstartday",
       "community": 14,
       "community_name": "weekly-ricerca-squadre.js",
-      "norm_label": "_rsstartday()"
+      "norm_label": "_rsstartday()",
+      "id": "src_js_weekly_ricerca_squadre_rsstartday"
     },
     {
       "label": "_rsStatus()",
@@ -1674,10 +1818,10 @@
       "source_location": "L42",
       "_callable": true,
       "_origin": "ast",
-      "id": "src_js_weekly_ricerca_squadre_rsstatus",
       "community": 14,
       "community_name": "weekly-ricerca-squadre.js",
-      "norm_label": "_rsstatus()"
+      "norm_label": "_rsstatus()",
+      "id": "src_js_weekly_ricerca_squadre_rsstatus"
     },
     {
       "label": "_rsSyncAltezze()",
@@ -1686,10 +1830,10 @@
       "source_location": "L793",
       "_callable": true,
       "_origin": "ast",
-      "id": "src_js_weekly_ricerca_squadre_rssyncaltezze",
       "community": 14,
       "community_name": "weekly-ricerca-squadre.js",
-      "norm_label": "_rssyncaltezze()"
+      "norm_label": "_rssyncaltezze()",
+      "id": "src_js_weekly_ricerca_squadre_rssyncaltezze"
     },
     {
       "label": "_rsTappaByNome()",
@@ -1698,10 +1842,10 @@
       "source_location": "L85",
       "_callable": true,
       "_origin": "ast",
-      "id": "src_js_weekly_ricerca_squadre_rstappabynome",
       "community": 14,
       "community_name": "weekly-ricerca-squadre.js",
-      "norm_label": "_rstappabynome()"
+      "norm_label": "_rstappabynome()",
+      "id": "src_js_weekly_ricerca_squadre_rstappabynome"
     },
     {
       "label": "rsToggleSkillsDropdown()",
@@ -1710,10 +1854,10 @@
       "source_location": "L266",
       "_callable": true,
       "_origin": "ast",
-      "id": "src_js_weekly_ricerca_squadre_rstoggleskillsdropdown",
       "community": 14,
       "community_name": "weekly-ricerca-squadre.js",
-      "norm_label": "rstoggleskillsdropdown()"
+      "norm_label": "rstoggleskillsdropdown()",
+      "id": "src_js_weekly_ricerca_squadre_rstoggleskillsdropdown"
     },
     {
       "label": "rsToggleStrumentiDropdown()",
@@ -1722,10 +1866,10 @@
       "source_location": "L278",
       "_callable": true,
       "_origin": "ast",
-      "id": "src_js_weekly_ricerca_squadre_rstogglestrumentidropdown",
       "community": 14,
       "community_name": "weekly-ricerca-squadre.js",
-      "norm_label": "rstogglestrumentidropdown()"
+      "norm_label": "rstogglestrumentidropdown()",
+      "id": "src_js_weekly_ricerca_squadre_rstogglestrumentidropdown"
     },
     {
       "label": "_rsUpdateSkillsLabel()",
@@ -1734,10 +1878,10 @@
       "source_location": "L356",
       "_callable": true,
       "_origin": "ast",
-      "id": "src_js_weekly_ricerca_squadre_rsupdateskillslabel",
       "community": 14,
       "community_name": "weekly-ricerca-squadre.js",
-      "norm_label": "_rsupdateskillslabel()"
+      "norm_label": "_rsupdateskillslabel()",
+      "id": "src_js_weekly_ricerca_squadre_rsupdateskillslabel"
     },
     {
       "label": "_rsUpdateStrumentiLabel()",
@@ -1746,10 +1890,10 @@
       "source_location": "L364",
       "_callable": true,
       "_origin": "ast",
-      "id": "src_js_weekly_ricerca_squadre_rsupdatestrumentilabel",
       "community": 14,
       "community_name": "weekly-ricerca-squadre.js",
-      "norm_label": "_rsupdatestrumentilabel()"
+      "norm_label": "_rsupdatestrumentilabel()",
+      "id": "src_js_weekly_ricerca_squadre_rsupdatestrumentilabel"
     },
     {
       "label": "assegnaOperatore()",
@@ -2019,7 +2163,7 @@
       "label": "pwRenderStats()",
       "file_type": "code",
       "source_file": "src/js/weekly-operatore-modal.js",
-      "source_location": "L521",
+      "source_location": "L522",
       "_callable": true,
       "_origin": "ast",
       "community": 17,
@@ -2686,18 +2830,6 @@
       "community_name": "weekly-ferie-import.js",
       "norm_label": "pwferieimportshowconfirm()",
       "id": "src_js_weekly_ferie_import_pwferieimportshowconfirm"
-    },
-    {
-      "label": "listBox()",
-      "file_type": "code",
-      "source_file": "src/js/weekly-ferie-import.js",
-      "source_location": "L74",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 20,
-      "community_name": "weekly-ferie-import.js",
-      "norm_label": "listbox()",
-      "id": "src_js_weekly_ferie_import_pwferieimportshowconfirm_listbox"
     },
     {
       "label": "pwFerieMatchOperatore()",
@@ -3471,37 +3603,49 @@
       "label": "checkForNewVersion()",
       "file_type": "code",
       "source_file": "src/js/sb-admin.js",
-      "source_location": "L624",
+      "source_location": "L763",
       "_callable": true,
       "_origin": "ast",
+      "id": "src_js_sb_admin_checkfornewversion",
       "community": 3,
       "community_name": "sb-admin.js",
-      "norm_label": "checkfornewversion()",
-      "id": "src_js_sb_admin_checkfornewversion"
+      "norm_label": "checkfornewversion()"
     },
     {
       "label": "reloadForNewVersion()",
       "file_type": "code",
       "source_file": "src/js/sb-admin.js",
-      "source_location": "L646",
+      "source_location": "L785",
       "_callable": true,
       "_origin": "ast",
+      "id": "src_js_sb_admin_reloadfornewversion",
       "community": 3,
       "community_name": "sb-admin.js",
-      "norm_label": "reloadfornewversion()",
-      "id": "src_js_sb_admin_reloadfornewversion"
+      "norm_label": "reloadfornewversion()"
+    },
+    {
+      "label": "sbCallAdminUsers()",
+      "file_type": "code",
+      "source_file": "src/js/sb-admin.js",
+      "source_location": "L256",
+      "_callable": true,
+      "_origin": "ast",
+      "id": "src_js_sb_admin_sbcalladminusers",
+      "community": 3,
+      "community_name": "sb-admin.js",
+      "norm_label": "sbcalladminusers()"
     },
     {
       "label": "sbChangePwd()",
       "file_type": "code",
       "source_file": "src/js/sb-admin.js",
-      "source_location": "L398",
+      "source_location": "L537",
       "_callable": true,
       "_origin": "ast",
+      "id": "src_js_sb_admin_sbchangepwd",
       "community": 3,
       "community_name": "sb-admin.js",
-      "norm_label": "sbchangepwd()",
-      "id": "src_js_sb_admin_sbchangepwd"
+      "norm_label": "sbchangepwd()"
     },
     {
       "label": "sbCloseBackups()",
@@ -3510,10 +3654,10 @@
       "source_location": "L184",
       "_callable": true,
       "_origin": "ast",
+      "id": "src_js_sb_admin_sbclosebackups",
       "community": 3,
       "community_name": "sb-admin.js",
-      "norm_label": "sbclosebackups()",
-      "id": "src_js_sb_admin_sbclosebackups"
+      "norm_label": "sbclosebackups()"
     },
     {
       "label": "sbCloseLog()",
@@ -3522,22 +3666,22 @@
       "source_location": "L24",
       "_callable": true,
       "_origin": "ast",
+      "id": "src_js_sb_admin_sbcloselog",
       "community": 3,
       "community_name": "sb-admin.js",
-      "norm_label": "sbcloselog()",
-      "id": "src_js_sb_admin_sbcloselog"
+      "norm_label": "sbcloselog()"
     },
     {
       "label": "sbClosePwdModal()",
       "file_type": "code",
       "source_file": "src/js/sb-admin.js",
-      "source_location": "L394",
+      "source_location": "L533",
       "_callable": true,
       "_origin": "ast",
+      "id": "src_js_sb_admin_sbclosepwdmodal",
       "community": 3,
       "community_name": "sb-admin.js",
-      "norm_label": "sbclosepwdmodal()",
-      "id": "src_js_sb_admin_sbclosepwdmodal"
+      "norm_label": "sbclosepwdmodal()"
     },
     {
       "label": "sbCloseSessions()",
@@ -3546,10 +3690,46 @@
       "source_location": "L125",
       "_callable": true,
       "_origin": "ast",
+      "id": "src_js_sb_admin_sbclosesessions",
       "community": 3,
       "community_name": "sb-admin.js",
-      "norm_label": "sbclosesessions()",
-      "id": "src_js_sb_admin_sbclosesessions"
+      "norm_label": "sbclosesessions()"
+    },
+    {
+      "label": "sbCloseUsers()",
+      "file_type": "code",
+      "source_file": "src/js/sb-admin.js",
+      "source_location": "L281",
+      "_callable": true,
+      "_origin": "ast",
+      "id": "src_js_sb_admin_sbcloseusers",
+      "community": 3,
+      "community_name": "sb-admin.js",
+      "norm_label": "sbcloseusers()"
+    },
+    {
+      "label": "sbCreateUser()",
+      "file_type": "code",
+      "source_file": "src/js/sb-admin.js",
+      "source_location": "L331",
+      "_callable": true,
+      "_origin": "ast",
+      "id": "src_js_sb_admin_sbcreateuser",
+      "community": 3,
+      "community_name": "sb-admin.js",
+      "norm_label": "sbcreateuser()"
+    },
+    {
+      "label": "sbDeleteUser()",
+      "file_type": "code",
+      "source_file": "src/js/sb-admin.js",
+      "source_location": "L371",
+      "_callable": true,
+      "_origin": "ast",
+      "id": "src_js_sb_admin_sbdeleteuser",
+      "community": 3,
+      "community_name": "sb-admin.js",
+      "norm_label": "sbdeleteuser()"
     },
     {
       "label": "sbGenerateSessionId()",
@@ -3558,34 +3738,34 @@
       "source_location": "L62",
       "_callable": true,
       "_origin": "ast",
+      "id": "src_js_sb_admin_sbgeneratesessionid",
       "community": 3,
       "community_name": "sb-admin.js",
-      "norm_label": "sbgeneratesessionid()",
-      "id": "src_js_sb_admin_sbgeneratesessionid"
+      "norm_label": "sbgeneratesessionid()"
     },
     {
       "label": "sbInit()",
       "file_type": "code",
       "source_file": "src/js/sb-admin.js",
-      "source_location": "L272",
+      "source_location": "L408",
       "_callable": true,
       "_origin": "ast",
+      "id": "src_js_sb_admin_sbinit",
       "community": 3,
       "community_name": "sb-admin.js",
-      "norm_label": "sbinit()",
-      "id": "src_js_sb_admin_sbinit"
+      "norm_label": "sbinit()"
     },
     {
       "label": "sbInitAndCheck()",
       "file_type": "code",
       "source_file": "src/js/sb-admin.js",
-      "source_location": "L654",
+      "source_location": "L793",
       "_callable": true,
       "_origin": "ast",
+      "id": "src_js_sb_admin_sbinitandcheck",
       "community": 3,
       "community_name": "sb-admin.js",
-      "norm_label": "sbinitandcheck()",
-      "id": "src_js_sb_admin_sbinitandcheck"
+      "norm_label": "sbinitandcheck()"
     },
     {
       "label": "sbIsAdmin()",
@@ -3594,10 +3774,10 @@
       "source_location": "L2",
       "_callable": true,
       "_origin": "ast",
+      "id": "src_js_sb_admin_sbisadmin",
       "community": 3,
       "community_name": "sb-admin.js",
-      "norm_label": "sbisadmin()",
-      "id": "src_js_sb_admin_sbisadmin"
+      "norm_label": "sbisadmin()"
     },
     {
       "label": "sbLoadBackups()",
@@ -3606,10 +3786,10 @@
       "source_location": "L188",
       "_callable": true,
       "_origin": "ast",
+      "id": "src_js_sb_admin_sbloadbackups",
       "community": 3,
       "community_name": "sb-admin.js",
-      "norm_label": "sbloadbackups()",
-      "id": "src_js_sb_admin_sbloadbackups"
+      "norm_label": "sbloadbackups()"
     },
     {
       "label": "sbLoadLog()",
@@ -3618,10 +3798,10 @@
       "source_location": "L28",
       "_callable": true,
       "_origin": "ast",
+      "id": "src_js_sb_admin_sbloadlog",
       "community": 3,
       "community_name": "sb-admin.js",
-      "norm_label": "sbloadlog()",
-      "id": "src_js_sb_admin_sbloadlog"
+      "norm_label": "sbloadlog()"
     },
     {
       "label": "sbLoadSessions()",
@@ -3630,10 +3810,22 @@
       "source_location": "L129",
       "_callable": true,
       "_origin": "ast",
+      "id": "src_js_sb_admin_sbloadsessions",
       "community": 3,
       "community_name": "sb-admin.js",
-      "norm_label": "sbloadsessions()",
-      "id": "src_js_sb_admin_sbloadsessions"
+      "norm_label": "sbloadsessions()"
+    },
+    {
+      "label": "sbLoadUsers()",
+      "file_type": "code",
+      "source_file": "src/js/sb-admin.js",
+      "source_location": "L292",
+      "_callable": true,
+      "_origin": "ast",
+      "id": "src_js_sb_admin_sbloadusers",
+      "community": 3,
+      "community_name": "sb-admin.js",
+      "norm_label": "sbloadusers()"
     },
     {
       "label": "sbLogActivity()",
@@ -3642,70 +3834,70 @@
       "source_location": "L6",
       "_callable": true,
       "_origin": "ast",
+      "id": "src_js_sb_admin_sblogactivity",
       "community": 3,
       "community_name": "sb-admin.js",
-      "norm_label": "sblogactivity()",
-      "id": "src_js_sb_admin_sblogactivity"
+      "norm_label": "sblogactivity()"
     },
     {
       "label": "sbLogin()",
       "file_type": "code",
       "source_file": "src/js/sb-admin.js",
-      "source_location": "L294",
+      "source_location": "L430",
       "_callable": true,
       "_origin": "ast",
+      "id": "src_js_sb_admin_sblogin",
       "community": 3,
       "community_name": "sb-admin.js",
-      "norm_label": "sblogin()",
-      "id": "src_js_sb_admin_sblogin"
+      "norm_label": "sblogin()"
     },
     {
       "label": "sbLogout()",
       "file_type": "code",
       "source_file": "src/js/sb-admin.js",
-      "source_location": "L371",
+      "source_location": "L510",
       "_callable": true,
       "_origin": "ast",
+      "id": "src_js_sb_admin_sblogout",
       "community": 3,
       "community_name": "sb-admin.js",
-      "norm_label": "sblogout()",
-      "id": "src_js_sb_admin_sblogout"
+      "norm_label": "sblogout()"
     },
     {
       "label": "sbOnLoggedIn()",
       "file_type": "code",
       "source_file": "src/js/sb-admin.js",
-      "source_location": "L316",
+      "source_location": "L452",
       "_callable": true,
       "_origin": "ast",
+      "id": "src_js_sb_admin_sbonloggedin",
       "community": 3,
       "community_name": "sb-admin.js",
-      "norm_label": "sbonloggedin()",
-      "id": "src_js_sb_admin_sbonloggedin"
+      "norm_label": "sbonloggedin()"
     },
     {
       "label": "sbPull()",
       "file_type": "code",
       "source_file": "src/js/sb-admin.js",
-      "source_location": "L431",
+      "source_location": "L570",
       "_callable": true,
       "_origin": "ast",
+      "id": "src_js_sb_admin_sbpull",
       "community": 3,
       "community_name": "sb-admin.js",
-      "norm_label": "sbpull()",
-      "id": "src_js_sb_admin_sbpull"
+      "norm_label": "sbpull()"
     },
     {
       "label": "sbPush()",
       "file_type": "code",
       "source_file": "src/js/sb-admin.js",
-      "source_location": "L524",
+      "source_location": "L663",
       "_callable": true,
       "_origin": "ast",
+      "id": "src_js_sb_admin_sbpush",
       "community": 3,
       "community_name": "sb-admin.js",
-      "norm_label": "sbpush()",
-      "id": "src_js_sb_admin_sbpush"
+      "norm_label": "sbpush()"
     },
     {
       "label": "sbRestoreBackup()",
@@ -3714,34 +3906,34 @@
       "source_location": "L217",
       "_callable": true,
       "_origin": "ast",
+      "id": "src_js_sb_admin_sbrestorebackup",
       "community": 3,
       "community_name": "sb-admin.js",
-      "norm_label": "sbrestorebackup()",
-      "id": "src_js_sb_admin_sbrestorebackup"
+      "norm_label": "sbrestorebackup()"
     },
     {
       "label": "sbScheduleAutoPush()",
       "file_type": "code",
       "source_file": "src/js/sb-admin.js",
-      "source_location": "L602",
+      "source_location": "L741",
       "_callable": true,
       "_origin": "ast",
+      "id": "src_js_sb_admin_sbscheduleautopush",
       "community": 3,
       "community_name": "sb-admin.js",
-      "norm_label": "sbscheduleautopush()",
-      "id": "src_js_sb_admin_sbscheduleautopush"
+      "norm_label": "sbscheduleautopush()"
     },
     {
       "label": "sbSetLocal()",
       "file_type": "code",
       "source_file": "src/js/sb-admin.js",
-      "source_location": "L608",
+      "source_location": "L747",
       "_callable": true,
       "_origin": "ast",
+      "id": "src_js_sb_admin_sbsetlocal",
       "community": 3,
       "community_name": "sb-admin.js",
-      "norm_label": "sbsetlocal()",
-      "id": "src_js_sb_admin_sbsetlocal"
+      "norm_label": "sbsetlocal()"
     },
     {
       "label": "sbShowBackups()",
@@ -3750,22 +3942,22 @@
       "source_location": "L177",
       "_callable": true,
       "_origin": "ast",
+      "id": "src_js_sb_admin_sbshowbackups",
       "community": 3,
       "community_name": "sb-admin.js",
-      "norm_label": "sbshowbackups()",
-      "id": "src_js_sb_admin_sbshowbackups"
+      "norm_label": "sbshowbackups()"
     },
     {
       "label": "sbShowChangePwd()",
       "file_type": "code",
       "source_file": "src/js/sb-admin.js",
-      "source_location": "L383",
+      "source_location": "L522",
       "_callable": true,
       "_origin": "ast",
+      "id": "src_js_sb_admin_sbshowchangepwd",
       "community": 3,
       "community_name": "sb-admin.js",
-      "norm_label": "sbshowchangepwd()",
-      "id": "src_js_sb_admin_sbshowchangepwd"
+      "norm_label": "sbshowchangepwd()"
     },
     {
       "label": "sbShowLog()",
@@ -3774,10 +3966,10 @@
       "source_location": "L19",
       "_callable": true,
       "_origin": "ast",
+      "id": "src_js_sb_admin_sbshowlog",
       "community": 3,
       "community_name": "sb-admin.js",
-      "norm_label": "sbshowlog()",
-      "id": "src_js_sb_admin_sbshowlog"
+      "norm_label": "sbshowlog()"
     },
     {
       "label": "sbShowSessions()",
@@ -3786,10 +3978,22 @@
       "source_location": "L120",
       "_callable": true,
       "_origin": "ast",
+      "id": "src_js_sb_admin_sbshowsessions",
       "community": 3,
       "community_name": "sb-admin.js",
-      "norm_label": "sbshowsessions()",
-      "id": "src_js_sb_admin_sbshowsessions"
+      "norm_label": "sbshowsessions()"
+    },
+    {
+      "label": "sbShowUsers()",
+      "file_type": "code",
+      "source_file": "src/js/sb-admin.js",
+      "source_location": "L271",
+      "_callable": true,
+      "_origin": "ast",
+      "id": "src_js_sb_admin_sbshowusers",
+      "community": 3,
+      "community_name": "sb-admin.js",
+      "norm_label": "sbshowusers()"
     },
     {
       "label": "sbStartHeartbeat()",
@@ -3798,10 +4002,10 @@
       "source_location": "L67",
       "_callable": true,
       "_origin": "ast",
+      "id": "src_js_sb_admin_sbstartheartbeat",
       "community": 3,
       "community_name": "sb-admin.js",
-      "norm_label": "sbstartheartbeat()",
-      "id": "src_js_sb_admin_sbstartheartbeat"
+      "norm_label": "sbstartheartbeat()"
     },
     {
       "label": "sbStopHeartbeat()",
@@ -3810,70 +4014,94 @@
       "source_location": "L109",
       "_callable": true,
       "_origin": "ast",
+      "id": "src_js_sb_admin_sbstopheartbeat",
       "community": 3,
       "community_name": "sb-admin.js",
-      "norm_label": "sbstopheartbeat()",
-      "id": "src_js_sb_admin_sbstopheartbeat"
+      "norm_label": "sbstopheartbeat()"
     },
     {
       "label": "sbSubscribeRealtime()",
       "file_type": "code",
       "source_file": "src/js/sb-admin.js",
-      "source_location": "L348",
+      "source_location": "L487",
       "_callable": true,
       "_origin": "ast",
+      "id": "src_js_sb_admin_sbsubscriberealtime",
       "community": 3,
       "community_name": "sb-admin.js",
-      "norm_label": "sbsubscriberealtime()",
-      "id": "src_js_sb_admin_sbsubscriberealtime"
+      "norm_label": "sbsubscriberealtime()"
     },
     {
       "label": "sbSync()",
       "file_type": "code",
       "source_file": "src/js/sb-admin.js",
-      "source_location": "L522",
+      "source_location": "L661",
       "_callable": true,
       "_origin": "ast",
+      "id": "src_js_sb_admin_sbsync",
       "community": 3,
       "community_name": "sb-admin.js",
-      "norm_label": "sbsync()",
-      "id": "src_js_sb_admin_sbsync"
+      "norm_label": "sbsync()"
     },
     {
       "label": "sbUpdateUI()",
       "file_type": "code",
       "source_file": "src/js/sb-admin.js",
-      "source_location": "L280",
+      "source_location": "L416",
       "_callable": true,
       "_origin": "ast",
+      "id": "src_js_sb_admin_sbupdateui",
       "community": 3,
       "community_name": "sb-admin.js",
-      "norm_label": "sbupdateui()",
-      "id": "src_js_sb_admin_sbupdateui"
+      "norm_label": "sbupdateui()"
+    },
+    {
+      "label": "sbUpdateUserRole()",
+      "file_type": "code",
+      "source_file": "src/js/sb-admin.js",
+      "source_location": "L358",
+      "_callable": true,
+      "_origin": "ast",
+      "id": "src_js_sb_admin_sbupdateuserrole",
+      "community": 3,
+      "community_name": "sb-admin.js",
+      "norm_label": "sbupdateuserrole()"
+    },
+    {
+      "label": "sbUsersMsg()",
+      "file_type": "code",
+      "source_file": "src/js/sb-admin.js",
+      "source_location": "L285",
+      "_callable": true,
+      "_origin": "ast",
+      "id": "src_js_sb_admin_sbusersmsg",
+      "community": 3,
+      "community_name": "sb-admin.js",
+      "norm_label": "sbusersmsg()"
     },
     {
       "label": "showVersionBanner()",
       "file_type": "code",
       "source_file": "src/js/sb-admin.js",
-      "source_location": "L637",
+      "source_location": "L776",
       "_callable": true,
       "_origin": "ast",
+      "id": "src_js_sb_admin_showversionbanner",
       "community": 3,
       "community_name": "sb-admin.js",
-      "norm_label": "showversionbanner()",
-      "id": "src_js_sb_admin_showversionbanner"
+      "norm_label": "showversionbanner()"
     },
     {
       "label": "startVersionCheck()",
       "file_type": "code",
       "source_file": "src/js/sb-admin.js",
-      "source_location": "L648",
+      "source_location": "L787",
       "_callable": true,
       "_origin": "ast",
+      "id": "src_js_sb_admin_startversioncheck",
       "community": 3,
       "community_name": "sb-admin.js",
-      "norm_label": "startversioncheck()",
-      "id": "src_js_sb_admin_startversioncheck"
+      "norm_label": "startversioncheck()"
     },
     {
       "label": "_commitInlineCell()",
@@ -4086,10 +4314,10 @@
       "source_location": "L7",
       "_callable": true,
       "_origin": "ast",
+      "id": "src_js_dashboard_alerts_render_renderalerts",
       "community": 36,
       "community_name": "dashboard-alerts-render.js",
-      "norm_label": "renderalerts()",
-      "id": "src_js_dashboard_alerts_render_renderalerts"
+      "norm_label": "renderalerts()"
     },
     {
       "label": "renderAll()",
@@ -4098,10 +4326,10 @@
       "source_location": "L91",
       "_callable": true,
       "_origin": "ast",
+      "id": "src_js_dashboard_alerts_render_renderall",
       "community": 36,
       "community_name": "dashboard-alerts-render.js",
-      "norm_label": "renderall()",
-      "id": "src_js_dashboard_alerts_render_renderall"
+      "norm_label": "renderall()"
     },
     {
       "label": "renderGap()",
@@ -5016,18 +5244,6 @@
       "id": "src_js_weekly_jira_subtask_pwjirasubtaskopencomunimodal_pwjirasubtaskcheckexisting"
     },
     {
-      "label": "rowHtml()",
-      "file_type": "code",
-      "source_file": "src/js/weekly-jira-subtask.js",
-      "source_location": "L322",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 5,
-      "community_name": "weekly-jira-subtask.js",
-      "norm_label": "rowhtml()",
-      "id": "src_js_weekly_jira_subtask_pwjirasubtaskopencomunimodal_rowhtml"
-    },
-    {
       "label": "setSquadraSkip()",
       "file_type": "code",
       "source_file": "src/js/weekly-jira-subtask.js",
@@ -5518,6 +5734,30 @@
       "community_name": "dashboard-crud-helpers.js",
       "norm_label": "showconfirmasync()",
       "id": "src_js_dashboard_crud_helpers_showconfirmasync"
+    },
+    {
+      "label": "listBox()",
+      "file_type": "code",
+      "source_file": "src/js/weekly-ferie-import.js",
+      "source_location": "L74",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 7,
+      "community_name": "dashboard-crud-helpers.js",
+      "norm_label": "listbox()",
+      "id": "src_js_weekly_ferie_import_pwferieimportshowconfirm_listbox"
+    },
+    {
+      "label": "rowHtml()",
+      "file_type": "code",
+      "source_file": "src/js/weekly-jira-subtask.js",
+      "source_location": "L322",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 7,
+      "community_name": "dashboard-crud-helpers.js",
+      "norm_label": "rowhtml()",
+      "id": "src_js_weekly_jira_subtask_pwjirasubtaskopencomunimodal_rowhtml"
     },
     {
       "label": "_pwSpost2opt()",
@@ -6348,10 +6588,10 @@
       "source_file": "src/js/weekly-meteo.js",
       "source_location": "L1",
       "_origin": "ast",
+      "id": "src_js_weekly_meteo",
       "community": 13,
       "community_name": "weekly-meteo.js",
-      "norm_label": "weekly-meteo.js",
-      "id": "src_js_weekly_meteo"
+      "norm_label": "weekly-meteo.js"
     },
     {
       "label": "METEO_FASCE",
@@ -6359,10 +6599,10 @@
       "source_file": "src/js/weekly-meteo.js",
       "source_location": "L11",
       "_origin": "ast",
+      "id": "src_js_weekly_meteo_meteo_fasce",
       "community": 13,
       "community_name": "weekly-meteo.js",
-      "norm_label": "meteo_fasce",
-      "id": "src_js_weekly_meteo_meteo_fasce"
+      "norm_label": "meteo_fasce"
     },
     {
       "label": "METEO_ICONS",
@@ -6370,10 +6610,10 @@
       "source_file": "src/js/weekly-meteo.js",
       "source_location": "L23",
       "_origin": "ast",
+      "id": "src_js_weekly_meteo_meteo_icons",
       "community": 13,
       "community_name": "weekly-meteo.js",
-      "norm_label": "meteo_icons",
-      "id": "src_js_weekly_meteo_meteo_icons"
+      "norm_label": "meteo_icons"
     },
     {
       "label": "_meteoCache",
@@ -6381,10 +6621,21 @@
       "source_file": "src/js/weekly-meteo.js",
       "source_location": "L15",
       "_origin": "ast",
+      "id": "src_js_weekly_meteo_meteocache",
       "community": 13,
       "community_name": "weekly-meteo.js",
-      "norm_label": "_meteocache",
-      "id": "src_js_weekly_meteo_meteocache"
+      "norm_label": "_meteocache"
+    },
+    {
+      "label": "_pcCache",
+      "file_type": "code",
+      "source_file": "src/js/weekly-meteo.js",
+      "source_location": "L300",
+      "_origin": "ast",
+      "id": "src_js_weekly_meteo_pccache",
+      "community": 13,
+      "community_name": "weekly-meteo.js",
+      "norm_label": "_pccache"
     },
     {
       "label": "weekly-ricerca-squadre.js",
@@ -6392,10 +6643,10 @@
       "source_file": "src/js/weekly-ricerca-squadre.js",
       "source_location": "L1",
       "_origin": "ast",
-      "id": "src_js_weekly_ricerca_squadre",
       "community": 14,
       "community_name": "weekly-ricerca-squadre.js",
-      "norm_label": "weekly-ricerca-squadre.js"
+      "norm_label": "weekly-ricerca-squadre.js",
+      "id": "src_js_weekly_ricerca_squadre"
     },
     {
       "label": "_ricercaSquadre",
@@ -6403,10 +6654,10 @@
       "source_file": "src/js/weekly-ricerca-squadre.js",
       "source_location": "L20",
       "_origin": "ast",
-      "id": "src_js_weekly_ricerca_squadre_ricercasquadre",
       "community": 14,
       "community_name": "weekly-ricerca-squadre.js",
-      "norm_label": "_ricercasquadre"
+      "norm_label": "_ricercasquadre",
+      "id": "src_js_weekly_ricerca_squadre_ricercasquadre"
     },
     {
       "label": "RS_STATI",
@@ -6414,10 +6665,10 @@
       "source_file": "src/js/weekly-ricerca-squadre.js",
       "source_location": "L34",
       "_origin": "ast",
-      "id": "src_js_weekly_ricerca_squadre_rs_stati",
       "community": 14,
       "community_name": "weekly-ricerca-squadre.js",
-      "norm_label": "rs_stati"
+      "norm_label": "rs_stati",
+      "id": "src_js_weekly_ricerca_squadre_rs_stati"
     },
     {
       "label": "_rsMapLayers",
@@ -6425,10 +6676,10 @@
       "source_file": "src/js/weekly-ricerca-squadre.js",
       "source_location": "L27",
       "_origin": "ast",
-      "id": "src_js_weekly_ricerca_squadre_rsmaplayers",
       "community": 14,
       "community_name": "weekly-ricerca-squadre.js",
-      "norm_label": "_rsmaplayers"
+      "norm_label": "_rsmaplayers",
+      "id": "src_js_weekly_ricerca_squadre_rsmaplayers"
     },
     {
       "label": "_rsSelSkills",
@@ -6436,10 +6687,10 @@
       "source_file": "src/js/weekly-ricerca-squadre.js",
       "source_location": "L28",
       "_origin": "ast",
-      "id": "src_js_weekly_ricerca_squadre_rsselskills",
       "community": 14,
       "community_name": "weekly-ricerca-squadre.js",
-      "norm_label": "_rsselskills"
+      "norm_label": "_rsselskills",
+      "id": "src_js_weekly_ricerca_squadre_rsselskills"
     },
     {
       "label": "_rsSelStrumenti",
@@ -6447,10 +6698,10 @@
       "source_file": "src/js/weekly-ricerca-squadre.js",
       "source_location": "L29",
       "_origin": "ast",
-      "id": "src_js_weekly_ricerca_squadre_rsselstrumenti",
       "community": 14,
       "community_name": "weekly-ricerca-squadre.js",
-      "norm_label": "_rsselstrumenti"
+      "norm_label": "_rsselstrumenti",
+      "id": "src_js_weekly_ricerca_squadre_rsselstrumenti"
     },
     {
       "label": "dashboard-assegnazioni.js",
@@ -6755,32 +7006,32 @@
       "source_file": "src/js/sb-admin.js",
       "source_location": "L1",
       "_origin": "ast",
+      "id": "src_js_sb_admin",
       "community": 3,
       "community_name": "sb-admin.js",
-      "norm_label": "sb-admin.js",
-      "id": "src_js_sb_admin"
+      "norm_label": "sb-admin.js"
     },
     {
       "label": "_sbDirty",
       "file_type": "code",
       "source_file": "src/js/sb-admin.js",
-      "source_location": "L270",
+      "source_location": "L406",
       "_origin": "ast",
+      "id": "src_js_sb_admin_sbdirty",
       "community": 3,
       "community_name": "sb-admin.js",
-      "norm_label": "_sbdirty",
-      "id": "src_js_sb_admin_sbdirty"
+      "norm_label": "_sbdirty"
     },
     {
       "label": "_sbRemoteTs",
       "file_type": "code",
       "source_file": "src/js/sb-admin.js",
-      "source_location": "L269",
+      "source_location": "L405",
       "_origin": "ast",
+      "id": "src_js_sb_admin_sbremotets",
       "community": 3,
       "community_name": "sb-admin.js",
-      "norm_label": "_sbremotets",
-      "id": "src_js_sb_admin_sbremotets"
+      "norm_label": "_sbremotets"
     },
     {
       "label": "dashboard-staffing-celle.js",
@@ -6898,10 +7149,10 @@
       "source_file": "src/js/dashboard-alerts-render.js",
       "source_location": "L1",
       "_origin": "ast",
+      "id": "src_js_dashboard_alerts_render",
       "community": 36,
       "community_name": "dashboard-alerts-render.js",
-      "norm_label": "dashboard-alerts-render.js",
-      "id": "src_js_dashboard_alerts_render"
+      "norm_label": "dashboard-alerts-render.js"
     },
     {
       "label": "dashboard-gap-riconc.js",
@@ -7504,6 +7755,21 @@
       "id": "index_sbpull"
     },
     {
+      "label": "sbPush()",
+      "file_type": "code",
+      "source_file": "index.html",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "community": 0,
+      "community_name": "Griglia Settimanale Tab",
+      "norm_label": "sbpush()",
+      "_origin": "semantic",
+      "id": "index_sbpush"
+    },
+    {
       "label": "switchScreen()",
       "file_type": "code",
       "source_file": "index.html",
@@ -7624,6 +7890,21 @@
       "id": "index_controllo_produzione_tab"
     },
     {
+      "label": "Core Sync Domain (state.*, row 1)",
+      "file_type": "concept",
+      "source_file": "index.html",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "community": 0,
+      "community_name": "Griglia Settimanale Tab",
+      "norm_label": "core sync domain (state.*, row 1)",
+      "_origin": "semantic",
+      "id": "index_core_domain"
+    },
+    {
       "label": "Dashboard Screen (state.*)",
       "file_type": "concept",
       "source_file": "index.html",
@@ -7652,6 +7933,36 @@
       "norm_label": "doppia week tab",
       "_origin": "semantic",
       "id": "index_doppia_week_tab"
+    },
+    {
+      "label": "Doppia Week Sync Domain (row 4)",
+      "file_type": "concept",
+      "source_file": "index.html",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "community": 0,
+      "community_name": "Griglia Settimanale Tab",
+      "norm_label": "doppia week sync domain (row 4)",
+      "_origin": "semantic",
+      "id": "index_dw_domain"
+    },
+    {
+      "label": "Ferie Sync Domain (pwFerie, row 3)",
+      "file_type": "concept",
+      "source_file": "index.html",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "community": 0,
+      "community_name": "Griglia Settimanale Tab",
+      "norm_label": "ferie sync domain (pwferie, row 3)",
+      "_origin": "semantic",
+      "id": "index_ferie_domain"
     },
     {
       "label": "Ferie & Permessi Tab",
@@ -7969,6 +8280,21 @@
       "id": "index_pianificazione_settimanale_screen"
     },
     {
+      "label": "Planning Sync Domain (pwData, row 2)",
+      "file_type": "concept",
+      "source_file": "index.html",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "community": 0,
+      "community_name": "Griglia Settimanale Tab",
+      "norm_label": "planning sync domain (pwdata, row 2)",
+      "_origin": "semantic",
+      "id": "index_planning_domain"
+    },
+    {
       "label": "Pool Operatori (Staff Registry)",
       "file_type": "concept",
       "source_file": "index.html",
@@ -8072,6 +8398,21 @@
       "norm_label": "delta model for km/production sync",
       "_origin": "semantic",
       "id": "claude_delta_model"
+    },
+    {
+      "label": "Four-Domain Supabase Sync Architecture",
+      "file_type": "rationale",
+      "source_file": "index.html",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "community": 0,
+      "community_name": "Griglia Settimanale Tab",
+      "norm_label": "four-domain supabase sync architecture",
+      "_origin": "semantic",
+      "id": "index_four_domain_sync"
     },
     {
       "label": "Delta Model for Jira Production Sync",
@@ -8764,96 +9105,6 @@
       "id": "product_users"
     },
     {
-      "label": "sbPush()",
-      "file_type": "code",
-      "source_file": "index.html",
-      "source_location": null,
-      "source_url": null,
-      "captured_at": null,
-      "author": null,
-      "contributor": null,
-      "community": 58,
-      "community_name": "sbPush",
-      "norm_label": "sbpush()",
-      "_origin": "semantic",
-      "id": "index_sbpush"
-    },
-    {
-      "label": "Core Sync Domain (state.*, row 1)",
-      "file_type": "concept",
-      "source_file": "index.html",
-      "source_location": null,
-      "source_url": null,
-      "captured_at": null,
-      "author": null,
-      "contributor": null,
-      "community": 58,
-      "community_name": "sbPush",
-      "norm_label": "core sync domain (state.*, row 1)",
-      "_origin": "semantic",
-      "id": "index_core_domain"
-    },
-    {
-      "label": "Doppia Week Sync Domain (row 4)",
-      "file_type": "concept",
-      "source_file": "index.html",
-      "source_location": null,
-      "source_url": null,
-      "captured_at": null,
-      "author": null,
-      "contributor": null,
-      "community": 58,
-      "community_name": "sbPush",
-      "norm_label": "doppia week sync domain (row 4)",
-      "_origin": "semantic",
-      "id": "index_dw_domain"
-    },
-    {
-      "label": "Ferie Sync Domain (pwFerie, row 3)",
-      "file_type": "concept",
-      "source_file": "index.html",
-      "source_location": null,
-      "source_url": null,
-      "captured_at": null,
-      "author": null,
-      "contributor": null,
-      "community": 58,
-      "community_name": "sbPush",
-      "norm_label": "ferie sync domain (pwferie, row 3)",
-      "_origin": "semantic",
-      "id": "index_ferie_domain"
-    },
-    {
-      "label": "Planning Sync Domain (pwData, row 2)",
-      "file_type": "concept",
-      "source_file": "index.html",
-      "source_location": null,
-      "source_url": null,
-      "captured_at": null,
-      "author": null,
-      "contributor": null,
-      "community": 58,
-      "community_name": "sbPush",
-      "norm_label": "planning sync domain (pwdata, row 2)",
-      "_origin": "semantic",
-      "id": "index_planning_domain"
-    },
-    {
-      "label": "Four-Domain Supabase Sync Architecture",
-      "file_type": "rationale",
-      "source_file": "index.html",
-      "source_location": null,
-      "source_url": null,
-      "captured_at": null,
-      "author": null,
-      "contributor": null,
-      "community": 58,
-      "community_name": "sbPush",
-      "norm_label": "four-domain supabase sync architecture",
-      "_origin": "semantic",
-      "id": "index_four_domain_sync"
-    },
-    {
       "label": "Supabase table active_sessions",
       "file_type": "concept",
       "source_file": "CLAUDE.md",
@@ -9427,9 +9678,9 @@
       "source_location": "L93",
       "weight": 1.0,
       "_origin": "ast",
-      "confidence_score": 1.0,
       "source": "src_js_dashboard_alerts_render_renderall",
-      "target": "src_js_dashboard_alerts_render_renderalerts"
+      "target": "src_js_dashboard_alerts_render_renderalerts",
+      "confidence_score": 1.0
     },
     {
       "relation": "calls",
@@ -11428,228 +11679,336 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/js/sb-admin.js",
-      "source_location": "L633",
+      "source_location": "L772",
       "weight": 1.0,
       "_origin": "ast",
-      "confidence_score": 1.0,
       "source": "src_js_sb_admin_checkfornewversion",
-      "target": "src_js_sb_admin_showversionbanner"
+      "target": "src_js_sb_admin_showversionbanner",
+      "confidence_score": 1.0
     },
     {
       "relation": "calls",
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/js/sb-admin.js",
-      "source_location": "L423",
+      "source_location": "L562",
       "weight": 1.0,
       "_origin": "ast",
-      "confidence_score": 1.0,
       "source": "src_js_sb_admin_sbchangepwd",
-      "target": "src_js_sb_admin_sbclosepwdmodal"
+      "target": "src_js_sb_admin_sbclosepwdmodal",
+      "confidence_score": 1.0
     },
     {
       "relation": "calls",
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/js/sb-admin.js",
-      "source_location": "L655",
+      "source_location": "L339",
       "weight": 1.0,
       "_origin": "ast",
-      "confidence_score": 1.0,
+      "source": "src_js_sb_admin_sbcreateuser",
+      "target": "src_js_sb_admin_sbusersmsg",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "src/js/sb-admin.js",
+      "source_location": "L346",
+      "weight": 1.0,
+      "_origin": "ast",
+      "source": "src_js_sb_admin_sbcreateuser",
+      "target": "src_js_sb_admin_sbcalladminusers",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "src/js/sb-admin.js",
+      "source_location": "L349",
+      "weight": 1.0,
+      "_origin": "ast",
+      "source": "src_js_sb_admin_sbcreateuser",
+      "target": "src_js_sb_admin_sblogactivity",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "src/js/sb-admin.js",
+      "source_location": "L350",
+      "weight": 1.0,
+      "_origin": "ast",
+      "source": "src_js_sb_admin_sbcreateuser",
+      "target": "src_js_sb_admin_sbloadusers",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "src/js/sb-admin.js",
+      "source_location": "L377",
+      "weight": 1.0,
+      "_origin": "ast",
+      "source": "src_js_sb_admin_sbdeleteuser",
+      "target": "src_js_sb_admin_sbusersmsg",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "src/js/sb-admin.js",
+      "source_location": "L379",
+      "weight": 1.0,
+      "_origin": "ast",
+      "source": "src_js_sb_admin_sbdeleteuser",
+      "target": "src_js_sb_admin_sbcalladminusers",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "src/js/sb-admin.js",
+      "source_location": "L381",
+      "weight": 1.0,
+      "_origin": "ast",
+      "source": "src_js_sb_admin_sbdeleteuser",
+      "target": "src_js_sb_admin_sblogactivity",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "src/js/sb-admin.js",
+      "source_location": "L382",
+      "weight": 1.0,
+      "_origin": "ast",
+      "source": "src_js_sb_admin_sbdeleteuser",
+      "target": "src_js_sb_admin_sbloadusers",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "src/js/sb-admin.js",
+      "source_location": "L794",
+      "weight": 1.0,
+      "_origin": "ast",
       "source": "src_js_sb_admin_sbinitandcheck",
-      "target": "src_js_sb_admin_startversioncheck"
+      "target": "src_js_sb_admin_startversioncheck",
+      "confidence_score": 1.0
     },
     {
       "relation": "calls",
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/js/sb-admin.js",
-      "source_location": "L671",
+      "source_location": "L810",
       "weight": 1.0,
       "_origin": "ast",
-      "confidence_score": 1.0,
       "source": "src_js_sb_admin_sbinitandcheck",
-      "target": "src_js_sb_admin_sbinit"
+      "target": "src_js_sb_admin_sbinit",
+      "confidence_score": 1.0
     },
     {
       "relation": "calls",
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/js/sb-admin.js",
-      "source_location": "L679",
+      "source_location": "L818",
       "weight": 1.0,
       "_origin": "ast",
-      "confidence_score": 1.0,
       "source": "src_js_sb_admin_sbinitandcheck",
-      "target": "src_js_sb_admin_sbonloggedin"
+      "target": "src_js_sb_admin_sbonloggedin",
+      "confidence_score": 1.0
     },
     {
       "relation": "calls",
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/js/sb-admin.js",
-      "source_location": "L308",
+      "source_location": "L296",
       "weight": 1.0,
       "_origin": "ast",
-      "confidence_score": 1.0,
+      "source": "src_js_sb_admin_sbloadusers",
+      "target": "src_js_sb_admin_sbcalladminusers",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "src/js/sb-admin.js",
+      "source_location": "L444",
+      "weight": 1.0,
+      "_origin": "ast",
       "source": "src_js_sb_admin_sblogin",
-      "target": "src_js_sb_admin_sbonloggedin"
+      "target": "src_js_sb_admin_sbonloggedin",
+      "confidence_score": 1.0
     },
     {
       "relation": "calls",
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/js/sb-admin.js",
-      "source_location": "L376",
+      "source_location": "L515",
       "weight": 1.0,
       "_origin": "ast",
-      "confidence_score": 1.0,
       "source": "src_js_sb_admin_sblogout",
-      "target": "src_js_sb_admin_sbstopheartbeat"
+      "target": "src_js_sb_admin_sbstopheartbeat",
+      "confidence_score": 1.0
     },
     {
       "relation": "calls",
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/js/sb-admin.js",
-      "source_location": "L330",
+      "source_location": "L467",
       "weight": 1.0,
       "_origin": "ast",
-      "confidence_score": 1.0,
       "source": "src_js_sb_admin_sbonloggedin",
-      "target": "src_js_sb_admin_sbisadmin"
+      "target": "src_js_sb_admin_sbisadmin",
+      "confidence_score": 1.0
     },
     {
       "relation": "calls",
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/js/sb-admin.js",
-      "source_location": "L341",
+      "source_location": "L480",
       "weight": 1.0,
       "_origin": "ast",
-      "confidence_score": 1.0,
       "source": "src_js_sb_admin_sbonloggedin",
-      "target": "src_js_sb_admin_sbupdateui"
+      "target": "src_js_sb_admin_sbupdateui",
+      "confidence_score": 1.0
     },
     {
       "relation": "calls",
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/js/sb-admin.js",
-      "source_location": "L342",
+      "source_location": "L481",
       "weight": 1.0,
       "_origin": "ast",
-      "confidence_score": 1.0,
       "source": "src_js_sb_admin_sbonloggedin",
-      "target": "src_js_sb_admin_sbpull"
+      "target": "src_js_sb_admin_sbpull",
+      "confidence_score": 1.0
     },
     {
       "relation": "calls",
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/js/sb-admin.js",
-      "source_location": "L343",
+      "source_location": "L482",
       "weight": 1.0,
       "_origin": "ast",
-      "confidence_score": 1.0,
       "source": "src_js_sb_admin_sbonloggedin",
-      "target": "src_js_sb_admin_sblogactivity"
+      "target": "src_js_sb_admin_sblogactivity",
+      "confidence_score": 1.0
     },
     {
       "relation": "calls",
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/js/sb-admin.js",
-      "source_location": "L344",
+      "source_location": "L483",
       "weight": 1.0,
       "_origin": "ast",
-      "confidence_score": 1.0,
       "source": "src_js_sb_admin_sbonloggedin",
-      "target": "src_js_sb_admin_sbstartheartbeat"
+      "target": "src_js_sb_admin_sbstartheartbeat",
+      "confidence_score": 1.0
     },
     {
       "relation": "calls",
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/js/sb-admin.js",
-      "source_location": "L345",
+      "source_location": "L484",
       "weight": 1.0,
       "_origin": "ast",
-      "confidence_score": 1.0,
       "source": "src_js_sb_admin_sbonloggedin",
-      "target": "src_js_sb_admin_sbsubscriberealtime"
+      "target": "src_js_sb_admin_sbsubscriberealtime",
+      "confidence_score": 1.0
     },
     {
       "relation": "calls",
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/js/sb-admin.js",
-      "source_location": "L434",
+      "source_location": "L573",
       "weight": 1.0,
       "_origin": "ast",
-      "confidence_score": 1.0,
       "source": "src_js_sb_admin_sbpull",
-      "target": "src_js_sb_admin_sbupdateui"
+      "target": "src_js_sb_admin_sbupdateui",
+      "confidence_score": 1.0
     },
     {
       "relation": "calls",
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/js/sb-admin.js",
-      "source_location": "L468",
+      "source_location": "L607",
       "weight": 1.0,
       "_origin": "ast",
-      "confidence_score": 1.0,
       "source": "src_js_sb_admin_sbpull",
-      "target": "src_js_sb_admin_sbsetlocal"
+      "target": "src_js_sb_admin_sbsetlocal",
+      "confidence_score": 1.0
     },
     {
       "relation": "calls",
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/js/sb-admin.js",
-      "source_location": "L513",
+      "source_location": "L652",
       "weight": 1.0,
       "_origin": "ast",
-      "confidence_score": 1.0,
       "source": "src_js_sb_admin_sbpull",
-      "target": "src_js_sb_admin_sbpush"
+      "target": "src_js_sb_admin_sbpush",
+      "confidence_score": 1.0
     },
     {
       "relation": "calls",
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/js/sb-admin.js",
-      "source_location": "L578",
+      "source_location": "L717",
       "weight": 1.0,
       "_origin": "ast",
-      "confidence_score": 1.0,
       "source": "src_js_sb_admin_sbpush",
-      "target": "src_js_sb_admin_sblogactivity"
+      "target": "src_js_sb_admin_sblogactivity",
+      "confidence_score": 1.0
     },
     {
       "relation": "calls",
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/js/sb-admin.js",
-      "source_location": "L586",
+      "source_location": "L725",
       "weight": 1.0,
       "_origin": "ast",
-      "confidence_score": 1.0,
       "source": "src_js_sb_admin_sbpush",
-      "target": "src_js_sb_admin_sbupdateui"
+      "target": "src_js_sb_admin_sbupdateui",
+      "confidence_score": 1.0
     },
     {
       "relation": "calls",
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/js/sb-admin.js",
-      "source_location": "L605",
+      "source_location": "L744",
       "weight": 1.0,
       "_origin": "ast",
-      "confidence_score": 1.0,
       "source": "src_js_sb_admin_sbscheduleautopush",
-      "target": "src_js_sb_admin_sbpush"
+      "target": "src_js_sb_admin_sbpush",
+      "confidence_score": 1.0
     },
     {
       "relation": "calls",
@@ -11659,9 +12018,9 @@
       "source_location": "L181",
       "weight": 1.0,
       "_origin": "ast",
-      "confidence_score": 1.0,
       "source": "src_js_sb_admin_sbshowbackups",
-      "target": "src_js_sb_admin_sbloadbackups"
+      "target": "src_js_sb_admin_sbloadbackups",
+      "confidence_score": 1.0
     },
     {
       "relation": "calls",
@@ -11671,9 +12030,9 @@
       "source_location": "L21",
       "weight": 1.0,
       "_origin": "ast",
-      "confidence_score": 1.0,
       "source": "src_js_sb_admin_sbshowlog",
-      "target": "src_js_sb_admin_sbloadlog"
+      "target": "src_js_sb_admin_sbloadlog",
+      "confidence_score": 1.0
     },
     {
       "relation": "calls",
@@ -11683,9 +12042,21 @@
       "source_location": "L122",
       "weight": 1.0,
       "_origin": "ast",
-      "confidence_score": 1.0,
       "source": "src_js_sb_admin_sbshowsessions",
-      "target": "src_js_sb_admin_sbloadsessions"
+      "target": "src_js_sb_admin_sbloadsessions",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "src/js/sb-admin.js",
+      "source_location": "L278",
+      "weight": 1.0,
+      "_origin": "ast",
+      "source": "src_js_sb_admin_sbshowusers",
+      "target": "src_js_sb_admin_sbloadusers",
+      "confidence_score": 1.0
     },
     {
       "relation": "calls",
@@ -11695,21 +12066,57 @@
       "source_location": "L75",
       "weight": 1.0,
       "_origin": "ast",
-      "confidence_score": 1.0,
       "source": "src_js_sb_admin_sbstartheartbeat",
-      "target": "src_js_sb_admin_sbgeneratesessionid"
+      "target": "src_js_sb_admin_sbgeneratesessionid",
+      "confidence_score": 1.0
     },
     {
       "relation": "calls",
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/js/sb-admin.js",
-      "source_location": "L360",
+      "source_location": "L499",
       "weight": 1.0,
       "_origin": "ast",
-      "confidence_score": 1.0,
       "source": "src_js_sb_admin_sbsubscriberealtime",
-      "target": "src_js_sb_admin_sbupdateui"
+      "target": "src_js_sb_admin_sbupdateui",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "src/js/sb-admin.js",
+      "source_location": "L500",
+      "weight": 1.0,
+      "_origin": "ast",
+      "source": "src_js_sb_admin_sbsubscriberealtime",
+      "target": "src_js_sb_admin_sbpull",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "src/js/sb-admin.js",
+      "source_location": "L661",
+      "weight": 1.0,
+      "_origin": "ast",
+      "source": "src_js_sb_admin_sbsync",
+      "target": "src_js_sb_admin_sbpull",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "src/js/sb-admin.js",
+      "source_location": "L359",
+      "weight": 1.0,
+      "_origin": "ast",
+      "source": "src_js_sb_admin_sbupdateuserrole",
+      "target": "src_js_sb_admin_sbusersmsg",
+      "confidence_score": 1.0
     },
     {
       "relation": "calls",
@@ -11719,33 +12126,45 @@
       "source_location": "L361",
       "weight": 1.0,
       "_origin": "ast",
-      "confidence_score": 1.0,
-      "source": "src_js_sb_admin_sbsubscriberealtime",
-      "target": "src_js_sb_admin_sbpull"
+      "source": "src_js_sb_admin_sbupdateuserrole",
+      "target": "src_js_sb_admin_sbcalladminusers",
+      "confidence_score": 1.0
     },
     {
       "relation": "calls",
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/js/sb-admin.js",
-      "source_location": "L522",
+      "source_location": "L363",
       "weight": 1.0,
       "_origin": "ast",
-      "confidence_score": 1.0,
-      "source": "src_js_sb_admin_sbsync",
-      "target": "src_js_sb_admin_sbpull"
+      "source": "src_js_sb_admin_sbupdateuserrole",
+      "target": "src_js_sb_admin_sblogactivity",
+      "confidence_score": 1.0
     },
     {
       "relation": "calls",
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/js/sb-admin.js",
-      "source_location": "L650",
+      "source_location": "L364",
       "weight": 1.0,
       "_origin": "ast",
-      "confidence_score": 1.0,
+      "source": "src_js_sb_admin_sbupdateuserrole",
+      "target": "src_js_sb_admin_sbloadusers",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "src/js/sb-admin.js",
+      "source_location": "L789",
+      "weight": 1.0,
+      "_origin": "ast",
       "source": "src_js_sb_admin_startversioncheck",
-      "target": "src_js_sb_admin_checkfornewversion"
+      "target": "src_js_sb_admin_checkfornewversion",
+      "confidence_score": 1.0
     },
     {
       "relation": "calls",
@@ -13540,12 +13959,72 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/js/weekly-meteo.js",
-      "source_location": "L228",
+      "source_location": "L329",
       "weight": 1.0,
       "_origin": "ast",
-      "confidence_score": 1.0,
+      "source": "src_js_weekly_meteo_pcparsegiorno",
+      "target": "src_js_weekly_meteo_pccolorfromlabel",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "src/js/weekly-meteo.js",
+      "source_location": "L377",
+      "weight": 1.0,
+      "_origin": "ast",
+      "source": "src_js_weekly_meteo_pcrefreshbollettino",
+      "target": "src_js_weekly_meteo_pcfetchindiceoggi",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "src/js/weekly-meteo.js",
+      "source_location": "L381",
+      "weight": 1.0,
+      "_origin": "ast",
+      "source": "src_js_weekly_meteo_pcrefreshbollettino",
+      "target": "src_js_weekly_meteo_pcparsegiorno",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "src/js/weekly-meteo.js",
+      "source_location": "L385",
+      "weight": 1.0,
+      "_origin": "ast",
+      "source": "src_js_weekly_meteo_pcrefreshbollettino",
+      "target": "src_js_weekly_meteo_pccachesave",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "src/js/weekly-meteo.js",
+      "source_location": "L229",
+      "weight": 1.0,
+      "_origin": "ast",
       "source": "src_js_weekly_meteo_pwapplymeteobadgestodom",
-      "target": "src_js_weekly_meteo_pwweatherbadgeinnerhtml"
+      "target": "src_js_weekly_meteo_pwweatherbadgeinnerhtml",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "src/js/weekly-meteo.js",
+      "source_location": "L231",
+      "weight": 1.0,
+      "_origin": "ast",
+      "source": "src_js_weekly_meteo_pwapplymeteobadgestodom",
+      "target": "src_js_weekly_meteo_pwupdateweatherwidget",
+      "confidence_score": 1.0
     },
     {
       "relation": "calls",
@@ -13555,21 +14034,9 @@
       "source_location": "L122",
       "weight": 1.0,
       "_origin": "ast",
-      "confidence_score": 1.0,
       "source": "src_js_weekly_meteo_pwfetchmeteorange",
-      "target": "src_js_weekly_meteo_meteocachesave"
-    },
-    {
-      "relation": "calls",
-      "context": "call",
-      "confidence": "EXTRACTED",
-      "source_file": "src/js/weekly-meteo.js",
-      "source_location": "L243",
-      "weight": 1.0,
-      "_origin": "ast",
-      "confidence_score": 1.0,
-      "source": "src_js_weekly_meteo_pwopenmeteomodal",
-      "target": "src_js_weekly_meteo_pwsquadracantierigiorno"
+      "target": "src_js_weekly_meteo_meteocachesave",
+      "confidence_score": 1.0
     },
     {
       "relation": "calls",
@@ -13579,45 +14046,81 @@
       "source_location": "L245",
       "weight": 1.0,
       "_origin": "ast",
-      "confidence_score": 1.0,
       "source": "src_js_weekly_meteo_pwopenmeteomodal",
-      "target": "src_js_weekly_meteo_pwmeteoinfofor"
+      "target": "src_js_weekly_meteo_pwsquadracantierigiorno",
+      "confidence_score": 1.0
     },
     {
       "relation": "calls",
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/js/weekly-meteo.js",
-      "source_location": "L249",
+      "source_location": "L247",
       "weight": 1.0,
       "_origin": "ast",
-      "confidence_score": 1.0,
       "source": "src_js_weekly_meteo_pwopenmeteomodal",
-      "target": "src_js_weekly_meteo_pwmeteomissingreason"
+      "target": "src_js_weekly_meteo_pwmeteoinfofor",
+      "confidence_score": 1.0
     },
     {
       "relation": "calls",
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/js/weekly-meteo.js",
-      "source_location": "L252",
+      "source_location": "L251",
       "weight": 1.0,
       "_origin": "ast",
-      "confidence_score": 1.0,
       "source": "src_js_weekly_meteo_pwopenmeteomodal",
-      "target": "src_js_weekly_meteo_pwfasceorariefor"
+      "target": "src_js_weekly_meteo_pwmeteomissingreason",
+      "confidence_score": 1.0
     },
     {
       "relation": "calls",
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/js/weekly-meteo.js",
-      "source_location": "L257",
+      "source_location": "L254",
       "weight": 1.0,
       "_origin": "ast",
-      "confidence_score": 1.0,
       "source": "src_js_weekly_meteo_pwopenmeteomodal",
-      "target": "src_js_weekly_meteo_pwmeteoiconfor"
+      "target": "src_js_weekly_meteo_pwfasceorariefor",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "src/js/weekly-meteo.js",
+      "source_location": "L259",
+      "weight": 1.0,
+      "_origin": "ast",
+      "source": "src_js_weekly_meteo_pwopenmeteomodal",
+      "target": "src_js_weekly_meteo_pwmeteoiconfor",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "src/js/weekly-meteo.js",
+      "source_location": "L499",
+      "weight": 1.0,
+      "_origin": "ast",
+      "source": "src_js_weekly_meteo_pwopenweatherweekmodal",
+      "target": "src_js_weekly_meteo_pwweatherweekstatus",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "src/js/weekly-meteo.js",
+      "source_location": "L508",
+      "weight": 1.0,
+      "_origin": "ast",
+      "source": "src_js_weekly_meteo_pwopenweatherweekmodal",
+      "target": "src_js_weekly_meteo_pwmeteoiconfor",
+      "confidence_score": 1.0
     },
     {
       "relation": "calls",
@@ -13627,9 +14130,9 @@
       "source_location": "L184",
       "weight": 1.0,
       "_origin": "ast",
-      "confidence_score": 1.0,
       "source": "src_js_weekly_meteo_pwrefreshmeteoweek",
-      "target": "src_js_weekly_meteo_pwfetchmeteorange"
+      "target": "src_js_weekly_meteo_pwfetchmeteorange",
+      "confidence_score": 1.0
     },
     {
       "relation": "calls",
@@ -13639,69 +14142,153 @@
       "source_location": "L187",
       "weight": 1.0,
       "_origin": "ast",
-      "confidence_score": 1.0,
       "source": "src_js_weekly_meteo_pwrefreshmeteoweek",
-      "target": "src_js_weekly_meteo_pwapplymeteobadgestodom"
+      "target": "src_js_weekly_meteo_pcrefreshbollettino",
+      "confidence_score": 1.0
     },
     {
       "relation": "calls",
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/js/weekly-meteo.js",
-      "source_location": "L289",
+      "source_location": "L188",
       "weight": 1.0,
       "_origin": "ast",
-      "confidence_score": 1.0,
+      "source": "src_js_weekly_meteo_pwrefreshmeteoweek",
+      "target": "src_js_weekly_meteo_pwapplymeteobadgestodom",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "src/js/weekly-meteo.js",
+      "source_location": "L538",
+      "weight": 1.0,
+      "_origin": "ast",
       "source": "src_js_weekly_meteo_pwstartmeteotimer",
-      "target": "src_js_weekly_meteo_pwrefreshmeteoweek"
+      "target": "src_js_weekly_meteo_pwrefreshmeteoweek",
+      "confidence_score": 1.0
     },
     {
       "relation": "calls",
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/js/weekly-meteo.js",
-      "source_location": "L216",
+      "source_location": "L472",
       "weight": 1.0,
       "_origin": "ast",
-      "confidence_score": 1.0,
+      "source": "src_js_weekly_meteo_pwupdateweatherwidget",
+      "target": "src_js_weekly_meteo_pwweatherweekstatus",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "src/js/weekly-meteo.js",
+      "source_location": "L217",
+      "weight": 1.0,
+      "_origin": "ast",
       "source": "src_js_weekly_meteo_pwweatherbadgehtml",
-      "target": "src_js_weekly_meteo_pwweatherbadgeinnerhtml"
+      "target": "src_js_weekly_meteo_pwweatherbadgeinnerhtml",
+      "confidence_score": 1.0
     },
     {
       "relation": "calls",
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/js/weekly-meteo.js",
-      "source_location": "L197",
+      "source_location": "L198",
       "weight": 1.0,
       "_origin": "ast",
-      "confidence_score": 1.0,
       "source": "src_js_weekly_meteo_pwweatherbadgeinnerhtml",
-      "target": "src_js_weekly_meteo_pwsquadracantierigiorno"
+      "target": "src_js_weekly_meteo_pwsquadracantierigiorno",
+      "confidence_score": 1.0
     },
     {
       "relation": "calls",
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/js/weekly-meteo.js",
-      "source_location": "L199",
+      "source_location": "L200",
       "weight": 1.0,
       "_origin": "ast",
-      "confidence_score": 1.0,
       "source": "src_js_weekly_meteo_pwweatherbadgeinnerhtml",
-      "target": "src_js_weekly_meteo_pwmeteoinfofor"
+      "target": "src_js_weekly_meteo_pwmeteoinfofor",
+      "confidence_score": 1.0
     },
     {
       "relation": "calls",
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/js/weekly-meteo.js",
-      "source_location": "L208",
+      "source_location": "L209",
       "weight": 1.0,
       "_origin": "ast",
-      "confidence_score": 1.0,
       "source": "src_js_weekly_meteo_pwweatherbadgeinnerhtml",
-      "target": "src_js_weekly_meteo_pwmeteoiconfor"
+      "target": "src_js_weekly_meteo_pwmeteoiconfor",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "src/js/weekly-meteo.js",
+      "source_location": "L446",
+      "weight": 1.0,
+      "_origin": "ast",
+      "source": "src_js_weekly_meteo_pwweatherweekstatus",
+      "target": "src_js_weekly_meteo_pwsquadracantierigiorno",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "src/js/weekly-meteo.js",
+      "source_location": "L451",
+      "weight": 1.0,
+      "_origin": "ast",
+      "source": "src_js_weekly_meteo_pwweatherweekstatus",
+      "target": "src_js_weekly_meteo_pwmeteoinfofor",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "src/js/weekly-meteo.js",
+      "source_location": "L453",
+      "weight": 1.0,
+      "_origin": "ast",
+      "source": "src_js_weekly_meteo_pwweatherweekstatus",
+      "target": "src_js_weekly_meteo_pwmeteoseverityfor",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "src/js/weekly-meteo.js",
+      "source_location": "L454",
+      "weight": 1.0,
+      "_origin": "ast",
+      "source": "src_js_weekly_meteo_pwweatherweekstatus",
+      "target": "src_js_weekly_meteo_pcinfofor",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "src/js/weekly-meteo.js",
+      "source_location": "L455",
+      "weight": 1.0,
+      "_origin": "ast",
+      "source": "src_js_weekly_meteo_pwweatherweekstatus",
+      "target": "src_js_weekly_meteo_pccolorepeggiore",
+      "confidence_score": 1.0
     },
     {
       "relation": "calls",
@@ -13915,9 +14502,9 @@
       "source_location": "L388",
       "weight": 1.0,
       "_origin": "ast",
+      "confidence_score": 1.0,
       "source": "src_js_weekly_ricerca_squadre_rsaddtappa",
-      "target": "src_js_weekly_ricerca_squadre_rsstatus",
-      "confidence_score": 1.0
+      "target": "src_js_weekly_ricerca_squadre_rsstatus"
     },
     {
       "relation": "calls",
@@ -13927,9 +14514,9 @@
       "source_location": "L410",
       "weight": 1.0,
       "_origin": "ast",
+      "confidence_score": 1.0,
       "source": "src_js_weekly_ricerca_squadre_rsaddtappa",
-      "target": "src_js_weekly_ricerca_squadre_rsupdateskillslabel",
-      "confidence_score": 1.0
+      "target": "src_js_weekly_ricerca_squadre_rsupdateskillslabel"
     },
     {
       "relation": "calls",
@@ -13939,9 +14526,9 @@
       "source_location": "L411",
       "weight": 1.0,
       "_origin": "ast",
+      "confidence_score": 1.0,
       "source": "src_js_weekly_ricerca_squadre_rsaddtappa",
-      "target": "src_js_weekly_ricerca_squadre_rsupdatestrumentilabel",
-      "confidence_score": 1.0
+      "target": "src_js_weekly_ricerca_squadre_rsupdatestrumentilabel"
     },
     {
       "relation": "calls",
@@ -13951,9 +14538,9 @@
       "source_location": "L412",
       "weight": 1.0,
       "_origin": "ast",
+      "confidence_score": 1.0,
       "source": "src_js_weekly_ricerca_squadre_rsaddtappa",
-      "target": "src_js_weekly_ricerca_squadre_rsclosedropdowns",
-      "confidence_score": 1.0
+      "target": "src_js_weekly_ricerca_squadre_rsclosedropdowns"
     },
     {
       "relation": "calls",
@@ -13963,9 +14550,9 @@
       "source_location": "L413",
       "weight": 1.0,
       "_origin": "ast",
+      "confidence_score": 1.0,
       "source": "src_js_weekly_ricerca_squadre_rsaddtappa",
-      "target": "src_js_weekly_ricerca_squadre_rsrendertappe",
-      "confidence_score": 1.0
+      "target": "src_js_weekly_ricerca_squadre_rsrendertappe"
     },
     {
       "relation": "calls",
@@ -13975,9 +14562,9 @@
       "source_location": "L129",
       "weight": 1.0,
       "_origin": "ast",
+      "confidence_score": 1.0,
       "source": "src_js_weekly_ricerca_squadre_rsbuildsquadre",
-      "target": "src_js_weekly_ricerca_squadre_rsoppool",
-      "confidence_score": 1.0
+      "target": "src_js_weekly_ricerca_squadre_rsoppool"
     },
     {
       "relation": "calls",
@@ -13987,9 +14574,9 @@
       "source_location": "L517",
       "weight": 1.0,
       "_origin": "ast",
+      "confidence_score": 1.0,
       "source": "src_js_weekly_ricerca_squadre_rscalcola",
-      "target": "src_js_weekly_ricerca_squadre_rsstartday",
-      "confidence_score": 1.0
+      "target": "src_js_weekly_ricerca_squadre_rsstartday"
     },
     {
       "relation": "calls",
@@ -13999,9 +14586,9 @@
       "source_location": "L518",
       "weight": 1.0,
       "_origin": "ast",
+      "confidence_score": 1.0,
       "source": "src_js_weekly_ricerca_squadre_rscalcola",
-      "target": "src_js_weekly_ricerca_squadre_rsbuildsquadre",
-      "confidence_score": 1.0
+      "target": "src_js_weekly_ricerca_squadre_rsbuildsquadre"
     },
     {
       "relation": "calls",
@@ -14011,9 +14598,9 @@
       "source_location": "L521",
       "weight": 1.0,
       "_origin": "ast",
+      "confidence_score": 1.0,
       "source": "src_js_weekly_ricerca_squadre_rscalcola",
-      "target": "src_js_weekly_ricerca_squadre_rsstatus",
-      "confidence_score": 1.0
+      "target": "src_js_weekly_ricerca_squadre_rsstatus"
     },
     {
       "relation": "calls",
@@ -14023,9 +14610,9 @@
       "source_location": "L522",
       "weight": 1.0,
       "_origin": "ast",
+      "confidence_score": 1.0,
       "source": "src_js_weekly_ricerca_squadre_rscalcola",
-      "target": "src_js_weekly_ricerca_squadre_rsrenderrisultati",
-      "confidence_score": 1.0
+      "target": "src_js_weekly_ricerca_squadre_rsrenderrisultati"
     },
     {
       "relation": "calls",
@@ -14035,9 +14622,9 @@
       "source_location": "L523",
       "weight": 1.0,
       "_origin": "ast",
+      "confidence_score": 1.0,
       "source": "src_js_weekly_ricerca_squadre_rscalcola",
-      "target": "src_js_weekly_ricerca_squadre_rsrendermappa",
-      "confidence_score": 1.0
+      "target": "src_js_weekly_ricerca_squadre_rsrendermappa"
     },
     {
       "relation": "calls",
@@ -14047,9 +14634,9 @@
       "source_location": "L529",
       "weight": 1.0,
       "_origin": "ast",
+      "confidence_score": 1.0,
       "source": "src_js_weekly_ricerca_squadre_rscalcola",
-      "target": "src_js_weekly_ricerca_squadre_rsgeocodemancanti",
-      "confidence_score": 1.0
+      "target": "src_js_weekly_ricerca_squadre_rsgeocodemancanti"
     },
     {
       "relation": "calls",
@@ -14059,9 +14646,9 @@
       "source_location": "L540",
       "weight": 1.0,
       "_origin": "ast",
+      "confidence_score": 1.0,
       "source": "src_js_weekly_ricerca_squadre_rscalcola",
-      "target": "src_js_weekly_ricerca_squadre_rsnorm",
-      "confidence_score": 1.0
+      "target": "src_js_weekly_ricerca_squadre_rsnorm"
     },
     {
       "relation": "calls",
@@ -14071,9 +14658,9 @@
       "source_location": "L546",
       "weight": 1.0,
       "_origin": "ast",
+      "confidence_score": 1.0,
       "source": "src_js_weekly_ricerca_squadre_rscalcola",
-      "target": "src_js_weekly_ricerca_squadre_rsmatricedistanze",
-      "confidence_score": 1.0
+      "target": "src_js_weekly_ricerca_squadre_rsmatricedistanze"
     },
     {
       "relation": "calls",
@@ -14083,9 +14670,9 @@
       "source_location": "L580",
       "weight": 1.0,
       "_origin": "ast",
+      "confidence_score": 1.0,
       "source": "src_js_weekly_ricerca_squadre_rscalcola",
-      "target": "src_js_weekly_ricerca_squadre_rsdisponibilita",
-      "confidence_score": 1.0
+      "target": "src_js_weekly_ricerca_squadre_rsdisponibilita"
     },
     {
       "relation": "calls",
@@ -14095,9 +14682,9 @@
       "source_location": "L585",
       "weight": 1.0,
       "_origin": "ast",
+      "confidence_score": 1.0,
       "source": "src_js_weekly_ricerca_squadre_rscalcola",
-      "target": "src_js_weekly_ricerca_squadre_rsgiornoconsigliato",
-      "confidence_score": 1.0
+      "target": "src_js_weekly_ricerca_squadre_rsgiornoconsigliato"
     },
     {
       "relation": "calls",
@@ -14107,9 +14694,9 @@
       "source_location": "L642",
       "weight": 1.0,
       "_origin": "ast",
+      "confidence_score": 1.0,
       "source": "src_js_weekly_ricerca_squadre_rsconsigliohtml",
-      "target": "src_js_weekly_ricerca_squadre_rstappabynome",
-      "confidence_score": 1.0
+      "target": "src_js_weekly_ricerca_squadre_rstappabynome"
     },
     {
       "relation": "calls",
@@ -14119,9 +14706,9 @@
       "source_location": "L649",
       "weight": 1.0,
       "_origin": "ast",
+      "confidence_score": 1.0,
       "source": "src_js_weekly_ricerca_squadre_rsconsigliohtml",
-      "target": "src_js_weekly_ricerca_squadre_rsformatdatait",
-      "confidence_score": 1.0
+      "target": "src_js_weekly_ricerca_squadre_rsformatdatait"
     },
     {
       "relation": "calls",
@@ -14131,9 +14718,9 @@
       "source_location": "L662",
       "weight": 1.0,
       "_origin": "ast",
+      "confidence_score": 1.0,
       "source": "src_js_weekly_ricerca_squadre_rsconsigliohtml",
-      "target": "src_js_weekly_ricerca_squadre_rskm",
-      "confidence_score": 1.0
+      "target": "src_js_weekly_ricerca_squadre_rskm"
     },
     {
       "relation": "calls",
@@ -14143,9 +14730,9 @@
       "source_location": "L669",
       "weight": 1.0,
       "_origin": "ast",
+      "confidence_score": 1.0,
       "source": "src_js_weekly_ricerca_squadre_rsconsigliohtml",
-      "target": "src_js_weekly_ricerca_squadre_rsgiornoiso",
-      "confidence_score": 1.0
+      "target": "src_js_weekly_ricerca_squadre_rsgiornoiso"
     },
     {
       "relation": "calls",
@@ -14155,9 +14742,9 @@
       "source_location": "L171",
       "weight": 1.0,
       "_origin": "ast",
+      "confidence_score": 1.0,
       "source": "src_js_weekly_ricerca_squadre_rsdisponibilita",
-      "target": "src_js_weekly_ricerca_squadre_rsnumgiorni",
-      "confidence_score": 1.0
+      "target": "src_js_weekly_ricerca_squadre_rsnumgiorni"
     },
     {
       "relation": "calls",
@@ -14167,9 +14754,9 @@
       "source_location": "L302",
       "weight": 1.0,
       "_origin": "ast",
+      "confidence_score": 1.0,
       "source": "src_js_weekly_ricerca_squadre_rsfilterskills",
-      "target": "src_js_weekly_ricerca_squadre_rsfilterlist",
-      "confidence_score": 1.0
+      "target": "src_js_weekly_ricerca_squadre_rsfilterlist"
     },
     {
       "relation": "calls",
@@ -14179,9 +14766,9 @@
       "source_location": "L303",
       "weight": 1.0,
       "_origin": "ast",
+      "confidence_score": 1.0,
       "source": "src_js_weekly_ricerca_squadre_rsfilterstrumenti",
-      "target": "src_js_weekly_ricerca_squadre_rsfilterlist",
-      "confidence_score": 1.0
+      "target": "src_js_weekly_ricerca_squadre_rsfilterlist"
     },
     {
       "relation": "calls",
@@ -14191,9 +14778,9 @@
       "source_location": "L470",
       "weight": 1.0,
       "_origin": "ast",
+      "confidence_score": 1.0,
       "source": "src_js_weekly_ricerca_squadre_rsgeocodemancanti",
-      "target": "src_js_weekly_ricerca_squadre_rsnorm",
-      "confidence_score": 1.0
+      "target": "src_js_weekly_ricerca_squadre_rsnorm"
     },
     {
       "relation": "calls",
@@ -14203,9 +14790,9 @@
       "source_location": "L472",
       "weight": 1.0,
       "_origin": "ast",
+      "confidence_score": 1.0,
       "source": "src_js_weekly_ricerca_squadre_rsgeocodemancanti",
-      "target": "src_js_weekly_ricerca_squadre_rsstatus",
-      "confidence_score": 1.0
+      "target": "src_js_weekly_ricerca_squadre_rsstatus"
     },
     {
       "relation": "calls",
@@ -14215,9 +14802,9 @@
       "source_location": "L241",
       "weight": 1.0,
       "_origin": "ast",
+      "confidence_score": 1.0,
       "source": "src_js_weekly_ricerca_squadre_rsgetskillsweek",
-      "target": "src_js_weekly_ricerca_squadre_rsbuildsquadre",
-      "confidence_score": 1.0
+      "target": "src_js_weekly_ricerca_squadre_rsbuildsquadre"
     },
     {
       "relation": "calls",
@@ -14227,9 +14814,9 @@
       "source_location": "L247",
       "weight": 1.0,
       "_origin": "ast",
+      "confidence_score": 1.0,
       "source": "src_js_weekly_ricerca_squadre_rsgetstrumentiweek",
-      "target": "src_js_weekly_ricerca_squadre_rsbuildsquadre",
-      "confidence_score": 1.0
+      "target": "src_js_weekly_ricerca_squadre_rsbuildsquadre"
     },
     {
       "relation": "calls",
@@ -14239,9 +14826,9 @@
       "source_location": "L211",
       "weight": 1.0,
       "_origin": "ast",
+      "confidence_score": 1.0,
       "source": "src_js_weekly_ricerca_squadre_rsgiornoconsigliato",
-      "target": "src_js_weekly_ricerca_squadre_rsnorm",
-      "confidence_score": 1.0
+      "target": "src_js_weekly_ricerca_squadre_rsnorm"
     },
     {
       "relation": "calls",
@@ -14251,9 +14838,9 @@
       "source_location": "L909",
       "weight": 1.0,
       "_origin": "ast",
+      "confidence_score": 1.0,
       "source": "src_js_weekly_ricerca_squadre_rsinit",
-      "target": "src_js_weekly_ricerca_squadre_rsupdateskillslabel",
-      "confidence_score": 1.0
+      "target": "src_js_weekly_ricerca_squadre_rsupdateskillslabel"
     },
     {
       "relation": "calls",
@@ -14263,9 +14850,9 @@
       "source_location": "L910",
       "weight": 1.0,
       "_origin": "ast",
+      "confidence_score": 1.0,
       "source": "src_js_weekly_ricerca_squadre_rsinit",
-      "target": "src_js_weekly_ricerca_squadre_rsupdatestrumentilabel",
-      "confidence_score": 1.0
+      "target": "src_js_weekly_ricerca_squadre_rsupdatestrumentilabel"
     },
     {
       "relation": "calls",
@@ -14275,9 +14862,9 @@
       "source_location": "L911",
       "weight": 1.0,
       "_origin": "ast",
+      "confidence_score": 1.0,
       "source": "src_js_weekly_ricerca_squadre_rsinit",
-      "target": "src_js_weekly_ricerca_squadre_rsrendertappe",
-      "confidence_score": 1.0
+      "target": "src_js_weekly_ricerca_squadre_rsrendertappe"
     },
     {
       "relation": "calls",
@@ -14287,9 +14874,9 @@
       "source_location": "L912",
       "weight": 1.0,
       "_origin": "ast",
+      "confidence_score": 1.0,
       "source": "src_js_weekly_ricerca_squadre_rsinit",
-      "target": "src_js_weekly_ricerca_squadre_rsrenderrisultati",
-      "confidence_score": 1.0
+      "target": "src_js_weekly_ricerca_squadre_rsrenderrisultati"
     },
     {
       "relation": "calls",
@@ -14299,9 +14886,9 @@
       "source_location": "L913",
       "weight": 1.0,
       "_origin": "ast",
+      "confidence_score": 1.0,
       "source": "src_js_weekly_ricerca_squadre_rsinit",
-      "target": "src_js_weekly_ricerca_squadre_rsrendermappa",
-      "confidence_score": 1.0
+      "target": "src_js_weekly_ricerca_squadre_rsrendermappa"
     },
     {
       "relation": "calls",
@@ -14311,9 +14898,9 @@
       "source_location": "L933",
       "weight": 1.0,
       "_origin": "ast",
+      "confidence_score": 1.0,
       "source": "src_js_weekly_ricerca_squadre_rsinit",
-      "target": "src_js_weekly_ricerca_squadre_rsclosedropdowns",
-      "confidence_score": 1.0
+      "target": "src_js_weekly_ricerca_squadre_rsclosedropdowns"
     },
     {
       "relation": "calls",
@@ -14323,9 +14910,9 @@
       "source_location": "L936",
       "weight": 1.0,
       "_origin": "ast",
+      "confidence_score": 1.0,
       "source": "src_js_weekly_ricerca_squadre_rsinit",
-      "target": "src_js_weekly_ricerca_squadre_rsaddtappa",
-      "confidence_score": 1.0
+      "target": "src_js_weekly_ricerca_squadre_rsaddtappa"
     },
     {
       "relation": "calls",
@@ -14335,9 +14922,9 @@
       "source_location": "L162",
       "weight": 1.0,
       "_origin": "ast",
+      "confidence_score": 1.0,
       "source": "src_js_weekly_ricerca_squadre_rsnumgiorni",
-      "target": "src_js_weekly_ricerca_squadre_rsindoppiaweek",
-      "confidence_score": 1.0
+      "target": "src_js_weekly_ricerca_squadre_rsindoppiaweek"
     },
     {
       "relation": "calls",
@@ -14347,9 +14934,9 @@
       "source_location": "L426",
       "weight": 1.0,
       "_origin": "ast",
+      "confidence_score": 1.0,
       "source": "src_js_weekly_ricerca_squadre_rspulisci",
-      "target": "src_js_weekly_ricerca_squadre_rsupdateskillslabel",
-      "confidence_score": 1.0
+      "target": "src_js_weekly_ricerca_squadre_rsupdateskillslabel"
     },
     {
       "relation": "calls",
@@ -14359,9 +14946,9 @@
       "source_location": "L427",
       "weight": 1.0,
       "_origin": "ast",
+      "confidence_score": 1.0,
       "source": "src_js_weekly_ricerca_squadre_rspulisci",
-      "target": "src_js_weekly_ricerca_squadre_rsupdatestrumentilabel",
-      "confidence_score": 1.0
+      "target": "src_js_weekly_ricerca_squadre_rsupdatestrumentilabel"
     },
     {
       "relation": "calls",
@@ -14371,9 +14958,9 @@
       "source_location": "L430",
       "weight": 1.0,
       "_origin": "ast",
+      "confidence_score": 1.0,
       "source": "src_js_weekly_ricerca_squadre_rspulisci",
-      "target": "src_js_weekly_ricerca_squadre_rsrendertappe",
-      "confidence_score": 1.0
+      "target": "src_js_weekly_ricerca_squadre_rsrendertappe"
     },
     {
       "relation": "calls",
@@ -14383,9 +14970,9 @@
       "source_location": "L431",
       "weight": 1.0,
       "_origin": "ast",
+      "confidence_score": 1.0,
       "source": "src_js_weekly_ricerca_squadre_rspulisci",
-      "target": "src_js_weekly_ricerca_squadre_rsrenderrisultati",
-      "confidence_score": 1.0
+      "target": "src_js_weekly_ricerca_squadre_rsrenderrisultati"
     },
     {
       "relation": "calls",
@@ -14395,9 +14982,9 @@
       "source_location": "L432",
       "weight": 1.0,
       "_origin": "ast",
+      "confidence_score": 1.0,
       "source": "src_js_weekly_ricerca_squadre_rspulisci",
-      "target": "src_js_weekly_ricerca_squadre_rsrendermappa",
-      "confidence_score": 1.0
+      "target": "src_js_weekly_ricerca_squadre_rsrendermappa"
     },
     {
       "relation": "calls",
@@ -14407,9 +14994,9 @@
       "source_location": "L433",
       "weight": 1.0,
       "_origin": "ast",
+      "confidence_score": 1.0,
       "source": "src_js_weekly_ricerca_squadre_rspulisci",
-      "target": "src_js_weekly_ricerca_squadre_rsstatus",
-      "confidence_score": 1.0
+      "target": "src_js_weekly_ricerca_squadre_rsstatus"
     },
     {
       "relation": "calls",
@@ -14419,9 +15006,9 @@
       "source_location": "L418",
       "weight": 1.0,
       "_origin": "ast",
+      "confidence_score": 1.0,
       "source": "src_js_weekly_ricerca_squadre_rsremovetappa",
-      "target": "src_js_weekly_ricerca_squadre_rsrendertappe",
-      "confidence_score": 1.0
+      "target": "src_js_weekly_ricerca_squadre_rsrendertappe"
     },
     {
       "relation": "calls",
@@ -14431,9 +15018,9 @@
       "source_location": "L861",
       "weight": 1.0,
       "_origin": "ast",
+      "confidence_score": 1.0,
       "source": "src_js_weekly_ricerca_squadre_rsrendermappa",
-      "target": "src_js_weekly_ricerca_squadre_rsnorm",
-      "confidence_score": 1.0
+      "target": "src_js_weekly_ricerca_squadre_rsnorm"
     },
     {
       "relation": "calls",
@@ -14443,9 +15030,9 @@
       "source_location": "L874",
       "weight": 1.0,
       "_origin": "ast",
+      "confidence_score": 1.0,
       "source": "src_js_weekly_ricerca_squadre_rsrendermappa",
-      "target": "src_js_weekly_ricerca_squadre_rskm",
-      "confidence_score": 1.0
+      "target": "src_js_weekly_ricerca_squadre_rskm"
     },
     {
       "relation": "calls",
@@ -14455,9 +15042,9 @@
       "source_location": "L710",
       "weight": 1.0,
       "_origin": "ast",
+      "confidence_score": 1.0,
       "source": "src_js_weekly_ricerca_squadre_rsrenderrisultati",
-      "target": "src_js_weekly_ricerca_squadre_rsrenderrisultatibody",
-      "confidence_score": 1.0
+      "target": "src_js_weekly_ricerca_squadre_rsrenderrisultatibody"
     },
     {
       "relation": "calls",
@@ -14467,9 +15054,9 @@
       "source_location": "L711",
       "weight": 1.0,
       "_origin": "ast",
+      "confidence_score": 1.0,
       "source": "src_js_weekly_ricerca_squadre_rsrenderrisultati",
-      "target": "src_js_weekly_ricerca_squadre_rssyncaltezze",
-      "confidence_score": 1.0
+      "target": "src_js_weekly_ricerca_squadre_rssyncaltezze"
     },
     {
       "relation": "calls",
@@ -14479,9 +15066,9 @@
       "source_location": "L732",
       "weight": 1.0,
       "_origin": "ast",
+      "confidence_score": 1.0,
       "source": "src_js_weekly_ricerca_squadre_rsrenderrisultatibody",
-      "target": "src_js_weekly_ricerca_squadre_rsstartday",
-      "confidence_score": 1.0
+      "target": "src_js_weekly_ricerca_squadre_rsstartday"
     },
     {
       "relation": "calls",
@@ -14491,9 +15078,9 @@
       "source_location": "L736",
       "weight": 1.0,
       "_origin": "ast",
+      "confidence_score": 1.0,
       "source": "src_js_weekly_ricerca_squadre_rsrenderrisultatibody",
-      "target": "src_js_weekly_ricerca_squadre_rskm",
-      "confidence_score": 1.0
+      "target": "src_js_weekly_ricerca_squadre_rskm"
     },
     {
       "relation": "calls",
@@ -14503,9 +15090,9 @@
       "source_location": "L752",
       "weight": 1.0,
       "_origin": "ast",
+      "confidence_score": 1.0,
       "source": "src_js_weekly_ricerca_squadre_rsrenderrisultatibody",
-      "target": "src_js_weekly_ricerca_squadre_rssitihtml",
-      "confidence_score": 1.0
+      "target": "src_js_weekly_ricerca_squadre_rssitihtml"
     },
     {
       "relation": "calls",
@@ -14515,9 +15102,9 @@
       "source_location": "L754",
       "weight": 1.0,
       "_origin": "ast",
+      "confidence_score": 1.0,
       "source": "src_js_weekly_ricerca_squadre_rsrenderrisultatibody",
-      "target": "src_js_weekly_ricerca_squadre_rsconsigliohtml",
-      "confidence_score": 1.0
+      "target": "src_js_weekly_ricerca_squadre_rsconsigliohtml"
     },
     {
       "relation": "calls",
@@ -14527,9 +15114,9 @@
       "source_location": "L756",
       "weight": 1.0,
       "_origin": "ast",
+      "confidence_score": 1.0,
       "source": "src_js_weekly_ricerca_squadre_rsrenderrisultatibody",
-      "target": "src_js_weekly_ricerca_squadre_rschipshtml",
-      "confidence_score": 1.0
+      "target": "src_js_weekly_ricerca_squadre_rschipshtml"
     },
     {
       "relation": "calls",
@@ -14539,9 +15126,9 @@
       "source_location": "L758",
       "weight": 1.0,
       "_origin": "ast",
+      "confidence_score": 1.0,
       "source": "src_js_weekly_ricerca_squadre_rsrenderrisultatibody",
-      "target": "src_js_weekly_ricerca_squadre_rsbadgehtml",
-      "confidence_score": 1.0
+      "target": "src_js_weekly_ricerca_squadre_rsbadgehtml"
     },
     {
       "relation": "calls",
@@ -14551,9 +15138,9 @@
       "source_location": "L319",
       "weight": 1.0,
       "_origin": "ast",
+      "confidence_score": 1.0,
       "source": "src_js_weekly_ricerca_squadre_rsrenderskillsdropdown",
-      "target": "src_js_weekly_ricerca_squadre_rsgetskillsweek",
-      "confidence_score": 1.0
+      "target": "src_js_weekly_ricerca_squadre_rsgetskillsweek"
     },
     {
       "relation": "calls",
@@ -14563,9 +15150,9 @@
       "source_location": "L325",
       "weight": 1.0,
       "_origin": "ast",
+      "confidence_score": 1.0,
       "source": "src_js_weekly_ricerca_squadre_rsrenderskillsdropdown",
-      "target": "src_js_weekly_ricerca_squadre_rsoptionrowhtml",
-      "confidence_score": 1.0
+      "target": "src_js_weekly_ricerca_squadre_rsoptionrowhtml"
     },
     {
       "relation": "calls",
@@ -14575,9 +15162,9 @@
       "source_location": "L331",
       "weight": 1.0,
       "_origin": "ast",
+      "confidence_score": 1.0,
       "source": "src_js_weekly_ricerca_squadre_rsrenderskillsdropdown",
-      "target": "src_js_weekly_ricerca_squadre_rsupdateskillslabel",
-      "confidence_score": 1.0
+      "target": "src_js_weekly_ricerca_squadre_rsupdateskillslabel"
     },
     {
       "relation": "calls",
@@ -14587,9 +15174,9 @@
       "source_location": "L339",
       "weight": 1.0,
       "_origin": "ast",
+      "confidence_score": 1.0,
       "source": "src_js_weekly_ricerca_squadre_rsrenderstrumentidropdown",
-      "target": "src_js_weekly_ricerca_squadre_rsgetstrumentiweek",
-      "confidence_score": 1.0
+      "target": "src_js_weekly_ricerca_squadre_rsgetstrumentiweek"
     },
     {
       "relation": "calls",
@@ -14599,9 +15186,9 @@
       "source_location": "L345",
       "weight": 1.0,
       "_origin": "ast",
+      "confidence_score": 1.0,
       "source": "src_js_weekly_ricerca_squadre_rsrenderstrumentidropdown",
-      "target": "src_js_weekly_ricerca_squadre_rsoptionrowhtml",
-      "confidence_score": 1.0
+      "target": "src_js_weekly_ricerca_squadre_rsoptionrowhtml"
     },
     {
       "relation": "calls",
@@ -14611,9 +15198,9 @@
       "source_location": "L351",
       "weight": 1.0,
       "_origin": "ast",
+      "confidence_score": 1.0,
       "source": "src_js_weekly_ricerca_squadre_rsrenderstrumentidropdown",
-      "target": "src_js_weekly_ricerca_squadre_rsupdatestrumentilabel",
-      "confidence_score": 1.0
+      "target": "src_js_weekly_ricerca_squadre_rsupdatestrumentilabel"
     },
     {
       "relation": "calls",
@@ -14623,9 +15210,9 @@
       "source_location": "L441",
       "weight": 1.0,
       "_origin": "ast",
+      "confidence_score": 1.0,
       "source": "src_js_weekly_ricerca_squadre_rsrendertappe",
-      "target": "src_js_weekly_ricerca_squadre_rssyncaltezze",
-      "confidence_score": 1.0
+      "target": "src_js_weekly_ricerca_squadre_rssyncaltezze"
     },
     {
       "relation": "calls",
@@ -14635,9 +15222,9 @@
       "source_location": "L444",
       "weight": 1.0,
       "_origin": "ast",
+      "confidence_score": 1.0,
       "source": "src_js_weekly_ricerca_squadre_rsrendertappe",
-      "target": "src_js_weekly_ricerca_squadre_rsoggiiso",
-      "confidence_score": 1.0
+      "target": "src_js_weekly_ricerca_squadre_rsoggiiso"
     },
     {
       "relation": "calls",
@@ -14647,9 +15234,9 @@
       "source_location": "L452",
       "weight": 1.0,
       "_origin": "ast",
+      "confidence_score": 1.0,
       "source": "src_js_weekly_ricerca_squadre_rsrendertappe",
-      "target": "src_js_weekly_ricerca_squadre_rsformatdatait",
-      "confidence_score": 1.0
+      "target": "src_js_weekly_ricerca_squadre_rsformatdatait"
     },
     {
       "relation": "calls",
@@ -14659,9 +15246,9 @@
       "source_location": "L694",
       "weight": 1.0,
       "_origin": "ast",
+      "confidence_score": 1.0,
       "source": "src_js_weekly_ricerca_squadre_rssitihtml",
-      "target": "src_js_weekly_ricerca_squadre_rsnumgiorni",
-      "confidence_score": 1.0
+      "target": "src_js_weekly_ricerca_squadre_rsnumgiorni"
     },
     {
       "relation": "calls",
@@ -14671,9 +15258,9 @@
       "source_location": "L270",
       "weight": 1.0,
       "_origin": "ast",
+      "confidence_score": 1.0,
       "source": "src_js_weekly_ricerca_squadre_rstoggleskillsdropdown",
-      "target": "src_js_weekly_ricerca_squadre_rsclosedropdowns",
-      "confidence_score": 1.0
+      "target": "src_js_weekly_ricerca_squadre_rsclosedropdowns"
     },
     {
       "relation": "calls",
@@ -14683,9 +15270,9 @@
       "source_location": "L272",
       "weight": 1.0,
       "_origin": "ast",
+      "confidence_score": 1.0,
       "source": "src_js_weekly_ricerca_squadre_rstoggleskillsdropdown",
-      "target": "src_js_weekly_ricerca_squadre_rsrenderskillsdropdown",
-      "confidence_score": 1.0
+      "target": "src_js_weekly_ricerca_squadre_rsrenderskillsdropdown"
     },
     {
       "relation": "calls",
@@ -14695,9 +15282,9 @@
       "source_location": "L275",
       "weight": 1.0,
       "_origin": "ast",
+      "confidence_score": 1.0,
       "source": "src_js_weekly_ricerca_squadre_rstoggleskillsdropdown",
-      "target": "src_js_weekly_ricerca_squadre_rsfilterskills",
-      "confidence_score": 1.0
+      "target": "src_js_weekly_ricerca_squadre_rsfilterskills"
     },
     {
       "relation": "calls",
@@ -14707,9 +15294,9 @@
       "source_location": "L282",
       "weight": 1.0,
       "_origin": "ast",
+      "confidence_score": 1.0,
       "source": "src_js_weekly_ricerca_squadre_rstogglestrumentidropdown",
-      "target": "src_js_weekly_ricerca_squadre_rsclosedropdowns",
-      "confidence_score": 1.0
+      "target": "src_js_weekly_ricerca_squadre_rsclosedropdowns"
     },
     {
       "relation": "calls",
@@ -14719,9 +15306,9 @@
       "source_location": "L284",
       "weight": 1.0,
       "_origin": "ast",
+      "confidence_score": 1.0,
       "source": "src_js_weekly_ricerca_squadre_rstogglestrumentidropdown",
-      "target": "src_js_weekly_ricerca_squadre_rsrenderstrumentidropdown",
-      "confidence_score": 1.0
+      "target": "src_js_weekly_ricerca_squadre_rsrenderstrumentidropdown"
     },
     {
       "relation": "calls",
@@ -14731,9 +15318,9 @@
       "source_location": "L287",
       "weight": 1.0,
       "_origin": "ast",
+      "confidence_score": 1.0,
       "source": "src_js_weekly_ricerca_squadre_rstogglestrumentidropdown",
-      "target": "src_js_weekly_ricerca_squadre_rsfilterstrumenti",
-      "confidence_score": 1.0
+      "target": "src_js_weekly_ricerca_squadre_rsfilterstrumenti"
     },
     {
       "relation": "calls",
@@ -16189,9 +16776,9 @@
       "source_location": "L7",
       "weight": 1.0,
       "_origin": "ast",
-      "confidence_score": 1.0,
       "source": "src_js_dashboard_alerts_render",
-      "target": "src_js_dashboard_alerts_render_renderalerts"
+      "target": "src_js_dashboard_alerts_render_renderalerts",
+      "confidence_score": 1.0
     },
     {
       "relation": "contains",
@@ -16200,9 +16787,9 @@
       "source_location": "L91",
       "weight": 1.0,
       "_origin": "ast",
-      "confidence_score": 1.0,
       "source": "src_js_dashboard_alerts_render",
-      "target": "src_js_dashboard_alerts_render_renderall"
+      "target": "src_js_dashboard_alerts_render_renderall",
+      "confidence_score": 1.0
     },
     {
       "relation": "contains",
@@ -18125,9 +18712,9 @@
       "source_location": "L109",
       "weight": 1.0,
       "_origin": "ast",
-      "confidence_score": 1.0,
       "source": "src_js_sb_admin",
-      "target": "src_js_sb_admin_sbstopheartbeat"
+      "target": "src_js_sb_admin_sbstopheartbeat",
+      "confidence_score": 1.0
     },
     {
       "relation": "contains",
@@ -18136,9 +18723,9 @@
       "source_location": "L120",
       "weight": 1.0,
       "_origin": "ast",
-      "confidence_score": 1.0,
       "source": "src_js_sb_admin",
-      "target": "src_js_sb_admin_sbshowsessions"
+      "target": "src_js_sb_admin_sbshowsessions",
+      "confidence_score": 1.0
     },
     {
       "relation": "contains",
@@ -18147,9 +18734,9 @@
       "source_location": "L125",
       "weight": 1.0,
       "_origin": "ast",
-      "confidence_score": 1.0,
       "source": "src_js_sb_admin",
-      "target": "src_js_sb_admin_sbclosesessions"
+      "target": "src_js_sb_admin_sbclosesessions",
+      "confidence_score": 1.0
     },
     {
       "relation": "contains",
@@ -18158,9 +18745,9 @@
       "source_location": "L129",
       "weight": 1.0,
       "_origin": "ast",
-      "confidence_score": 1.0,
       "source": "src_js_sb_admin",
-      "target": "src_js_sb_admin_sbloadsessions"
+      "target": "src_js_sb_admin_sbloadsessions",
+      "confidence_score": 1.0
     },
     {
       "relation": "contains",
@@ -18169,9 +18756,9 @@
       "source_location": "L177",
       "weight": 1.0,
       "_origin": "ast",
-      "confidence_score": 1.0,
       "source": "src_js_sb_admin",
-      "target": "src_js_sb_admin_sbshowbackups"
+      "target": "src_js_sb_admin_sbshowbackups",
+      "confidence_score": 1.0
     },
     {
       "relation": "contains",
@@ -18180,9 +18767,9 @@
       "source_location": "L184",
       "weight": 1.0,
       "_origin": "ast",
-      "confidence_score": 1.0,
       "source": "src_js_sb_admin",
-      "target": "src_js_sb_admin_sbclosebackups"
+      "target": "src_js_sb_admin_sbclosebackups",
+      "confidence_score": 1.0
     },
     {
       "relation": "contains",
@@ -18191,9 +18778,9 @@
       "source_location": "L188",
       "weight": 1.0,
       "_origin": "ast",
-      "confidence_score": 1.0,
       "source": "src_js_sb_admin",
-      "target": "src_js_sb_admin_sbloadbackups"
+      "target": "src_js_sb_admin_sbloadbackups",
+      "confidence_score": 1.0
     },
     {
       "relation": "contains",
@@ -18202,9 +18789,9 @@
       "source_location": "L19",
       "weight": 1.0,
       "_origin": "ast",
-      "confidence_score": 1.0,
       "source": "src_js_sb_admin",
-      "target": "src_js_sb_admin_sbshowlog"
+      "target": "src_js_sb_admin_sbshowlog",
+      "confidence_score": 1.0
     },
     {
       "relation": "contains",
@@ -18213,9 +18800,9 @@
       "source_location": "L2",
       "weight": 1.0,
       "_origin": "ast",
-      "confidence_score": 1.0,
       "source": "src_js_sb_admin",
-      "target": "src_js_sb_admin_sbisadmin"
+      "target": "src_js_sb_admin_sbisadmin",
+      "confidence_score": 1.0
     },
     {
       "relation": "contains",
@@ -18224,9 +18811,9 @@
       "source_location": "L217",
       "weight": 1.0,
       "_origin": "ast",
-      "confidence_score": 1.0,
       "source": "src_js_sb_admin",
-      "target": "src_js_sb_admin_sbrestorebackup"
+      "target": "src_js_sb_admin_sbrestorebackup",
+      "confidence_score": 1.0
     },
     {
       "relation": "contains",
@@ -18235,42 +18822,31 @@
       "source_location": "L24",
       "weight": 1.0,
       "_origin": "ast",
-      "confidence_score": 1.0,
       "source": "src_js_sb_admin",
-      "target": "src_js_sb_admin_sbcloselog"
+      "target": "src_js_sb_admin_sbcloselog",
+      "confidence_score": 1.0
     },
     {
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/js/sb-admin.js",
-      "source_location": "L269",
+      "source_location": "L256",
       "weight": 1.0,
       "_origin": "ast",
-      "confidence_score": 1.0,
       "source": "src_js_sb_admin",
-      "target": "src_js_sb_admin_sbremotets"
+      "target": "src_js_sb_admin_sbcalladminusers",
+      "confidence_score": 1.0
     },
     {
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/js/sb-admin.js",
-      "source_location": "L270",
+      "source_location": "L271",
       "weight": 1.0,
       "_origin": "ast",
-      "confidence_score": 1.0,
       "source": "src_js_sb_admin",
-      "target": "src_js_sb_admin_sbdirty"
-    },
-    {
-      "relation": "contains",
-      "confidence": "EXTRACTED",
-      "source_file": "src/js/sb-admin.js",
-      "source_location": "L272",
-      "weight": 1.0,
-      "_origin": "ast",
-      "confidence_score": 1.0,
-      "source": "src_js_sb_admin",
-      "target": "src_js_sb_admin_sbinit"
+      "target": "src_js_sb_admin_sbshowusers",
+      "confidence_score": 1.0
     },
     {
       "relation": "contains",
@@ -18279,53 +18855,64 @@
       "source_location": "L28",
       "weight": 1.0,
       "_origin": "ast",
-      "confidence_score": 1.0,
       "source": "src_js_sb_admin",
-      "target": "src_js_sb_admin_sbloadlog"
+      "target": "src_js_sb_admin_sbloadlog",
+      "confidence_score": 1.0
     },
     {
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/js/sb-admin.js",
-      "source_location": "L280",
+      "source_location": "L281",
       "weight": 1.0,
       "_origin": "ast",
-      "confidence_score": 1.0,
       "source": "src_js_sb_admin",
-      "target": "src_js_sb_admin_sbupdateui"
+      "target": "src_js_sb_admin_sbcloseusers",
+      "confidence_score": 1.0
     },
     {
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/js/sb-admin.js",
-      "source_location": "L294",
+      "source_location": "L285",
       "weight": 1.0,
       "_origin": "ast",
-      "confidence_score": 1.0,
       "source": "src_js_sb_admin",
-      "target": "src_js_sb_admin_sblogin"
+      "target": "src_js_sb_admin_sbusersmsg",
+      "confidence_score": 1.0
     },
     {
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/js/sb-admin.js",
-      "source_location": "L316",
+      "source_location": "L292",
       "weight": 1.0,
       "_origin": "ast",
-      "confidence_score": 1.0,
       "source": "src_js_sb_admin",
-      "target": "src_js_sb_admin_sbonloggedin"
+      "target": "src_js_sb_admin_sbloadusers",
+      "confidence_score": 1.0
     },
     {
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/js/sb-admin.js",
-      "source_location": "L348",
+      "source_location": "L331",
       "weight": 1.0,
       "_origin": "ast",
-      "confidence_score": 1.0,
       "source": "src_js_sb_admin",
-      "target": "src_js_sb_admin_sbsubscriberealtime"
+      "target": "src_js_sb_admin_sbcreateuser",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "src/js/sb-admin.js",
+      "source_location": "L358",
+      "weight": 1.0,
+      "_origin": "ast",
+      "source": "src_js_sb_admin",
+      "target": "src_js_sb_admin_sbupdateuserrole",
+      "confidence_score": 1.0
     },
     {
       "relation": "contains",
@@ -18334,53 +18921,97 @@
       "source_location": "L371",
       "weight": 1.0,
       "_origin": "ast",
-      "confidence_score": 1.0,
       "source": "src_js_sb_admin",
-      "target": "src_js_sb_admin_sblogout"
+      "target": "src_js_sb_admin_sbdeleteuser",
+      "confidence_score": 1.0
     },
     {
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/js/sb-admin.js",
-      "source_location": "L383",
+      "source_location": "L405",
       "weight": 1.0,
       "_origin": "ast",
-      "confidence_score": 1.0,
       "source": "src_js_sb_admin",
-      "target": "src_js_sb_admin_sbshowchangepwd"
+      "target": "src_js_sb_admin_sbremotets",
+      "confidence_score": 1.0
     },
     {
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/js/sb-admin.js",
-      "source_location": "L394",
+      "source_location": "L406",
       "weight": 1.0,
       "_origin": "ast",
-      "confidence_score": 1.0,
       "source": "src_js_sb_admin",
-      "target": "src_js_sb_admin_sbclosepwdmodal"
+      "target": "src_js_sb_admin_sbdirty",
+      "confidence_score": 1.0
     },
     {
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/js/sb-admin.js",
-      "source_location": "L398",
+      "source_location": "L408",
       "weight": 1.0,
       "_origin": "ast",
-      "confidence_score": 1.0,
       "source": "src_js_sb_admin",
-      "target": "src_js_sb_admin_sbchangepwd"
+      "target": "src_js_sb_admin_sbinit",
+      "confidence_score": 1.0
     },
     {
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/js/sb-admin.js",
-      "source_location": "L431",
+      "source_location": "L416",
       "weight": 1.0,
       "_origin": "ast",
-      "confidence_score": 1.0,
       "source": "src_js_sb_admin",
-      "target": "src_js_sb_admin_sbpull"
+      "target": "src_js_sb_admin_sbupdateui",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "src/js/sb-admin.js",
+      "source_location": "L430",
+      "weight": 1.0,
+      "_origin": "ast",
+      "source": "src_js_sb_admin",
+      "target": "src_js_sb_admin_sblogin",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "src/js/sb-admin.js",
+      "source_location": "L452",
+      "weight": 1.0,
+      "_origin": "ast",
+      "source": "src_js_sb_admin",
+      "target": "src_js_sb_admin_sbonloggedin",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "src/js/sb-admin.js",
+      "source_location": "L487",
+      "weight": 1.0,
+      "_origin": "ast",
+      "source": "src_js_sb_admin",
+      "target": "src_js_sb_admin_sbsubscriberealtime",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "src/js/sb-admin.js",
+      "source_location": "L510",
+      "weight": 1.0,
+      "_origin": "ast",
+      "source": "src_js_sb_admin",
+      "target": "src_js_sb_admin_sblogout",
+      "confidence_score": 1.0
     },
     {
       "relation": "contains",
@@ -18389,20 +19020,42 @@
       "source_location": "L522",
       "weight": 1.0,
       "_origin": "ast",
-      "confidence_score": 1.0,
       "source": "src_js_sb_admin",
-      "target": "src_js_sb_admin_sbsync"
+      "target": "src_js_sb_admin_sbshowchangepwd",
+      "confidence_score": 1.0
     },
     {
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/js/sb-admin.js",
-      "source_location": "L524",
+      "source_location": "L533",
       "weight": 1.0,
       "_origin": "ast",
-      "confidence_score": 1.0,
       "source": "src_js_sb_admin",
-      "target": "src_js_sb_admin_sbpush"
+      "target": "src_js_sb_admin_sbclosepwdmodal",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "src/js/sb-admin.js",
+      "source_location": "L537",
+      "weight": 1.0,
+      "_origin": "ast",
+      "source": "src_js_sb_admin",
+      "target": "src_js_sb_admin_sbchangepwd",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "src/js/sb-admin.js",
+      "source_location": "L570",
+      "weight": 1.0,
+      "_origin": "ast",
+      "source": "src_js_sb_admin",
+      "target": "src_js_sb_admin_sbpull",
+      "confidence_score": 1.0
     },
     {
       "relation": "contains",
@@ -18411,31 +19064,9 @@
       "source_location": "L6",
       "weight": 1.0,
       "_origin": "ast",
-      "confidence_score": 1.0,
       "source": "src_js_sb_admin",
-      "target": "src_js_sb_admin_sblogactivity"
-    },
-    {
-      "relation": "contains",
-      "confidence": "EXTRACTED",
-      "source_file": "src/js/sb-admin.js",
-      "source_location": "L602",
-      "weight": 1.0,
-      "_origin": "ast",
-      "confidence_score": 1.0,
-      "source": "src_js_sb_admin",
-      "target": "src_js_sb_admin_sbscheduleautopush"
-    },
-    {
-      "relation": "contains",
-      "confidence": "EXTRACTED",
-      "source_file": "src/js/sb-admin.js",
-      "source_location": "L608",
-      "weight": 1.0,
-      "_origin": "ast",
-      "confidence_score": 1.0,
-      "source": "src_js_sb_admin",
-      "target": "src_js_sb_admin_sbsetlocal"
+      "target": "src_js_sb_admin_sblogactivity",
+      "confidence_score": 1.0
     },
     {
       "relation": "contains",
@@ -18444,64 +19075,31 @@
       "source_location": "L62",
       "weight": 1.0,
       "_origin": "ast",
-      "confidence_score": 1.0,
       "source": "src_js_sb_admin",
-      "target": "src_js_sb_admin_sbgeneratesessionid"
+      "target": "src_js_sb_admin_sbgeneratesessionid",
+      "confidence_score": 1.0
     },
     {
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/js/sb-admin.js",
-      "source_location": "L624",
+      "source_location": "L661",
       "weight": 1.0,
       "_origin": "ast",
-      "confidence_score": 1.0,
       "source": "src_js_sb_admin",
-      "target": "src_js_sb_admin_checkfornewversion"
+      "target": "src_js_sb_admin_sbsync",
+      "confidence_score": 1.0
     },
     {
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/js/sb-admin.js",
-      "source_location": "L637",
+      "source_location": "L663",
       "weight": 1.0,
       "_origin": "ast",
-      "confidence_score": 1.0,
       "source": "src_js_sb_admin",
-      "target": "src_js_sb_admin_showversionbanner"
-    },
-    {
-      "relation": "contains",
-      "confidence": "EXTRACTED",
-      "source_file": "src/js/sb-admin.js",
-      "source_location": "L646",
-      "weight": 1.0,
-      "_origin": "ast",
-      "confidence_score": 1.0,
-      "source": "src_js_sb_admin",
-      "target": "src_js_sb_admin_reloadfornewversion"
-    },
-    {
-      "relation": "contains",
-      "confidence": "EXTRACTED",
-      "source_file": "src/js/sb-admin.js",
-      "source_location": "L648",
-      "weight": 1.0,
-      "_origin": "ast",
-      "confidence_score": 1.0,
-      "source": "src_js_sb_admin",
-      "target": "src_js_sb_admin_startversioncheck"
-    },
-    {
-      "relation": "contains",
-      "confidence": "EXTRACTED",
-      "source_file": "src/js/sb-admin.js",
-      "source_location": "L654",
-      "weight": 1.0,
-      "_origin": "ast",
-      "confidence_score": 1.0,
-      "source": "src_js_sb_admin",
-      "target": "src_js_sb_admin_sbinitandcheck"
+      "target": "src_js_sb_admin_sbpush",
+      "confidence_score": 1.0
     },
     {
       "relation": "contains",
@@ -18510,9 +19108,86 @@
       "source_location": "L67",
       "weight": 1.0,
       "_origin": "ast",
-      "confidence_score": 1.0,
       "source": "src_js_sb_admin",
-      "target": "src_js_sb_admin_sbstartheartbeat"
+      "target": "src_js_sb_admin_sbstartheartbeat",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "src/js/sb-admin.js",
+      "source_location": "L741",
+      "weight": 1.0,
+      "_origin": "ast",
+      "source": "src_js_sb_admin",
+      "target": "src_js_sb_admin_sbscheduleautopush",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "src/js/sb-admin.js",
+      "source_location": "L747",
+      "weight": 1.0,
+      "_origin": "ast",
+      "source": "src_js_sb_admin",
+      "target": "src_js_sb_admin_sbsetlocal",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "src/js/sb-admin.js",
+      "source_location": "L763",
+      "weight": 1.0,
+      "_origin": "ast",
+      "source": "src_js_sb_admin",
+      "target": "src_js_sb_admin_checkfornewversion",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "src/js/sb-admin.js",
+      "source_location": "L776",
+      "weight": 1.0,
+      "_origin": "ast",
+      "source": "src_js_sb_admin",
+      "target": "src_js_sb_admin_showversionbanner",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "src/js/sb-admin.js",
+      "source_location": "L785",
+      "weight": 1.0,
+      "_origin": "ast",
+      "source": "src_js_sb_admin",
+      "target": "src_js_sb_admin_reloadfornewversion",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "src/js/sb-admin.js",
+      "source_location": "L787",
+      "weight": 1.0,
+      "_origin": "ast",
+      "source": "src_js_sb_admin",
+      "target": "src_js_sb_admin_startversioncheck",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "src/js/sb-admin.js",
+      "source_location": "L793",
+      "weight": 1.0,
+      "_origin": "ast",
+      "source": "src_js_sb_admin",
+      "target": "src_js_sb_admin_sbinitandcheck",
+      "confidence_score": 1.0
     },
     {
       "relation": "contains",
@@ -20193,9 +20868,9 @@
       "source_location": "L11",
       "weight": 1.0,
       "_origin": "ast",
-      "confidence_score": 1.0,
       "source": "src_js_weekly_meteo",
-      "target": "src_js_weekly_meteo_meteo_fasce"
+      "target": "src_js_weekly_meteo_meteo_fasce",
+      "confidence_score": 1.0
     },
     {
       "relation": "contains",
@@ -20204,9 +20879,9 @@
       "source_location": "L135",
       "weight": 1.0,
       "_origin": "ast",
-      "confidence_score": 1.0,
       "source": "src_js_weekly_meteo",
-      "target": "src_js_weekly_meteo_pwrefreshmeteoweek"
+      "target": "src_js_weekly_meteo_pwrefreshmeteoweek",
+      "confidence_score": 1.0
     },
     {
       "relation": "contains",
@@ -20215,9 +20890,9 @@
       "source_location": "L15",
       "weight": 1.0,
       "_origin": "ast",
-      "confidence_score": 1.0,
       "source": "src_js_weekly_meteo",
-      "target": "src_js_weekly_meteo_meteocache"
+      "target": "src_js_weekly_meteo_meteocache",
+      "confidence_score": 1.0
     },
     {
       "relation": "contains",
@@ -20226,9 +20901,9 @@
       "source_location": "L16",
       "weight": 1.0,
       "_origin": "ast",
-      "confidence_score": 1.0,
       "source": "src_js_weekly_meteo",
-      "target": "src_js_weekly_meteo_meteocacheload"
+      "target": "src_js_weekly_meteo_meteocacheload",
+      "confidence_score": 1.0
     },
     {
       "relation": "contains",
@@ -20237,42 +20912,42 @@
       "source_location": "L19",
       "weight": 1.0,
       "_origin": "ast",
-      "confidence_score": 1.0,
       "source": "src_js_weekly_meteo",
-      "target": "src_js_weekly_meteo_meteocachesave"
+      "target": "src_js_weekly_meteo_meteocachesave",
+      "confidence_score": 1.0
     },
     {
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/js/weekly-meteo.js",
-      "source_location": "L196",
+      "source_location": "L197",
       "weight": 1.0,
       "_origin": "ast",
-      "confidence_score": 1.0,
       "source": "src_js_weekly_meteo",
-      "target": "src_js_weekly_meteo_pwweatherbadgeinnerhtml"
+      "target": "src_js_weekly_meteo_pwweatherbadgeinnerhtml",
+      "confidence_score": 1.0
     },
     {
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/js/weekly-meteo.js",
-      "source_location": "L215",
+      "source_location": "L216",
       "weight": 1.0,
       "_origin": "ast",
-      "confidence_score": 1.0,
       "source": "src_js_weekly_meteo",
-      "target": "src_js_weekly_meteo_pwweatherbadgehtml"
+      "target": "src_js_weekly_meteo_pwweatherbadgehtml",
+      "confidence_score": 1.0
     },
     {
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/js/weekly-meteo.js",
-      "source_location": "L221",
+      "source_location": "L222",
       "weight": 1.0,
       "_origin": "ast",
-      "confidence_score": 1.0,
       "source": "src_js_weekly_meteo",
-      "target": "src_js_weekly_meteo_pwapplymeteobadgestodom"
+      "target": "src_js_weekly_meteo_pwapplymeteobadgestodom",
+      "confidence_score": 1.0
     },
     {
       "relation": "contains",
@@ -20281,31 +20956,75 @@
       "source_location": "L23",
       "weight": 1.0,
       "_origin": "ast",
-      "confidence_score": 1.0,
       "source": "src_js_weekly_meteo",
-      "target": "src_js_weekly_meteo_meteo_icons"
+      "target": "src_js_weekly_meteo_meteo_icons",
+      "confidence_score": 1.0
     },
     {
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/js/weekly-meteo.js",
-      "source_location": "L233",
+      "source_location": "L235",
       "weight": 1.0,
       "_origin": "ast",
-      "confidence_score": 1.0,
       "source": "src_js_weekly_meteo",
-      "target": "src_js_weekly_meteo_pwopenmeteomodal"
+      "target": "src_js_weekly_meteo_pwopenmeteomodal",
+      "confidence_score": 1.0
     },
     {
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/js/weekly-meteo.js",
-      "source_location": "L285",
+      "source_location": "L300",
       "weight": 1.0,
       "_origin": "ast",
-      "confidence_score": 1.0,
       "source": "src_js_weekly_meteo",
-      "target": "src_js_weekly_meteo_pwstartmeteotimer"
+      "target": "src_js_weekly_meteo_pccache",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "src/js/weekly-meteo.js",
+      "source_location": "L301",
+      "weight": 1.0,
+      "_origin": "ast",
+      "source": "src_js_weekly_meteo",
+      "target": "src_js_weekly_meteo_pccacheload",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "src/js/weekly-meteo.js",
+      "source_location": "L304",
+      "weight": 1.0,
+      "_origin": "ast",
+      "source": "src_js_weekly_meteo",
+      "target": "src_js_weekly_meteo_pccachesave",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "src/js/weekly-meteo.js",
+      "source_location": "L310",
+      "weight": 1.0,
+      "_origin": "ast",
+      "source": "src_js_weekly_meteo",
+      "target": "src_js_weekly_meteo_pccolorfromlabel",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "src/js/weekly-meteo.js",
+      "source_location": "L318",
+      "weight": 1.0,
+      "_origin": "ast",
+      "source": "src_js_weekly_meteo",
+      "target": "src_js_weekly_meteo_pcparsegiorno",
+      "confidence_score": 1.0
     },
     {
       "relation": "contains",
@@ -20314,9 +21033,31 @@
       "source_location": "L33",
       "weight": 1.0,
       "_origin": "ast",
-      "confidence_score": 1.0,
       "source": "src_js_weekly_meteo",
-      "target": "src_js_weekly_meteo_pwmeteoiconfor"
+      "target": "src_js_weekly_meteo_pwmeteoiconfor",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "src/js/weekly-meteo.js",
+      "source_location": "L344",
+      "weight": 1.0,
+      "_origin": "ast",
+      "source": "src_js_weekly_meteo",
+      "target": "src_js_weekly_meteo_pcfetchindiceoggi",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "src/js/weekly-meteo.js",
+      "source_location": "L371",
+      "weight": 1.0,
+      "_origin": "ast",
+      "source": "src_js_weekly_meteo",
+      "target": "src_js_weekly_meteo_pcrefreshbollettino",
+      "confidence_score": 1.0
     },
     {
       "relation": "contains",
@@ -20325,9 +21066,75 @@
       "source_location": "L39",
       "weight": 1.0,
       "_origin": "ast",
-      "confidence_score": 1.0,
       "source": "src_js_weekly_meteo",
-      "target": "src_js_weekly_meteo_pwsquadracantierigiorno"
+      "target": "src_js_weekly_meteo_pwsquadracantierigiorno",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "src/js/weekly-meteo.js",
+      "source_location": "L396",
+      "weight": 1.0,
+      "_origin": "ast",
+      "source": "src_js_weekly_meteo",
+      "target": "src_js_weekly_meteo_pcinfofor",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "src/js/weekly-meteo.js",
+      "source_location": "L406",
+      "weight": 1.0,
+      "_origin": "ast",
+      "source": "src_js_weekly_meteo",
+      "target": "src_js_weekly_meteo_pccolorepeggiore",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "src/js/weekly-meteo.js",
+      "source_location": "L423",
+      "weight": 1.0,
+      "_origin": "ast",
+      "source": "src_js_weekly_meteo",
+      "target": "src_js_weekly_meteo_pwmeteoseverityfor",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "src/js/weekly-meteo.js",
+      "source_location": "L435",
+      "weight": 1.0,
+      "_origin": "ast",
+      "source": "src_js_weekly_meteo",
+      "target": "src_js_weekly_meteo_pwweatherweekstatus",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "src/js/weekly-meteo.js",
+      "source_location": "L469",
+      "weight": 1.0,
+      "_origin": "ast",
+      "source": "src_js_weekly_meteo",
+      "target": "src_js_weekly_meteo_pwupdateweatherwidget",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "src/js/weekly-meteo.js",
+      "source_location": "L498",
+      "weight": 1.0,
+      "_origin": "ast",
+      "source": "src_js_weekly_meteo",
+      "target": "src_js_weekly_meteo_pwopenweatherweekmodal",
+      "confidence_score": 1.0
     },
     {
       "relation": "contains",
@@ -20336,9 +21143,20 @@
       "source_location": "L50",
       "weight": 1.0,
       "_origin": "ast",
-      "confidence_score": 1.0,
       "source": "src_js_weekly_meteo",
-      "target": "src_js_weekly_meteo_pwmeteoinfofor"
+      "target": "src_js_weekly_meteo_pwmeteoinfofor",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "src/js/weekly-meteo.js",
+      "source_location": "L534",
+      "weight": 1.0,
+      "_origin": "ast",
+      "source": "src_js_weekly_meteo",
+      "target": "src_js_weekly_meteo_pwstartmeteotimer",
+      "confidence_score": 1.0
     },
     {
       "relation": "contains",
@@ -20347,9 +21165,9 @@
       "source_location": "L63",
       "weight": 1.0,
       "_origin": "ast",
-      "confidence_score": 1.0,
       "source": "src_js_weekly_meteo",
-      "target": "src_js_weekly_meteo_pwmeteomissingreason"
+      "target": "src_js_weekly_meteo_pwmeteomissingreason",
+      "confidence_score": 1.0
     },
     {
       "relation": "contains",
@@ -20358,9 +21176,9 @@
       "source_location": "L71",
       "weight": 1.0,
       "_origin": "ast",
-      "confidence_score": 1.0,
       "source": "src_js_weekly_meteo",
-      "target": "src_js_weekly_meteo_pwfasceorariefor"
+      "target": "src_js_weekly_meteo_pwfasceorariefor",
+      "confidence_score": 1.0
     },
     {
       "relation": "contains",
@@ -20369,9 +21187,9 @@
       "source_location": "L81",
       "weight": 1.0,
       "_origin": "ast",
-      "confidence_score": 1.0,
       "source": "src_js_weekly_meteo",
-      "target": "src_js_weekly_meteo_pwfetchmeteorange"
+      "target": "src_js_weekly_meteo_pwfetchmeteorange",
+      "confidence_score": 1.0
     },
     {
       "relation": "contains",
@@ -20520,7 +21338,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/js/weekly-operatore-modal.js",
-      "source_location": "L521",
+      "source_location": "L522",
       "weight": 1.0,
       "_origin": "ast",
       "confidence_score": 1.0,
@@ -20644,9 +21462,9 @@
       "source_location": "L106",
       "weight": 1.0,
       "_origin": "ast",
+      "confidence_score": 1.0,
       "source": "src_js_weekly_ricerca_squadre",
-      "target": "src_js_weekly_ricerca_squadre_rsbuildsquadre",
-      "confidence_score": 1.0
+      "target": "src_js_weekly_ricerca_squadre_rsbuildsquadre"
     },
     {
       "relation": "contains",
@@ -20655,9 +21473,9 @@
       "source_location": "L150",
       "weight": 1.0,
       "_origin": "ast",
+      "confidence_score": 1.0,
       "source": "src_js_weekly_ricerca_squadre",
-      "target": "src_js_weekly_ricerca_squadre_rsindoppiaweek",
-      "confidence_score": 1.0
+      "target": "src_js_weekly_ricerca_squadre_rsindoppiaweek"
     },
     {
       "relation": "contains",
@@ -20666,9 +21484,9 @@
       "source_location": "L160",
       "weight": 1.0,
       "_origin": "ast",
+      "confidence_score": 1.0,
       "source": "src_js_weekly_ricerca_squadre",
-      "target": "src_js_weekly_ricerca_squadre_rsnumgiorni",
-      "confidence_score": 1.0
+      "target": "src_js_weekly_ricerca_squadre_rsnumgiorni"
     },
     {
       "relation": "contains",
@@ -20677,9 +21495,9 @@
       "source_location": "L167",
       "weight": 1.0,
       "_origin": "ast",
+      "confidence_score": 1.0,
       "source": "src_js_weekly_ricerca_squadre",
-      "target": "src_js_weekly_ricerca_squadre_rsdisponibilita",
-      "confidence_score": 1.0
+      "target": "src_js_weekly_ricerca_squadre_rsdisponibilita"
     },
     {
       "relation": "contains",
@@ -20688,9 +21506,9 @@
       "source_location": "L199",
       "weight": 1.0,
       "_origin": "ast",
+      "confidence_score": 1.0,
       "source": "src_js_weekly_ricerca_squadre",
-      "target": "src_js_weekly_ricerca_squadre_rsgiornoconsigliato",
-      "confidence_score": 1.0
+      "target": "src_js_weekly_ricerca_squadre_rsgiornoconsigliato"
     },
     {
       "relation": "contains",
@@ -20699,9 +21517,9 @@
       "source_location": "L20",
       "weight": 1.0,
       "_origin": "ast",
+      "confidence_score": 1.0,
       "source": "src_js_weekly_ricerca_squadre",
-      "target": "src_js_weekly_ricerca_squadre_ricercasquadre",
-      "confidence_score": 1.0
+      "target": "src_js_weekly_ricerca_squadre_ricercasquadre"
     },
     {
       "relation": "contains",
@@ -20710,9 +21528,9 @@
       "source_location": "L239",
       "weight": 1.0,
       "_origin": "ast",
+      "confidence_score": 1.0,
       "source": "src_js_weekly_ricerca_squadre",
-      "target": "src_js_weekly_ricerca_squadre_rsgetskillsweek",
-      "confidence_score": 1.0
+      "target": "src_js_weekly_ricerca_squadre_rsgetskillsweek"
     },
     {
       "relation": "contains",
@@ -20721,9 +21539,9 @@
       "source_location": "L245",
       "weight": 1.0,
       "_origin": "ast",
+      "confidence_score": 1.0,
       "source": "src_js_weekly_ricerca_squadre",
-      "target": "src_js_weekly_ricerca_squadre_rsgetstrumentiweek",
-      "confidence_score": 1.0
+      "target": "src_js_weekly_ricerca_squadre_rsgetstrumentiweek"
     },
     {
       "relation": "contains",
@@ -20732,9 +21550,9 @@
       "source_location": "L258",
       "weight": 1.0,
       "_origin": "ast",
+      "confidence_score": 1.0,
       "source": "src_js_weekly_ricerca_squadre",
-      "target": "src_js_weekly_ricerca_squadre_rsclosedropdowns",
-      "confidence_score": 1.0
+      "target": "src_js_weekly_ricerca_squadre_rsclosedropdowns"
     },
     {
       "relation": "contains",
@@ -20743,9 +21561,9 @@
       "source_location": "L266",
       "weight": 1.0,
       "_origin": "ast",
+      "confidence_score": 1.0,
       "source": "src_js_weekly_ricerca_squadre",
-      "target": "src_js_weekly_ricerca_squadre_rstoggleskillsdropdown",
-      "confidence_score": 1.0
+      "target": "src_js_weekly_ricerca_squadre_rstoggleskillsdropdown"
     },
     {
       "relation": "contains",
@@ -20754,9 +21572,9 @@
       "source_location": "L27",
       "weight": 1.0,
       "_origin": "ast",
+      "confidence_score": 1.0,
       "source": "src_js_weekly_ricerca_squadre",
-      "target": "src_js_weekly_ricerca_squadre_rsmaplayers",
-      "confidence_score": 1.0
+      "target": "src_js_weekly_ricerca_squadre_rsmaplayers"
     },
     {
       "relation": "contains",
@@ -20765,9 +21583,9 @@
       "source_location": "L278",
       "weight": 1.0,
       "_origin": "ast",
+      "confidence_score": 1.0,
       "source": "src_js_weekly_ricerca_squadre",
-      "target": "src_js_weekly_ricerca_squadre_rstogglestrumentidropdown",
-      "confidence_score": 1.0
+      "target": "src_js_weekly_ricerca_squadre_rstogglestrumentidropdown"
     },
     {
       "relation": "contains",
@@ -20776,9 +21594,9 @@
       "source_location": "L28",
       "weight": 1.0,
       "_origin": "ast",
+      "confidence_score": 1.0,
       "source": "src_js_weekly_ricerca_squadre",
-      "target": "src_js_weekly_ricerca_squadre_rsselskills",
-      "confidence_score": 1.0
+      "target": "src_js_weekly_ricerca_squadre_rsselskills"
     },
     {
       "relation": "contains",
@@ -20787,9 +21605,9 @@
       "source_location": "L29",
       "weight": 1.0,
       "_origin": "ast",
+      "confidence_score": 1.0,
       "source": "src_js_weekly_ricerca_squadre",
-      "target": "src_js_weekly_ricerca_squadre_rsselstrumenti",
-      "confidence_score": 1.0
+      "target": "src_js_weekly_ricerca_squadre_rsselstrumenti"
     },
     {
       "relation": "contains",
@@ -20798,9 +21616,9 @@
       "source_location": "L293",
       "weight": 1.0,
       "_origin": "ast",
+      "confidence_score": 1.0,
       "source": "src_js_weekly_ricerca_squadre",
-      "target": "src_js_weekly_ricerca_squadre_rsfilterlist",
-      "confidence_score": 1.0
+      "target": "src_js_weekly_ricerca_squadre_rsfilterlist"
     },
     {
       "relation": "contains",
@@ -20809,9 +21627,9 @@
       "source_location": "L302",
       "weight": 1.0,
       "_origin": "ast",
+      "confidence_score": 1.0,
       "source": "src_js_weekly_ricerca_squadre",
-      "target": "src_js_weekly_ricerca_squadre_rsfilterskills",
-      "confidence_score": 1.0
+      "target": "src_js_weekly_ricerca_squadre_rsfilterskills"
     },
     {
       "relation": "contains",
@@ -20820,9 +21638,9 @@
       "source_location": "L303",
       "weight": 1.0,
       "_origin": "ast",
+      "confidence_score": 1.0,
       "source": "src_js_weekly_ricerca_squadre",
-      "target": "src_js_weekly_ricerca_squadre_rsfilterstrumenti",
-      "confidence_score": 1.0
+      "target": "src_js_weekly_ricerca_squadre_rsfilterstrumenti"
     },
     {
       "relation": "contains",
@@ -20831,9 +21649,9 @@
       "source_location": "L305",
       "weight": 1.0,
       "_origin": "ast",
+      "confidence_score": 1.0,
       "source": "src_js_weekly_ricerca_squadre",
-      "target": "src_js_weekly_ricerca_squadre_rsoptionrowhtml",
-      "confidence_score": 1.0
+      "target": "src_js_weekly_ricerca_squadre_rsoptionrowhtml"
     },
     {
       "relation": "contains",
@@ -20842,9 +21660,9 @@
       "source_location": "L316",
       "weight": 1.0,
       "_origin": "ast",
+      "confidence_score": 1.0,
       "source": "src_js_weekly_ricerca_squadre",
-      "target": "src_js_weekly_ricerca_squadre_rsrenderskillsdropdown",
-      "confidence_score": 1.0
+      "target": "src_js_weekly_ricerca_squadre_rsrenderskillsdropdown"
     },
     {
       "relation": "contains",
@@ -20853,9 +21671,9 @@
       "source_location": "L336",
       "weight": 1.0,
       "_origin": "ast",
+      "confidence_score": 1.0,
       "source": "src_js_weekly_ricerca_squadre",
-      "target": "src_js_weekly_ricerca_squadre_rsrenderstrumentidropdown",
-      "confidence_score": 1.0
+      "target": "src_js_weekly_ricerca_squadre_rsrenderstrumentidropdown"
     },
     {
       "relation": "contains",
@@ -20864,9 +21682,9 @@
       "source_location": "L34",
       "weight": 1.0,
       "_origin": "ast",
+      "confidence_score": 1.0,
       "source": "src_js_weekly_ricerca_squadre",
-      "target": "src_js_weekly_ricerca_squadre_rs_stati",
-      "confidence_score": 1.0
+      "target": "src_js_weekly_ricerca_squadre_rs_stati"
     },
     {
       "relation": "contains",
@@ -20875,9 +21693,9 @@
       "source_location": "L356",
       "weight": 1.0,
       "_origin": "ast",
+      "confidence_score": 1.0,
       "source": "src_js_weekly_ricerca_squadre",
-      "target": "src_js_weekly_ricerca_squadre_rsupdateskillslabel",
-      "confidence_score": 1.0
+      "target": "src_js_weekly_ricerca_squadre_rsupdateskillslabel"
     },
     {
       "relation": "contains",
@@ -20886,9 +21704,9 @@
       "source_location": "L364",
       "weight": 1.0,
       "_origin": "ast",
+      "confidence_score": 1.0,
       "source": "src_js_weekly_ricerca_squadre",
-      "target": "src_js_weekly_ricerca_squadre_rsupdatestrumentilabel",
-      "confidence_score": 1.0
+      "target": "src_js_weekly_ricerca_squadre_rsupdatestrumentilabel"
     },
     {
       "relation": "contains",
@@ -20897,9 +21715,9 @@
       "source_location": "L373",
       "weight": 1.0,
       "_origin": "ast",
+      "confidence_score": 1.0,
       "source": "src_js_weekly_ricerca_squadre",
-      "target": "src_js_weekly_ricerca_squadre_rsaddtappa",
-      "confidence_score": 1.0
+      "target": "src_js_weekly_ricerca_squadre_rsaddtappa"
     },
     {
       "relation": "contains",
@@ -20908,9 +21726,9 @@
       "source_location": "L416",
       "weight": 1.0,
       "_origin": "ast",
+      "confidence_score": 1.0,
       "source": "src_js_weekly_ricerca_squadre",
-      "target": "src_js_weekly_ricerca_squadre_rsremovetappa",
-      "confidence_score": 1.0
+      "target": "src_js_weekly_ricerca_squadre_rsremovetappa"
     },
     {
       "relation": "contains",
@@ -20919,9 +21737,9 @@
       "source_location": "L42",
       "weight": 1.0,
       "_origin": "ast",
+      "confidence_score": 1.0,
       "source": "src_js_weekly_ricerca_squadre",
-      "target": "src_js_weekly_ricerca_squadre_rsstatus",
-      "confidence_score": 1.0
+      "target": "src_js_weekly_ricerca_squadre_rsstatus"
     },
     {
       "relation": "contains",
@@ -20930,9 +21748,9 @@
       "source_location": "L421",
       "weight": 1.0,
       "_origin": "ast",
+      "confidence_score": 1.0,
       "source": "src_js_weekly_ricerca_squadre",
-      "target": "src_js_weekly_ricerca_squadre_rspulisci",
-      "confidence_score": 1.0
+      "target": "src_js_weekly_ricerca_squadre_rspulisci"
     },
     {
       "relation": "contains",
@@ -20941,9 +21759,9 @@
       "source_location": "L436",
       "weight": 1.0,
       "_origin": "ast",
+      "confidence_score": 1.0,
       "source": "src_js_weekly_ricerca_squadre",
-      "target": "src_js_weekly_ricerca_squadre_rsrendertappe",
-      "confidence_score": 1.0
+      "target": "src_js_weekly_ricerca_squadre_rsrendertappe"
     },
     {
       "relation": "contains",
@@ -20952,9 +21770,9 @@
       "source_location": "L469",
       "weight": 1.0,
       "_origin": "ast",
+      "confidence_score": 1.0,
       "source": "src_js_weekly_ricerca_squadre",
-      "target": "src_js_weekly_ricerca_squadre_rsgeocodemancanti",
-      "confidence_score": 1.0
+      "target": "src_js_weekly_ricerca_squadre_rsgeocodemancanti"
     },
     {
       "relation": "contains",
@@ -20963,9 +21781,9 @@
       "source_location": "L481",
       "weight": 1.0,
       "_origin": "ast",
+      "confidence_score": 1.0,
       "source": "src_js_weekly_ricerca_squadre",
-      "target": "src_js_weekly_ricerca_squadre_rsmatricedistanze",
-      "confidence_score": 1.0
+      "target": "src_js_weekly_ricerca_squadre_rsmatricedistanze"
     },
     {
       "relation": "contains",
@@ -20974,9 +21792,9 @@
       "source_location": "L50",
       "weight": 1.0,
       "_origin": "ast",
+      "confidence_score": 1.0,
       "source": "src_js_weekly_ricerca_squadre",
-      "target": "src_js_weekly_ricerca_squadre_rsnorm",
-      "confidence_score": 1.0
+      "target": "src_js_weekly_ricerca_squadre_rsnorm"
     },
     {
       "relation": "contains",
@@ -20985,9 +21803,9 @@
       "source_location": "L506",
       "weight": 1.0,
       "_origin": "ast",
+      "confidence_score": 1.0,
       "source": "src_js_weekly_ricerca_squadre",
-      "target": "src_js_weekly_ricerca_squadre_rscalcola",
-      "confidence_score": 1.0
+      "target": "src_js_weekly_ricerca_squadre_rscalcola"
     },
     {
       "relation": "contains",
@@ -20996,9 +21814,9 @@
       "source_location": "L54",
       "weight": 1.0,
       "_origin": "ast",
+      "confidence_score": 1.0,
       "source": "src_js_weekly_ricerca_squadre",
-      "target": "src_js_weekly_ricerca_squadre_rskm",
-      "confidence_score": 1.0
+      "target": "src_js_weekly_ricerca_squadre_rskm"
     },
     {
       "relation": "contains",
@@ -21007,9 +21825,9 @@
       "source_location": "L61",
       "weight": 1.0,
       "_origin": "ast",
+      "confidence_score": 1.0,
       "source": "src_js_weekly_ricerca_squadre",
-      "target": "src_js_weekly_ricerca_squadre_rsoppool",
-      "confidence_score": 1.0
+      "target": "src_js_weekly_ricerca_squadre_rsoppool"
     },
     {
       "relation": "contains",
@@ -21018,9 +21836,9 @@
       "source_location": "L624",
       "weight": 1.0,
       "_origin": "ast",
+      "confidence_score": 1.0,
       "source": "src_js_weekly_ricerca_squadre",
-      "target": "src_js_weekly_ricerca_squadre_rschipshtml",
-      "confidence_score": 1.0
+      "target": "src_js_weekly_ricerca_squadre_rschipshtml"
     },
     {
       "relation": "contains",
@@ -21029,9 +21847,9 @@
       "source_location": "L640",
       "weight": 1.0,
       "_origin": "ast",
+      "confidence_score": 1.0,
       "source": "src_js_weekly_ricerca_squadre",
-      "target": "src_js_weekly_ricerca_squadre_rsconsigliohtml",
-      "confidence_score": 1.0
+      "target": "src_js_weekly_ricerca_squadre_rsconsigliohtml"
     },
     {
       "relation": "contains",
@@ -21040,9 +21858,9 @@
       "source_location": "L68",
       "weight": 1.0,
       "_origin": "ast",
+      "confidence_score": 1.0,
       "source": "src_js_weekly_ricerca_squadre",
-      "target": "src_js_weekly_ricerca_squadre_rsoggiiso",
-      "confidence_score": 1.0
+      "target": "src_js_weekly_ricerca_squadre_rsoggiiso"
     },
     {
       "relation": "contains",
@@ -21051,9 +21869,9 @@
       "source_location": "L680",
       "weight": 1.0,
       "_origin": "ast",
+      "confidence_score": 1.0,
       "source": "src_js_weekly_ricerca_squadre",
-      "target": "src_js_weekly_ricerca_squadre_rsbadgehtml",
-      "confidence_score": 1.0
+      "target": "src_js_weekly_ricerca_squadre_rsbadgehtml"
     },
     {
       "relation": "contains",
@@ -21062,9 +21880,9 @@
       "source_location": "L692",
       "weight": 1.0,
       "_origin": "ast",
+      "confidence_score": 1.0,
       "source": "src_js_weekly_ricerca_squadre",
-      "target": "src_js_weekly_ricerca_squadre_rssitihtml",
-      "confidence_score": 1.0
+      "target": "src_js_weekly_ricerca_squadre_rssitihtml"
     },
     {
       "relation": "contains",
@@ -21073,9 +21891,9 @@
       "source_location": "L709",
       "weight": 1.0,
       "_origin": "ast",
+      "confidence_score": 1.0,
       "source": "src_js_weekly_ricerca_squadre",
-      "target": "src_js_weekly_ricerca_squadre_rsrenderrisultati",
-      "confidence_score": 1.0
+      "target": "src_js_weekly_ricerca_squadre_rsrenderrisultati"
     },
     {
       "relation": "contains",
@@ -21084,9 +21902,9 @@
       "source_location": "L714",
       "weight": 1.0,
       "_origin": "ast",
+      "confidence_score": 1.0,
       "source": "src_js_weekly_ricerca_squadre",
-      "target": "src_js_weekly_ricerca_squadre_rsrenderrisultatibody",
-      "confidence_score": 1.0
+      "target": "src_js_weekly_ricerca_squadre_rsrenderrisultatibody"
     },
     {
       "relation": "contains",
@@ -21095,9 +21913,9 @@
       "source_location": "L73",
       "weight": 1.0,
       "_origin": "ast",
+      "confidence_score": 1.0,
       "source": "src_js_weekly_ricerca_squadre",
-      "target": "src_js_weekly_ricerca_squadre_rsgiornoiso",
-      "confidence_score": 1.0
+      "target": "src_js_weekly_ricerca_squadre_rsgiornoiso"
     },
     {
       "relation": "contains",
@@ -21106,9 +21924,9 @@
       "source_location": "L793",
       "weight": 1.0,
       "_origin": "ast",
+      "confidence_score": 1.0,
       "source": "src_js_weekly_ricerca_squadre",
-      "target": "src_js_weekly_ricerca_squadre_rssyncaltezze",
-      "confidence_score": 1.0
+      "target": "src_js_weekly_ricerca_squadre_rssyncaltezze"
     },
     {
       "relation": "contains",
@@ -21117,9 +21935,9 @@
       "source_location": "L80",
       "weight": 1.0,
       "_origin": "ast",
+      "confidence_score": 1.0,
       "source": "src_js_weekly_ricerca_squadre",
-      "target": "src_js_weekly_ricerca_squadre_rsformatdatait",
-      "confidence_score": 1.0
+      "target": "src_js_weekly_ricerca_squadre_rsformatdatait"
     },
     {
       "relation": "contains",
@@ -21128,9 +21946,9 @@
       "source_location": "L818",
       "weight": 1.0,
       "_origin": "ast",
+      "confidence_score": 1.0,
       "source": "src_js_weekly_ricerca_squadre",
-      "target": "src_js_weekly_ricerca_squadre_rsrendermappa",
-      "confidence_score": 1.0
+      "target": "src_js_weekly_ricerca_squadre_rsrendermappa"
     },
     {
       "relation": "contains",
@@ -21139,9 +21957,9 @@
       "source_location": "L85",
       "weight": 1.0,
       "_origin": "ast",
+      "confidence_score": 1.0,
       "source": "src_js_weekly_ricerca_squadre",
-      "target": "src_js_weekly_ricerca_squadre_rstappabynome",
-      "confidence_score": 1.0
+      "target": "src_js_weekly_ricerca_squadre_rstappabynome"
     },
     {
       "relation": "contains",
@@ -21150,9 +21968,9 @@
       "source_location": "L899",
       "weight": 1.0,
       "_origin": "ast",
+      "confidence_score": 1.0,
       "source": "src_js_weekly_ricerca_squadre",
-      "target": "src_js_weekly_ricerca_squadre_rsinit",
-      "confidence_score": 1.0
+      "target": "src_js_weekly_ricerca_squadre_rsinit"
     },
     {
       "relation": "contains",
@@ -21161,9 +21979,9 @@
       "source_location": "L93",
       "weight": 1.0,
       "_origin": "ast",
+      "confidence_score": 1.0,
       "source": "src_js_weekly_ricerca_squadre",
-      "target": "src_js_weekly_ricerca_squadre_rsstartday",
-      "confidence_score": 1.0
+      "target": "src_js_weekly_ricerca_squadre_rsstartday"
     },
     {
       "relation": "contains",
@@ -21804,9 +22622,9 @@
       "source_location": "L916",
       "weight": 1.0,
       "_origin": "ast",
+      "confidence_score": 0.5,
       "source": "src_js_weekly_ricerca_squadre_rsinit",
-      "target": "src_js_weekly_ricerca_squadre_rssyncaltezze",
-      "confidence_score": 0.5
+      "target": "src_js_weekly_ricerca_squadre_rssyncaltezze"
     },
     {
       "relation": "indirect_call",
@@ -23587,5 +24405,5 @@
       "source_file": "index.html"
     }
   ],
-  "built_at_commit": "2a825102d9d10e523d4b5706fb4dc84df43c007b"
+  "built_at_commit": "3db15b00e4cb4689bf41e174d41f542ec6b16906"
 }
