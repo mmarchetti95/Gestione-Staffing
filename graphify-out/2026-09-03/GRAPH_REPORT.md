@@ -1,16 +1,16 @@
 # Graph Report - Gestione-Staffing  (2026-09-03)
 
 ## Corpus Check
-- 48 files · ~207,024 words
+- 48 files · ~205,473 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
-- 745 nodes · 1254 edges · 58 communities (38 shown, 20 thin omitted)
+- 741 nodes · 1243 edges · 59 communities (39 shown, 20 thin omitted)
 - Extraction: 99% EXTRACTED · 1% INFERRED · 0% AMBIGUOUS · INFERRED: 13 edges (avg confidence: 0.69)
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `cd5cd1f9`
+- Built from commit: `2a825102`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -72,6 +72,7 @@
 - dashboard-anagrafica-import.js
 - new-project
 - checkpoint
+- sbPush
 
 ## God Nodes (most connected - your core abstractions)
 1. `pwMapRenderCantieri()` - 14 edges
@@ -109,11 +110,11 @@
 - **Jira Integration Edge Functions** — claude_delta_model [EXTRACTED 1.00]
 - **Pianificazione Settimanale Tab Group** — index_griglia_tab, index_ferie_tab, index_mappa_tab, index_controllo_produzione_tab, index_doppia_week_tab, index_pianifica_spostamenti_tab [EXTRACTED 1.00]
 
-## Communities (58 total, 20 thin omitted)
+## Communities (59 total, 20 thin omitted)
 
 ### Community 0 - "Griglia Settimanale Tab"
-Cohesion: 0.06
-Nodes (48): Delta model for KM/production sync, index.html (generated Gestione-Staffing app), Active Sessions Panel (Admin), Activity Log (Admin Panel), Attestati & Scadenze Feature, Auth & Roles (Supabase Auth), Confronto Preventivo/Effettivo, Controllo Produzione Tab (+40 more)
+Cohesion: 0.07
+Nodes (42): Delta model for KM/production sync, index.html (generated Gestione-Staffing app), Active Sessions Panel (Admin), Activity Log (Admin Panel), Attestati & Scadenze Feature, Auth & Roles (Supabase Auth), Confronto Preventivo/Effettivo, Controllo Produzione Tab (+34 more)
 
 ### Community 1 - "weekly-mappa.js"
 Cohesion: 0.09
@@ -164,8 +165,8 @@ Cohesion: 0.19
 Nodes (14): aggiornaGgOpVistaCommessa(), apriVistaOperatore(), checkCoerenzaOperatori(), EMAIL_SEED, renderAttestatiFilters(), renderEmailOperatori(), renderOperatori(), renderProvinciaFilterOptions() (+6 more)
 
 ### Community 13 - "weekly-meteo.js"
-Cohesion: 0.18
-Nodes (20): METEO_FASCE, METEO_ICONS, _meteoCache, _meteoCacheSave(), pwApplyMeteoBadgesToDom(), pwFasceOrarieFor(), pwFetchMeteoRange(), pwMeteoIconFor() (+12 more)
+Cohesion: 0.20
+Nodes (16): METEO_FASCE, METEO_ICONS, _meteoCache, _meteoCacheSave(), pwApplyMeteoBadgesToDom(), pwFasceOrarieFor(), pwFetchMeteoRange(), pwMeteoIconFor() (+8 more)
 
 ### Community 14 - "weekly-ricerca-squadre.js"
 Cohesion: 0.10
@@ -259,8 +260,12 @@ Nodes (22): Base (sempre incluso), Go (indicatore: go.mod), Java (indicatori: po
 Cohesion: 0.33
 Nodes (5): checkpoint, Gotchas, Resume flow, Save flow, Storage
 
+### Community 58 - "sbPush"
+Cohesion: 0.60
+Nodes (6): Core Sync Domain (state.*, row 1), Doppia Week Sync Domain (row 4), Ferie Sync Domain (pwFerie, row 3), Four-Domain Supabase Sync Architecture, Planning Sync Domain (pwData, row 2), sbPush()
+
 ## Knowledge Gaps
-- **108 isolated node(s):** `METEO_FASCE`, `_meteoCache`, `METEO_ICONS`, `_geoCache`, `MAP_COLORS` (+103 more)
+- **108 isolated node(s):** `_ricercaSquadre`, `_rsMapLayers`, `_rsSelSkills`, `_rsSelStrumenti`, `RS_STATI` (+103 more)
   These have ≤1 connection - possible missing edges or undocumented components.
 - **20 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
 
@@ -273,10 +278,10 @@ _Questions this graph is uniquely positioned to answer:_
   _High betweenness centrality (0.003) - this node is a cross-community bridge._
 - **Are the 3 inferred relationships involving `esc()` (e.g. with `listBox()` and `rowHtml()`) actually correct?**
   _`esc()` has 3 INFERRED edges - model-reasoned connections that need verification._
-- **What connects `METEO_FASCE`, `_meteoCache`, `METEO_ICONS` to the rest of the system?**
+- **What connects `_ricercaSquadre`, `_rsMapLayers`, `_rsSelSkills` to the rest of the system?**
   _108 weakly-connected nodes found - possible documentation gaps or missing edges._
 - **Should `Griglia Settimanale Tab` be split into smaller, more focused modules?**
-  _Cohesion score 0.0636734693877551 - nodes in this community are weakly interconnected._
+  _Cohesion score 0.07188160676532769 - nodes in this community are weakly interconnected._
 - **Should `weekly-mappa.js` be split into smaller, more focused modules?**
   _Cohesion score 0.08686868686868687 - nodes in this community are weakly interconnected._
 - **Should `weekly-mail-core.js` be split into smaller, more focused modules?**

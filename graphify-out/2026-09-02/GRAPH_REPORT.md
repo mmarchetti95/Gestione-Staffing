@@ -1,25 +1,25 @@
 # Graph Report - Gestione-Staffing  (2026-09-02)
 
 ## Corpus Check
-- 44 files · ~182,688 words
+- 45 files · ~200,875 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
-- 645 nodes · 1059 edges · 55 communities (35 shown, 20 thin omitted)
-- Extraction: 99% EXTRACTED · 1% INFERRED · 0% AMBIGUOUS · INFERRED: 12 edges (avg confidence: 0.7)
+- 706 nodes · 1204 edges · 57 communities (37 shown, 20 thin omitted)
+- Extraction: 99% EXTRACTED · 1% INFERRED · 0% AMBIGUOUS · INFERRED: 13 edges (avg confidence: 0.69)
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `8dc9bc35`
+- Built from commit: `e2343e4e`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
 ## Community Hubs (Navigation)
 - Griglia Settimanale Tab
-- weekly-mail-core.js
-- dashboard-attestati.js
-- sb-admin.js
 - weekly-mappa.js
+- weekly-mail-core.js
+- sb-admin.js
+- dashboard-attestati.js
 - weekly-jira-subtask.js
 - CLAUDE.md
 - dashboard-crud-helpers.js
@@ -29,9 +29,10 @@
 - config.js
 - dashboard-operatori.js
 - weekly-meteo.js
-- Design System Tokens
-- Staffing Assignment Logic
-- Operator Picker Modal
+- weekly-ricerca-squadre.js
+- Categorical Color System (colori categorici)
+- dashboard-assegnazioni.js
+- weekly-operatore-modal.js
 - Atlante Campi Jira (Eagleprojects)
 - storage-utils.js
 - weekly-ferie-import.js
@@ -53,6 +54,7 @@
 - dashboard-alerts-render.js
 - La Regola del Bagliore Vietato
 - Capabilities and Constraints
+- dashboard-dpi-admin.js
 - Deep Teal accent (#0d9488)
 - No side-tab colored border rule
 - Start date pianificato custom field (customfield_13093)
@@ -67,19 +69,20 @@
 - Principle: optimize for internal expert audience
 - Product Purpose (staffing + pipeline commerciale)
 - Product Users (staff ufficio Eagleprojects rilievi)
-- weekly-ricerca-squadre.js
+- dashboard-anagrafica-import.js
+- sbPush
 
 ## God Nodes (most connected - your core abstractions)
 1. `pwMapRenderCantieri()` - 14 edges
-2. `pwJiraSubtaskOpenComuniModal()` - 12 edges
-3. `esc()` - 12 edges
-4. `pwGetFerieWeek()` - 11 edges
-5. `renderAttestati()` - 11 edges
-6. `pwSpostDrawMap()` - 11 edges
-7. `Griglia Settimanale Tab` - 11 edges
-8. `closeModal()` - 10 edges
-9. `pwFerieRender()` - 9 edges
-10. `pwGeneraMail()` - 9 edges
+2. `esc()` - 12 edges
+3. `pwJiraSubtaskOpenComuniModal()` - 12 edges
+4. `rsCalcola()` - 11 edges
+5. `pwGetFerieWeek()` - 11 edges
+6. `renderAttestati()` - 11 edges
+7. `pwSpostDrawMap()` - 11 edges
+8. `Griglia Settimanale Tab` - 11 edges
+9. `closeModal()` - 10 edges
+10. `renderDpi()` - 10 edges
 
 ## Surprising Connections (you probably didn't know these)
 - `Creative North Star: The Site Foreman's Whiteboard` --semantically_similar_to--> `Principle: information density over whitespace`  [INFERRED] [semantically similar]
@@ -88,9 +91,9 @@
   SETUP_SUPABASE_GITHUB.md → CLAUDE.md
 - `listBox()` --indirect_call--> `esc()`  [INFERRED]
   src/js/weekly-ferie-import.js → src/js/dashboard-crud-helpers.js
-- `rowHtml()` --indirect_call--> `esc()`  [INFERRED]
-  src/js/weekly-jira-subtask.js → src/js/dashboard-crud-helpers.js
 - `src/head.html (app shell source)` --implements--> `index.html (generated Gestione-Staffing app)`  [INFERRED]
+  src/head.html → index.html
+- `src/head.html (app shell source)` --implements--> `Gestione Staffing / Dashboard Staffing App`  [EXTRACTED]
   src/head.html → index.html
 
 ## Import Cycles
@@ -105,39 +108,39 @@
 - **Jira Integration Edge Functions** — claude_delta_model [EXTRACTED 1.00]
 - **Pianificazione Settimanale Tab Group** — index_griglia_tab, index_ferie_tab, index_mappa_tab, index_controllo_produzione_tab, index_doppia_week_tab, index_pianifica_spostamenti_tab [EXTRACTED 1.00]
 
-## Communities (55 total, 20 thin omitted)
+## Communities (57 total, 20 thin omitted)
 
 ### Community 0 - "Griglia Settimanale Tab"
-Cohesion: 0.06
-Nodes (48): Delta model for KM/production sync, index.html (generated Gestione-Staffing app), Active Sessions Panel (Admin), Activity Log (Admin Panel), Attestati & Scadenze Feature, Auth & Roles (Supabase Auth), Confronto Preventivo/Effettivo, Controllo Produzione Tab (+40 more)
+Cohesion: 0.07
+Nodes (42): Delta model for KM/production sync, index.html (generated Gestione-Staffing app), Active Sessions Panel (Admin), Activity Log (Admin Panel), Attestati & Scadenze Feature, Auth & Roles (Supabase Auth), Confronto Preventivo/Effettivo, Controllo Produzione Tab (+34 more)
 
-### Community 1 - "weekly-mail-core.js"
+### Community 1 - "weekly-mappa.js"
+Cohesion: 0.09
+Nodes (41): commessaRegione(), _geoCache, _geoCacheSaveSingle(), geocodifica(), MAP_COLORS, _mapCollapsedCommesse, _mapCollapsedRegioniOp, _mapColor() (+33 more)
+
+### Community 2 - "weekly-mail-core.js"
 Cohesion: 0.11
 Nodes (37): formatDate(), isoWeekToMonday(), isoWeekYear(), pwCellCantieri(), pwData, pwDoppiaWeek, pwDwCount(), pwDwLoad() (+29 more)
-
-### Community 2 - "dashboard-attestati.js"
-Cohesion: 0.12
-Nodes (33): attBadgeHtml(), attBadgesHtml(), attClasseStato(), attDataBreve(), attEtichettaMancanza(), attExcelData(), _attFiltri, attFoglio() (+25 more)
 
 ### Community 3 - "sb-admin.js"
 Cohesion: 0.09
 Nodes (30): checkForNewVersion(), sbChangePwd(), sbClosePwdModal(), _sbDirty, sbGenerateSessionId(), sbInit(), sbInitAndCheck(), sbIsAdmin() (+22 more)
 
-### Community 4 - "weekly-mappa.js"
-Cohesion: 0.09
-Nodes (41): commessaRegione(), _geoCache, _geoCacheSaveSingle(), geocodifica(), MAP_COLORS, _mapCollapsedCommesse, _mapCollapsedRegioniOp, _mapColor() (+33 more)
+### Community 4 - "dashboard-attestati.js"
+Cohesion: 0.12
+Nodes (33): attBadgeHtml(), attBadgesHtml(), attClasseStato(), attDataBreve(), attEtichettaMancanza(), attExcelData(), _attFiltri, attFoglio() (+25 more)
 
 ### Community 5 - "weekly-jira-subtask.js"
-Cohesion: 0.14
-Nodes (26): pwJiraBuildSubtaskItem(), pwJiraCreateSubtasks(), pwJiraFetchEpics(), pwJiraFetchExtraFields(), pwJiraFetchTasks(), pwJiraResolveCognome(), pwJiraSearchPanel(), pwJiraSearchPanelClose() (+18 more)
+Cohesion: 0.15
+Nodes (25): pwJiraBuildSubtaskItem(), pwJiraCreateSubtasks(), pwJiraFetchEpics(), pwJiraFetchExtraFields(), pwJiraFetchTasks(), pwJiraResolveCognome(), pwJiraSearchPanel(), pwJiraSearchPanelClose() (+17 more)
 
 ### Community 6 - "CLAUDE.md"
 Cohesion: 0.10
 Nodes (25): Supabase table active_sessions, Supabase table activity_log, scripts/build.py, esc(), Four independent sync domains design, Hard-won conventions (safety rules), INITIAL_DATA fallback constant, jsAttr() (+17 more)
 
 ### Community 7 - "dashboard-crud-helpers.js"
-Cohesion: 0.16
-Nodes (24): closeModal(), cpSelectModal(), deleteCommessa(), deleteOperatore(), esc(), getOperatoriAttivi(), isOperatoreLicenziato(), isOperatoreScaduto() (+16 more)
+Cohesion: 0.15
+Nodes (25): closeModal(), cpSelectModal(), deleteCommessa(), deleteOperatore(), esc(), getOperatoriAttivi(), isOperatoreLicenziato(), isOperatoreScaduto() (+17 more)
 
 ### Community 8 - "weekly-spostamenti.js"
 Cohesion: 0.18
@@ -152,8 +155,8 @@ Cohesion: 0.14
 Nodes (14): pwAddSquadra(), pwAddStrumento(), pwRemoveSquadra(), pwRemoveStrumento(), pwRinumeraSquadreDefault(), pwSetSqStrumentiJira(), pwSqStrumentiJira(), pwStrClose() (+6 more)
 
 ### Community 11 - "config.js"
-Cohesion: 0.14
-Nodes (20): ANNO, ATTESTATI_COLONNE, ATTESTATI_DURATA, distanzaLavorazione(), distanzaProvince(), haversineKm(), INDUSTRIES, INITIAL_DATA (+12 more)
+Cohesion: 0.13
+Nodes (21): ANNO, ATTESTATI_COLONNE, ATTESTATI_DURATA, distanzaLavorazione(), distanzaProvince(), DPI_DEFAULT, haversineKm(), INDUSTRIES (+13 more)
 
 ### Community 12 - "dashboard-operatori.js"
 Cohesion: 0.19
@@ -163,55 +166,59 @@ Nodes (14): aggiornaGgOpVistaCommessa(), apriVistaOperatore(), checkCoerenzaOper
 Cohesion: 0.20
 Nodes (16): METEO_FASCE, METEO_ICONS, _meteoCache, _meteoCacheSave(), pwApplyMeteoBadgesToDom(), pwFasceOrarieFor(), pwFetchMeteoRange(), pwMeteoIconFor() (+8 more)
 
-### Community 14 - "Design System Tokens"
+### Community 14 - "weekly-ricerca-squadre.js"
+Cohesion: 0.11
+Nodes (44): _ricercaSquadre, RS_STATI, rsAddTappa(), _rsBadgeHtml(), _rsBuildSquadre(), rsCalcola(), _rsChipsHtml(), _rsCloseDropdowns() (+36 more)
+
+### Community 15 - "Categorical Color System (colori categorici)"
 Cohesion: 0.19
 Nodes (13): Alarm Rose (gap risorse/alert), Categorical Color System (colori categorici), Circuit Indigo (operatori/Jira sync), Creative North Star: The Site Foreman's Whiteboard, Foreman Amber (saturazione/carico), KPI Tile component, Ledger Blue (commesse attive), Modale canonico (Tailwind shadow-xl family) (+5 more)
 
-### Community 15 - "Staffing Assignment Logic"
+### Community 16 - "dashboard-assegnazioni.js"
 Cohesion: 0.21
 Nodes (6): assegnaOperatore(), openOperatoreImpegniModal(), rimuoviAssegnazione(), rimuoviMeseAllocazione(), rimuoviRigaStaffing(), spostaAssegnazione()
 
-### Community 16 - "Operator Picker Modal"
+### Community 17 - "weekly-operatore-modal.js"
 Cohesion: 0.28
 Nodes (11): pwCloseOpModal(), pwConfirmOpModal(), pwOpenOpModal(), buildList(), passaFiltroGeo(), pwOperatoreGeoLabel(), pwPopulateWeekSelect(), pwRender() (+3 more)
 
-### Community 17 - "Atlante Campi Jira (Eagleprojects)"
+### Community 18 - "Atlante Campi Jira (Eagleprojects)"
 Cohesion: 0.20
 Nodes (12): Atlante Campi Jira Claude Artifact (live version), Atlante Campi Jira (Eagleprojects), Jira createmeta / field-metadata API, Eccezione 1: Tempo Team assente su T02P e ASR0, Eccezione 2: ONP_prg senza campo Team, EPICKEY custom field (customfield_10432), jira-custom-fields.html (standalone shareable copy), Template A - Rilievi classico (14 progetti) (+4 more)
 
-### Community 18 - "storage-utils.js"
+### Community 19 - "storage-utils.js"
 Cohesion: 0.24
 Nodes (7): loadState(), monthsBetween(), operatoreSatPeriodo(), ricalcolaAllocOperatori(), saveState(), sget(), sset()
 
-### Community 19 - "weekly-ferie-import.js"
+### Community 20 - "weekly-ferie-import.js"
 Cohesion: 0.23
 Nodes (8): PW_FERIE_ACCENTI, PW_FERIE_MESI, pwFerieImportFile(), pwFerieImportPick(), pwFerieImportShowConfirm(), listBox(), pwFerieMatchOperatore(), pwFerieNormTokens()
 
-### Community 20 - "dashboard-commessa-attiva.js"
+### Community 21 - "dashboard-commessa-attiva.js"
 Cohesion: 0.24
 Nodes (6): _CONFRONTO_STATO_BADGE, _confrontoBodyHtml(), _confrontoTableHtml(), getCommessaAttivaMeta(), openCommessaAttivaModal(), renderConfrontoBox()
 
-### Community 21 - "weekly-popover-stats.js"
+### Community 22 - "weekly-popover-stats.js"
 Cohesion: 0.27
 Nodes (7): pwAddCantiereField(), pwCantiereCellOf(), pwRemoveCantiereField(), pwTitleCase(), pwToggleStatPopover(), pwUpdateCantiere(), pwUpdateCell()
 
-### Community 22 - "produzione-report.js"
+### Community 23 - "produzione-report.js"
 Cohesion: 0.33
 Nodes (8): cpCaricaReportSquadra(), cpGetSquadraOpsByDay(), cpHmToMin(), cpOreJiraRGB(), cpParseReportCsv(), cpProcessReport(), cpSplitCsvLine(), pwControlloExportPDF()
 
-### Community 23 - "weekly-clipboard-cantiere.js"
+### Community 24 - "weekly-clipboard-cantiere.js"
 Cohesion: 0.40
 Nodes (9): pwCellCtxMenu(), _pwCloseCtxMenu(), pwCopyCell(), pwCopyRow(), _pwCtxMenuEsc(), pwPasteCell(), pwPasteRow(), pwRowCtxMenu() (+1 more)
 
-### Community 24 - "weekly-collapse-cp.js"
+### Community 25 - "weekly-collapse-cp.js"
 Cohesion: 0.39
 Nodes (8): cpApplyCollapse(), cpCollapseAllToggle(), cpToggleComm(), cpToggleSq(), pwApplyCollapseState(), pwCollapseAllToggle(), pwToggleComm(), pwToggleSq()
 
-### Community 25 - "weekly-doppiaweek.js"
+### Community 26 - "weekly-doppiaweek.js"
 Cohesion: 0.32
 Nodes (6): PW_MESI_IT, pwDoppiaWeekRender(), pwDwMonth, pwDwMonthNav(), pwDwToggle(), pwDwYear
 
-### Community 26 - "dashboard-import-export.js"
+### Community 27 - "dashboard-import-export.js"
 Cohesion: 0.48
 Nodes (5): importXlsx(), normalizeForMatch(), parseDateCell(), parseXlsxToData(), riconcilia()
 
@@ -235,12 +242,20 @@ Nodes (4): _pwActiveTab, _pwScrollY, pwSwitchTab(), switchScreen()
 Cohesion: 0.67
 Nodes (3): build_bytes(), main(), Ritorna il contenuto di index.html così come lo produrrebbe la build, senza…
 
-### Community 54 - "weekly-ricerca-squadre.js"
-Cohesion: 0.24
-Nodes (11): _ricercaSquadre, rsAddTappa(), _rsCalcDistMedia(), rsCalcola(), rsInit(), _rsKm(), rsRemoveTappa(), rsRenderMappa() (+3 more)
+### Community 40 - "dashboard-dpi-admin.js"
+Cohesion: 0.19
+Nodes (19): dpiBindModaleOperatore(), dpiDurataMesi(), _dpiFiltri, dpiIsValido(), dpiNonCoperti(), dpiRichiestiPerOperatore(), dpiRigaModaleOperatore(), dpiRigheMatrice() (+11 more)
+
+### Community 55 - "dashboard-anagrafica-import.js"
+Cohesion: 0.36
+Nodes (6): anagImportFile(), anagImportParseWorkbook(), anagImportPick(), anagImportShowConfirm(), anagNormComune(), anagNormProvincia()
+
+### Community 56 - "sbPush"
+Cohesion: 0.60
+Nodes (6): Core Sync Domain (state.*, row 1), Doppia Week Sync Domain (row 4), Ferie Sync Domain (pwFerie, row 3), Four-Domain Supabase Sync Architecture, Planning Sync Domain (pwData, row 2), sbPush()
 
 ## Knowledge Gaps
-- **78 isolated node(s):** `INITIAL_DATA`, `SKILLS`, `MESI`, `MESI_LONG`, `INDUSTRIES` (+73 more)
+- **84 isolated node(s):** `EMAIL_SEED`, `_geoCache`, `MAP_COLORS`, `_mapCollapsedCommesse`, `_mapCollapsedRegioniOp` (+79 more)
   These have ≤1 connection - possible missing edges or undocumented components.
 - **20 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
 
@@ -248,16 +263,16 @@ Nodes (11): _ricercaSquadre, rsAddTappa(), _rsCalcDistMedia(), rsCalcola(), rsIn
 _Questions this graph is uniquely positioned to answer:_
 
 - **Why does `esc()` connect `dashboard-crud-helpers.js` to `weekly-ferie-import.js`, `weekly-jira-subtask.js`?**
-  _High betweenness centrality (0.007) - this node is a cross-community bridge._
+  _High betweenness centrality (0.006) - this node is a cross-community bridge._
 - **Why does `pwJiraSubtaskRenderPreview()` connect `weekly-jira-subtask.js` to `dashboard-crud-helpers.js`?**
-  _High betweenness centrality (0.004) - this node is a cross-community bridge._
+  _High betweenness centrality (0.003) - this node is a cross-community bridge._
 - **Are the 3 inferred relationships involving `esc()` (e.g. with `listBox()` and `rowHtml()`) actually correct?**
   _`esc()` has 3 INFERRED edges - model-reasoned connections that need verification._
-- **What connects `INITIAL_DATA`, `SKILLS`, `MESI` to the rest of the system?**
-  _78 weakly-connected nodes found - possible documentation gaps or missing edges._
+- **What connects `EMAIL_SEED`, `_geoCache`, `MAP_COLORS` to the rest of the system?**
+  _84 weakly-connected nodes found - possible documentation gaps or missing edges._
 - **Should `Griglia Settimanale Tab` be split into smaller, more focused modules?**
-  _Cohesion score 0.0636734693877551 - nodes in this community are weakly interconnected._
+  _Cohesion score 0.07188160676532769 - nodes in this community are weakly interconnected._
+- **Should `weekly-mappa.js` be split into smaller, more focused modules?**
+  _Cohesion score 0.08686868686868687 - nodes in this community are weakly interconnected._
 - **Should `weekly-mail-core.js` be split into smaller, more focused modules?**
   _Cohesion score 0.1091753774680604 - nodes in this community are weakly interconnected._
-- **Should `dashboard-attestati.js` be split into smaller, more focused modules?**
-  _Cohesion score 0.12380952380952381 - nodes in this community are weakly interconnected._
