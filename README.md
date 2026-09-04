@@ -1,3 +1,6 @@
+## v18.132.0
+- fix: **Modal "Criticità meteo" — dimensione corretta e scrollabile** — con più giorni/commesse a rischio (v18.131.0) il modal cresceva oltre l'altezza della finestra, tagliando il contenuto senza modo di scrollarlo. Ora usa la stessa convenzione degli altri modal dell'app (`max-h-[90vh] overflow-y-auto`, leggermente più largo): resta centrato in verticale e diventa scrollabile con barra quando il contenuto non ci sta.
+
 ## v18.131.0
 - fix: **Modal "Criticità meteo" — raggruppato per giorno, cliccabile fino alla cella** — cambiato di nuovo il criterio di raggruppamento del modal (v18.130.0): ora la prima suddivisione è per giorno della settimana e, sotto ciascun giorno, per commessa (non più per priorità in testa). Ogni riga di dettaglio (commessa + squadra + severità) è cliccabile: chiude il modal, espande commessa/squadra nella Griglia se collassate e scrolla evidenziando per un paio di secondi la cella cantiere/giorno corrispondente. Per rendere possibile il collegamento alla cella esatta, le criticità non sono più deduplicate tra squadre diverse che condividono lo stesso cantiere/giorno (prima ne veniva mostrata solo una): ora compare una riga per ogni squadra effettivamente coinvolta.
 

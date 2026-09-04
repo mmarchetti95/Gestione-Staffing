@@ -581,7 +581,7 @@ function pwOpenWeatherWeekModal() {
   const rows = sections.length
     ? sections.join('')
     : `<div class="text-slate-400 text-sm">Nessuna criticità meteo rilevata nei cantieri pianificati questa settimana.</div>`;
-  root.innerHTML = `<div class="modal-backdrop"><div class="bg-white rounded-lg shadow-xl w-full max-w-lg mx-4 my-8 p-5">
+  root.innerHTML = `<div class="modal-backdrop"><div class="bg-white rounded-lg shadow-xl w-full max-w-xl mx-4 my-8 p-5 max-h-[90vh] overflow-y-auto">
     <h3 class="font-semibold text-slate-900 mb-1">⛈️ Criticità meteo — settimana</h3>
     <p class="text-xs text-slate-500 mb-3">Soglie sulle previsioni Open-Meteo (tutta la settimana) + bollettino ufficiale Protezione Civile quando disponibile (solo oggi/domani). Clicca una riga per andare alla cella corrispondente nella Griglia.</p>
     <div>${rows}</div>
