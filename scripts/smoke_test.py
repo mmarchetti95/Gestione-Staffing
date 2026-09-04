@@ -162,6 +162,44 @@ def main():
     else:
         print("[onclick]  nessun onclick con stringa dinamica non escapata: OK")
 
+    # ---- 8. Modal di conferma/alert generici sempre in primo piano ----
+    # Regola generale: showConfirmAsync/showAlertModal (renderizzati in #modal-root
+    # con classe .modal-backdrop) devono avere lo z-index più alto di qualsiasi
+    # altro modal/overlay fisso dell'app. Se un modal specifico (es. un pannello
+    # admin sb-*) usa uno z-index >= quello di .modal-backdrop, la conferma/alert
+    # finisce dietro e diventa invisibile/non cliccabile (visto in produzione con
+    # "Elimina utente" dietro "Gestione utenti", fix v18.137.0).
+    mb_match = re.search(r'\.modal-backdrop\s*\{[^}]*?z-index:\s*(\d+)', html)
+    if not mb_match:
+        errors.append("Impossibile trovare lo z-index di .modal-backdrop: verificare manualmente che i modal di conferma/alert restino sempre in primo piano.")
+    else:
+        modal_backdrop_z = int(mb_match.group(1))
+        offenders = []
+        # Altre regole CSS con selettore (classi) che dichiarano position:fixed + z-index
+        for sel, body in re.findall(r'([.#][\w-]+)\s*\{([^{}]*)\}', html):
+            if sel == '.modal-backdrop':
+                continue
+            if re.search(r'position:\s*fixed', body) and 'z-index' in body:
+                zm = re.search(r'z-index:\s*(\d+)', body)
+                if zm and int(zm.group(1)) >= modal_backdrop_z:
+                    offenders.append(f"{sel} (z-index {zm.group(1)})")
+        # Tag con style inline che dichiarano position:fixed + z-index (es. i modal sb-*)
+        for m in re.finditer(r'<[a-zA-Z][\w-]*\s[^>]*>', html):
+            tag = m.group(0)
+            if not re.search(r'position:\s*fixed', tag):
+                continue
+            zm = re.search(r'z-index:\s*(\d+)', tag)
+            if zm and int(zm.group(1)) >= modal_backdrop_z:
+                idm = re.search(r'\bid="([^"]*)"', tag)
+                offenders.append(f"{idm.group(1) if idm else '<elemento senza id>'} (z-index {zm.group(1)})")
+        if offenders:
+            errors.append(
+                f"Modal/overlay con z-index >= .modal-backdrop ({modal_backdrop_z}): " + ", ".join(sorted(set(offenders))) +
+                " — i modal di conferma/alert (showConfirmAsync/showAlertModal) devono restare sempre sopra ogni altro modal."
+            )
+        else:
+            print(f"[z-index]  .modal-backdrop (conferma/alert) resta il più alto ({modal_backdrop_z}): OK")
+
     # ---- Esito ----
     print()
     for w in warnings:
