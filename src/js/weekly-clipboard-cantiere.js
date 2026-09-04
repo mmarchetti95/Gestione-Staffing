@@ -66,6 +66,7 @@ function pwCopyCell(cidx, sidx, oidx, day) {
 }
 
 async function pwPasteCell(cidx, sidx, oidx, day) {
+  if (!sbGuardWrite()) return;
   if (!_pwClipCell) return;
   const data = pwGetWeekData();
   const op = data[cidx]?.squadre[sidx]?.operatori[oidx];
@@ -100,6 +101,7 @@ function pwCopyRow(cidx, sidx, oidx) {
 }
 
 async function pwPasteRow(cidx, sidx, oidx) {
+  if (!sbGuardWrite()) return;
   if (!_pwClipRow) return;
   const data = pwGetWeekData();
   const op = data[cidx]?.squadre[sidx]?.operatori[oidx];

@@ -91,6 +91,7 @@ function pwDoppiaWeekRender() {
 }
 
 async function pwDwToggle(nome, anno, week) {
+  if (!sbGuardWrite()) return;
   const prev = pwWeekAdd(anno, week, -1);
   const isStart  = pwIsDwStart(anno, week, nome);
   const isSecond = pwIsDwStart(prev.anno, prev.week, nome);

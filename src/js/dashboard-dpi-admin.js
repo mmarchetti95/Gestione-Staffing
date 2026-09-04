@@ -410,6 +410,7 @@ function renderDpiCatalogo() {
   const btnAdd = document.getElementById('dpi-btn-add');
   if (btnAdd) {
     btnAdd.onclick = async () => {
+      if (!sbGuardWrite()) return;
       const input = document.getElementById('dpi-input-new');
       const inputDurata = document.getElementById('dpi-input-durata');
       const value = input.value.trim();
@@ -432,6 +433,7 @@ function renderDpiCatalogo() {
 
   listDiv.querySelectorAll('.dpi-durata').forEach(inp => {
     inp.onchange = async () => {
+      if (!sbGuardWrite()) return;
       const dpi = (state.dpi_disponibili || [])[parseInt(inp.dataset.idx, 10)];
       if (!dpi) return;
       const mesi = parseInt(inp.value, 10);
@@ -448,6 +450,7 @@ function renderDpiCatalogo() {
 
   listDiv.querySelectorAll('.dpi-btn-remove').forEach(btn => {
     btn.onclick = async () => {
+      if (!sbGuardWrite()) return;
       const idx = parseInt(btn.dataset.idx, 10);
       const dpi = (state.dpi_disponibili || [])[idx];
       if (!dpi) return;

@@ -249,6 +249,7 @@ function exportOperatoriXlsx() {
    a termine risultava scaduto, lo riporta a tempo indeterminato (altrimenti
    tornerebbe ex al prossimo render finche' non si aggiorna la data di fine). */
 async function riattivaOperatore(id) {
+  if (!sbGuardWrite()) return;
   const op = state.operatori.find(o => o.id === id);
   if (!op) return;
   const eraScaduto = isOperatoreScaduto(op);
@@ -374,6 +375,7 @@ function renderEmailOperatori() {
 }
 
 async function saveEmailOperatore(opId, value) {
+  if (!sbGuardWrite()) return;
   const op = (state.operatori || []).find(o => o.id === opId);
   if (!op) return;
   const val = (value || '').trim();
@@ -593,6 +595,7 @@ function renderVistaOperatore(opId) {
 }
 
 async function aggiornaGgOpVistaCommessa(inp) {
+  if (!sbGuardWrite()) return;
   const risorsa = inp.dataset.risorsa;
   const commessa = inp.dataset.commessa;
   const meseIdx = parseInt(inp.dataset.mese);

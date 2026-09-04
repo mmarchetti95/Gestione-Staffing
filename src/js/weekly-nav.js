@@ -11,6 +11,8 @@ function mapAddSatelliteToggle(map, streetLayer) {
 
 /* ==================== NAVIGAZIONE SCHERMATA ==================== */
 function switchScreen(screen) {
+  if (screen === 'dashboard' && !sbCanSeePage('dashboard')) return;
+  if (screen === 'weekly' && !PW_TAB_KEYS.some(k => sbCanSeePage('weekly:' + k))) return;
   const mainEl   = document.querySelector('main');
   const weeklyEl = document.getElementById('screen-weekly');
   const navDash  = document.getElementById('nav-dashboard');
@@ -41,6 +43,11 @@ let _pwScrollY = { griglia: 0, ferie: 0, mappa: 0, spostamenti: 0, ricerca_squad
 let _cpTableScrollTop = 0;
 
 function pwSwitchTab(tab) {
+  if (!sbCanSeePage('weekly:' + tab)) {
+    const allowed = PW_TAB_KEYS.find(k => sbCanSeePage('weekly:' + k));
+    if (allowed && allowed !== tab) { pwSwitchTab(allowed); }
+    return;
+  }
   // Salva la posizione di scroll del tab che si stava lasciando, per ripristinarla al ritorno
   const _leavingTab = _pwActiveTab;
   _pwScrollY[_leavingTab] = window.scrollY;

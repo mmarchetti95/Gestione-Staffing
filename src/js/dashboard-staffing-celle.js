@@ -3,6 +3,7 @@
    Aggiorna lo stato e ricalcola solo il totale riga + il box fabbisogno,
    senza un re-render completo (per non interrompere l'editing). */
 async function _commitInlineCell(inp) {
+  if (!sbGuardWrite()) return;
   const staffingIdx = parseInt(inp.dataset.idx);
   const meseIdx     = parseInt(inp.dataset.mese);
   const gl          = parseInt(inp.dataset.gl) || 20;

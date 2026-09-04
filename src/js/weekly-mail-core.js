@@ -335,6 +335,7 @@ function pwGeneraMail() {
 
   // Salva note e strumenti in pwData ad ogni modifica
   async function salvaNoteSq() {
+    if (!sbGuardWrite()) return;
     squadreInfo.forEach((s, i) => {
       const sq = data[s.cIdx]?.squadre[s.sIdx];
       if (!sq) return;
@@ -355,17 +356,20 @@ function pwGeneraMail() {
   };
   // Rigenera anche quando cambiano i parametri, persistendoli in pwData
   document.getElementById('mail-orario-partenza').addEventListener('input', (e) => {
+    if (!sbGuardWrite()) return;
     pwData.mailOrarioPartenza = e.target.value;
     pwSave();
     document.getElementById('mail-testo').value = componiTesto();
   });
   document.getElementById('mail-orario-lavoro').addEventListener('input', (e) => {
+    if (!sbGuardWrite()) return;
     pwData.mailOrarioLavoro = e.target.value;
     pwSave();
     document.getElementById('mail-testo').value = componiTesto();
   });
   // Email sempre incluse: persistita in pwData, non fa parte del testo della mail
   document.getElementById('mail-email-sempre').addEventListener('input', (e) => {
+    if (!sbGuardWrite()) return;
     pwData.emailSempreIncluse = e.target.value;
     pwSave();
   });
@@ -654,6 +658,7 @@ async function pwDwLoad() {
 }
 
 async function pwFerieSave() {
+  if (!sbGuardWrite()) return;
   _sbDirty.ferie = true;
   try { await sset('pw_ferie', pwFerie); } catch(e) { console.warn('pwFerieSave error', e); }
   try { await sset('pw_ferie_dettagli', pwFerieDettagli); } catch(e) { console.warn('pwFerieSave dettagli error', e); }
@@ -852,6 +857,7 @@ function pwFerieSummaryRender(allOps, days, DAY_NAMES, today) {
 // Per scegliere "Non disponibile" (o rimuovere l'assenza lasciando la spunta) si usa il
 // click destro sulla cella, vedi pwFerieCellCtxMenu()/pwSetFeriaTipo().
 async function pwToggleFeria(cb) {
+  if (!sbGuardWrite()) return;
   const nome = cb.dataset.op;
   const day = parseInt(cb.dataset.day);
   if (!cb.checked) {
@@ -888,6 +894,7 @@ async function pwToggleFeria(cb) {
 
 // Applica o rimuove le ferie a tutta la settimana (6 giorni) per un operatore.
 async function pwFerieToggleWeek(nome) {
+  if (!sbGuardWrite()) return;
   const fw = pwGetFerieWeek();
   if (!fw[nome]) fw[nome] = {};
   const allSet = [0,1,2,3,4,5].every(i => !!fw[nome][i]);
@@ -918,6 +925,7 @@ function pwFerieCellCtxMenu(ev, nome, day) {
 }
 
 async function pwSetFeriaTipo(nome, day, tipo) {
+  if (!sbGuardWrite()) return;
   const fw = pwGetFerieWeek();
   if (!fw[nome]) fw[nome] = {};
   fw[nome][day] = tipo || false;
@@ -939,6 +947,7 @@ async function pwLoad() {
 }
 
 async function pwSave() {
+  if (!sbGuardWrite()) return;
   _sbDirty.planning = true;
   try { await sset('pw_data', pwData); } catch(e) { console.warn('pwSave error', e); }
   // Push immediato su Supabase con debounce breve (500ms) per evitare perdita dati al refresh

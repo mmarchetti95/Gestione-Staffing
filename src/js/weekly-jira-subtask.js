@@ -179,6 +179,7 @@ function pwJiraBuildSubtaskItem(meta, task, comune, nomeOperatore, attivita) {
       bc.jiraSubtask: il badge non segue mai il copia/incolla su un altro
       operatore/cantiere. */
 function pwJiraSubtaskMarkBadge(cIdx, comune, operatoreNome, status, key, url) {
+  if (!sbGuardWrite()) return;
   const bc = pwGetWeekData()[cIdx];
   if (!bc || !comune || !operatoreNome) return;
   if (!bc.jiraSubtask) bc.jiraSubtask = {};
@@ -188,6 +189,7 @@ function pwJiraSubtaskMarkBadge(cIdx, comune, operatoreNome, status, key, url) {
 }
 
 function pwJiraSubtaskBadgeRemove(cIdx, mapKey) {
+  if (!sbGuardWrite()) return;
   const bc = pwGetWeekData()[cIdx];
   if (!bc || !bc.jiraSubtask) return;
   delete bc.jiraSubtask[mapKey];

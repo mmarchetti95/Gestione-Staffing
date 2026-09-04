@@ -414,6 +414,7 @@ function parseDateCell(v) {
 }
 
 async function importXlsx(file) {
+  if (!sbGuardWrite()) return;
   if (typeof XLSX === 'undefined') { showAlertModal('Libreria XLSX non caricata. Verifica la connessione internet e ricarica la pagina.'); return; }
   if (!await showConfirmAsync(`Importare "${file.name}"?\n\nLo stato corrente (commesse, operatori, assegnazioni manuali, modifiche allo staffing) verrà sostituito con i dati del file.`, 'Importa')) return;
 

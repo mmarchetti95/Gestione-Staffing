@@ -1140,17 +1140,11 @@
     <div class="flex items-center gap-2">
       <button id="btn-presentation" class="px-3 py-1.5 text-sm rounded hover:bg-white/10" style="border:1px solid var(--dark-border-strong);color:var(--dark-text);visibility:visible;">📊 Modalità presentazione</button>
       <div class="text-xs pl-2" style="border-left:1px solid var(--dark-border-strong);color:var(--dark-text-muted);">
-        <span id="app-version" class="font-medium" style="color:var(--accent);">v18.135.0</span> · Michele Marchetti
-        <span id="sb-role-badge" style="margin-left:8px;padding:1px 8px;border-radius:9999px;background:rgba(255,255,255,.1);color:var(--dark-text);font-weight:600;"></span>
+        <span id="app-version" class="font-medium" style="color:var(--accent);">v18.134.0</span> · Michele Marchetti
       </div>
     </div>
   </div>
 </header>
-
-<!-- Banner sola lettura (Operatore/Guest): mostrato/nascosto da sbApplyReadOnlyBanner() -->
-<div id="readonly-banner" class="no-print" style="display:none;background:#fef3c7;border-bottom:1px solid #fde68a;color:#92400e;font-size:12.5px;font-weight:600;text-align:center;padding:6px 12px;">
-  👁 Sei in sola lettura — le modifiche non vengono salvate.
-</div>
 
 <!-- Schermata di Login Supabase (overlay fullscreen) -->
 <div id="sb-login-screen" style="display:none;position:fixed;inset:0;z-index:99999;background:#f8fafc;align-items:center;justify-content:center;">
@@ -1370,20 +1364,14 @@
         <input id="sb-users-new-password" type="text" placeholder="Minimo 6 caratteri"
           style="width:100%;border:1px solid #dde3ea;border-radius:6px;padding:7px 10px;font-size:12.5px;outline:none;box-sizing:border-box;">
       </div>
-      <div style="min-width:130px;">
+      <div style="min-width:110px;">
         <label style="display:block;font-size:10.5px;font-weight:600;color:#374151;margin-bottom:3px;">Ruolo</label>
-        <select id="sb-users-new-role" onchange="sbToggleGuestPagesUI('sb-users-new-guestpages', this.value)" style="width:100%;border:1px solid #dde3ea;border-radius:6px;padding:7px 10px;font-size:12.5px;outline:none;box-sizing:border-box;">
+        <select id="sb-users-new-role" style="width:100%;border:1px solid #dde3ea;border-radius:6px;padding:7px 10px;font-size:12.5px;outline:none;box-sizing:border-box;">
+          <option value="user">Utente</option>
           <option value="admin">Admin</option>
-          <option value="responsabile" selected>Responsabile</option>
-          <option value="operatore">Operatore (sola lettura)</option>
-          <option value="guest">Guest (pagine ad hoc)</option>
         </select>
       </div>
       <button id="sb-users-add-btn" onclick="sbCreateUser()" style="padding:8px 16px;font-size:12.5px;background:var(--accent);color:white;border:none;border-radius:6px;cursor:pointer;font-weight:600;white-space:nowrap;">+ Aggiungi utente</button>
-      <div id="sb-users-new-guestpages" style="display:none;width:100%;margin-top:4px;padding:8px 10px;background:white;border:1px solid #dde3ea;border-radius:6px;">
-        <div style="font-size:10.5px;font-weight:600;color:#374151;margin-bottom:5px;">Pagine visibili al Guest</div>
-        <div class="sb-guestpages-checks" style="display:flex;flex-wrap:wrap;gap:8px;font-size:11.5px;color:#475569;"></div>
-      </div>
     </div>
 
     <div style="overflow-y:auto;flex:1;">
@@ -1401,19 +1389,6 @@
           <tr><td colspan="5" style="padding:20px;text-align:center;color:#94a3b8;">Caricamento…</td></tr>
         </tbody>
       </table>
-    </div>
-  </div>
-</div>
-
-<!-- Modal editor pagine Guest (aperto da "📄 Pagine" nella riga di un utente Guest) -->
-<div id="sb-guestpages-modal" style="display:none;position:fixed;inset:0;z-index:100000;background:var(--backdrop);align-items:center;justify-content:center;">
-  <div style="background:white;border-radius:var(--radius-lg);padding:22px 26px;width:420px;max-width:94vw;box-shadow:var(--shadow-lg);">
-    <div style="font-weight:700;font-size:14px;color:#0f172a;margin-bottom:2px;">Pagine visibili</div>
-    <div id="sb-guestpages-modal-email" style="font-size:11px;color:#94a3b8;margin-bottom:12px;"></div>
-    <div class="sb-guestpages-checks" id="sb-guestpages-modal-checks" style="display:flex;flex-direction:column;gap:6px;font-size:12.5px;color:#374151;margin-bottom:16px;"></div>
-    <div style="display:flex;justify-content:flex-end;gap:8px;">
-      <button onclick="sbCloseGuestPagesEditorCancel()" style="padding:6px 14px;font-size:12px;border:1px solid #e2e8f0;border-radius:6px;background:white;cursor:pointer;color:#475569;">Annulla</button>
-      <button onclick="sbSaveGuestPagesEditor()" style="padding:6px 14px;font-size:12px;background:var(--accent);color:white;border:none;border-radius:6px;cursor:pointer;font-weight:600;">Salva</button>
     </div>
   </div>
 </div>
@@ -2278,76 +2253,8 @@ let state = {
 };
 
 /* ===================== ACTIVITY LOG ===================== */
-/* ===================== RUOLI & PERMESSI ===================== */
-// Gerarchia: admin (tutto) / responsabile (RW, no funzioni admin-only) /
-// operatore (sola lettura su tutto) / guest (sola lettura, solo sulle pagine
-// in user_metadata.guest_pages). Il blocco in scrittura per operatore/guest è
-// applicato anche via RLS su staffing_state (non è solo un vincolo client-side).
-function sbRole() {
-  return _sbUser?.user_metadata?.role || 'responsabile';
-}
 function sbIsAdmin() {
-  return sbRole() === 'admin';
-}
-function sbCanWrite() {
-  return sbRole() === 'admin' || sbRole() === 'responsabile';
-}
-function sbGuestPages() {
-  return Array.isArray(_sbUser?.user_metadata?.guest_pages) ? _sbUser.user_metadata.guest_pages : [];
-}
-function sbCanSeePage(pageKey) {
-  return sbRole() !== 'guest' || sbGuestPages().includes(pageKey);
-}
-// Guard da chiamare in cima alle azioni di modifica: blocca l'azione se il ruolo
-// corrente è di sola lettura. Il messaggio viene mostrato una sola volta per sessione
-// (non ad ogni chiamata): alcuni chokepoint sono agganciati a listener 'input' che
-// scattano ad ogni tasto premuto, e un modale ad ogni carattere sarebbe inutilizzabile.
-let _sbGuardWriteWarned = false;
-function sbGuardWrite() {
-  if (sbCanWrite()) return true;
-  if (!_sbGuardWriteWarned) {
-    _sbGuardWriteWarned = true;
-    showAlertModal('Il tuo ruolo è di sola lettura: le modifiche non vengono salvate.');
-  }
-  return false;
-}
-
-// Chiavi pagina della Pianificazione Settimanale, stesso ordine/id dei tab in src/head.html
-const PW_TAB_KEYS = ['griglia', 'ferie', 'mappa', 'spostamenti', 'ricerca-squadre', 'controllo', 'doppia'];
-
-// Mostra/nasconde nav Dashboard/Pianificazione e le singole tab in base alle pagine
-// visibili per il ruolo corrente (rilevante solo per il ruolo 'guest'); se lo schermo/tab
-// attualmente aperto non è più visibile, sposta su uno consentito.
-function sbApplyPageVisibility() {
-  const navDash = document.getElementById('nav-dashboard');
-  const navWk = document.getElementById('nav-weekly');
-  const canDash = sbCanSeePage('dashboard');
-  const anyWeekly = PW_TAB_KEYS.some(k => sbCanSeePage('weekly:' + k));
-  if (navDash) navDash.style.display = canDash ? '' : 'none';
-  if (navWk) navWk.style.display = anyWeekly ? '' : 'none';
-  PW_TAB_KEYS.forEach(k => {
-    const el = document.getElementById('pw-tab-' + k);
-    if (el) el.style.display = sbCanSeePage('weekly:' + k) ? '' : 'none';
-  });
-  const weeklyEl = document.getElementById('screen-weekly');
-  const onWeekly = weeklyEl && !weeklyEl.classList.contains('hidden');
-  if (onWeekly && !anyWeekly && canDash) switchScreen('dashboard');
-  else if (!onWeekly && !canDash && anyWeekly) switchScreen('weekly');
-  if (onWeekly && typeof _pwActiveTab !== 'undefined' && !sbCanSeePage('weekly:' + _pwActiveTab)) {
-    const allowed = PW_TAB_KEYS.find(k => sbCanSeePage('weekly:' + k));
-    if (allowed) pwSwitchTab(allowed);
-  }
-}
-
-// Banner "sola lettura" in header + badge ruolo accanto al nome utente
-function sbApplyReadOnlyBanner() {
-  const banner = document.getElementById('readonly-banner');
-  if (banner) banner.style.display = sbCanWrite() ? 'none' : '';
-  const badge = document.getElementById('sb-role-badge');
-  if (badge) {
-    const labels = { admin: 'Admin', responsabile: 'Responsabile', operatore: 'Operatore · sola lettura', guest: 'Guest · sola lettura' };
-    badge.textContent = labels[sbRole()] || '';
-  }
+  return _sbUser?.user_metadata?.role === 'admin';
 }
 
 async function sbLogActivity(action, details = {}) {
@@ -2615,74 +2522,13 @@ async function sbCallAdminUsers(action, extra) {
   return data;
 }
 
-// Etichette e chiavi delle pagine assegnabili ad hoc a un utente Guest (stesse
-// chiavi usate da sbCanSeePage()/PW_TAB_KEYS per il gating lato client).
-const SB_PAGE_LABELS = {
-  'dashboard': 'Dashboard',
-  'weekly:griglia': 'Griglia',
-  'weekly:ferie': 'Ferie',
-  'weekly:mappa': 'Mappa',
-  'weekly:spostamenti': 'Spostamenti',
-  'weekly:ricerca-squadre': 'Ricerca Squadre',
-  'weekly:controllo': 'Controllo Produzione',
-  'weekly:doppia': 'Doppia Week',
-};
-function sbAllPageKeys() {
-  return ['dashboard', ...PW_TAB_KEYS.map(k => 'weekly:' + k)];
-}
-function sbGuestPagesChecksHtml(checked) {
-  return sbAllPageKeys().map(k =>
-    '<label style="display:flex;align-items:center;gap:5px;cursor:pointer;">' +
-      '<input type="checkbox" class="sb-guestpage-check" value="' + jsAttr(k) + '"' + ((checked||[]).includes(k) ? ' checked' : '') + '>' +
-      esc(SB_PAGE_LABELS[k] || k) +
-    '</label>'
-  ).join('');
-}
-// Mostra/nasconde il blocco checkbox "pagine visibili" nel form di creazione utente,
-// in base al ruolo selezionato nella select.
-function sbToggleGuestPagesUI(containerId, role) {
-  const box = document.getElementById(containerId);
-  if (!box) return;
-  if (role === 'guest') {
-    box.style.display = '';
-    const checksEl = box.querySelector('.sb-guestpages-checks');
-    if (checksEl) checksEl.innerHTML = sbGuestPagesChecksHtml([]);
-  } else {
-    box.style.display = 'none';
-  }
-}
-// Modal secondario per scegliere le pagine di un utente Guest esistente (o appena
-// impostato a Guest dalla select di riga).
-let _sbGuestPagesEditorCtx = null;
-function sbOpenGuestPagesEditor(userId, email, currentPagesJson) {
-  let currentPages = [];
-  try { currentPages = JSON.parse(currentPagesJson || '[]'); } catch(e) {}
-  _sbGuestPagesEditorCtx = { userId, email };
-  document.getElementById('sb-guestpages-modal-email').textContent = email;
-  document.getElementById('sb-guestpages-modal-checks').innerHTML = sbGuestPagesChecksHtml(currentPages);
-  document.getElementById('sb-guestpages-modal').style.display = 'flex';
-}
-function sbCloseGuestPagesEditorCancel() {
-  document.getElementById('sb-guestpages-modal').style.display = 'none';
-  _sbGuestPagesEditorCtx = null;
-  sbLoadUsers(); // ripristina la select del ruolo al valore realmente salvato
-}
-async function sbSaveGuestPagesEditor() {
-  if (!_sbGuestPagesEditorCtx) return;
-  const pages = [...document.querySelectorAll('#sb-guestpages-modal-checks .sb-guestpage-check:checked')].map(c => c.value);
-  document.getElementById('sb-guestpages-modal').style.display = 'none';
-  await sbApplyUserRole(_sbGuestPagesEditorCtx.userId, 'guest', _sbGuestPagesEditorCtx.email, pages);
-  _sbGuestPagesEditorCtx = null;
-}
-
 async function sbShowUsers() {
   document.getElementById('sb-users-modal').style.display = 'flex';
   document.getElementById('sb-users-error').style.display = 'none';
   document.getElementById('sb-users-success').style.display = 'none';
   document.getElementById('sb-users-new-email').value = '';
   document.getElementById('sb-users-new-password').value = '';
-  document.getElementById('sb-users-new-role').value = 'responsabile';
-  sbToggleGuestPagesUI('sb-users-new-guestpages', 'responsabile');
+  document.getElementById('sb-users-new-role').value = 'user';
   await sbLoadUsers();
 }
 
@@ -2714,21 +2560,15 @@ async function sbLoadUsers() {
     };
     tbody.innerHTML = users.map(u => {
       const isSelf = _sbUser && u.id === _sbUser.id;
-      const pagesJson = jsAttr(JSON.stringify(u.guest_pages || []));
       return '<tr style="border-bottom:1px solid #f1f5f9;">' +
         '<td style="padding:7px 12px;color:#374151;">' + esc(u.email || '') + (isSelf ? ' <span style="color:#94a3b8;font-size:10.5px;">(tu)</span>' : '') + '</td>' +
         '<td style="padding:7px 12px;">' +
-          '<div style="display:flex;align-items:center;gap:6px;">' +
           '<select onchange="sbUpdateUserRole(\'' + jsAttr(u.id) + '\', this.value, \'' + jsAttr(u.email) + '\')" ' +
             (isSelf ? 'disabled title="Non puoi modificare il tuo stesso ruolo"' : '') +
             ' style="border:1px solid #dde3ea;border-radius:6px;padding:4px 8px;font-size:11.5px;outline:none;">' +
+            '<option value="user"' + (u.role === 'user' ? ' selected' : '') + '>Utente</option>' +
             '<option value="admin"' + (u.role === 'admin' ? ' selected' : '') + '>Admin</option>' +
-            '<option value="responsabile"' + (u.role === 'responsabile' ? ' selected' : '') + '>Responsabile</option>' +
-            '<option value="operatore"' + (u.role === 'operatore' ? ' selected' : '') + '>Operatore</option>' +
-            '<option value="guest"' + (u.role === 'guest' ? ' selected' : '') + '>Guest</option>' +
           '</select>' +
-          (u.role === 'guest' ? '<button onclick="sbOpenGuestPagesEditor(\'' + jsAttr(u.id) + '\', \'' + jsAttr(u.email) + '\', \'' + pagesJson + '\')" title="Scegli le pagine visibili" style="padding:3px 8px;font-size:10.5px;border:1px solid #dde3ea;border-radius:6px;background:#f8fafc;cursor:pointer;color:#475569;white-space:nowrap;">📄 Pagine (' + (u.guest_pages||[]).length + ')</button>' : '') +
-          '</div>' +
         '</td>' +
         '<td style="padding:7px 12px;white-space:nowrap;color:#64748b;">' + fmt(u.created_at) + '</td>' +
         '<td style="padding:7px 12px;white-space:nowrap;color:#64748b;">' + fmt(u.last_sign_in_at) + '</td>' +
@@ -2755,15 +2595,10 @@ async function sbCreateUser() {
   if (!email || !password) { sbUsersMsg('Inserisci email e password.'); return; }
   if (password.length < 6) { sbUsersMsg('La password deve essere di almeno 6 caratteri.'); return; }
 
-  const guestPages = role === 'guest'
-    ? [...document.querySelectorAll('#sb-users-new-guestpages .sb-guestpage-check:checked')].map(c => c.value)
-    : [];
-
   btn.textContent = 'Creazione…'; btn.disabled = true;
   try {
-    await sbCallAdminUsers('create', { email, password, role, guestPages });
-    emailEl.value = ''; pwdEl.value = ''; roleEl.value = 'responsabile';
-    sbToggleGuestPagesUI('sb-users-new-guestpages', 'responsabile');
+    await sbCallAdminUsers('create', { email, password, role });
+    emailEl.value = ''; pwdEl.value = ''; roleEl.value = 'user';
     sbUsersMsg(null, 'Utente ' + email + ' creato con successo.');
     sbLogActivity('Creazione utente', { email, role });
     await sbLoadUsers();
@@ -2774,20 +2609,11 @@ async function sbCreateUser() {
   }
 }
 
-// Chiamata dalla select di riga. Per il ruolo Guest non salva subito: apre l'editor
-// pagine (senza pagine pre-selezionate, essendo un cambio da un altro ruolo) e salva
-// solo alla conferma — per un Guest già esistente si usa invece il bottone "📄 Pagine".
 async function sbUpdateUserRole(userId, role, email) {
-  if (role === 'guest') { sbOpenGuestPagesEditor(userId, email, '[]'); return; }
-  await sbApplyUserRole(userId, role, email, []);
-}
-
-async function sbApplyUserRole(userId, role, email, guestPages) {
   sbUsersMsg(null, null);
-  const roleLabels = { admin: 'Admin', responsabile: 'Responsabile', operatore: 'Operatore', guest: 'Guest' };
   try {
-    await sbCallAdminUsers('updateRole', { userId, role, guestPages });
-    sbUsersMsg(null, 'Ruolo di ' + email + ' aggiornato a "' + (roleLabels[role] || role) + '".');
+    await sbCallAdminUsers('updateRole', { userId, role });
+    sbUsersMsg(null, 'Ruolo di ' + email + ' aggiornato a "' + (role === 'admin' ? 'Admin' : 'Utente') + '".');
     sbLogActivity('Modifica ruolo utente', { email, role });
     await sbLoadUsers();
   } catch(e) {
@@ -2905,8 +2731,6 @@ async function sbOnLoggedIn() {
     if (btnUsers) btnUsers.style.visibility = 'hidden';
     if (secRecon) secRecon.style.display = 'none';
   }
-  sbApplyPageVisibility();
-  sbApplyReadOnlyBanner();
   sbUpdateUI('syncing', 'Sync: caricamento dati…');
   await sbPull();
   sbLogActivity('Login', { email: _sbUser.email });
@@ -3076,9 +2900,8 @@ async function sbPull() {
     const ora = new Date().toLocaleTimeString('it-IT', { hour:'2-digit', minute:'2-digit' });
     sbUpdateUI('ok', 'Sync: aggiornato ✓', 'Ultimo sync: ' + ora);
 
-    // Migrazione automatica (solo se il ruolo può scrivere: un ruolo di sola lettura
-    // non deve marcare dirty né innescare un push automatico)
-    if (needsMigration && sbCanWrite()) {
+    // Migrazione automatica
+    if (needsMigration) {
       _sbDirty.core = true; _sbDirty.planning = true; _sbDirty.ferie = true;
       setTimeout(() => sbPush(), 1500);
     }
@@ -3093,11 +2916,6 @@ async function sbSync() { await sbPull(); }
 
 async function sbPush() {
   if (!_sbUser) return false;
-  // Backstop: un ruolo di sola lettura non deve mai arrivare a scrivere su Supabase,
-  // nemmeno tramite un push automatico (debounce/heartbeat) innescato da un percorso
-  // che non passa dai guard nei singoli chokepoint (es. migrazioni automatiche).
-  // Silenzioso (nessun modale): l'utente non ha compiuto un'azione diretta qui.
-  if (!sbCanWrite()) { _sbDirty.core = _sbDirty.planning = _sbDirty.ferie = _sbDirty.dw = false; return false; }
   try {
     const domains = [];
     if (_sbDirty.core) {
@@ -3307,14 +3125,12 @@ async function loadState() {
   state.dpi_catalogo = (dcat && typeof dcat === 'object') ? dcat : {};
   ricalcolaAllocOperatori();
 
-  // Seed email operatori una-tantum (solo su quelli ancora senza email).
-  // Non marca dirty per un ruolo di sola lettura: non deve innescare un push automatico.
-  if (seedEmailOperatori() && sbCanWrite()) {
+  // Seed email operatori una-tantum (solo su quelli ancora senza email)
+  if (seedEmailOperatori()) {
     try { await sset('operatori', state.operatori); _sbDirty.core = true; } catch(e) { console.warn('seed email save', e); }
   }
 }
 async function saveState(logAction, logDetails, immediate) {
-  if (!sbGuardWrite()) return;
   _sbDirty.core = true;
   await Promise.all([
     sset('commesse_pipeline', state.pipeline),
@@ -4077,7 +3893,6 @@ function exportOperatoriXlsx() {
    a termine risultava scaduto, lo riporta a tempo indeterminato (altrimenti
    tornerebbe ex al prossimo render finche' non si aggiorna la data di fine). */
 async function riattivaOperatore(id) {
-  if (!sbGuardWrite()) return;
   const op = state.operatori.find(o => o.id === id);
   if (!op) return;
   const eraScaduto = isOperatoreScaduto(op);
@@ -4203,7 +4018,6 @@ function renderEmailOperatori() {
 }
 
 async function saveEmailOperatore(opId, value) {
-  if (!sbGuardWrite()) return;
   const op = (state.operatori || []).find(o => o.id === opId);
   if (!op) return;
   const val = (value || '').trim();
@@ -4423,7 +4237,6 @@ function renderVistaOperatore(opId) {
 }
 
 async function aggiornaGgOpVistaCommessa(inp) {
-  if (!sbGuardWrite()) return;
   const risorsa = inp.dataset.risorsa;
   const commessa = inp.dataset.commessa;
   const meseIdx = parseInt(inp.dataset.mese);
@@ -5061,7 +4874,6 @@ function attImportParseWorkbook(wb) {
 }
 
 async function attImportFile(file) {
-  if (!sbGuardWrite()) return;
   if (typeof XLSX === 'undefined') { showAlertModal('Libreria XLSX non caricata. Verifica la connessione internet e ricarica la pagina.'); return; }
 
   let wb;
@@ -5244,7 +5056,6 @@ function anagImportParseWorkbook(wb) {
 }
 
 async function anagImportFile(file) {
-  if (!sbGuardWrite()) return;
   if (typeof XLSX === 'undefined') { showAlertModal('Libreria XLSX non caricata. Verifica la connessione internet e ricarica la pagina.'); return; }
 
   let wb;
@@ -5798,7 +5609,6 @@ function renderCommesseAttive() {
 
 /* ===================== ASSEGNAZIONI ===================== */
 async function assegnaOperatore(commessaId, operatoreId) {
-  if (!sbGuardWrite()) return;
   const c = state.pipeline.find(p => p.id === commessaId);
   const op = state.operatori.find(o => o.id === operatoreId);
   if (!c || !op) return;
@@ -5836,7 +5646,6 @@ async function assegnaOperatore(commessaId, operatoreId) {
 }
 
 async function rimuoviAssegnazione(cid, oid) {
-  if (!sbGuardWrite()) return;
   const c = state.pipeline.find(p => p.id === cid);
   const op = state.operatori.find(o => o.id === oid);
   const msg = (c && op) ? `Rimuovere l'assegnazione di "${op.nome_esteso}" su "${c.progetto}"?` : 'Rimuovere questa assegnazione?';
@@ -5853,7 +5662,6 @@ async function spostaAssegnazione(cidFrom, oid, cidTo) {
 
 /* ===================== CHIUSURA / RIPRISTINO COMMESSE ATTIVE ===================== */
 async function eliminaCommessaChiusa(idx) {
-  if (!sbGuardWrite()) return;
   const cc = state.commesse_chiuse[idx];
   if (!cc) return;
   if (!await showConfirmAsync(`Eliminare definitivamente "${cc.progetto}" dall'archivio?\n\nL'operazione è irreversibile.`, 'Elimina definitivamente')) return;
@@ -6059,7 +5867,6 @@ function calcolaImpegniEffettiviAnnoOperatore(nomeOperatore) {
 }
 
 async function rimuoviRigaStaffing(idx) {
-  if (!sbGuardWrite()) return;
   const r = state.staffing[idx];
   if (!r) return;
   const tot = r.mesi.reduce((s,v) => s + (Number(v)||0), 0);
@@ -6071,7 +5878,6 @@ async function rimuoviRigaStaffing(idx) {
 }
 
 async function rimuoviMeseAllocazione(idx, meseIdx) {
-  if (!sbGuardWrite()) return;
   const r = state.staffing[idx];
   if (!r) return;
   const val = r.mesi[meseIdx];
@@ -6270,7 +6076,6 @@ function openAddAllocazioneModal(commessaNome, opts = {}) {
   };
 
   document.getElementById('alloc-save').onclick = async () => {
-    if (!sbGuardWrite()) return;
     const op = state.operatori.find(o => o.id === opSelect.value);
     if (!op) return;
     const mesi = new Array(12).fill(0);
@@ -6348,7 +6153,6 @@ function openEditCellModal(staffingIdx, meseIdx) {
   `);
   setTimeout(() => document.getElementById('edit-cell-val').focus(), 100);
   document.getElementById('edit-cell-save').onclick = async () => {
-    if (!sbGuardWrite()) return;
     const nuovo = parseFloat(document.getElementById('edit-cell-val').value) || 0;
     state.staffing[staffingIdx].mesi[meseIdx] = nuovo;
     // se l'intera riga è azzerata, la rimuovo
@@ -6673,7 +6477,6 @@ function openCommessaModal(id) {
   };
 
   document.getElementById('m-save').onclick = async () => {
-    if (!sbGuardWrite()) return;
     const emailRefList = parseEmailList(document.getElementById('m-email-ref').value);
     if (!emailRefList) { showAlertModal('Email referente tecnico obbligatoria: inserisci una o più email valide separate da virgola.'); return; }
     const newC = {
@@ -6880,7 +6683,6 @@ function openFabbisognoModal(commessaId, commessaNome) {
   };
 
   document.getElementById('fb-save').onclick = async () => {
-    if (!sbGuardWrite()) return;
     const tot = totaleRighe();
     if (commessaId) {
       const c = state.pipeline.find(p => p.id === commessaId);
@@ -6898,7 +6700,6 @@ function openFabbisognoModal(commessaId, commessaNome) {
 }
 
 async function deleteCommessa(id) {
-  if (!sbGuardWrite()) return;
   if (!await showConfirmAsync('Eliminare la commessa? Le assegnazioni verranno rimosse.', 'Elimina commessa')) return;
   const delC = state.pipeline.find(p => p.id === id);
   state.pipeline = state.pipeline.filter(p => p.id !== id);
@@ -6907,7 +6708,6 @@ async function deleteCommessa(id) {
 }
 
 async function promuoviCommessa(id) {
-  if (!sbGuardWrite()) return;
   const c = state.pipeline.find(p => p.id === id);
   if (!c) return;
   if (!await showConfirmAsync(`Promuovere "${c.progetto}" a commessa attiva?`, 'Promuovi')) return;
@@ -7063,7 +6863,6 @@ function openOperatoreModal(id) {
   });
 
   document.getElementById('mo-save').onclick = async () => {
-    if (!sbGuardWrite()) return;
     const nomeEsteso = document.getElementById('mo-esteso').value.trim();
     if (!nomeEsteso) { showAlertModal('Nome obbligatorio.'); return; }
     const skills = [...document.querySelectorAll('.mo-skill:checked')].map(x => x.value);
@@ -7199,7 +6998,6 @@ function isOperatoreLicenziato(nome) {
 }
 
 async function deleteOperatore(id) {
-  if (!sbGuardWrite()) return;
   const op = state.operatori.find(o => o.id === id);
   if (!op) return;
   const mc = meseCorrente();
@@ -7275,7 +7073,6 @@ function openLicenziaModal(id) {
 }
 
 async function licenziaOperatore(id) {
-  if (!sbGuardWrite()) return;
   const op = state.operatori.find(o => o.id === id);
   if (!op) return;
   op.licenziato = true;
@@ -7867,7 +7664,6 @@ function parseDateCell(v) {
 }
 
 async function importXlsx(file) {
-  if (!sbGuardWrite()) return;
   if (typeof XLSX === 'undefined') { showAlertModal('Libreria XLSX non caricata. Verifica la connessione internet e ricarica la pagina.'); return; }
   if (!await showConfirmAsync(`Importare "${file.name}"?\n\nLo stato corrente (commesse, operatori, assegnazioni manuali, modifiche allo staffing) verrà sostituito con i dati del file.`, 'Importa')) return;
 
@@ -8318,12 +8114,10 @@ function openCommessaAttivaModal(nome) {
     setTimeout(() => openFabbisognoModal(null, n), 50);
   };
   document.getElementById('ma-reset').onclick = async () => {
-    if (!sbGuardWrite()) return;
     if(!await showConfirmAsync('Rimuovere i metadati salvati?', 'Rimuovi')) return;
     delete state.commesse_attive_meta[nome]; await saveState(null, null, true); renderAll(); closeModal();
   };
   document.getElementById('ma-save').onclick = async () => {
-    if (!sbGuardWrite()) return;
     const risRaw = document.getElementById('ma-ris').value.trim();
     const risDichiarate = risRaw !== '' ? parseInt(risRaw) : null;
     // Validazione: se specificato deve essere >= 0
@@ -8355,7 +8149,6 @@ function openCommessaAttivaModal(nome) {
 
 /* ===================== CHIUDI / RIPRISTINA COMMESSA ===================== */
 async function chiudiCommessa(nome) {
-  if (!sbGuardWrite()) return;
   const righe = state.staffing.filter(r => r.commessa===nome);
   const risorse = [...new Set(righe.map(r=>r.risorsa))];
   const tot = righe.reduce((s,r) => s+r.mesi.reduce((a,b)=>a+(Number(b)||0),0), 0);
@@ -8390,7 +8183,6 @@ async function chiudiCommessa(nome) {
 }
 
 async function ripristinaCommessa(idx) {
-  if (!sbGuardWrite()) return;
   const cc = state.commesse_chiuse[idx];
   if (!cc) return;
   if (!await showConfirmAsync(`Ripristinare "${cc.progetto}"?\n${cc.staffingArchiviato.length} righe staffing reinserite.`, 'Ripristina')) return;
@@ -8905,7 +8697,6 @@ function renderDpiCatalogo() {
   const btnAdd = document.getElementById('dpi-btn-add');
   if (btnAdd) {
     btnAdd.onclick = async () => {
-      if (!sbGuardWrite()) return;
       const input = document.getElementById('dpi-input-new');
       const inputDurata = document.getElementById('dpi-input-durata');
       const value = input.value.trim();
@@ -8928,7 +8719,6 @@ function renderDpiCatalogo() {
 
   listDiv.querySelectorAll('.dpi-durata').forEach(inp => {
     inp.onchange = async () => {
-      if (!sbGuardWrite()) return;
       const dpi = (state.dpi_disponibili || [])[parseInt(inp.dataset.idx, 10)];
       if (!dpi) return;
       const mesi = parseInt(inp.value, 10);
@@ -8945,7 +8735,6 @@ function renderDpiCatalogo() {
 
   listDiv.querySelectorAll('.dpi-btn-remove').forEach(btn => {
     btn.onclick = async () => {
-      if (!sbGuardWrite()) return;
       const idx = parseInt(btn.dataset.idx, 10);
       const dpi = (state.dpi_disponibili || [])[idx];
       if (!dpi) return;
@@ -9027,7 +8816,6 @@ function exportDpiXlsx() {
    Aggiorna lo stato e ricalcola solo il totale riga + il box fabbisogno,
    senza un re-render completo (per non interrompere l'editing). */
 async function _commitInlineCell(inp) {
-  if (!sbGuardWrite()) return;
   const staffingIdx = parseInt(inp.dataset.idx);
   const meseIdx     = parseInt(inp.dataset.mese);
   const gl          = parseInt(inp.dataset.gl) || 20;
@@ -10048,7 +9836,6 @@ function pwGeneraMail() {
 
   // Salva note e strumenti in pwData ad ogni modifica
   async function salvaNoteSq() {
-    if (!sbGuardWrite()) return;
     squadreInfo.forEach((s, i) => {
       const sq = data[s.cIdx]?.squadre[s.sIdx];
       if (!sq) return;
@@ -10069,20 +9856,17 @@ function pwGeneraMail() {
   };
   // Rigenera anche quando cambiano i parametri, persistendoli in pwData
   document.getElementById('mail-orario-partenza').addEventListener('input', (e) => {
-    if (!sbGuardWrite()) return;
     pwData.mailOrarioPartenza = e.target.value;
     pwSave();
     document.getElementById('mail-testo').value = componiTesto();
   });
   document.getElementById('mail-orario-lavoro').addEventListener('input', (e) => {
-    if (!sbGuardWrite()) return;
     pwData.mailOrarioLavoro = e.target.value;
     pwSave();
     document.getElementById('mail-testo').value = componiTesto();
   });
   // Email sempre incluse: persistita in pwData, non fa parte del testo della mail
   document.getElementById('mail-email-sempre').addEventListener('input', (e) => {
-    if (!sbGuardWrite()) return;
     pwData.emailSempreIncluse = e.target.value;
     pwSave();
   });
@@ -10371,7 +10155,6 @@ async function pwDwLoad() {
 }
 
 async function pwFerieSave() {
-  if (!sbGuardWrite()) return;
   _sbDirty.ferie = true;
   try { await sset('pw_ferie', pwFerie); } catch(e) { console.warn('pwFerieSave error', e); }
   try { await sset('pw_ferie_dettagli', pwFerieDettagli); } catch(e) { console.warn('pwFerieSave dettagli error', e); }
@@ -10570,7 +10353,6 @@ function pwFerieSummaryRender(allOps, days, DAY_NAMES, today) {
 // Per scegliere "Non disponibile" (o rimuovere l'assenza lasciando la spunta) si usa il
 // click destro sulla cella, vedi pwFerieCellCtxMenu()/pwSetFeriaTipo().
 async function pwToggleFeria(cb) {
-  if (!sbGuardWrite()) return;
   const nome = cb.dataset.op;
   const day = parseInt(cb.dataset.day);
   if (!cb.checked) {
@@ -10607,7 +10389,6 @@ async function pwToggleFeria(cb) {
 
 // Applica o rimuove le ferie a tutta la settimana (6 giorni) per un operatore.
 async function pwFerieToggleWeek(nome) {
-  if (!sbGuardWrite()) return;
   const fw = pwGetFerieWeek();
   if (!fw[nome]) fw[nome] = {};
   const allSet = [0,1,2,3,4,5].every(i => !!fw[nome][i]);
@@ -10638,7 +10419,6 @@ function pwFerieCellCtxMenu(ev, nome, day) {
 }
 
 async function pwSetFeriaTipo(nome, day, tipo) {
-  if (!sbGuardWrite()) return;
   const fw = pwGetFerieWeek();
   if (!fw[nome]) fw[nome] = {};
   fw[nome][day] = tipo || false;
@@ -10660,7 +10440,6 @@ async function pwLoad() {
 }
 
 async function pwSave() {
-  if (!sbGuardWrite()) return;
   _sbDirty.planning = true;
   try { await sset('pw_data', pwData); } catch(e) { console.warn('pwSave error', e); }
   // Push immediato su Supabase con debounce breve (500ms) per evitare perdita dati al refresh
@@ -10881,7 +10660,6 @@ function pwFerieImportFilter(query) {
 }
 
 async function pwFerieImportFile(file) {
-  if (!sbGuardWrite()) return;
   if (typeof XLSX === 'undefined') { showAlertModal('Libreria XLSX non caricata. Verifica la connessione internet e ricarica la pagina.'); return; }
 
   let rows;
@@ -11272,7 +11050,6 @@ function pwCloseOpModal() {
 
 async function pwConfirmOpModal(cidx, sidx, oidx, nome) {
   pwCloseOpModal();
-  if (!sbGuardWrite()) return;
   const data = pwGetWeekData();
   const op   = data[cidx]?.squadre[sidx]?.operatori[oidx];
   if (op !== undefined) {
@@ -11795,7 +11572,6 @@ function pwTitleCase(str) {
 }
 
 async function pwUpdateCell(inp) {
-  if (!sbGuardWrite()) return;
   const { cidx, sidx, oidx, day, field } = inp.dataset;
   const data = pwGetWeekData();
   const op = data[cidx]?.squadre[sidx]?.operatori[oidx];
@@ -11823,7 +11599,6 @@ function pwCantiereCellOf(dataset) {
 }
 
 async function pwUpdateCantiere(inp) {
-  if (!sbGuardWrite()) return;
   const g = pwCantiereCellOf(inp.dataset);
   if (!g) return;
   const idx = Number(inp.dataset.idx);
@@ -11841,7 +11616,6 @@ async function pwUpdateCantiere(inp) {
 }
 
 async function pwAddCantiereField(btn) {
-  if (!sbGuardWrite()) return;
   const g = pwCantiereCellOf(btn.dataset);
   if (!g) return;
   // Cella vuota: la UI mostra già un campo vuoto "sintetico" (non salvato) come
@@ -11855,7 +11629,6 @@ async function pwAddCantiereField(btn) {
 }
 
 async function pwRemoveCantiereField(btn) {
-  if (!sbGuardWrite()) return;
   const g = pwCantiereCellOf(btn.dataset);
   if (!g) return;
   const idx = Number(btn.dataset.idx);
@@ -11865,7 +11638,6 @@ async function pwRemoveCantiereField(btn) {
 }
 
 async function pwUpdateOpNome(sel) {
-  if (!sbGuardWrite()) return;
   const { cidx, sidx, oidx } = sel.dataset;
   const data = pwGetWeekData();
   const op = data[cidx]?.squadre[sidx]?.operatori[oidx];
@@ -11940,7 +11712,6 @@ function pwCopyCell(cidx, sidx, oidx, day) {
 }
 
 async function pwPasteCell(cidx, sidx, oidx, day) {
-  if (!sbGuardWrite()) return;
   if (!_pwClipCell) return;
   const data = pwGetWeekData();
   const op = data[cidx]?.squadre[sidx]?.operatori[oidx];
@@ -11975,7 +11746,6 @@ function pwCopyRow(cidx, sidx, oidx) {
 }
 
 async function pwPasteRow(cidx, sidx, oidx) {
-  if (!sbGuardWrite()) return;
   if (!_pwClipRow) return;
   const data = pwGetWeekData();
   const op = data[cidx]?.squadre[sidx]?.operatori[oidx];
@@ -12039,7 +11809,6 @@ function pwStrumentoCounts() {
 }
 
 async function pwAddStrumento(btn) {
-  if (!sbGuardWrite()) return;
   const { cidx, sidx } = btn.dataset;
   const sq = pwGetWeekData()[cidx]?.squadre[sidx];
   if (!sq) return;
@@ -12051,7 +11820,6 @@ async function pwAddStrumento(btn) {
 }
 
 async function pwRemoveStrumento(btn) {
-  if (!sbGuardWrite()) return;
   const { cidx, sidx, idx } = btn.dataset;
   const sq = pwGetWeekData()[cidx]?.squadre[sidx];
   if (!sq) return;
@@ -12119,7 +11887,6 @@ function pwStrRenderList(filter) {
   list.querySelectorAll('.pw-str-item').forEach(el => { el.onclick = () => pwStrPick(el.dataset.key); });
 }
 async function pwStrPick(key) {
-  if (!sbGuardWrite()) { pwStrClose(); return; }
   if (!_pwStrTarget) return;
   const { cidx, sidx, idx } = _pwStrTarget;
   const sq = pwGetWeekData()[cidx]?.squadre[sidx];
@@ -12134,7 +11901,6 @@ async function pwStrPick(key) {
 }
 
 async function pwUpdateSquadraNome(inp) {
-  if (!sbGuardWrite()) return;
   const { cidx, sidx } = inp.dataset;
   const data = pwGetWeekData();
   const sq = data[cidx]?.squadre[sidx];
@@ -12142,7 +11908,6 @@ async function pwUpdateSquadraNome(inp) {
 }
 
 async function pwUpdateCommessa(sel) {
-  if (!sbGuardWrite()) return;
   const cidx = parseInt(sel.dataset.cidx);
   const data = pwGetWeekData();
   if (data[cidx]) {
@@ -12172,7 +11937,6 @@ function pwRinumeraSquadreDefault(cidx) {
 }
 
 async function pwAddSquadra(btn) {
-  if (!sbGuardWrite()) return;
   const cidx = parseInt(btn.dataset.cidx);
   const data = pwGetWeekData();
   if (data[cidx]) {
@@ -12184,7 +11948,6 @@ async function pwAddSquadra(btn) {
 }
 
 async function pwRemoveSquadra(btn) {
-  if (!sbGuardWrite()) return;
   const { cidx, sidx } = btn.dataset;
   const data = pwGetWeekData();
   if (!data[cidx]) return;
@@ -12199,7 +11962,6 @@ async function pwRemoveSquadra(btn) {
 }
 
 async function pwAddOp(btn) {
-  if (!sbGuardWrite()) return;
   const { cidx, sidx } = btn.dataset;
   const data = pwGetWeekData();
   const sq = data[cidx]?.squadre[sidx];
@@ -12207,7 +11969,6 @@ async function pwAddOp(btn) {
 }
 
 async function pwRemoveOp(btn) {
-  if (!sbGuardWrite()) return;
   const { cidx, sidx, oidx } = btn.dataset;
   const data = pwGetWeekData();
   const sq = data[cidx]?.squadre[sidx];
@@ -12222,7 +11983,6 @@ async function pwRemoveOp(btn) {
 }
 
 async function pwRemoveCommessa(btn) {
-  if (!sbGuardWrite()) return;
   const cidx = parseInt(btn.dataset.cidx);
   if (!await showConfirmAsync('Rimuovere questa commessa dalla pianificazione della settimana?', 'Rimuovi commessa')) return;
   const data = pwGetWeekData();
@@ -12231,7 +11991,6 @@ async function pwRemoveCommessa(btn) {
 }
 
 async function pwMoveCommessaUp(btn) {
-  if (!sbGuardWrite()) return;
   const cidx = parseInt(btn.dataset.cidx);
   const data = pwGetWeekData();
   if (cidx > 0) {
@@ -12241,7 +12000,6 @@ async function pwMoveCommessaUp(btn) {
 }
 
 async function pwMoveCommessaDown(btn) {
-  if (!sbGuardWrite()) return;
   const cidx = parseInt(btn.dataset.cidx);
   const data = pwGetWeekData();
   if (cidx < data.length - 1) {
@@ -12312,7 +12070,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     pwSwitchTab(_pwActiveTab || 'griglia');
   };
   document.getElementById('pw-add-commessa').onclick = async () => {
-    if (!sbGuardWrite()) return;
     const data = pwGetWeekData();
     data.push({ commessa: '', squadre: [{ nome: 'Squadra 1', operatori: [{ nome: '', giorni: {} }] }] });
     await pwSave(); pwRender();
@@ -12516,7 +12273,6 @@ function pwJiraBuildSubtaskItem(meta, task, comune, nomeOperatore, attivita) {
       bc.jiraSubtask: il badge non segue mai il copia/incolla su un altro
       operatore/cantiere. */
 function pwJiraSubtaskMarkBadge(cIdx, comune, operatoreNome, status, key, url) {
-  if (!sbGuardWrite()) return;
   const bc = pwGetWeekData()[cIdx];
   if (!bc || !comune || !operatoreNome) return;
   if (!bc.jiraSubtask) bc.jiraSubtask = {};
@@ -12526,7 +12282,6 @@ function pwJiraSubtaskMarkBadge(cIdx, comune, operatoreNome, status, key, url) {
 }
 
 function pwJiraSubtaskBadgeRemove(cIdx, mapKey) {
-  if (!sbGuardWrite()) return;
   const bc = pwGetWeekData()[cIdx];
   if (!bc || !bc.jiraSubtask) return;
   delete bc.jiraSubtask[mapKey];
@@ -13134,8 +12889,6 @@ function mapAddSatelliteToggle(map, streetLayer) {
 
 /* ==================== NAVIGAZIONE SCHERMATA ==================== */
 function switchScreen(screen) {
-  if (screen === 'dashboard' && !sbCanSeePage('dashboard')) return;
-  if (screen === 'weekly' && !PW_TAB_KEYS.some(k => sbCanSeePage('weekly:' + k))) return;
   const mainEl   = document.querySelector('main');
   const weeklyEl = document.getElementById('screen-weekly');
   const navDash  = document.getElementById('nav-dashboard');
@@ -13166,11 +12919,6 @@ let _pwScrollY = { griglia: 0, ferie: 0, mappa: 0, spostamenti: 0, ricerca_squad
 let _cpTableScrollTop = 0;
 
 function pwSwitchTab(tab) {
-  if (!sbCanSeePage('weekly:' + tab)) {
-    const allowed = PW_TAB_KEYS.find(k => sbCanSeePage('weekly:' + k));
-    if (allowed && allowed !== tab) { pwSwitchTab(allowed); }
-    return;
-  }
   // Salva la posizione di scroll del tab che si stava lasciando, per ripristinarla al ritorno
   const _leavingTab = _pwActiveTab;
   _pwScrollY[_leavingTab] = window.scrollY;
@@ -13375,7 +13123,6 @@ function pwDoppiaWeekRender() {
 }
 
 async function pwDwToggle(nome, anno, week) {
-  if (!sbGuardWrite()) return;
   const prev = pwWeekAdd(anno, week, -1);
   const isStart  = pwIsDwStart(anno, week, nome);
   const isSecond = pwIsDwStart(prev.anno, prev.week, nome);

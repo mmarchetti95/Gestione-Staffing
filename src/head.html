@@ -1140,11 +1140,17 @@
     <div class="flex items-center gap-2">
       <button id="btn-presentation" class="px-3 py-1.5 text-sm rounded hover:bg-white/10" style="border:1px solid var(--dark-border-strong);color:var(--dark-text);visibility:visible;">📊 Modalità presentazione</button>
       <div class="text-xs pl-2" style="border-left:1px solid var(--dark-border-strong);color:var(--dark-text-muted);">
-        <span id="app-version" class="font-medium" style="color:var(--accent);">v18.134.0</span> · Michele Marchetti
+        <span id="app-version" class="font-medium" style="color:var(--accent);">v18.135.0</span> · Michele Marchetti
+        <span id="sb-role-badge" style="margin-left:8px;padding:1px 8px;border-radius:9999px;background:rgba(255,255,255,.1);color:var(--dark-text);font-weight:600;"></span>
       </div>
     </div>
   </div>
 </header>
+
+<!-- Banner sola lettura (Operatore/Guest): mostrato/nascosto da sbApplyReadOnlyBanner() -->
+<div id="readonly-banner" class="no-print" style="display:none;background:#fef3c7;border-bottom:1px solid #fde68a;color:#92400e;font-size:12.5px;font-weight:600;text-align:center;padding:6px 12px;">
+  👁 Sei in sola lettura — le modifiche non vengono salvate.
+</div>
 
 <!-- Schermata di Login Supabase (overlay fullscreen) -->
 <div id="sb-login-screen" style="display:none;position:fixed;inset:0;z-index:99999;background:#f8fafc;align-items:center;justify-content:center;">
@@ -1364,14 +1370,20 @@
         <input id="sb-users-new-password" type="text" placeholder="Minimo 6 caratteri"
           style="width:100%;border:1px solid #dde3ea;border-radius:6px;padding:7px 10px;font-size:12.5px;outline:none;box-sizing:border-box;">
       </div>
-      <div style="min-width:110px;">
+      <div style="min-width:130px;">
         <label style="display:block;font-size:10.5px;font-weight:600;color:#374151;margin-bottom:3px;">Ruolo</label>
-        <select id="sb-users-new-role" style="width:100%;border:1px solid #dde3ea;border-radius:6px;padding:7px 10px;font-size:12.5px;outline:none;box-sizing:border-box;">
-          <option value="user">Utente</option>
+        <select id="sb-users-new-role" onchange="sbToggleGuestPagesUI('sb-users-new-guestpages', this.value)" style="width:100%;border:1px solid #dde3ea;border-radius:6px;padding:7px 10px;font-size:12.5px;outline:none;box-sizing:border-box;">
           <option value="admin">Admin</option>
+          <option value="responsabile" selected>Responsabile</option>
+          <option value="operatore">Operatore (sola lettura)</option>
+          <option value="guest">Guest (pagine ad hoc)</option>
         </select>
       </div>
       <button id="sb-users-add-btn" onclick="sbCreateUser()" style="padding:8px 16px;font-size:12.5px;background:var(--accent);color:white;border:none;border-radius:6px;cursor:pointer;font-weight:600;white-space:nowrap;">+ Aggiungi utente</button>
+      <div id="sb-users-new-guestpages" style="display:none;width:100%;margin-top:4px;padding:8px 10px;background:white;border:1px solid #dde3ea;border-radius:6px;">
+        <div style="font-size:10.5px;font-weight:600;color:#374151;margin-bottom:5px;">Pagine visibili al Guest</div>
+        <div class="sb-guestpages-checks" style="display:flex;flex-wrap:wrap;gap:8px;font-size:11.5px;color:#475569;"></div>
+      </div>
     </div>
 
     <div style="overflow-y:auto;flex:1;">
@@ -1389,6 +1401,19 @@
           <tr><td colspan="5" style="padding:20px;text-align:center;color:#94a3b8;">Caricamento…</td></tr>
         </tbody>
       </table>
+    </div>
+  </div>
+</div>
+
+<!-- Modal editor pagine Guest (aperto da "📄 Pagine" nella riga di un utente Guest) -->
+<div id="sb-guestpages-modal" style="display:none;position:fixed;inset:0;z-index:100000;background:var(--backdrop);align-items:center;justify-content:center;">
+  <div style="background:white;border-radius:var(--radius-lg);padding:22px 26px;width:420px;max-width:94vw;box-shadow:var(--shadow-lg);">
+    <div style="font-weight:700;font-size:14px;color:#0f172a;margin-bottom:2px;">Pagine visibili</div>
+    <div id="sb-guestpages-modal-email" style="font-size:11px;color:#94a3b8;margin-bottom:12px;"></div>
+    <div class="sb-guestpages-checks" id="sb-guestpages-modal-checks" style="display:flex;flex-direction:column;gap:6px;font-size:12.5px;color:#374151;margin-bottom:16px;"></div>
+    <div style="display:flex;justify-content:flex-end;gap:8px;">
+      <button onclick="sbCloseGuestPagesEditorCancel()" style="padding:6px 14px;font-size:12px;border:1px solid #e2e8f0;border-radius:6px;background:white;cursor:pointer;color:#475569;">Annulla</button>
+      <button onclick="sbSaveGuestPagesEditor()" style="padding:6px 14px;font-size:12px;background:var(--accent);color:white;border:none;border-radius:6px;cursor:pointer;font-weight:600;">Salva</button>
     </div>
   </div>
 </div>

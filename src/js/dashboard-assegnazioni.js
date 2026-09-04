@@ -1,5 +1,6 @@
 /* ===================== ASSEGNAZIONI ===================== */
 async function assegnaOperatore(commessaId, operatoreId) {
+  if (!sbGuardWrite()) return;
   const c = state.pipeline.find(p => p.id === commessaId);
   const op = state.operatori.find(o => o.id === operatoreId);
   if (!c || !op) return;
@@ -37,6 +38,7 @@ async function assegnaOperatore(commessaId, operatoreId) {
 }
 
 async function rimuoviAssegnazione(cid, oid) {
+  if (!sbGuardWrite()) return;
   const c = state.pipeline.find(p => p.id === cid);
   const op = state.operatori.find(o => o.id === oid);
   const msg = (c && op) ? `Rimuovere l'assegnazione di "${op.nome_esteso}" su "${c.progetto}"?` : 'Rimuovere questa assegnazione?';
@@ -53,6 +55,7 @@ async function spostaAssegnazione(cidFrom, oid, cidTo) {
 
 /* ===================== CHIUSURA / RIPRISTINO COMMESSE ATTIVE ===================== */
 async function eliminaCommessaChiusa(idx) {
+  if (!sbGuardWrite()) return;
   const cc = state.commesse_chiuse[idx];
   if (!cc) return;
   if (!await showConfirmAsync(`Eliminare definitivamente "${cc.progetto}" dall'archivio?\n\nL'operazione è irreversibile.`, 'Elimina definitivamente')) return;
@@ -258,6 +261,7 @@ function calcolaImpegniEffettiviAnnoOperatore(nomeOperatore) {
 }
 
 async function rimuoviRigaStaffing(idx) {
+  if (!sbGuardWrite()) return;
   const r = state.staffing[idx];
   if (!r) return;
   const tot = r.mesi.reduce((s,v) => s + (Number(v)||0), 0);
@@ -269,6 +273,7 @@ async function rimuoviRigaStaffing(idx) {
 }
 
 async function rimuoviMeseAllocazione(idx, meseIdx) {
+  if (!sbGuardWrite()) return;
   const r = state.staffing[idx];
   if (!r) return;
   const val = r.mesi[meseIdx];
@@ -467,6 +472,7 @@ function openAddAllocazioneModal(commessaNome, opts = {}) {
   };
 
   document.getElementById('alloc-save').onclick = async () => {
+    if (!sbGuardWrite()) return;
     const op = state.operatori.find(o => o.id === opSelect.value);
     if (!op) return;
     const mesi = new Array(12).fill(0);
@@ -544,6 +550,7 @@ function openEditCellModal(staffingIdx, meseIdx) {
   `);
   setTimeout(() => document.getElementById('edit-cell-val').focus(), 100);
   document.getElementById('edit-cell-save').onclick = async () => {
+    if (!sbGuardWrite()) return;
     const nuovo = parseFloat(document.getElementById('edit-cell-val').value) || 0;
     state.staffing[staffingIdx].mesi[meseIdx] = nuovo;
     // se l'intera riga è azzerata, la rimuovo

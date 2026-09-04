@@ -114,6 +114,7 @@ function openCommessaModal(id) {
   };
 
   document.getElementById('m-save').onclick = async () => {
+    if (!sbGuardWrite()) return;
     const emailRefList = parseEmailList(document.getElementById('m-email-ref').value);
     if (!emailRefList) { showAlertModal('Email referente tecnico obbligatoria: inserisci una o più email valide separate da virgola.'); return; }
     const newC = {
@@ -320,6 +321,7 @@ function openFabbisognoModal(commessaId, commessaNome) {
   };
 
   document.getElementById('fb-save').onclick = async () => {
+    if (!sbGuardWrite()) return;
     const tot = totaleRighe();
     if (commessaId) {
       const c = state.pipeline.find(p => p.id === commessaId);
@@ -337,6 +339,7 @@ function openFabbisognoModal(commessaId, commessaNome) {
 }
 
 async function deleteCommessa(id) {
+  if (!sbGuardWrite()) return;
   if (!await showConfirmAsync('Eliminare la commessa? Le assegnazioni verranno rimosse.', 'Elimina commessa')) return;
   const delC = state.pipeline.find(p => p.id === id);
   state.pipeline = state.pipeline.filter(p => p.id !== id);
@@ -345,6 +348,7 @@ async function deleteCommessa(id) {
 }
 
 async function promuoviCommessa(id) {
+  if (!sbGuardWrite()) return;
   const c = state.pipeline.find(p => p.id === id);
   if (!c) return;
   if (!await showConfirmAsync(`Promuovere "${c.progetto}" a commessa attiva?`, 'Promuovi')) return;
@@ -500,6 +504,7 @@ function openOperatoreModal(id) {
   });
 
   document.getElementById('mo-save').onclick = async () => {
+    if (!sbGuardWrite()) return;
     const nomeEsteso = document.getElementById('mo-esteso').value.trim();
     if (!nomeEsteso) { showAlertModal('Nome obbligatorio.'); return; }
     const skills = [...document.querySelectorAll('.mo-skill:checked')].map(x => x.value);
@@ -635,6 +640,7 @@ function isOperatoreLicenziato(nome) {
 }
 
 async function deleteOperatore(id) {
+  if (!sbGuardWrite()) return;
   const op = state.operatori.find(o => o.id === id);
   if (!op) return;
   const mc = meseCorrente();
@@ -710,6 +716,7 @@ function openLicenziaModal(id) {
 }
 
 async function licenziaOperatore(id) {
+  if (!sbGuardWrite()) return;
   const op = state.operatori.find(o => o.id === id);
   if (!op) return;
   op.licenziato = true;

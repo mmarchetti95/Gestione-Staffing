@@ -135,6 +135,7 @@ function pwTitleCase(str) {
 }
 
 async function pwUpdateCell(inp) {
+  if (!sbGuardWrite()) return;
   const { cidx, sidx, oidx, day, field } = inp.dataset;
   const data = pwGetWeekData();
   const op = data[cidx]?.squadre[sidx]?.operatori[oidx];
@@ -162,6 +163,7 @@ function pwCantiereCellOf(dataset) {
 }
 
 async function pwUpdateCantiere(inp) {
+  if (!sbGuardWrite()) return;
   const g = pwCantiereCellOf(inp.dataset);
   if (!g) return;
   const idx = Number(inp.dataset.idx);
@@ -179,6 +181,7 @@ async function pwUpdateCantiere(inp) {
 }
 
 async function pwAddCantiereField(btn) {
+  if (!sbGuardWrite()) return;
   const g = pwCantiereCellOf(btn.dataset);
   if (!g) return;
   // Cella vuota: la UI mostra già un campo vuoto "sintetico" (non salvato) come
@@ -192,6 +195,7 @@ async function pwAddCantiereField(btn) {
 }
 
 async function pwRemoveCantiereField(btn) {
+  if (!sbGuardWrite()) return;
   const g = pwCantiereCellOf(btn.dataset);
   if (!g) return;
   const idx = Number(btn.dataset.idx);
@@ -201,6 +205,7 @@ async function pwRemoveCantiereField(btn) {
 }
 
 async function pwUpdateOpNome(sel) {
+  if (!sbGuardWrite()) return;
   const { cidx, sidx, oidx } = sel.dataset;
   const data = pwGetWeekData();
   const op = data[cidx]?.squadre[sidx]?.operatori[oidx];

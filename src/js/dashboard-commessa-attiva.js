@@ -163,10 +163,12 @@ function openCommessaAttivaModal(nome) {
     setTimeout(() => openFabbisognoModal(null, n), 50);
   };
   document.getElementById('ma-reset').onclick = async () => {
+    if (!sbGuardWrite()) return;
     if(!await showConfirmAsync('Rimuovere i metadati salvati?', 'Rimuovi')) return;
     delete state.commesse_attive_meta[nome]; await saveState(null, null, true); renderAll(); closeModal();
   };
   document.getElementById('ma-save').onclick = async () => {
+    if (!sbGuardWrite()) return;
     const risRaw = document.getElementById('ma-ris').value.trim();
     const risDichiarate = risRaw !== '' ? parseInt(risRaw) : null;
     // Validazione: se specificato deve essere >= 0
@@ -198,6 +200,7 @@ function openCommessaAttivaModal(nome) {
 
 /* ===================== CHIUDI / RIPRISTINA COMMESSA ===================== */
 async function chiudiCommessa(nome) {
+  if (!sbGuardWrite()) return;
   const righe = state.staffing.filter(r => r.commessa===nome);
   const risorse = [...new Set(righe.map(r=>r.risorsa))];
   const tot = righe.reduce((s,r) => s+r.mesi.reduce((a,b)=>a+(Number(b)||0),0), 0);
@@ -232,6 +235,7 @@ async function chiudiCommessa(nome) {
 }
 
 async function ripristinaCommessa(idx) {
+  if (!sbGuardWrite()) return;
   const cc = state.commesse_chiuse[idx];
   if (!cc) return;
   if (!await showConfirmAsync(`Ripristinare "${cc.progetto}"?\n${cc.staffingArchiviato.length} righe staffing reinserite.`, 'Ripristina')) return;

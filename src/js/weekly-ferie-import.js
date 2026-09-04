@@ -145,6 +145,7 @@ function pwFerieImportFilter(query) {
 }
 
 async function pwFerieImportFile(file) {
+  if (!sbGuardWrite()) return;
   if (typeof XLSX === 'undefined') { showAlertModal('Libreria XLSX non caricata. Verifica la connessione internet e ricarica la pagina.'); return; }
 
   let rows;

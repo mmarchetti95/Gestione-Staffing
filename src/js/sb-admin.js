@@ -1,6 +1,74 @@
 /* ===================== ACTIVITY LOG ===================== */
+/* ===================== RUOLI & PERMESSI ===================== */
+// Gerarchia: admin (tutto) / responsabile (RW, no funzioni admin-only) /
+// operatore (sola lettura su tutto) / guest (sola lettura, solo sulle pagine
+// in user_metadata.guest_pages). Il blocco in scrittura per operatore/guest è
+// applicato anche via RLS su staffing_state (non è solo un vincolo client-side).
+function sbRole() {
+  return _sbUser?.user_metadata?.role || 'responsabile';
+}
 function sbIsAdmin() {
-  return _sbUser?.user_metadata?.role === 'admin';
+  return sbRole() === 'admin';
+}
+function sbCanWrite() {
+  return sbRole() === 'admin' || sbRole() === 'responsabile';
+}
+function sbGuestPages() {
+  return Array.isArray(_sbUser?.user_metadata?.guest_pages) ? _sbUser.user_metadata.guest_pages : [];
+}
+function sbCanSeePage(pageKey) {
+  return sbRole() !== 'guest' || sbGuestPages().includes(pageKey);
+}
+// Guard da chiamare in cima alle azioni di modifica: blocca l'azione se il ruolo
+// corrente è di sola lettura. Il messaggio viene mostrato una sola volta per sessione
+// (non ad ogni chiamata): alcuni chokepoint sono agganciati a listener 'input' che
+// scattano ad ogni tasto premuto, e un modale ad ogni carattere sarebbe inutilizzabile.
+let _sbGuardWriteWarned = false;
+function sbGuardWrite() {
+  if (sbCanWrite()) return true;
+  if (!_sbGuardWriteWarned) {
+    _sbGuardWriteWarned = true;
+    showAlertModal('Il tuo ruolo è di sola lettura: le modifiche non vengono salvate.');
+  }
+  return false;
+}
+
+// Chiavi pagina della Pianificazione Settimanale, stesso ordine/id dei tab in src/head.html
+const PW_TAB_KEYS = ['griglia', 'ferie', 'mappa', 'spostamenti', 'ricerca-squadre', 'controllo', 'doppia'];
+
+// Mostra/nasconde nav Dashboard/Pianificazione e le singole tab in base alle pagine
+// visibili per il ruolo corrente (rilevante solo per il ruolo 'guest'); se lo schermo/tab
+// attualmente aperto non è più visibile, sposta su uno consentito.
+function sbApplyPageVisibility() {
+  const navDash = document.getElementById('nav-dashboard');
+  const navWk = document.getElementById('nav-weekly');
+  const canDash = sbCanSeePage('dashboard');
+  const anyWeekly = PW_TAB_KEYS.some(k => sbCanSeePage('weekly:' + k));
+  if (navDash) navDash.style.display = canDash ? '' : 'none';
+  if (navWk) navWk.style.display = anyWeekly ? '' : 'none';
+  PW_TAB_KEYS.forEach(k => {
+    const el = document.getElementById('pw-tab-' + k);
+    if (el) el.style.display = sbCanSeePage('weekly:' + k) ? '' : 'none';
+  });
+  const weeklyEl = document.getElementById('screen-weekly');
+  const onWeekly = weeklyEl && !weeklyEl.classList.contains('hidden');
+  if (onWeekly && !anyWeekly && canDash) switchScreen('dashboard');
+  else if (!onWeekly && !canDash && anyWeekly) switchScreen('weekly');
+  if (onWeekly && typeof _pwActiveTab !== 'undefined' && !sbCanSeePage('weekly:' + _pwActiveTab)) {
+    const allowed = PW_TAB_KEYS.find(k => sbCanSeePage('weekly:' + k));
+    if (allowed) pwSwitchTab(allowed);
+  }
+}
+
+// Banner "sola lettura" in header + badge ruolo accanto al nome utente
+function sbApplyReadOnlyBanner() {
+  const banner = document.getElementById('readonly-banner');
+  if (banner) banner.style.display = sbCanWrite() ? 'none' : '';
+  const badge = document.getElementById('sb-role-badge');
+  if (badge) {
+    const labels = { admin: 'Admin', responsabile: 'Responsabile', operatore: 'Operatore · sola lettura', guest: 'Guest · sola lettura' };
+    badge.textContent = labels[sbRole()] || '';
+  }
 }
 
 async function sbLogActivity(action, details = {}) {
@@ -268,13 +336,74 @@ async function sbCallAdminUsers(action, extra) {
   return data;
 }
 
+// Etichette e chiavi delle pagine assegnabili ad hoc a un utente Guest (stesse
+// chiavi usate da sbCanSeePage()/PW_TAB_KEYS per il gating lato client).
+const SB_PAGE_LABELS = {
+  'dashboard': 'Dashboard',
+  'weekly:griglia': 'Griglia',
+  'weekly:ferie': 'Ferie',
+  'weekly:mappa': 'Mappa',
+  'weekly:spostamenti': 'Spostamenti',
+  'weekly:ricerca-squadre': 'Ricerca Squadre',
+  'weekly:controllo': 'Controllo Produzione',
+  'weekly:doppia': 'Doppia Week',
+};
+function sbAllPageKeys() {
+  return ['dashboard', ...PW_TAB_KEYS.map(k => 'weekly:' + k)];
+}
+function sbGuestPagesChecksHtml(checked) {
+  return sbAllPageKeys().map(k =>
+    '<label style="display:flex;align-items:center;gap:5px;cursor:pointer;">' +
+      '<input type="checkbox" class="sb-guestpage-check" value="' + jsAttr(k) + '"' + ((checked||[]).includes(k) ? ' checked' : '') + '>' +
+      esc(SB_PAGE_LABELS[k] || k) +
+    '</label>'
+  ).join('');
+}
+// Mostra/nasconde il blocco checkbox "pagine visibili" nel form di creazione utente,
+// in base al ruolo selezionato nella select.
+function sbToggleGuestPagesUI(containerId, role) {
+  const box = document.getElementById(containerId);
+  if (!box) return;
+  if (role === 'guest') {
+    box.style.display = '';
+    const checksEl = box.querySelector('.sb-guestpages-checks');
+    if (checksEl) checksEl.innerHTML = sbGuestPagesChecksHtml([]);
+  } else {
+    box.style.display = 'none';
+  }
+}
+// Modal secondario per scegliere le pagine di un utente Guest esistente (o appena
+// impostato a Guest dalla select di riga).
+let _sbGuestPagesEditorCtx = null;
+function sbOpenGuestPagesEditor(userId, email, currentPagesJson) {
+  let currentPages = [];
+  try { currentPages = JSON.parse(currentPagesJson || '[]'); } catch(e) {}
+  _sbGuestPagesEditorCtx = { userId, email };
+  document.getElementById('sb-guestpages-modal-email').textContent = email;
+  document.getElementById('sb-guestpages-modal-checks').innerHTML = sbGuestPagesChecksHtml(currentPages);
+  document.getElementById('sb-guestpages-modal').style.display = 'flex';
+}
+function sbCloseGuestPagesEditorCancel() {
+  document.getElementById('sb-guestpages-modal').style.display = 'none';
+  _sbGuestPagesEditorCtx = null;
+  sbLoadUsers(); // ripristina la select del ruolo al valore realmente salvato
+}
+async function sbSaveGuestPagesEditor() {
+  if (!_sbGuestPagesEditorCtx) return;
+  const pages = [...document.querySelectorAll('#sb-guestpages-modal-checks .sb-guestpage-check:checked')].map(c => c.value);
+  document.getElementById('sb-guestpages-modal').style.display = 'none';
+  await sbApplyUserRole(_sbGuestPagesEditorCtx.userId, 'guest', _sbGuestPagesEditorCtx.email, pages);
+  _sbGuestPagesEditorCtx = null;
+}
+
 async function sbShowUsers() {
   document.getElementById('sb-users-modal').style.display = 'flex';
   document.getElementById('sb-users-error').style.display = 'none';
   document.getElementById('sb-users-success').style.display = 'none';
   document.getElementById('sb-users-new-email').value = '';
   document.getElementById('sb-users-new-password').value = '';
-  document.getElementById('sb-users-new-role').value = 'user';
+  document.getElementById('sb-users-new-role').value = 'responsabile';
+  sbToggleGuestPagesUI('sb-users-new-guestpages', 'responsabile');
   await sbLoadUsers();
 }
 
@@ -306,15 +435,21 @@ async function sbLoadUsers() {
     };
     tbody.innerHTML = users.map(u => {
       const isSelf = _sbUser && u.id === _sbUser.id;
+      const pagesJson = jsAttr(JSON.stringify(u.guest_pages || []));
       return '<tr style="border-bottom:1px solid #f1f5f9;">' +
         '<td style="padding:7px 12px;color:#374151;">' + esc(u.email || '') + (isSelf ? ' <span style="color:#94a3b8;font-size:10.5px;">(tu)</span>' : '') + '</td>' +
         '<td style="padding:7px 12px;">' +
+          '<div style="display:flex;align-items:center;gap:6px;">' +
           '<select onchange="sbUpdateUserRole(\'' + jsAttr(u.id) + '\', this.value, \'' + jsAttr(u.email) + '\')" ' +
             (isSelf ? 'disabled title="Non puoi modificare il tuo stesso ruolo"' : '') +
             ' style="border:1px solid #dde3ea;border-radius:6px;padding:4px 8px;font-size:11.5px;outline:none;">' +
-            '<option value="user"' + (u.role === 'user' ? ' selected' : '') + '>Utente</option>' +
             '<option value="admin"' + (u.role === 'admin' ? ' selected' : '') + '>Admin</option>' +
+            '<option value="responsabile"' + (u.role === 'responsabile' ? ' selected' : '') + '>Responsabile</option>' +
+            '<option value="operatore"' + (u.role === 'operatore' ? ' selected' : '') + '>Operatore</option>' +
+            '<option value="guest"' + (u.role === 'guest' ? ' selected' : '') + '>Guest</option>' +
           '</select>' +
+          (u.role === 'guest' ? '<button onclick="sbOpenGuestPagesEditor(\'' + jsAttr(u.id) + '\', \'' + jsAttr(u.email) + '\', \'' + pagesJson + '\')" title="Scegli le pagine visibili" style="padding:3px 8px;font-size:10.5px;border:1px solid #dde3ea;border-radius:6px;background:#f8fafc;cursor:pointer;color:#475569;white-space:nowrap;">📄 Pagine (' + (u.guest_pages||[]).length + ')</button>' : '') +
+          '</div>' +
         '</td>' +
         '<td style="padding:7px 12px;white-space:nowrap;color:#64748b;">' + fmt(u.created_at) + '</td>' +
         '<td style="padding:7px 12px;white-space:nowrap;color:#64748b;">' + fmt(u.last_sign_in_at) + '</td>' +
@@ -341,10 +476,15 @@ async function sbCreateUser() {
   if (!email || !password) { sbUsersMsg('Inserisci email e password.'); return; }
   if (password.length < 6) { sbUsersMsg('La password deve essere di almeno 6 caratteri.'); return; }
 
+  const guestPages = role === 'guest'
+    ? [...document.querySelectorAll('#sb-users-new-guestpages .sb-guestpage-check:checked')].map(c => c.value)
+    : [];
+
   btn.textContent = 'Creazione…'; btn.disabled = true;
   try {
-    await sbCallAdminUsers('create', { email, password, role });
-    emailEl.value = ''; pwdEl.value = ''; roleEl.value = 'user';
+    await sbCallAdminUsers('create', { email, password, role, guestPages });
+    emailEl.value = ''; pwdEl.value = ''; roleEl.value = 'responsabile';
+    sbToggleGuestPagesUI('sb-users-new-guestpages', 'responsabile');
     sbUsersMsg(null, 'Utente ' + email + ' creato con successo.');
     sbLogActivity('Creazione utente', { email, role });
     await sbLoadUsers();
@@ -355,11 +495,20 @@ async function sbCreateUser() {
   }
 }
 
+// Chiamata dalla select di riga. Per il ruolo Guest non salva subito: apre l'editor
+// pagine (senza pagine pre-selezionate, essendo un cambio da un altro ruolo) e salva
+// solo alla conferma — per un Guest già esistente si usa invece il bottone "📄 Pagine".
 async function sbUpdateUserRole(userId, role, email) {
+  if (role === 'guest') { sbOpenGuestPagesEditor(userId, email, '[]'); return; }
+  await sbApplyUserRole(userId, role, email, []);
+}
+
+async function sbApplyUserRole(userId, role, email, guestPages) {
   sbUsersMsg(null, null);
+  const roleLabels = { admin: 'Admin', responsabile: 'Responsabile', operatore: 'Operatore', guest: 'Guest' };
   try {
-    await sbCallAdminUsers('updateRole', { userId, role });
-    sbUsersMsg(null, 'Ruolo di ' + email + ' aggiornato a "' + (role === 'admin' ? 'Admin' : 'Utente') + '".');
+    await sbCallAdminUsers('updateRole', { userId, role, guestPages });
+    sbUsersMsg(null, 'Ruolo di ' + email + ' aggiornato a "' + (roleLabels[role] || role) + '".');
     sbLogActivity('Modifica ruolo utente', { email, role });
     await sbLoadUsers();
   } catch(e) {
@@ -477,6 +626,8 @@ async function sbOnLoggedIn() {
     if (btnUsers) btnUsers.style.visibility = 'hidden';
     if (secRecon) secRecon.style.display = 'none';
   }
+  sbApplyPageVisibility();
+  sbApplyReadOnlyBanner();
   sbUpdateUI('syncing', 'Sync: caricamento dati…');
   await sbPull();
   sbLogActivity('Login', { email: _sbUser.email });
@@ -646,8 +797,9 @@ async function sbPull() {
     const ora = new Date().toLocaleTimeString('it-IT', { hour:'2-digit', minute:'2-digit' });
     sbUpdateUI('ok', 'Sync: aggiornato ✓', 'Ultimo sync: ' + ora);
 
-    // Migrazione automatica
-    if (needsMigration) {
+    // Migrazione automatica (solo se il ruolo può scrivere: un ruolo di sola lettura
+    // non deve marcare dirty né innescare un push automatico)
+    if (needsMigration && sbCanWrite()) {
       _sbDirty.core = true; _sbDirty.planning = true; _sbDirty.ferie = true;
       setTimeout(() => sbPush(), 1500);
     }
@@ -662,6 +814,11 @@ async function sbSync() { await sbPull(); }
 
 async function sbPush() {
   if (!_sbUser) return false;
+  // Backstop: un ruolo di sola lettura non deve mai arrivare a scrivere su Supabase,
+  // nemmeno tramite un push automatico (debounce/heartbeat) innescato da un percorso
+  // che non passa dai guard nei singoli chokepoint (es. migrazioni automatiche).
+  // Silenzioso (nessun modale): l'utente non ha compiuto un'azione diretta qui.
+  if (!sbCanWrite()) { _sbDirty.core = _sbDirty.planning = _sbDirty.ferie = _sbDirty.dw = false; return false; }
   try {
     const domains = [];
     if (_sbDirty.core) {

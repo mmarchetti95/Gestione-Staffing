@@ -47,12 +47,14 @@ async function loadState() {
   state.dpi_catalogo = (dcat && typeof dcat === 'object') ? dcat : {};
   ricalcolaAllocOperatori();
 
-  // Seed email operatori una-tantum (solo su quelli ancora senza email)
-  if (seedEmailOperatori()) {
+  // Seed email operatori una-tantum (solo su quelli ancora senza email).
+  // Non marca dirty per un ruolo di sola lettura: non deve innescare un push automatico.
+  if (seedEmailOperatori() && sbCanWrite()) {
     try { await sset('operatori', state.operatori); _sbDirty.core = true; } catch(e) { console.warn('seed email save', e); }
   }
 }
 async function saveState(logAction, logDetails, immediate) {
+  if (!sbGuardWrite()) return;
   _sbDirty.core = true;
   await Promise.all([
     sset('commesse_pipeline', state.pipeline),

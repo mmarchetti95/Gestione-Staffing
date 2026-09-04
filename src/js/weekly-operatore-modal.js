@@ -205,6 +205,7 @@ function pwCloseOpModal() {
 
 async function pwConfirmOpModal(cidx, sidx, oidx, nome) {
   pwCloseOpModal();
+  if (!sbGuardWrite()) return;
   const data = pwGetWeekData();
   const op   = data[cidx]?.squadre[sidx]?.operatori[oidx];
   if (op !== undefined) {

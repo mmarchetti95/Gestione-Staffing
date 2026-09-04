@@ -48,6 +48,7 @@ function pwStrumentoCounts() {
 }
 
 async function pwAddStrumento(btn) {
+  if (!sbGuardWrite()) return;
   const { cidx, sidx } = btn.dataset;
   const sq = pwGetWeekData()[cidx]?.squadre[sidx];
   if (!sq) return;
@@ -59,6 +60,7 @@ async function pwAddStrumento(btn) {
 }
 
 async function pwRemoveStrumento(btn) {
+  if (!sbGuardWrite()) return;
   const { cidx, sidx, idx } = btn.dataset;
   const sq = pwGetWeekData()[cidx]?.squadre[sidx];
   if (!sq) return;
@@ -126,6 +128,7 @@ function pwStrRenderList(filter) {
   list.querySelectorAll('.pw-str-item').forEach(el => { el.onclick = () => pwStrPick(el.dataset.key); });
 }
 async function pwStrPick(key) {
+  if (!sbGuardWrite()) { pwStrClose(); return; }
   if (!_pwStrTarget) return;
   const { cidx, sidx, idx } = _pwStrTarget;
   const sq = pwGetWeekData()[cidx]?.squadre[sidx];
@@ -140,6 +143,7 @@ async function pwStrPick(key) {
 }
 
 async function pwUpdateSquadraNome(inp) {
+  if (!sbGuardWrite()) return;
   const { cidx, sidx } = inp.dataset;
   const data = pwGetWeekData();
   const sq = data[cidx]?.squadre[sidx];
@@ -147,6 +151,7 @@ async function pwUpdateSquadraNome(inp) {
 }
 
 async function pwUpdateCommessa(sel) {
+  if (!sbGuardWrite()) return;
   const cidx = parseInt(sel.dataset.cidx);
   const data = pwGetWeekData();
   if (data[cidx]) {
@@ -176,6 +181,7 @@ function pwRinumeraSquadreDefault(cidx) {
 }
 
 async function pwAddSquadra(btn) {
+  if (!sbGuardWrite()) return;
   const cidx = parseInt(btn.dataset.cidx);
   const data = pwGetWeekData();
   if (data[cidx]) {
@@ -187,6 +193,7 @@ async function pwAddSquadra(btn) {
 }
 
 async function pwRemoveSquadra(btn) {
+  if (!sbGuardWrite()) return;
   const { cidx, sidx } = btn.dataset;
   const data = pwGetWeekData();
   if (!data[cidx]) return;
@@ -201,6 +208,7 @@ async function pwRemoveSquadra(btn) {
 }
 
 async function pwAddOp(btn) {
+  if (!sbGuardWrite()) return;
   const { cidx, sidx } = btn.dataset;
   const data = pwGetWeekData();
   const sq = data[cidx]?.squadre[sidx];
@@ -208,6 +216,7 @@ async function pwAddOp(btn) {
 }
 
 async function pwRemoveOp(btn) {
+  if (!sbGuardWrite()) return;
   const { cidx, sidx, oidx } = btn.dataset;
   const data = pwGetWeekData();
   const sq = data[cidx]?.squadre[sidx];
@@ -222,6 +231,7 @@ async function pwRemoveOp(btn) {
 }
 
 async function pwRemoveCommessa(btn) {
+  if (!sbGuardWrite()) return;
   const cidx = parseInt(btn.dataset.cidx);
   if (!await showConfirmAsync('Rimuovere questa commessa dalla pianificazione della settimana?', 'Rimuovi commessa')) return;
   const data = pwGetWeekData();
@@ -230,6 +240,7 @@ async function pwRemoveCommessa(btn) {
 }
 
 async function pwMoveCommessaUp(btn) {
+  if (!sbGuardWrite()) return;
   const cidx = parseInt(btn.dataset.cidx);
   const data = pwGetWeekData();
   if (cidx > 0) {
@@ -239,6 +250,7 @@ async function pwMoveCommessaUp(btn) {
 }
 
 async function pwMoveCommessaDown(btn) {
+  if (!sbGuardWrite()) return;
   const cidx = parseInt(btn.dataset.cidx);
   const data = pwGetWeekData();
   if (cidx < data.length - 1) {
@@ -309,6 +321,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     pwSwitchTab(_pwActiveTab || 'griglia');
   };
   document.getElementById('pw-add-commessa').onclick = async () => {
+    if (!sbGuardWrite()) return;
     const data = pwGetWeekData();
     data.push({ commessa: '', squadre: [{ nome: 'Squadra 1', operatori: [{ nome: '', giorni: {} }] }] });
     await pwSave(); pwRender();
