@@ -1,3 +1,6 @@
+## v18.138.0
+- fix: **Sottotask Jira da Griglia — pannello di ricerca Epic/Task invisibile/non cliccabile** — nel modal "Crea sottotask Jira", cliccando su "scegli Epic"/"scegli Task" il pannello di ricerca a tendina si apriva ma finiva dietro il modal stesso (pannello a z-index 9999, modal a z-index 100050 da v18.137.0), risultando invisibile e non cliccabile — sembrava che il click non avesse effetto. Portato lo z-index del pannello a 100060, sopra il modal.
+
 ## v18.137.0
 - fix: **Modal generici (conferma/alert) finivano dietro i modal di Gestione utenti** — confermando l'eliminazione di un utente dal pannello admin, il modal "Elimina utente" (`showConfirmAsync`, z-index 10050) appariva dietro il modal "Gestione utenti" (z-index 99999), risultando invisibile/non cliccabile. Portato lo z-index dei modal generici a 100050, sopra tutti i modal `sb-*` esistenti (max 100000).
 

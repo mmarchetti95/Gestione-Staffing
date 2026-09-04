@@ -27,7 +27,7 @@ function pwJiraSearchPanelEnsure() {
   p = document.createElement('div');
   p.id = 'pw-jira-panel';
   p.className = 'pw-str-panel';
-  p.style.cssText = 'position:fixed;z-index:9999;width:320px;display:none;overflow:hidden;';
+  p.style.cssText = 'position:fixed;z-index:100060;width:320px;display:none;overflow:hidden;';
   p.innerHTML = '<div class="pw-str-panel-search"><input id="pw-jira-panel-search" type="text" placeholder="Cerca…"></div><div id="pw-jira-panel-list" style="overflow-y:auto;"></div>';
   document.body.appendChild(p);
   let debounceTimer = null;
