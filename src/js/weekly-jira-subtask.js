@@ -7,8 +7,8 @@
    si seleziona puntualmente quali dei sottotask proposti creare davvero (per
    operatore/comune, non solo per comune intero), poi si compilano gli eventuali
    campi extra obbligatori in creazione su quel progetto (Data scadenza, Stima
-   originale, Activity Type, Target Production, Start date pianificato, Tempo
-   Team — vedi pwJiraFetchExtraFields), infine si crea un sottotask per ogni
+   originale, Activity Type, Target Production, Production Weight (%), Start
+   date pianificato, Tempo Team — vedi pwJiraFetchExtraFields), infine si crea un sottotask per ogni
    operatore assegnato: "[Attività] - [Comune] - [Cognome]".
    Anteprima obbligatoria (dryRun) prima di ogni creazione reale — vedi jira-create-subtask
    Edge Function per il contratto e il check di idempotenza per assignee/Task.
@@ -128,7 +128,7 @@ async function pwJiraCreateSubtasks(items, dryRun, extraFields) {
 }
 
 // Campi extra (Data scadenza, Stima originale, Activity Type, Target
-// Production, Start date pianificato, Tempo Team) che su alcuni progetti
+// Production, Production Weight (%), Start date pianificato, Tempo Team) che su alcuni progetti
 // Jira sono obbligatori in creazione senza che l'API createmeta lo segnali
 // correttamente (verificato empiricamente sull'istanza Jira di Eagleprojects:
 // createmeta li marca required=false ma la creazione fallisce con "Inserire:
@@ -617,8 +617,8 @@ function pwJiraSubtaskOpenSelectItemsModal(cIdx, commessaNome, meta, items, skip
 }
 
 /* ----- Step 1.5: campi extra spesso obbligatori in creazione (Data scadenza,
-   Stima originale, Activity Type, Target Production, Start date pianificato,
-   Tempo Team) — vedi commento su pwJiraFetchExtraFields. Un solo form per
+   Stima originale, Activity Type, Target Production, Production Weight (%),
+   Start date pianificato, Tempo Team) — vedi commento su pwJiraFetchExtraFields. Un solo form per
    l'intero batch (si applica a tutti i sottotask creati in questa sessione),
    con un valore di esempio precompilato ma sempre modificabile. Se il
    progetto non ha nessuno di questi campi si salta direttamente all'anteprima. */
@@ -649,6 +649,7 @@ async function pwJiraSubtaskOpenExtraFieldsModal(cIdx, commessaNome, meta, items
     originalEstimate: '8h',
     activityType: '',
     targetProduction: '',
+    productionWeight: '50',
     startDatePianificato: monday.toISOString().slice(0, 10),
     tempoTeam: '',
   };
@@ -662,7 +663,7 @@ async function pwJiraSubtaskOpenExtraFieldsModal(cIdx, commessaNome, meta, items
       inputHtml = `<select data-extra-key="${esc(f.extraKey)}" class="w-full border border-slate-300 rounded px-2 py-1.5 text-sm"><option value="">— seleziona —</option>${opts}</select>`;
     } else if (f.type === 'date') {
       inputHtml = `<input type="date" data-extra-key="${esc(f.extraKey)}" value="${esc(val)}" class="w-full border border-slate-300 rounded px-2 py-1.5 text-sm">`;
-    } else if (f.type === 'number' || f.key === 'customfield_11280') {
+    } else if (f.type === 'number' || f.key === 'customfield_11280' || f.key === 'customfield_13027') {
       inputHtml = `<input type="number" data-extra-key="${esc(f.extraKey)}" value="${esc(val)}" class="w-full border border-slate-300 rounded px-2 py-1.5 text-sm">`;
     } else {
       inputHtml = `<input type="text" data-extra-key="${esc(f.extraKey)}" value="${esc(val)}" class="w-full border border-slate-300 rounded px-2 py-1.5 text-sm">`;

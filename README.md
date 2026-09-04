@@ -1,3 +1,7 @@
+## v18.139.0
+- feat: **Sottotask Jira — nuovo campo extra "Production Weight (%)"** — aggiunto ai campi extra spesso obbligatori in creazione (Data scadenza, Stima originale, Activity Type, Target Production, Start date pianificato, Tempo Team) il campo Jira `customfield_13027` "Production Weight (%)", con valore di esempio precompilato `50` (modificabile o lasciabile vuoto). Compare nel form solo per i progetti che hanno davvero quel campo (cluster C — Task/Iniziativa: AI032, AI029, PS019, WT036, WT037, WT038 — vedi `docs/jira-custom-fields.md`); sulle commesse dei Rilievi classici (cluster A/B) non compare, come per gli altri campi extra già gestiti.
+  - Aggiornata la Edge Function `jira-create-subtask` (stesso nome, nuova entry in `KNOWN_EXTRA_FIELDS`/`buildExtraFieldsPayload` per `customfield_13027`), nessuna nuova Edge Function da deployare.
+
 ## v18.138.0
 - fix: **Sottotask Jira da Griglia — pannello di ricerca Epic/Task invisibile/non cliccabile** — nel modal "Crea sottotask Jira", cliccando su "scegli Epic"/"scegli Task" il pannello di ricerca a tendina si apriva ma finiva dietro il modal stesso (pannello a z-index 9999, modal a z-index 100050 da v18.137.0), risultando invisibile e non cliccabile — sembrava che il click non avesse effetto. Portato lo z-index del pannello a 100060, sopra il modal.
 
