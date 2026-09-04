@@ -287,19 +287,17 @@ function pwGeneraMail() {
     const DAY_NAMES_FERIE = ['Lun', 'Mar', 'Mer', 'Gio', 'Ven', 'Sab'];
     const righeF = [];
     Object.entries(fw).forEach(([nome, giorni]) => {
-      const giorniAssenti = Object.entries(giorni)
-        .filter(([, v]) => pwFerieTipo(v))
+      const giorniFerie = Object.entries(giorni)
+        .filter(([, v]) => pwFerieTipo(v) === 'ferie')
         .map(([di]) => parseInt(di));
-      if (giorniAssenti.length === 0) return;
-      const tuttiFerie = giorniAssenti.every(di => pwFerieTipo(giorni[di]) === 'ferie');
-      if (giorniAssenti.length === 6 && tuttiFerie) {
+      if (giorniFerie.length === 0) return;
+      if (giorniFerie.length === 6) {
         righeF.push(`• ${nome} → tutta la settimana`);
       } else {
-        const etichette = giorniAssenti.map(di => {
+        const etichette = giorniFerie.map(di => {
           const d = new Date(monday);
           d.setUTCDate(monday.getUTCDate() + di);
-          const tag = pwFerieTipo(giorni[di]) === 'non_disponibile' ? ' (non disponibile)' : '';
-          return `${DAY_NAMES_FERIE[di]} ${formatDate(d)}${tag}`;
+          return `${DAY_NAMES_FERIE[di]} ${formatDate(d)}`;
         });
         righeF.push(`• ${nome} → ${etichette.join(', ')}`);
       }
