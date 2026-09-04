@@ -519,22 +519,45 @@ function pwOpenWeatherWeekModal() {
   const DAY_NAMES_FULL = ['Lunedì', 'Martedì', 'Mercoledì', 'Giovedì', 'Venerdì', 'Sabato'];
   const root = document.getElementById('modal-root');
   if (!root) return;
+
+  /* Raggruppa: priorità (alta poi media) -> commessa/cantiere -> giorni, in modo che
+     una commessa con più giorni a rischio compaia una sola volta con tutti i suoi giorni sotto. */
+  const bySeverity = { alta: [], media: [] };
+  crit.forEach(c => bySeverity[c.severity].push(c));
+
+  const dayLine = c => {
+    const [, mm, dd] = c.dateISO.split('-');
+    const meteoLine = c.info
+      ? `${pwMeteoIconFor(c.info.code)} ${Math.round(c.info.tmax)}°/${Math.round(c.info.tmin)}°${c.info.pop != null ? ' · 💧' + Math.round(c.info.pop) + '%' : ''}`
+      : '';
+    const pcLine = c.pcColor
+      ? `📋 Bollettino PC: allerta ${c.pcColor}${c.pcInfo && c.pcInfo.zona ? ' — zona ' + esc(c.pcInfo.zona) : ''}`
+      : '';
+    const righe = [meteoLine, pcLine].filter(Boolean).join(' · ');
+    return `<div class="pw-meteo-modal-giorno"><span class="pw-meteo-modal-giorno-label">${DAY_NAMES_FULL[c.dayIdx]} ${dd}/${mm}</span> — ${righe}</div>`;
+  };
+
+  const sectionFor = (sev, label, icon) => {
+    const items = bySeverity[sev];
+    if (!items.length) return '';
+    const byCantiere = new Map();
+    items.forEach(c => {
+      if (!byCantiere.has(c.cantiere)) byCantiere.set(c.cantiere, []);
+      byCantiere.get(c.cantiere).push(c);
+    });
+    const blocks = [...byCantiere.entries()].map(([cantiere, giorni]) => `
+      <div class="pw-meteo-modal-block">
+        <div class="pw-meteo-modal-cantiere">${esc(cantiere)}</div>
+        ${giorni.map(dayLine).join('')}
+      </div>`).join('');
+    return `<div class="pw-meteo-modal-section">
+      <div class="pw-meteo-modal-sev-header pw-meteo-modal-sev-${sev}">${icon} ${label}</div>
+      ${blocks}
+    </div>`;
+  };
+
   const rows = crit.length
-    ? crit.map(c => {
-        const sevLabel = c.severity === 'alta' ? '🔴 Alta' : '🟠 Media';
-        const [, mm, dd] = c.dateISO.split('-');
-        const meteoLine = c.info
-          ? `${pwMeteoIconFor(c.info.code)} ${Math.round(c.info.tmax)}°/${Math.round(c.info.tmin)}°${c.info.pop != null ? ' · 💧' + Math.round(c.info.pop) + '%' : ''}`
-          : '';
-        const pcLine = c.pcColor
-          ? `📋 Bollettino PC: allerta ${c.pcColor}${c.pcInfo && c.pcInfo.zona ? ' — zona ' + esc(c.pcInfo.zona) : ''}`
-          : '';
-        const righe = [meteoLine, pcLine].filter(Boolean).join('<br>');
-        return `<div class="pw-meteo-modal-block">
-          <div class="pw-meteo-modal-cantiere">${esc(c.cantiere)} — ${DAY_NAMES_FULL[c.dayIdx]} ${dd}/${mm}</div>
-          <div class="pw-meteo-modal-info">${sevLabel} · ${righe}</div>
-        </div>`;
-      }).join('')
+    ? sectionFor('alta', 'Priorità alta', '🔴') + sectionFor('media', 'Priorità media', '🟠')
     : `<div class="text-slate-400 text-sm">Nessuna criticità meteo rilevata nei cantieri pianificati questa settimana.</div>`;
   root.innerHTML = `<div class="modal-backdrop"><div class="bg-white rounded-lg shadow-xl w-full max-w-lg mx-4 my-8 p-5">
     <h3 class="font-semibold text-slate-900 mb-1">⛈️ Criticità meteo — settimana</h3>

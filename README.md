@@ -1,3 +1,6 @@
+## v18.130.0
+- fix: **Modal "Criticità meteo" — raggruppato per priorità e commessa** — il dettaglio del widget (introdotto in v18.127.0) elencava una riga per ogni combinazione cantiere/giorno, di lettura scomoda quando una stessa commessa aveva più giorni a rischio. Ora è raggruppato in due sezioni per severità (🔴 Priorità alta, 🟠 Priorità media) e, dentro ciascuna, per commessa/cantiere, con i giorni a rischio elencati sotto ognuna. Nessuna modifica alla logica di calcolo delle criticità, solo alla presentazione.
+
 ## v18.129.0
 - fix: **Bollettino Protezione Civile — copertura anche prima della pubblicazione del giorno** — il bollettino esce di norma entro le 16:00, quindi nelle ore precedenti non era ancora disponibile su GitHub e il widget "Criticità meteo" restava senza il segnale PC per mezza giornata. Ora, se il bollettino di oggi non è ancora pubblicato, si usa la sezione "domani" di quello di ieri (che copre esattamente oggi), verificato contro i dati reali del repo.
 
