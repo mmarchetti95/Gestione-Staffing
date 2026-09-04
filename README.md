@@ -1,3 +1,6 @@
+## v18.137.0
+- fix: **Modal generici (conferma/alert) finivano dietro i modal di Gestione utenti** — confermando l'eliminazione di un utente dal pannello admin, il modal "Elimina utente" (`showConfirmAsync`, z-index 10050) appariva dietro il modal "Gestione utenti" (z-index 99999), risultando invisibile/non cliccabile. Portato lo z-index dei modal generici a 100050, sopra tutti i modal `sb-*` esistenti (max 100000).
+
 ## v18.136.0
 - fix: **Mail settimanale — sezione "FERIE / PERMESSI" non include più i "non disponibile"** — la sezione automatica generata nel testo della mail elencava anche i giorni marcati "non disponibile" (non ferie vere e proprie), con l'etichetta "(non disponibile)" accanto al giorno. Ora la sezione considera solo i giorni di ferie effettive: un operatore con solo giorni "non disponibile" (nessun giorno di ferie) non compare più in quella sezione.
 
