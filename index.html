@@ -1140,7 +1140,7 @@
     <div class="flex items-center gap-2">
       <button id="btn-presentation" class="px-3 py-1.5 text-sm rounded hover:bg-white/10" style="border:1px solid var(--dark-border-strong);color:var(--dark-text);visibility:visible;">📊 Modalità presentazione</button>
       <div class="text-xs pl-2" style="border-left:1px solid var(--dark-border-strong);color:var(--dark-text-muted);">
-        <span id="app-version" class="font-medium" style="color:var(--accent);">v18.132.0</span> · Michele Marchetti
+        <span id="app-version" class="font-medium" style="color:var(--accent);">v18.134.0</span> · Michele Marchetti
       </div>
     </div>
   </div>
@@ -3569,26 +3569,56 @@ function showKpiModal(type) {
     const scadenze = attScadenzeOperatori();
     const scaduti = scadenze.filter(s => s.stato === 'scaduto');
     const inScadenza = scadenze.filter(s => s.stato === 'scadenza');
-    const riga = s => `<tr style="background:${s.stato==='scaduto'?'#fff5f5':'#fffbeb'};">
-      <td style="padding:7px 10px;font-weight:600;color:#1e293b;">${esc(s.op.nome_esteso||s.op.nome||'')}</td>
-      <td style="padding:7px 10px;color:#475569;">${esc(s.nome)}</td>
-      <td style="padding:7px 10px;color:#64748b;white-space:nowrap;">${fmtDate(s.scad)}</td>
-      <td style="padding:7px 10px;text-align:center;font-weight:700;color:${s.stato==='scaduto'?'#dc2626':'#c2410c'};">${s.stato==='scaduto' ? ('scaduto da '+Math.abs(s.giorni)+'gg') : ('tra '+s.giorni+'gg')}</td>
-    </tr>`;
+
+    // raggruppa le voci per operatore, ordinando i gruppi alfabeticamente
+    // (le voci dentro ogni gruppo restano ordinate per urgenza)
+    const raggruppaPerOperatore = lista => {
+      const gruppi = [];
+      const byKey = new Map();
+      lista.forEach(s => {
+        const key = s.op.id || s.op.nome_esteso || s.op.nome;
+        let g = byKey.get(key);
+        if (!g) { g = { op: s.op, voci: [] }; byKey.set(key, g); gruppi.push(g); }
+        g.voci.push(s);
+      });
+      gruppi.sort((a, b) => (a.op.nome_esteso||a.op.nome||'').localeCompare(b.op.nome_esteso||b.op.nome||'', 'it'));
+      return gruppi;
+    };
+
+    const sezione = (lista, opts) => {
+      if (!lista.length) return '';
+      const gruppi = raggruppaPerOperatore(lista);
+      return `<div style="margin-bottom:20px;">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;">
+          <span style="font-size:12px;font-weight:800;color:${opts.color};text-transform:uppercase;letter-spacing:.04em;">${opts.label}</span>
+          <span style="font-size:11px;font-weight:700;color:#fff;background:${opts.color};padding:1px 8px;border-radius:9999px;">${lista.length}</span>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:8px;">
+          ${gruppi.map(g => `
+            <div style="border:1px solid ${opts.border};border-radius:8px;background:${opts.bg};overflow:hidden;">
+              <div style="padding:8px 12px;font-weight:700;color:#1e293b;font-size:13px;border-bottom:1px solid ${opts.border};">${esc(g.op.nome_esteso||g.op.nome||'')}</div>
+              <div style="display:flex;flex-direction:column;">
+                ${g.voci.map((s,i) => `
+                  <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;padding:6px 12px;${i>0?`border-top:1px dashed ${opts.border};`:''}">
+                    <span style="color:#334155;font-size:12px;">${esc(s.nome)}</span>
+                    <span style="display:flex;align-items:center;gap:10px;flex-shrink:0;">
+                      <span style="color:#94a3b8;font-size:11px;white-space:nowrap;">${fmtDate(s.scad)}</span>
+                      <span style="font-weight:700;color:${opts.color};font-size:11px;white-space:nowrap;min-width:78px;text-align:right;">${s.stato==='scaduto' ? ('scaduto da '+Math.abs(s.giorni)+'gg') : ('tra '+s.giorni+'gg')}</span>
+                    </span>
+                  </div>`).join('')}
+              </div>
+            </div>`).join('')}
+        </div>
+      </div>`;
+    };
+
     if (scadenze.length === 0) {
       bodyHtml = `<div style="text-align:center;padding:32px;color:#16a34a;font-size:14px;">✅ Nessun attestato scaduto o in scadenza</div>`;
     } else {
-      bodyHtml = `<div style="font-size:12px;color:#64748b;margin-bottom:12px;">${scaduti.length} scaduti, ${inScadenza.length} in scadenza entro ${ATTESTATI_PREAVVISO_GG} giorni</div>
-      <table style="width:100%;border-collapse:collapse;font-size:13px;">
-        <thead><tr style="background:#fef3c7;">
-          <th style="text-align:left;padding:8px 10px;font-size:11px;color:#475569;font-weight:700;border-bottom:2px solid #fde68a;">Operatore</th>
-          <th style="text-align:left;padding:8px 10px;font-size:11px;color:#475569;font-weight:700;border-bottom:2px solid #fde68a;">Attestato</th>
-          <th style="text-align:left;padding:8px 10px;font-size:11px;color:#475569;font-weight:700;border-bottom:2px solid #fde68a;">Scadenza</th>
-          <th style="text-align:center;padding:8px 10px;font-size:11px;color:#475569;font-weight:700;border-bottom:2px solid #fde68a;">Stato</th>
-        </tr></thead><tbody>
-        ${scaduti.concat(inScadenza).map(riga).join('')}
-        </tbody></table>
-      <div style="margin-top:14px;text-align:right;">
+      bodyHtml = `<div style="font-size:12px;color:#64748b;margin-bottom:16px;">${scaduti.length} scaduti, ${inScadenza.length} in scadenza entro ${ATTESTATI_PREAVVISO_GG} giorni</div>
+      ${sezione(scaduti, { label: '❌ Scaduti', color: '#dc2626', bg: '#fff5f5', border: '#fecaca' })}
+      ${sezione(inScadenza, { label: '⚠️ In scadenza', color: '#c2410c', bg: '#fffbeb', border: '#fde68a' })}
+      <div style="margin-top:6px;text-align:right;">
         <button onclick="closeModal(); const d=document.getElementById('att-details'); if(d){ d.open=true; attToggleSezione(); d.scrollIntoView({behavior:'smooth'}); }"
           style="font-size:12px;padding:6px 12px;background:#0f172a;color:#fff;border:none;border-radius:6px;cursor:pointer;">Apri sezione Attestati &amp; scadenze →</button>
       </div>`;

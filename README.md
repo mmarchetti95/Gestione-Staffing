@@ -1,3 +1,6 @@
+## v18.134.0
+- fix: **Modal "Attestati scaduti o in scadenza" — leggibilità** — la lista era una tabella piatta con tutte le righe accorpate senza un ordine logico, difficile da scorrere. Ora è divisa in due sezioni (❌ Scaduti, ⚠️ In scadenza) con contatore, e dentro ciascuna sezione le voci sono raggruppate per operatore (una card per persona con tutti i suoi attestati elencati sotto, invece di ripetere il nome a ogni riga) e ordinate alfabeticamente.
+
 ## v18.132.0
 - fix: **Modal "Criticità meteo" — dimensione corretta e scrollabile** — con più giorni/commesse a rischio (v18.131.0) il modal cresceva oltre l'altezza della finestra, tagliando il contenuto senza modo di scrollarlo. Ora usa la stessa convenzione degli altri modal dell'app (`max-h-[90vh] overflow-y-auto`, leggermente più largo): resta centrato in verticale e diventa scrollabile con barra quando il contenuto non ci sta.
 
