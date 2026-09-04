@@ -1,7 +1,7 @@
 # Graph Report - Gestione-Staffing  (2026-09-04)
 
 ## Corpus Check
-- 48 files · ~215,937 words
+- 48 files · ~215,463 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
@@ -10,7 +10,7 @@
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `8c2ffb1a`
+- Built from commit: `7aba8f50`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -78,8 +78,8 @@
 2. `new-project` - 14 edges
 3. `pwJiraSubtaskOpenComuniModal()` - 12 edges
 4. `esc()` - 12 edges
-5. `rsCalcola()` - 11 edges
-6. `pwGetFerieWeek()` - 11 edges
+5. `pwGetFerieWeek()` - 11 edges
+6. `rsCalcola()` - 11 edges
 7. `sbOnLoggedIn()` - 11 edges
 8. `renderAttestati()` - 11 edges
 9. `pwSpostDrawMap()` - 11 edges
@@ -260,7 +260,7 @@ Cohesion: 0.33
 Nodes (5): checkpoint, Gotchas, Resume flow, Save flow, Storage
 
 ## Knowledge Gaps
-- **111 isolated node(s):** `_geoCache`, `MAP_COLORS`, `_mapCollapsedCommesse`, `_mapCollapsedRegioniOp`, `_mapColors` (+106 more)
+- **111 isolated node(s):** `pwData`, `pwFerie`, `pwFerieDettagli`, `pwDoppiaWeek`, `_geoCache` (+106 more)
   These have ≤1 connection - possible missing edges or undocumented components.
 - **20 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
 
@@ -273,7 +273,7 @@ _Questions this graph is uniquely positioned to answer:_
   _High betweenness centrality (0.002) - this node is a cross-community bridge._
 - **Are the 3 inferred relationships involving `esc()` (e.g. with `listBox()` and `rowHtml()`) actually correct?**
   _`esc()` has 3 INFERRED edges - model-reasoned connections that need verification._
-- **What connects `_geoCache`, `MAP_COLORS`, `_mapCollapsedCommesse` to the rest of the system?**
+- **What connects `pwData`, `pwFerie`, `pwFerieDettagli` to the rest of the system?**
   _111 weakly-connected nodes found - possible documentation gaps or missing edges._
 - **Should `Griglia Settimanale Tab` be split into smaller, more focused modules?**
   _Cohesion score 0.0636734693877551 - nodes in this community are weakly interconnected._

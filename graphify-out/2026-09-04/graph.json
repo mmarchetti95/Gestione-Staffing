@@ -2346,10 +2346,10 @@
       "source_location": "L530",
       "_callable": true,
       "_origin": "ast",
+      "id": "src_js_weekly_mail_core_formatdate",
       "community": 2,
       "community_name": "weekly-mail-core.js",
-      "norm_label": "formatdate()",
-      "id": "src_js_weekly_mail_core_formatdate"
+      "norm_label": "formatdate()"
     },
     {
       "label": "formatDateFull()",
@@ -2358,10 +2358,10 @@
       "source_location": "L534",
       "_callable": true,
       "_origin": "ast",
+      "id": "src_js_weekly_mail_core_formatdatefull",
       "community": 2,
       "community_name": "weekly-mail-core.js",
-      "norm_label": "formatdatefull()",
-      "id": "src_js_weekly_mail_core_formatdatefull"
+      "norm_label": "formatdatefull()"
     },
     {
       "label": "isoWeekToMonday()",
@@ -2370,10 +2370,10 @@
       "source_location": "L515",
       "_callable": true,
       "_origin": "ast",
+      "id": "src_js_weekly_mail_core_isoweektomonday",
       "community": 2,
       "community_name": "weekly-mail-core.js",
-      "norm_label": "isoweektomonday()",
-      "id": "src_js_weekly_mail_core_isoweektomonday"
+      "norm_label": "isoweektomonday()"
     },
     {
       "label": "isoWeekYear()",
@@ -2382,10 +2382,10 @@
       "source_location": "L503",
       "_callable": true,
       "_origin": "ast",
+      "id": "src_js_weekly_mail_core_isoweekyear",
       "community": 2,
       "community_name": "weekly-mail-core.js",
-      "norm_label": "isoweekyear()",
-      "id": "src_js_weekly_mail_core_isoweekyear"
+      "norm_label": "isoweekyear()"
     },
     {
       "label": "pwCellCantieri()",
@@ -2394,10 +2394,10 @@
       "source_location": "L549",
       "_callable": true,
       "_origin": "ast",
+      "id": "src_js_weekly_mail_core_pwcellcantieri",
       "community": 2,
       "community_name": "weekly-mail-core.js",
-      "norm_label": "pwcellcantieri()",
-      "id": "src_js_weekly_mail_core_pwcellcantieri"
+      "norm_label": "pwcellcantieri()"
     },
     {
       "label": "pwCellCantieriRaw()",
@@ -2406,10 +2406,10 @@
       "source_location": "L559",
       "_callable": true,
       "_origin": "ast",
+      "id": "src_js_weekly_mail_core_pwcellcantieriraw",
       "community": 2,
       "community_name": "weekly-mail-core.js",
-      "norm_label": "pwcellcantieriraw()",
-      "id": "src_js_weekly_mail_core_pwcellcantieriraw"
+      "norm_label": "pwcellcantieriraw()"
     },
     {
       "label": "pwDwCount()",
@@ -2418,10 +2418,10 @@
       "source_location": "L625",
       "_callable": true,
       "_origin": "ast",
+      "id": "src_js_weekly_mail_core_pwdwcount",
       "community": 2,
       "community_name": "weekly-mail-core.js",
-      "norm_label": "pwdwcount()",
-      "id": "src_js_weekly_mail_core_pwdwcount"
+      "norm_label": "pwdwcount()"
     },
     {
       "label": "pwDwLoad()",
@@ -2430,10 +2430,10 @@
       "source_location": "L654",
       "_callable": true,
       "_origin": "ast",
+      "id": "src_js_weekly_mail_core_pwdwload",
       "community": 2,
       "community_name": "weekly-mail-core.js",
-      "norm_label": "pwdwload()",
-      "id": "src_js_weekly_mail_core_pwdwload"
+      "norm_label": "pwdwload()"
     },
     {
       "label": "pwFerieCellCtxMenu()",
@@ -2442,10 +2442,10 @@
       "source_location": "L913",
       "_callable": true,
       "_origin": "ast",
+      "id": "src_js_weekly_mail_core_pwferiecellctxmenu",
       "community": 2,
       "community_name": "weekly-mail-core.js",
-      "norm_label": "pwferiecellctxmenu()",
-      "id": "src_js_weekly_mail_core_pwferiecellctxmenu"
+      "norm_label": "pwferiecellctxmenu()"
     },
     {
       "label": "pwFerieLoad()",
@@ -2454,10 +2454,10 @@
       "source_location": "L649",
       "_callable": true,
       "_origin": "ast",
+      "id": "src_js_weekly_mail_core_pwferieload",
       "community": 2,
       "community_name": "weekly-mail-core.js",
-      "norm_label": "pwferieload()",
-      "id": "src_js_weekly_mail_core_pwferieload"
+      "norm_label": "pwferieload()"
     },
     {
       "label": "pwFerieRender()",
@@ -2466,10 +2466,10 @@
       "source_location": "L744",
       "_callable": true,
       "_origin": "ast",
+      "id": "src_js_weekly_mail_core_pwferierender",
       "community": 2,
       "community_name": "weekly-mail-core.js",
-      "norm_label": "pwferierender()",
-      "id": "src_js_weekly_mail_core_pwferierender"
+      "norm_label": "pwferierender()"
     },
     {
       "label": "pwFerieSave()",
@@ -2478,10 +2478,10 @@
       "source_location": "L658",
       "_callable": true,
       "_origin": "ast",
+      "id": "src_js_weekly_mail_core_pwferiesave",
       "community": 2,
       "community_name": "weekly-mail-core.js",
-      "norm_label": "pwferiesave()",
-      "id": "src_js_weekly_mail_core_pwferiesave"
+      "norm_label": "pwferiesave()"
     },
     {
       "label": "pwFerieSummaryRender()",
@@ -2490,10 +2490,10 @@
       "source_location": "L822",
       "_callable": true,
       "_origin": "ast",
+      "id": "src_js_weekly_mail_core_pwferiesummaryrender",
       "community": 2,
       "community_name": "weekly-mail-core.js",
-      "norm_label": "pwferiesummaryrender()",
-      "id": "src_js_weekly_mail_core_pwferiesummaryrender"
+      "norm_label": "pwferiesummaryrender()"
     },
     {
       "label": "pwFerieTipo()",
@@ -2502,10 +2502,10 @@
       "source_location": "L576",
       "_callable": true,
       "_origin": "ast",
+      "id": "src_js_weekly_mail_core_pwferietipo",
       "community": 2,
       "community_name": "weekly-mail-core.js",
-      "norm_label": "pwferietipo()",
-      "id": "src_js_weekly_mail_core_pwferietipo"
+      "norm_label": "pwferietipo()"
     },
     {
       "label": "pwFerieTipoWeek()",
@@ -2514,10 +2514,10 @@
       "source_location": "L720",
       "_callable": true,
       "_origin": "ast",
+      "id": "src_js_weekly_mail_core_pwferietipoweek",
       "community": 2,
       "community_name": "weekly-mail-core.js",
-      "norm_label": "pwferietipoweek()",
-      "id": "src_js_weekly_mail_core_pwferietipoweek"
+      "norm_label": "pwferietipoweek()"
     },
     {
       "label": "pwFerieToggleWeek()",
@@ -2526,10 +2526,10 @@
       "source_location": "L894",
       "_callable": true,
       "_origin": "ast",
+      "id": "src_js_weekly_mail_core_pwferietoggleweek",
       "community": 2,
       "community_name": "weekly-mail-core.js",
-      "norm_label": "pwferietoggleweek()",
-      "id": "src_js_weekly_mail_core_pwferietoggleweek"
+      "norm_label": "pwferietoggleweek()"
     },
     {
       "label": "pwGeneraMail()",
@@ -2538,10 +2538,10 @@
       "source_location": "L2",
       "_callable": true,
       "_origin": "ast",
+      "id": "src_js_weekly_mail_core_pwgeneramail",
       "community": 2,
       "community_name": "weekly-mail-core.js",
-      "norm_label": "pwgeneramail()",
-      "id": "src_js_weekly_mail_core_pwgeneramail"
+      "norm_label": "pwgeneramail()"
     },
     {
       "label": "componiTesto()",
@@ -2550,10 +2550,10 @@
       "source_location": "L196",
       "_callable": true,
       "_origin": "ast",
+      "id": "src_js_weekly_mail_core_pwgeneramail_componitesto",
       "community": 2,
       "community_name": "weekly-mail-core.js",
-      "norm_label": "componitesto()",
-      "id": "src_js_weekly_mail_core_pwgeneramail_componitesto"
+      "norm_label": "componitesto()"
     },
     {
       "label": "salvaNoteSq()",
@@ -2562,10 +2562,10 @@
       "source_location": "L335",
       "_callable": true,
       "_origin": "ast",
+      "id": "src_js_weekly_mail_core_pwgeneramail_salvanotesq",
       "community": 2,
       "community_name": "weekly-mail-core.js",
-      "norm_label": "salvanotesq()",
-      "id": "src_js_weekly_mail_core_pwgeneramail_salvanotesq"
+      "norm_label": "salvanotesq()"
     },
     {
       "label": "pwGetCommesseValide()",
@@ -2574,10 +2574,10 @@
       "source_location": "L965",
       "_callable": true,
       "_origin": "ast",
+      "id": "src_js_weekly_mail_core_pwgetcommessevalide",
       "community": 2,
       "community_name": "weekly-mail-core.js",
-      "norm_label": "pwgetcommessevalide()",
-      "id": "src_js_weekly_mail_core_pwgetcommessevalide"
+      "norm_label": "pwgetcommessevalide()"
     },
     {
       "label": "pwGetFerieDettagliWeek()",
@@ -2586,10 +2586,10 @@
       "source_location": "L672",
       "_callable": true,
       "_origin": "ast",
+      "id": "src_js_weekly_mail_core_pwgetferiedettagliweek",
       "community": 2,
       "community_name": "weekly-mail-core.js",
-      "norm_label": "pwgetferiedettagliweek()",
-      "id": "src_js_weekly_mail_core_pwgetferiedettagliweek"
+      "norm_label": "pwgetferiedettagliweek()"
     },
     {
       "label": "pwGetFerieWeek()",
@@ -2598,10 +2598,10 @@
       "source_location": "L678",
       "_callable": true,
       "_origin": "ast",
+      "id": "src_js_weekly_mail_core_pwgetferieweek",
       "community": 2,
       "community_name": "weekly-mail-core.js",
-      "norm_label": "pwgetferieweek()",
-      "id": "src_js_weekly_mail_core_pwgetferieweek"
+      "norm_label": "pwgetferieweek()"
     },
     {
       "label": "pwGetOperatoriPerCommessa()",
@@ -2610,10 +2610,10 @@
       "source_location": "L1000",
       "_callable": true,
       "_origin": "ast",
+      "id": "src_js_weekly_mail_core_pwgetoperatoripercommessa",
       "community": 2,
       "community_name": "weekly-mail-core.js",
-      "norm_label": "pwgetoperatoripercommessa()",
-      "id": "src_js_weekly_mail_core_pwgetoperatoripercommessa"
+      "norm_label": "pwgetoperatoripercommessa()"
     },
     {
       "label": "pwGetWeekData()",
@@ -2622,10 +2622,10 @@
       "source_location": "L958",
       "_callable": true,
       "_origin": "ast",
+      "id": "src_js_weekly_mail_core_pwgetweekdata",
       "community": 2,
       "community_name": "weekly-mail-core.js",
-      "norm_label": "pwgetweekdata()",
-      "id": "src_js_weekly_mail_core_pwgetweekdata"
+      "norm_label": "pwgetweekdata()"
     },
     {
       "label": "pwHasFeriaWeek()",
@@ -2634,10 +2634,10 @@
       "source_location": "L601",
       "_callable": true,
       "_origin": "ast",
+      "id": "src_js_weekly_mail_core_pwhasferiaweek",
       "community": 2,
       "community_name": "weekly-mail-core.js",
-      "norm_label": "pwhasferiaweek()",
-      "id": "src_js_weekly_mail_core_pwhasferiaweek"
+      "norm_label": "pwhasferiaweek()"
     },
     {
       "label": "pwIsDwStart()",
@@ -2646,10 +2646,10 @@
       "source_location": "L609",
       "_callable": true,
       "_origin": "ast",
+      "id": "src_js_weekly_mail_core_pwisdwstart",
       "community": 2,
       "community_name": "weekly-mail-core.js",
-      "norm_label": "pwisdwstart()",
-      "id": "src_js_weekly_mail_core_pwisdwstart"
+      "norm_label": "pwisdwstart()"
     },
     {
       "label": "pwIsGiaAssegnato()",
@@ -2658,10 +2658,10 @@
       "source_location": "L697",
       "_callable": true,
       "_origin": "ast",
+      "id": "src_js_weekly_mail_core_pwisgiaassegnato",
       "community": 2,
       "community_name": "weekly-mail-core.js",
-      "norm_label": "pwisgiaassegnato()",
-      "id": "src_js_weekly_mail_core_pwisgiaassegnato"
+      "norm_label": "pwisgiaassegnato()"
     },
     {
       "label": "pwIsInFerie()",
@@ -2670,10 +2670,10 @@
       "source_location": "L685",
       "_callable": true,
       "_origin": "ast",
+      "id": "src_js_weekly_mail_core_pwisinferie",
       "community": 2,
       "community_name": "weekly-mail-core.js",
-      "norm_label": "pwisinferie()",
-      "id": "src_js_weekly_mail_core_pwisinferie"
+      "norm_label": "pwisinferie()"
     },
     {
       "label": "pwLoad()",
@@ -2682,10 +2682,10 @@
       "source_location": "L938",
       "_callable": true,
       "_origin": "ast",
+      "id": "src_js_weekly_mail_core_pwload",
       "community": 2,
       "community_name": "weekly-mail-core.js",
-      "norm_label": "pwload()",
-      "id": "src_js_weekly_mail_core_pwload"
+      "norm_label": "pwload()"
     },
     {
       "label": "pwMonthWeeks()",
@@ -2694,10 +2694,10 @@
       "source_location": "L637",
       "_callable": true,
       "_origin": "ast",
+      "id": "src_js_weekly_mail_core_pwmonthweeks",
       "community": 2,
       "community_name": "weekly-mail-core.js",
-      "norm_label": "pwmonthweeks()",
-      "id": "src_js_weekly_mail_core_pwmonthweeks"
+      "norm_label": "pwmonthweeks()"
     },
     {
       "label": "pwSave()",
@@ -2706,10 +2706,10 @@
       "source_location": "L947",
       "_callable": true,
       "_origin": "ast",
+      "id": "src_js_weekly_mail_core_pwsave",
       "community": 2,
       "community_name": "weekly-mail-core.js",
-      "norm_label": "pwsave()",
-      "id": "src_js_weekly_mail_core_pwsave"
+      "norm_label": "pwsave()"
     },
     {
       "label": "pwSetDwStart()",
@@ -2718,10 +2718,10 @@
       "source_location": "L613",
       "_callable": true,
       "_origin": "ast",
+      "id": "src_js_weekly_mail_core_pwsetdwstart",
       "community": 2,
       "community_name": "weekly-mail-core.js",
-      "norm_label": "pwsetdwstart()",
-      "id": "src_js_weekly_mail_core_pwsetdwstart"
+      "norm_label": "pwsetdwstart()"
     },
     {
       "label": "pwSetFeriaTipo()",
@@ -2730,10 +2730,10 @@
       "source_location": "L925",
       "_callable": true,
       "_origin": "ast",
+      "id": "src_js_weekly_mail_core_pwsetferiatipo",
       "community": 2,
       "community_name": "weekly-mail-core.js",
-      "norm_label": "pwsetferiatipo()",
-      "id": "src_js_weekly_mail_core_pwsetferiatipo"
+      "norm_label": "pwsetferiatipo()"
     },
     {
       "label": "pwStatoOperatore()",
@@ -2742,10 +2742,10 @@
       "source_location": "L735",
       "_callable": true,
       "_origin": "ast",
+      "id": "src_js_weekly_mail_core_pwstatooperatore",
       "community": 2,
       "community_name": "weekly-mail-core.js",
-      "norm_label": "pwstatooperatore()",
-      "id": "src_js_weekly_mail_core_pwstatooperatore"
+      "norm_label": "pwstatooperatore()"
     },
     {
       "label": "pwToggleFeria()",
@@ -2754,10 +2754,10 @@
       "source_location": "L857",
       "_callable": true,
       "_origin": "ast",
+      "id": "src_js_weekly_mail_core_pwtoggleferia",
       "community": 2,
       "community_name": "weekly-mail-core.js",
-      "norm_label": "pwtoggleferia()",
-      "id": "src_js_weekly_mail_core_pwtoggleferia"
+      "norm_label": "pwtoggleferia()"
     },
     {
       "label": "pwWeekAdd()",
@@ -2766,10 +2766,10 @@
       "source_location": "L593",
       "_callable": true,
       "_origin": "ast",
+      "id": "src_js_weekly_mail_core_pwweekadd",
       "community": 2,
       "community_name": "weekly-mail-core.js",
-      "norm_label": "pwweekadd()",
-      "id": "src_js_weekly_mail_core_pwweekadd"
+      "norm_label": "pwweekadd()"
     },
     {
       "label": "weeksInYear()",
@@ -2778,10 +2778,10 @@
       "source_location": "L524",
       "_callable": true,
       "_origin": "ast",
+      "id": "src_js_weekly_mail_core_weeksinyear",
       "community": 2,
       "community_name": "weekly-mail-core.js",
-      "norm_label": "weeksinyear()",
-      "id": "src_js_weekly_mail_core_weeksinyear"
+      "norm_label": "weeksinyear()"
     },
     {
       "label": "pwFerieDettaglioBadge()",
@@ -3555,13 +3555,13 @@
       "label": "_find_eslint()",
       "file_type": "code",
       "source_file": "scripts/smoke_test.py",
-      "source_location": "L217",
+      "source_location": "L179",
       "_callable": true,
       "_origin": "ast",
-      "id": "scripts_smoke_test_find_eslint",
       "community": 28,
       "community_name": "smoke_test.py",
-      "norm_label": "_find_eslint()"
+      "norm_label": "_find_eslint()",
+      "id": "scripts_smoke_test_find_eslint"
     },
     {
       "label": "main()",
@@ -3570,22 +3570,22 @@
       "source_location": "L28",
       "_callable": true,
       "_origin": "ast",
-      "id": "scripts_smoke_test_main",
       "community": 28,
       "community_name": "smoke_test.py",
-      "norm_label": "main()"
+      "norm_label": "main()",
+      "id": "scripts_smoke_test_main"
     },
     {
       "label": "_run_eslint_noundef()",
       "file_type": "code",
       "source_file": "scripts/smoke_test.py",
-      "source_location": "L230",
+      "source_location": "L192",
       "_callable": true,
       "_origin": "ast",
-      "id": "scripts_smoke_test_run_eslint_noundef",
       "community": 28,
       "community_name": "smoke_test.py",
-      "norm_label": "_run_eslint_noundef()"
+      "norm_label": "_run_eslint_noundef()",
+      "id": "scripts_smoke_test_run_eslint_noundef"
     },
     {
       "label": "getNomiCommesseAttive()",
@@ -6934,10 +6934,10 @@
       "source_file": "src/js/weekly-mail-core.js",
       "source_location": "L1",
       "_origin": "ast",
+      "id": "src_js_weekly_mail_core",
       "community": 2,
       "community_name": "weekly-mail-core.js",
-      "norm_label": "weekly-mail-core.js",
-      "id": "src_js_weekly_mail_core"
+      "norm_label": "weekly-mail-core.js"
     },
     {
       "label": "pwData",
@@ -6945,10 +6945,10 @@
       "source_file": "src/js/weekly-mail-core.js",
       "source_location": "L543",
       "_origin": "ast",
+      "id": "src_js_weekly_mail_core_pwdata",
       "community": 2,
       "community_name": "weekly-mail-core.js",
-      "norm_label": "pwdata",
-      "id": "src_js_weekly_mail_core_pwdata"
+      "norm_label": "pwdata"
     },
     {
       "label": "pwDoppiaWeek",
@@ -6956,10 +6956,10 @@
       "source_file": "src/js/weekly-mail-core.js",
       "source_location": "L590",
       "_origin": "ast",
+      "id": "src_js_weekly_mail_core_pwdoppiaweek",
       "community": 2,
       "community_name": "weekly-mail-core.js",
-      "norm_label": "pwdoppiaweek",
-      "id": "src_js_weekly_mail_core_pwdoppiaweek"
+      "norm_label": "pwdoppiaweek"
     },
     {
       "label": "pwFerie",
@@ -6967,10 +6967,10 @@
       "source_file": "src/js/weekly-mail-core.js",
       "source_location": "L572",
       "_origin": "ast",
+      "id": "src_js_weekly_mail_core_pwferie",
       "community": 2,
       "community_name": "weekly-mail-core.js",
-      "norm_label": "pwferie",
-      "id": "src_js_weekly_mail_core_pwferie"
+      "norm_label": "pwferie"
     },
     {
       "label": "pwFerieDettagli",
@@ -6978,10 +6978,10 @@
       "source_file": "src/js/weekly-mail-core.js",
       "source_location": "L586",
       "_origin": "ast",
+      "id": "src_js_weekly_mail_core_pwferiedettagli",
       "community": 2,
       "community_name": "weekly-mail-core.js",
-      "norm_label": "pwferiedettagli",
-      "id": "src_js_weekly_mail_core_pwferiedettagli"
+      "norm_label": "pwferiedettagli"
     },
     {
       "label": "weekly-ferie-import.js",
@@ -7143,32 +7143,32 @@
       "source_file": "scripts/smoke_test.py",
       "source_location": "L1",
       "_origin": "ast",
-      "id": "scripts_smoke_test",
       "community": 28,
       "community_name": "smoke_test.py",
-      "norm_label": "smoke_test.py"
+      "norm_label": "smoke_test.py",
+      "id": "scripts_smoke_test"
     },
     {
       "label": "Cerca l'eseguibile eslint in vari percorsi noti; None se assente.",
       "file_type": "rationale",
       "source_file": "scripts/smoke_test.py",
-      "source_location": "L218",
+      "source_location": "L180",
       "_origin": "ast",
-      "id": "scripts_smoke_test_rationale_218",
       "community": 28,
       "community_name": "smoke_test.py",
-      "norm_label": "cerca l'eseguibile eslint in vari percorsi noti; none se assente."
+      "norm_label": "cerca l'eseguibile eslint in vari percorsi noti; none se assente.",
+      "id": "scripts_smoke_test_rationale_180"
     },
     {
       "label": "Esegue eslint (solo regola no-undef) sul JS e ritorna lista (nome, riga).",
       "file_type": "rationale",
       "source_file": "scripts/smoke_test.py",
-      "source_location": "L231",
+      "source_location": "L193",
       "_origin": "ast",
-      "id": "scripts_smoke_test_rationale_231",
       "community": 28,
       "community_name": "smoke_test.py",
-      "norm_label": "esegue eslint (solo regola no-undef) sul js e ritorna lista (nome, riga)."
+      "norm_label": "esegue eslint (solo regola no-undef) sul js e ritorna lista (nome, riga).",
+      "id": "scripts_smoke_test_rationale_193"
     },
     {
       "label": "dashboard-commesse.js",
@@ -9760,9 +9760,9 @@
       "source_location": "L136",
       "weight": 1.0,
       "_origin": "ast",
+      "confidence_score": 1.0,
       "source": "scripts_smoke_test_main",
-      "target": "scripts_smoke_test_find_eslint",
-      "confidence_score": 1.0
+      "target": "scripts_smoke_test_find_eslint"
     },
     {
       "relation": "calls",
@@ -9772,9 +9772,9 @@
       "source_location": "L140",
       "weight": 1.0,
       "_origin": "ast",
+      "confidence_score": 1.0,
       "source": "scripts_smoke_test_main",
-      "target": "scripts_smoke_test_run_eslint_noundef",
-      "confidence_score": 1.0
+      "target": "scripts_smoke_test_run_eslint_noundef"
     },
     {
       "relation": "calls",
@@ -13288,9 +13288,9 @@
       "source_location": "L627",
       "weight": 1.0,
       "_origin": "ast",
-      "confidence_score": 1.0,
       "source": "src_js_weekly_mail_core_pwdwcount",
-      "target": "src_js_weekly_mail_core_pwisdwstart"
+      "target": "src_js_weekly_mail_core_pwisdwstart",
+      "confidence_score": 1.0
     },
     {
       "relation": "calls",
@@ -13300,9 +13300,9 @@
       "source_location": "L915",
       "weight": 1.0,
       "_origin": "ast",
-      "confidence_score": 1.0,
       "source": "src_js_weekly_mail_core_pwferiecellctxmenu",
-      "target": "src_js_weekly_mail_core_pwgetferieweek"
+      "target": "src_js_weekly_mail_core_pwgetferieweek",
+      "confidence_score": 1.0
     },
     {
       "relation": "calls",
@@ -13312,9 +13312,9 @@
       "source_location": "L916",
       "weight": 1.0,
       "_origin": "ast",
-      "confidence_score": 1.0,
       "source": "src_js_weekly_mail_core_pwferiecellctxmenu",
-      "target": "src_js_weekly_mail_core_pwferietipo"
+      "target": "src_js_weekly_mail_core_pwferietipo",
+      "confidence_score": 1.0
     },
     {
       "relation": "calls",
@@ -13324,9 +13324,9 @@
       "source_location": "L918",
       "weight": 1.0,
       "_origin": "ast",
-      "confidence_score": 1.0,
       "source": "src_js_weekly_mail_core_pwferiecellctxmenu",
-      "target": "src_js_weekly_mail_core_pwsetferiatipo"
+      "target": "src_js_weekly_mail_core_pwsetferiatipo",
+      "confidence_score": 1.0
     },
     {
       "relation": "calls",
@@ -13336,9 +13336,9 @@
       "source_location": "L745",
       "weight": 1.0,
       "_origin": "ast",
-      "confidence_score": 1.0,
       "source": "src_js_weekly_mail_core_pwferierender",
-      "target": "src_js_weekly_mail_core_pwgetferieweek"
+      "target": "src_js_weekly_mail_core_pwgetferieweek",
+      "confidence_score": 1.0
     },
     {
       "relation": "calls",
@@ -13348,9 +13348,9 @@
       "source_location": "L746",
       "weight": 1.0,
       "_origin": "ast",
-      "confidence_score": 1.0,
       "source": "src_js_weekly_mail_core_pwferierender",
-      "target": "src_js_weekly_mail_core_isoweektomonday"
+      "target": "src_js_weekly_mail_core_isoweektomonday",
+      "confidence_score": 1.0
     },
     {
       "relation": "calls",
@@ -13360,9 +13360,9 @@
       "source_location": "L758",
       "weight": 1.0,
       "_origin": "ast",
-      "confidence_score": 1.0,
       "source": "src_js_weekly_mail_core_pwferierender",
-      "target": "src_js_weekly_mail_core_formatdate"
+      "target": "src_js_weekly_mail_core_formatdate",
+      "confidence_score": 1.0
     },
     {
       "relation": "calls",
@@ -13372,9 +13372,9 @@
       "source_location": "L781",
       "weight": 1.0,
       "_origin": "ast",
-      "confidence_score": 1.0,
       "source": "src_js_weekly_mail_core_pwferierender",
-      "target": "src_js_weekly_mail_core_pwgetferiedettagliweek"
+      "target": "src_js_weekly_mail_core_pwgetferiedettagliweek",
+      "confidence_score": 1.0
     },
     {
       "relation": "calls",
@@ -13384,9 +13384,9 @@
       "source_location": "L789",
       "weight": 1.0,
       "_origin": "ast",
-      "confidence_score": 1.0,
       "source": "src_js_weekly_mail_core_pwferierender",
-      "target": "src_js_weekly_mail_core_pwferietipo"
+      "target": "src_js_weekly_mail_core_pwferietipo",
+      "confidence_score": 1.0
     },
     {
       "relation": "calls",
@@ -13396,9 +13396,9 @@
       "source_location": "L819",
       "weight": 1.0,
       "_origin": "ast",
-      "confidence_score": 1.0,
       "source": "src_js_weekly_mail_core_pwferierender",
-      "target": "src_js_weekly_mail_core_pwferiesummaryrender"
+      "target": "src_js_weekly_mail_core_pwferiesummaryrender",
+      "confidence_score": 1.0
     },
     {
       "relation": "calls",
@@ -13408,9 +13408,9 @@
       "source_location": "L823",
       "weight": 1.0,
       "_origin": "ast",
-      "confidence_score": 1.0,
       "source": "src_js_weekly_mail_core_pwferiesummaryrender",
-      "target": "src_js_weekly_mail_core_pwgetferieweek"
+      "target": "src_js_weekly_mail_core_pwgetferieweek",
+      "confidence_score": 1.0
     },
     {
       "relation": "calls",
@@ -13420,9 +13420,9 @@
       "source_location": "L833",
       "weight": 1.0,
       "_origin": "ast",
-      "confidence_score": 1.0,
       "source": "src_js_weekly_mail_core_pwferiesummaryrender",
-      "target": "src_js_weekly_mail_core_pwferietipo"
+      "target": "src_js_weekly_mail_core_pwferietipo",
+      "confidence_score": 1.0
     },
     {
       "relation": "calls",
@@ -13432,9 +13432,9 @@
       "source_location": "L838",
       "weight": 1.0,
       "_origin": "ast",
-      "confidence_score": 1.0,
       "source": "src_js_weekly_mail_core_pwferiesummaryrender",
-      "target": "src_js_weekly_mail_core_formatdate"
+      "target": "src_js_weekly_mail_core_formatdate",
+      "confidence_score": 1.0
     },
     {
       "relation": "calls",
@@ -13444,9 +13444,9 @@
       "source_location": "L721",
       "weight": 1.0,
       "_origin": "ast",
-      "confidence_score": 1.0,
       "source": "src_js_weekly_mail_core_pwferietipoweek",
-      "target": "src_js_weekly_mail_core_pwgetferieweek"
+      "target": "src_js_weekly_mail_core_pwgetferieweek",
+      "confidence_score": 1.0
     },
     {
       "relation": "calls",
@@ -13456,9 +13456,9 @@
       "source_location": "L726",
       "weight": 1.0,
       "_origin": "ast",
-      "confidence_score": 1.0,
       "source": "src_js_weekly_mail_core_pwferietipoweek",
-      "target": "src_js_weekly_mail_core_pwferietipo"
+      "target": "src_js_weekly_mail_core_pwferietipo",
+      "confidence_score": 1.0
     },
     {
       "relation": "calls",
@@ -13468,9 +13468,9 @@
       "source_location": "L896",
       "weight": 1.0,
       "_origin": "ast",
-      "confidence_score": 1.0,
       "source": "src_js_weekly_mail_core_pwferietoggleweek",
-      "target": "src_js_weekly_mail_core_pwgetferieweek"
+      "target": "src_js_weekly_mail_core_pwgetferieweek",
+      "confidence_score": 1.0
     },
     {
       "relation": "calls",
@@ -13480,9 +13480,9 @@
       "source_location": "L902",
       "weight": 1.0,
       "_origin": "ast",
-      "confidence_score": 1.0,
       "source": "src_js_weekly_mail_core_pwferietoggleweek",
-      "target": "src_js_weekly_mail_core_pwgetferiedettagliweek"
+      "target": "src_js_weekly_mail_core_pwgetferiedettagliweek",
+      "confidence_score": 1.0
     },
     {
       "relation": "calls",
@@ -13492,9 +13492,9 @@
       "source_location": "L905",
       "weight": 1.0,
       "_origin": "ast",
-      "confidence_score": 1.0,
       "source": "src_js_weekly_mail_core_pwferietoggleweek",
-      "target": "src_js_weekly_mail_core_pwferiesave"
+      "target": "src_js_weekly_mail_core_pwferiesave",
+      "confidence_score": 1.0
     },
     {
       "relation": "calls",
@@ -13504,9 +13504,9 @@
       "source_location": "L906",
       "weight": 1.0,
       "_origin": "ast",
-      "confidence_score": 1.0,
       "source": "src_js_weekly_mail_core_pwferietoggleweek",
-      "target": "src_js_weekly_mail_core_pwferierender"
+      "target": "src_js_weekly_mail_core_pwferierender",
+      "confidence_score": 1.0
     },
     {
       "relation": "calls",
@@ -13516,9 +13516,9 @@
       "source_location": "L3",
       "weight": 1.0,
       "_origin": "ast",
-      "confidence_score": 1.0,
       "source": "src_js_weekly_mail_core_pwgeneramail",
-      "target": "src_js_weekly_mail_core_pwgetweekdata"
+      "target": "src_js_weekly_mail_core_pwgetweekdata",
+      "confidence_score": 1.0
     },
     {
       "relation": "calls",
@@ -13528,9 +13528,9 @@
       "source_location": "L359",
       "weight": 1.0,
       "_origin": "ast",
-      "confidence_score": 1.0,
       "source": "src_js_weekly_mail_core_pwgeneramail",
-      "target": "src_js_weekly_mail_core_pwsave"
+      "target": "src_js_weekly_mail_core_pwsave",
+      "confidence_score": 1.0
     },
     {
       "relation": "calls",
@@ -13540,9 +13540,9 @@
       "source_location": "L4",
       "weight": 1.0,
       "_origin": "ast",
-      "confidence_score": 1.0,
       "source": "src_js_weekly_mail_core_pwgeneramail",
-      "target": "src_js_weekly_mail_core_isoweektomonday"
+      "target": "src_js_weekly_mail_core_isoweektomonday",
+      "confidence_score": 1.0
     },
     {
       "relation": "calls",
@@ -13552,9 +13552,9 @@
       "source_location": "L417",
       "weight": 1.0,
       "_origin": "ast",
-      "confidence_score": 1.0,
       "source": "src_js_weekly_mail_core_pwgeneramail",
-      "target": "src_js_weekly_mail_core_pwgetferieweek"
+      "target": "src_js_weekly_mail_core_pwgetferieweek",
+      "confidence_score": 1.0
     },
     {
       "relation": "calls",
@@ -13564,9 +13564,9 @@
       "source_location": "L418",
       "weight": 1.0,
       "_origin": "ast",
-      "confidence_score": 1.0,
       "source": "src_js_weekly_mail_core_pwgeneramail",
-      "target": "src_js_weekly_mail_core_pwferietipo"
+      "target": "src_js_weekly_mail_core_pwferietipo",
+      "confidence_score": 1.0
     },
     {
       "relation": "calls",
@@ -13576,9 +13576,9 @@
       "source_location": "L94",
       "weight": 1.0,
       "_origin": "ast",
-      "confidence_score": 1.0,
       "source": "src_js_weekly_mail_core_pwgeneramail",
-      "target": "src_js_weekly_mail_core_formatdate"
+      "target": "src_js_weekly_mail_core_formatdate",
+      "confidence_score": 1.0
     },
     {
       "relation": "calls",
@@ -13588,9 +13588,9 @@
       "source_location": "L201",
       "weight": 1.0,
       "_origin": "ast",
-      "confidence_score": 1.0,
       "source": "src_js_weekly_mail_core_pwgeneramail_componitesto",
-      "target": "src_js_weekly_mail_core_pwweekadd"
+      "target": "src_js_weekly_mail_core_pwweekadd",
+      "confidence_score": 1.0
     },
     {
       "relation": "calls",
@@ -13600,9 +13600,9 @@
       "source_location": "L203",
       "weight": 1.0,
       "_origin": "ast",
-      "confidence_score": 1.0,
       "source": "src_js_weekly_mail_core_pwgeneramail_componitesto",
-      "target": "src_js_weekly_mail_core_pwisdwstart"
+      "target": "src_js_weekly_mail_core_pwisdwstart",
+      "confidence_score": 1.0
     },
     {
       "relation": "calls",
@@ -13612,9 +13612,9 @@
       "source_location": "L209",
       "weight": 1.0,
       "_origin": "ast",
-      "confidence_score": 1.0,
       "source": "src_js_weekly_mail_core_pwgeneramail_componitesto",
-      "target": "src_js_weekly_mail_core_formatdate"
+      "target": "src_js_weekly_mail_core_formatdate",
+      "confidence_score": 1.0
     },
     {
       "relation": "calls",
@@ -13624,9 +13624,9 @@
       "source_location": "L258",
       "weight": 1.0,
       "_origin": "ast",
-      "confidence_score": 1.0,
       "source": "src_js_weekly_mail_core_pwgeneramail_componitesto",
-      "target": "src_js_weekly_mail_core_pwcellcantieri"
+      "target": "src_js_weekly_mail_core_pwcellcantieri",
+      "confidence_score": 1.0
     },
     {
       "relation": "calls",
@@ -13636,9 +13636,9 @@
       "source_location": "L286",
       "weight": 1.0,
       "_origin": "ast",
-      "confidence_score": 1.0,
       "source": "src_js_weekly_mail_core_pwgeneramail_componitesto",
-      "target": "src_js_weekly_mail_core_pwgetferieweek"
+      "target": "src_js_weekly_mail_core_pwgetferieweek",
+      "confidence_score": 1.0
     },
     {
       "relation": "calls",
@@ -13648,9 +13648,9 @@
       "source_location": "L291",
       "weight": 1.0,
       "_origin": "ast",
-      "confidence_score": 1.0,
       "source": "src_js_weekly_mail_core_pwgeneramail_componitesto",
-      "target": "src_js_weekly_mail_core_pwferietipo"
+      "target": "src_js_weekly_mail_core_pwferietipo",
+      "confidence_score": 1.0
     },
     {
       "relation": "calls",
@@ -13660,9 +13660,9 @@
       "source_location": "L345",
       "weight": 1.0,
       "_origin": "ast",
-      "confidence_score": 1.0,
       "source": "src_js_weekly_mail_core_pwgeneramail_salvanotesq",
-      "target": "src_js_weekly_mail_core_pwsave"
+      "target": "src_js_weekly_mail_core_pwsave",
+      "confidence_score": 1.0
     },
     {
       "relation": "calls",
@@ -13672,9 +13672,9 @@
       "source_location": "L966",
       "weight": 1.0,
       "_origin": "ast",
-      "confidence_score": 1.0,
       "source": "src_js_weekly_mail_core_pwgetcommessevalide",
-      "target": "src_js_weekly_mail_core_isoweektomonday"
+      "target": "src_js_weekly_mail_core_isoweektomonday",
+      "confidence_score": 1.0
     },
     {
       "relation": "calls",
@@ -13684,9 +13684,9 @@
       "source_location": "L1001",
       "weight": 1.0,
       "_origin": "ast",
-      "confidence_score": 1.0,
       "source": "src_js_weekly_mail_core_pwgetoperatoripercommessa",
-      "target": "src_js_weekly_mail_core_isoweektomonday"
+      "target": "src_js_weekly_mail_core_isoweektomonday",
+      "confidence_score": 1.0
     },
     {
       "relation": "calls",
@@ -13696,9 +13696,9 @@
       "source_location": "L699",
       "weight": 1.0,
       "_origin": "ast",
-      "confidence_score": 1.0,
       "source": "src_js_weekly_mail_core_pwisgiaassegnato",
-      "target": "src_js_weekly_mail_core_pwgetweekdata"
+      "target": "src_js_weekly_mail_core_pwgetweekdata",
+      "confidence_score": 1.0
     },
     {
       "relation": "calls",
@@ -13708,9 +13708,9 @@
       "source_location": "L686",
       "weight": 1.0,
       "_origin": "ast",
-      "confidence_score": 1.0,
       "source": "src_js_weekly_mail_core_pwisinferie",
-      "target": "src_js_weekly_mail_core_pwgetferieweek"
+      "target": "src_js_weekly_mail_core_pwgetferieweek",
+      "confidence_score": 1.0
     },
     {
       "relation": "calls",
@@ -13720,9 +13720,9 @@
       "source_location": "L689",
       "weight": 1.0,
       "_origin": "ast",
-      "confidence_score": 1.0,
       "source": "src_js_weekly_mail_core_pwisinferie",
-      "target": "src_js_weekly_mail_core_pwferietipo"
+      "target": "src_js_weekly_mail_core_pwferietipo",
+      "confidence_score": 1.0
     },
     {
       "relation": "calls",
@@ -13732,9 +13732,9 @@
       "source_location": "L943",
       "weight": 1.0,
       "_origin": "ast",
-      "confidence_score": 1.0,
       "source": "src_js_weekly_mail_core_pwload",
-      "target": "src_js_weekly_mail_core_pwferieload"
+      "target": "src_js_weekly_mail_core_pwferieload",
+      "confidence_score": 1.0
     },
     {
       "relation": "calls",
@@ -13744,9 +13744,9 @@
       "source_location": "L944",
       "weight": 1.0,
       "_origin": "ast",
-      "confidence_score": 1.0,
       "source": "src_js_weekly_mail_core_pwload",
-      "target": "src_js_weekly_mail_core_pwdwload"
+      "target": "src_js_weekly_mail_core_pwdwload",
+      "confidence_score": 1.0
     },
     {
       "relation": "calls",
@@ -13756,9 +13756,9 @@
       "source_location": "L642",
       "weight": 1.0,
       "_origin": "ast",
-      "confidence_score": 1.0,
       "source": "src_js_weekly_mail_core_pwmonthweeks",
-      "target": "src_js_weekly_mail_core_isoweekyear"
+      "target": "src_js_weekly_mail_core_isoweekyear",
+      "confidence_score": 1.0
     },
     {
       "relation": "calls",
@@ -13768,9 +13768,9 @@
       "source_location": "L927",
       "weight": 1.0,
       "_origin": "ast",
-      "confidence_score": 1.0,
       "source": "src_js_weekly_mail_core_pwsetferiatipo",
-      "target": "src_js_weekly_mail_core_pwgetferieweek"
+      "target": "src_js_weekly_mail_core_pwgetferieweek",
+      "confidence_score": 1.0
     },
     {
       "relation": "calls",
@@ -13780,9 +13780,9 @@
       "source_location": "L931",
       "weight": 1.0,
       "_origin": "ast",
-      "confidence_score": 1.0,
       "source": "src_js_weekly_mail_core_pwsetferiatipo",
-      "target": "src_js_weekly_mail_core_pwgetferiedettagliweek"
+      "target": "src_js_weekly_mail_core_pwgetferiedettagliweek",
+      "confidence_score": 1.0
     },
     {
       "relation": "calls",
@@ -13792,9 +13792,9 @@
       "source_location": "L934",
       "weight": 1.0,
       "_origin": "ast",
-      "confidence_score": 1.0,
       "source": "src_js_weekly_mail_core_pwsetferiatipo",
-      "target": "src_js_weekly_mail_core_pwferiesave"
+      "target": "src_js_weekly_mail_core_pwferiesave",
+      "confidence_score": 1.0
     },
     {
       "relation": "calls",
@@ -13804,9 +13804,9 @@
       "source_location": "L935",
       "weight": 1.0,
       "_origin": "ast",
-      "confidence_score": 1.0,
       "source": "src_js_weekly_mail_core_pwsetferiatipo",
-      "target": "src_js_weekly_mail_core_pwferierender"
+      "target": "src_js_weekly_mail_core_pwferierender",
+      "confidence_score": 1.0
     },
     {
       "relation": "calls",
@@ -13816,9 +13816,9 @@
       "source_location": "L737",
       "weight": 1.0,
       "_origin": "ast",
-      "confidence_score": 1.0,
       "source": "src_js_weekly_mail_core_pwstatooperatore",
-      "target": "src_js_weekly_mail_core_pwferietipoweek"
+      "target": "src_js_weekly_mail_core_pwferietipoweek",
+      "confidence_score": 1.0
     },
     {
       "relation": "calls",
@@ -13828,9 +13828,9 @@
       "source_location": "L739",
       "weight": 1.0,
       "_origin": "ast",
-      "confidence_score": 1.0,
       "source": "src_js_weekly_mail_core_pwstatooperatore",
-      "target": "src_js_weekly_mail_core_pwisgiaassegnato"
+      "target": "src_js_weekly_mail_core_pwisgiaassegnato",
+      "confidence_score": 1.0
     },
     {
       "relation": "calls",
@@ -13840,9 +13840,9 @@
       "source_location": "L865",
       "weight": 1.0,
       "_origin": "ast",
-      "confidence_score": 1.0,
       "source": "src_js_weekly_mail_core_pwtoggleferia",
-      "target": "src_js_weekly_mail_core_pwgetferieweek"
+      "target": "src_js_weekly_mail_core_pwgetferieweek",
+      "confidence_score": 1.0
     },
     {
       "relation": "calls",
@@ -13852,9 +13852,9 @@
       "source_location": "L870",
       "weight": 1.0,
       "_origin": "ast",
-      "confidence_score": 1.0,
       "source": "src_js_weekly_mail_core_pwtoggleferia",
-      "target": "src_js_weekly_mail_core_pwgetferiedettagliweek"
+      "target": "src_js_weekly_mail_core_pwgetferiedettagliweek",
+      "confidence_score": 1.0
     },
     {
       "relation": "calls",
@@ -13864,9 +13864,9 @@
       "source_location": "L882",
       "weight": 1.0,
       "_origin": "ast",
-      "confidence_score": 1.0,
       "source": "src_js_weekly_mail_core_pwtoggleferia",
-      "target": "src_js_weekly_mail_core_pwferiesave"
+      "target": "src_js_weekly_mail_core_pwferiesave",
+      "confidence_score": 1.0
     },
     {
       "relation": "calls",
@@ -13876,9 +13876,9 @@
       "source_location": "L885",
       "weight": 1.0,
       "_origin": "ast",
-      "confidence_score": 1.0,
       "source": "src_js_weekly_mail_core_pwtoggleferia",
-      "target": "src_js_weekly_mail_core_isoweektomonday"
+      "target": "src_js_weekly_mail_core_isoweektomonday",
+      "confidence_score": 1.0
     },
     {
       "relation": "calls",
@@ -13888,9 +13888,9 @@
       "source_location": "L890",
       "weight": 1.0,
       "_origin": "ast",
-      "confidence_score": 1.0,
       "source": "src_js_weekly_mail_core_pwtoggleferia",
-      "target": "src_js_weekly_mail_core_pwferiesummaryrender"
+      "target": "src_js_weekly_mail_core_pwferiesummaryrender",
+      "confidence_score": 1.0
     },
     {
       "relation": "calls",
@@ -13900,9 +13900,9 @@
       "source_location": "L595",
       "weight": 1.0,
       "_origin": "ast",
-      "confidence_score": 1.0,
       "source": "src_js_weekly_mail_core_pwweekadd",
-      "target": "src_js_weekly_mail_core_weeksinyear"
+      "target": "src_js_weekly_mail_core_weeksinyear",
+      "confidence_score": 1.0
     },
     {
       "relation": "calls",
@@ -13912,9 +13912,9 @@
       "source_location": "L527",
       "weight": 1.0,
       "_origin": "ast",
-      "confidence_score": 1.0,
       "source": "src_js_weekly_mail_core_weeksinyear",
-      "target": "src_js_weekly_mail_core_isoweekyear"
+      "target": "src_js_weekly_mail_core_isoweekyear",
+      "confidence_score": 1.0
     },
     {
       "relation": "calls",
@@ -16624,9 +16624,9 @@
       "source_location": "L196",
       "weight": 1.0,
       "_origin": "ast",
-      "confidence_score": 1.0,
       "source": "src_js_weekly_mail_core_pwgeneramail",
-      "target": "src_js_weekly_mail_core_pwgeneramail_componitesto"
+      "target": "src_js_weekly_mail_core_pwgeneramail_componitesto",
+      "confidence_score": 1.0
     },
     {
       "relation": "contains",
@@ -16636,9 +16636,9 @@
       "source_location": "L335",
       "weight": 1.0,
       "_origin": "ast",
-      "confidence_score": 1.0,
       "source": "src_js_weekly_mail_core_pwgeneramail",
-      "target": "src_js_weekly_mail_core_pwgeneramail_salvanotesq"
+      "target": "src_js_weekly_mail_core_pwgeneramail_salvanotesq",
+      "confidence_score": 1.0
     },
     {
       "relation": "contains",
@@ -16987,23 +16987,23 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "scripts/smoke_test.py",
-      "source_location": "L217",
+      "source_location": "L179",
       "weight": 1.0,
       "_origin": "ast",
+      "confidence_score": 1.0,
       "source": "scripts_smoke_test",
-      "target": "scripts_smoke_test_find_eslint",
-      "confidence_score": 1.0
+      "target": "scripts_smoke_test_find_eslint"
     },
     {
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "scripts/smoke_test.py",
-      "source_location": "L230",
+      "source_location": "L192",
       "weight": 1.0,
       "_origin": "ast",
+      "confidence_score": 1.0,
       "source": "scripts_smoke_test",
-      "target": "scripts_smoke_test_run_eslint_noundef",
-      "confidence_score": 1.0
+      "target": "scripts_smoke_test_run_eslint_noundef"
     },
     {
       "relation": "contains",
@@ -17012,9 +17012,9 @@
       "source_location": "L28",
       "weight": 1.0,
       "_origin": "ast",
+      "confidence_score": 1.0,
       "source": "scripts_smoke_test",
-      "target": "scripts_smoke_test_main",
-      "confidence_score": 1.0
+      "target": "scripts_smoke_test_main"
     },
     {
       "relation": "contains",
@@ -20609,9 +20609,9 @@
       "source_location": "L1000",
       "weight": 1.0,
       "_origin": "ast",
-      "confidence_score": 1.0,
       "source": "src_js_weekly_mail_core",
-      "target": "src_js_weekly_mail_core_pwgetoperatoripercommessa"
+      "target": "src_js_weekly_mail_core_pwgetoperatoripercommessa",
+      "confidence_score": 1.0
     },
     {
       "relation": "contains",
@@ -20620,9 +20620,9 @@
       "source_location": "L2",
       "weight": 1.0,
       "_origin": "ast",
-      "confidence_score": 1.0,
       "source": "src_js_weekly_mail_core",
-      "target": "src_js_weekly_mail_core_pwgeneramail"
+      "target": "src_js_weekly_mail_core_pwgeneramail",
+      "confidence_score": 1.0
     },
     {
       "relation": "contains",
@@ -20631,9 +20631,9 @@
       "source_location": "L503",
       "weight": 1.0,
       "_origin": "ast",
-      "confidence_score": 1.0,
       "source": "src_js_weekly_mail_core",
-      "target": "src_js_weekly_mail_core_isoweekyear"
+      "target": "src_js_weekly_mail_core_isoweekyear",
+      "confidence_score": 1.0
     },
     {
       "relation": "contains",
@@ -20642,9 +20642,9 @@
       "source_location": "L515",
       "weight": 1.0,
       "_origin": "ast",
-      "confidence_score": 1.0,
       "source": "src_js_weekly_mail_core",
-      "target": "src_js_weekly_mail_core_isoweektomonday"
+      "target": "src_js_weekly_mail_core_isoweektomonday",
+      "confidence_score": 1.0
     },
     {
       "relation": "contains",
@@ -20653,9 +20653,9 @@
       "source_location": "L524",
       "weight": 1.0,
       "_origin": "ast",
-      "confidence_score": 1.0,
       "source": "src_js_weekly_mail_core",
-      "target": "src_js_weekly_mail_core_weeksinyear"
+      "target": "src_js_weekly_mail_core_weeksinyear",
+      "confidence_score": 1.0
     },
     {
       "relation": "contains",
@@ -20664,9 +20664,9 @@
       "source_location": "L530",
       "weight": 1.0,
       "_origin": "ast",
-      "confidence_score": 1.0,
       "source": "src_js_weekly_mail_core",
-      "target": "src_js_weekly_mail_core_formatdate"
+      "target": "src_js_weekly_mail_core_formatdate",
+      "confidence_score": 1.0
     },
     {
       "relation": "contains",
@@ -20675,9 +20675,9 @@
       "source_location": "L534",
       "weight": 1.0,
       "_origin": "ast",
-      "confidence_score": 1.0,
       "source": "src_js_weekly_mail_core",
-      "target": "src_js_weekly_mail_core_formatdatefull"
+      "target": "src_js_weekly_mail_core_formatdatefull",
+      "confidence_score": 1.0
     },
     {
       "relation": "contains",
@@ -20686,9 +20686,9 @@
       "source_location": "L543",
       "weight": 1.0,
       "_origin": "ast",
-      "confidence_score": 1.0,
       "source": "src_js_weekly_mail_core",
-      "target": "src_js_weekly_mail_core_pwdata"
+      "target": "src_js_weekly_mail_core_pwdata",
+      "confidence_score": 1.0
     },
     {
       "relation": "contains",
@@ -20697,9 +20697,9 @@
       "source_location": "L549",
       "weight": 1.0,
       "_origin": "ast",
-      "confidence_score": 1.0,
       "source": "src_js_weekly_mail_core",
-      "target": "src_js_weekly_mail_core_pwcellcantieri"
+      "target": "src_js_weekly_mail_core_pwcellcantieri",
+      "confidence_score": 1.0
     },
     {
       "relation": "contains",
@@ -20708,9 +20708,9 @@
       "source_location": "L559",
       "weight": 1.0,
       "_origin": "ast",
-      "confidence_score": 1.0,
       "source": "src_js_weekly_mail_core",
-      "target": "src_js_weekly_mail_core_pwcellcantieriraw"
+      "target": "src_js_weekly_mail_core_pwcellcantieriraw",
+      "confidence_score": 1.0
     },
     {
       "relation": "contains",
@@ -20719,9 +20719,9 @@
       "source_location": "L572",
       "weight": 1.0,
       "_origin": "ast",
-      "confidence_score": 1.0,
       "source": "src_js_weekly_mail_core",
-      "target": "src_js_weekly_mail_core_pwferie"
+      "target": "src_js_weekly_mail_core_pwferie",
+      "confidence_score": 1.0
     },
     {
       "relation": "contains",
@@ -20730,9 +20730,9 @@
       "source_location": "L576",
       "weight": 1.0,
       "_origin": "ast",
-      "confidence_score": 1.0,
       "source": "src_js_weekly_mail_core",
-      "target": "src_js_weekly_mail_core_pwferietipo"
+      "target": "src_js_weekly_mail_core_pwferietipo",
+      "confidence_score": 1.0
     },
     {
       "relation": "contains",
@@ -20741,9 +20741,9 @@
       "source_location": "L586",
       "weight": 1.0,
       "_origin": "ast",
-      "confidence_score": 1.0,
       "source": "src_js_weekly_mail_core",
-      "target": "src_js_weekly_mail_core_pwferiedettagli"
+      "target": "src_js_weekly_mail_core_pwferiedettagli",
+      "confidence_score": 1.0
     },
     {
       "relation": "contains",
@@ -20752,9 +20752,9 @@
       "source_location": "L590",
       "weight": 1.0,
       "_origin": "ast",
-      "confidence_score": 1.0,
       "source": "src_js_weekly_mail_core",
-      "target": "src_js_weekly_mail_core_pwdoppiaweek"
+      "target": "src_js_weekly_mail_core_pwdoppiaweek",
+      "confidence_score": 1.0
     },
     {
       "relation": "contains",
@@ -20763,9 +20763,9 @@
       "source_location": "L593",
       "weight": 1.0,
       "_origin": "ast",
-      "confidence_score": 1.0,
       "source": "src_js_weekly_mail_core",
-      "target": "src_js_weekly_mail_core_pwweekadd"
+      "target": "src_js_weekly_mail_core_pwweekadd",
+      "confidence_score": 1.0
     },
     {
       "relation": "contains",
@@ -20774,9 +20774,9 @@
       "source_location": "L601",
       "weight": 1.0,
       "_origin": "ast",
-      "confidence_score": 1.0,
       "source": "src_js_weekly_mail_core",
-      "target": "src_js_weekly_mail_core_pwhasferiaweek"
+      "target": "src_js_weekly_mail_core_pwhasferiaweek",
+      "confidence_score": 1.0
     },
     {
       "relation": "contains",
@@ -20785,9 +20785,9 @@
       "source_location": "L609",
       "weight": 1.0,
       "_origin": "ast",
-      "confidence_score": 1.0,
       "source": "src_js_weekly_mail_core",
-      "target": "src_js_weekly_mail_core_pwisdwstart"
+      "target": "src_js_weekly_mail_core_pwisdwstart",
+      "confidence_score": 1.0
     },
     {
       "relation": "contains",
@@ -20796,9 +20796,9 @@
       "source_location": "L613",
       "weight": 1.0,
       "_origin": "ast",
-      "confidence_score": 1.0,
       "source": "src_js_weekly_mail_core",
-      "target": "src_js_weekly_mail_core_pwsetdwstart"
+      "target": "src_js_weekly_mail_core_pwsetdwstart",
+      "confidence_score": 1.0
     },
     {
       "relation": "contains",
@@ -20807,9 +20807,9 @@
       "source_location": "L625",
       "weight": 1.0,
       "_origin": "ast",
-      "confidence_score": 1.0,
       "source": "src_js_weekly_mail_core",
-      "target": "src_js_weekly_mail_core_pwdwcount"
+      "target": "src_js_weekly_mail_core_pwdwcount",
+      "confidence_score": 1.0
     },
     {
       "relation": "contains",
@@ -20818,9 +20818,9 @@
       "source_location": "L637",
       "weight": 1.0,
       "_origin": "ast",
-      "confidence_score": 1.0,
       "source": "src_js_weekly_mail_core",
-      "target": "src_js_weekly_mail_core_pwmonthweeks"
+      "target": "src_js_weekly_mail_core_pwmonthweeks",
+      "confidence_score": 1.0
     },
     {
       "relation": "contains",
@@ -20829,9 +20829,9 @@
       "source_location": "L649",
       "weight": 1.0,
       "_origin": "ast",
-      "confidence_score": 1.0,
       "source": "src_js_weekly_mail_core",
-      "target": "src_js_weekly_mail_core_pwferieload"
+      "target": "src_js_weekly_mail_core_pwferieload",
+      "confidence_score": 1.0
     },
     {
       "relation": "contains",
@@ -20840,9 +20840,9 @@
       "source_location": "L654",
       "weight": 1.0,
       "_origin": "ast",
-      "confidence_score": 1.0,
       "source": "src_js_weekly_mail_core",
-      "target": "src_js_weekly_mail_core_pwdwload"
+      "target": "src_js_weekly_mail_core_pwdwload",
+      "confidence_score": 1.0
     },
     {
       "relation": "contains",
@@ -20851,9 +20851,9 @@
       "source_location": "L658",
       "weight": 1.0,
       "_origin": "ast",
-      "confidence_score": 1.0,
       "source": "src_js_weekly_mail_core",
-      "target": "src_js_weekly_mail_core_pwferiesave"
+      "target": "src_js_weekly_mail_core_pwferiesave",
+      "confidence_score": 1.0
     },
     {
       "relation": "contains",
@@ -20862,9 +20862,9 @@
       "source_location": "L672",
       "weight": 1.0,
       "_origin": "ast",
-      "confidence_score": 1.0,
       "source": "src_js_weekly_mail_core",
-      "target": "src_js_weekly_mail_core_pwgetferiedettagliweek"
+      "target": "src_js_weekly_mail_core_pwgetferiedettagliweek",
+      "confidence_score": 1.0
     },
     {
       "relation": "contains",
@@ -20873,9 +20873,9 @@
       "source_location": "L678",
       "weight": 1.0,
       "_origin": "ast",
-      "confidence_score": 1.0,
       "source": "src_js_weekly_mail_core",
-      "target": "src_js_weekly_mail_core_pwgetferieweek"
+      "target": "src_js_weekly_mail_core_pwgetferieweek",
+      "confidence_score": 1.0
     },
     {
       "relation": "contains",
@@ -20884,9 +20884,9 @@
       "source_location": "L685",
       "weight": 1.0,
       "_origin": "ast",
-      "confidence_score": 1.0,
       "source": "src_js_weekly_mail_core",
-      "target": "src_js_weekly_mail_core_pwisinferie"
+      "target": "src_js_weekly_mail_core_pwisinferie",
+      "confidence_score": 1.0
     },
     {
       "relation": "contains",
@@ -20895,9 +20895,9 @@
       "source_location": "L697",
       "weight": 1.0,
       "_origin": "ast",
-      "confidence_score": 1.0,
       "source": "src_js_weekly_mail_core",
-      "target": "src_js_weekly_mail_core_pwisgiaassegnato"
+      "target": "src_js_weekly_mail_core_pwisgiaassegnato",
+      "confidence_score": 1.0
     },
     {
       "relation": "contains",
@@ -20906,9 +20906,9 @@
       "source_location": "L720",
       "weight": 1.0,
       "_origin": "ast",
-      "confidence_score": 1.0,
       "source": "src_js_weekly_mail_core",
-      "target": "src_js_weekly_mail_core_pwferietipoweek"
+      "target": "src_js_weekly_mail_core_pwferietipoweek",
+      "confidence_score": 1.0
     },
     {
       "relation": "contains",
@@ -20917,9 +20917,9 @@
       "source_location": "L735",
       "weight": 1.0,
       "_origin": "ast",
-      "confidence_score": 1.0,
       "source": "src_js_weekly_mail_core",
-      "target": "src_js_weekly_mail_core_pwstatooperatore"
+      "target": "src_js_weekly_mail_core_pwstatooperatore",
+      "confidence_score": 1.0
     },
     {
       "relation": "contains",
@@ -20928,9 +20928,9 @@
       "source_location": "L744",
       "weight": 1.0,
       "_origin": "ast",
-      "confidence_score": 1.0,
       "source": "src_js_weekly_mail_core",
-      "target": "src_js_weekly_mail_core_pwferierender"
+      "target": "src_js_weekly_mail_core_pwferierender",
+      "confidence_score": 1.0
     },
     {
       "relation": "contains",
@@ -20939,9 +20939,9 @@
       "source_location": "L822",
       "weight": 1.0,
       "_origin": "ast",
-      "confidence_score": 1.0,
       "source": "src_js_weekly_mail_core",
-      "target": "src_js_weekly_mail_core_pwferiesummaryrender"
+      "target": "src_js_weekly_mail_core_pwferiesummaryrender",
+      "confidence_score": 1.0
     },
     {
       "relation": "contains",
@@ -20950,9 +20950,9 @@
       "source_location": "L857",
       "weight": 1.0,
       "_origin": "ast",
-      "confidence_score": 1.0,
       "source": "src_js_weekly_mail_core",
-      "target": "src_js_weekly_mail_core_pwtoggleferia"
+      "target": "src_js_weekly_mail_core_pwtoggleferia",
+      "confidence_score": 1.0
     },
     {
       "relation": "contains",
@@ -20961,9 +20961,9 @@
       "source_location": "L894",
       "weight": 1.0,
       "_origin": "ast",
-      "confidence_score": 1.0,
       "source": "src_js_weekly_mail_core",
-      "target": "src_js_weekly_mail_core_pwferietoggleweek"
+      "target": "src_js_weekly_mail_core_pwferietoggleweek",
+      "confidence_score": 1.0
     },
     {
       "relation": "contains",
@@ -20972,9 +20972,9 @@
       "source_location": "L913",
       "weight": 1.0,
       "_origin": "ast",
-      "confidence_score": 1.0,
       "source": "src_js_weekly_mail_core",
-      "target": "src_js_weekly_mail_core_pwferiecellctxmenu"
+      "target": "src_js_weekly_mail_core_pwferiecellctxmenu",
+      "confidence_score": 1.0
     },
     {
       "relation": "contains",
@@ -20983,9 +20983,9 @@
       "source_location": "L925",
       "weight": 1.0,
       "_origin": "ast",
-      "confidence_score": 1.0,
       "source": "src_js_weekly_mail_core",
-      "target": "src_js_weekly_mail_core_pwsetferiatipo"
+      "target": "src_js_weekly_mail_core_pwsetferiatipo",
+      "confidence_score": 1.0
     },
     {
       "relation": "contains",
@@ -20994,9 +20994,9 @@
       "source_location": "L938",
       "weight": 1.0,
       "_origin": "ast",
-      "confidence_score": 1.0,
       "source": "src_js_weekly_mail_core",
-      "target": "src_js_weekly_mail_core_pwload"
+      "target": "src_js_weekly_mail_core_pwload",
+      "confidence_score": 1.0
     },
     {
       "relation": "contains",
@@ -21005,9 +21005,9 @@
       "source_location": "L947",
       "weight": 1.0,
       "_origin": "ast",
-      "confidence_score": 1.0,
       "source": "src_js_weekly_mail_core",
-      "target": "src_js_weekly_mail_core_pwsave"
+      "target": "src_js_weekly_mail_core_pwsave",
+      "confidence_score": 1.0
     },
     {
       "relation": "contains",
@@ -21016,9 +21016,9 @@
       "source_location": "L958",
       "weight": 1.0,
       "_origin": "ast",
-      "confidence_score": 1.0,
       "source": "src_js_weekly_mail_core",
-      "target": "src_js_weekly_mail_core_pwgetweekdata"
+      "target": "src_js_weekly_mail_core_pwgetweekdata",
+      "confidence_score": 1.0
     },
     {
       "relation": "contains",
@@ -21027,9 +21027,9 @@
       "source_location": "L965",
       "weight": 1.0,
       "_origin": "ast",
-      "confidence_score": 1.0,
       "source": "src_js_weekly_mail_core",
-      "target": "src_js_weekly_mail_core_pwgetcommessevalide"
+      "target": "src_js_weekly_mail_core_pwgetcommessevalide",
+      "confidence_score": 1.0
     },
     {
       "relation": "contains",
@@ -23213,23 +23213,23 @@
       "relation": "rationale_for",
       "confidence": "EXTRACTED",
       "source_file": "scripts/smoke_test.py",
-      "source_location": "L218",
+      "source_location": "L180",
       "weight": 1.0,
       "_origin": "ast",
-      "source": "scripts_smoke_test_rationale_218",
-      "target": "scripts_smoke_test_find_eslint",
-      "confidence_score": 1.0
+      "confidence_score": 1.0,
+      "source": "scripts_smoke_test_rationale_180",
+      "target": "scripts_smoke_test_find_eslint"
     },
     {
       "relation": "rationale_for",
       "confidence": "EXTRACTED",
       "source_file": "scripts/smoke_test.py",
-      "source_location": "L231",
+      "source_location": "L193",
       "weight": 1.0,
       "_origin": "ast",
-      "source": "scripts_smoke_test_rationale_231",
-      "target": "scripts_smoke_test_run_eslint_noundef",
-      "confidence_score": 1.0
+      "confidence_score": 1.0,
+      "source": "scripts_smoke_test_rationale_193",
+      "target": "scripts_smoke_test_run_eslint_noundef"
     },
     {
       "relation": "references",
@@ -25081,5 +25081,5 @@
       "source_file": "index.html"
     }
   ],
-  "built_at_commit": "8c2ffb1a1d32f316be585da50e725000a0f94f2a"
+  "built_at_commit": "7aba8f50d1d7eb7b6135f6d2b371864542564c4e"
 }
