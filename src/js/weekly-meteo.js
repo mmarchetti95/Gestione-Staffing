@@ -448,37 +448,48 @@ function pwMeteoSeverityFor(info) {
   return null;
 }
 
-/* Scansiona la settimana corrente (tutti i cantieri pianificati, deduplicati per cantiere+data)
-   e restituisce sia la copertura (quanti hanno già un meteo in cache) sia le criticità trovate,
-   ordinate per severità poi data — usato sia dal badge nell'header sia dal modal di dettaglio. */
+/* Scansiona la settimana corrente (tutti i cantieri pianificati) e restituisce sia la copertura
+   (quanti cantiere+data distinti hanno già un meteo in cache) sia le criticità trovate — una per
+   ogni combinazione commessa/squadra/cantiere/giorno (non deduplicate tra squadre diverse, perché
+   ciascuna va poi collegata alla propria cella nella Griglia), ordinate per giorno poi severità
+   poi commessa — usato sia dal badge nell'header sia dal modal di dettaglio. */
 function pwWeatherWeekStatus() {
   const data = pwGetWeekData();
   const monday = isoWeekToMonday(pwAnno, pwWeek);
   const SEV_RANK = { alta: 0, media: 1 };
-  const seen = new Set();
+  const seenGeo = new Set();
   let total = 0, covered = 0;
   const crit = [];
-  data.forEach(bc => (bc.squadre || []).forEach(sq => {
+  data.forEach((bc, cIdx) => (bc.squadre || []).forEach((sq, sIdx) => {
     for (let dayIdx = 0; dayIdx < 6; dayIdx++) {
       const d = new Date(monday); d.setUTCDate(monday.getUTCDate() + dayIdx);
       const dateISO = d.toISOString().slice(0, 10);
       pwSquadraCantieriGiorno(sq, dayIdx).forEach(cantiere => {
-        const key = cantiere.toLowerCase().trim() + '|' + dateISO;
-        if (seen.has(key)) return;
-        seen.add(key);
-        total++;
+        const geoKey = cantiere.toLowerCase().trim() + '|' + dateISO;
+        if (!seenGeo.has(geoKey)) {
+          seenGeo.add(geoKey);
+          total++;
+          if (pwMeteoInfoFor(cantiere, dateISO)) covered++;
+        }
         const info = pwMeteoInfoFor(cantiere, dateISO);
-        if (info) covered++;
         const meteoSeverity = pwMeteoSeverityFor(info);
         const pcInfo = pcInfoFor(cantiere, dateISO);
         const pcColor = pcColorePeggiore(pcInfo);
         const pcSeverity = pcColor === 'gialla' ? 'media' : (pcColor ? 'alta' : null);
         const severity = pcSeverity === 'alta' || meteoSeverity === 'alta' ? 'alta' : (pcSeverity || meteoSeverity);
-        if (severity) crit.push({ cantiere, dayIdx, dateISO, severity, info, pcInfo, pcColor });
+        if (severity) {
+          crit.push({
+            cIdx, sIdx,
+            commessa: bc.commessa || '(senza commessa)',
+            squadraNome: sq.nome || '',
+            cantiere, dayIdx, dateISO, severity, info, pcInfo, pcColor
+          });
+        }
       });
     }
   }));
-  crit.sort((a, b) => SEV_RANK[a.severity] - SEV_RANK[b.severity] || a.dayIdx - b.dayIdx || a.cantiere.localeCompare(b.cantiere));
+  crit.sort((a, b) => a.dayIdx - b.dayIdx || SEV_RANK[a.severity] - SEV_RANK[b.severity]
+    || a.commessa.localeCompare(b.commessa) || a.cantiere.localeCompare(b.cantiere));
   return { total, covered, crit };
 }
 
@@ -511,57 +522,68 @@ function pwUpdateWeatherWidget() {
   }
 }
 
-/* Modal di dettaglio: elenco per giorno/cantiere delle criticità trovate (severità, condizione,
-   temperature, probabilità di pioggia). Apribile anche quando non ci sono criticità, per
-   confermare che il controllo è stato fatto invece di lasciare solo un badge silenzioso. */
+/* Modal di dettaglio: elenco per giorno -> commessa delle criticità trovate (severità, condizione,
+   temperature, probabilità di pioggia). Ogni riga è cliccabile e riporta alla cella corrispondente
+   nella Griglia (pwGoToWeatherCell). Apribile anche quando non ci sono criticità, per confermare
+   che il controllo è stato fatto invece di lasciare solo un badge silenzioso. */
 function pwOpenWeatherWeekModal() {
   const { crit } = pwWeatherWeekStatus();
   const DAY_NAMES_FULL = ['Lunedì', 'Martedì', 'Mercoledì', 'Giovedì', 'Venerdì', 'Sabato'];
   const root = document.getElementById('modal-root');
   if (!root) return;
 
-  /* Raggruppa: priorità (alta poi media) -> commessa/cantiere -> giorni, in modo che
-     una commessa con più giorni a rischio compaia una sola volta con tutti i suoi giorni sotto. */
-  const bySeverity = { alta: [], media: [] };
-  crit.forEach(c => bySeverity[c.severity].push(c));
-
-  const dayLine = c => {
-    const [, mm, dd] = c.dateISO.split('-');
+  const infoLine = c => {
     const meteoLine = c.info
       ? `${pwMeteoIconFor(c.info.code)} ${Math.round(c.info.tmax)}°/${Math.round(c.info.tmin)}°${c.info.pop != null ? ' · 💧' + Math.round(c.info.pop) + '%' : ''}`
       : '';
     const pcLine = c.pcColor
       ? `📋 Bollettino PC: allerta ${c.pcColor}${c.pcInfo && c.pcInfo.zona ? ' — zona ' + esc(c.pcInfo.zona) : ''}`
       : '';
-    const righe = [meteoLine, pcLine].filter(Boolean).join(' · ');
-    return `<div class="pw-meteo-modal-giorno"><span class="pw-meteo-modal-giorno-label">${DAY_NAMES_FULL[c.dayIdx]} ${dd}/${mm}</span> — ${righe}</div>`;
+    return [meteoLine, pcLine].filter(Boolean).join(' · ');
   };
 
-  const sectionFor = (sev, label, icon) => {
-    const items = bySeverity[sev];
-    if (!items.length) return '';
-    const byCantiere = new Map();
+  /* Raggruppa: giorno -> commessa, in modo che la prima cosa che si veda sia "cosa succede oggi/
+     domani" e sotto, per ogni giorno, quali commesse sono coinvolte (una commessa con più squadre
+     a rischio lo stesso giorno compare una volta sola, con una riga cliccabile per squadra). */
+  const byDay = new Map();
+  crit.forEach(c => {
+    if (!byDay.has(c.dayIdx)) byDay.set(c.dayIdx, []);
+    byDay.get(c.dayIdx).push(c);
+  });
+
+  const monday = isoWeekToMonday(pwAnno, pwWeek);
+  const sections = [...byDay.keys()].sort((a, b) => a - b).map(dayIdx => {
+    const items = byDay.get(dayIdx);
+    const d = new Date(monday); d.setUTCDate(monday.getUTCDate() + dayIdx);
+    const [, mm, dd] = d.toISOString().slice(0, 10).split('-');
+    const byCommessa = new Map();
     items.forEach(c => {
-      if (!byCantiere.has(c.cantiere)) byCantiere.set(c.cantiere, []);
-      byCantiere.get(c.cantiere).push(c);
+      if (!byCommessa.has(c.commessa)) byCommessa.set(c.commessa, []);
+      byCommessa.get(c.commessa).push(c);
     });
-    const blocks = [...byCantiere.entries()].map(([cantiere, giorni]) => `
+    const blocks = [...byCommessa.entries()].map(([commessa, entries]) => `
       <div class="pw-meteo-modal-block">
-        <div class="pw-meteo-modal-cantiere">${esc(cantiere)}</div>
-        ${giorni.map(dayLine).join('')}
+        <div class="pw-meteo-modal-cantiere">${esc(commessa)}</div>
+        ${entries.map(c => {
+          const sevIcon = c.severity === 'alta' ? '🔴' : '🟠';
+          const sqLabel = c.squadraNome ? ` <span class="pw-meteo-modal-sq">(${esc(c.squadraNome)})</span>` : '';
+          return `<div class="pw-meteo-modal-giorno pw-meteo-modal-clickable" onclick="pwGoToWeatherCell(${c.cIdx}, ${c.sIdx}, ${c.dayIdx})" title="Vai alla cella nella Griglia">
+            ${sevIcon} <span class="pw-meteo-modal-giorno-label">${esc(c.cantiere)}</span>${sqLabel} — ${infoLine(c)}
+          </div>`;
+        }).join('')}
       </div>`).join('');
     return `<div class="pw-meteo-modal-section">
-      <div class="pw-meteo-modal-sev-header pw-meteo-modal-sev-${sev}">${icon} ${label}</div>
+      <div class="pw-meteo-modal-day-header">${DAY_NAMES_FULL[dayIdx]} ${dd}/${mm}</div>
       ${blocks}
     </div>`;
-  };
+  });
 
-  const rows = crit.length
-    ? sectionFor('alta', 'Priorità alta', '🔴') + sectionFor('media', 'Priorità media', '🟠')
+  const rows = sections.length
+    ? sections.join('')
     : `<div class="text-slate-400 text-sm">Nessuna criticità meteo rilevata nei cantieri pianificati questa settimana.</div>`;
   root.innerHTML = `<div class="modal-backdrop"><div class="bg-white rounded-lg shadow-xl w-full max-w-lg mx-4 my-8 p-5">
     <h3 class="font-semibold text-slate-900 mb-1">⛈️ Criticità meteo — settimana</h3>
-    <p class="text-xs text-slate-500 mb-3">Soglie sulle previsioni Open-Meteo (tutta la settimana) + bollettino ufficiale Protezione Civile quando disponibile (solo oggi/domani).</p>
+    <p class="text-xs text-slate-500 mb-3">Soglie sulle previsioni Open-Meteo (tutta la settimana) + bollettino ufficiale Protezione Civile quando disponibile (solo oggi/domani). Clicca una riga per andare alla cella corrispondente nella Griglia.</p>
     <div>${rows}</div>
     <div class="flex justify-end mt-4">
       <button onclick="closeModal()" class="px-3 py-1.5 text-sm border border-slate-300 rounded">Chiudi</button>
@@ -570,6 +592,28 @@ function pwOpenWeatherWeekModal() {
   root.querySelector('.modal-backdrop').addEventListener('click', e => {
     if (e.target.classList.contains('modal-backdrop')) closeModal();
   });
+}
+
+/* Chiude il modal criticità meteo e porta l'utente esattamente alla cella (commessa/squadra/
+   giorno) della Griglia che ha generato quella riga: espande commessa/squadra se collassate,
+   scrolla la cella al centro e la evidenzia per un paio di secondi. Il bottone che apre il modal
+   vive solo dentro il tab Griglia (#pw-view-griglia), quindi qui siamo già sul tab giusto. */
+function pwGoToWeatherCell(cIdx, sIdx, dayIdx) {
+  closeModal();
+  const commKey = String(cIdx);
+  const sqKey = cIdx + '-' + sIdx;
+  let changed = false;
+  if (_pwCollapsedComm.has(commKey)) { _pwCollapsedComm.delete(commKey); changed = true; }
+  if (_pwCollapsedSq.has(sqKey)) { _pwCollapsedSq.delete(sqKey); changed = true; }
+  if (changed) pwApplyCollapseState();
+  setTimeout(() => {
+    const cell = document.querySelector('.pw-day-cell[data-cidx="' + cIdx + '"][data-sidx="' + sIdx + '"][data-day="' + dayIdx + '"]');
+    const target = cell || document.querySelector('.pw-squadra-block[data-collapse-key="' + sqKey + '"]');
+    if (!target) return;
+    target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    target.classList.add('pw-weather-cell-flash');
+    setTimeout(() => target.classList.remove('pw-weather-cell-flash'), 2000);
+  }, 50);
 }
 
 /* ----- Refresh periodico (avviato una volta al caricamento dell'app) ----- */

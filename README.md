@@ -1,3 +1,6 @@
+## v18.131.0
+- fix: **Modal "Criticità meteo" — raggruppato per giorno, cliccabile fino alla cella** — cambiato di nuovo il criterio di raggruppamento del modal (v18.130.0): ora la prima suddivisione è per giorno della settimana e, sotto ciascun giorno, per commessa (non più per priorità in testa). Ogni riga di dettaglio (commessa + squadra + severità) è cliccabile: chiude il modal, espande commessa/squadra nella Griglia se collassate e scrolla evidenziando per un paio di secondi la cella cantiere/giorno corrispondente. Per rendere possibile il collegamento alla cella esatta, le criticità non sono più deduplicate tra squadre diverse che condividono lo stesso cantiere/giorno (prima ne veniva mostrata solo una): ora compare una riga per ogni squadra effettivamente coinvolta.
+
 ## v18.130.0
 - fix: **Modal "Criticità meteo" — raggruppato per priorità e commessa** — il dettaglio del widget (introdotto in v18.127.0) elencava una riga per ogni combinazione cantiere/giorno, di lettura scomoda quando una stessa commessa aveva più giorni a rischio. Ora è raggruppato in due sezioni per severità (🔴 Priorità alta, 🟠 Priorità media) e, dentro ciascuna, per commessa/cantiere, con i giorni a rischio elencati sotto ognuna. Nessuna modifica alla logica di calcolo delle criticità, solo alla presentazione.
 

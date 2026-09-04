@@ -493,15 +493,21 @@
   .pw-weather-badge-pending { color: #94a3b8; }
   .pw-meteo-modal-section { margin-bottom: 14px; }
   .pw-meteo-modal-section:last-child { margin-bottom: 0; }
-  .pw-meteo-modal-sev-header { font-weight: 700; font-size: 12px; text-transform: uppercase; letter-spacing: .03em; padding: 4px 6px; border-radius: 4px; margin-bottom: 6px; }
-  .pw-meteo-modal-sev-alta { color: #991b1b; background: #fef2f2; }
-  .pw-meteo-modal-sev-media { color: #92400e; background: #fffbeb; }
+  .pw-meteo-modal-day-header { font-weight: 700; font-size: 12px; text-transform: uppercase; letter-spacing: .03em; color: #0f766e; background: #f0fdfa; padding: 4px 6px; border-radius: 4px; margin-bottom: 6px; }
   .pw-meteo-modal-block { padding: 6px 2px 8px; border-bottom: 1px solid #f1f5f9; }
   .pw-meteo-modal-block:last-child { border-bottom: none; }
   .pw-meteo-modal-cantiere { font-weight: 600; color: #1e293b; font-size: 13px; margin-bottom: 4px; }
-  .pw-meteo-modal-giorno { color: #334155; font-size: 13px; padding: 1px 0 1px 8px; }
-  .pw-meteo-modal-giorno-label { color: #64748b; font-weight: 500; }
+  .pw-meteo-modal-giorno { color: #334155; font-size: 13px; padding: 2px 4px; border-radius: 4px; margin-left: 4px; }
+  .pw-meteo-modal-giorno-label { color: #1e293b; font-weight: 500; }
+  .pw-meteo-modal-sq { color: #94a3b8; font-weight: 400; }
+  .pw-meteo-modal-clickable { cursor: pointer; }
+  .pw-meteo-modal-clickable:hover { background: #f1f5f9; }
   .pw-meteo-modal-info { color: #334155; font-size: 13px; }
+  @keyframes pwWeatherCellFlash {
+    0%, 100% { box-shadow: none; }
+    20%, 60% { box-shadow: 0 0 0 3px #fb923c; }
+  }
+  .pw-weather-cell-flash { animation: pwWeatherCellFlash 2s ease-in-out; position: relative; z-index: 1; }
   .pw-meteo-modal-missing { color: #94a3b8; font-style: italic; }
   .pw-meteo-fasce {
     display: flex;
@@ -1134,7 +1140,7 @@
     <div class="flex items-center gap-2">
       <button id="btn-presentation" class="px-3 py-1.5 text-sm rounded hover:bg-white/10" style="border:1px solid var(--dark-border-strong);color:var(--dark-text);visibility:visible;">📊 Modalità presentazione</button>
       <div class="text-xs pl-2" style="border-left:1px solid var(--dark-border-strong);color:var(--dark-text-muted);">
-        <span id="app-version" class="font-medium" style="color:var(--accent);">v18.130.0</span> · Michele Marchetti
+        <span id="app-version" class="font-medium" style="color:var(--accent);">v18.131.0</span> · Michele Marchetti
       </div>
     </div>
   </div>
