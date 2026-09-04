@@ -1,58 +1,120 @@
 {
   "communities": {
     "0": [
-      "claude_delta_model",
-      "index",
-      "index_active_sessions",
-      "index_activity_log",
-      "index_attestati_scadenze_feature",
-      "index_auth_roles",
-      "index_confronto_preventivo_effettivo",
-      "index_controllo_produzione_tab",
-      "index_core_domain",
-      "index_dashboard_screen",
-      "index_doppia_week_tab",
-      "index_dw_domain",
-      "index_ferie_domain",
-      "index_ferie_tab",
-      "index_four_domain_sync",
-      "index_genera_mail_feature",
-      "index_gestione_staffing_app",
-      "index_griglia_tab",
-      "index_import_attestati_excel",
-      "index_import_ferie_excel",
-      "index_jira_create_subtask",
-      "index_jira_delta_model",
-      "index_jira_integration",
-      "index_jira_list_epics",
-      "index_jira_list_strumenti",
-      "index_jira_list_tasks",
-      "index_jira_sync_worklogs",
-      "index_jira_update_production",
-      "index_mappa_residenze_operatori",
-      "index_mappa_tab",
-      "index_multidomain_conflict_fix",
-      "index_name_matching_import",
-      "index_nominatim_geocoding",
-      "index_non_disponibile_type",
-      "index_open_meteo_weather",
-      "index_osrm_routing",
-      "index_pianifica_spostamenti_tab",
-      "index_pianificazione_settimanale_screen",
-      "index_planning_domain",
-      "index_pool_operatori",
-      "index_provenienza_geografica",
-      "index_sbpull",
-      "index_sbpush",
-      "index_sottotask_jira_feature",
-      "index_switchscreen",
-      "index_version_check_banner",
-      "readme",
-      "readme_changelog",
-      "src_head",
-      "src_head_design_system"
+      "src_js_sb_admin",
+      "src_js_sb_admin_checkfornewversion",
+      "src_js_sb_admin_pw_tab_keys",
+      "src_js_sb_admin_reloadfornewversion",
+      "src_js_sb_admin_sb_page_labels",
+      "src_js_sb_admin_sballpagekeys",
+      "src_js_sb_admin_sbapplypagevisibility",
+      "src_js_sb_admin_sbapplyreadonlybanner",
+      "src_js_sb_admin_sbapplyuserrole",
+      "src_js_sb_admin_sbcalladminusers",
+      "src_js_sb_admin_sbcanseepage",
+      "src_js_sb_admin_sbcanwrite",
+      "src_js_sb_admin_sbchangepwd",
+      "src_js_sb_admin_sbclosebackups",
+      "src_js_sb_admin_sbcloseguestpageseditorcancel",
+      "src_js_sb_admin_sbcloselog",
+      "src_js_sb_admin_sbclosepwdmodal",
+      "src_js_sb_admin_sbclosesessions",
+      "src_js_sb_admin_sbcloseusers",
+      "src_js_sb_admin_sbcreateuser",
+      "src_js_sb_admin_sbdeleteuser",
+      "src_js_sb_admin_sbdirty",
+      "src_js_sb_admin_sbgeneratesessionid",
+      "src_js_sb_admin_sbguardwrite",
+      "src_js_sb_admin_sbguestpages",
+      "src_js_sb_admin_sbguestpagescheckshtml",
+      "src_js_sb_admin_sbinit",
+      "src_js_sb_admin_sbinitandcheck",
+      "src_js_sb_admin_sbisadmin",
+      "src_js_sb_admin_sbloadbackups",
+      "src_js_sb_admin_sbloadlog",
+      "src_js_sb_admin_sbloadsessions",
+      "src_js_sb_admin_sbloadusers",
+      "src_js_sb_admin_sblogactivity",
+      "src_js_sb_admin_sblogin",
+      "src_js_sb_admin_sblogout",
+      "src_js_sb_admin_sbonloggedin",
+      "src_js_sb_admin_sbopenguestpageseditor",
+      "src_js_sb_admin_sbpull",
+      "src_js_sb_admin_sbpush",
+      "src_js_sb_admin_sbremotets",
+      "src_js_sb_admin_sbrestorebackup",
+      "src_js_sb_admin_sbrole",
+      "src_js_sb_admin_sbsaveguestpageseditor",
+      "src_js_sb_admin_sbscheduleautopush",
+      "src_js_sb_admin_sbsetlocal",
+      "src_js_sb_admin_sbshowbackups",
+      "src_js_sb_admin_sbshowchangepwd",
+      "src_js_sb_admin_sbshowlog",
+      "src_js_sb_admin_sbshowsessions",
+      "src_js_sb_admin_sbshowusers",
+      "src_js_sb_admin_sbstartheartbeat",
+      "src_js_sb_admin_sbstopheartbeat",
+      "src_js_sb_admin_sbsubscriberealtime",
+      "src_js_sb_admin_sbsync",
+      "src_js_sb_admin_sbtoggleguestpagesui",
+      "src_js_sb_admin_sbupdateui",
+      "src_js_sb_admin_sbupdateuserrole",
+      "src_js_sb_admin_sbusersmsg",
+      "src_js_sb_admin_showversionbanner",
+      "src_js_sb_admin_startversioncheck"
     ],
     "1": [
+      "src_js_weekly_ricerca_squadre",
+      "src_js_weekly_ricerca_squadre_ricercasquadre",
+      "src_js_weekly_ricerca_squadre_rs_stati",
+      "src_js_weekly_ricerca_squadre_rsaddtappa",
+      "src_js_weekly_ricerca_squadre_rsbadgehtml",
+      "src_js_weekly_ricerca_squadre_rsbuildsquadre",
+      "src_js_weekly_ricerca_squadre_rscalcola",
+      "src_js_weekly_ricerca_squadre_rschipshtml",
+      "src_js_weekly_ricerca_squadre_rsclosedropdowns",
+      "src_js_weekly_ricerca_squadre_rsconsigliohtml",
+      "src_js_weekly_ricerca_squadre_rsdisponibilita",
+      "src_js_weekly_ricerca_squadre_rsfilterlist",
+      "src_js_weekly_ricerca_squadre_rsfilterskills",
+      "src_js_weekly_ricerca_squadre_rsfilterstrumenti",
+      "src_js_weekly_ricerca_squadre_rsformatdatait",
+      "src_js_weekly_ricerca_squadre_rsgeocodemancanti",
+      "src_js_weekly_ricerca_squadre_rsgetskillsweek",
+      "src_js_weekly_ricerca_squadre_rsgetstrumentiweek",
+      "src_js_weekly_ricerca_squadre_rsgiornoconsigliato",
+      "src_js_weekly_ricerca_squadre_rsgiornoiso",
+      "src_js_weekly_ricerca_squadre_rsindoppiaweek",
+      "src_js_weekly_ricerca_squadre_rsinit",
+      "src_js_weekly_ricerca_squadre_rskm",
+      "src_js_weekly_ricerca_squadre_rsmaplayers",
+      "src_js_weekly_ricerca_squadre_rsmatricedistanze",
+      "src_js_weekly_ricerca_squadre_rsnorm",
+      "src_js_weekly_ricerca_squadre_rsnumgiorni",
+      "src_js_weekly_ricerca_squadre_rsoggiiso",
+      "src_js_weekly_ricerca_squadre_rsoppool",
+      "src_js_weekly_ricerca_squadre_rsoptionrowhtml",
+      "src_js_weekly_ricerca_squadre_rspulisci",
+      "src_js_weekly_ricerca_squadre_rsremovetappa",
+      "src_js_weekly_ricerca_squadre_rsrendermappa",
+      "src_js_weekly_ricerca_squadre_rsrenderrisultati",
+      "src_js_weekly_ricerca_squadre_rsrenderrisultatibody",
+      "src_js_weekly_ricerca_squadre_rsrenderskillsdropdown",
+      "src_js_weekly_ricerca_squadre_rsrenderstrumentidropdown",
+      "src_js_weekly_ricerca_squadre_rsrendertappe",
+      "src_js_weekly_ricerca_squadre_rsselskills",
+      "src_js_weekly_ricerca_squadre_rsselstrumenti",
+      "src_js_weekly_ricerca_squadre_rssitihtml",
+      "src_js_weekly_ricerca_squadre_rsstartday",
+      "src_js_weekly_ricerca_squadre_rsstatus",
+      "src_js_weekly_ricerca_squadre_rssyncaltezze",
+      "src_js_weekly_ricerca_squadre_rstappabynome",
+      "src_js_weekly_ricerca_squadre_rstoggleskillsdropdown",
+      "src_js_weekly_ricerca_squadre_rstogglestrumentidropdown",
+      "src_js_weekly_ricerca_squadre_rsupdateskillslabel",
+      "src_js_weekly_ricerca_squadre_rsupdatestrumentilabel"
+    ],
+    "2": [
       "src_js_weekly_mappa",
       "src_js_weekly_mappa_commessaregione",
       "src_js_weekly_mappa_geocache",
@@ -99,7 +161,7 @@
       "src_js_weekly_mappa_pwmapstrfilterupdatebtnlabel",
       "src_js_weekly_mappa_pwmaptogglegroup"
     ],
-    "2": [
+    "3": [
       "src_js_weekly_mail_core",
       "src_js_weekly_mail_core_formatdate",
       "src_js_weekly_mail_core_formatdatefull",
@@ -143,45 +205,6 @@
       "src_js_weekly_mail_core_pwweekadd",
       "src_js_weekly_mail_core_weeksinyear"
     ],
-    "3": [
-      "src_js_sb_admin",
-      "src_js_sb_admin_checkfornewversion",
-      "src_js_sb_admin_reloadfornewversion",
-      "src_js_sb_admin_sbchangepwd",
-      "src_js_sb_admin_sbclosebackups",
-      "src_js_sb_admin_sbcloselog",
-      "src_js_sb_admin_sbclosepwdmodal",
-      "src_js_sb_admin_sbclosesessions",
-      "src_js_sb_admin_sbdirty",
-      "src_js_sb_admin_sbgeneratesessionid",
-      "src_js_sb_admin_sbinit",
-      "src_js_sb_admin_sbinitandcheck",
-      "src_js_sb_admin_sbisadmin",
-      "src_js_sb_admin_sbloadbackups",
-      "src_js_sb_admin_sbloadlog",
-      "src_js_sb_admin_sbloadsessions",
-      "src_js_sb_admin_sblogactivity",
-      "src_js_sb_admin_sblogin",
-      "src_js_sb_admin_sblogout",
-      "src_js_sb_admin_sbonloggedin",
-      "src_js_sb_admin_sbpull",
-      "src_js_sb_admin_sbpush",
-      "src_js_sb_admin_sbremotets",
-      "src_js_sb_admin_sbrestorebackup",
-      "src_js_sb_admin_sbscheduleautopush",
-      "src_js_sb_admin_sbsetlocal",
-      "src_js_sb_admin_sbshowbackups",
-      "src_js_sb_admin_sbshowchangepwd",
-      "src_js_sb_admin_sbshowlog",
-      "src_js_sb_admin_sbshowsessions",
-      "src_js_sb_admin_sbstartheartbeat",
-      "src_js_sb_admin_sbstopheartbeat",
-      "src_js_sb_admin_sbsubscriberealtime",
-      "src_js_sb_admin_sbsync",
-      "src_js_sb_admin_sbupdateui",
-      "src_js_sb_admin_showversionbanner",
-      "src_js_sb_admin_startversioncheck"
-    ],
     "4": [
       "src_js_dashboard_attestati",
       "src_js_dashboard_attestati_attbadgehtml",
@@ -221,6 +244,72 @@
       "src_js_dashboard_attestati_renderattestati_urgenzariga"
     ],
     "5": [
+      "src_js_weekly_meteo",
+      "src_js_weekly_meteo_meteo_fasce",
+      "src_js_weekly_meteo_meteo_icons",
+      "src_js_weekly_meteo_meteocache",
+      "src_js_weekly_meteo_meteocacheload",
+      "src_js_weekly_meteo_meteocachesave",
+      "src_js_weekly_meteo_pccache",
+      "src_js_weekly_meteo_pccacheload",
+      "src_js_weekly_meteo_pccachesave",
+      "src_js_weekly_meteo_pccolorepeggiore",
+      "src_js_weekly_meteo_pccolorfromlabel",
+      "src_js_weekly_meteo_pcfetchbollettinoutile",
+      "src_js_weekly_meteo_pcfetchindice",
+      "src_js_weekly_meteo_pcinfofor",
+      "src_js_weekly_meteo_pcparsegiorno",
+      "src_js_weekly_meteo_pcrefreshbollettino",
+      "src_js_weekly_meteo_pwapplymeteobadgestodom",
+      "src_js_weekly_meteo_pwfasceorariefor",
+      "src_js_weekly_meteo_pwfetchmeteorange",
+      "src_js_weekly_meteo_pwgotoweathercell",
+      "src_js_weekly_meteo_pwmeteoiconfor",
+      "src_js_weekly_meteo_pwmeteoinfofor",
+      "src_js_weekly_meteo_pwmeteomissingreason",
+      "src_js_weekly_meteo_pwmeteoseverityfor",
+      "src_js_weekly_meteo_pwopenmeteomodal",
+      "src_js_weekly_meteo_pwopenweatherweekmodal",
+      "src_js_weekly_meteo_pwrefreshmeteoweek",
+      "src_js_weekly_meteo_pwsquadracantierigiorno",
+      "src_js_weekly_meteo_pwstartmeteotimer",
+      "src_js_weekly_meteo_pwupdateweatherwidget",
+      "src_js_weekly_meteo_pwweatherbadgehtml",
+      "src_js_weekly_meteo_pwweatherbadgeinnerhtml",
+      "src_js_weekly_meteo_pwweatherweekstatus"
+    ],
+    "6": [
+      "claude_auth_roles",
+      "claude_build_script",
+      "claude_data_structures",
+      "claude_deploy_workflow",
+      "claude_geocoding_mapping",
+      "claude_hard_won_conventions",
+      "claude_jira_integration",
+      "claude_project_overview",
+      "claude_smoke_test",
+      "claude_source_layout",
+      "claude_state_sync_domains",
+      "claude_two_screens_architecture",
+      "index_build_artifact",
+      "readme_attestati_dpi",
+      "readme_backup_ripristino",
+      "readme_changelog",
+      "readme_criticita_meteo_widget",
+      "readme_doppia_week",
+      "readme_gestione_utenti",
+      "readme_jira_sottotask",
+      "readme_km_delta_model",
+      "readme_mappa_squadre",
+      "readme_pianifica_spostamenti",
+      "readme_ricerca_squadre",
+      "readme_ruoli_gerarchia",
+      "src_head_design_tokens",
+      "src_head_document",
+      "src_head_modal_zindex_convention",
+      "src_head_role_hierarchy_ui"
+    ],
+    "7": [
       "src_js_weekly_jira_subtask",
       "src_js_weekly_jira_subtask_pwjirabuildsubtaskitem",
       "src_js_weekly_jira_subtask_pwjiracreatesubtasks",
@@ -251,37 +340,7 @@
       "src_js_weekly_jira_subtask_pwjirasubtaskpreview",
       "src_js_weekly_jira_subtask_pwjirasubtaskrenderpreview"
     ],
-    "6": [
-      "claude_active_sessions_table",
-      "claude_activity_log_table",
-      "claude_build_py",
-      "claude_document",
-      "claude_esc_function",
-      "claude_four_sync_domains",
-      "claude_hard_won_conventions",
-      "claude_initial_data",
-      "claude_jsattr",
-      "claude_pwswitchtab",
-      "claude_sb_url_anon_key",
-      "claude_sbisadmin",
-      "claude_sbpull",
-      "claude_sbpush",
-      "claude_sget_sset",
-      "claude_showalertmodal",
-      "claude_showconfirmasync",
-      "claude_smoke_test_py",
-      "claude_src_js_files",
-      "claude_staffing_state_table",
-      "claude_switchscreen",
-      "setup_supabase_github_document",
-      "setup_supabase_github_migration_keys",
-      "setup_supabase_github_pages_deploy",
-      "setup_supabase_github_rls_policies",
-      "setup_supabase_github_sb_credentials",
-      "setup_supabase_github_staffing_state_setup",
-      "src_tail_document"
-    ],
-    "7": [
+    "8": [
       "src_js_dashboard_crud_helpers",
       "src_js_dashboard_crud_helpers_closemodal",
       "src_js_dashboard_crud_helpers_cpselectmodal",
@@ -310,7 +369,7 @@
       "src_js_dashboard_crud_helpers_showconfirm",
       "src_js_dashboard_crud_helpers_showconfirmasync"
     ],
-    "8": [
+    "9": [
       "src_js_weekly_spostamenti",
       "src_js_weekly_spostamenti_pwspost",
       "src_js_weekly_spostamenti_pwspost2opt",
@@ -339,7 +398,33 @@
       "src_js_weekly_spostamenti_pwspostsave",
       "src_js_weekly_spostamenti_pwspoststatus"
     ],
-    "9": [
+    "10": [
+      "claude_skills_new_project_references_gitignore_templates",
+      "claude_skills_new_project_references_gitignore_templates_base_sempre_incluso",
+      "claude_skills_new_project_references_gitignore_templates_go_indicatore_go_mod",
+      "claude_skills_new_project_references_gitignore_templates_java_indicatori_pom_xml_build_gradle",
+      "claude_skills_new_project_references_gitignore_templates_net_indicatori_csproj_sln",
+      "claude_skills_new_project_references_gitignore_templates_node_indicatore_package_json",
+      "claude_skills_new_project_references_gitignore_templates_python_indicatori_requirements_txt_pyproject_toml_pipfile",
+      "claude_skills_new_project_references_gitignore_templates_rust_indicatore_cargo_toml",
+      "claude_skills_new_project_references_gitignore_templates_template_gitignore_per_stack",
+      "claude_skills_new_project_skill",
+      "claude_skills_new_project_skill_gotchas",
+      "claude_skills_new_project_skill_new_project",
+      "claude_skills_new_project_skill_passo_10_graphify",
+      "claude_skills_new_project_skill_passo_11_commit_dello_scaffolding",
+      "claude_skills_new_project_skill_passo_12_riepilogo_finale",
+      "claude_skills_new_project_skill_passo_1_rileva_lo_stato_attuale",
+      "claude_skills_new_project_skill_passo_2_raccogli_le_informazioni_minime",
+      "claude_skills_new_project_skill_passo_3_git",
+      "claude_skills_new_project_skill_passo_4_gitignore",
+      "claude_skills_new_project_skill_passo_5_agents_md",
+      "claude_skills_new_project_skill_passo_6_claude_md",
+      "claude_skills_new_project_skill_passo_7_readme_md",
+      "claude_skills_new_project_skill_passo_8_license",
+      "claude_skills_new_project_skill_passo_9_changelog_md"
+    ],
+    "11": [
       "src_js_produzione_core",
       "src_js_produzione_core_cpbuildrecord",
       "src_js_produzione_core_cpcollapsedcomm",
@@ -365,7 +450,7 @@
       "src_js_produzione_core_pwcontrollosyncjira",
       "src_js_produzione_core_pwsynccpdataforgrid"
     ],
-    "10": [
+    "12": [
       "src_js_weekly_strumenti",
       "src_js_weekly_strumenti_pwaddop",
       "src_js_weekly_strumenti_pwaddsquadra",
@@ -391,13 +476,14 @@
       "src_js_weekly_strumenti_pwupdatecommessa",
       "src_js_weekly_strumenti_pwupdatesquadranome"
     ],
-    "11": [
+    "13": [
       "src_js_config",
       "src_js_config_anno",
       "src_js_config_attestati_colonne",
       "src_js_config_attestati_durata",
       "src_js_config_distanzalavorazione",
       "src_js_config_distanzaprovince",
+      "src_js_config_dpi_default",
       "src_js_config_haversinekm",
       "src_js_config_industries",
       "src_js_config_initial_data",
@@ -414,7 +500,31 @@
       "src_js_config_solofuturi",
       "src_js_config_state"
     ],
-    "12": [
+    "14": [
+      "src_js_dashboard_dpi_admin",
+      "src_js_dashboard_dpi_admin_dpibindmodaleoperatore",
+      "src_js_dashboard_dpi_admin_dpiduratamesi",
+      "src_js_dashboard_dpi_admin_dpifiltri",
+      "src_js_dashboard_dpi_admin_dpiisvalido",
+      "src_js_dashboard_dpi_admin_dpileggimodaleoperatore",
+      "src_js_dashboard_dpi_admin_dpinoncoperti",
+      "src_js_dashboard_dpi_admin_dpirichiestiperoperatore",
+      "src_js_dashboard_dpi_admin_dpirigamodaleoperatore",
+      "src_js_dashboard_dpi_admin_dpirighematrice",
+      "src_js_dashboard_dpi_admin_dpiscadenzadaassegnazione",
+      "src_js_dashboard_dpi_admin_dpiscadenzeoperatori",
+      "src_js_dashboard_dpi_admin_dpisetfiltro",
+      "src_js_dashboard_dpi_admin_dpistatooperatore",
+      "src_js_dashboard_dpi_admin_dpistatovoce",
+      "src_js_dashboard_dpi_admin_dpitogglesezione",
+      "src_js_dashboard_dpi_admin_dpitooltipvoce",
+      "src_js_dashboard_dpi_admin_dpivoceoperatore",
+      "src_js_dashboard_dpi_admin_exportdpixlsx",
+      "src_js_dashboard_dpi_admin_renderdpi",
+      "src_js_dashboard_dpi_admin_renderdpi_dpiurgenzariga",
+      "src_js_dashboard_dpi_admin_renderdpicatalogo"
+    ],
+    "15": [
       "src_js_dashboard_operatori",
       "src_js_dashboard_operatori_aggiornaggopvistacommessa",
       "src_js_dashboard_operatori_aprivistaoperatore",
@@ -434,43 +544,26 @@
       "src_js_dashboard_operatori_updateattestatisummary",
       "src_js_dashboard_operatori_updateprovinciafilteroptions"
     ],
-    "13": [
-      "src_js_weekly_meteo",
-      "src_js_weekly_meteo_meteo_fasce",
-      "src_js_weekly_meteo_meteo_icons",
-      "src_js_weekly_meteo_meteocache",
-      "src_js_weekly_meteo_meteocacheload",
-      "src_js_weekly_meteo_meteocachesave",
-      "src_js_weekly_meteo_pwapplymeteobadgestodom",
-      "src_js_weekly_meteo_pwfasceorariefor",
-      "src_js_weekly_meteo_pwfetchmeteorange",
-      "src_js_weekly_meteo_pwmeteoiconfor",
-      "src_js_weekly_meteo_pwmeteoinfofor",
-      "src_js_weekly_meteo_pwmeteomissingreason",
-      "src_js_weekly_meteo_pwopenmeteomodal",
-      "src_js_weekly_meteo_pwrefreshmeteoweek",
-      "src_js_weekly_meteo_pwsquadracantierigiorno",
-      "src_js_weekly_meteo_pwstartmeteotimer",
-      "src_js_weekly_meteo_pwweatherbadgehtml",
-      "src_js_weekly_meteo_pwweatherbadgeinnerhtml"
+    "16": [
+      "claude_skills_checkpoint_skill",
+      "claude_skills_checkpoint_skill_checkpoint",
+      "claude_skills_checkpoint_skill_gotchas",
+      "claude_skills_checkpoint_skill_resume_flow",
+      "claude_skills_checkpoint_skill_save_flow",
+      "claude_skills_checkpoint_skill_single_use_design",
+      "claude_skills_checkpoint_skill_storage",
+      "claude_skills_new_project_references_gitignore_templates_base_block",
+      "claude_skills_new_project_references_gitignore_templates_node_block",
+      "claude_skills_new_project_references_gitignore_templates_python_block",
+      "claude_skills_new_project_skill_agents_md_scaffold",
+      "claude_skills_new_project_skill_auto_rebuild_hook",
+      "claude_skills_new_project_skill_claude_md_scaffold",
+      "claude_skills_new_project_skill_graphify",
+      "claude_skills_new_project_skill_graphify_step",
+      "claude_skills_new_project_skill_license_default",
+      "claude_skills_new_project_skill_new_project_skill"
     ],
-    "14": [
-      "src_js_weekly_ricerca_squadre",
-      "src_js_weekly_ricerca_squadre_ricercasquadre",
-      "src_js_weekly_ricerca_squadre_rsaddtappa",
-      "src_js_weekly_ricerca_squadre_rscalcdistmedia",
-      "src_js_weekly_ricerca_squadre_rscalcola",
-      "src_js_weekly_ricerca_squadre_rsdur",
-      "src_js_weekly_ricerca_squadre_rsgetskillspool",
-      "src_js_weekly_ricerca_squadre_rsinit",
-      "src_js_weekly_ricerca_squadre_rskm",
-      "src_js_weekly_ricerca_squadre_rsremovetappa",
-      "src_js_weekly_ricerca_squadre_rsrendermappa",
-      "src_js_weekly_ricerca_squadre_rsrenderrisultati",
-      "src_js_weekly_ricerca_squadre_rsrendertappe",
-      "src_js_weekly_ricerca_squadre_rsstatus"
-    ],
-    "15": [
+    "17": [
       "design_alarm_rose",
       "design_categorical_color_system",
       "design_circuit_indigo",
@@ -485,7 +578,7 @@
       "design_rule_single_typeface",
       "product_principle_density_over_whitespace"
     ],
-    "16": [
+    "18": [
       "src_js_dashboard_assegnazioni",
       "src_js_dashboard_assegnazioni_assegnaoperatore",
       "src_js_dashboard_assegnazioni_calcolaconfrontocommessa",
@@ -500,7 +593,7 @@
       "src_js_dashboard_assegnazioni_rimuovirigastaffing",
       "src_js_dashboard_assegnazioni_spostaassegnazione"
     ],
-    "17": [
+    "19": [
       "src_js_weekly_operatore_modal",
       "src_js_weekly_operatore_modal_pwcloseopmodal",
       "src_js_weekly_operatore_modal_pwconfirmopmodal",
@@ -515,7 +608,7 @@
       "src_js_weekly_operatore_modal_pwrenderstats",
       "src_js_weekly_operatore_modal_pwsquadracognomi"
     ],
-    "18": [
+    "20": [
       "docs_jira_custom_fields_artifact_atlante",
       "docs_jira_custom_fields_atlante_campi_jira",
       "docs_jira_custom_fields_createmeta_api",
@@ -529,7 +622,7 @@
       "docs_jira_custom_fields_template_d_gar_asset_management",
       "docs_jira_custom_fields_tempo_team_field"
     ],
-    "19": [
+    "21": [
       "src_js_storage_utils",
       "src_js_storage_utils_fmtdate",
       "src_js_storage_utils_loadstate",
@@ -543,7 +636,7 @@
       "src_js_storage_utils_sget",
       "src_js_storage_utils_sset"
     ],
-    "20": [
+    "22": [
       "src_js_weekly_ferie_import",
       "src_js_weekly_ferie_import_pw_ferie_accenti",
       "src_js_weekly_ferie_import_pw_ferie_mesi",
@@ -557,7 +650,7 @@
       "src_js_weekly_ferie_import_pwferiematchoperatore",
       "src_js_weekly_ferie_import_pwferienormtokens"
     ],
-    "21": [
+    "23": [
       "src_js_dashboard_commessa_attiva",
       "src_js_dashboard_commessa_attiva_chiudicommessa",
       "src_js_dashboard_commessa_attiva_confronto_stato_badge",
@@ -570,7 +663,7 @@
       "src_js_dashboard_commessa_attiva_renderconfrontobox",
       "src_js_dashboard_commessa_attiva_ripristinacommessa"
     ],
-    "22": [
+    "24": [
       "src_js_weekly_popover_stats",
       "src_js_weekly_popover_stats_pwaddcantierefield",
       "src_js_weekly_popover_stats_pwcantierecellof",
@@ -583,7 +676,7 @@
       "src_js_weekly_popover_stats_pwupdatecell",
       "src_js_weekly_popover_stats_pwupdateopnome"
     ],
-    "23": [
+    "25": [
       "src_js_produzione_report",
       "src_js_produzione_report_cpcaricareportsquadra",
       "src_js_produzione_report_cpgetsquadraopsbyday",
@@ -595,7 +688,7 @@
       "src_js_produzione_report_pwcontrolloexport",
       "src_js_produzione_report_pwcontrolloexportpdf"
     ],
-    "24": [
+    "26": [
       "src_js_weekly_clipboard_cantiere",
       "src_js_weekly_clipboard_cantiere_pwcellctxmenu",
       "src_js_weekly_clipboard_cantiere_pwclosectxmenu",
@@ -607,7 +700,18 @@
       "src_js_weekly_clipboard_cantiere_pwrowctxmenu",
       "src_js_weekly_clipboard_cantiere_pwshowctxmenu"
     ],
-    "25": [
+    "27": [
+      "src_js_dashboard_anagrafica_import",
+      "src_js_dashboard_anagrafica_import_anagimportfile",
+      "src_js_dashboard_anagrafica_import_anagimportfilter",
+      "src_js_dashboard_anagrafica_import_anagimportparseworkbook",
+      "src_js_dashboard_anagrafica_import_anagimportpick",
+      "src_js_dashboard_anagrafica_import_anagimportshowconfirm",
+      "src_js_dashboard_anagrafica_import_anagimportshowconfirm_anaglistbox",
+      "src_js_dashboard_anagrafica_import_anagnormcomune",
+      "src_js_dashboard_anagrafica_import_anagnormprovincia"
+    ],
+    "28": [
       "src_js_weekly_collapse_cp",
       "src_js_weekly_collapse_cp_cpapplycollapse",
       "src_js_weekly_collapse_cp_cpcollapsealltoggle",
@@ -618,7 +722,7 @@
       "src_js_weekly_collapse_cp_pwtogglecomm",
       "src_js_weekly_collapse_cp_pwtogglesq"
     ],
-    "26": [
+    "29": [
       "src_js_weekly_doppiaweek",
       "src_js_weekly_doppiaweek_pw_mesi_it",
       "src_js_weekly_doppiaweek_pwdoppiaweekexportpdf",
@@ -628,7 +732,7 @@
       "src_js_weekly_doppiaweek_pwdwtoggle",
       "src_js_weekly_doppiaweek_pwdwyear"
     ],
-    "27": [
+    "30": [
       "src_js_dashboard_import_export",
       "src_js_dashboard_import_export_exportxlsx",
       "src_js_dashboard_import_export_importxlsx",
@@ -637,15 +741,23 @@
       "src_js_dashboard_import_export_parsexlsxtodata",
       "src_js_dashboard_import_export_riconcilia"
     ],
-    "28": [
+    "31": [
       "scripts_smoke_test",
       "scripts_smoke_test_find_eslint",
       "scripts_smoke_test_main",
-      "scripts_smoke_test_rationale_180",
-      "scripts_smoke_test_rationale_193",
+      "scripts_smoke_test_rationale_218",
+      "scripts_smoke_test_rationale_231",
       "scripts_smoke_test_run_eslint_noundef"
     ],
-    "29": [
+    "32": [
+      "setup_supabase_github_document",
+      "setup_supabase_github_migration_keys",
+      "setup_supabase_github_pages_deploy",
+      "setup_supabase_github_rls_policies",
+      "setup_supabase_github_sb_credentials",
+      "setup_supabase_github_staffing_state_setup"
+    ],
+    "33": [
       "src_js_dashboard_commesse",
       "src_js_dashboard_commesse_confrontomesesel",
       "src_js_dashboard_commesse_getnomicommesseattive",
@@ -653,152 +765,155 @@
       "src_js_dashboard_commesse_rendercommesse",
       "src_js_dashboard_commesse_rendercommesseattive"
     ],
-    "30": [
+    "34": [
+      "src_js_weekly_nav",
+      "src_js_weekly_nav_mapaddsatellitetoggle",
+      "src_js_weekly_nav_pwactivetab",
+      "src_js_weekly_nav_pwscrolly",
+      "src_js_weekly_nav_pwswitchtab",
+      "src_js_weekly_nav_switchscreen"
+    ],
+    "35": [
       "src_js_dashboard_staffing_celle",
       "src_js_dashboard_staffing_celle_commitinlinecell",
       "src_js_dashboard_staffing_celle_refreshconfrontobox",
       "src_js_dashboard_staffing_celle_refreshfabbisognobox",
       "src_js_dashboard_staffing_celle_showinlinealert"
     ],
-    "31": [
-      "src_js_weekly_nav",
-      "src_js_weekly_nav_pwactivetab",
-      "src_js_weekly_nav_pwscrolly",
-      "src_js_weekly_nav_pwswitchtab",
-      "src_js_weekly_nav_switchscreen"
-    ],
-    "32": [
+    "36": [
       "scripts_build",
       "scripts_build_build_bytes",
       "scripts_build_main",
-      "scripts_build_rationale_58"
+      "scripts_build_rationale_59"
     ],
-    "33": [
+    "37": [
       "src_js_dashboard_dettaglio_mese",
       "src_js_dashboard_dettaglio_mese_apridettagliomesecommessa",
       "src_js_dashboard_dettaglio_mese_apridettagliomesecommessa_buildcandidati",
       "src_js_dashboard_dettaglio_mese_apridettagliomesecommessa_rendercardcandidato"
     ],
-    "34": [
+    "38": [
       "src_js_dashboard_gantt",
       "src_js_dashboard_gantt_ganttcfg",
       "src_js_dashboard_gantt_rendergantt",
       "src_js_dashboard_gantt_rendergantt_buildrowhtml"
     ],
-    "35": [
+    "39": [
       "src_js_dashboard_kpi",
       "src_js_dashboard_kpi_calckpi",
       "src_js_dashboard_kpi_renderkpi",
       "src_js_dashboard_kpi_showkpimodal"
     ],
-    "36": [
+    "40": [
       "src_js_dashboard_alerts_render",
       "src_js_dashboard_alerts_render_renderalerts",
       "src_js_dashboard_alerts_render_renderall"
     ],
-    "37": [
+    "41": [
       "src_js_dashboard_gap_riconc",
       "src_js_dashboard_gap_riconc_rendergap",
       "src_js_dashboard_gap_riconc_renderriconciliazione"
     ],
-    "38": [
+    "42": [
       "design_rule_no_glow",
       "design_shadow_vocabulary"
     ],
-    "39": [
+    "43": [
       "product_capabilities_constraints",
       "product_principle_no_regression_hardwon"
     ],
-    "40": [
-      "src_js_dashboard_dpi_admin",
-      "src_js_dashboard_dpi_admin_renderdpiadmin"
-    ],
-    "41": [
-      "design_deep_teal_accent"
-    ],
-    "42": [
-      "design_rule_no_side_tab"
-    ],
-    "43": [
-      "docs_jira_custom_fields_start_date_pianificato_field"
-    ],
     "44": [
-      "docs_jira_custom_fields_target_production_field"
+      "claude_skills_checkpoint_skill_checkpoint_skill"
     ],
     "45": [
-      "product_accessibility"
+      "design_deep_teal_accent"
     ],
     "46": [
-      "product_brand_commitments"
+      "design_rule_no_side_tab"
     ],
     "47": [
-      "product_evidence_on_hand"
+      "docs_jira_custom_fields_start_date_pianificato_field"
     ],
     "48": [
-      "product_operating_context"
+      "docs_jira_custom_fields_target_production_field"
     ],
     "49": [
-      "product_positioning"
+      "product_accessibility"
     ],
     "50": [
-      "product_principle_data_correctness_first"
+      "product_brand_commitments"
     ],
     "51": [
-      "product_principle_incremental_consistency"
+      "product_evidence_on_hand"
     ],
     "52": [
-      "product_principle_internal_expert_audience"
+      "product_operating_context"
     ],
     "53": [
-      "product_purpose"
+      "product_positioning"
     ],
     "54": [
+      "product_principle_data_correctness_first"
+    ],
+    "55": [
+      "product_principle_incremental_consistency"
+    ],
+    "56": [
+      "product_principle_internal_expert_audience"
+    ],
+    "57": [
+      "product_purpose"
+    ],
+    "58": [
       "product_users"
+    ],
+    "59": [
+      "src_tail_document"
     ]
   },
   "cohesion": {
-    "0": 0.0636734693877551,
-    "1": 0.08686868686868687,
-    "2": 0.1091753774680604,
-    "3": 0.0945945945945946,
+    "0": 0.06666666666666667,
+    "1": 0.10034013605442177,
+    "2": 0.08686868686868687,
+    "3": 0.1091753774680604,
     "4": 0.12380952380952381,
-    "5": 0.14285714285714285,
-    "6": 0.10052910052910052,
-    "7": 0.1623931623931624,
-    "8": 0.17663817663817663,
-    "9": 0.18478260869565216,
-    "10": 0.13768115942028986,
-    "11": 0.1380952380952381,
-    "12": 0.1895424836601307,
-    "13": 0.20261437908496732,
-    "14": 0.24175824175824176,
-    "15": 0.19230769230769232,
-    "16": 0.20512820512820512,
-    "17": 0.28205128205128205,
-    "18": 0.19696969696969696,
-    "19": 0.24242424242424243,
-    "20": 0.22727272727272727,
-    "21": 0.23636363636363636,
-    "22": 0.2727272727272727,
-    "23": 0.3333333333333333,
-    "24": 0.4,
-    "25": 0.3888888888888889,
-    "26": 0.32142857142857145,
-    "27": 0.47619047619047616,
-    "28": 0.4666666666666667,
-    "29": 0.5333333333333333,
-    "30": 0.6,
-    "31": 0.5,
-    "32": 0.6666666666666666,
-    "33": 0.5,
-    "34": 0.5,
-    "35": 0.6666666666666666,
-    "36": 1.0,
-    "37": 0.6666666666666666,
-    "38": 1.0,
-    "39": 1.0,
+    "5": 0.11553030303030302,
+    "6": 0.0960591133004926,
+    "7": 0.14285714285714285,
+    "8": 0.1623931623931624,
+    "9": 0.17663817663817663,
+    "10": 0.08333333333333333,
+    "11": 0.18478260869565216,
+    "12": 0.13768115942028986,
+    "13": 0.12987012987012986,
+    "14": 0.19480519480519481,
+    "15": 0.1895424836601307,
+    "16": 0.13970588235294118,
+    "17": 0.19230769230769232,
+    "18": 0.20512820512820512,
+    "19": 0.28205128205128205,
+    "20": 0.19696969696969696,
+    "21": 0.24242424242424243,
+    "22": 0.22727272727272727,
+    "23": 0.23636363636363636,
+    "24": 0.2727272727272727,
+    "25": 0.3333333333333333,
+    "26": 0.4,
+    "27": 0.3611111111111111,
+    "28": 0.3888888888888889,
+    "29": 0.32142857142857145,
+    "30": 0.47619047619047616,
+    "31": 0.4666666666666667,
+    "32": 0.3333333333333333,
+    "33": 0.5333333333333333,
+    "34": 0.4666666666666667,
+    "35": 0.6,
+    "36": 0.6666666666666666,
+    "37": 0.5,
+    "38": 0.5,
+    "39": 0.6666666666666666,
     "40": 1.0,
-    "41": 1.0,
+    "41": 0.6666666666666666,
     "42": 1.0,
     "43": 1.0,
     "44": 1.0,
@@ -811,7 +926,12 @@
     "51": 1.0,
     "52": 1.0,
     "53": 1.0,
-    "54": 1.0
+    "54": 1.0,
+    "55": 1.0,
+    "56": 1.0,
+    "57": 1.0,
+    "58": 1.0,
+    "59": 1.0
   },
   "gods": [
     {
@@ -820,9 +940,9 @@
       "degree": 14
     },
     {
-      "id": "src_js_weekly_jira_subtask_pwjirasubtaskopencomunimodal",
-      "label": "pwJiraSubtaskOpenComuniModal()",
-      "degree": 12
+      "id": "claude_skills_new_project_skill_new_project",
+      "label": "new-project",
+      "degree": 14
     },
     {
       "id": "src_js_dashboard_crud_helpers_esc",
@@ -830,13 +950,28 @@
       "degree": 12
     },
     {
+      "id": "src_js_weekly_jira_subtask_pwjirasubtaskopencomunimodal",
+      "label": "pwJiraSubtaskOpenComuniModal()",
+      "degree": 12
+    },
+    {
+      "id": "src_js_dashboard_attestati_renderattestati",
+      "label": "renderAttestati()",
+      "degree": 11
+    },
+    {
+      "id": "src_js_sb_admin_sbonloggedin",
+      "label": "sbOnLoggedIn()",
+      "degree": 11
+    },
+    {
       "id": "src_js_weekly_mail_core_pwgetferieweek",
       "label": "pwGetFerieWeek()",
       "degree": 11
     },
     {
-      "id": "src_js_dashboard_attestati_renderattestati",
-      "label": "renderAttestati()",
+      "id": "src_js_weekly_ricerca_squadre_rscalcola",
+      "label": "rsCalcola()",
       "degree": 11
     },
     {
@@ -845,24 +980,9 @@
       "degree": 11
     },
     {
-      "id": "index_griglia_tab",
-      "label": "Griglia Settimanale Tab",
-      "degree": 11
-    },
-    {
       "id": "src_js_dashboard_crud_helpers_closemodal",
       "label": "closeModal()",
       "degree": 10
-    },
-    {
-      "id": "src_js_weekly_mail_core_pwferierender",
-      "label": "pwFerieRender()",
-      "degree": 9
-    },
-    {
-      "id": "src_js_weekly_mail_core_pwgeneramail",
-      "label": "pwGeneraMail()",
-      "degree": 9
     }
   ],
   "surprises": [
@@ -878,15 +998,15 @@
       "why": "inferred connection - not explicitly stated in source; connects across different repos/directories; semantically similar concepts with no structural link"
     },
     {
-      "source": "Legacy sessionStorage keys migration",
-      "target": "INITIAL_DATA fallback constant",
+      "source": "Auth and Roles",
+      "target": "Role Hierarchy (Admin/Responsabile/Operatore/Guest)",
       "source_files": [
-        "SETUP_SUPABASE_GITHUB.md",
-        "CLAUDE.md"
+        "CLAUDE.md",
+        "README.md"
       ],
-      "confidence": "INFERRED",
-      "relation": "semantically_similar_to",
-      "why": "inferred connection - not explicitly stated in source; connects across different repos/directories; semantically similar concepts with no structural link"
+      "confidence": "AMBIGUOUS",
+      "relation": "conceptually_related_to",
+      "why": "ambiguous connection - not explicitly stated in source; connects across different repos/directories"
     },
     {
       "source": "listBox()",
@@ -911,19 +1031,52 @@
       "why": "inferred connection - not explicitly stated in source; bridges separate communities; peripheral node `rowHtml()` unexpectedly reaches hub `esc()`"
     },
     {
-      "source": "src/head.html (app shell source)",
-      "target": "index.html (generated Gestione-Staffing app)",
+      "source": "Single-Use Checkpoint Design",
+      "target": "New-Project Skill",
       "source_files": [
-        "src/head.html",
-        "index.html"
+        ".claude/skills/checkpoint/SKILL.md",
+        ".claude/skills/new-project/SKILL.md"
       ],
       "confidence": "INFERRED",
-      "relation": "implements",
-      "why": "inferred connection - not explicitly stated in source; connects across different repos/directories"
+      "relation": "semantically_similar_to",
+      "why": "inferred connection - not explicitly stated in source; semantically similar concepts with no structural link; peripheral node `Single-Use Checkpoint Design` unexpectedly reaches hub `New-Project Skill`"
     }
   ],
-  "tokens": {
-    "input": 0,
-    "output": 0
-  }
+  "questions": [
+    {
+      "type": "ambiguous_edge",
+      "question": "What is the exact relationship between `Auth and Roles` and `Role Hierarchy (Admin/Responsabile/Operatore/Guest)`?",
+      "why": "Edge tagged AMBIGUOUS (relation: conceptually_related_to) - confidence is low."
+    },
+    {
+      "type": "bridge_node",
+      "question": "Why does `esc()` connect `Community 8` to `Community 22`, `Community 7`?",
+      "why": "High betweenness centrality (0.005) - this node is a cross-community bridge."
+    },
+    {
+      "type": "bridge_node",
+      "question": "Why does `pwJiraSubtaskRenderPreview()` connect `Community 7` to `Community 8`?",
+      "why": "High betweenness centrality (0.003) - this node is a cross-community bridge."
+    },
+    {
+      "type": "bridge_node",
+      "question": "Why does `listBox()` connect `Community 22` to `Community 8`?",
+      "why": "High betweenness centrality (0.002) - this node is a cross-community bridge."
+    },
+    {
+      "type": "verify_inferred",
+      "question": "Are the 3 inferred relationships involving `esc()` (e.g. with `listBox()` and `rowHtml()`) actually correct?",
+      "why": "`esc()` has 3 INFERRED edges - model-reasoned connections that need verification."
+    },
+    {
+      "type": "isolated_nodes",
+      "question": "What connects `_geoCache`, `MAP_COLORS`, `_mapCollapsedCommesse` to the rest of the system?",
+      "why": "116 weakly-connected nodes found - possible documentation gaps or missing edges."
+    },
+    {
+      "type": "low_cohesion",
+      "question": "Should `Community 0` be split into smaller, more focused modules?",
+      "why": "Cohesion score 0.06666666666666667 - nodes in this community are weakly interconnected."
+    }
+  ]
 }
