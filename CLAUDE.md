@@ -49,7 +49,7 @@ Exit code 0 = pass, 1 = fail. Always run this before considering a change done.
 3. Run `python3 scripts/build.py` to regenerate `index.html`.
 4. Run the smoke test above.
 5. Commit/push both the changed `src/` file(s) and the regenerated `index.html` to `main` — GitHub Pages deploys automatically, no CI. Never commit an `index.html` that doesn't match a `python3 scripts/build.py` run against the `src/` in the same commit.
-6. Add an entry to the top of `README.md`'s changelog (Italian, terse, describes user-visible behavior and any required Supabase schema/Edge Function change).
+6. Add an entry to the top of the `## Changelog` section in `README.md` (Italian, terse, describes user-visible behavior and any required Supabase schema/Edge Function change). **`README.md` convention**: the program description (Funzionalità, Accesso, Stack tecnico, Backup, File nella repo, Note tecniche) comes first; the `## Changelog` section — newest entry first — comes after it, near the end of the file. Don't prepend changelog entries to the top of the file itself.
 
 There's no local dev server needed — open `index.html` directly in a browser, or push and reload the Pages URL. Supabase URL/anon key are hardcoded in `index.html` (`SB_URL`/`SB_ANON_KEY`, around line 1305); this repo is private specifically because of that.
 

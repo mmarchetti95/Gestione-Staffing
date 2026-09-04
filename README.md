@@ -1,3 +1,119 @@
+# Dashboard Staffing — Eagleprojects
+
+Applicazione web per la gestione dello staffing e della pipeline commerciale del dipartimento rilievi.
+
+🔗 **[Apri il Dashboard](https://mmarchetti95.github.io/Gestione-Staffing/)**
+
+---
+
+## Funzionalità
+
+- 📊 **Pipeline commerciale** — gestione commesse in fase di offerta con probabilità e valore
+- 👷 **Operatori** — anagrafica con skill badge (WO, MMS, LIXEL, DRONE, GPS, LASER, ROBOT, GRD)
+- 📅 **Staffing mensile** — allocazione gg-uomo per commessa, saturazione e gap analysis
+- 🗓️ **Pianificazione settimanale** — composizione squadre, assegnazione cantieri, gestione ferie
+- 🗺️ **Mappa cantieri** — visualizzazione geografica delle commesse attive
+- 📈 **Gantt** — timeline visiva pipeline e commesse attive
+- ☁️ **Sync automatico** — ogni modifica viene salvata su database cloud (Supabase) in tempo reale
+- 🔑 **Cambio password** — ogni utente può cambiare la propria password dal banner sync
+- 📋 **Log attività** — pannello admin con storico di tutte le modifiche (solo amministratori)
+- 🔒 **Riconciliazione nomi** — sezione debug visibile solo agli amministratori
+
+---
+
+## Accesso
+
+Il dashboard è protetto da login con credenziali personali.  
+Per richiedere un account contattare l'amministratore.
+
+### Ruoli utente
+| Ruolo | Accesso |
+|---|---|
+| Utente standard | Dashboard completo, modifica dati, cambio password |
+| Admin | Come sopra + log attività + sezione riconciliazione nomi |
+
+Per assegnare il ruolo admin — SQL Editor su Supabase:
+```sql
+UPDATE auth.users SET raw_user_meta_data = raw_user_meta_data || '{"role": "admin"}'::jsonb WHERE email = 'email@esempio.it';
+```
+
+---
+
+## Stack tecnico
+
+| Componente | Tecnologia |
+|---|---|
+| Frontend | HTML + Tailwind CSS + Chart.js + Leaflet.js |
+| Hosting | GitHub Pages |
+| Database / Auth | Supabase (PostgreSQL) |
+| Aggiornamento | Push su branch `main` → deploy automatico |
+
+---
+
+## Backup e ripristino dati
+
+I dati veri (pipeline, operatori, staffing, pianificazione settimanale, controllo produzione) vivono solo in Supabase — non c'è un seed locale recuperabile. `staffing_state` viene sovrascritta a ogni salvataggio (`upsert`, nessuno storico), quindi una cancellazione o un import errato non è di per sé recuperabile dall'app.
+
+**Rete di sicurezza attuale**: un job `pg_cron` (`nightly_staffing_backup`) gira ogni notte alle 02:00 UTC e chiama `run_nightly_backup()`, che salva uno snapshot completo di `staffing_state` + `controllo_produzione` nella tabella `data_backups` (retention 30 giorni). È il minimo indispensabile per poter tornare indietro, non un audit trail completo: se un dato viene cancellato e ripristinato lo stesso giorno prima del backup notturno successivo, si perde comunque quanto scritto tra l'ultimo snapshot buono e il ripristino.
+
+**Ripristino da UI (consigliato, da v18.115.0)**: un admin loggato trova nel banner sync il pulsante "🗄️ Backup dati", che apre un selettore con gli snapshot disponibili (data/ora + conteggio righe) e un pulsante "Ripristina questo backup" (con checkbox per includere o meno `controllo_produzione`). Dopo la conferma la pagina si ricarica da sola; gli altri utenti collegati vanno avvisati di ricaricare a mano. Sotto, la stessa procedura via SQL Editor — utile se l'app non è raggiungibile o per un controllo più fine.
+
+Per vedere i backup disponibili (via SQL Editor su Supabase, utente admin):
+```sql
+select id, created_at, jsonb_array_length(staffing_state) as righe_staffing, jsonb_array_length(controllo_produzione) as righe_cp
+from data_backups order by created_at desc;
+```
+
+Per forzare uno snapshot immediato (es. prima di un'importazione rischiosa):
+```sql
+select run_nightly_backup();
+```
+
+**Ripristino** (sostituisce interamente la tabella scelta con lo snapshot `<ID_BACKUP>` — verificare prima con la query sopra quale snapshot è quello buono):
+```sql
+-- Ripristina staffing_state (pipeline/operatori/staffing + griglia/ferie/doppia week)
+truncate table staffing_state;
+insert into staffing_state
+select * from jsonb_populate_recordset(null::staffing_state, (select staffing_state from data_backups where id = <ID_BACKUP>));
+
+-- Ripristina anche controllo_produzione, solo se necessario
+truncate table controllo_produzione;
+insert into controllo_produzione
+select * from jsonb_populate_recordset(null::controllo_produzione, (select controllo_produzione from data_backups where id = <ID_BACKUP>));
+```
+Dopo il ripristino, ricaricare la pagina dell'app (o attendere il pull realtime) perché gli utenti collegati vedano i dati ripristinati.
+
+Limite noto: il progetto Supabase è sul piano **Free**, che non include backup automatici/PITR nativi di Supabase — questo meccanismo è l'unica rete di sicurezza. Per un ripristino punto-per-punto più fine (non solo giornaliero) o per non avere alcuna finestra di perdita, valutare l'upgrade a Supabase Pro.
+
+---
+
+## File nella repo
+
+| File | Descrizione |
+|---|---|
+| `index.html` | Applicazione completa (single-file) |
+| `SETUP_SUPABASE_GITHUB.md` | Guida setup iniziale Supabase + GitHub Pages |
+| `README.md` | Questo file |
+| `backups/` | Backup versioni precedenti |
+
+---
+
+## Note tecniche per sviluppo futuro
+
+- Sempre scaricare `index.html` via GitHub API prima di modificare (per avere SHA aggiornato)
+- Workflow per ogni modifica: backup in `backups/` → modifica → push `index.html` → aggiorna README
+- Credenziali Supabase: URL e anon key già inserite nel file `index.html`
+- Admin role: assegnato via SQL su `auth.users.raw_user_meta_data`, letto con `auth.jwt() -> 'user_metadata' ->> 'role'`
+- `window.confirm()` non funziona in iframe — usare sempre `showConfirm()` custom
+- Nested template literals causano errori JS — usare concatenazione + attributi `data-`
+
+---
+
+## Changelog
+
+## v18.140.0
+- fix: **Genera mail — "Note generali" non veniva salvato** — nel modal "Genera mail" della Griglia, il campo "Note generali" (ferie manuali, istruzioni…) non veniva persistito: chiudendo e riaprendo il modal il testo andava perso, e non era condiviso tra utenti. Ora è salvato per settimana in `pwData.noteGenerali[anno][week]`, sincronizzato su Supabase come il resto della Griglia (i campi "Note squadra" e "Strumenti/attrezzatura" per squadra erano già persistiti correttamente).
+
 ## v18.139.0
 - feat: **Sottotask Jira — nuovo campo extra "Production Weight (%)"** — aggiunto ai campi extra spesso obbligatori in creazione (Data scadenza, Stima originale, Activity Type, Target Production, Start date pianificato, Tempo Team) il campo Jira `customfield_13027` "Production Weight (%)", con valore di esempio precompilato `50` (modificabile o lasciabile vuoto). Compare nel form solo per i progetti che hanno davvero quel campo (cluster C — Task/Iniziativa: AI032, AI029, PS019, WT036, WT037, WT038 — vedi `docs/jira-custom-fields.md`); sulle commesse dei Rilievi classici (cluster A/B) non compare, come per gli altri campi extra già gestiti.
   - Aggiornata la Edge Function `jira-create-subtask` (stesso nome, nuova entry in `KNOWN_EXTRA_FIELDS`/`buildExtraFieldsPayload` per `customfield_13027`), nessuna nuova Edge Function da deployare.
@@ -368,107 +484,7 @@
 ## v18.27.0
 - fix: mantenuti stato di espansione/collasso (commesse/squadre) e posizione di scroll per ciascun tab (Griglia settimanale, Ferie/Permessi, Mappa squadre, Controllo produzione) quando si passa da un tab all'altro nella Pianificazione Settimanale. Prima ogni switch di tab azzerava collapse e scroll; ora restano invariati finché non si fa il refresh della pagina.
 
-# Dashboard Staffing — Eagleprojects
-
-Applicazione web per la gestione dello staffing e della pipeline commerciale del dipartimento rilievi.
-
-🔗 **[Apri il Dashboard](https://mmarchetti95.github.io/Gestione-Staffing/)**
-
----
-
-## Funzionalità
-
-- 📊 **Pipeline commerciale** — gestione commesse in fase di offerta con probabilità e valore
-- 👷 **Operatori** — anagrafica con skill badge (WO, MMS, LIXEL, DRONE, GPS, LASER, ROBOT, GRD)
-- 📅 **Staffing mensile** — allocazione gg-uomo per commessa, saturazione e gap analysis
-- 🗓️ **Pianificazione settimanale** — composizione squadre, assegnazione cantieri, gestione ferie
-- 🗺️ **Mappa cantieri** — visualizzazione geografica delle commesse attive
-- 📈 **Gantt** — timeline visiva pipeline e commesse attive
-- ☁️ **Sync automatico** — ogni modifica viene salvata su database cloud (Supabase) in tempo reale
-- 🔑 **Cambio password** — ogni utente può cambiare la propria password dal banner sync
-- 📋 **Log attività** — pannello admin con storico di tutte le modifiche (solo amministratori)
-- 🔒 **Riconciliazione nomi** — sezione debug visibile solo agli amministratori
-
----
-
-## Accesso
-
-Il dashboard è protetto da login con credenziali personali.  
-Per richiedere un account contattare l'amministratore.
-
-### Ruoli utente
-| Ruolo | Accesso |
-|---|---|
-| Utente standard | Dashboard completo, modifica dati, cambio password |
-| Admin | Come sopra + log attività + sezione riconciliazione nomi |
-
-Per assegnare il ruolo admin — SQL Editor su Supabase:
-```sql
-UPDATE auth.users SET raw_user_meta_data = raw_user_meta_data || '{"role": "admin"}'::jsonb WHERE email = 'email@esempio.it';
-```
-
----
-
-## Stack tecnico
-
-| Componente | Tecnologia |
-|---|---|
-| Frontend | HTML + Tailwind CSS + Chart.js + Leaflet.js |
-| Hosting | GitHub Pages |
-| Database / Auth | Supabase (PostgreSQL) |
-| Aggiornamento | Push su branch `main` → deploy automatico |
-
----
-
-## Backup e ripristino dati
-
-I dati veri (pipeline, operatori, staffing, pianificazione settimanale, controllo produzione) vivono solo in Supabase — non c'è un seed locale recuperabile. `staffing_state` viene sovrascritta a ogni salvataggio (`upsert`, nessuno storico), quindi una cancellazione o un import errato non è di per sé recuperabile dall'app.
-
-**Rete di sicurezza attuale**: un job `pg_cron` (`nightly_staffing_backup`) gira ogni notte alle 02:00 UTC e chiama `run_nightly_backup()`, che salva uno snapshot completo di `staffing_state` + `controllo_produzione` nella tabella `data_backups` (retention 30 giorni). È il minimo indispensabile per poter tornare indietro, non un audit trail completo: se un dato viene cancellato e ripristinato lo stesso giorno prima del backup notturno successivo, si perde comunque quanto scritto tra l'ultimo snapshot buono e il ripristino.
-
-**Ripristino da UI (consigliato, da v18.115.0)**: un admin loggato trova nel banner sync il pulsante "🗄️ Backup dati", che apre un selettore con gli snapshot disponibili (data/ora + conteggio righe) e un pulsante "Ripristina questo backup" (con checkbox per includere o meno `controllo_produzione`). Dopo la conferma la pagina si ricarica da sola; gli altri utenti collegati vanno avvisati di ricaricare a mano. Sotto, la stessa procedura via SQL Editor — utile se l'app non è raggiungibile o per un controllo più fine.
-
-Per vedere i backup disponibili (via SQL Editor su Supabase, utente admin):
-```sql
-select id, created_at, jsonb_array_length(staffing_state) as righe_staffing, jsonb_array_length(controllo_produzione) as righe_cp
-from data_backups order by created_at desc;
-```
-
-Per forzare uno snapshot immediato (es. prima di un'importazione rischiosa):
-```sql
-select run_nightly_backup();
-```
-
-**Ripristino** (sostituisce interamente la tabella scelta con lo snapshot `<ID_BACKUP>` — verificare prima con la query sopra quale snapshot è quello buono):
-```sql
--- Ripristina staffing_state (pipeline/operatori/staffing + griglia/ferie/doppia week)
-truncate table staffing_state;
-insert into staffing_state
-select * from jsonb_populate_recordset(null::staffing_state, (select staffing_state from data_backups where id = <ID_BACKUP>));
-
--- Ripristina anche controllo_produzione, solo se necessario
-truncate table controllo_produzione;
-insert into controllo_produzione
-select * from jsonb_populate_recordset(null::controllo_produzione, (select controllo_produzione from data_backups where id = <ID_BACKUP>));
-```
-Dopo il ripristino, ricaricare la pagina dell'app (o attendere il pull realtime) perché gli utenti collegati vedano i dati ripristinati.
-
-Limite noto: il progetto Supabase è sul piano **Free**, che non include backup automatici/PITR nativi di Supabase — questo meccanismo è l'unica rete di sicurezza. Per un ripristino punto-per-punto più fine (non solo giornaliero) o per non avere alcuna finestra di perdita, valutare l'upgrade a Supabase Pro.
-
----
-
-## File nella repo
-
-| File | Descrizione |
-|---|---|
-| `index.html` | Applicazione completa (single-file) |
-| `SETUP_SUPABASE_GITHUB.md` | Guida setup iniziale Supabase + GitHub Pages |
-| `README.md` | Questo file |
-| `backups/` | Backup versioni precedenti |
-
----
-
-## Changelog
+### Versioni precedenti (formato tabellare, fino a v18.26.0)
 
 | Versione | Data | Modifiche |
 |---|---|---|
@@ -506,15 +522,4 @@ Limite noto: il progetto Supabase è sul piano **Free**, che non include backup 
 
 ---
 
-## Note tecniche per sviluppo futuro
-
-- Sempre scaricare `index.html` via GitHub API prima di modificare (per avere SHA aggiornato)
-- Workflow per ogni modifica: backup in `backups/` → modifica → push `index.html` → aggiorna README
-- Credenziali Supabase: URL e anon key già inserite nel file `index.html`
-- Admin role: assegnato via SQL su `auth.users.raw_user_meta_data`, letto con `auth.jwt() -> 'user_metadata' ->> 'role'`
-- `window.confirm()` non funziona in iframe — usare sempre `showConfirm()` custom
-- Nested template literals causano errori JS — usare concatenazione + attributi `data-`
-
----
-
-*Versione attuale: **v18.12.0** — Michele Marchetti*
+*Versione attuale: **v18.139.0** — Michele Marchetti*

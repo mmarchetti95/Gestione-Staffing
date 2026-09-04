@@ -150,7 +150,7 @@ function pwGeneraMail() {
             style="width:100%; border:1px solid #e2e8f0; border-radius:6px;
                    padding:8px 10px; font-size:11px; color:#334155; outline:none;
                    resize:vertical; box-sizing:border-box;"
-            placeholder="Es: permesso pomeriggio @Mario Rossi"></textarea>
+            placeholder="Es: permesso pomeriggio @Mario Rossi">${esc(pwGetNoteGeneraliWeek())}</textarea>
         </div>
 
         <!-- Anteprima mail -->
@@ -384,7 +384,11 @@ function pwGeneraMail() {
       document.getElementById('mail-testo').value = componiTesto();
     });
   });
-  document.getElementById('mail-note-generali').addEventListener('input', () => {
+  document.getElementById('mail-note-generali').addEventListener('input', (e) => {
+    if (sbGuardWrite()) {
+      pwSetNoteGeneraliWeek(e.target.value);
+      pwSave();
+    }
     document.getElementById('mail-testo').value = componiTesto();
   });
 
@@ -959,6 +963,19 @@ function pwGetWeekData() {
   if (!pwData[pwAnno]) pwData[pwAnno] = {};
   if (!pwData[pwAnno][pwWeek]) pwData[pwAnno][pwWeek] = [];
   return pwData[pwAnno][pwWeek];
+}
+
+// "Note generali" del modal Genera mail: testo libero specifico della settimana corrente
+// (a differenza di orario/CC, che sono impostazioni globali). Vive in pwData (dominio
+// "planning"), quindi persiste e si sincronizza tra utenti come il resto della Griglia.
+function pwGetNoteGeneraliWeek() {
+  return (pwData.noteGenerali && pwData.noteGenerali[pwAnno] && pwData.noteGenerali[pwAnno][pwWeek]) || '';
+}
+
+function pwSetNoteGeneraliWeek(testo) {
+  if (!pwData.noteGenerali) pwData.noteGenerali = {};
+  if (!pwData.noteGenerali[pwAnno]) pwData.noteGenerali[pwAnno] = {};
+  pwData.noteGenerali[pwAnno][pwWeek] = testo;
 }
 
 /* ----- Calcola commesse e operatori validi per la settimana corrente ----- */
