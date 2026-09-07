@@ -111,6 +111,9 @@ Limite noto: il progetto Supabase è sul piano **Free**, che non include backup 
 
 ## Changelog
 
+## v18.143.0
+- feat: **Sottotask Jira da Griglia — evidenza in griglia dei sottotask non creati per errore** — quando la creazione reale (Step 3) di uno o più sottotask fallisce su Jira, l'operatore/comune interessato ora mostra in Griglia un badge rosso ⚠️ (invece che sparire senza traccia, visibile solo nell'alert di riepilogo finale) con il messaggio d'errore in tooltip, rimovibile con la ✕ come gli altri badge. Un comune/operatore in errore NON viene considerato "coperto": riaprendo "🎫 Sottotask Jira" resta proponibile per un nuovo tentativo (non pre-selezionato "salta", non pre-deselezionato nello step di scelta puntuale).
+
 ## v18.142.0
 - feat: **Pianificazione Settimanale — pulsanti di azione disabilitati/ingrigiti per Operatore/Guest** — in tutte le tab (Griglia, Ferie, Mappa, Controllo Produzione, Doppia Week; Pianifica Spostamenti e Ricerca Squadre erano già di fatto sola-lettura, nessuna modifica lì) i controlli che scrivono dati (aggiungi/rimuovi commessa o squadra, assegna operatore, cantiere/attività, ferie, import Excel, sottotask Jira, sincronizzazione/inserimento dati in Controllo Produzione, correzione manuale geocoding in Mappa, ecc.) ora appaiono visivamente grigi e non cliccabili per i ruoli sola lettura, invece di mostrare l'alert solo dopo il click. Corretti anche tre punti privi di qualunque controllo di ruolo lato client (Controllo Produzione nel suo complesso, la creazione reale dei sottotask Jira, la correzione manuale del geocoding in Mappa squadre): ora bloccati anche via `sbGuardWrite()` come il resto dell'app, non solo esteticamente.
 

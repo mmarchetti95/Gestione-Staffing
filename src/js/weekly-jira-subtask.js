@@ -167,9 +167,14 @@ function pwJiraBuildSubtaskItem(meta, task, comune, nomeOperatore, attivita) {
   };
 }
 
-/* ----- Badge persistente in Griglia (stato "sottotask già esistente/creato") -----
+/* ----- Badge persistente in Griglia (stato "sottotask già esistente/creato/errore") -----
    Il dato vive in bc.jiraSubtask (oggetto sibling di `squadre` sul blocco
-   commessa), chiave "<comune>|||<operatore>" -> {status, key, url, ts}.
+   commessa), chiave "<comune>|||<operatore>" -> {status, key, url, message, ts}.
+   status 'error' (creazione reale fallita su Jira, Step 3) mostra un badge
+   rosso ⚠️ con il messaggio d'errore in tooltip, ma NON viene trattato come
+   "coperto" altrove nel flusso (vedi pwJiraSubtaskIsResolved) — a differenza
+   di 'created'/'already_exists', un comune/operatore in errore resta
+   selezionabile per un nuovo tentativo.
    Volutamente NON dentro giorni/cantieri della cella, per due motivi:
    - rinominare il cantiere in una cella fa sparire da solo il vecchio badge:
       la chiave vecchia non è più referenziata da nessuna cella (vedi
@@ -178,14 +183,24 @@ function pwJiraBuildSubtaskItem(meta, task, comune, nomeOperatore, attivita) {
       (weekly-clipboard-cantiere.js) copia solo {cantieri, attivita}, mai
       bc.jiraSubtask: il badge non segue mai il copia/incolla su un altro
       operatore/cantiere. */
-function pwJiraSubtaskMarkBadge(cIdx, comune, operatoreNome, status, key, url) {
+function pwJiraSubtaskMarkBadge(cIdx, comune, operatoreNome, status, key, url, message) {
   if (!sbGuardWrite()) return;
   const bc = pwGetWeekData()[cIdx];
   if (!bc || !comune || !operatoreNome) return;
   if (!bc.jiraSubtask) bc.jiraSubtask = {};
-  bc.jiraSubtask[comune + '|||' + operatoreNome] = { status, key: key || '', url: url || '', ts: new Date().toISOString() };
+  bc.jiraSubtask[comune + '|||' + operatoreNome] = { status, key: key || '', url: url || '', message: message || '', ts: new Date().toISOString() };
   pwSave();
   pwJiraSubtaskApplyBadgesToDom();
+}
+
+// Un entry va considerato "risolto" (sottotask presente su Jira, o già
+// esistente prima ancora del tentativo) solo per status created/already_exists.
+// Un entry con status 'error' resta segnalato in griglia ma NON deve far
+// considerare l'operatore/comune come coperto altrove nel flusso (Step 1
+// "salta" pre-selezionato, Step 1.4 riga pre-deselezionata): l'utente deve
+// poter ritentare la creazione senza doverlo prima capire da un badge rosso.
+function pwJiraSubtaskIsResolved(entry) {
+  return !!entry && (entry.status === 'created' || entry.status === 'already_exists');
 }
 
 function pwJiraSubtaskBadgeRemove(cIdx, mapKey) {
@@ -199,14 +214,18 @@ function pwJiraSubtaskBadgeRemove(cIdx, mapKey) {
 
 // includeCreated=false per le verifiche dryRun (Step 1 per-comune e Step 2
 // anteprima): marcano solo gli "already_exists" già trovati su Jira, mai i
-// "would_create" (non ancora creati per davvero). includeCreated=true solo
-// dopo la creazione reale (Step 3), dove va marcato anche "created".
+// "would_create" (non ancora creati per davvero) né gli "error" (un errore in
+// dryRun è solo informativo, resta visibile nella modale corrente e non deve
+// sporcare la griglia). includeCreated=true solo dopo la creazione reale
+// (Step 3), dove va marcato anche "created" e, soprattutto, "error": prima di
+// questa modifica un fallimento in creazione reale spariva silenziosamente
+// (visibile solo nell'alert di riepilogo) senza lasciare traccia in griglia.
 function pwJiraSubtaskApplyResultsToBadges(cIdx, items, results, includeCreated) {
   (results || []).forEach((r, i) => {
     const item = items[i];
     if (!item) return;
-    if (r.status === 'already_exists' || (includeCreated && r.status === 'created')) {
-      pwJiraSubtaskMarkBadge(cIdx, item._comune, item._operatore, r.status, r.key, r.url);
+    if (r.status === 'already_exists' || (includeCreated && (r.status === 'created' || r.status === 'error'))) {
+      pwJiraSubtaskMarkBadge(cIdx, item._comune, item._operatore, r.status, r.key, r.url, r.message);
     }
   });
 }
@@ -217,12 +236,14 @@ function pwJiraSubtaskBadgeInnerHtml(cIdx, bc, operatoreNome, cantiere) {
   const mapKey = c + '|||' + operatoreNome;
   const entry = bc.jiraSubtask[mapKey];
   if (!entry) return '';
-  const label = entry.status === 'created' ? 'creato' : 'già esistente';
-  const title = `Sottotask Jira ${label}${entry.key ? ': ' + entry.key : ''}`;
-  const body = '🎫' + (entry.key ? ' ' + esc(entry.key) : '');
+  const isError = entry.status === 'error';
+  const label = entry.status === 'created' ? 'creato' : (isError ? 'creazione fallita' : 'già esistente');
+  const title = `Sottotask Jira ${label}${entry.key ? ': ' + entry.key : ''}${isError && entry.message ? ' — ' + entry.message : ''}`;
+  const body = (isError ? '⚠️' : '🎫') + (entry.key ? ' ' + esc(entry.key) : '');
+  const linkClass = 'pw-jira-sub-link' + (isError ? ' pw-jira-sub-link-error' : '');
   const linkHtml = entry.url
-    ? `<a href="${esc(entry.url)}" target="_blank" rel="noopener" class="pw-jira-sub-link" title="${esc(title)}" onclick="event.stopPropagation()">${body}</a>`
-    : `<span class="pw-jira-sub-link" title="${esc(title)}">${body}</span>`;
+    ? `<a href="${esc(entry.url)}" target="_blank" rel="noopener" class="${linkClass}" title="${esc(title)}" onclick="event.stopPropagation()">${body}</a>`
+    : `<span class="${linkClass}" title="${esc(title)}">${body}</span>`;
   return `${linkHtml}<button type="button" class="pw-jira-sub-remove" title="Rimuovi indicatore sottotask Jira" onclick="event.stopPropagation();pwJiraSubtaskBadgeRemove(${cIdx},'${jsAttr(mapKey)}')">✕</button>`;
 }
 
@@ -324,11 +345,13 @@ function pwJiraSubtaskOpenComuniModal(cIdx, commessaNome, meta, comuneNames, com
 
   function rowHtml(comune, i) {
     const operatori = Object.keys(comuni[comune]);
-    const doneOperatori = operatori.filter(op => jiraMap[comune + '|||' + op]);
+    const doneOperatori = operatori.filter(op => pwJiraSubtaskIsResolved(jiraMap[comune + '|||' + op]));
+    const erroredOperatori = operatori.filter(op => { const e = jiraMap[comune + '|||' + op]; return e && e.status === 'error'; });
     const allDone = operatori.length > 0 && doneOperatori.length === operatori.length;
     const someDone = doneOperatori.length > 0 && !allDone;
     const operatoriNote = someDone ? ` <span class="text-blue-600">(${doneOperatori.length}/${operatori.length} già con sottotask)</span>` : '';
     const doneNote = allDone ? '<div class="text-[11px] text-blue-700 mb-1">🎫 Sottotask già presenti per tutti gli operatori — "salta" pre-selezionato, deseleziona per rifare la verifica.</div>' : '';
+    const errorNote = erroredOperatori.length ? `<div class="text-[11px] text-red-700 mb-1">⚠️ Creazione fallita per: ${erroredOperatori.map(esc).join(', ')} — ritenta.</div>` : '';
     return `<div class="border border-slate-200 rounded p-2 mb-2" data-comune-idx="${i}">
       <div class="flex items-center justify-between gap-2 mb-1">
         <div class="text-sm font-medium text-slate-800">${esc(comune)}</div>
@@ -338,6 +361,7 @@ function pwJiraSubtaskOpenComuniModal(cIdx, commessaNome, meta, comuneNames, com
       </div>
       <div class="text-[11px] text-slate-500 mb-1">Operatori: ${operatori.map(esc).join(', ')}${operatoriNote}</div>
       ${doneNote}
+      ${errorNote}
       <div class="grid grid-cols-2 gap-2">
         <button type="button" class="pw-jira-panel-trigger pw-jira-epic-trigger w-full text-left border border-slate-300 rounded px-2 py-1.5 text-sm bg-white hover:bg-slate-50 truncate block" data-idx="${i}"${allDone ? ' disabled style="opacity:0.5;"' : ''}>— scegli Epic —</button>
         <button type="button" class="pw-jira-panel-trigger pw-jira-task-trigger w-full text-left border border-slate-300 rounded px-2 py-1.5 text-sm bg-white hover:bg-slate-50 truncate block" data-idx="${i}" disabled style="opacity:0.5;">— scegli prima l'Epic —</button>
@@ -576,8 +600,12 @@ function pwJiraSubtaskOpenSelectItemsModal(cIdx, commessaNome, meta, items, skip
   // deselezionato: inutile riproporlo per poi doverlo scartare a mano. Resta
   // comunque visibile e riselezionabile (es. per rifare la verifica).
   const rows = items.map((item, i) => {
-    const already = jiraMap[(item._comune || '') + '|||' + (item._operatore || '')];
-    const noteHtml = already ? ` <span class="text-blue-600">🎫 già presente${already.key ? ' · ' + esc(already.key) : ''}</span>` : '';
+    const entry = jiraMap[(item._comune || '') + '|||' + (item._operatore || '')];
+    const already = pwJiraSubtaskIsResolved(entry) ? entry : null;
+    const erroredBefore = entry && entry.status === 'error';
+    let noteHtml = '';
+    if (already) noteHtml = ` <span class="text-blue-600">🎫 già presente${already.key ? ' · ' + esc(already.key) : ''}</span>`;
+    else if (erroredBefore) noteHtml = ` <span class="text-red-700">⚠️ tentativo precedente fallito${entry.message ? ' · ' + esc(entry.message) : ''}</span>`;
     return `<label class="flex items-center gap-2 border-b border-slate-100 py-1.5 text-sm cursor-pointer${already ? ' opacity-70' : ''}">
       <input type="checkbox" class="pw-jira-select-item" data-idx="${i}"${already ? '' : ' checked'}>
       <div class="min-w-0">
