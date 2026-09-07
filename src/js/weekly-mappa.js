@@ -518,6 +518,10 @@ async function pwMapRenderCantieri(itemsAll, dayIdx) {
     </div>`;
 
     const marker = L.marker([lat, lng], { icon }).addTo(_map).bindPopup(popup);
+    // Il dettaglio squadra (popup) si vede anche al semplice passaggio del mouse,
+    // senza dover cliccare (il click resta l'unico modo per zoomare sulla zona).
+    marker.on('mouseover', () => marker.openPopup());
+    marker.on('mouseout', () => marker.closePopup());
     marker.on('click', () => pwMapFocusItem(i));
     _mapMarkers.push(marker);
   });

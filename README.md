@@ -111,6 +111,9 @@ Limite noto: il progetto Supabase è sul piano **Free**, che non include backup 
 
 ## Changelog
 
+## v18.148.0
+- feat: **Mappa Squadre — dettaglio squadra visibile anche al passaggio del mouse** — il popup con i dettagli della squadra (commessa, cantiere, operatori, strumenti) sui marker della mappa ora si apre anche al semplice hover, senza dover cliccare; il click resta invariato (apre comunque il popup e in più zooma sulla zona).
+
 ## v18.147.0
 - feat: **Griglia — pulsanti "+ Aggiungi commessa" e "Genera mail" spostati nella barra azioni della Griglia, ora sticky** — i due pulsanti, prima nella toolbar di navigazione settimana comune a tutte le tab (Griglia, Ferie, Mappa, ecc.), sono ora specifici della sola Griglia: spostati accanto al pulsante "Collassa" nella barra di ricerca operatore/cantiere. Quella barra è inoltre diventata sticky (resta visibile in cima durante lo scroll della griglia, agganciata subito sotto l'header fisso, la cui altezza viene misurata a runtime via JS per evitare valori "a occhio").
 
