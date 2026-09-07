@@ -784,12 +784,16 @@ function pwJiraSubtaskRenderPreview(cIdx, commessaNome, items, results, skippedC
   root.querySelector('.modal-backdrop').addEventListener('click', e => { if (e.target.classList.contains('modal-backdrop')) closeModal(); });
 
   if (wouldCreate > 0) {
-    document.getElementById('pw-jira-confirm-create').onclick = () => pwJiraSubtaskConfirmCreate(cIdx, commessaNome, items, extraFields);
+    document.getElementById('pw-jira-confirm-create').onclick = () => pwJiraSubtaskConfirmCreate(cIdx, commessaNome, items, extraFields, results);
   }
 }
 
-/* ----- Step 3: creazione reale + riepilogo ----- */
-async function pwJiraSubtaskConfirmCreate(cIdx, commessaNome, items, extraFields) {
+/* ----- Step 3: creazione reale + riepilogo -----
+   previewResults: i risultati dryRun dello Step 2 (stesso ordine di items),
+   usati SOLO come fallback se la chiamata reale fallisce nel suo insieme
+   (vedi catch sotto) — non per la marcatura badge del percorso normale, che
+   usa sempre i risultati reali. */
+async function pwJiraSubtaskConfirmCreate(cIdx, commessaNome, items, extraFields, previewResults) {
   if (!sbGuardWrite()) return;
   const root = document.getElementById('modal-root');
   root.innerHTML = `<div class="modal-backdrop"><div class="bg-white rounded-lg shadow-xl w-full max-w-md mx-4 p-5">
@@ -800,7 +804,20 @@ async function pwJiraSubtaskConfirmCreate(cIdx, commessaNome, items, extraFields
   try {
     results = await pwJiraCreateSubtasks(items, false, extraFields);
   } catch (e) {
-    showAlertModal('Errore durante la creazione: ' + (e.message || e));
+    // La chiamata alla Edge Function è fallita nel suo insieme (es. eccezione
+    // non gestita lato server risolvendo l'assignee di un operatore non
+    // presente su Jira) PRIMA di restituire risultati per-item: senza questo
+    // fallback l'errore restava visibile solo nel popup di riepilogo, che
+    // sparisce dopo la chiusura, e la griglia non mostrava alcuna traccia del
+    // fallimento.
+    // Marchiamo come 'error' tutti gli item tranne quelli che nell'anteprima
+    // (dryRun, Step 2) risultavano già 'already_exists': quelli hanno già il
+    // badge corretto (marcato allo Step 2) e un sottotask realmente presente
+    // su Jira, quindi non vanno segnalati come falliti.
+    const msg = e.message || String(e);
+    const toMark = items.filter((_, i) => !(previewResults && previewResults[i] && previewResults[i].status === 'already_exists'));
+    pwJiraSubtaskApplyResultsToBadges(cIdx, toMark, toMark.map(() => ({ status: 'error', message: msg })), true);
+    showAlertModal('Errore durante la creazione: ' + msg);
     return;
   }
 

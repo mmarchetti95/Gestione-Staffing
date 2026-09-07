@@ -111,6 +111,9 @@ Limite noto: il progetto Supabase è sul piano **Free**, che non include backup 
 
 ## Changelog
 
+## v18.144.0
+- fix: **Sottotask Jira da Griglia — errore su operatore non presente su Jira non lasciava traccia in griglia** — il badge rosso ⚠️ introdotto in v18.143.0 marcava solo gli errori restituiti item-per-item dalla Edge Function; quando invece l'intera chiamata di creazione falliva prima di restituire risultati per-item (caso riscontrato: operatore/assignee non trovato su Jira), l'errore restava visibile solo nel popup di riepilogo finale e la griglia non mostrava nulla. Ora, in questo caso, tutti gli item del batch (tranne quelli già segnati "già esistente" nell'anteprima) vengono marcati con il badge di errore.
+
 ## v18.143.0
 - feat: **Sottotask Jira da Griglia — evidenza in griglia dei sottotask non creati per errore** — quando la creazione reale (Step 3) di uno o più sottotask fallisce su Jira, l'operatore/comune interessato ora mostra in Griglia un badge rosso ⚠️ (invece che sparire senza traccia, visibile solo nell'alert di riepilogo finale) con il messaggio d'errore in tooltip, rimovibile con la ✕ come gli altri badge. Un comune/operatore in errore NON viene considerato "coperto": riaprendo "🎫 Sottotask Jira" resta proponibile per un nuovo tentativo (non pre-selezionato "salta", non pre-deselezionato nello step di scelta puntuale).
 
