@@ -259,8 +259,18 @@ async function pwMoveCommessaDown(btn) {
   }
 }
 
+/* Altezza reale dell'header fisso, per agganciarci sotto la barra azioni
+   sticky della Griglia (var CSS --pw-toolbar-top, letta da head.html). */
+function pwSyncStickyOffsets() {
+  const header = document.getElementById('app-header');
+  if (header) document.documentElement.style.setProperty('--pw-toolbar-top', header.offsetHeight + 'px');
+}
+
 /* ----- Init pianificazione ----- */
 document.addEventListener('DOMContentLoaded', async () => {
+  pwSyncStickyOffsets();
+  window.addEventListener('resize', pwSyncStickyOffsets);
+
   await pwLoad();
 
   // pwData/pwFerie arrivano da un DOMContentLoaded separato da quello del Dashboard

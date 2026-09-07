@@ -64,11 +64,6 @@
     /* Sfondo di attenuazione condiviso da tutti i backdrop modali: prima
        erano tre alpha diverse (.4 / .45 / .5) per lo stesso ruolo. */
     --backdrop: rgba(0,0,0,.4);
-
-    /* Altezza dell'header fisso, usata per agganciare sotto di esso la
-       barra azioni della Griglia (sticky). Valore di fallback prima che
-       pwSyncStickyOffsets() la misuri via JS a runtime. */
-    --pw-toolbar-top: 64px;
   }
   /* 'Inter' era dichiarato in font-family ma mai realmente caricato (nessun
      <link> Google Fonts né @font-face) — l'app ha sempre reso nel font di
@@ -1137,7 +1132,7 @@
 <body class="min-h-screen">
 
 <!-- Top bar -->
-<header id="app-header" class="no-print sticky top-0 z-30" style="background:var(--dark-bg);border-bottom:3px solid var(--accent);">
+<header class="no-print sticky top-0 z-30" style="background:var(--dark-bg);border-bottom:3px solid var(--accent);">
   <div class="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between">
     <div class="flex items-center gap-3">
       <div class="w-10 h-10 rounded-lg text-white flex items-center justify-center" style="background:var(--accent);font-size:17px;font-weight:800;letter-spacing:-0.02em;box-shadow:0 2px 6px rgba(0,0,0,.4);">S</div>
@@ -1154,7 +1149,7 @@
     <div class="flex items-center gap-2">
       <button id="btn-presentation" class="px-3 py-1.5 text-sm rounded hover:bg-white/10" style="border:1px solid var(--dark-border-strong);color:var(--dark-text);visibility:visible;">📊 Modalità presentazione</button>
       <div class="text-xs pl-2" style="border-left:1px solid var(--dark-border-strong);color:var(--dark-text-muted);">
-        <span id="app-version" class="font-medium" style="color:var(--accent);">v18.147.0</span> · Michele Marchetti
+        <span id="app-version" class="font-medium" style="color:var(--accent);">v18.146.0</span> · Michele Marchetti
         <span id="sb-role-badge" style="margin-left:8px;padding:1px 8px;border-radius:9999px;background:rgba(255,255,255,.1);color:var(--dark-text);font-weight:600;"></span>
       </div>
     </div>
@@ -1717,7 +1712,7 @@
   <!-- Vista Griglia -->
   <div id="pw-view-griglia">
     <!-- Barra ricerca operatore -->
-    <div id="pw-toolbar-griglia" class="bg-white border border-slate-200 rounded-lg px-4 py-3 mb-3 no-print flex items-center gap-3" style="position:sticky; top:var(--pw-toolbar-top, 64px); z-index:20;">
+    <div class="bg-white border border-slate-200 rounded-lg px-4 py-3 mb-3 no-print flex items-center gap-3">
       <div class="relative flex-1 max-w-sm">
         <span class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm pointer-events-none">🔍</span>
         <input id="pw-search-op" type="text"
@@ -12409,18 +12404,8 @@ async function pwMoveCommessaDown(btn) {
   }
 }
 
-/* Altezza reale dell'header fisso, per agganciarci sotto la barra azioni
-   sticky della Griglia (var CSS --pw-toolbar-top, letta da head.html). */
-function pwSyncStickyOffsets() {
-  const header = document.getElementById('app-header');
-  if (header) document.documentElement.style.setProperty('--pw-toolbar-top', header.offsetHeight + 'px');
-}
-
 /* ----- Init pianificazione ----- */
 document.addEventListener('DOMContentLoaded', async () => {
-  pwSyncStickyOffsets();
-  window.addEventListener('resize', pwSyncStickyOffsets);
-
   await pwLoad();
 
   // pwData/pwFerie arrivano da un DOMContentLoaded separato da quello del Dashboard
