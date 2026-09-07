@@ -111,6 +111,9 @@ Limite noto: il progetto Supabase è sul piano **Free**, che non include backup 
 
 ## Changelog
 
+## v18.145.0
+- fix: **Sottotask Jira da Griglia — errore mostrato solo in anteprima ("Crea 0 sottotask") non lasciava traccia in griglia** — caso riscontrato: un operatore non risolvibile su Jira (es. assignee non trovato) fa fallire già l'anteprima (dryRun, Step 2) con status "Errore" e il pulsante "Crea 0 sottotask" resta disabilitato, quindi la creazione reale (Step 3, dove scattavano i badge introdotti in v18.143.0/v18.144.0) non veniva mai raggiunta e l'errore spariva chiudendo la modale. Ora il badge rosso ⚠️ viene marcato in griglia anche per gli errori mostrati in anteprima (Step 1 verifica per-comune e Step 2), non solo per quelli della creazione reale.
+
 ## v18.144.0
 - fix: **Sottotask Jira da Griglia — errore su operatore non presente su Jira non lasciava traccia in griglia** — il badge rosso ⚠️ introdotto in v18.143.0 marcava solo gli errori restituiti item-per-item dalla Edge Function; quando invece l'intera chiamata di creazione falliva prima di restituire risultati per-item (caso riscontrato: operatore/assignee non trovato su Jira), l'errore restava visibile solo nel popup di riepilogo finale e la griglia non mostrava nulla. Ora, in questo caso, tutti gli item del batch (tranne quelli già segnati "già esistente" nell'anteprima) vengono marcati con il badge di errore.
 

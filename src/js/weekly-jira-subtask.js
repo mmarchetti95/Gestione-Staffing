@@ -170,10 +170,11 @@ function pwJiraBuildSubtaskItem(meta, task, comune, nomeOperatore, attivita) {
 /* ----- Badge persistente in Griglia (stato "sottotask già esistente/creato/errore") -----
    Il dato vive in bc.jiraSubtask (oggetto sibling di `squadre` sul blocco
    commessa), chiave "<comune>|||<operatore>" -> {status, key, url, message, ts}.
-   status 'error' (creazione reale fallita su Jira, Step 3) mostra un badge
-   rosso ⚠️ con il messaggio d'errore in tooltip, ma NON viene trattato come
-   "coperto" altrove nel flusso (vedi pwJiraSubtaskIsResolved) — a differenza
-   di 'created'/'already_exists', un comune/operatore in errore resta
+   status 'error' (fallito su Jira: sia in anteprima/dryRun — Step 1 o Step 2
+   — sia in creazione reale, Step 3) mostra un badge rosso ⚠️ con il messaggio
+   d'errore in tooltip, ma NON viene trattato come "coperto" altrove nel
+   flusso (vedi pwJiraSubtaskIsResolved) — a differenza di
+   'created'/'already_exists', un comune/operatore in errore resta
    selezionabile per un nuovo tentativo.
    Volutamente NON dentro giorni/cantieri della cella, per due motivi:
    - rinominare il cantiere in una cella fa sparire da solo il vecchio badge:
@@ -213,18 +214,20 @@ function pwJiraSubtaskBadgeRemove(cIdx, mapKey) {
 }
 
 // includeCreated=false per le verifiche dryRun (Step 1 per-comune e Step 2
-// anteprima): marcano solo gli "already_exists" già trovati su Jira, mai i
-// "would_create" (non ancora creati per davvero) né gli "error" (un errore in
-// dryRun è solo informativo, resta visibile nella modale corrente e non deve
-// sporcare la griglia). includeCreated=true solo dopo la creazione reale
-// (Step 3), dove va marcato anche "created" e, soprattutto, "error": prima di
-// questa modifica un fallimento in creazione reale spariva silenziosamente
-// (visibile solo nell'alert di riepilogo) senza lasciare traccia in griglia.
+// anteprima): marcano "already_exists" e "error", mai i "would_create" (non
+// ancora creati per davvero). Gli "error" vanno marcati anche in dryRun — non
+// solo dopo la creazione reale (Step 3) — perché un errore di anteprima (es.
+// operatore/assignee non risolvibile su Jira) tipicamente disabilita il
+// pulsante "Crea" (0 da creare): senza questo, quell'item non passa MAI da
+// Step 3 e l'errore, visibile solo nella modale di anteprima corrente,
+// sparirebbe chiudendola senza lasciare traccia in griglia.
+// includeCreated=true solo dopo la creazione reale (Step 3), dove va marcato
+// anche "created".
 function pwJiraSubtaskApplyResultsToBadges(cIdx, items, results, includeCreated) {
   (results || []).forEach((r, i) => {
     const item = items[i];
     if (!item) return;
-    if (r.status === 'already_exists' || (includeCreated && (r.status === 'created' || r.status === 'error'))) {
+    if (r.status === 'already_exists' || r.status === 'error' || (includeCreated && r.status === 'created')) {
       pwJiraSubtaskMarkBadge(cIdx, item._comune, item._operatore, r.status, r.key, r.url, r.message);
     }
   });
@@ -811,11 +814,13 @@ async function pwJiraSubtaskConfirmCreate(cIdx, commessaNome, items, extraFields
     // sparisce dopo la chiusura, e la griglia non mostrava alcuna traccia del
     // fallimento.
     // Marchiamo come 'error' tutti gli item tranne quelli che nell'anteprima
-    // (dryRun, Step 2) risultavano già 'already_exists': quelli hanno già il
-    // badge corretto (marcato allo Step 2) e un sottotask realmente presente
-    // su Jira, quindi non vanno segnalati come falliti.
+    // (dryRun, Step 2 — vedi pwJiraSubtaskApplyResultsToBadges, ora marca
+    // anche gli 'error' di anteprima) risultavano già 'already_exists' (badge
+    // corretto, sottotask realmente presente su Jira) o già 'error' (badge
+    // già presente con il messaggio specifico di quell'item, più utile del
+    // messaggio generico di fallimento dell'intero batch che avremmo qui).
     const msg = e.message || String(e);
-    const toMark = items.filter((_, i) => !(previewResults && previewResults[i] && previewResults[i].status === 'already_exists'));
+    const toMark = items.filter((_, i) => !(previewResults && previewResults[i] && (previewResults[i].status === 'already_exists' || previewResults[i].status === 'error')));
     pwJiraSubtaskApplyResultsToBadges(cIdx, toMark, toMark.map(() => ({ status: 'error', message: msg })), true);
     showAlertModal('Errore durante la creazione: ' + msg);
     return;
