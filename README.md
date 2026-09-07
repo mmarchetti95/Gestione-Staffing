@@ -111,6 +111,9 @@ Limite noto: il progetto Supabase è sul piano **Free**, che non include backup 
 
 ## Changelog
 
+## v18.141.0
+- feat: **Griglia — ricerca anche per cantiere + modal risultati con navigazione diretta alla cella** — la barra di ricerca della Griglia settimanale ora trova, oltre al nome operatore, anche il testo dei cantieri assegnati nei giorni della settimana. Il conteggio risultati sopra la barra è ora cliccabile: apre un modal con il dettaglio di ogni corrispondenza (operatore/squadra/commessa, e per i match su cantiere anche il giorno), cliccando una riga il modal si chiude e si viene portati esattamente alla cella corrispondente nella Griglia (espandendo commessa/squadra se collassate, con scroll ed evidenziazione temporanea).
+
 ## v18.140.0
 - fix: **Genera mail — "Note generali" non veniva salvato** — nel modal "Genera mail" della Griglia, il campo "Note generali" (ferie manuali, istruzioni…) non veniva persistito: chiudendo e riaprendo il modal il testo andava perso, e non era condiviso tra utenti. Ora è salvato per settimana in `pwData.noteGenerali[anno][week]`, sincronizzato su Supabase come il resto della Griglia (i campi "Note squadra" e "Strumenti/attrezzatura" per squadra erano già persistiti correttamente).
 

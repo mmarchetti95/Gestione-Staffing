@@ -1140,7 +1140,7 @@
     <div class="flex items-center gap-2">
       <button id="btn-presentation" class="px-3 py-1.5 text-sm rounded hover:bg-white/10" style="border:1px solid var(--dark-border-strong);color:var(--dark-text);visibility:visible;">📊 Modalità presentazione</button>
       <div class="text-xs pl-2" style="border-left:1px solid var(--dark-border-strong);color:var(--dark-text-muted);">
-        <span id="app-version" class="font-medium" style="color:var(--accent);">v18.141.0</span> · Michele Marchetti
+        <span id="app-version" class="font-medium" style="color:var(--accent);">v18.140.0</span> · Michele Marchetti
         <span id="sb-role-badge" style="margin-left:8px;padding:1px 8px;border-radius:9999px;background:rgba(255,255,255,.1);color:var(--dark-text);font-weight:600;"></span>
       </div>
     </div>
@@ -1709,7 +1709,7 @@
       <div class="relative flex-1 max-w-sm">
         <span class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm pointer-events-none">🔍</span>
         <input id="pw-search-op" type="text"
-          placeholder="Cerca operatore o cantiere nella griglia…"
+          placeholder="Cerca operatore nella griglia…"
           class="w-full pl-8 pr-8 py-1.5 text-sm border border-slate-200 rounded-lg focus:outline-none focus:border-teal-400 bg-slate-50">
         <button id="pw-search-op-clear"
           class="absolute right-2 top-1/2 -translate-y-1/2 text-slate-300 hover:text-slate-500 text-lg leading-none hidden">×</button>
@@ -11748,15 +11748,11 @@ function pwToggleStatPopover(key, cardEl) {
   }, 0);
 }
 
-/* ----- Ricerca operatore/cantiere nella griglia ----- */
+/* ----- Ricerca operatore nella griglia ----- */
 let _pwSearchTerm = '';
-// Match trovati dall'ultima pwSearchOp (uno per nome-operatore trovato + uno per
-// ogni cella-cantiere trovata), usati da pwOpenSearchResultsModal per il dettaglio.
-let _pwSearchMatches = [];
 
 function pwSearchOp(term) {
   _pwSearchTerm = (term || '').trim().toLowerCase();
-  _pwSearchMatches = [];
 
   const clearBtn = document.getElementById('pw-search-op-clear');
   const infoEl   = document.getElementById('pw-search-op-info');
@@ -11770,167 +11766,42 @@ function pwSearchOp(term) {
     document.querySelectorAll('.pw-commessa-block').forEach(b => {
       b.classList.remove('search-no-match');
     });
-    if (infoEl) {
-      infoEl.textContent = '';
-      infoEl.classList.add('hidden');
-      infoEl.style.cursor = '';
-      infoEl.style.textDecoration = '';
-      infoEl.onclick = null;
-    }
+    if (infoEl) { infoEl.textContent = ''; infoEl.classList.add('hidden'); }
     return;
   }
 
-  const data = pwGetWeekData();
+  let totalMatch = 0;
+  let commesseConMatch = 0;
 
   document.querySelectorAll('.pw-commessa-block').forEach(block => {
-    const cIdx = block.dataset.cidx;
-    const bc   = data[cIdx];
     let matchInBlock = 0;
-
     block.querySelectorAll('.pw-op-row').forEach(row => {
-      // Legge il nome dall'op-trigger-label dentro la riga (assente sulla riga
-      // header giorni, che infatti non ha celle .pw-day-cell)
-      const dayCells = row.querySelectorAll('.pw-day-cell');
-      const labelEl  = row.querySelector('.op-trigger-label');
-      const nome     = labelEl ? labelEl.textContent.trim().toLowerCase() : '';
-      const nomeMatch = !!nome && nome !== '— scegli —' && nome.includes(_pwSearchTerm);
+      // Legge il nome dall'op-trigger-label dentro la riga
+      const labelEl = row.querySelector('.op-trigger-label');
+      const nome = labelEl ? labelEl.textContent.trim().toLowerCase() : '';
+      const isMatch = nome && nome !== '— scegli —' && nome.includes(_pwSearchTerm);
 
-      // Cerca il termine anche nei cantieri di ogni giorno di questa riga
-      const cantiereMatches = [];
-      dayCells.forEach(cell => {
-        cell.querySelectorAll('.pw-cantiere-input').forEach(inp => {
-          const val = (inp.value || '').trim();
-          if (val && val.toLowerCase().includes(_pwSearchTerm)) {
-            cantiereMatches.push({ dayIdx: Number(cell.dataset.day), cantiere: val });
-          }
-        });
-      });
-
-      const isMatch = nomeMatch || cantiereMatches.length > 0;
       row.classList.toggle('search-match', isMatch);
       row.classList.toggle('search-dim',  !isMatch);
 
-      if (isMatch) matchInBlock++;
-
-      if (isMatch && dayCells.length > 0) {
-        const sIdx = dayCells[0].dataset.sidx;
-        const oIdx = dayCells[0].dataset.oidx;
-        const squadra = bc?.squadre?.[sIdx];
-        const operatoreNome = squadra?.operatori?.[oIdx]?.nome || '';
-        if (nomeMatch) {
-          _pwSearchMatches.push({
-            cIdx: Number(cIdx), sIdx: Number(sIdx), oIdx: Number(oIdx), dayIdx: null,
-            commessa: bc?.commessa || '', squadra: squadra?.nome || '', operatore: operatoreNome,
-            tipo: 'operatore', dettaglio: operatoreNome,
-          });
-        }
-        cantiereMatches.forEach(cm => {
-          _pwSearchMatches.push({
-            cIdx: Number(cIdx), sIdx: Number(sIdx), oIdx: Number(oIdx), dayIdx: cm.dayIdx,
-            commessa: bc?.commessa || '', squadra: squadra?.nome || '', operatore: operatoreNome,
-            tipo: 'cantiere', dettaglio: cm.cantiere,
-          });
-        });
-      }
+      if (isMatch) { matchInBlock++; totalMatch++; }
     });
 
     const hasOps = block.querySelectorAll('.pw-op-row').length > 0;
     block.classList.toggle('search-no-match', hasOps && matchInBlock === 0);
+    if (matchInBlock > 0) commesseConMatch++;
   });
-
-  const totalMatch = _pwSearchMatches.length;
-  const commesseConMatch = new Set(_pwSearchMatches.map(m => m.cIdx)).size;
 
   if (infoEl) {
     infoEl.classList.remove('hidden');
     if (totalMatch === 0) {
-      infoEl.textContent = 'Nessun risultato trovato';
+      infoEl.textContent = 'Nessun operatore trovato';
       infoEl.style.color = 'var(--red)';
-      infoEl.style.cursor = '';
-      infoEl.style.textDecoration = '';
-      infoEl.onclick = null;
     } else {
-      infoEl.textContent = `${totalMatch} risultat${totalMatch === 1 ? 'o' : 'i'} in ${commesseConMatch} commess${commesseConMatch === 1 ? 'a' : 'e'} — clicca per il dettaglio`;
+      infoEl.textContent = `${totalMatch} risultat${totalMatch === 1 ? 'o' : 'i'} in ${commesseConMatch} commess${commesseConMatch === 1 ? 'a' : 'e'}`;
       infoEl.style.color = 'var(--accent)';
-      infoEl.style.cursor = 'pointer';
-      infoEl.style.textDecoration = 'underline';
-      infoEl.onclick = () => pwOpenSearchResultsModal();
     }
   }
-}
-
-/* Modal di dettaglio dei risultati di pwSearchOp (per nome operatore o per
-   cantiere), raggruppati per commessa. Ogni riga è cliccabile e riporta alla
-   cella corrispondente nella Griglia (pwGoToSearchCell) — stesso pattern del
-   modal criticità meteo (pwOpenWeatherWeekModal / pwGoToWeatherCell in
-   weekly-meteo.js). */
-function pwOpenSearchResultsModal() {
-  const root = document.getElementById('modal-root');
-  if (!root || _pwSearchMatches.length === 0) return;
-
-  const DAY_NAMES = ['Lun', 'Mar', 'Mer', 'Gio', 'Ven', 'Sab'];
-
-  const byCommessa = new Map();
-  _pwSearchMatches.forEach(m => {
-    if (!byCommessa.has(m.cIdx)) byCommessa.set(m.cIdx, { commessa: m.commessa, items: [] });
-    byCommessa.get(m.cIdx).items.push(m);
-  });
-
-  const sections = [...byCommessa.values()].map(({ commessa, items }) => {
-    const rows = items.map(m => {
-      const tagLabel = m.tipo === 'operatore'
-        ? '👷 operatore'
-        : `📍 cantiere · ${DAY_NAMES[m.dayIdx] || ''}`;
-      const dettaglioHtml = m.tipo === 'cantiere' ? `: ${esc(m.dettaglio)}` : '';
-      return `<div class="pw-meteo-modal-giorno pw-meteo-modal-clickable"
-          onclick="pwGoToSearchCell(${m.cIdx}, ${m.sIdx}, ${m.oIdx}, ${m.dayIdx === null ? 'null' : m.dayIdx})"
-          title="Vai alla cella nella Griglia">
-        <span class="pw-meteo-modal-giorno-label">${esc(m.operatore || '(senza nome)')}</span>
-        ${m.squadra ? `<span class="pw-meteo-modal-sq">(${esc(m.squadra)})</span>` : ''}
-        — <span style="color:#0f766e;">${tagLabel}</span>${dettaglioHtml}
-      </div>`;
-    }).join('');
-    return `<div class="pw-meteo-modal-section">
-      <div class="pw-meteo-modal-day-header">${esc(commessa || '(senza commessa)')}</div>
-      ${rows}
-    </div>`;
-  });
-
-  root.innerHTML = `<div class="modal-backdrop"><div class="bg-white rounded-lg shadow-xl w-full max-w-xl mx-4 my-8 p-5 max-h-[90vh] overflow-y-auto">
-    <h3 class="font-semibold text-slate-900 mb-1">🔍 Risultati ricerca</h3>
-    <p class="text-xs text-slate-500 mb-3">Clicca una riga per andare alla cella corrispondente nella Griglia.</p>
-    <div>${sections.join('')}</div>
-    <div class="flex justify-end mt-4">
-      <button onclick="closeModal()" class="px-3 py-1.5 text-sm border border-slate-300 rounded">Chiudi</button>
-    </div>
-  </div></div>`;
-  root.querySelector('.modal-backdrop').addEventListener('click', e => {
-    if (e.target.classList.contains('modal-backdrop')) closeModal();
-  });
-}
-
-/* Chiude il modal risultati ricerca e porta l'utente esattamente alla cella
-   (o, per un match di solo nome, all'intera riga operatore) della Griglia:
-   espande commessa/squadra se collassate, scrolla al centro e evidenzia per
-   un paio di secondi. Stesso pattern di pwGoToWeatherCell (weekly-meteo.js). */
-function pwGoToSearchCell(cIdx, sIdx, oIdx, dayIdx) {
-  closeModal();
-  const commKey = String(cIdx);
-  const sqKey = cIdx + '-' + sIdx;
-  let changed = false;
-  if (_pwCollapsedComm.has(commKey)) { _pwCollapsedComm.delete(commKey); changed = true; }
-  if (_pwCollapsedSq.has(sqKey)) { _pwCollapsedSq.delete(sqKey); changed = true; }
-  if (changed) pwApplyCollapseState();
-  setTimeout(() => {
-    const anchorDay = dayIdx !== null ? dayIdx : 0;
-    const cell = document.querySelector('.pw-day-cell[data-cidx="' + cIdx + '"][data-sidx="' + sIdx + '"][data-oidx="' + oIdx + '"][data-day="' + anchorDay + '"]');
-    const target = (dayIdx !== null ? cell : cell?.closest('.pw-op-row'))
-      || document.querySelector('.pw-squadra-block[data-collapse-key="' + sqKey + '"]');
-    if (!target) return;
-    target.scrollIntoView({ behavior: 'smooth', block: 'center' });
-    target.classList.add('pw-weather-cell-flash');
-    setTimeout(() => target.classList.remove('pw-weather-cell-flash'), 2000);
-  }, 50);
 }
 
 /* ----- Handlers CRUD pianificazione ----- */
