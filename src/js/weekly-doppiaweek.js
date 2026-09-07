@@ -69,7 +69,7 @@ function pwDoppiaWeekRender() {
         title = 'Doppia week (2ª settimana) — rientro giovedì, riposo compensativo venerdì. Clicca per rimuovere.';
       }
       const warn = diFila ? '<span style="position:absolute;top:1px;right:2px;font-size:10px;" title="Doppia week di fila (sconsigliato)">⚠</span>' : '';
-      html += `<div onclick="pwDwToggle('${jsesc(nome)}',${wk.anno},${wk.week})" title="${esc(title)}" style="position:relative;display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:36px;background:${bg};color:${color};font-size:11px;font-weight:600;cursor:${cursor};border-bottom:1px solid #f1f5f9;border-left:1px solid #f1f5f9;">${lbl}${sub}${warn}</div>`;
+      html += `<div class="pw-write-action" onclick="pwDwToggle('${jsesc(nome)}',${wk.anno},${wk.week})" title="${esc(title)}" style="position:relative;display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:36px;background:${bg};color:${color};font-size:11px;font-weight:600;cursor:${cursor};border-bottom:1px solid #f1f5f9;border-left:1px solid #f1f5f9;">${lbl}${sub}${warn}</div>`;
     });
     html += `</div>`;
   });

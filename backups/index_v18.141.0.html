@@ -1118,14 +1118,6 @@
   .pw-str-item:hover { background: #eff6ff; }
   .pw-str-item.empty { color: #94a3b8; }
 
-  /* Ruoli sola lettura (operatore/guest): ingrigisce/disabilita i controlli
-     che compiono un'azione di scrittura nella Pianificazione Settimanale.
-     Classe applicata staticamente in markup, attivata da un'unica classe
-     sul body (impostata una volta al login da sbApplyReadOnlyBanner) — così
-     copre anche gli elementi generati dopo, senza dover ri-applicare nulla
-     ad ogni render. */
-  body.pw-readonly .pw-write-action { opacity: .45 !important; pointer-events: none !important; cursor: not-allowed !important; }
-
 </style>
 </head>
 <body class="min-h-screen">
@@ -1148,7 +1140,7 @@
     <div class="flex items-center gap-2">
       <button id="btn-presentation" class="px-3 py-1.5 text-sm rounded hover:bg-white/10" style="border:1px solid var(--dark-border-strong);color:var(--dark-text);visibility:visible;">📊 Modalità presentazione</button>
       <div class="text-xs pl-2" style="border-left:1px solid var(--dark-border-strong);color:var(--dark-text-muted);">
-        <span id="app-version" class="font-medium" style="color:var(--accent);">v18.142.0</span> · Michele Marchetti
+        <span id="app-version" class="font-medium" style="color:var(--accent);">v18.141.0</span> · Michele Marchetti
         <span id="sb-role-badge" style="margin-left:8px;padding:1px 8px;border-radius:9999px;background:rgba(255,255,255,.1);color:var(--dark-text);font-weight:600;"></span>
       </div>
     </div>
@@ -1690,7 +1682,7 @@
     </div>
     <div id="pw-header-dates" class="text-sm font-semibold text-slate-700"></div>
     <div class="flex items-center gap-2">
-      <button id="pw-add-commessa" class="px-3 py-1.5 text-sm bg-teal-600 text-white rounded hover:bg-teal-700 no-print pw-write-action">+ Aggiungi commessa</button>
+      <button id="pw-add-commessa" class="px-3 py-1.5 text-sm bg-teal-600 text-white rounded hover:bg-teal-700 no-print">+ Aggiungi commessa</button>
       <button id="pw-gen-mail" class="px-3 py-1.5 text-sm bg-indigo-600 text-white rounded hover:bg-indigo-700 no-print">📧 Genera mail</button>
       <button id="pw-print" class="px-3 py-1.5 text-sm border border-slate-300 rounded hover:bg-slate-50 no-print">🖨 Stampa</button>
     </div>
@@ -1740,7 +1732,7 @@
           <span class="ml-3 text-rose-200 text-sm" id="pw-ferie-week-label"></span>
         </div>
         <div class="flex items-center gap-3">
-          <button id="pw-ferie-import-btn" class="px-3 py-1.5 text-sm bg-white/10 hover:bg-white/20 border border-white/30 rounded text-white no-print whitespace-nowrap pw-write-action"
+          <button id="pw-ferie-import-btn" class="px-3 py-1.5 text-sm bg-white/10 hover:bg-white/20 border border-white/30 rounded text-white no-print whitespace-nowrap"
             onclick="document.getElementById('pw-ferie-import-file').click()"
             title="Importa da Excel l'export ferie/permessi (colonne: Dipendente, descrizione, dataintervento, Somma di durata)">📥 Importa Excel</button>
           <input type="file" id="pw-ferie-import-file" accept=".xlsx" class="hidden" onchange="pwFerieImportPick(this)">
@@ -2027,7 +2019,7 @@
       </div>
       <div class="flex items-center gap-2">
         <button id="cp-collapse-all" class="px-3 py-1.5 text-sm border border-slate-300 rounded hover:bg-slate-50 no-print" onclick="cpCollapseAllToggle()">≡ Collassa</button>
-        <button id="cp-sync-jira" onclick="pwControlloSyncJira()" class="px-3 py-1.5 text-sm font-medium bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 flex items-center gap-1.5 no-print pw-write-action">
+        <button id="cp-sync-jira" onclick="pwControlloSyncJira()" class="px-3 py-1.5 text-sm font-medium bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 flex items-center gap-1.5 no-print">
           🔄 Sincronizza da Jira
         </button>
         <button onclick="pwControlloExport()" class="px-3 py-1.5 text-sm font-medium bg-teal-600 text-white rounded-lg hover:bg-teal-700 flex items-center gap-1.5 no-print">
@@ -2351,7 +2343,6 @@ function sbApplyPageVisibility() {
 function sbApplyReadOnlyBanner() {
   const banner = document.getElementById('readonly-banner');
   if (banner) banner.style.display = sbCanWrite() ? 'none' : '';
-  document.body.classList.toggle('pw-readonly', !sbCanWrite());
   const badge = document.getElementById('sb-role-badge');
   if (badge) {
     const labels = { admin: 'Admin', responsabile: 'Responsabile', operatore: 'Operatore · sola lettura', guest: 'Guest · sola lettura' };
@@ -9770,14 +9761,14 @@ function pwGeneraMail() {
               <div>
                 <label class="block text-[10px] text-slate-500 font-medium mb-0.5">📝 Note squadra <span class="text-slate-400 font-normal">(facoltativo)</span></label>
                 <textarea id="mail-note-sq-${i}" rows="2"
-                  class="w-full border border-slate-200 rounded px-2 py-1 text-xs text-slate-700 focus:outline-none focus:border-teal-400 bg-white pw-write-action"
+                  class="w-full border border-slate-200 rounded px-2 py-1 text-xs text-slate-700 focus:outline-none focus:border-teal-400 bg-white"
                   placeholder="Es: Affiancamento, istruzioni operative…">${esc(noteSalvate)}</textarea>
               </div>
               <div>
                 <label class="block text-[10px] text-slate-500 font-medium mb-0.5">🔧 Strumenti / attrezzatura <span class="text-slate-400 font-normal">(aggiuntivi, facoltativo)</span></label>
                 ${jiraHint}
                 <textarea id="mail-strumenti-sq-${i}" rows="2"
-                  class="w-full border border-slate-200 rounded px-2 py-1 text-xs text-slate-700 focus:outline-none focus:border-teal-400 bg-white pw-write-action"
+                  class="w-full border border-slate-200 rounded px-2 py-1 text-xs text-slate-700 focus:outline-none focus:border-teal-400 bg-white"
                   placeholder="Es: GPS Leica RX1250, Auto targa AB123CD…">${esc(strumentiSalvati)}</textarea>
               </div>
             </div>
@@ -9825,13 +9816,13 @@ function pwGeneraMail() {
         <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
           <label style="font-size:11px;">
             <div style="color:#475569; font-weight:600; margin-bottom:3px;">Orario partenza sede</div>
-            <input id="mail-orario-partenza" type="text" class="pw-write-action" value="${esc(pwData.mailOrarioPartenza || '08:00')}"
+            <input id="mail-orario-partenza" type="text" value="${esc(pwData.mailOrarioPartenza || '08:00')}"
               style="width:100%; border:1px solid #e2e8f0; border-radius:6px;
                      padding:6px 10px; font-size:13px; outline:none; box-sizing:border-box;">
           </label>
           <label style="font-size:11px;">
             <div style="color:#475569; font-weight:600; margin-bottom:3px;">Orario lavoro</div>
-            <input id="mail-orario-lavoro" type="text" class="pw-write-action" value="${esc(pwData.mailOrarioLavoro || '08:00/08:30 – 16:30/17:00')}"
+            <input id="mail-orario-lavoro" type="text" value="${esc(pwData.mailOrarioLavoro || '08:00/08:30 – 16:30/17:00')}"
               style="width:100%; border:1px solid #e2e8f0; border-radius:6px;
                      padding:6px 10px; font-size:13px; outline:none; box-sizing:border-box;">
           </label>
@@ -9840,7 +9831,7 @@ function pwGeneraMail() {
           <div style="color:#475569; font-weight:600; margin-bottom:3px;">📧 Email sempre in CC
             <span style="font-weight:400; color:#94a3b8;">(separate da virgola, aggiunte sempre in copia conoscenza)</span>
           </div>
-          <input id="mail-email-sempre" type="text" class="pw-write-action" value="${esc(pwData.emailSempreIncluse || '')}"
+          <input id="mail-email-sempre" type="text" value="${esc(pwData.emailSempreIncluse || '')}"
             placeholder="es: ufficio.tecnico@eagleprojects.it, capocommessa@eagleprojects.it"
             style="width:100%; border:1px solid #e2e8f0; border-radius:6px;
                    padding:6px 10px; font-size:13px; outline:none; box-sizing:border-box;">
@@ -9868,7 +9859,7 @@ function pwGeneraMail() {
             📌 Note generali
             <span style="font-weight:400; color:#94a3b8;">(ferie manuali, istruzioni…)</span>
           </label>
-          <textarea id="mail-note-generali" rows="3" class="pw-write-action"
+          <textarea id="mail-note-generali" rows="3"
             style="width:100%; border:1px solid #e2e8f0; border-radius:6px;
                    padding:8px 10px; font-size:11px; color:#334155; outline:none;
                    resize:vertical; box-sizing:border-box;"
@@ -10522,7 +10513,7 @@ function pwFerieRender() {
           tipo === 'non_disponibile' ? 'non-disponibile' : '', importata ? 'importata' : ''].filter(Boolean).join(' ');
         return `<div class="${cls}" oncontextmenu="return pwFerieCellCtxMenu(event, '${jsAttr(nome)}', ${i})"
             title="${importata ? '' : (tipo ? 'Click destro per cambiare tipo assenza' : '')}">
-          <input type="checkbox" class="pw-ferie-cb pw-write-action"
+          <input type="checkbox" class="pw-ferie-cb"
             data-op="${nome.replace(/"/g, '&quot;')}" data-day="${i}"
             ${checked ? 'checked' : ''}
             onchange="pwToggleFeria(this)">
@@ -10530,7 +10521,7 @@ function pwFerieRender() {
         </div>`;
       }).join('')}
       <div class="pw-ferie-cell" style="padding:2px 6px;">
-        <button class="pw-write-action" data-op="${nome.replace(/"/g, '&quot;')}" onclick="pwFerieToggleWeek(this.dataset.op)"
+        <button data-op="${nome.replace(/"/g, '&quot;')}" onclick="pwFerieToggleWeek(this.dataset.op)"
           title="${allSet ? 'Rimuovi le ferie da tutta la settimana' : 'Applica le ferie a tutta la settimana'}"
           style="width:100%;font-size:11px;font-weight:600;border-radius:5px;padding:3px 6px;cursor:pointer;border:1px solid ${allSet ? '#fca5a5' : '#cbd5e1'};background:${allSet ? '#fee2e2' : '#f8fafc'};color:${allSet ? '#991b1b' : '#475569'};white-space:nowrap;">
           ${allSet ? 'Tutta la Settimana' : 'Tutta la Settimana'}
@@ -10641,9 +10632,9 @@ function pwFerieCellCtxMenu(ev, nome, day) {
   const fw = pwGetFerieWeek();
   const tipoAttuale = pwFerieTipo((fw[nome] || {})[day]);
   _pwShowCtxMenu(ev.clientX, ev.clientY, [
-    { label: (tipoAttuale === 'ferie' ? '✓ ' : '') + '🏖 Ferie', disabled: !sbCanWrite(), onClick: () => pwSetFeriaTipo(nome, day, 'ferie') },
-    { label: (tipoAttuale === 'non_disponibile' ? '✓ ' : '') + '🚫 Non disponibile', disabled: !sbCanWrite(), onClick: () => pwSetFeriaTipo(nome, day, 'non_disponibile') },
-    { label: '✕ Rimuovi assenza', disabled: !tipoAttuale || !sbCanWrite(), onClick: () => pwSetFeriaTipo(nome, day, null) },
+    { label: (tipoAttuale === 'ferie' ? '✓ ' : '') + '🏖 Ferie', onClick: () => pwSetFeriaTipo(nome, day, 'ferie') },
+    { label: (tipoAttuale === 'non_disponibile' ? '✓ ' : '') + '🚫 Non disponibile', onClick: () => pwSetFeriaTipo(nome, day, 'non_disponibile') },
+    { label: '✕ Rimuovi assenza', disabled: !tipoAttuale, onClick: () => pwSetFeriaTipo(nome, day, null) },
   ]);
   return false;
 }
@@ -11339,7 +11330,7 @@ function pwRenderOpDropdown(cidx, sidx, oidx, nomeCorrente) {
     ? '<span class="op-ex-tag">ex</span>'
     : '';
   const geoLabel   = nomeCorrente ? pwOperatoreGeoLabel(nomeCorrente) : '';
-  return `<button class="op-trigger-btn pw-write-action ${statoClass}"
+  return `<button class="op-trigger-btn ${statoClass}"
     onclick="pwOpenOpModal(${cidx}, ${sidx}, ${oidx})">
     <span class="op-trigger-label">${label}${exBadge}</span>
     ${geoLabel ? `<span class="op-trigger-geo">📍 ${esc(geoLabel)}</span>` : ''}
@@ -11452,10 +11443,10 @@ function pwRender() {
           const attivitaPlaceholder = isInFerie ? '' : 'attività (facolt.)';
           const cantiereRowsHtml = cantiereList.map((c, ci) => `
             <div class="pw-cantiere-row">
-              <input class="pw-cantiere-input pw-write-action" type="text" placeholder="${cantierePlaceholder}"
+              <input class="pw-cantiere-input" type="text" placeholder="${cantierePlaceholder}"
                 value="${c.replace(/"/g, '&quot;')}"
                 data-cidx="${cIdx}" data-sidx="${sIdx}" data-oidx="${oIdx}" data-day="${dKey}" data-idx="${ci}"
-                onchange="pwUpdateCantiere(this)">${pwJiraSubtaskBadgeHtml(cIdx, sIdx, oIdx, dKey, ci, bloccoCommessa, op.nome, c)}${cantiereList.length > 1 ? `<button type="button" class="pw-cantiere-remove pw-write-action" title="Rimuovi cantiere"
+                onchange="pwUpdateCantiere(this)">${pwJiraSubtaskBadgeHtml(cIdx, sIdx, oIdx, dKey, ci, bloccoCommessa, op.nome, c)}${cantiereList.length > 1 ? `<button type="button" class="pw-cantiere-remove" title="Rimuovi cantiere"
                 data-cidx="${cIdx}" data-sidx="${sIdx}" data-oidx="${oIdx}" data-day="${dKey}" data-idx="${ci}"
                 onclick="pwRemoveCantiereField(this)">✕</button>` : ''}
             </div>`).join('');
@@ -11464,11 +11455,11 @@ function pwRender() {
             oncontextmenu="return pwCellCtxMenu(event, ${cIdx}, ${sIdx}, ${oIdx}, ${dKey});">
             <div class="pw-cantiere-list">
               ${cantiereRowsHtml}
-              <button type="button" class="pw-cantiere-add pw-write-action" title="Aggiungi un altro cantiere per questo giorno"
+              <button type="button" class="pw-cantiere-add" title="Aggiungi un altro cantiere per questo giorno"
                 data-cidx="${cIdx}" data-sidx="${sIdx}" data-oidx="${oIdx}" data-day="${dKey}"
                 onclick="pwAddCantiereField(this)">+ cantiere</button>
             </div>
-            <input class="pw-attivita-input pw-write-action" type="text" placeholder="${attivitaPlaceholder}"
+            <input class="pw-attivita-input" type="text" placeholder="${attivitaPlaceholder}"
               value="${attivita.replace(/"/g, '&quot;')}"
               data-cidx="${cIdx}" data-sidx="${sIdx}" data-oidx="${oIdx}" data-day="${dKey}" data-field="attivita"
               onchange="pwUpdateCell(this)">
@@ -11503,7 +11494,7 @@ function pwRender() {
             ${pwRenderOpDropdown(cIdx, sIdx, oIdx, op.nome)}
             ${badgeHtml ? `<div>${badgeHtml}</div>` : ''}
             ${dwBadge ? `<div>${dwBadge}</div>` : ''}
-            <button class="text-[9px] text-red-400 hover:text-red-600 text-left pw-write-action"
+            <button class="text-[9px] text-red-400 hover:text-red-600 text-left"
               data-cidx="${cIdx}" data-sidx="${sIdx}" data-oidx="${oIdx}"
               onclick="pwRemoveOp(this)">✕ rimuovi</button>
           </div>
@@ -11520,16 +11511,16 @@ function pwRender() {
         <div class="pw-squadra-header">
           <button class="pw-sq-collapse-toggle" onclick="pwToggleSq(${cIdx},${sIdx})">▼</button>
           <span>🟡</span>
-          <input type="text" class="pw-sq-nome-input pw-write-action bg-transparent border-none outline-none font-semibold text-amber-900 text-xs"
+          <input type="text" class="pw-sq-nome-input bg-transparent border-none outline-none font-semibold text-amber-900 text-xs"
             placeholder="Nome squadra…" value="${(squadra.nome || '').replace(/"/g, '&quot;')}"
             data-cidx="${cIdx}" data-sidx="${sIdx}"
             onchange="pwUpdateSquadraNome(this)">
           ${cognomiHtml}
           <div class="flex items-center gap-2 ml-2" style="margin-left:auto;">
-            <button class="text-[10px] bg-amber-200 hover:bg-amber-300 text-amber-900 px-2 py-0.5 rounded pw-write-action"
+            <button class="text-[10px] bg-amber-200 hover:bg-amber-300 text-amber-900 px-2 py-0.5 rounded"
               data-cidx="${cIdx}" data-sidx="${sIdx}"
               onclick="pwAddOp(this)">+ Operatore</button>
-            <button class="text-[10px] text-red-400 hover:text-red-600 pw-write-action"
+            <button class="text-[10px] text-red-400 hover:text-red-600"
               data-cidx="${cIdx}" data-sidx="${sIdx}"
               onclick="pwRemoveSquadra(this)">✕ Rimuovi squadra</button>
           </div>
@@ -11541,12 +11532,12 @@ function pwRender() {
             ${strumenti.map((k, idx) => {
               const dup = k && _stCount[k] > 1;
               return `<span style="display:inline-flex;align-items:center;gap:2px;">
-                <button type="button" class="pw-str-trigger pw-write-action" data-cidx="${cIdx}" data-sidx="${sIdx}" data-idx="${idx}" onclick="pwStrOpen(this)"
+                <button type="button" class="pw-str-trigger" data-cidx="${cIdx}" data-sidx="${sIdx}" data-idx="${idx}" onclick="pwStrOpen(this)"
                   title="${dup ? 'Attenzione: questo strumento e assegnato a piu squadre in questa settimana' : 'Clicca per cercare e scegliere lo strumento'}"
-                  style="font-size:11px;text-align:left;border:1px solid ${dup ? '#dc2626' : '#d1d5db'};border-radius:4px;padding:2px 6px;max-width:220px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;background:${dup ? '#fef2f2' : '#fff'};cursor:pointer;">${esc(pwStrLabel(k))} ▾</button>${dup ? '<span title="Doppia assegnazione" style="color:#dc2626;font-size:12px;">⚠</span>' : ''}<button class="pw-write-action" data-cidx="${cIdx}" data-sidx="${sIdx}" data-idx="${idx}" onclick="pwRemoveStrumento(this)" title="Rimuovi strumento" style="color:#b91c1c;font-size:12px;line-height:1;padding:0 2px;">✕</button>
+                  style="font-size:11px;text-align:left;border:1px solid ${dup ? '#dc2626' : '#d1d5db'};border-radius:4px;padding:2px 6px;max-width:220px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;background:${dup ? '#fef2f2' : '#fff'};cursor:pointer;">${esc(pwStrLabel(k))} ▾</button>${dup ? '<span title="Doppia assegnazione" style="color:#dc2626;font-size:12px;">⚠</span>' : ''}<button data-cidx="${cIdx}" data-sidx="${sIdx}" data-idx="${idx}" onclick="pwRemoveStrumento(this)" title="Rimuovi strumento" style="color:#b91c1c;font-size:12px;line-height:1;padding:0 2px;">✕</button>
               </span>`;
             }).join('')}
-            <button class="pw-write-action" data-cidx="${cIdx}" data-sidx="${sIdx}" onclick="pwAddStrumento(this)" style="font-size:10px;font-weight:600;background:#fde68a;color:#92400e;border-radius:4px;padding:2px 7px;white-space:nowrap;">+ Strumento</button>
+            <button data-cidx="${cIdx}" data-sidx="${sIdx}" onclick="pwAddStrumento(this)" style="font-size:10px;font-weight:600;background:#fde68a;color:#92400e;border-radius:4px;padding:2px 7px;white-space:nowrap;">+ Strumento</button>
             ${pwStrumenti.length === 0 ? '<span style="font-size:9px;color:#b45309;">(clicca "🔧 Aggiorna strumenti" in alto per caricare l\'elenco da Jira)</span>' : ''}
           </div>`;
         })()}
@@ -11565,21 +11556,21 @@ function pwRender() {
         <button class="pw-collapse-toggle" onclick="pwToggleComm(${cIdx})">▼</button>
         <div class="flex items-center gap-2 flex-1">
           <span class="text-teal-200 text-xs font-normal">Commessa:</span>
-          <select class="bg-teal-700 text-white text-sm font-semibold border border-teal-500 rounded px-2 py-0.5 pw-write-action"
+          <select class="bg-teal-700 text-white text-sm font-semibold border border-teal-500 rounded px-2 py-0.5"
             data-cidx="${cIdx}" onchange="pwUpdateCommessa(this)">
             ${commessaOptions}
           </select>
         </div>
         <div class="flex items-center gap-2">
-          <button class="text-xs bg-teal-500 hover:bg-teal-400 text-white px-3 py-1 rounded pw-write-action"
+          <button class="text-xs bg-teal-500 hover:bg-teal-400 text-white px-3 py-1 rounded"
             data-cidx="${cIdx}" onclick="pwAddSquadra(this)">+ Squadra</button>
-          <button class="text-xs bg-amber-500 hover:bg-amber-400 text-white px-2 py-1 rounded pw-write-action"
+          <button class="text-xs bg-amber-500 hover:bg-amber-400 text-white px-2 py-1 rounded"
             data-cidx="${cIdx}" onclick="pwJiraSubtaskInit(${cIdx})" title="Crea sottotask su Jira per gli operatori pianificati questa settimana">🎫 Sottotask Jira</button>
           <button class="text-xs bg-teal-600 hover:bg-teal-500 text-white px-2 py-1 rounded disabled:opacity-50"
-            data-cidx="${cIdx}" onclick="pwMoveCommessaUp(this)" ${(cIdx === 0 || !sbCanWrite()) ? 'disabled' : ''} title="Sposta commessa su">▲</button>
+            data-cidx="${cIdx}" onclick="pwMoveCommessaUp(this)" ${cIdx === 0 ? 'disabled' : ''} title="Sposta commessa su">▲</button>
           <button class="text-xs bg-teal-600 hover:bg-teal-500 text-white px-2 py-1 rounded disabled:opacity-50"
-            data-cidx="${cIdx}" onclick="pwMoveCommessaDown(this)" ${(cIdx === data.length - 1 || !sbCanWrite()) ? 'disabled' : ''} title="Sposta commessa giù">▼</button>
-          <button class="text-xs text-teal-200 hover:text-red-300 pw-write-action"
+            data-cidx="${cIdx}" onclick="pwMoveCommessaDown(this)" ${cIdx === data.length - 1 ? 'disabled' : ''} title="Sposta commessa giù">▼</button>
+          <button class="text-xs text-teal-200 hover:text-red-300"
             data-cidx="${cIdx}" onclick="pwRemoveCommessa(this)">✕</button>
         </div>
       </div>
@@ -12079,7 +12070,7 @@ function pwCellCtxMenu(ev, cidx, sidx, oidx, day) {
   ev.preventDefault();
   _pwShowCtxMenu(ev.clientX, ev.clientY, [
     { label: '📋 Copia cantiere/attività', onClick: () => pwCopyCell(cidx, sidx, oidx, day) },
-    { label: '📥 Incolla qui', disabled: !_pwClipCell || !sbCanWrite(), onClick: () => pwPasteCell(cidx, sidx, oidx, day) },
+    { label: '📥 Incolla qui', disabled: !_pwClipCell, onClick: () => pwPasteCell(cidx, sidx, oidx, day) },
   ]);
   return false;
 }
@@ -12110,7 +12101,7 @@ function pwRowCtxMenu(ev, cidx, sidx, oidx) {
   ev.preventDefault();
   _pwShowCtxMenu(ev.clientX, ev.clientY, [
     { label: '📋 Copia settimana (cantieri/attività)', onClick: () => pwCopyRow(cidx, sidx, oidx) },
-    { label: '📥 Incolla settimana qui', disabled: !_pwClipRow || !sbCanWrite(), onClick: () => pwPasteRow(cidx, sidx, oidx) },
+    { label: '📥 Incolla settimana qui', disabled: !_pwClipRow, onClick: () => pwPasteRow(cidx, sidx, oidx) },
   ]);
   return false;
 }
@@ -12738,7 +12729,6 @@ function pwJiraSubtaskApplyBadgesToDom() {
 
 /* ----- Entry point dal bottone in Griglia ----- */
 function pwJiraSubtaskInit(cIdx) {
-  if (!sbGuardWrite()) return;
   const data = pwGetWeekData();
   const bc = data[cIdx];
   if (!bc || !bc.commessa) { showAlertModal('Seleziona prima una commessa per questo blocco.'); return; }
@@ -13240,7 +13230,7 @@ function pwJiraSubtaskRenderPreview(cIdx, commessaNome, items, results, skippedC
     ${skippedHtml}
     <div class="flex justify-end gap-2 mt-4">
       <button onclick="closeModal()" class="px-3 py-1.5 text-sm border border-slate-300 rounded">Annulla</button>
-      <button id="pw-jira-confirm-create" class="px-3 py-1.5 text-sm bg-teal-600 text-white rounded hover:bg-teal-700 disabled:opacity-50" ${(wouldCreate === 0 || !sbCanWrite()) ? 'disabled' : ''}>Crea ${wouldCreate} sottotask</button>
+      <button id="pw-jira-confirm-create" class="px-3 py-1.5 text-sm bg-teal-600 text-white rounded hover:bg-teal-700 disabled:opacity-50" ${wouldCreate === 0 ? 'disabled' : ''}>Crea ${wouldCreate} sottotask</button>
     </div>
   </div></div>`;
   root.querySelector('.modal-backdrop').addEventListener('click', e => { if (e.target.classList.contains('modal-backdrop')) closeModal(); });
@@ -13252,7 +13242,6 @@ function pwJiraSubtaskRenderPreview(cIdx, commessaNome, items, results, skippedC
 
 /* ----- Step 3: creazione reale + riepilogo ----- */
 async function pwJiraSubtaskConfirmCreate(cIdx, commessaNome, items, extraFields) {
-  if (!sbGuardWrite()) return;
   const root = document.getElementById('modal-root');
   root.innerHTML = `<div class="modal-backdrop"><div class="bg-white rounded-lg shadow-xl w-full max-w-md mx-4 p-5">
     <div class="text-sm text-slate-600">⏳ Creazione sottotask su Jira in corso…</div>
@@ -13509,7 +13498,7 @@ function pwDoppiaWeekRender() {
         title = 'Doppia week (2ª settimana) — rientro giovedì, riposo compensativo venerdì. Clicca per rimuovere.';
       }
       const warn = diFila ? '<span style="position:absolute;top:1px;right:2px;font-size:10px;" title="Doppia week di fila (sconsigliato)">⚠</span>' : '';
-      html += `<div class="pw-write-action" onclick="pwDwToggle('${jsesc(nome)}',${wk.anno},${wk.week})" title="${esc(title)}" style="position:relative;display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:36px;background:${bg};color:${color};font-size:11px;font-weight:600;cursor:${cursor};border-bottom:1px solid #f1f5f9;border-left:1px solid #f1f5f9;">${lbl}${sub}${warn}</div>`;
+      html += `<div onclick="pwDwToggle('${jsesc(nome)}',${wk.anno},${wk.week})" title="${esc(title)}" style="position:relative;display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:36px;background:${bg};color:${color};font-size:11px;font-weight:600;cursor:${cursor};border-bottom:1px solid #f1f5f9;border-left:1px solid #f1f5f9;">${lbl}${sub}${warn}</div>`;
     });
     html += `</div>`;
   });
@@ -13968,7 +13957,7 @@ function pwControlloRender() {
     html += `<tr class="cp-tr-commessa" data-comm-idx="${blIdx}"><td colspan="16"><span class="cp-carr" style="cursor:pointer;user-select:none;margin-right:5px;font-size:11px;display:inline-block;width:10px;text-align:center;" onclick="cpToggleComm(${blIdx})">▼</span>📁 ${esc(bl.commessa)}</td></tr>`;
     bl.squadre.forEach((sq, sqIdx) => {
       const sqKey = blIdx + '-' + sqIdx;
-      html += `<tr class="cp-tr-squadra" data-comm-idx="${blIdx}" data-sq-idx="${sqKey}"><td colspan="16">&nbsp;&nbsp;&nbsp;<span class="cp-sarr" style="cursor:pointer;user-select:none;margin-right:5px;font-size:11px;display:inline-block;width:10px;text-align:center;" onclick="cpToggleSq('${jsAttr(sqKey)}')">▼</span>👥 ${esc(sq.nome)}<button class="no-print pw-write-action" style="margin-left:10px;font-size:11px;font-weight:600;background:#4f46e5;color:#fff;border:none;border-radius:5px;padding:2px 8px;cursor:pointer;" onclick="event.stopPropagation();pwControlloSyncJira('${jsesc(bl.commessa)}','${jsesc(sq.nome)}',this)">🔄 Sincronizza squadra</button><button class="no-print pw-write-action" style="margin-left:6px;font-size:11px;font-weight:600;background:#0ea5e9;color:#fff;border:none;border-radius:5px;padding:2px 8px;cursor:pointer;" onclick="event.stopPropagation();cpCaricaReportSquadra('${jsesc(bl.commessa)}','${jsesc(sq.nome)}')">📄 Carica Report</button></td></tr>`;
+      html += `<tr class="cp-tr-squadra" data-comm-idx="${blIdx}" data-sq-idx="${sqKey}"><td colspan="16">&nbsp;&nbsp;&nbsp;<span class="cp-sarr" style="cursor:pointer;user-select:none;margin-right:5px;font-size:11px;display:inline-block;width:10px;text-align:center;" onclick="cpToggleSq('${jsAttr(sqKey)}')">▼</span>👥 ${esc(sq.nome)}<button class="no-print" style="margin-left:10px;font-size:11px;font-weight:600;background:#4f46e5;color:#fff;border:none;border-radius:5px;padding:2px 8px;cursor:pointer;" onclick="event.stopPropagation();pwControlloSyncJira('${jsesc(bl.commessa)}','${jsesc(sq.nome)}',this)">🔄 Sincronizza squadra</button><button class="no-print" style="margin-left:6px;font-size:11px;font-weight:600;background:#0ea5e9;color:#fff;border:none;border-radius:5px;padding:2px 8px;cursor:pointer;" onclick="event.stopPropagation();cpCaricaReportSquadra('${jsesc(bl.commessa)}','${jsesc(sq.nome)}')">📄 Carica Report</button></td></tr>`;
       sq.giorni.forEach((gBlock, gIdx) => {
         const g   = gBlock.giornoIdx;
         const sep = gIdx > 0 ? ' cp-day-sep' : '';
@@ -13999,15 +13988,15 @@ function pwControlloRender() {
             ? '<span style="color:#cbd5e1">—</span>'
             : tickets.map(t => {
                 const kv = byTicket[t.key];
-                return `<input class="cp-input pw-write-action" type="number" step="0.1" min="0" style="width:64px;height:22px;display:block;margin:1px 0;box-sizing:border-box;" value="${kv==null?'':esc(String(kv))}" title="${esc(t.key||'')}" onblur="cpSaveKmTicket('${jsesc(bl.commessa)}','${jsesc(sq.nome)}','${jsesc(op.nome)}',${g},'${jsesc(dates[g])}','${jsesc(op.cantiere)}','${jsesc(op.attivita)}','${jsesc(t.key||'')}',this.value)">`;
+                return `<input class="cp-input" type="number" step="0.1" min="0" style="width:64px;height:22px;display:block;margin:1px 0;box-sizing:border-box;" value="${kv==null?'':esc(String(kv))}" title="${esc(t.key||'')}" onblur="cpSaveKmTicket('${jsesc(bl.commessa)}','${jsesc(sq.nome)}','${jsesc(op.nome)}',${g},'${jsesc(dates[g])}','${jsesc(op.cantiere)}','${jsesc(op.attivita)}','${jsesc(t.key||'')}',this.value)">`;
               }).join('');
           const suJiraHtml = tickets.length === 0
             ? '<span style="color:#cbd5e1">—</span>'
             : tickets.map(t => {
                 const wrote = lastByTicket[t.key] != null;
                 const ttl = wrote ? ('Ultimo scritto su Jira: ' + lastByTicket[t.key] + ' — clicca per azzerare lo storico (con conferma)') : 'Si spunta dopo la scrittura su Jira';
-                const reloadBtn = wrote ? `<button type="button" class="no-print pw-write-action" title="Rileggi il valore attuale da Jira (sovrascrive il Km/Cad locale di questo ticket)" style="border:none;background:transparent;cursor:pointer;font-size:12px;line-height:1;padding:0;margin-left:3px;" onclick="cpRereadTicket(event,'${jsesc(bl.commessa)}','${jsesc(sq.nome)}','${jsesc(op.nome)}',${g},'${jsesc(dates[g])}','${jsesc(op.cantiere)}','${jsesc(op.attivita)}','${jsesc(t.key||'')}')">🔄</button>` : '';
-                return `<div style="height:24px;display:flex;align-items:center;justify-content:center;"><input type="checkbox" class="pw-write-action" ${wrote?'checked':''} title="${esc(ttl)}" style="width:15px;height:15px;cursor:pointer;" onclick="cpJiraFlagTicketClick(event,'${jsesc(bl.commessa)}','${jsesc(sq.nome)}','${jsesc(op.nome)}',${g},'${jsesc(t.key||'')}')">${reloadBtn}</div>`;
+                const reloadBtn = wrote ? `<button type="button" class="no-print" title="Rileggi il valore attuale da Jira (sovrascrive il Km/Cad locale di questo ticket)" style="border:none;background:transparent;cursor:pointer;font-size:12px;line-height:1;padding:0;margin-left:3px;" onclick="cpRereadTicket(event,'${jsesc(bl.commessa)}','${jsesc(sq.nome)}','${jsesc(op.nome)}',${g},'${jsesc(dates[g])}','${jsesc(op.cantiere)}','${jsesc(op.attivita)}','${jsesc(t.key||'')}')">🔄</button>` : '';
+                return `<div style="height:24px;display:flex;align-items:center;justify-content:center;"><input type="checkbox" ${wrote?'checked':''} title="${esc(ttl)}" style="width:15px;height:15px;cursor:pointer;" onclick="cpJiraFlagTicketClick(event,'${jsesc(bl.commessa)}','${jsesc(sq.nome)}','${jsesc(op.nome)}',${g},'${jsesc(t.key||'')}')">${reloadBtn}</div>`;
               }).join('');
           const jDisplay = (jVal === '' || jVal == null)
             ? '<span style="color:#cbd5e1">—</span>'
@@ -14031,7 +14020,7 @@ function pwControlloRender() {
       <td class="cp-wrap" title="${esc(bl.commessa)}">${esc(bl.commessa)}</td>
       <td class="cp-wrap" title="${esc(sq.nome)}">${esc(sq.nome)}</td>
       <td class="cp-wrap" title="${esc(op.nome)}"><strong>${esc(op.nome)}</strong>${isOperatoreLicenziato(op.nome) ? '<span class="op-ex-tag">ex</span>' : ''}</td>
-      <td style="text-align:center"><input type="checkbox" class="pw-write-action" ${verificato ? 'checked' : ''} title="Verificato" style="width:16px;height:16px;cursor:pointer;" onchange="pwControlloSaveCell('${ci}','${si}','${oi}',${g},'${dt}','${ca}','${at}','verificato',this.checked)"></td>
+      <td style="text-align:center"><input type="checkbox" ${verificato ? 'checked' : ''} title="Verificato" style="width:16px;height:16px;cursor:pointer;" onchange="pwControlloSaveCell('${ci}','${si}','${oi}',${g},'${dt}','${ca}','${at}','verificato',this.checked)"></td>
       <td>${DAY_NAMES[g]}</td>
       <td>${dates[g]}</td>
       <td class="cp-wrap" style="color:#64748b" title="${esc(op.cantiere)}">${esc(op.cantiere)}</td>
@@ -14039,13 +14028,13 @@ function pwControlloRender() {
       <td style="${cpOreJiraStyle(jVal, g)}"><span id="cp-j-${ri}" data-jval="${esc(String(jVal))}">${jDisplay}</span></td>
       <td style="vertical-align:top;padding-top:4px;">${ticketHtml}</td>
       <td style="vertical-align:top;padding-top:4px;">${epicHtml}</td>
-      <td class="cp-td-edit"><input id="cp-r-${ri}" class="cp-input pw-write-action" type="number" step="0.5" min="0" max="24"
+      <td class="cp-td-edit"><input id="cp-r-${ri}" class="cp-input" type="number" step="0.5" min="0" max="24"
         value="${esc(String(rVal))}" oninput="cpDelta(${ri})"
         onblur="pwControlloSaveCell('${ci}','${si}','${oi}',${g},'${dt}','${ca}','${at}','ore_report',this.value)"></td>
       <td id="cp-d-${ri}" style="text-align:center">${deltaHtml}</td>
       <td class="cp-td-edit" style="vertical-align:top;padding-top:4px;">${kmCellHtml}</td>
       <td style="vertical-align:top;padding-top:4px;">${suJiraHtml}</td>
-      <td class="cp-td-edit"><input class="cp-input note pw-write-action" type="text"
+      <td class="cp-td-edit"><input class="cp-input note" type="text"
         value="${esc(nVal)}"
         onblur="pwControlloSaveCell('${ci}','${si}','${oi}',${g},'${dt}','${ca}','${at}','note',this.value)"></td>
     </tr>`;
@@ -14120,7 +14109,6 @@ async function _cpEdgeErr(error, fnName) {
 // a quella squadra invece che a tutta la settimana. btnEl: bottone da disabilitare durante
 // la sync (default il bottone globale in header, per compatibilità con la chiamata senza argomenti).
 async function pwControlloSyncJira(scopeCommessa, scopeSquadra, btnEl) {
-  if (!sbGuardWrite()) return;
   if (!_sbClient || !_sbUser) { showAlertModal('Sincronizzazione non disponibile in modalità offline.'); return; }
 
   const scoped     = (scopeCommessa != null && scopeSquadra != null);
@@ -14397,7 +14385,6 @@ async function pwControlloSyncJira(scopeCommessa, scopeSquadra, btnEl) {
 }
 
 async function pwControlloSaveCell(commessa, squadra, operatore, giornoIdx, dataGiorno, cantiere, attivita, field, value) {
-  if (!sbGuardWrite()) return;
   const k = `${commessa}|||${squadra}|||${operatore}|||${giornoIdx}`;
   if (!_cpData[k]) _cpData[k] = {};
 
@@ -14463,7 +14450,6 @@ async function pwControlloSaveCell(commessa, squadra, operatore, giornoIdx, data
 //   Production. Usare solo se il campo su Jira è stato azzerato a mano.
 async function cpJiraFlagClick(ev, commessa, squadra, operatore, giorno) {
   if (ev && ev.preventDefault) ev.preventDefault();
-  if (!sbGuardWrite()) return;
   const k = `${commessa}|||${squadra}|||${operatore}|||${giorno}`;
   const cur = _cpData[k] && _cpData[k].km_jira_last != null;
 
@@ -14505,7 +14491,6 @@ async function cpJiraFlagClick(ev, commessa, squadra, operatore, giorno) {
 
 // Salva il KM/Cad di un singolo ticket dentro la mappa per-ticket della cella.
 async function cpSaveKmTicket(commessa, squadra, operatore, giorno, dataGiorno, cantiere, attivita, ticketKey, value) {
-  if (!sbGuardWrite()) return;
   const k = `${commessa}|||${squadra}|||${operatore}|||${giorno}`;
   if (!_cpData[k]) _cpData[k] = {};
   if (!_cpData[k].km_by_ticket || typeof _cpData[k].km_by_ticket !== 'object') _cpData[k].km_by_ticket = {};
@@ -14536,7 +14521,6 @@ async function cpSaveKmTicket(commessa, squadra, operatore, giorno, dataGiorno, 
 // azzerabile solo con conferma (rimuove lo storico di scrittura per quel ticket).
 async function cpJiraFlagTicketClick(ev, commessa, squadra, operatore, giorno, ticketKey) {
   if (ev && ev.preventDefault) ev.preventDefault();
-  if (!sbGuardWrite()) return;
   const k = `${commessa}|||${squadra}|||${operatore}|||${giorno}`;
   const cell = _cpData[k] || {};
   const lastMap = (cell.km_last_by_ticket && typeof cell.km_last_by_ticket === 'object') ? cell.km_last_by_ticket : {};
@@ -14593,7 +14577,6 @@ async function cpJiraFlagTicketClick(ev, commessa, squadra, operatore, giorno, t
 // rileggerebbe mai più, perché applica solo il DELTA rispetto al valore adottato.
 async function cpRereadTicket(ev, commessa, squadra, operatore, giorno, dataGiorno, cantiere, attivita, ticketKey) {
   if (ev && ev.preventDefault) ev.preventDefault();
-  if (!sbGuardWrite()) return;
   if (!_sbClient || !_sbUser) { showAlertModal('Rilettura non disponibile in modalità offline.'); return; }
 
   const ok = await showConfirmAsync(
@@ -14773,7 +14756,6 @@ function cpGetSquadraOpsByDay(commessa, squadra) {
 
 // Handler del bottone: apre il selettore file (CSV) per la squadra indicata.
 async function cpCaricaReportSquadra(commessa, squadra) {
-  if (!sbGuardWrite()) return;
   const inp = document.createElement('input');
   inp.type = 'file';
   inp.accept = '.csv,text/csv,text/plain';
@@ -15970,7 +15952,6 @@ function pwMapParseCoords(text) {
    perché la modifica vale per tutte le settimane in cui compare quel nome
    cantiere, non solo per la card corrente. */
 async function pwMapGeoEditSubmit(inp) {
-  if (!sbGuardWrite()) return;
   const cantiere = inp.dataset.cantiere;
   const query = inp.value.trim();
   if (!cantiere || !query) return;
@@ -16015,11 +15996,11 @@ async function pwMapGeoEditSubmit(inp) {
    dato che in quel caso la posizione mostrata è solo un fallback approssimato. */
 function pwMapCantiereRowHtml(item, missing) {
   const cantiereAttr = item.cantiere.replace(/"/g, '&quot;');
-  const editInput = `<input type="text" class="pw-fix-input pw-write-action" placeholder='Comune o "lat, lng" (Invio)'
+  const editInput = `<input type="text" class="pw-fix-input" placeholder='Comune o "lat, lng" (Invio)'
         data-cantiere="${cantiereAttr}"
         onkeydown="if(event.key==='Enter'){event.stopPropagation();pwMapGeoEditSubmit(this)}" onclick="event.stopPropagation()">`;
   return `<div class="pw-geo-wrap">
-    <div class="sq-cantiere">📍 ${esc(item.cantiere)} <span class="pw-geo-edit-btn pw-write-action" onclick="event.stopPropagation();pwMapGeoEditToggle(this)" title="Correggi posizione">✏️</span></div>
+    <div class="sq-cantiere">📍 ${esc(item.cantiere)} <span class="pw-geo-edit-btn" onclick="event.stopPropagation();pwMapGeoEditToggle(this)" title="Correggi posizione">✏️</span></div>
     ${missing
       ? `<div class="sq-warn">⚠ Luogo non trovato, posizione approssimata<div class="pw-geo-edit-row" style="display:block;">${editInput}</div></div>`
       : `<div class="pw-geo-edit-row" style="display:none;">${editInput}</div>`}

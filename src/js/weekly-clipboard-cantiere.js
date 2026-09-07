@@ -52,7 +52,7 @@ function pwCellCtxMenu(ev, cidx, sidx, oidx, day) {
   ev.preventDefault();
   _pwShowCtxMenu(ev.clientX, ev.clientY, [
     { label: '📋 Copia cantiere/attività', onClick: () => pwCopyCell(cidx, sidx, oidx, day) },
-    { label: '📥 Incolla qui', disabled: !_pwClipCell, onClick: () => pwPasteCell(cidx, sidx, oidx, day) },
+    { label: '📥 Incolla qui', disabled: !_pwClipCell || !sbCanWrite(), onClick: () => pwPasteCell(cidx, sidx, oidx, day) },
   ]);
   return false;
 }
@@ -83,7 +83,7 @@ function pwRowCtxMenu(ev, cidx, sidx, oidx) {
   ev.preventDefault();
   _pwShowCtxMenu(ev.clientX, ev.clientY, [
     { label: '📋 Copia settimana (cantieri/attività)', onClick: () => pwCopyRow(cidx, sidx, oidx) },
-    { label: '📥 Incolla settimana qui', disabled: !_pwClipRow, onClick: () => pwPasteRow(cidx, sidx, oidx) },
+    { label: '📥 Incolla settimana qui', disabled: !_pwClipRow || !sbCanWrite(), onClick: () => pwPasteRow(cidx, sidx, oidx) },
   ]);
   return false;
 }

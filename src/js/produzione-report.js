@@ -126,6 +126,7 @@ function cpGetSquadraOpsByDay(commessa, squadra) {
 
 // Handler del bottone: apre il selettore file (CSV) per la squadra indicata.
 async function cpCaricaReportSquadra(commessa, squadra) {
+  if (!sbGuardWrite()) return;
   const inp = document.createElement('input');
   inp.type = 'file';
   inp.accept = '.csv,text/csv,text/plain';

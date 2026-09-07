@@ -747,6 +747,7 @@ function pwMapParseCoords(text) {
    perché la modifica vale per tutte le settimane in cui compare quel nome
    cantiere, non solo per la card corrente. */
 async function pwMapGeoEditSubmit(inp) {
+  if (!sbGuardWrite()) return;
   const cantiere = inp.dataset.cantiere;
   const query = inp.value.trim();
   if (!cantiere || !query) return;
@@ -791,11 +792,11 @@ async function pwMapGeoEditSubmit(inp) {
    dato che in quel caso la posizione mostrata è solo un fallback approssimato. */
 function pwMapCantiereRowHtml(item, missing) {
   const cantiereAttr = item.cantiere.replace(/"/g, '&quot;');
-  const editInput = `<input type="text" class="pw-fix-input" placeholder='Comune o "lat, lng" (Invio)'
+  const editInput = `<input type="text" class="pw-fix-input pw-write-action" placeholder='Comune o "lat, lng" (Invio)'
         data-cantiere="${cantiereAttr}"
         onkeydown="if(event.key==='Enter'){event.stopPropagation();pwMapGeoEditSubmit(this)}" onclick="event.stopPropagation()">`;
   return `<div class="pw-geo-wrap">
-    <div class="sq-cantiere">📍 ${esc(item.cantiere)} <span class="pw-geo-edit-btn" onclick="event.stopPropagation();pwMapGeoEditToggle(this)" title="Correggi posizione">✏️</span></div>
+    <div class="sq-cantiere">📍 ${esc(item.cantiere)} <span class="pw-geo-edit-btn pw-write-action" onclick="event.stopPropagation();pwMapGeoEditToggle(this)" title="Correggi posizione">✏️</span></div>
     ${missing
       ? `<div class="sq-warn">⚠ Luogo non trovato, posizione approssimata<div class="pw-geo-edit-row" style="display:block;">${editInput}</div></div>`
       : `<div class="pw-geo-edit-row" style="display:none;">${editInput}</div>`}

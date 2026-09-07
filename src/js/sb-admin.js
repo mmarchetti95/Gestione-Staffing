@@ -64,6 +64,7 @@ function sbApplyPageVisibility() {
 function sbApplyReadOnlyBanner() {
   const banner = document.getElementById('readonly-banner');
   if (banner) banner.style.display = sbCanWrite() ? 'none' : '';
+  document.body.classList.toggle('pw-readonly', !sbCanWrite());
   const badge = document.getElementById('sb-role-badge');
   if (badge) {
     const labels = { admin: 'Admin', responsabile: 'Responsabile', operatore: 'Operatore · sola lettura', guest: 'Guest · sola lettura' };

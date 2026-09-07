@@ -248,7 +248,7 @@ function pwRenderOpDropdown(cidx, sidx, oidx, nomeCorrente) {
     ? '<span class="op-ex-tag">ex</span>'
     : '';
   const geoLabel   = nomeCorrente ? pwOperatoreGeoLabel(nomeCorrente) : '';
-  return `<button class="op-trigger-btn ${statoClass}"
+  return `<button class="op-trigger-btn pw-write-action ${statoClass}"
     onclick="pwOpenOpModal(${cidx}, ${sidx}, ${oidx})">
     <span class="op-trigger-label">${label}${exBadge}</span>
     ${geoLabel ? `<span class="op-trigger-geo">📍 ${esc(geoLabel)}</span>` : ''}
@@ -361,10 +361,10 @@ function pwRender() {
           const attivitaPlaceholder = isInFerie ? '' : 'attività (facolt.)';
           const cantiereRowsHtml = cantiereList.map((c, ci) => `
             <div class="pw-cantiere-row">
-              <input class="pw-cantiere-input" type="text" placeholder="${cantierePlaceholder}"
+              <input class="pw-cantiere-input pw-write-action" type="text" placeholder="${cantierePlaceholder}"
                 value="${c.replace(/"/g, '&quot;')}"
                 data-cidx="${cIdx}" data-sidx="${sIdx}" data-oidx="${oIdx}" data-day="${dKey}" data-idx="${ci}"
-                onchange="pwUpdateCantiere(this)">${pwJiraSubtaskBadgeHtml(cIdx, sIdx, oIdx, dKey, ci, bloccoCommessa, op.nome, c)}${cantiereList.length > 1 ? `<button type="button" class="pw-cantiere-remove" title="Rimuovi cantiere"
+                onchange="pwUpdateCantiere(this)">${pwJiraSubtaskBadgeHtml(cIdx, sIdx, oIdx, dKey, ci, bloccoCommessa, op.nome, c)}${cantiereList.length > 1 ? `<button type="button" class="pw-cantiere-remove pw-write-action" title="Rimuovi cantiere"
                 data-cidx="${cIdx}" data-sidx="${sIdx}" data-oidx="${oIdx}" data-day="${dKey}" data-idx="${ci}"
                 onclick="pwRemoveCantiereField(this)">✕</button>` : ''}
             </div>`).join('');
@@ -373,11 +373,11 @@ function pwRender() {
             oncontextmenu="return pwCellCtxMenu(event, ${cIdx}, ${sIdx}, ${oIdx}, ${dKey});">
             <div class="pw-cantiere-list">
               ${cantiereRowsHtml}
-              <button type="button" class="pw-cantiere-add" title="Aggiungi un altro cantiere per questo giorno"
+              <button type="button" class="pw-cantiere-add pw-write-action" title="Aggiungi un altro cantiere per questo giorno"
                 data-cidx="${cIdx}" data-sidx="${sIdx}" data-oidx="${oIdx}" data-day="${dKey}"
                 onclick="pwAddCantiereField(this)">+ cantiere</button>
             </div>
-            <input class="pw-attivita-input" type="text" placeholder="${attivitaPlaceholder}"
+            <input class="pw-attivita-input pw-write-action" type="text" placeholder="${attivitaPlaceholder}"
               value="${attivita.replace(/"/g, '&quot;')}"
               data-cidx="${cIdx}" data-sidx="${sIdx}" data-oidx="${oIdx}" data-day="${dKey}" data-field="attivita"
               onchange="pwUpdateCell(this)">
@@ -412,7 +412,7 @@ function pwRender() {
             ${pwRenderOpDropdown(cIdx, sIdx, oIdx, op.nome)}
             ${badgeHtml ? `<div>${badgeHtml}</div>` : ''}
             ${dwBadge ? `<div>${dwBadge}</div>` : ''}
-            <button class="text-[9px] text-red-400 hover:text-red-600 text-left"
+            <button class="text-[9px] text-red-400 hover:text-red-600 text-left pw-write-action"
               data-cidx="${cIdx}" data-sidx="${sIdx}" data-oidx="${oIdx}"
               onclick="pwRemoveOp(this)">✕ rimuovi</button>
           </div>
@@ -429,16 +429,16 @@ function pwRender() {
         <div class="pw-squadra-header">
           <button class="pw-sq-collapse-toggle" onclick="pwToggleSq(${cIdx},${sIdx})">▼</button>
           <span>🟡</span>
-          <input type="text" class="pw-sq-nome-input bg-transparent border-none outline-none font-semibold text-amber-900 text-xs"
+          <input type="text" class="pw-sq-nome-input pw-write-action bg-transparent border-none outline-none font-semibold text-amber-900 text-xs"
             placeholder="Nome squadra…" value="${(squadra.nome || '').replace(/"/g, '&quot;')}"
             data-cidx="${cIdx}" data-sidx="${sIdx}"
             onchange="pwUpdateSquadraNome(this)">
           ${cognomiHtml}
           <div class="flex items-center gap-2 ml-2" style="margin-left:auto;">
-            <button class="text-[10px] bg-amber-200 hover:bg-amber-300 text-amber-900 px-2 py-0.5 rounded"
+            <button class="text-[10px] bg-amber-200 hover:bg-amber-300 text-amber-900 px-2 py-0.5 rounded pw-write-action"
               data-cidx="${cIdx}" data-sidx="${sIdx}"
               onclick="pwAddOp(this)">+ Operatore</button>
-            <button class="text-[10px] text-red-400 hover:text-red-600"
+            <button class="text-[10px] text-red-400 hover:text-red-600 pw-write-action"
               data-cidx="${cIdx}" data-sidx="${sIdx}"
               onclick="pwRemoveSquadra(this)">✕ Rimuovi squadra</button>
           </div>
@@ -450,12 +450,12 @@ function pwRender() {
             ${strumenti.map((k, idx) => {
               const dup = k && _stCount[k] > 1;
               return `<span style="display:inline-flex;align-items:center;gap:2px;">
-                <button type="button" class="pw-str-trigger" data-cidx="${cIdx}" data-sidx="${sIdx}" data-idx="${idx}" onclick="pwStrOpen(this)"
+                <button type="button" class="pw-str-trigger pw-write-action" data-cidx="${cIdx}" data-sidx="${sIdx}" data-idx="${idx}" onclick="pwStrOpen(this)"
                   title="${dup ? 'Attenzione: questo strumento e assegnato a piu squadre in questa settimana' : 'Clicca per cercare e scegliere lo strumento'}"
-                  style="font-size:11px;text-align:left;border:1px solid ${dup ? '#dc2626' : '#d1d5db'};border-radius:4px;padding:2px 6px;max-width:220px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;background:${dup ? '#fef2f2' : '#fff'};cursor:pointer;">${esc(pwStrLabel(k))} ▾</button>${dup ? '<span title="Doppia assegnazione" style="color:#dc2626;font-size:12px;">⚠</span>' : ''}<button data-cidx="${cIdx}" data-sidx="${sIdx}" data-idx="${idx}" onclick="pwRemoveStrumento(this)" title="Rimuovi strumento" style="color:#b91c1c;font-size:12px;line-height:1;padding:0 2px;">✕</button>
+                  style="font-size:11px;text-align:left;border:1px solid ${dup ? '#dc2626' : '#d1d5db'};border-radius:4px;padding:2px 6px;max-width:220px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;background:${dup ? '#fef2f2' : '#fff'};cursor:pointer;">${esc(pwStrLabel(k))} ▾</button>${dup ? '<span title="Doppia assegnazione" style="color:#dc2626;font-size:12px;">⚠</span>' : ''}<button class="pw-write-action" data-cidx="${cIdx}" data-sidx="${sIdx}" data-idx="${idx}" onclick="pwRemoveStrumento(this)" title="Rimuovi strumento" style="color:#b91c1c;font-size:12px;line-height:1;padding:0 2px;">✕</button>
               </span>`;
             }).join('')}
-            <button data-cidx="${cIdx}" data-sidx="${sIdx}" onclick="pwAddStrumento(this)" style="font-size:10px;font-weight:600;background:#fde68a;color:#92400e;border-radius:4px;padding:2px 7px;white-space:nowrap;">+ Strumento</button>
+            <button class="pw-write-action" data-cidx="${cIdx}" data-sidx="${sIdx}" onclick="pwAddStrumento(this)" style="font-size:10px;font-weight:600;background:#fde68a;color:#92400e;border-radius:4px;padding:2px 7px;white-space:nowrap;">+ Strumento</button>
             ${pwStrumenti.length === 0 ? '<span style="font-size:9px;color:#b45309;">(clicca "🔧 Aggiorna strumenti" in alto per caricare l\'elenco da Jira)</span>' : ''}
           </div>`;
         })()}
@@ -474,21 +474,21 @@ function pwRender() {
         <button class="pw-collapse-toggle" onclick="pwToggleComm(${cIdx})">▼</button>
         <div class="flex items-center gap-2 flex-1">
           <span class="text-teal-200 text-xs font-normal">Commessa:</span>
-          <select class="bg-teal-700 text-white text-sm font-semibold border border-teal-500 rounded px-2 py-0.5"
+          <select class="bg-teal-700 text-white text-sm font-semibold border border-teal-500 rounded px-2 py-0.5 pw-write-action"
             data-cidx="${cIdx}" onchange="pwUpdateCommessa(this)">
             ${commessaOptions}
           </select>
         </div>
         <div class="flex items-center gap-2">
-          <button class="text-xs bg-teal-500 hover:bg-teal-400 text-white px-3 py-1 rounded"
+          <button class="text-xs bg-teal-500 hover:bg-teal-400 text-white px-3 py-1 rounded pw-write-action"
             data-cidx="${cIdx}" onclick="pwAddSquadra(this)">+ Squadra</button>
-          <button class="text-xs bg-amber-500 hover:bg-amber-400 text-white px-2 py-1 rounded"
+          <button class="text-xs bg-amber-500 hover:bg-amber-400 text-white px-2 py-1 rounded pw-write-action"
             data-cidx="${cIdx}" onclick="pwJiraSubtaskInit(${cIdx})" title="Crea sottotask su Jira per gli operatori pianificati questa settimana">🎫 Sottotask Jira</button>
           <button class="text-xs bg-teal-600 hover:bg-teal-500 text-white px-2 py-1 rounded disabled:opacity-50"
-            data-cidx="${cIdx}" onclick="pwMoveCommessaUp(this)" ${cIdx === 0 ? 'disabled' : ''} title="Sposta commessa su">▲</button>
+            data-cidx="${cIdx}" onclick="pwMoveCommessaUp(this)" ${(cIdx === 0 || !sbCanWrite()) ? 'disabled' : ''} title="Sposta commessa su">▲</button>
           <button class="text-xs bg-teal-600 hover:bg-teal-500 text-white px-2 py-1 rounded disabled:opacity-50"
-            data-cidx="${cIdx}" onclick="pwMoveCommessaDown(this)" ${cIdx === data.length - 1 ? 'disabled' : ''} title="Sposta commessa giù">▼</button>
-          <button class="text-xs text-teal-200 hover:text-red-300"
+            data-cidx="${cIdx}" onclick="pwMoveCommessaDown(this)" ${(cIdx === data.length - 1 || !sbCanWrite()) ? 'disabled' : ''} title="Sposta commessa giù">▼</button>
+          <button class="text-xs text-teal-200 hover:text-red-300 pw-write-action"
             data-cidx="${cIdx}" onclick="pwRemoveCommessa(this)">✕</button>
         </div>
       </div>

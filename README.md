@@ -111,6 +111,9 @@ Limite noto: il progetto Supabase è sul piano **Free**, che non include backup 
 
 ## Changelog
 
+## v18.142.0
+- feat: **Pianificazione Settimanale — pulsanti di azione disabilitati/ingrigiti per Operatore/Guest** — in tutte le tab (Griglia, Ferie, Mappa, Controllo Produzione, Doppia Week; Pianifica Spostamenti e Ricerca Squadre erano già di fatto sola-lettura, nessuna modifica lì) i controlli che scrivono dati (aggiungi/rimuovi commessa o squadra, assegna operatore, cantiere/attività, ferie, import Excel, sottotask Jira, sincronizzazione/inserimento dati in Controllo Produzione, correzione manuale geocoding in Mappa, ecc.) ora appaiono visivamente grigi e non cliccabili per i ruoli sola lettura, invece di mostrare l'alert solo dopo il click. Corretti anche tre punti privi di qualunque controllo di ruolo lato client (Controllo Produzione nel suo complesso, la creazione reale dei sottotask Jira, la correzione manuale del geocoding in Mappa squadre): ora bloccati anche via `sbGuardWrite()` come il resto dell'app, non solo esteticamente.
+
 ## v18.141.0
 - feat: **Griglia — ricerca anche per cantiere + modal risultati con navigazione diretta alla cella** — la barra di ricerca della Griglia settimanale ora trova, oltre al nome operatore, anche il testo dei cantieri assegnati nei giorni della settimana. Il conteggio risultati sopra la barra è ora cliccabile: apre un modal con il dettaglio di ogni corrispondenza (operatore/squadra/commessa, e per i match su cantiere anche il giorno), cliccando una riga il modal si chiude e si viene portati esattamente alla cella corrispondente nella Griglia (espandendo commessa/squadra se collassate, con scroll ed evidenziazione temporanea).
 

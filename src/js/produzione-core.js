@@ -216,7 +216,7 @@ function pwControlloRender() {
     html += `<tr class="cp-tr-commessa" data-comm-idx="${blIdx}"><td colspan="16"><span class="cp-carr" style="cursor:pointer;user-select:none;margin-right:5px;font-size:11px;display:inline-block;width:10px;text-align:center;" onclick="cpToggleComm(${blIdx})">▼</span>📁 ${esc(bl.commessa)}</td></tr>`;
     bl.squadre.forEach((sq, sqIdx) => {
       const sqKey = blIdx + '-' + sqIdx;
-      html += `<tr class="cp-tr-squadra" data-comm-idx="${blIdx}" data-sq-idx="${sqKey}"><td colspan="16">&nbsp;&nbsp;&nbsp;<span class="cp-sarr" style="cursor:pointer;user-select:none;margin-right:5px;font-size:11px;display:inline-block;width:10px;text-align:center;" onclick="cpToggleSq('${jsAttr(sqKey)}')">▼</span>👥 ${esc(sq.nome)}<button class="no-print" style="margin-left:10px;font-size:11px;font-weight:600;background:#4f46e5;color:#fff;border:none;border-radius:5px;padding:2px 8px;cursor:pointer;" onclick="event.stopPropagation();pwControlloSyncJira('${jsesc(bl.commessa)}','${jsesc(sq.nome)}',this)">🔄 Sincronizza squadra</button><button class="no-print" style="margin-left:6px;font-size:11px;font-weight:600;background:#0ea5e9;color:#fff;border:none;border-radius:5px;padding:2px 8px;cursor:pointer;" onclick="event.stopPropagation();cpCaricaReportSquadra('${jsesc(bl.commessa)}','${jsesc(sq.nome)}')">📄 Carica Report</button></td></tr>`;
+      html += `<tr class="cp-tr-squadra" data-comm-idx="${blIdx}" data-sq-idx="${sqKey}"><td colspan="16">&nbsp;&nbsp;&nbsp;<span class="cp-sarr" style="cursor:pointer;user-select:none;margin-right:5px;font-size:11px;display:inline-block;width:10px;text-align:center;" onclick="cpToggleSq('${jsAttr(sqKey)}')">▼</span>👥 ${esc(sq.nome)}<button class="no-print pw-write-action" style="margin-left:10px;font-size:11px;font-weight:600;background:#4f46e5;color:#fff;border:none;border-radius:5px;padding:2px 8px;cursor:pointer;" onclick="event.stopPropagation();pwControlloSyncJira('${jsesc(bl.commessa)}','${jsesc(sq.nome)}',this)">🔄 Sincronizza squadra</button><button class="no-print pw-write-action" style="margin-left:6px;font-size:11px;font-weight:600;background:#0ea5e9;color:#fff;border:none;border-radius:5px;padding:2px 8px;cursor:pointer;" onclick="event.stopPropagation();cpCaricaReportSquadra('${jsesc(bl.commessa)}','${jsesc(sq.nome)}')">📄 Carica Report</button></td></tr>`;
       sq.giorni.forEach((gBlock, gIdx) => {
         const g   = gBlock.giornoIdx;
         const sep = gIdx > 0 ? ' cp-day-sep' : '';
@@ -247,15 +247,15 @@ function pwControlloRender() {
             ? '<span style="color:#cbd5e1">—</span>'
             : tickets.map(t => {
                 const kv = byTicket[t.key];
-                return `<input class="cp-input" type="number" step="0.1" min="0" style="width:64px;height:22px;display:block;margin:1px 0;box-sizing:border-box;" value="${kv==null?'':esc(String(kv))}" title="${esc(t.key||'')}" onblur="cpSaveKmTicket('${jsesc(bl.commessa)}','${jsesc(sq.nome)}','${jsesc(op.nome)}',${g},'${jsesc(dates[g])}','${jsesc(op.cantiere)}','${jsesc(op.attivita)}','${jsesc(t.key||'')}',this.value)">`;
+                return `<input class="cp-input pw-write-action" type="number" step="0.1" min="0" style="width:64px;height:22px;display:block;margin:1px 0;box-sizing:border-box;" value="${kv==null?'':esc(String(kv))}" title="${esc(t.key||'')}" onblur="cpSaveKmTicket('${jsesc(bl.commessa)}','${jsesc(sq.nome)}','${jsesc(op.nome)}',${g},'${jsesc(dates[g])}','${jsesc(op.cantiere)}','${jsesc(op.attivita)}','${jsesc(t.key||'')}',this.value)">`;
               }).join('');
           const suJiraHtml = tickets.length === 0
             ? '<span style="color:#cbd5e1">—</span>'
             : tickets.map(t => {
                 const wrote = lastByTicket[t.key] != null;
                 const ttl = wrote ? ('Ultimo scritto su Jira: ' + lastByTicket[t.key] + ' — clicca per azzerare lo storico (con conferma)') : 'Si spunta dopo la scrittura su Jira';
-                const reloadBtn = wrote ? `<button type="button" class="no-print" title="Rileggi il valore attuale da Jira (sovrascrive il Km/Cad locale di questo ticket)" style="border:none;background:transparent;cursor:pointer;font-size:12px;line-height:1;padding:0;margin-left:3px;" onclick="cpRereadTicket(event,'${jsesc(bl.commessa)}','${jsesc(sq.nome)}','${jsesc(op.nome)}',${g},'${jsesc(dates[g])}','${jsesc(op.cantiere)}','${jsesc(op.attivita)}','${jsesc(t.key||'')}')">🔄</button>` : '';
-                return `<div style="height:24px;display:flex;align-items:center;justify-content:center;"><input type="checkbox" ${wrote?'checked':''} title="${esc(ttl)}" style="width:15px;height:15px;cursor:pointer;" onclick="cpJiraFlagTicketClick(event,'${jsesc(bl.commessa)}','${jsesc(sq.nome)}','${jsesc(op.nome)}',${g},'${jsesc(t.key||'')}')">${reloadBtn}</div>`;
+                const reloadBtn = wrote ? `<button type="button" class="no-print pw-write-action" title="Rileggi il valore attuale da Jira (sovrascrive il Km/Cad locale di questo ticket)" style="border:none;background:transparent;cursor:pointer;font-size:12px;line-height:1;padding:0;margin-left:3px;" onclick="cpRereadTicket(event,'${jsesc(bl.commessa)}','${jsesc(sq.nome)}','${jsesc(op.nome)}',${g},'${jsesc(dates[g])}','${jsesc(op.cantiere)}','${jsesc(op.attivita)}','${jsesc(t.key||'')}')">🔄</button>` : '';
+                return `<div style="height:24px;display:flex;align-items:center;justify-content:center;"><input type="checkbox" class="pw-write-action" ${wrote?'checked':''} title="${esc(ttl)}" style="width:15px;height:15px;cursor:pointer;" onclick="cpJiraFlagTicketClick(event,'${jsesc(bl.commessa)}','${jsesc(sq.nome)}','${jsesc(op.nome)}',${g},'${jsesc(t.key||'')}')">${reloadBtn}</div>`;
               }).join('');
           const jDisplay = (jVal === '' || jVal == null)
             ? '<span style="color:#cbd5e1">—</span>'
@@ -279,7 +279,7 @@ function pwControlloRender() {
       <td class="cp-wrap" title="${esc(bl.commessa)}">${esc(bl.commessa)}</td>
       <td class="cp-wrap" title="${esc(sq.nome)}">${esc(sq.nome)}</td>
       <td class="cp-wrap" title="${esc(op.nome)}"><strong>${esc(op.nome)}</strong>${isOperatoreLicenziato(op.nome) ? '<span class="op-ex-tag">ex</span>' : ''}</td>
-      <td style="text-align:center"><input type="checkbox" ${verificato ? 'checked' : ''} title="Verificato" style="width:16px;height:16px;cursor:pointer;" onchange="pwControlloSaveCell('${ci}','${si}','${oi}',${g},'${dt}','${ca}','${at}','verificato',this.checked)"></td>
+      <td style="text-align:center"><input type="checkbox" class="pw-write-action" ${verificato ? 'checked' : ''} title="Verificato" style="width:16px;height:16px;cursor:pointer;" onchange="pwControlloSaveCell('${ci}','${si}','${oi}',${g},'${dt}','${ca}','${at}','verificato',this.checked)"></td>
       <td>${DAY_NAMES[g]}</td>
       <td>${dates[g]}</td>
       <td class="cp-wrap" style="color:#64748b" title="${esc(op.cantiere)}">${esc(op.cantiere)}</td>
@@ -287,13 +287,13 @@ function pwControlloRender() {
       <td style="${cpOreJiraStyle(jVal, g)}"><span id="cp-j-${ri}" data-jval="${esc(String(jVal))}">${jDisplay}</span></td>
       <td style="vertical-align:top;padding-top:4px;">${ticketHtml}</td>
       <td style="vertical-align:top;padding-top:4px;">${epicHtml}</td>
-      <td class="cp-td-edit"><input id="cp-r-${ri}" class="cp-input" type="number" step="0.5" min="0" max="24"
+      <td class="cp-td-edit"><input id="cp-r-${ri}" class="cp-input pw-write-action" type="number" step="0.5" min="0" max="24"
         value="${esc(String(rVal))}" oninput="cpDelta(${ri})"
         onblur="pwControlloSaveCell('${ci}','${si}','${oi}',${g},'${dt}','${ca}','${at}','ore_report',this.value)"></td>
       <td id="cp-d-${ri}" style="text-align:center">${deltaHtml}</td>
       <td class="cp-td-edit" style="vertical-align:top;padding-top:4px;">${kmCellHtml}</td>
       <td style="vertical-align:top;padding-top:4px;">${suJiraHtml}</td>
-      <td class="cp-td-edit"><input class="cp-input note" type="text"
+      <td class="cp-td-edit"><input class="cp-input note pw-write-action" type="text"
         value="${esc(nVal)}"
         onblur="pwControlloSaveCell('${ci}','${si}','${oi}',${g},'${dt}','${ca}','${at}','note',this.value)"></td>
     </tr>`;
@@ -368,6 +368,7 @@ async function _cpEdgeErr(error, fnName) {
 // a quella squadra invece che a tutta la settimana. btnEl: bottone da disabilitare durante
 // la sync (default il bottone globale in header, per compatibilità con la chiamata senza argomenti).
 async function pwControlloSyncJira(scopeCommessa, scopeSquadra, btnEl) {
+  if (!sbGuardWrite()) return;
   if (!_sbClient || !_sbUser) { showAlertModal('Sincronizzazione non disponibile in modalità offline.'); return; }
 
   const scoped     = (scopeCommessa != null && scopeSquadra != null);
@@ -644,6 +645,7 @@ async function pwControlloSyncJira(scopeCommessa, scopeSquadra, btnEl) {
 }
 
 async function pwControlloSaveCell(commessa, squadra, operatore, giornoIdx, dataGiorno, cantiere, attivita, field, value) {
+  if (!sbGuardWrite()) return;
   const k = `${commessa}|||${squadra}|||${operatore}|||${giornoIdx}`;
   if (!_cpData[k]) _cpData[k] = {};
 
@@ -709,6 +711,7 @@ async function pwControlloSaveCell(commessa, squadra, operatore, giornoIdx, data
 //   Production. Usare solo se il campo su Jira è stato azzerato a mano.
 async function cpJiraFlagClick(ev, commessa, squadra, operatore, giorno) {
   if (ev && ev.preventDefault) ev.preventDefault();
+  if (!sbGuardWrite()) return;
   const k = `${commessa}|||${squadra}|||${operatore}|||${giorno}`;
   const cur = _cpData[k] && _cpData[k].km_jira_last != null;
 
@@ -750,6 +753,7 @@ async function cpJiraFlagClick(ev, commessa, squadra, operatore, giorno) {
 
 // Salva il KM/Cad di un singolo ticket dentro la mappa per-ticket della cella.
 async function cpSaveKmTicket(commessa, squadra, operatore, giorno, dataGiorno, cantiere, attivita, ticketKey, value) {
+  if (!sbGuardWrite()) return;
   const k = `${commessa}|||${squadra}|||${operatore}|||${giorno}`;
   if (!_cpData[k]) _cpData[k] = {};
   if (!_cpData[k].km_by_ticket || typeof _cpData[k].km_by_ticket !== 'object') _cpData[k].km_by_ticket = {};
@@ -780,6 +784,7 @@ async function cpSaveKmTicket(commessa, squadra, operatore, giorno, dataGiorno, 
 // azzerabile solo con conferma (rimuove lo storico di scrittura per quel ticket).
 async function cpJiraFlagTicketClick(ev, commessa, squadra, operatore, giorno, ticketKey) {
   if (ev && ev.preventDefault) ev.preventDefault();
+  if (!sbGuardWrite()) return;
   const k = `${commessa}|||${squadra}|||${operatore}|||${giorno}`;
   const cell = _cpData[k] || {};
   const lastMap = (cell.km_last_by_ticket && typeof cell.km_last_by_ticket === 'object') ? cell.km_last_by_ticket : {};
@@ -836,6 +841,7 @@ async function cpJiraFlagTicketClick(ev, commessa, squadra, operatore, giorno, t
 // rileggerebbe mai più, perché applica solo il DELTA rispetto al valore adottato.
 async function cpRereadTicket(ev, commessa, squadra, operatore, giorno, dataGiorno, cantiere, attivita, ticketKey) {
   if (ev && ev.preventDefault) ev.preventDefault();
+  if (!sbGuardWrite()) return;
   if (!_sbClient || !_sbUser) { showAlertModal('Rilettura non disponibile in modalità offline.'); return; }
 
   const ok = await showConfirmAsync(

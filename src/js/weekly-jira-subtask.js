@@ -248,6 +248,7 @@ function pwJiraSubtaskApplyBadgesToDom() {
 
 /* ----- Entry point dal bottone in Griglia ----- */
 function pwJiraSubtaskInit(cIdx) {
+  if (!sbGuardWrite()) return;
   const data = pwGetWeekData();
   const bc = data[cIdx];
   if (!bc || !bc.commessa) { showAlertModal('Seleziona prima una commessa per questo blocco.'); return; }
@@ -749,7 +750,7 @@ function pwJiraSubtaskRenderPreview(cIdx, commessaNome, items, results, skippedC
     ${skippedHtml}
     <div class="flex justify-end gap-2 mt-4">
       <button onclick="closeModal()" class="px-3 py-1.5 text-sm border border-slate-300 rounded">Annulla</button>
-      <button id="pw-jira-confirm-create" class="px-3 py-1.5 text-sm bg-teal-600 text-white rounded hover:bg-teal-700 disabled:opacity-50" ${wouldCreate === 0 ? 'disabled' : ''}>Crea ${wouldCreate} sottotask</button>
+      <button id="pw-jira-confirm-create" class="px-3 py-1.5 text-sm bg-teal-600 text-white rounded hover:bg-teal-700 disabled:opacity-50" ${(wouldCreate === 0 || !sbCanWrite()) ? 'disabled' : ''}>Crea ${wouldCreate} sottotask</button>
     </div>
   </div></div>`;
   root.querySelector('.modal-backdrop').addEventListener('click', e => { if (e.target.classList.contains('modal-backdrop')) closeModal(); });
@@ -761,6 +762,7 @@ function pwJiraSubtaskRenderPreview(cIdx, commessaNome, items, results, skippedC
 
 /* ----- Step 3: creazione reale + riepilogo ----- */
 async function pwJiraSubtaskConfirmCreate(cIdx, commessaNome, items, extraFields) {
+  if (!sbGuardWrite()) return;
   const root = document.getElementById('modal-root');
   root.innerHTML = `<div class="modal-backdrop"><div class="bg-white rounded-lg shadow-xl w-full max-w-md mx-4 p-5">
     <div class="text-sm text-slate-600">⏳ Creazione sottotask su Jira in corso…</div>

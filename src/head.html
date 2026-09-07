@@ -1118,6 +1118,14 @@
   .pw-str-item:hover { background: #eff6ff; }
   .pw-str-item.empty { color: #94a3b8; }
 
+  /* Ruoli sola lettura (operatore/guest): ingrigisce/disabilita i controlli
+     che compiono un'azione di scrittura nella Pianificazione Settimanale.
+     Classe applicata staticamente in markup, attivata da un'unica classe
+     sul body (impostata una volta al login da sbApplyReadOnlyBanner) — così
+     copre anche gli elementi generati dopo, senza dover ri-applicare nulla
+     ad ogni render. */
+  body.pw-readonly .pw-write-action { opacity: .45 !important; pointer-events: none !important; cursor: not-allowed !important; }
+
 </style>
 </head>
 <body class="min-h-screen">
@@ -1140,7 +1148,7 @@
     <div class="flex items-center gap-2">
       <button id="btn-presentation" class="px-3 py-1.5 text-sm rounded hover:bg-white/10" style="border:1px solid var(--dark-border-strong);color:var(--dark-text);visibility:visible;">📊 Modalità presentazione</button>
       <div class="text-xs pl-2" style="border-left:1px solid var(--dark-border-strong);color:var(--dark-text-muted);">
-        <span id="app-version" class="font-medium" style="color:var(--accent);">v18.141.0</span> · Michele Marchetti
+        <span id="app-version" class="font-medium" style="color:var(--accent);">v18.142.0</span> · Michele Marchetti
         <span id="sb-role-badge" style="margin-left:8px;padding:1px 8px;border-radius:9999px;background:rgba(255,255,255,.1);color:var(--dark-text);font-weight:600;"></span>
       </div>
     </div>
@@ -1682,7 +1690,7 @@
     </div>
     <div id="pw-header-dates" class="text-sm font-semibold text-slate-700"></div>
     <div class="flex items-center gap-2">
-      <button id="pw-add-commessa" class="px-3 py-1.5 text-sm bg-teal-600 text-white rounded hover:bg-teal-700 no-print">+ Aggiungi commessa</button>
+      <button id="pw-add-commessa" class="px-3 py-1.5 text-sm bg-teal-600 text-white rounded hover:bg-teal-700 no-print pw-write-action">+ Aggiungi commessa</button>
       <button id="pw-gen-mail" class="px-3 py-1.5 text-sm bg-indigo-600 text-white rounded hover:bg-indigo-700 no-print">📧 Genera mail</button>
       <button id="pw-print" class="px-3 py-1.5 text-sm border border-slate-300 rounded hover:bg-slate-50 no-print">🖨 Stampa</button>
     </div>
@@ -1732,7 +1740,7 @@
           <span class="ml-3 text-rose-200 text-sm" id="pw-ferie-week-label"></span>
         </div>
         <div class="flex items-center gap-3">
-          <button id="pw-ferie-import-btn" class="px-3 py-1.5 text-sm bg-white/10 hover:bg-white/20 border border-white/30 rounded text-white no-print whitespace-nowrap"
+          <button id="pw-ferie-import-btn" class="px-3 py-1.5 text-sm bg-white/10 hover:bg-white/20 border border-white/30 rounded text-white no-print whitespace-nowrap pw-write-action"
             onclick="document.getElementById('pw-ferie-import-file').click()"
             title="Importa da Excel l'export ferie/permessi (colonne: Dipendente, descrizione, dataintervento, Somma di durata)">📥 Importa Excel</button>
           <input type="file" id="pw-ferie-import-file" accept=".xlsx" class="hidden" onchange="pwFerieImportPick(this)">
@@ -2019,7 +2027,7 @@
       </div>
       <div class="flex items-center gap-2">
         <button id="cp-collapse-all" class="px-3 py-1.5 text-sm border border-slate-300 rounded hover:bg-slate-50 no-print" onclick="cpCollapseAllToggle()">≡ Collassa</button>
-        <button id="cp-sync-jira" onclick="pwControlloSyncJira()" class="px-3 py-1.5 text-sm font-medium bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 flex items-center gap-1.5 no-print">
+        <button id="cp-sync-jira" onclick="pwControlloSyncJira()" class="px-3 py-1.5 text-sm font-medium bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 flex items-center gap-1.5 no-print pw-write-action">
           🔄 Sincronizza da Jira
         </button>
         <button onclick="pwControlloExport()" class="px-3 py-1.5 text-sm font-medium bg-teal-600 text-white rounded-lg hover:bg-teal-700 flex items-center gap-1.5 no-print">

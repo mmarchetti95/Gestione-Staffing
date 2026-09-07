@@ -48,14 +48,14 @@ function pwGeneraMail() {
               <div>
                 <label class="block text-[10px] text-slate-500 font-medium mb-0.5">📝 Note squadra <span class="text-slate-400 font-normal">(facoltativo)</span></label>
                 <textarea id="mail-note-sq-${i}" rows="2"
-                  class="w-full border border-slate-200 rounded px-2 py-1 text-xs text-slate-700 focus:outline-none focus:border-teal-400 bg-white"
+                  class="w-full border border-slate-200 rounded px-2 py-1 text-xs text-slate-700 focus:outline-none focus:border-teal-400 bg-white pw-write-action"
                   placeholder="Es: Affiancamento, istruzioni operative…">${esc(noteSalvate)}</textarea>
               </div>
               <div>
                 <label class="block text-[10px] text-slate-500 font-medium mb-0.5">🔧 Strumenti / attrezzatura <span class="text-slate-400 font-normal">(aggiuntivi, facoltativo)</span></label>
                 ${jiraHint}
                 <textarea id="mail-strumenti-sq-${i}" rows="2"
-                  class="w-full border border-slate-200 rounded px-2 py-1 text-xs text-slate-700 focus:outline-none focus:border-teal-400 bg-white"
+                  class="w-full border border-slate-200 rounded px-2 py-1 text-xs text-slate-700 focus:outline-none focus:border-teal-400 bg-white pw-write-action"
                   placeholder="Es: GPS Leica RX1250, Auto targa AB123CD…">${esc(strumentiSalvati)}</textarea>
               </div>
             </div>
@@ -103,13 +103,13 @@ function pwGeneraMail() {
         <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
           <label style="font-size:11px;">
             <div style="color:#475569; font-weight:600; margin-bottom:3px;">Orario partenza sede</div>
-            <input id="mail-orario-partenza" type="text" value="${esc(pwData.mailOrarioPartenza || '08:00')}"
+            <input id="mail-orario-partenza" type="text" class="pw-write-action" value="${esc(pwData.mailOrarioPartenza || '08:00')}"
               style="width:100%; border:1px solid #e2e8f0; border-radius:6px;
                      padding:6px 10px; font-size:13px; outline:none; box-sizing:border-box;">
           </label>
           <label style="font-size:11px;">
             <div style="color:#475569; font-weight:600; margin-bottom:3px;">Orario lavoro</div>
-            <input id="mail-orario-lavoro" type="text" value="${esc(pwData.mailOrarioLavoro || '08:00/08:30 – 16:30/17:00')}"
+            <input id="mail-orario-lavoro" type="text" class="pw-write-action" value="${esc(pwData.mailOrarioLavoro || '08:00/08:30 – 16:30/17:00')}"
               style="width:100%; border:1px solid #e2e8f0; border-radius:6px;
                      padding:6px 10px; font-size:13px; outline:none; box-sizing:border-box;">
           </label>
@@ -118,7 +118,7 @@ function pwGeneraMail() {
           <div style="color:#475569; font-weight:600; margin-bottom:3px;">📧 Email sempre in CC
             <span style="font-weight:400; color:#94a3b8;">(separate da virgola, aggiunte sempre in copia conoscenza)</span>
           </div>
-          <input id="mail-email-sempre" type="text" value="${esc(pwData.emailSempreIncluse || '')}"
+          <input id="mail-email-sempre" type="text" class="pw-write-action" value="${esc(pwData.emailSempreIncluse || '')}"
             placeholder="es: ufficio.tecnico@eagleprojects.it, capocommessa@eagleprojects.it"
             style="width:100%; border:1px solid #e2e8f0; border-radius:6px;
                    padding:6px 10px; font-size:13px; outline:none; box-sizing:border-box;">
@@ -146,7 +146,7 @@ function pwGeneraMail() {
             📌 Note generali
             <span style="font-weight:400; color:#94a3b8;">(ferie manuali, istruzioni…)</span>
           </label>
-          <textarea id="mail-note-generali" rows="3"
+          <textarea id="mail-note-generali" rows="3" class="pw-write-action"
             style="width:100%; border:1px solid #e2e8f0; border-radius:6px;
                    padding:8px 10px; font-size:11px; color:#334155; outline:none;
                    resize:vertical; box-sizing:border-box;"
@@ -800,7 +800,7 @@ function pwFerieRender() {
           tipo === 'non_disponibile' ? 'non-disponibile' : '', importata ? 'importata' : ''].filter(Boolean).join(' ');
         return `<div class="${cls}" oncontextmenu="return pwFerieCellCtxMenu(event, '${jsAttr(nome)}', ${i})"
             title="${importata ? '' : (tipo ? 'Click destro per cambiare tipo assenza' : '')}">
-          <input type="checkbox" class="pw-ferie-cb"
+          <input type="checkbox" class="pw-ferie-cb pw-write-action"
             data-op="${nome.replace(/"/g, '&quot;')}" data-day="${i}"
             ${checked ? 'checked' : ''}
             onchange="pwToggleFeria(this)">
@@ -808,7 +808,7 @@ function pwFerieRender() {
         </div>`;
       }).join('')}
       <div class="pw-ferie-cell" style="padding:2px 6px;">
-        <button data-op="${nome.replace(/"/g, '&quot;')}" onclick="pwFerieToggleWeek(this.dataset.op)"
+        <button class="pw-write-action" data-op="${nome.replace(/"/g, '&quot;')}" onclick="pwFerieToggleWeek(this.dataset.op)"
           title="${allSet ? 'Rimuovi le ferie da tutta la settimana' : 'Applica le ferie a tutta la settimana'}"
           style="width:100%;font-size:11px;font-weight:600;border-radius:5px;padding:3px 6px;cursor:pointer;border:1px solid ${allSet ? '#fca5a5' : '#cbd5e1'};background:${allSet ? '#fee2e2' : '#f8fafc'};color:${allSet ? '#991b1b' : '#475569'};white-space:nowrap;">
           ${allSet ? 'Tutta la Settimana' : 'Tutta la Settimana'}
@@ -919,9 +919,9 @@ function pwFerieCellCtxMenu(ev, nome, day) {
   const fw = pwGetFerieWeek();
   const tipoAttuale = pwFerieTipo((fw[nome] || {})[day]);
   _pwShowCtxMenu(ev.clientX, ev.clientY, [
-    { label: (tipoAttuale === 'ferie' ? '✓ ' : '') + '🏖 Ferie', onClick: () => pwSetFeriaTipo(nome, day, 'ferie') },
-    { label: (tipoAttuale === 'non_disponibile' ? '✓ ' : '') + '🚫 Non disponibile', onClick: () => pwSetFeriaTipo(nome, day, 'non_disponibile') },
-    { label: '✕ Rimuovi assenza', disabled: !tipoAttuale, onClick: () => pwSetFeriaTipo(nome, day, null) },
+    { label: (tipoAttuale === 'ferie' ? '✓ ' : '') + '🏖 Ferie', disabled: !sbCanWrite(), onClick: () => pwSetFeriaTipo(nome, day, 'ferie') },
+    { label: (tipoAttuale === 'non_disponibile' ? '✓ ' : '') + '🚫 Non disponibile', disabled: !sbCanWrite(), onClick: () => pwSetFeriaTipo(nome, day, 'non_disponibile') },
+    { label: '✕ Rimuovi assenza', disabled: !tipoAttuale || !sbCanWrite(), onClick: () => pwSetFeriaTipo(nome, day, null) },
   ]);
   return false;
 }
