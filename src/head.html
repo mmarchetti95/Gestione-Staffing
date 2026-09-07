@@ -1149,7 +1149,7 @@
     <div class="flex items-center gap-2">
       <button id="btn-presentation" class="px-3 py-1.5 text-sm rounded hover:bg-white/10" style="border:1px solid var(--dark-border-strong);color:var(--dark-text);visibility:visible;">📊 Modalità presentazione</button>
       <div class="text-xs pl-2" style="border-left:1px solid var(--dark-border-strong);color:var(--dark-text-muted);">
-        <span id="app-version" class="font-medium" style="color:var(--accent);">v18.145.0</span> · Michele Marchetti
+        <span id="app-version" class="font-medium" style="color:var(--accent);">v18.146.0</span> · Michele Marchetti
         <span id="sb-role-badge" style="margin-left:8px;padding:1px 8px;border-radius:9999px;background:rgba(255,255,255,.1);color:var(--dark-text);font-weight:600;"></span>
       </div>
     </div>
@@ -1691,8 +1691,6 @@
     </div>
     <div id="pw-header-dates" class="text-sm font-semibold text-slate-700"></div>
     <div class="flex items-center gap-2">
-      <button id="pw-add-commessa" class="px-3 py-1.5 text-sm bg-teal-600 text-white rounded hover:bg-teal-700 no-print pw-write-action">+ Aggiungi commessa</button>
-      <button id="pw-gen-mail" class="px-3 py-1.5 text-sm bg-indigo-600 text-white rounded hover:bg-indigo-700 no-print">📧 Genera mail</button>
       <button id="pw-print" class="px-3 py-1.5 text-sm border border-slate-300 rounded hover:bg-slate-50 no-print">🖨 Stampa</button>
     </div>
   </div>
@@ -1727,7 +1725,9 @@
       <button id="pw-strumenti-refresh" class="px-3 py-1.5 text-sm border border-amber-300 bg-amber-50 text-amber-800 rounded hover:bg-amber-100 no-print whitespace-nowrap" title="Carica/aggiorna l'elenco strumenti dal progetto Jira GAR">🔧 Aggiorna strumenti</button>
       <span id="pw-strumenti-status" class="text-xs text-slate-500 no-print"></span>
       <button id="pw-weather-week-btn" class="px-3 py-1.5 text-sm border border-slate-200 bg-slate-50 text-slate-400 rounded no-print whitespace-nowrap" title="Criticità meteo nei cantieri pianificati questa settimana" onclick="pwOpenWeatherWeekModal()">⛈️ Meteo settimana…</button>
-      <button id="pw-collapse-all" class="ml-auto px-3 py-1.5 text-sm border border-slate-300 rounded hover:bg-slate-50 no-print whitespace-nowrap" title="Collassa / Espandi tutto" onclick="pwCollapseAllToggle()">≡ Collassa</button>
+      <button id="pw-add-commessa" class="ml-auto px-3 py-1.5 text-sm bg-teal-600 text-white rounded hover:bg-teal-700 no-print pw-write-action whitespace-nowrap">+ Aggiungi commessa</button>
+      <button id="pw-gen-mail" class="px-3 py-1.5 text-sm bg-indigo-600 text-white rounded hover:bg-indigo-700 no-print whitespace-nowrap">📧 Genera mail</button>
+      <button id="pw-collapse-all" class="px-3 py-1.5 text-sm border border-slate-300 rounded hover:bg-slate-50 no-print whitespace-nowrap" title="Collassa / Espandi tutto" onclick="pwCollapseAllToggle()">≡ Collassa</button>
     </div>
     <div id="pw-grid" class="space-y-4"></div>
   </div>

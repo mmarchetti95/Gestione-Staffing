@@ -151,9 +151,20 @@ function pwJiraResolveCognome(op) {
   return esteso ? esteso.split(/\s+/)[0] : '';
 }
 
+// Email operatore da anagrafica (state.operatori) per assegnare il sottotask
+// su Jira. Un operatore pianificato in griglia ma senza email in anagrafica
+// non produce MAI un item (né dryRun né creazione reale): niente chiamata a
+// Jira, quindi nessun status 'error' dalla Edge Function per lui — va perciò
+// intercettato qui, lato client, per non escluderlo silenziosamente (vedi
+// pwJiraSubtaskMarkMissingEmail e i punti che la chiamano).
+function pwJiraOperatorEmail(nomeOperatore) {
+  const op = (state.operatori || []).find(o => (o.nome_esteso || o.nome_breve) === nomeOperatore);
+  return op && op.email && op.email.trim() ? op.email.trim() : '';
+}
+
 function pwJiraBuildSubtaskItem(meta, task, comune, nomeOperatore, attivita) {
   const op = (state.operatori || []).find(o => (o.nome_esteso || o.nome_breve) === nomeOperatore);
-  const email = op && op.email && op.email.trim() ? op.email.trim() : '';
+  const email = pwJiraOperatorEmail(nomeOperatore);
   if (!email) return null;
   const cognome = op ? pwJiraResolveCognome(op) : '';
   const summary = [attivita, comune, cognome].filter(Boolean).join(' - ');
@@ -192,6 +203,14 @@ function pwJiraSubtaskMarkBadge(cIdx, comune, operatoreNome, status, key, url, m
   bc.jiraSubtask[comune + '|||' + operatoreNome] = { status, key: key || '', url: url || '', message: message || '', ts: new Date().toISOString() };
   pwSave();
   pwJiraSubtaskApplyBadgesToDom();
+}
+
+// Vedi commento su pwJiraOperatorEmail: un operatore senza email in anagrafica
+// non genera mai un item da inviare a Jira, quindi va marcato "a mano" con lo
+// stesso badge rosso ⚠️ usato per gli errori restituiti dalla Edge Function,
+// altrimenti sparisce dalla creazione senza alcuna evidenza in griglia.
+function pwJiraSubtaskMarkMissingEmail(cIdx, comune, operatoreNome) {
+  pwJiraSubtaskMarkBadge(cIdx, comune, operatoreNome, 'error', '', '', 'Email non trovata in anagrafica: sottotask non creato.');
 }
 
 // Un entry va considerato "risolto" (sottotask presente su Jira, o già
@@ -349,12 +368,21 @@ function pwJiraSubtaskOpenComuniModal(cIdx, commessaNome, meta, comuneNames, com
   function rowHtml(comune, i) {
     const operatori = Object.keys(comuni[comune]);
     const doneOperatori = operatori.filter(op => pwJiraSubtaskIsResolved(jiraMap[comune + '|||' + op]));
-    const erroredOperatori = operatori.filter(op => { const e = jiraMap[comune + '|||' + op]; return e && e.status === 'error'; });
+    // Calcolato subito, indipendentemente da badge pregressi e dalla scelta
+    // di Epic/Task, così un operatore senza email in anagrafica (es. appena
+    // inserito, mai ancora tentato per questo comune) è visibile fin dalla
+    // primissima apertura del modal invece che solo dopo aver scelto un
+    // Task (pwJiraSubtaskCheckExisting) o cliccato "Continua".
+    const noEmailOperatori = operatori.filter(op => !pwJiraOperatorEmail(op));
+    // Esclude chi è già coperto da noEmailNote sotto, per non duplicare lo
+    // stesso operatore in due avvisi rossi separati.
+    const erroredOperatori = operatori.filter(op => { const e = jiraMap[comune + '|||' + op]; return e && e.status === 'error'; }).filter(op => !noEmailOperatori.includes(op));
     const allDone = operatori.length > 0 && doneOperatori.length === operatori.length;
     const someDone = doneOperatori.length > 0 && !allDone;
     const operatoriNote = someDone ? ` <span class="text-blue-600">(${doneOperatori.length}/${operatori.length} già con sottotask)</span>` : '';
     const doneNote = allDone ? '<div class="text-[11px] text-blue-700 mb-1">🎫 Sottotask già presenti per tutti gli operatori — "salta" pre-selezionato, deseleziona per rifare la verifica.</div>' : '';
     const errorNote = erroredOperatori.length ? `<div class="text-[11px] text-red-700 mb-1">⚠️ Creazione fallita per: ${erroredOperatori.map(esc).join(', ')} — ritenta.</div>` : '';
+    const noEmailNote = noEmailOperatori.length ? `<div class="text-[11px] text-red-700 mb-1">⚠️ Email mancante in anagrafica, verranno esclusi: ${noEmailOperatori.map(esc).join(', ')}</div>` : '';
     return `<div class="border border-slate-200 rounded p-2 mb-2" data-comune-idx="${i}">
       <div class="flex items-center justify-between gap-2 mb-1">
         <div class="text-sm font-medium text-slate-800">${esc(comune)}</div>
@@ -365,6 +393,7 @@ function pwJiraSubtaskOpenComuniModal(cIdx, commessaNome, meta, comuneNames, com
       <div class="text-[11px] text-slate-500 mb-1">Operatori: ${operatori.map(esc).join(', ')}${operatoriNote}</div>
       ${doneNote}
       ${errorNote}
+      ${noEmailNote}
       <div class="grid grid-cols-2 gap-2">
         <button type="button" class="pw-jira-panel-trigger pw-jira-epic-trigger w-full text-left border border-slate-300 rounded px-2 py-1.5 text-sm bg-white hover:bg-slate-50 truncate block" data-idx="${i}"${allDone ? ' disabled style="opacity:0.5;"' : ''}>— scegli Epic —</button>
         <button type="button" class="pw-jira-panel-trigger pw-jira-task-trigger w-full text-left border border-slate-300 rounded px-2 py-1.5 text-sm bg-white hover:bg-slate-50 truncate block" data-idx="${i}" disabled style="opacity:0.5;">— scegli prima l'Epic —</button>
@@ -455,15 +484,22 @@ function pwJiraSubtaskOpenComuniModal(cIdx, commessaNome, meta, comuneNames, com
     if (!task) { if (statusEl) statusEl.innerHTML = ''; return; }
     const comune = comuneNames[idx];
     const items = [];
+    const noEmail = [];
     Object.keys(comuni[comune]).forEach(nomeOp => {
       const built = pwJiraBuildSubtaskItem(meta, task, comune, nomeOp, comuni[comune][nomeOp]);
-      if (built) items.push(built);
+      if (built) items.push(built); else noEmail.push(nomeOp);
     });
+    // Un operatore senza email va segnalato anche quando NON è l'unico del
+    // comune (items.length > 0): altrimenti resta escluso senza alcun avviso,
+    // visibile solo — se lo si nota — nel piccolo elenco "Esclusi" in fondo
+    // all'anteprima finale (vedi Tajar Lico, caso segnalato dall'utente).
+    noEmail.forEach(nomeOp => pwJiraSubtaskMarkMissingEmail(cIdx, comune, nomeOp));
+    const noEmailHtml = noEmail.length ? `<span class="text-red-700">⚠️ senza email: ${noEmail.map(esc).join(', ')}</span>&nbsp; ` : '';
     if (items.length === 0) {
-      if (statusEl) statusEl.innerHTML = '<span class="text-amber-600">Nessuna email operatore trovata in anagrafica.</span>';
+      if (statusEl) statusEl.innerHTML = noEmailHtml || '<span class="text-amber-600">Nessuna email operatore trovata in anagrafica.</span>';
       return;
     }
-    if (statusEl) statusEl.innerHTML = '<span class="text-slate-400">⏳ verifica su Jira…</span>';
+    if (statusEl) statusEl.innerHTML = noEmailHtml + '<span class="text-slate-400">⏳ verifica su Jira…</span>';
     try {
       const results = await pwJiraCreateSubtasks(items, true, {});
       if (existingReqIds[idx] !== myReq) return; // superata da una scelta più recente
@@ -471,7 +507,7 @@ function pwJiraSubtaskOpenComuniModal(cIdx, commessaNome, meta, comuneNames, com
       const already = results.filter(r => r.status === 'already_exists').length;
       const toCreate = results.filter(r => r.status === 'would_create').length;
       const errors = results.filter(r => r.status === 'error').length;
-      let html = '';
+      let html = noEmailHtml;
       if (already) html += `<span class="text-blue-700">🔵 ${already} già esistenti</span>&nbsp; `;
       if (toCreate) html += `<span class="text-emerald-700">🟢 ${toCreate} da creare</span>&nbsp; `;
       if (errors) html += `<span class="text-red-700">⚠️ ${errors} errori</span>`;
@@ -580,7 +616,8 @@ function pwJiraSubtaskOpenComuniModal(cIdx, commessaNome, meta, comuneNames, com
       const task = chosenTasks[i];
       Object.keys(comuni[comune]).forEach(nomeOp => {
         const built = pwJiraBuildSubtaskItem(meta, task, comune, nomeOp, comuni[comune][nomeOp]);
-        if (built) items.push(built); else skipped.push(`${comune} / ${nomeOp} (email non trovata in anagrafica)`);
+        if (built) items.push(built);
+        else { skipped.push(`${comune} / ${nomeOp} (email non trovata in anagrafica)`); pwJiraSubtaskMarkMissingEmail(cIdx, comune, nomeOp); }
       });
     });
     if (items.length === 0) { showAlertModal('Nessun sottotask da creare' + (skipped.length ? ':\n' + skipped.join('\n') : '.')); return; }

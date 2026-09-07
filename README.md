@@ -111,6 +111,9 @@ Limite noto: il progetto Supabase è sul piano **Free**, che non include backup 
 
 ## Changelog
 
+## v18.146.0
+- fix: **Sottotask Jira da Griglia — operatore senza email in anagrafica escluso senza alcun avviso** — caso riscontrato: un operatore pianificato in griglia ma senza email compilata in anagrafica (es. "Tajar Lico") non genera mai un item da inviare a Jira, quindi non passa nemmeno per l'Edge Function — non essendo un errore restituito da Jira, i badge introdotti nelle versioni precedenti non lo intercettavano, e l'unica traccia era una riga testuale "Esclusi: ..." in fondo all'anteprima finale, facile da non notare (specie quando il comune ha anche altri operatori con email regolare). Ora: il modal "Crea sottotask Jira" segnala subito, comune per comune, quali operatori hanno l'email mancante (prima ancora di scegliere Epic/Task); la verifica dryRun per-comune la ripete esplicitamente invece di ignorarla in silenzio quando non è l'unico operatore del comune; e — soprattutto — l'operatore riceve lo stesso badge rosso ⚠️ in Griglia degli altri errori, con messaggio "Email non trovata in anagrafica" in tooltip.
+
 ## v18.145.0
 - fix: **Sottotask Jira da Griglia — errore mostrato solo in anteprima ("Crea 0 sottotask") non lasciava traccia in griglia** — caso riscontrato: un operatore non risolvibile su Jira (es. assignee non trovato) fa fallire già l'anteprima (dryRun, Step 2) con status "Errore" e il pulsante "Crea 0 sottotask" resta disabilitato, quindi la creazione reale (Step 3, dove scattavano i badge introdotti in v18.143.0/v18.144.0) non veniva mai raggiunta e l'errore spariva chiudendo la modale. Ora il badge rosso ⚠️ viene marcato in griglia anche per gli errori mostrati in anteprima (Step 1 verifica per-comune e Step 2), non solo per quelli della creazione reale.
 
