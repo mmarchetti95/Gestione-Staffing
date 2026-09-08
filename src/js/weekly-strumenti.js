@@ -351,6 +351,19 @@ document.addEventListener('DOMContentLoaded', async () => {
   if (searchClear) {
     searchClear.onclick = () => { searchInput.value = ''; pwSearchOp(''); searchInput.focus(); };
   }
+
+  // Ricerca operatore/cantiere in Controllo Produzione
+  const cpSearchInput = document.getElementById('cp-search-op');
+  const cpSearchClear = document.getElementById('cp-search-op-clear');
+  if (cpSearchInput) {
+    cpSearchInput.addEventListener('input', () => cpSearchOp(cpSearchInput.value));
+    cpSearchInput.addEventListener('keydown', e => {
+      if (e.key === 'Escape') { cpSearchInput.value = ''; cpSearchOp(''); }
+    });
+  }
+  if (cpSearchClear) {
+    cpSearchClear.onclick = () => { cpSearchInput.value = ''; cpSearchOp(''); cpSearchInput.focus(); };
+  }
 });
 
 

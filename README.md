@@ -111,6 +111,9 @@ Limite noto: il progetto Supabase è sul piano **Free**, che non include backup 
 
 ## Changelog
 
+## v18.150.0
+- feat: **Controllo Produzione — casella di ricerca operatore/cantiere** — stessa idea della barra di ricerca già presente in Griglia: un campo testo nella toolbar della tab filtra le righe della tabella per nome operatore o testo cantiere, evidenziando i risultati e attenuando le altre righe (con conteggio a fianco). Durante la ricerca le sezioni collassate (commessa/squadra) vengono temporaneamente mostrate per non nascondere risultati; lo stato collassa/espandi dell'utente viene ripristinato svuotando la ricerca.
+
 ## v18.149.0
 - feat: **Sottotask Jira da Griglia — campi extra "Activity Type" e "Tempo Team" (e ogni altro campo a scelta fissa) con tendina di ricerca invece del `<select>` nativo** — nel modal "campi extra" (Step 1.5, prima dell'anteprima) i campi con valori predefiniti da Jira ora si aprono con lo stesso pannello di ricerca già usato per la scelta di Epic/Task: si apre sempre verso il basso, ha altezza limitata con scrollbar e un campo testo per filtrare le voci — comodo sui progetti Jira con liste lunghe.
 

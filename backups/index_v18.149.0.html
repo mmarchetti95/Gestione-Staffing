@@ -825,17 +825,6 @@
     opacity: 0.4;
   }
 
-  /* ===== RICERCA OPERATORE/CANTIERE IN CONTROLLO PRODUZIONE ===== */
-  .cp-table tr.cp-search-match td {
-    background: #fefce8 !important;
-  }
-  .cp-table tr.cp-search-dim {
-    opacity: 0.25;
-  }
-  .cp-table tr.cp-search-no-match td {
-    opacity: 0.4;
-  }
-
   /* ===== STATISTICHE SETTIMANA ===== */
   .pw-stat-card {
     background: white;
@@ -1165,7 +1154,7 @@
     <div class="flex items-center gap-2">
       <button id="btn-presentation" class="px-3 py-1.5 text-sm rounded hover:bg-white/10" style="border:1px solid var(--dark-border-strong);color:var(--dark-text);visibility:visible;">📊 Modalità presentazione</button>
       <div class="text-xs pl-2" style="border-left:1px solid var(--dark-border-strong);color:var(--dark-text-muted);">
-        <span id="app-version" class="font-medium" style="color:var(--accent);">v18.150.0</span> · Michele Marchetti
+        <span id="app-version" class="font-medium" style="color:var(--accent);">v18.149.0</span> · Michele Marchetti
         <span id="sb-role-badge" style="margin-left:8px;padding:1px 8px;border-radius:9999px;background:rgba(255,255,255,.1);color:var(--dark-text);font-weight:600;"></span>
       </div>
     </div>
@@ -2037,20 +2026,11 @@
 
   <!-- CONTROLLO PRODUZIONE -->
   <div id="pw-view-controllo" class="hidden">
-    <div class="flex items-center justify-between mb-3 no-print flex-wrap gap-2">
+    <div class="flex items-center justify-between mb-3 no-print">
       <div class="flex items-center gap-2">
         <span class="text-xs font-semibold text-slate-600">Controllo produzione settimanale</span>
         <span class="text-xs text-slate-400" id="cp-status"></span>
       </div>
-      <div class="relative flex-1 max-w-sm">
-        <span class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm pointer-events-none">🔍</span>
-        <input id="cp-search-op" type="text"
-          placeholder="Cerca operatore o cantiere…"
-          class="w-full pl-8 pr-8 py-1.5 text-sm border border-slate-200 rounded-lg focus:outline-none focus:border-teal-400 bg-slate-50">
-        <button id="cp-search-op-clear"
-          class="absolute right-2 top-1/2 -translate-y-1/2 text-slate-300 hover:text-slate-500 text-lg leading-none hidden">×</button>
-      </div>
-      <div id="cp-search-op-info" class="text-xs text-slate-400 hidden"></div>
       <div class="flex items-center gap-2">
         <button id="cp-collapse-all" class="px-3 py-1.5 text-sm border border-slate-300 rounded hover:bg-slate-50 no-print" onclick="cpCollapseAllToggle()">≡ Collassa</button>
         <button id="cp-sync-jira" onclick="pwControlloSyncJira()" class="px-3 py-1.5 text-sm font-medium bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 flex items-center gap-1.5 no-print pw-write-action">
@@ -12521,19 +12501,6 @@ document.addEventListener('DOMContentLoaded', async () => {
   if (searchClear) {
     searchClear.onclick = () => { searchInput.value = ''; pwSearchOp(''); searchInput.focus(); };
   }
-
-  // Ricerca operatore/cantiere in Controllo Produzione
-  const cpSearchInput = document.getElementById('cp-search-op');
-  const cpSearchClear = document.getElementById('cp-search-op-clear');
-  if (cpSearchInput) {
-    cpSearchInput.addEventListener('input', () => cpSearchOp(cpSearchInput.value));
-    cpSearchInput.addEventListener('keydown', e => {
-      if (e.key === 'Escape') { cpSearchInput.value = ''; cpSearchOp(''); }
-    });
-  }
-  if (cpSearchClear) {
-    cpSearchClear.onclick = () => { cpSearchInput.value = ''; cpSearchOp(''); cpSearchInput.focus(); };
-  }
 });
 
 
@@ -13932,71 +13899,6 @@ function cpCollapseAllToggle() {
   cpApplyCollapse();
 }
 
-/* ----- Ricerca operatore/cantiere in Controllo Produzione -----
-   Stesso pattern di pwSearchOp (weekly-popover-stats.js) ma senza modal di
-   dettaglio: la tabella è piatta, quindi evidenziare/attenuare le righe basta.
-   Durante la ricerca lo stato collassa/espandi viene ignorato (tutte le righe
-   restano visibili) per non nascondere risultati dentro sezioni chiuse; alla
-   ricerca vuota si ripristina con cpApplyCollapse(). */
-let _cpSearchTerm = '';
-
-function cpSearchOp(term) {
-  _cpSearchTerm = (term || '').trim().toLowerCase();
-
-  const clearBtn = document.getElementById('cp-search-op-clear');
-  const infoEl   = document.getElementById('cp-search-op-info');
-  if (clearBtn) clearBtn.classList.toggle('hidden', !_cpSearchTerm);
-
-  const tbody = document.querySelector('.cp-table tbody');
-  if (!tbody) return;
-
-  if (!_cpSearchTerm) {
-    tbody.querySelectorAll('tr').forEach(tr => tr.classList.remove('cp-search-match', 'cp-search-dim', 'cp-search-no-match'));
-    if (infoEl) { infoEl.textContent = ''; infoEl.classList.add('hidden'); }
-    cpApplyCollapse();
-    return;
-  }
-
-  const matchedComm = new Set();
-  const matchedSq   = new Set();
-  let matchCount = 0;
-
-  tbody.querySelectorAll('tr[data-operatore]').forEach(tr => {
-    const nome     = (tr.dataset.operatore || '').toLowerCase();
-    const cantiere = (tr.dataset.cantiere  || '').toLowerCase();
-    const isMatch  = (!!nome && nome.includes(_cpSearchTerm)) || (!!cantiere && cantiere.includes(_cpSearchTerm));
-    tr.classList.toggle('cp-search-match', isMatch);
-    tr.classList.toggle('cp-search-dim', !isMatch);
-    tr.style.display = '';
-    if (isMatch) {
-      matchCount++;
-      matchedComm.add(tr.dataset.commIdx);
-      matchedSq.add(tr.dataset.sqIdx);
-    }
-  });
-
-  tbody.querySelectorAll('tr.cp-tr-commessa').forEach(tr => {
-    tr.style.display = '';
-    tr.classList.toggle('cp-search-no-match', !matchedComm.has(tr.dataset.commIdx));
-  });
-  tbody.querySelectorAll('tr.cp-tr-squadra').forEach(tr => {
-    tr.style.display = '';
-    tr.classList.toggle('cp-search-no-match', !matchedSq.has(tr.dataset.sqIdx));
-  });
-  tbody.querySelectorAll('tr.cp-tr-day').forEach(tr => { tr.style.display = ''; });
-
-  if (infoEl) {
-    infoEl.classList.remove('hidden');
-    if (matchCount === 0) {
-      infoEl.textContent = 'Nessun risultato trovato';
-      infoEl.style.color = 'var(--red)';
-    } else {
-      infoEl.textContent = `${matchCount} risultat${matchCount === 1 ? 'o' : 'i'} trovat${matchCount === 1 ? 'o' : 'i'}`;
-      infoEl.style.color = 'var(--accent)';
-    }
-  }
-}
-
 /* ==================== CONTROLLO PRODUZIONE ==================== */
 let _cpData = {}; // chiave: "commessa|||squadra|||operatore|||giorno" → { ore_jira, ore_report, km_cad, note }
 
@@ -14274,7 +14176,7 @@ function pwControlloRender() {
           const ci = jsesc(bl.commessa), si = jsesc(sq.nome), oi = jsesc(op.nome);
           const ca = jsesc(op.cantiere), at = jsesc(op.attivita), dt = jsesc(dates[g]);
 
-          html += `<tr data-comm-idx="${blIdx}" data-sq-idx="${sqKey}" data-operatore="${esc(op.nome)}" data-cantiere="${esc(op.cantiere)}">
+          html += `<tr data-comm-idx="${blIdx}" data-sq-idx="${sqKey}">
       <td class="cp-wrap" title="${esc(bl.commessa)}">${esc(bl.commessa)}</td>
       <td class="cp-wrap" title="${esc(sq.nome)}">${esc(sq.nome)}</td>
       <td class="cp-wrap" title="${esc(op.nome)}"><strong>${esc(op.nome)}</strong>${isOperatoreLicenziato(op.nome) ? '<span class="op-ex-tag">ex</span>' : ''}</td>
@@ -14305,8 +14207,6 @@ function pwControlloRender() {
   html += '</tbody></table>';
   container.innerHTML = html;
   cpApplyCollapse();
-  // Re-applica ricerca operatore/cantiere se attiva (il DOM è appena stato ricreato)
-  if (_cpSearchTerm) cpSearchOp(_cpSearchTerm);
 }
 
 function cpDelta(ri) {

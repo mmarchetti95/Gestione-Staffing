@@ -97,3 +97,68 @@ function cpCollapseAllToggle() {
   cpApplyCollapse();
 }
 
+/* ----- Ricerca operatore/cantiere in Controllo Produzione -----
+   Stesso pattern di pwSearchOp (weekly-popover-stats.js) ma senza modal di
+   dettaglio: la tabella è piatta, quindi evidenziare/attenuare le righe basta.
+   Durante la ricerca lo stato collassa/espandi viene ignorato (tutte le righe
+   restano visibili) per non nascondere risultati dentro sezioni chiuse; alla
+   ricerca vuota si ripristina con cpApplyCollapse(). */
+let _cpSearchTerm = '';
+
+function cpSearchOp(term) {
+  _cpSearchTerm = (term || '').trim().toLowerCase();
+
+  const clearBtn = document.getElementById('cp-search-op-clear');
+  const infoEl   = document.getElementById('cp-search-op-info');
+  if (clearBtn) clearBtn.classList.toggle('hidden', !_cpSearchTerm);
+
+  const tbody = document.querySelector('.cp-table tbody');
+  if (!tbody) return;
+
+  if (!_cpSearchTerm) {
+    tbody.querySelectorAll('tr').forEach(tr => tr.classList.remove('cp-search-match', 'cp-search-dim', 'cp-search-no-match'));
+    if (infoEl) { infoEl.textContent = ''; infoEl.classList.add('hidden'); }
+    cpApplyCollapse();
+    return;
+  }
+
+  const matchedComm = new Set();
+  const matchedSq   = new Set();
+  let matchCount = 0;
+
+  tbody.querySelectorAll('tr[data-operatore]').forEach(tr => {
+    const nome     = (tr.dataset.operatore || '').toLowerCase();
+    const cantiere = (tr.dataset.cantiere  || '').toLowerCase();
+    const isMatch  = (!!nome && nome.includes(_cpSearchTerm)) || (!!cantiere && cantiere.includes(_cpSearchTerm));
+    tr.classList.toggle('cp-search-match', isMatch);
+    tr.classList.toggle('cp-search-dim', !isMatch);
+    tr.style.display = '';
+    if (isMatch) {
+      matchCount++;
+      matchedComm.add(tr.dataset.commIdx);
+      matchedSq.add(tr.dataset.sqIdx);
+    }
+  });
+
+  tbody.querySelectorAll('tr.cp-tr-commessa').forEach(tr => {
+    tr.style.display = '';
+    tr.classList.toggle('cp-search-no-match', !matchedComm.has(tr.dataset.commIdx));
+  });
+  tbody.querySelectorAll('tr.cp-tr-squadra').forEach(tr => {
+    tr.style.display = '';
+    tr.classList.toggle('cp-search-no-match', !matchedSq.has(tr.dataset.sqIdx));
+  });
+  tbody.querySelectorAll('tr.cp-tr-day').forEach(tr => { tr.style.display = ''; });
+
+  if (infoEl) {
+    infoEl.classList.remove('hidden');
+    if (matchCount === 0) {
+      infoEl.textContent = 'Nessun risultato trovato';
+      infoEl.style.color = 'var(--red)';
+    } else {
+      infoEl.textContent = `${matchCount} risultat${matchCount === 1 ? 'o' : 'i'} trovat${matchCount === 1 ? 'o' : 'i'}`;
+      infoEl.style.color = 'var(--accent)';
+    }
+  }
+}
+
