@@ -111,6 +111,9 @@ Limite noto: il progetto Supabase è sul piano **Free**, che non include backup 
 
 ## Changelog
 
+## v18.149.0
+- feat: **Sottotask Jira da Griglia — campi extra "Activity Type" e "Tempo Team" (e ogni altro campo a scelta fissa) con tendina di ricerca invece del `<select>` nativo** — nel modal "campi extra" (Step 1.5, prima dell'anteprima) i campi con valori predefiniti da Jira ora si aprono con lo stesso pannello di ricerca già usato per la scelta di Epic/Task: si apre sempre verso il basso, ha altezza limitata con scrollbar e un campo testo per filtrare le voci — comodo sui progetti Jira con liste lunghe.
+
 ## v18.148.0
 - feat: **Mappa Squadre — dettaglio squadra visibile anche al passaggio del mouse** — il popup con i dettagli della squadra (commessa, cantiere, operatori, strumenti) sui marker della mappa ora si apre anche al semplice hover, senza dover cliccare; il click resta invariato (apre comunque il popup e in più zooma sulla zona).
 

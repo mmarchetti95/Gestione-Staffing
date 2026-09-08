@@ -51,10 +51,13 @@ function pwJiraSearchPanelClose() {
 }
 
 // triggerBtn: elemento che apre il pannello (posizionato subito sotto).
-// opts.fetchItems(search): Promise<[{key,summary}]>. opts.onPick(item|null).
+// opts.fetchItems(search): Promise<[{key,summary}]> (anche un array sincrono va bene, viene comunque
+// atteso con await). opts.onPick(item|null). opts.renderItem(item): stringa HTML per la riga della
+// lista — di default "chiave · summary" (Epic/Task), sovrascrivibile per liste senza quella forma
+// (es. valori di un campo select, vedi pwExtraFieldSelectOpen).
 function pwJiraSearchPanel(triggerBtn, opts) {
   const p = pwJiraSearchPanelEnsure();
-  _pwJiraPanelTarget = { fetchItems: opts.fetchItems, onPick: opts.onPick, emptyLabel: opts.emptyLabel || '— nessuno —' };
+  _pwJiraPanelTarget = { fetchItems: opts.fetchItems, onPick: opts.onPick, renderItem: opts.renderItem, emptyLabel: opts.emptyLabel || '— nessuno —' };
   const r = triggerBtn.getBoundingClientRect();
   p.style.display = 'block';
   p.style.left = Math.max(6, Math.min(r.left, window.innerWidth - 330)) + 'px';
@@ -88,8 +91,11 @@ async function pwJiraSearchPanelLoad(filter) {
     html += '<div style="padding:8px;font-size:11px;color:#94a3b8;">Nessun risultato.</div>';
   } else {
     items.forEach((it, i) => {
-      const typeTag = it.issuetype ? `<span style="color:#94a3b8;">[${esc(it.issuetype)}]</span> ` : '';
-      html += `<div class="pw-str-item" data-idx="${i}">${typeTag}<b>${esc(it.key)}</b> · ${esc(it.summary)}</div>`;
+      const rowHtml = target.renderItem ? target.renderItem(it) : (() => {
+        const typeTag = it.issuetype ? `<span style="color:#94a3b8;">[${esc(it.issuetype)}]</span> ` : '';
+        return `${typeTag}<b>${esc(it.key)}</b> · ${esc(it.summary)}`;
+      })();
+      html += `<div class="pw-str-item" data-idx="${i}">${rowHtml}</div>`;
     });
   }
   list.innerHTML = html;
@@ -100,6 +106,40 @@ async function pwJiraSearchPanelLoad(filter) {
       pwJiraSearchPanelClose();
     };
   });
+}
+
+/* ----- Tendina custom con ricerca per i campi extra a scelta fissa (Activity Type,
+   Tempo Team, ...) di pwJiraSubtaskOpenExtraFieldsModal. Riusa il pannello di ricerca
+   Epic/Task (stesso markup/posizionamento/scroll di pwJiraSearchPanel) invece di un
+   <select> nativo: la lista di un progetto Jira può avere molte voci, e un <select>
+   nativo su alcuni browser/OS non si apre sempre verso il basso né è ricercabile. -----*/
+let _pwExtraFieldsByKey = {};
+
+function pwExtraFieldSelectOpen(btn) {
+  const key = btn.dataset.selectFor;
+  const field = _pwExtraFieldsByKey[key];
+  if (!field) return;
+  pwJiraSearchPanel(btn, {
+    fetchItems: search => {
+      const f = (search || '').toLowerCase().trim();
+      return (field.allowedValues || []).filter(v => !f || v.value.toLowerCase().includes(f));
+    },
+    renderItem: v => esc(v.value),
+    emptyLabel: '— seleziona —',
+    onPick: v => pwExtraFieldSelectPick(key, v),
+  });
+}
+
+function pwExtraFieldSelectPick(key, v) {
+  const container = document.getElementById('pw-jira-extra-fields');
+  if (!container) return;
+  const hidden = Array.from(container.querySelectorAll('input[type="hidden"][data-extra-key]')).find(el => el.dataset.extraKey === key);
+  const trigger = Array.from(container.querySelectorAll('.pw-extra-select-trigger')).find(el => el.dataset.selectFor === key);
+  if (hidden) hidden.value = v ? String(v.id) : '';
+  if (trigger) {
+    const label = trigger.querySelector('.pw-extra-select-label');
+    if (label) label.textContent = v ? v.value : '— seleziona —';
+  }
 }
 
 /* ----- Chiamate alle Edge Function Jira (stesso schema di errore di pwFetchStrumenti) ----- */
@@ -723,13 +763,19 @@ async function pwJiraSubtaskOpenExtraFieldsModal(cIdx, commessaNome, meta, items
     tempoTeam: '',
   };
 
+  _pwExtraFieldsByKey = {};
   const rowsHtml = fields.map(f => {
     const val = defaults[f.extraKey] !== undefined ? defaults[f.extraKey] : '';
     let inputHtml;
     if (f.allowedValues && f.allowedValues.length) {
-      const preselect = f.allowedValues.length === 1 ? f.allowedValues[0].id : '';
-      const opts = f.allowedValues.map(v => `<option value="${esc(String(v.id))}"${String(v.id) === String(preselect) ? ' selected' : ''}>${esc(v.value)}</option>`).join('');
-      inputHtml = `<select data-extra-key="${esc(f.extraKey)}" class="w-full border border-slate-300 rounded px-2 py-1.5 text-sm"><option value="">— seleziona —</option>${opts}</select>`;
+      _pwExtraFieldsByKey[f.extraKey] = f;
+      const preselect = f.allowedValues.length === 1 ? String(f.allowedValues[0].id) : '';
+      const selected = f.allowedValues.find(v => String(v.id) === preselect);
+      const label = selected ? selected.value : '— seleziona —';
+      inputHtml = `<input type="hidden" data-extra-key="${esc(f.extraKey)}" value="${esc(preselect)}">
+        <button type="button" class="pw-jira-panel-trigger pw-extra-select-trigger w-full border border-slate-300 rounded px-2 py-1.5 text-sm text-left bg-white flex items-center justify-between gap-2" data-select-for="${esc(f.extraKey)}" onclick="pwExtraFieldSelectOpen(this)">
+          <span class="pw-extra-select-label truncate">${esc(label)}</span><span class="text-slate-400 text-[10px]">▾</span>
+        </button>`;
     } else if (f.type === 'date') {
       inputHtml = `<input type="date" data-extra-key="${esc(f.extraKey)}" value="${esc(val)}" class="w-full border border-slate-300 rounded px-2 py-1.5 text-sm">`;
     } else if (f.type === 'number' || f.key === 'customfield_11280' || f.key === 'customfield_13027') {
