@@ -1,16 +1,16 @@
 # Graph Report - Gestione-Staffing  (2026-09-08)
 
 ## Corpus Check
-- 48 files · ~222,087 words
+- 48 files · ~221,260 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
-- 865 nodes · 1391 edges · 80 communities (52 shown, 28 thin omitted)
+- 864 nodes · 1389 edges · 81 communities (53 shown, 28 thin omitted)
 - Extraction: 97% EXTRACTED · 3% INFERRED · 0% AMBIGUOUS · INFERRED: 44 edges (avg confidence: 0.82)
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `1ea5ee66`
+- Built from commit: `d54165ff`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -22,7 +22,7 @@
 - Attestati (Certifications) Tracking
 - Meteo & Bollettino Widget
 - weekly-jira-subtask.js
-- dashboard-crud-helpers.js
+- Dashboard CRUD Modals
 - Pianifica Spostamenti (Route Planner)
 - Strumenti & Squadre Editing
 - New-Project Skill Scaffold
@@ -39,12 +39,13 @@
 - Jira Custom Fields Docs
 - index.html Build Artifact
 - Storage & State Persistence
+- Ferie Import (Leave Import)
 - Active Commesse Archive
 - Produzione Report Export
 - Cantiere Clipboard Copy/Paste
 - Multi-Domain Sync (Planning/Ferie)
 - Anagrafica Import
-- weekly-collapse-cp.js
+- Collapse/Expand Controls
 - Weekly Planning Screen Tabs
 - Griglia & Jira Subtask Creation
 - Modal Z-Index Convention
@@ -128,7 +129,7 @@
 - **Hard-won conventions enforced by smoke_test.py** — claude_no_native_alert, claude_escape_onclick, claude_no_nested_template_literals, claude_no_duplicate_function_names, claude_smoke_test_py [EXTRACTED 1.00]
 - **Four Supabase staffing_state sync domains (core/planning/ferie/dw)** — claude_sb_row_core, claude_sb_row_planning, claude_sb_row_ferie, claude_sb_row_dw, claude_staffing_state_table, claude_four_sync_domains [EXTRACTED 1.00]
 
-## Communities (80 total, 28 thin omitted)
+## Communities (81 total, 28 thin omitted)
 
 ### Community 0 - "Supabase Admin & Auth Panel"
 Cohesion: 0.07
@@ -158,9 +159,9 @@ Nodes (29): METEO_FASCE, METEO_ICONS, _meteoCache, _meteoCacheSave(), _pcCache, 
 Cohesion: 0.12
 Nodes (32): _pwExtraFieldsByKey, pwExtraFieldSelectOpen(), pwExtraFieldSelectPick(), pwJiraBuildSubtaskItem(), pwJiraCreateSubtasks(), pwJiraFetchEpics(), pwJiraFetchExtraFields(), pwJiraFetchTasks() (+24 more)
 
-### Community 7 - "dashboard-crud-helpers.js"
-Cohesion: 0.10
-Nodes (32): closeModal(), cpSelectModal(), deleteCommessa(), deleteOperatore(), esc(), getOperatoriAttivi(), isOperatoreLicenziato(), isOperatoreScaduto() (+24 more)
+### Community 7 - "Dashboard CRUD Modals"
+Cohesion: 0.16
+Nodes (24): closeModal(), cpSelectModal(), deleteCommessa(), deleteOperatore(), esc(), getOperatoriAttivi(), isOperatoreLicenziato(), isOperatoreScaduto() (+16 more)
 
 ### Community 8 - "Pianifica Spostamenti (Route Planner)"
 Cohesion: 0.18
@@ -226,6 +227,10 @@ Nodes (12): Unified --accent design token (teal) replacing two divergent hex tea
 Cohesion: 0.24
 Nodes (7): loadState(), monthsBetween(), operatoreSatPeriodo(), ricalcolaAllocOperatori(), saveState(), sget(), sset()
 
+### Community 24 - "Ferie Import (Leave Import)"
+Cohesion: 0.23
+Nodes (8): PW_FERIE_ACCENTI, PW_FERIE_MESI, pwFerieImportFile(), pwFerieImportPick(), pwFerieImportShowConfirm(), listBox(), pwFerieMatchOperatore(), pwFerieNormTokens()
+
 ### Community 25 - "Active Commesse Archive"
 Cohesion: 0.24
 Nodes (6): _CONFRONTO_STATO_BADGE, _confrontoBodyHtml(), _confrontoTableHtml(), getCommessaAttivaMeta(), openCommessaAttivaModal(), renderConfrontoBox()
@@ -246,9 +251,9 @@ Nodes (8): Four independent sync domains pattern (not one big blob), pwData[anno
 Cohesion: 0.36
 Nodes (6): anagImportFile(), anagImportParseWorkbook(), anagImportPick(), anagImportShowConfirm(), anagNormComune(), anagNormProvincia()
 
-### Community 30 - "weekly-collapse-cp.js"
-Cohesion: 0.36
-Nodes (9): cpApplyCollapse(), cpCollapseAllToggle(), cpSearchOp(), cpToggleComm(), cpToggleSq(), pwApplyCollapseState(), pwCollapseAllToggle(), pwToggleComm() (+1 more)
+### Community 30 - "Collapse/Expand Controls"
+Cohesion: 0.39
+Nodes (8): cpApplyCollapse(), cpCollapseAllToggle(), cpToggleComm(), cpToggleSq(), pwApplyCollapseState(), pwCollapseAllToggle(), pwToggleComm(), pwToggleSq()
 
 ### Community 31 - "Weekly Planning Screen Tabs"
 Cohesion: 0.25
@@ -335,7 +340,7 @@ Nodes (3): v18.69.0 /impeccable-guided restyling (unified accent teal, Inter fon
   README.md · relation: conceptually_related_to
 
 ## Knowledge Gaps
-- **164 isolated node(s):** `_cpData`, `_pwCollapsedComm`, `_pwCollapsedSq`, `_cpCollapsedComm`, `_cpCollapsedSq` (+159 more)
+- **164 isolated node(s):** `_pwExtraFieldsByKey`, `PW_TAB_KEYS`, `SB_PAGE_LABELS`, `_sbDirty`, `_sbRemoteTs` (+159 more)
   These have ≤1 connection - possible missing edges or undocumented components.
 - **28 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
 
@@ -344,15 +349,15 @@ _Questions this graph is uniquely positioned to answer:_
 
 - **What is the exact relationship between `Stack tecnico (Tailwind, Chart.js, Leaflet.js, Supabase, GitHub Pages)` and `v18.58.0 removed unused sortablejs/chart.js CDN references`?**
   _Edge tagged AMBIGUOUS (relation: conceptually_related_to) - confidence is low._
-- **Why does `esc()` connect `dashboard-crud-helpers.js` to `weekly-jira-subtask.js`?**
+- **Why does `esc()` connect `Dashboard CRUD Modals` to `Ferie Import (Leave Import)`, `weekly-jira-subtask.js`?**
   _High betweenness centrality (0.005) - this node is a cross-community bridge._
 - **Why does `Pianificazione Settimanale screen (pw* namespace)` connect `Weekly Planning Screen Tabs` to `KM Delta Model (Jira Production)`, `Griglia & Jira Subtask Creation`, `Multi-Domain Sync (Planning/Ferie)`, `Dashboard Screen & Core Sync`?**
   _High betweenness centrality (0.002) - this node is a cross-community bridge._
+- **Why does `listBox()` connect `Ferie Import (Leave Import)` to `Dashboard CRUD Modals`?**
+  _High betweenness centrality (0.002) - this node is a cross-community bridge._
 - **Are the 4 inferred relationships involving `esc()` (e.g. with `listBox()` and `pwJiraSubtaskCheckExisting()`) actually correct?**
   _`esc()` has 4 INFERRED edges - model-reasoned connections that need verification._
-- **What connects `_cpData`, `_pwCollapsedComm`, `_pwCollapsedSq` to the rest of the system?**
+- **What connects `_pwExtraFieldsByKey`, `PW_TAB_KEYS`, `SB_PAGE_LABELS` to the rest of the system?**
   _164 weakly-connected nodes found - possible documentation gaps or missing edges._
 - **Should `Supabase Admin & Auth Panel` be split into smaller, more focused modules?**
   _Cohesion score 0.06666666666666667 - nodes in this community are weakly interconnected._
-- **Should `Ricerca Squadre (Team Search)` be split into smaller, more focused modules?**
-  _Cohesion score 0.10034013605442177 - nodes in this community are weakly interconnected._
