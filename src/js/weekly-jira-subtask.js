@@ -161,7 +161,11 @@ async function pwJiraFetchTasks(epicKey, search) {
 
 async function pwJiraCreateSubtasks(items, dryRun, extraFields) {
   if (!_sbClient || !_sbUser) throw new Error('Non connesso a Supabase.');
-  const { data, error } = await _sbClient.functions.invoke('jira-create-subtask', { body: { items, dryRun: !!dryRun, extraFields: extraFields || {} } });
+  // week: usata lato server solo per il controllo anti-duplicati (vedi
+  // pwJiraBuildSubtaskItem) — l'intero batch viene sempre aperto da una
+  // singola cella/week della Griglia, quindi e' un valore di richiesta, non
+  // per-item.
+  const { data, error } = await _sbClient.functions.invoke('jira-create-subtask', { body: { items, dryRun: !!dryRun, extraFields: extraFields || {}, week: pwWeek } });
   if (error) throw new Error(await _cpEdgeErr(error, 'jira-create-subtask'));
   if (data && data.error) throw new Error(data.error);
   return Array.isArray(data && data.results) ? data.results : [];
@@ -207,7 +211,12 @@ function pwJiraBuildSubtaskItem(meta, task, comune, nomeOperatore, attivita) {
   const email = pwJiraOperatorEmail(nomeOperatore);
   if (!email) return null;
   const cognome = op ? pwJiraResolveCognome(op) : '';
-  const summary = [attivita, comune, cognome].filter(Boolean).join(' - ');
+  // Marker "Week N" nel summary: usato lato server (jira-create-subtask) per
+  // distinguere, nel controllo anti-duplicati, un sottotask della stessa week
+  // da uno di una week precedente per lo stesso operatore/Task — un sottotask
+  // e' settimanale e nominativo, quindi assignee+Task da soli non bastano
+  // (vedi anche il campo "week" inviato a parte in pwJiraCreateSubtasks).
+  const summary = [attivita, comune, cognome].filter(Boolean).join(' - ') + ` - Week ${pwWeek}`;
   return {
     projectKey: meta.jira_project_code,
     taskKey: task.key,
@@ -215,6 +224,11 @@ function pwJiraBuildSubtaskItem(meta, task, comune, nomeOperatore, attivita) {
     summary,
     _comune: comune,
     _operatore: nomeOperatore,
+    // Target Production del Task padre (vedi jira-list-tasks), ereditato
+    // cosi' com'e' senza ricalcolo. Puo' mancare (progetto/Task senza il
+    // campo): in tal caso resta undefined e non viene mai inviato alla Edge
+    // Function (vedi pwJiraSubtaskOpenExtraFieldsModal).
+    _targetProduction: (task.targetProduction === null || task.targetProduction === undefined) ? undefined : task.targetProduction,
   };
 }
 
@@ -597,7 +611,7 @@ function pwJiraSubtaskOpenComuniModal(cIdx, commessaNome, meta, comuneNames, com
         fetchItems: (search) => pwJiraFetchTasks(epic.key, search),
         onPick: (item) => {
           if (item) {
-            chosenTasks[idx] = { key: item.key, summary: item.summary };
+            chosenTasks[idx] = { key: item.key, summary: item.summary, targetProduction: item.targetProduction };
             triggerEl.textContent = item.key + ' · ' + item.summary;
           } else {
             delete chosenTasks[idx];
@@ -725,12 +739,38 @@ function pwJiraSubtaskOpenSelectItemsModal(cIdx, commessaNome, meta, items, skip
   };
 }
 
+// Stima originale = Data di scadenza - Start date pianificato (in giorni,
+// coerente con la convenzione Jira "1d" = 1 giornata lavorativa). Richiamata
+// sia per il valore iniziale del form sia live quando l'utente cambia una
+// delle due date (vedi listener su duedate/startDatePianificato sotto).
+function pwJiraComputeOriginalEstimate(startIso, dueIso) {
+  const start = new Date(startIso + 'T00:00:00Z');
+  const due = new Date(dueIso + 'T00:00:00Z');
+  if (isNaN(start) || isNaN(due)) return '';
+  const diffDays = Math.round((due - start) / 86400000);
+  return (diffDays > 0 ? diffDays : 1) + 'd';
+}
+
+// Production Weight (%) = 100 / N, N = numero di sottotask selezionati in
+// questo batch (Step 1.4) — 1 operatore -> 100%, 2 -> 50% ciascuno, ecc.
+function pwJiraComputeProductionWeight(n) {
+  if (!n || n <= 0) return '100';
+  return (Math.round((100 / n) * 100) / 100).toString();
+}
+
 /* ----- Step 1.5: campi extra spesso obbligatori in creazione (Data scadenza,
-   Stima originale, Activity Type, Target Production, Production Weight (%),
-   Start date pianificato, Tempo Team) — vedi commento su pwJiraFetchExtraFields. Un solo form per
-   l'intero batch (si applica a tutti i sottotask creati in questa sessione),
-   con un valore di esempio precompilato ma sempre modificabile. Se il
-   progetto non ha nessuno di questi campi si salta direttamente all'anteprima. */
+   Stima originale, Activity Type, Production Weight (%), Start date
+   pianificato, Tempo Team) — vedi commento su pwJiraFetchExtraFields. Un solo
+   form per l'intero batch (si applica a tutti i sottotask creati in questa
+   sessione), con un valore di esempio precompilato ma sempre modificabile.
+   Se il progetto non ha nessuno di questi campi si salta direttamente
+   all'anteprima.
+   Target Production NON compare in questo form: e' ereditato per-item dal
+   Task padre scelto per quel comune (vedi pwJiraBuildSubtaskItem/
+   jira-list-tasks) invece che da un valore unico condiviso da tutto il
+   batch — un batch puo' includere piu' Task/comuni diversi con Target
+   Production diversi. Applicato qui, prima di ogni render, cosi' vale anche
+   se il progetto non ha altri campi extra (ramo fields.length===0 sotto). */
 async function pwJiraSubtaskOpenExtraFieldsModal(cIdx, commessaNome, meta, items, skippedComuni) {
   const root = document.getElementById('modal-root');
   root.innerHTML = `<div class="modal-backdrop"><div class="bg-white rounded-lg shadow-xl w-full max-w-md mx-4 p-5">
@@ -746,25 +786,35 @@ async function pwJiraSubtaskOpenExtraFieldsModal(cIdx, commessaNome, meta, items
     fields = [];
   }
 
-  if (fields.length === 0) {
+  if (fields.some(f => f.extraKey === 'targetProduction')) {
+    items.forEach(item => {
+      if (item._targetProduction !== undefined && item._targetProduction !== null && item._targetProduction !== '') {
+        item.targetProduction = item._targetProduction;
+      }
+    });
+  }
+  const visibleFields = fields.filter(f => f.extraKey !== 'targetProduction');
+
+  if (visibleFields.length === 0) {
     pwJiraSubtaskPreview(cIdx, commessaNome, items, skippedComuni, {}, []);
     return;
   }
 
   const monday = isoWeekToMonday(pwAnno, pwWeek);
   const saturday = new Date(monday); saturday.setUTCDate(monday.getUTCDate() + 5);
+  const startIso = monday.toISOString().slice(0, 10);
+  const dueIso = saturday.toISOString().slice(0, 10);
   const defaults = {
-    duedate: saturday.toISOString().slice(0, 10),
-    originalEstimate: '8h',
+    duedate: dueIso,
+    originalEstimate: pwJiraComputeOriginalEstimate(startIso, dueIso),
     activityType: '',
-    targetProduction: '',
-    productionWeight: '50',
-    startDatePianificato: monday.toISOString().slice(0, 10),
+    productionWeight: pwJiraComputeProductionWeight(items.length),
+    startDatePianificato: startIso,
     tempoTeam: '',
   };
 
   _pwExtraFieldsByKey = {};
-  const rowsHtml = fields.map(f => {
+  const rowsHtml = visibleFields.map(f => {
     const val = defaults[f.extraKey] !== undefined ? defaults[f.extraKey] : '';
     let inputHtml;
     if (f.allowedValues && f.allowedValues.length) {
@@ -806,13 +856,31 @@ async function pwJiraSubtaskOpenExtraFieldsModal(cIdx, commessaNome, meta, items
   </div></div>`;
   root.querySelector('.modal-backdrop').addEventListener('click', e => { if (e.target.classList.contains('modal-backdrop')) closeModal(); });
 
+  // Ricalcolo live della Stima originale quando l'utente cambia una delle due
+  // date da cui e' derivata — il valore iniziale precompilato sopra resta
+  // altrimenti disallineato non appena si corregge Data scadenza o Start
+  // date pianificato. Non sovrascrive piu' nulla una volta che l'utente
+  // stesso ha toccato lo scadenza/estimate a mano dopo l'ultimo cambio data.
+  const dueInput = root.querySelector('[data-extra-key="duedate"]');
+  const startInput = root.querySelector('[data-extra-key="startDatePianificato"]');
+  const estimateInput = root.querySelector('[data-extra-key="originalEstimate"]');
+  if (estimateInput && (dueInput || startInput)) {
+    const recomputeEstimate = () => {
+      const due = dueInput ? dueInput.value : dueIso;
+      const start = startInput ? startInput.value : startIso;
+      if (due && start) estimateInput.value = pwJiraComputeOriginalEstimate(start, due);
+    };
+    if (dueInput) dueInput.addEventListener('input', recomputeEstimate);
+    if (startInput) startInput.addEventListener('input', recomputeEstimate);
+  }
+
   document.getElementById('pw-jira-extra-continua').onclick = () => {
     const extraFields = {};
     root.querySelectorAll('[data-extra-key]').forEach(el => {
       const key = el.dataset.extraKey;
       if (el.value !== '') extraFields[key] = el.value;
     });
-    pwJiraSubtaskPreview(cIdx, commessaNome, items, skippedComuni, extraFields, fields);
+    pwJiraSubtaskPreview(cIdx, commessaNome, items, skippedComuni, extraFields, visibleFields);
   };
 }
 
