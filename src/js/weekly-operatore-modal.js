@@ -483,7 +483,7 @@ function pwRender() {
           <button class="text-xs bg-teal-500 hover:bg-teal-400 text-white px-3 py-1 rounded pw-write-action"
             data-cidx="${cIdx}" onclick="pwAddSquadra(this)">+ Squadra</button>
           <button class="text-xs bg-amber-500 hover:bg-amber-400 text-white px-2 py-1 rounded pw-write-action"
-            data-cidx="${cIdx}" onclick="pwJiraSubtaskInit(${cIdx})" title="Crea sottotask su Jira per gli operatori pianificati questa settimana">🎫 Sottotask Jira</button>
+            data-cidx="${cIdx}" data-help-key="pw-sottotask-jira" onclick="pwJiraSubtaskInit(${cIdx})" title="Crea sottotask su Jira per gli operatori pianificati questa settimana — Click destro per la guida">🎫 Sottotask Jira</button>
           <button class="text-xs bg-teal-600 hover:bg-teal-500 text-white px-2 py-1 rounded disabled:opacity-50"
             data-cidx="${cIdx}" onclick="pwMoveCommessaUp(this)" ${(cIdx === 0 || !sbCanWrite()) ? 'disabled' : ''} title="Sposta commessa su">▲</button>
           <button class="text-xs bg-teal-600 hover:bg-teal-500 text-white px-2 py-1 rounded disabled:opacity-50"

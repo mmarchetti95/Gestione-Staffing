@@ -216,7 +216,7 @@ function pwControlloRender() {
     html += `<tr class="cp-tr-commessa" data-comm-idx="${blIdx}"><td colspan="16"><span class="cp-carr" style="cursor:pointer;user-select:none;margin-right:5px;font-size:11px;display:inline-block;width:10px;text-align:center;" onclick="cpToggleComm(${blIdx})">▼</span>📁 ${esc(bl.commessa)}</td></tr>`;
     bl.squadre.forEach((sq, sqIdx) => {
       const sqKey = blIdx + '-' + sqIdx;
-      html += `<tr class="cp-tr-squadra" data-comm-idx="${blIdx}" data-sq-idx="${sqKey}"><td colspan="16">&nbsp;&nbsp;&nbsp;<span class="cp-sarr" style="cursor:pointer;user-select:none;margin-right:5px;font-size:11px;display:inline-block;width:10px;text-align:center;" onclick="cpToggleSq('${jsAttr(sqKey)}')">▼</span>👥 ${esc(sq.nome)}<button class="no-print pw-write-action" style="margin-left:10px;font-size:11px;font-weight:600;background:#4f46e5;color:#fff;border:none;border-radius:5px;padding:2px 8px;cursor:pointer;" onclick="event.stopPropagation();pwControlloSyncJira('${jsesc(bl.commessa)}','${jsesc(sq.nome)}',this)">🔄 Sincronizza squadra</button><button class="no-print pw-write-action" style="margin-left:6px;font-size:11px;font-weight:600;background:#0ea5e9;color:#fff;border:none;border-radius:5px;padding:2px 8px;cursor:pointer;" onclick="event.stopPropagation();cpCaricaReportSquadra('${jsesc(bl.commessa)}','${jsesc(sq.nome)}')">📄 Carica Report</button></td></tr>`;
+      html += `<tr class="cp-tr-squadra" data-comm-idx="${blIdx}" data-sq-idx="${sqKey}"><td colspan="16">&nbsp;&nbsp;&nbsp;<span class="cp-sarr" style="cursor:pointer;user-select:none;margin-right:5px;font-size:11px;display:inline-block;width:10px;text-align:center;" onclick="cpToggleSq('${jsAttr(sqKey)}')">▼</span>👥 ${esc(sq.nome)}<button class="no-print pw-write-action" style="margin-left:10px;font-size:11px;font-weight:600;background:#4f46e5;color:#fff;border:none;border-radius:5px;padding:2px 8px;cursor:pointer;" onclick="event.stopPropagation();pwControlloSyncJira('${jsesc(bl.commessa)}','${jsesc(sq.nome)}',this)">🔄 Sincronizza squadra</button><button class="no-print pw-write-action" style="margin-left:6px;font-size:11px;font-weight:600;background:#0ea5e9;color:#fff;border:none;border-radius:5px;padding:2px 8px;cursor:pointer;" data-help-key="cp-carica-report" title="Click destro per la guida" onclick="event.stopPropagation();cpCaricaReportSquadra('${jsesc(bl.commessa)}','${jsesc(sq.nome)}')">📄 Carica Report</button></td></tr>`;
       sq.giorni.forEach((gBlock, gIdx) => {
         const g   = gBlock.giornoIdx;
         const sep = gIdx > 0 ? ' cp-day-sep' : '';
@@ -365,6 +365,8 @@ async function _cpEdgeErr(error, fnName) {
   } catch (_) { /* ignore */ }
   return prefix + (error && error.message ? error.message : String(error));
 }
+
+HELP_TEXTS['cp-sync-jira'] = 'Aggiorna le colonne "Ore Jira" e "Ticket/Epic" di TUTTE le squadre pianificate questa settimana, prendendo i worklog reali da Jira.\n\nSovrascrive i valori già presenti in quelle colonne. Non tocca "Ore Report Prod." né il Km/Cad, che si aggiornano solo con "Carica Report".\n\nOgni squadra ha anche un bottone "🔄 Sincronizza squadra" per farlo solo su quella riga invece che su tutta la settimana.';
 
 // scopeCommessa/scopeSquadra: se entrambi valorizzati, la sync (worklog + KM) si limita
 // a quella squadra invece che a tutta la settimana. btnEl: bottone da disabilitare durante

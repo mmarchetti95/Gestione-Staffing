@@ -5,6 +5,8 @@
 // del tipo di assenza, mostrati come badge/tooltip nella Vista Ferie).
 // Copre TUTTE le settimane presenti nel file, non solo quella aperta in griglia.
 
+HELP_TEXTS['pw-ferie-import'] = 'Importa l\'export "ORE NON LAVORATE" del gestionale presenze (colonne Dipendente, descrizione, dataintervento, Somma di durata) e popola ferie/permessi per tutti gli operatori riconosciuti.\n\nCopre TUTTE le settimane presenti nel file, non solo quella aperta in Griglia. I giorni importati restano riconoscibili in Vista Ferie da un bordo colorato a sinistra della cella.';
+
 const PW_FERIE_MESI = {
   gennaio: 0, febbraio: 1, marzo: 2, aprile: 3, maggio: 4, giugno: 5,
   luglio: 6, agosto: 7, settembre: 8, ottobre: 9, novembre: 10, dicembre: 11,

@@ -3,6 +3,8 @@
 let pwStrumenti = [];
 try { const _c = localStorage.getItem('pw_strumenti_cache'); if (_c) pwStrumenti = JSON.parse(_c) || []; } catch (_) {}
 
+HELP_TEXTS['pw-strumenti-refresh'] = 'Ricarica dal progetto Jira "GAR" l\'elenco degli strumenti (Strumentazione) disponibili nella tendina di scelta strumenti in Griglia, e aggiorna la cache locale del browser.\n\nDa rifare quando in Jira vengono creati o rinominati strumenti che non compaiono ancora (o compaiono col nome vecchio) nell\'elenco a tendina.';
+
 async function pwFetchStrumenti() {
   const st = document.getElementById('pw-strumenti-status');
   if (!_sbClient || !_sbUser) { showAlertModal('Non connesso: impossibile contattare Jira.'); return; }

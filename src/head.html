@@ -1165,7 +1165,7 @@
     <div class="flex items-center gap-2">
       <button id="btn-presentation" class="px-3 py-1.5 text-sm rounded hover:bg-white/10" style="border:1px solid var(--dark-border-strong);color:var(--dark-text);visibility:visible;">📊 Modalità presentazione</button>
       <div class="text-xs pl-2" style="border-left:1px solid var(--dark-border-strong);color:var(--dark-text-muted);">
-        <span id="app-version" class="font-medium" style="color:var(--accent);">v18.154.0</span> · Michele Marchetti
+        <span id="app-version" class="font-medium" style="color:var(--accent);">v18.155.0</span> · Michele Marchetti
         <span id="sb-role-badge" style="margin-left:8px;padding:1px 8px;border-radius:9999px;background:rgba(255,255,255,.1);color:var(--dark-text);font-weight:600;"></span>
       </div>
     </div>
@@ -1738,7 +1738,7 @@
           class="absolute right-2 top-1/2 -translate-y-1/2 text-slate-300 hover:text-slate-500 text-lg leading-none hidden">×</button>
       </div>
       <div id="pw-search-op-info" class="text-xs text-slate-400 hidden"></div>
-      <button id="pw-strumenti-refresh" class="px-3 py-1.5 text-sm border border-amber-300 bg-amber-50 text-amber-800 rounded hover:bg-amber-100 no-print whitespace-nowrap" title="Carica/aggiorna l'elenco strumenti dal progetto Jira GAR">🔧 Aggiorna strumenti</button>
+      <button id="pw-strumenti-refresh" data-help-key="pw-strumenti-refresh" class="px-3 py-1.5 text-sm border border-amber-300 bg-amber-50 text-amber-800 rounded hover:bg-amber-100 no-print whitespace-nowrap" title="Carica/aggiorna l'elenco strumenti dal progetto Jira GAR — Click destro per la guida">🔧 Aggiorna strumenti</button>
       <span id="pw-strumenti-status" class="text-xs text-slate-500 no-print"></span>
       <button id="pw-weather-week-btn" class="px-3 py-1.5 text-sm border border-slate-200 bg-slate-50 text-slate-400 rounded no-print whitespace-nowrap" title="Criticità meteo nei cantieri pianificati questa settimana" onclick="pwOpenWeatherWeekModal()">⛈️ Meteo settimana…</button>
       <button id="pw-add-commessa" class="ml-auto px-3 py-1.5 text-sm bg-teal-600 text-white rounded hover:bg-teal-700 no-print pw-write-action whitespace-nowrap">+ Aggiungi commessa</button>
@@ -1757,9 +1757,9 @@
           <span class="ml-3 text-rose-200 text-sm" id="pw-ferie-week-label"></span>
         </div>
         <div class="flex items-center gap-3">
-          <button id="pw-ferie-import-btn" class="px-3 py-1.5 text-sm bg-white/10 hover:bg-white/20 border border-white/30 rounded text-white no-print whitespace-nowrap pw-write-action"
+          <button id="pw-ferie-import-btn" data-help-key="pw-ferie-import" class="px-3 py-1.5 text-sm bg-white/10 hover:bg-white/20 border border-white/30 rounded text-white no-print whitespace-nowrap pw-write-action"
             onclick="document.getElementById('pw-ferie-import-file').click()"
-            title="Importa da Excel l'export ferie/permessi (colonne: Dipendente, descrizione, dataintervento, Somma di durata)">📥 Importa Excel</button>
+            title="Importa da Excel l'export ferie/permessi (colonne: Dipendente, descrizione, dataintervento, Somma di durata) — Click destro per la guida">📥 Importa Excel</button>
           <input type="file" id="pw-ferie-import-file" accept=".xlsx" class="hidden" onchange="pwFerieImportPick(this)">
         </div>
       </div>
@@ -2053,7 +2053,7 @@
       <div id="cp-search-op-info" class="text-xs text-slate-400 hidden"></div>
       <div class="flex items-center gap-2">
         <button id="cp-collapse-all" class="px-3 py-1.5 text-sm border border-slate-300 rounded hover:bg-slate-50 no-print" onclick="cpCollapseAllToggle()">≡ Collassa</button>
-        <button id="cp-sync-jira" onclick="pwControlloSyncJira()" class="px-3 py-1.5 text-sm font-medium bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 flex items-center gap-1.5 no-print pw-write-action">
+        <button id="cp-sync-jira" data-help-key="cp-sync-jira" onclick="pwControlloSyncJira()" class="px-3 py-1.5 text-sm font-medium bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 flex items-center gap-1.5 no-print pw-write-action" title="Click destro per la guida">
           🔄 Sincronizza da Jira
         </button>
         <button onclick="pwControlloExport()" class="px-3 py-1.5 text-sm font-medium bg-teal-600 text-white rounded-lg hover:bg-teal-700 flex items-center gap-1.5 no-print">

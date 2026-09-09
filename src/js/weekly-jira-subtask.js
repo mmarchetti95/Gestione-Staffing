@@ -14,6 +14,8 @@
    Edge Function per il contratto e il check di idempotenza per assignee/Task.
 */
 
+HELP_TEXTS['pw-sottotask-jira'] = 'Crea sottotask su Jira per gli operatori pianificati questa settimana su QUESTA commessa, sotto l\'Epic Jira configurato in anagrafica commessa: uno per operatore/comune ("[Attività] - [Comune] - [Cognome]").\n\nRichiede di scegliere un Task Jira per ogni comune pianificato, poi permette di selezionare puntualmente quali sottotask proposti creare davvero. Mostra sempre un\'anteprima (dryRun) prima di creare qualsiasi cosa su Jira.\n\nRichiede "Codice progetto Jira" ed "Epic Jira" configurati sulla commessa.';
+
 /* ----- Pannello di ricerca condiviso (Epic/Task Jira) -----
    Clone parametrico del pattern "tendina custom" di weekly-strumenti.js
    (pw-str-panel), qui riusato per liste caricate on-demand da Jira invece che

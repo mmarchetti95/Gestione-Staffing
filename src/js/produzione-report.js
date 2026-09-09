@@ -124,6 +124,8 @@ function cpGetSquadraOpsByDay(commessa, squadra) {
   return perDay;
 }
 
+HELP_TEXTS['cp-carica-report'] = 'Importa un file CSV/testo con le ore di produzione reale degli operatori di QUESTA squadra e compila "Ore Report Prod." e il Km/Cad del ticket del comune, per i soli giorni trovati nel file.\n\nI valori già presenti per quel ticket vengono sovrascritti. Se il file non copre nessun giorno della settimana, ti viene comunque chiesto se vuoi azzerare le ore per quei giorni.\n\nRiguarda solo "Ore Report Prod."/Km — le "Ore Jira" si aggiornano con "Sincronizza da Jira".';
+
 // Handler del bottone: apre il selettore file (CSV) per la squadra indicata.
 async function cpCaricaReportSquadra(commessa, squadra) {
   if (!sbGuardWrite()) return;

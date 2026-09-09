@@ -1165,7 +1165,7 @@
     <div class="flex items-center gap-2">
       <button id="btn-presentation" class="px-3 py-1.5 text-sm rounded hover:bg-white/10" style="border:1px solid var(--dark-border-strong);color:var(--dark-text);visibility:visible;">📊 Modalità presentazione</button>
       <div class="text-xs pl-2" style="border-left:1px solid var(--dark-border-strong);color:var(--dark-text-muted);">
-        <span id="app-version" class="font-medium" style="color:var(--accent);">v18.155.0</span> · Michele Marchetti
+        <span id="app-version" class="font-medium" style="color:var(--accent);">v18.154.0</span> · Michele Marchetti
         <span id="sb-role-badge" style="margin-left:8px;padding:1px 8px;border-radius:9999px;background:rgba(255,255,255,.1);color:var(--dark-text);font-weight:600;"></span>
       </div>
     </div>
@@ -1738,7 +1738,7 @@
           class="absolute right-2 top-1/2 -translate-y-1/2 text-slate-300 hover:text-slate-500 text-lg leading-none hidden">×</button>
       </div>
       <div id="pw-search-op-info" class="text-xs text-slate-400 hidden"></div>
-      <button id="pw-strumenti-refresh" data-help-key="pw-strumenti-refresh" class="px-3 py-1.5 text-sm border border-amber-300 bg-amber-50 text-amber-800 rounded hover:bg-amber-100 no-print whitespace-nowrap" title="Carica/aggiorna l'elenco strumenti dal progetto Jira GAR — Click destro per la guida">🔧 Aggiorna strumenti</button>
+      <button id="pw-strumenti-refresh" class="px-3 py-1.5 text-sm border border-amber-300 bg-amber-50 text-amber-800 rounded hover:bg-amber-100 no-print whitespace-nowrap" title="Carica/aggiorna l'elenco strumenti dal progetto Jira GAR">🔧 Aggiorna strumenti</button>
       <span id="pw-strumenti-status" class="text-xs text-slate-500 no-print"></span>
       <button id="pw-weather-week-btn" class="px-3 py-1.5 text-sm border border-slate-200 bg-slate-50 text-slate-400 rounded no-print whitespace-nowrap" title="Criticità meteo nei cantieri pianificati questa settimana" onclick="pwOpenWeatherWeekModal()">⛈️ Meteo settimana…</button>
       <button id="pw-add-commessa" class="ml-auto px-3 py-1.5 text-sm bg-teal-600 text-white rounded hover:bg-teal-700 no-print pw-write-action whitespace-nowrap">+ Aggiungi commessa</button>
@@ -1757,9 +1757,9 @@
           <span class="ml-3 text-rose-200 text-sm" id="pw-ferie-week-label"></span>
         </div>
         <div class="flex items-center gap-3">
-          <button id="pw-ferie-import-btn" data-help-key="pw-ferie-import" class="px-3 py-1.5 text-sm bg-white/10 hover:bg-white/20 border border-white/30 rounded text-white no-print whitespace-nowrap pw-write-action"
+          <button id="pw-ferie-import-btn" class="px-3 py-1.5 text-sm bg-white/10 hover:bg-white/20 border border-white/30 rounded text-white no-print whitespace-nowrap pw-write-action"
             onclick="document.getElementById('pw-ferie-import-file').click()"
-            title="Importa da Excel l'export ferie/permessi (colonne: Dipendente, descrizione, dataintervento, Somma di durata) — Click destro per la guida">📥 Importa Excel</button>
+            title="Importa da Excel l'export ferie/permessi (colonne: Dipendente, descrizione, dataintervento, Somma di durata)">📥 Importa Excel</button>
           <input type="file" id="pw-ferie-import-file" accept=".xlsx" class="hidden" onchange="pwFerieImportPick(this)">
         </div>
       </div>
@@ -2053,7 +2053,7 @@
       <div id="cp-search-op-info" class="text-xs text-slate-400 hidden"></div>
       <div class="flex items-center gap-2">
         <button id="cp-collapse-all" class="px-3 py-1.5 text-sm border border-slate-300 rounded hover:bg-slate-50 no-print" onclick="cpCollapseAllToggle()">≡ Collassa</button>
-        <button id="cp-sync-jira" data-help-key="cp-sync-jira" onclick="pwControlloSyncJira()" class="px-3 py-1.5 text-sm font-medium bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 flex items-center gap-1.5 no-print pw-write-action" title="Click destro per la guida">
+        <button id="cp-sync-jira" onclick="pwControlloSyncJira()" class="px-3 py-1.5 text-sm font-medium bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 flex items-center gap-1.5 no-print pw-write-action">
           🔄 Sincronizza da Jira
         </button>
         <button onclick="pwControlloExport()" class="px-3 py-1.5 text-sm font-medium bg-teal-600 text-white rounded-lg hover:bg-teal-700 flex items-center gap-1.5 no-print">
@@ -7185,36 +7185,6 @@ function showConfirmAsync(msg, btnLabel) {
   });
 }
 
-// Guide contestuali sui bottoni della Pianificazione Settimanale: click destro su un
-// bottone con data-help-key apre showHelpGuide(key) con un testo breve, tenuto vicino
-// alla funzione del bottone nel rispettivo file e popolato qui in HELP_TEXTS. Aggiungere
-// una guida = aggiungere data-help-key="..." al bottone + HELP_TEXTS['...'] = '...'.
-// z-index del backdrop tenuto sotto quello di showAlertModal/showConfirmAsync (100050),
-// per non nascondere un eventuale conferma/alert aperto sopra questa guida.
-const HELP_TEXTS = {};
-
-function showHelpGuide(key) {
-  const text = HELP_TEXTS[key];
-  if (!text) return;
-  const root = document.getElementById('modal-root');
-  const safeMsg = esc(text).replace(/\n/g, '<br>');
-  root.innerHTML = '<div class="modal-backdrop" style="z-index:100040;"><div class="bg-white rounded-lg shadow-xl w-full max-w-lg mx-4 p-5 flex flex-col" style="max-height:80vh;">' +
-    '<div class="flex items-center justify-between mb-3" style="flex-shrink:0;"><span class="font-semibold text-slate-700">ℹ️ Guida</span><button id="hg-close" class="text-slate-400 hover:text-slate-600 text-xl leading-none">&times;</button></div>' +
-    '<div class="text-sm text-slate-700" style="overflow-y:auto;flex:1;min-height:0;">' + safeMsg + '</div></div></div>';
-  document.getElementById('hg-close').onclick = () => closeModal();
-  root.querySelector('.modal-backdrop').addEventListener('click', e => { if (e.target.classList.contains('modal-backdrop')) closeModal(); });
-}
-
-// Delegato su document invece che per-elemento: alcuni bottoni con guida (Carica Report,
-// Sottotask Jira) sono rigenerati a ogni pwRender/cpRender, un listener diretto andrebbe
-// riattaccato manualmente ogni volta.
-document.addEventListener('contextmenu', e => {
-  const el = e.target.closest('[data-help-key]');
-  if (!el) return;
-  e.preventDefault();
-  showHelpGuide(el.dataset.helpKey);
-});
-
 /* Vero se il rapporto a termine e' scaduto (data fine gia' passata rispetto a oggi).
    Calcolato, non persistito: basta correggere/rimuovere la data fine per "riattivare"
    l'operatore, senza dover disfare un flag manuale. */
@@ -10821,8 +10791,6 @@ function pwGetOperatoriPerCommessa(commessaNome) {
 // del tipo di assenza, mostrati come badge/tooltip nella Vista Ferie).
 // Copre TUTTE le settimane presenti nel file, non solo quella aperta in griglia.
 
-HELP_TEXTS['pw-ferie-import'] = 'Importa l\'export "ORE NON LAVORATE" del gestionale presenze (colonne Dipendente, descrizione, dataintervento, Somma di durata) e popola ferie/permessi per tutti gli operatori riconosciuti.\n\nCopre TUTTE le settimane presenti nel file, non solo quella aperta in Griglia. I giorni importati restano riconoscibili in Vista Ferie da un bordo colorato a sinistra della cella.';
-
 const PW_FERIE_MESI = {
   gennaio: 0, febbraio: 1, marzo: 2, aprile: 3, maggio: 4, giugno: 5,
   luglio: 6, agosto: 7, settembre: 8, ottobre: 9, novembre: 10, dicembre: 11,
@@ -11632,7 +11600,7 @@ function pwRender() {
           <button class="text-xs bg-teal-500 hover:bg-teal-400 text-white px-3 py-1 rounded pw-write-action"
             data-cidx="${cIdx}" onclick="pwAddSquadra(this)">+ Squadra</button>
           <button class="text-xs bg-amber-500 hover:bg-amber-400 text-white px-2 py-1 rounded pw-write-action"
-            data-cidx="${cIdx}" data-help-key="pw-sottotask-jira" onclick="pwJiraSubtaskInit(${cIdx})" title="Crea sottotask su Jira per gli operatori pianificati questa settimana — Click destro per la guida">🎫 Sottotask Jira</button>
+            data-cidx="${cIdx}" onclick="pwJiraSubtaskInit(${cIdx})" title="Crea sottotask su Jira per gli operatori pianificati questa settimana">🎫 Sottotask Jira</button>
           <button class="text-xs bg-teal-600 hover:bg-teal-500 text-white px-2 py-1 rounded disabled:opacity-50"
             data-cidx="${cIdx}" onclick="pwMoveCommessaUp(this)" ${(cIdx === 0 || !sbCanWrite()) ? 'disabled' : ''} title="Sposta commessa su">▲</button>
           <button class="text-xs bg-teal-600 hover:bg-teal-500 text-white px-2 py-1 rounded disabled:opacity-50"
@@ -12205,8 +12173,6 @@ async function pwPasteRow(cidx, sidx, oidx) {
 let pwStrumenti = [];
 try { const _c = localStorage.getItem('pw_strumenti_cache'); if (_c) pwStrumenti = JSON.parse(_c) || []; } catch (_) {}
 
-HELP_TEXTS['pw-strumenti-refresh'] = 'Ricarica dal progetto Jira "GAR" l\'elenco degli strumenti (Strumentazione) disponibili nella tendina di scelta strumenti in Griglia, e aggiorna la cache locale del browser.\n\nDa rifare quando in Jira vengono creati o rinominati strumenti che non compaiono ancora (o compaiono col nome vecchio) nell\'elenco a tendina.';
-
 async function pwFetchStrumenti() {
   const st = document.getElementById('pw-strumenti-status');
   if (!_sbClient || !_sbUser) { showAlertModal('Non connesso: impossibile contattare Jira.'); return; }
@@ -12587,8 +12553,6 @@ document.addEventListener('DOMContentLoaded', async () => {
    Anteprima obbligatoria (dryRun) prima di ogni creazione reale — vedi jira-create-subtask
    Edge Function per il contratto e il check di idempotenza per assignee/Task.
 */
-
-HELP_TEXTS['pw-sottotask-jira'] = 'Crea sottotask su Jira per gli operatori pianificati questa settimana su QUESTA commessa, sotto l\'Epic Jira configurato in anagrafica commessa: uno per operatore/comune ("[Attività] - [Comune] - [Cognome]").\n\nRichiede di scegliere un Task Jira per ogni comune pianificato, poi permette di selezionare puntualmente quali sottotask proposti creare davvero. Mostra sempre un\'anteprima (dryRun) prima di creare qualsiasi cosa su Jira.\n\nRichiede "Codice progetto Jira" ed "Epic Jira" configurati sulla commessa.';
 
 /* ----- Pannello di ricerca condiviso (Epic/Task Jira) -----
    Clone parametrico del pattern "tendina custom" di weekly-strumenti.js
@@ -14394,7 +14358,7 @@ function pwControlloRender() {
     html += `<tr class="cp-tr-commessa" data-comm-idx="${blIdx}"><td colspan="16"><span class="cp-carr" style="cursor:pointer;user-select:none;margin-right:5px;font-size:11px;display:inline-block;width:10px;text-align:center;" onclick="cpToggleComm(${blIdx})">▼</span>📁 ${esc(bl.commessa)}</td></tr>`;
     bl.squadre.forEach((sq, sqIdx) => {
       const sqKey = blIdx + '-' + sqIdx;
-      html += `<tr class="cp-tr-squadra" data-comm-idx="${blIdx}" data-sq-idx="${sqKey}"><td colspan="16">&nbsp;&nbsp;&nbsp;<span class="cp-sarr" style="cursor:pointer;user-select:none;margin-right:5px;font-size:11px;display:inline-block;width:10px;text-align:center;" onclick="cpToggleSq('${jsAttr(sqKey)}')">▼</span>👥 ${esc(sq.nome)}<button class="no-print pw-write-action" style="margin-left:10px;font-size:11px;font-weight:600;background:#4f46e5;color:#fff;border:none;border-radius:5px;padding:2px 8px;cursor:pointer;" onclick="event.stopPropagation();pwControlloSyncJira('${jsesc(bl.commessa)}','${jsesc(sq.nome)}',this)">🔄 Sincronizza squadra</button><button class="no-print pw-write-action" style="margin-left:6px;font-size:11px;font-weight:600;background:#0ea5e9;color:#fff;border:none;border-radius:5px;padding:2px 8px;cursor:pointer;" data-help-key="cp-carica-report" title="Click destro per la guida" onclick="event.stopPropagation();cpCaricaReportSquadra('${jsesc(bl.commessa)}','${jsesc(sq.nome)}')">📄 Carica Report</button></td></tr>`;
+      html += `<tr class="cp-tr-squadra" data-comm-idx="${blIdx}" data-sq-idx="${sqKey}"><td colspan="16">&nbsp;&nbsp;&nbsp;<span class="cp-sarr" style="cursor:pointer;user-select:none;margin-right:5px;font-size:11px;display:inline-block;width:10px;text-align:center;" onclick="cpToggleSq('${jsAttr(sqKey)}')">▼</span>👥 ${esc(sq.nome)}<button class="no-print pw-write-action" style="margin-left:10px;font-size:11px;font-weight:600;background:#4f46e5;color:#fff;border:none;border-radius:5px;padding:2px 8px;cursor:pointer;" onclick="event.stopPropagation();pwControlloSyncJira('${jsesc(bl.commessa)}','${jsesc(sq.nome)}',this)">🔄 Sincronizza squadra</button><button class="no-print pw-write-action" style="margin-left:6px;font-size:11px;font-weight:600;background:#0ea5e9;color:#fff;border:none;border-radius:5px;padding:2px 8px;cursor:pointer;" onclick="event.stopPropagation();cpCaricaReportSquadra('${jsesc(bl.commessa)}','${jsesc(sq.nome)}')">📄 Carica Report</button></td></tr>`;
       sq.giorni.forEach((gBlock, gIdx) => {
         const g   = gBlock.giornoIdx;
         const sep = gIdx > 0 ? ' cp-day-sep' : '';
@@ -14543,8 +14507,6 @@ async function _cpEdgeErr(error, fnName) {
   } catch (_) { /* ignore */ }
   return prefix + (error && error.message ? error.message : String(error));
 }
-
-HELP_TEXTS['cp-sync-jira'] = 'Aggiorna le colonne "Ore Jira" e "Ticket/Epic" di TUTTE le squadre pianificate questa settimana, prendendo i worklog reali da Jira.\n\nSovrascrive i valori già presenti in quelle colonne. Non tocca "Ore Report Prod." né il Km/Cad, che si aggiornano solo con "Carica Report".\n\nOgni squadra ha anche un bottone "🔄 Sincronizza squadra" per farlo solo su quella riga invece che su tutta la settimana.';
 
 // scopeCommessa/scopeSquadra: se entrambi valorizzati, la sync (worklog + KM) si limita
 // a quella squadra invece che a tutta la settimana. btnEl: bottone da disabilitare durante
@@ -15211,8 +15173,6 @@ function cpGetSquadraOpsByDay(commessa, squadra) {
   });
   return perDay;
 }
-
-HELP_TEXTS['cp-carica-report'] = 'Importa un file CSV/testo con le ore di produzione reale degli operatori di QUESTA squadra e compila "Ore Report Prod." e il Km/Cad del ticket del comune, per i soli giorni trovati nel file.\n\nI valori già presenti per quel ticket vengono sovrascritti. Se il file non copre nessun giorno della settimana, ti viene comunque chiesto se vuoi azzerare le ore per quei giorni.\n\nRiguarda solo "Ore Report Prod."/Km — le "Ore Jira" si aggiornano con "Sincronizza da Jira".';
 
 // Handler del bottone: apre il selettore file (CSV) per la squadra indicata.
 async function cpCaricaReportSquadra(commessa, squadra) {

@@ -591,6 +591,36 @@ function showConfirmAsync(msg, btnLabel) {
   });
 }
 
+// Guide contestuali sui bottoni della Pianificazione Settimanale: click destro su un
+// bottone con data-help-key apre showHelpGuide(key) con un testo breve, tenuto vicino
+// alla funzione del bottone nel rispettivo file e popolato qui in HELP_TEXTS. Aggiungere
+// una guida = aggiungere data-help-key="..." al bottone + HELP_TEXTS['...'] = '...'.
+// z-index del backdrop tenuto sotto quello di showAlertModal/showConfirmAsync (100050),
+// per non nascondere un eventuale conferma/alert aperto sopra questa guida.
+const HELP_TEXTS = {};
+
+function showHelpGuide(key) {
+  const text = HELP_TEXTS[key];
+  if (!text) return;
+  const root = document.getElementById('modal-root');
+  const safeMsg = esc(text).replace(/\n/g, '<br>');
+  root.innerHTML = '<div class="modal-backdrop" style="z-index:100040;"><div class="bg-white rounded-lg shadow-xl w-full max-w-lg mx-4 p-5 flex flex-col" style="max-height:80vh;">' +
+    '<div class="flex items-center justify-between mb-3" style="flex-shrink:0;"><span class="font-semibold text-slate-700">ℹ️ Guida</span><button id="hg-close" class="text-slate-400 hover:text-slate-600 text-xl leading-none">&times;</button></div>' +
+    '<div class="text-sm text-slate-700" style="overflow-y:auto;flex:1;min-height:0;">' + safeMsg + '</div></div></div>';
+  document.getElementById('hg-close').onclick = () => closeModal();
+  root.querySelector('.modal-backdrop').addEventListener('click', e => { if (e.target.classList.contains('modal-backdrop')) closeModal(); });
+}
+
+// Delegato su document invece che per-elemento: alcuni bottoni con guida (Carica Report,
+// Sottotask Jira) sono rigenerati a ogni pwRender/cpRender, un listener diretto andrebbe
+// riattaccato manualmente ogni volta.
+document.addEventListener('contextmenu', e => {
+  const el = e.target.closest('[data-help-key]');
+  if (!el) return;
+  e.preventDefault();
+  showHelpGuide(el.dataset.helpKey);
+});
+
 /* Vero se il rapporto a termine e' scaduto (data fine gia' passata rispetto a oggi).
    Calcolato, non persistito: basta correggere/rimuovere la data fine per "riattivare"
    l'operatore, senza dover disfare un flag manuale. */
