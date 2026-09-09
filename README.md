@@ -111,6 +111,9 @@ Limite noto: il progetto Supabase è sul piano **Free**, che non include backup 
 
 ## Changelog
 
+## v18.151.0
+- feat: **Controllo Produzione — la ricerca operatore/cantiere salta direttamente al primo risultato** — dopo la ricerca introdotta in v18.150.0, ora il testo "N risultati trovati" è cliccabile e porta subito alla prima riga corrispondente (scroll centrato + evidenziazione temporanea, stesso pattern già usato in Griglia per il salto alla cella); premere Invio nella casella di ricerca fa lo stesso.
+
 ## v18.150.0
 - feat: **Controllo Produzione — casella di ricerca operatore/cantiere** — stessa idea della barra di ricerca già presente in Griglia: un campo testo nella toolbar della tab filtra le righe della tabella per nome operatore o testo cantiere, evidenziando i risultati e attenuando le altre righe (con conteggio a fianco). Durante la ricerca le sezioni collassate (commessa/squadra) vengono temporaneamente mostrate per non nascondere risultati; lo stato collassa/espandi dell'utente viene ripristinato svuotando la ricerca.
 

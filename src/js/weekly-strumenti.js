@@ -359,6 +359,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     cpSearchInput.addEventListener('input', () => cpSearchOp(cpSearchInput.value));
     cpSearchInput.addEventListener('keydown', e => {
       if (e.key === 'Escape') { cpSearchInput.value = ''; cpSearchOp(''); }
+      else if (e.key === 'Enter') { e.preventDefault(); cpGoToFirstMatch(_cpFirstMatchRow); }
     });
   }
   if (cpSearchClear) {

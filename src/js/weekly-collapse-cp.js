@@ -102,11 +102,14 @@ function cpCollapseAllToggle() {
    dettaglio: la tabella è piatta, quindi evidenziare/attenuare le righe basta.
    Durante la ricerca lo stato collassa/espandi viene ignorato (tutte le righe
    restano visibili) per non nascondere risultati dentro sezioni chiuse; alla
-   ricerca vuota si ripristina con cpApplyCollapse(). */
+   ricerca vuota si ripristina con cpApplyCollapse(). Cliccando sul testo dei
+   risultati si salta direttamente alla prima riga trovata (cpGoToFirstMatch). */
 let _cpSearchTerm = '';
+let _cpFirstMatchRow = null;
 
 function cpSearchOp(term) {
   _cpSearchTerm = (term || '').trim().toLowerCase();
+  _cpFirstMatchRow = null;
 
   const clearBtn = document.getElementById('cp-search-op-clear');
   const infoEl   = document.getElementById('cp-search-op-info');
@@ -117,7 +120,13 @@ function cpSearchOp(term) {
 
   if (!_cpSearchTerm) {
     tbody.querySelectorAll('tr').forEach(tr => tr.classList.remove('cp-search-match', 'cp-search-dim', 'cp-search-no-match'));
-    if (infoEl) { infoEl.textContent = ''; infoEl.classList.add('hidden'); }
+    if (infoEl) {
+      infoEl.textContent = '';
+      infoEl.classList.add('hidden');
+      infoEl.style.cursor = '';
+      infoEl.style.textDecoration = '';
+      infoEl.onclick = null;
+    }
     cpApplyCollapse();
     return;
   }
@@ -125,6 +134,7 @@ function cpSearchOp(term) {
   const matchedComm = new Set();
   const matchedSq   = new Set();
   let matchCount = 0;
+  let firstMatchRow = null;
 
   tbody.querySelectorAll('tr[data-operatore]').forEach(tr => {
     const nome     = (tr.dataset.operatore || '').toLowerCase();
@@ -135,10 +145,12 @@ function cpSearchOp(term) {
     tr.style.display = '';
     if (isMatch) {
       matchCount++;
+      if (!firstMatchRow) firstMatchRow = tr;
       matchedComm.add(tr.dataset.commIdx);
       matchedSq.add(tr.dataset.sqIdx);
     }
   });
+  _cpFirstMatchRow = firstMatchRow;
 
   tbody.querySelectorAll('tr.cp-tr-commessa').forEach(tr => {
     tr.style.display = '';
@@ -155,10 +167,26 @@ function cpSearchOp(term) {
     if (matchCount === 0) {
       infoEl.textContent = 'Nessun risultato trovato';
       infoEl.style.color = 'var(--red)';
+      infoEl.style.cursor = '';
+      infoEl.style.textDecoration = '';
+      infoEl.onclick = null;
     } else {
-      infoEl.textContent = `${matchCount} risultat${matchCount === 1 ? 'o' : 'i'} trovat${matchCount === 1 ? 'o' : 'i'}`;
+      infoEl.textContent = `${matchCount} risultat${matchCount === 1 ? 'o' : 'i'} trovat${matchCount === 1 ? 'o' : 'i'} — clicca per andare al primo`;
       infoEl.style.color = 'var(--accent)';
+      infoEl.style.cursor = 'pointer';
+      infoEl.style.textDecoration = 'underline';
+      infoEl.onclick = () => cpGoToFirstMatch(_cpFirstMatchRow);
     }
   }
+}
+
+/* Scrolla alla prima riga trovata dall'ultima cpSearchOp e la evidenzia per
+   un paio di secondi (stesso pattern/classe di pwGoToSearchCell in
+   weekly-popover-stats.js). */
+function cpGoToFirstMatch(row) {
+  if (!row || !row.isConnected) return;
+  row.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  row.classList.add('pw-weather-cell-flash');
+  setTimeout(() => row.classList.remove('pw-weather-cell-flash'), 2000);
 }
 
