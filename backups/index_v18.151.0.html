@@ -1165,7 +1165,7 @@
     <div class="flex items-center gap-2">
       <button id="btn-presentation" class="px-3 py-1.5 text-sm rounded hover:bg-white/10" style="border:1px solid var(--dark-border-strong);color:var(--dark-text);visibility:visible;">📊 Modalità presentazione</button>
       <div class="text-xs pl-2" style="border-left:1px solid var(--dark-border-strong);color:var(--dark-text-muted);">
-        <span id="app-version" class="font-medium" style="color:var(--accent);">v18.153.0</span> · Michele Marchetti
+        <span id="app-version" class="font-medium" style="color:var(--accent);">v18.151.0</span> · Michele Marchetti
         <span id="sb-role-badge" style="margin-left:8px;padding:1px 8px;border-radius:9999px;background:rgba(255,255,255,.1);color:var(--dark-text);font-weight:600;"></span>
       </div>
     </div>
@@ -13287,7 +13287,7 @@ async function pwJiraSubtaskOpenExtraFieldsModal(cIdx, commessaNome, meta, items
   }
 
   if (fields.length === 0) {
-    pwJiraSubtaskPreview(cIdx, commessaNome, items, skippedComuni, {}, []);
+    pwJiraSubtaskPreview(cIdx, commessaNome, items, skippedComuni, {});
     return;
   }
 
@@ -13319,13 +13319,7 @@ async function pwJiraSubtaskOpenExtraFieldsModal(cIdx, commessaNome, meta, items
     } else if (f.type === 'date') {
       inputHtml = `<input type="date" data-extra-key="${esc(f.extraKey)}" value="${esc(val)}" class="w-full border border-slate-300 rounded px-2 py-1.5 text-sm">`;
     } else if (f.type === 'number' || f.key === 'customfield_11280' || f.key === 'customfield_13027') {
-      // onwheel + blur: Chrome/Edge incrementano/decrementano il valore di un
-      // <input type="number"> quando ci si scorre sopra con la rotellina/trackpad,
-      // anche solo di passaggio scrollando la modale (che e' overflow-y-auto) per
-      // arrivare al pulsante "Continua". Con uno scroll a inerzia bastano pochi
-      // istanti per alterare silenziosamente un valore come 50 senza che l'utente
-      // lo digiti mai (bug segnalato su "Production Weight (%)": 50 -> 5000).
-      inputHtml = `<input type="number" data-extra-key="${esc(f.extraKey)}" value="${esc(val)}" onwheel="this.blur()" class="w-full border border-slate-300 rounded px-2 py-1.5 text-sm">`;
+      inputHtml = `<input type="number" data-extra-key="${esc(f.extraKey)}" value="${esc(val)}" class="w-full border border-slate-300 rounded px-2 py-1.5 text-sm">`;
     } else {
       inputHtml = `<input type="text" data-extra-key="${esc(f.extraKey)}" value="${esc(val)}" class="w-full border border-slate-300 rounded px-2 py-1.5 text-sm">`;
     }
@@ -13352,50 +13346,12 @@ async function pwJiraSubtaskOpenExtraFieldsModal(cIdx, commessaNome, meta, items
       const key = el.dataset.extraKey;
       if (el.value !== '') extraFields[key] = el.value;
     });
-    pwJiraSubtaskPreview(cIdx, commessaNome, items, skippedComuni, extraFields, fields);
+    pwJiraSubtaskPreview(cIdx, commessaNome, items, skippedComuni, extraFields);
   };
 }
 
-// Etichette di fallback per i campi extra note (vedi KNOWN_EXTRA_FIELDS lato
-// Edge Function jira-create-subtask), usate solo se `fields` non e' disponibile
-// (caso fields.length===0, extraFields comunque vuoto in quel caso).
-const PW_JIRA_EXTRA_FIELD_LABELS = {
-  duedate: 'Data scadenza',
-  originalEstimate: 'Stima originale',
-  activityType: 'Activity Type',
-  targetProduction: 'Target Production',
-  productionWeight: 'Production Weight (%)',
-  startDatePianificato: 'Start date pianificato',
-  tempoTeam: 'Tempo Team',
-};
-
-// Riepilogo dei campi extra (Step 1.5) mostrato nell'anteprima finale (Step 2),
-// cosi' il valore che sta per essere scritto su Jira per OGNI sottotask di
-// questo batch resta visibile e verificabile un'ultima volta prima della
-// creazione reale — non solo nel form dove e' stato digitato (vedi fix
-// onwheel su pwJiraSubtaskOpenExtraFieldsModal: senza questo riepilogo, un
-// valore alterato per sbaglio dopo la compilazione del form non sarebbe mai
-// più visibile prima della creazione).
-function pwJiraSubtaskExtraFieldsRecapHtml(extraFields, fields) {
-  const keys = Object.keys(extraFields || {});
-  if (keys.length === 0) return '';
-  const byExtraKey = {};
-  (fields || []).forEach(f => { byExtraKey[f.extraKey] = f; });
-  const rows = keys.map(key => {
-    const f = byExtraKey[key];
-    const label = f ? f.name : (PW_JIRA_EXTRA_FIELD_LABELS[key] || key);
-    let value = extraFields[key];
-    if (f && f.allowedValues) {
-      const match = f.allowedValues.find(v => String(v.id) === String(value));
-      if (match) value = match.value;
-    }
-    return `<div class="flex items-baseline justify-between gap-2"><span class="text-slate-500">${esc(label)}</span><span class="font-medium text-slate-800">${esc(String(value))}</span></div>`;
-  }).join('');
-  return `<div class="border border-slate-200 rounded p-2 mb-3 text-[11px] space-y-0.5">${rows}</div>`;
-}
-
 /* ----- Step 2: anteprima (dryRun) ----- */
-async function pwJiraSubtaskPreview(cIdx, commessaNome, items, skippedComuni, extraFields, fields) {
+async function pwJiraSubtaskPreview(cIdx, commessaNome, items, skippedComuni, extraFields) {
   const root = document.getElementById('modal-root');
   root.innerHTML = `<div class="modal-backdrop"><div class="bg-white rounded-lg shadow-xl w-full max-w-xl mx-4 my-8 p-5 max-h-[90vh] overflow-y-auto">
     <h3 class="font-semibold text-slate-900 mb-3">Crea sottotask Jira — ${esc(commessaNome)}</h3>
@@ -13412,13 +13368,12 @@ async function pwJiraSubtaskPreview(cIdx, commessaNome, items, skippedComuni, ex
   }
 
   pwJiraSubtaskApplyResultsToBadges(cIdx, items, results, false);
-  pwJiraSubtaskRenderPreview(cIdx, commessaNome, items, results, skippedComuni, extraFields, fields);
+  pwJiraSubtaskRenderPreview(cIdx, commessaNome, items, results, skippedComuni, extraFields);
 }
 
-function pwJiraSubtaskRenderPreview(cIdx, commessaNome, items, results, skippedComuni, extraFields, fields) {
+function pwJiraSubtaskRenderPreview(cIdx, commessaNome, items, results, skippedComuni, extraFields) {
   const root = document.getElementById('modal-root');
   const wouldCreate = results.filter(r => r.status === 'would_create').length;
-  const extraFieldsRecapHtml = pwJiraSubtaskExtraFieldsRecapHtml(extraFields, fields);
 
   const rows = results.map((r, i) => {
     const item = items[i] || {};
@@ -13445,7 +13400,6 @@ function pwJiraSubtaskRenderPreview(cIdx, commessaNome, items, results, skippedC
   root.innerHTML = `<div class="modal-backdrop"><div class="bg-white rounded-lg shadow-xl w-full max-w-xl mx-4 my-8 p-5 max-h-[90vh] overflow-y-auto">
     <h3 class="font-semibold text-slate-900 mb-1">Crea sottotask Jira — ${esc(commessaNome)}</h3>
     <p class="text-xs text-slate-500 mb-3">${wouldCreate} da creare su ${results.length} totali.</p>
-    ${extraFieldsRecapHtml}
     <div>${rows}</div>
     ${skippedHtml}
     <div class="flex justify-end gap-2 mt-4">
@@ -14645,8 +14599,7 @@ async function pwControlloSyncJira(scopeCommessa, scopeSquadra, btnEl) {
       const okKm = await showConfirmAsync(
         `Aggiornamento "Actual Production" su Jira per ${kmUpdates.length} ticket ` +
         `(${nNew} nuovi, ${nUpd} corretti).\n\n` +
-        `Verrà applicata la differenza rispetto all'ultimo valore già scritto per ciascun ticket (la tua quota viene sostituita, non risommata). ` +
-        `La stessa differenza verrà sommata anche all'"Actual Production" del Task padre diretto di ciascun sottotask. Procedere?`,
+        `Verrà applicata la differenza rispetto all'ultimo valore già scritto per ciascun ticket (la tua quota viene sostituita, non risommata). Procedere?`,
         'Aggiorna Jira');
       if (!okKm) {
         kmMsg = `\n\n(Aggiornamento KM su Jira annullato — nessuna modifica ai ticket.)`;
@@ -14660,11 +14613,10 @@ async function pwControlloSyncJira(scopeCommessa, scopeSquadra, btnEl) {
         } else if (pData && pData.error) {
           kmMsg = `\n\n⚠ Upload KM su Jira non riuscito: ${pData.error}. Nessuno storico modificato.`;
         } else {
-          const pres      = (pData && pData.results)      || {};
-          const perr      = (pData && pData.errors)       || {};
-          const parentErr = (pData && pData.parentErrors) || {};
+          const pres = (pData && pData.results) || {};
+          const perr = (pData && pData.errors)  || {};
           const touched = new Map();
-          let uploaded = 0, uploadedParents = 0;
+          let uploaded = 0;
           kmUpdates.forEach(u => {
             const r = pres[u.issueKey];
             if (r && r.ok) {
@@ -14672,7 +14624,6 @@ async function pwControlloSyncJira(scopeCommessa, scopeSquadra, btnEl) {
               _cpData[u.k].km_last_by_ticket[u.issueKey] = u.newLast;
               touched.set(u.k, u);
               uploaded++;
-              if (r.parentKey) uploadedParents++;
             }
           });
           if (touched.size > 0) {
@@ -14688,17 +14639,9 @@ async function pwControlloSyncJira(scopeCommessa, scopeSquadra, btnEl) {
           if (!kmMsg) {
             kmMsg = `\n\n✅ Actual Production aggiornata su Jira: ${uploaded}/${kmUpdates.length} ticket` +
                     (pData.fieldId ? ` (campo ${pData.fieldId})` : '') + '.';
-            if (uploadedParents > 0) {
-              kmMsg += ` Aggiornato anche il Task padre per ${uploadedParents} ticket.`;
-            }
             const perrKeys = Object.keys(perr);
             if (perrKeys.length) {
               kmMsg += ` ⚠ Errori: ` + perrKeys.map(kk => `${kk} (${perr[kk]})`).join('; ') + '.';
-            }
-            const parentErrKeys = Object.keys(parentErr);
-            if (parentErrKeys.length) {
-              kmMsg += ` ⚠ Aggiornamento Task padre non riuscito per: ` +
-                       parentErrKeys.map(kk => `${kk} → ${parentErr[kk]}`).join('; ') + '.';
             }
           }
         }

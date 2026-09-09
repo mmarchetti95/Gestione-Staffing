@@ -571,7 +571,8 @@ async function pwControlloSyncJira(scopeCommessa, scopeSquadra, btnEl) {
       const okKm = await showConfirmAsync(
         `Aggiornamento "Actual Production" su Jira per ${kmUpdates.length} ticket ` +
         `(${nNew} nuovi, ${nUpd} corretti).\n\n` +
-        `Verrà applicata la differenza rispetto all'ultimo valore già scritto per ciascun ticket (la tua quota viene sostituita, non risommata). Procedere?`,
+        `Verrà applicata la differenza rispetto all'ultimo valore già scritto per ciascun ticket (la tua quota viene sostituita, non risommata). ` +
+        `La stessa differenza verrà sommata anche all'"Actual Production" del Task padre diretto di ciascun sottotask. Procedere?`,
         'Aggiorna Jira');
       if (!okKm) {
         kmMsg = `\n\n(Aggiornamento KM su Jira annullato — nessuna modifica ai ticket.)`;
@@ -585,10 +586,11 @@ async function pwControlloSyncJira(scopeCommessa, scopeSquadra, btnEl) {
         } else if (pData && pData.error) {
           kmMsg = `\n\n⚠ Upload KM su Jira non riuscito: ${pData.error}. Nessuno storico modificato.`;
         } else {
-          const pres = (pData && pData.results) || {};
-          const perr = (pData && pData.errors)  || {};
+          const pres      = (pData && pData.results)      || {};
+          const perr      = (pData && pData.errors)       || {};
+          const parentErr = (pData && pData.parentErrors) || {};
           const touched = new Map();
-          let uploaded = 0;
+          let uploaded = 0, uploadedParents = 0;
           kmUpdates.forEach(u => {
             const r = pres[u.issueKey];
             if (r && r.ok) {
@@ -596,6 +598,7 @@ async function pwControlloSyncJira(scopeCommessa, scopeSquadra, btnEl) {
               _cpData[u.k].km_last_by_ticket[u.issueKey] = u.newLast;
               touched.set(u.k, u);
               uploaded++;
+              if (r.parentKey) uploadedParents++;
             }
           });
           if (touched.size > 0) {
@@ -611,9 +614,17 @@ async function pwControlloSyncJira(scopeCommessa, scopeSquadra, btnEl) {
           if (!kmMsg) {
             kmMsg = `\n\n✅ Actual Production aggiornata su Jira: ${uploaded}/${kmUpdates.length} ticket` +
                     (pData.fieldId ? ` (campo ${pData.fieldId})` : '') + '.';
+            if (uploadedParents > 0) {
+              kmMsg += ` Aggiornato anche il Task padre per ${uploadedParents} ticket.`;
+            }
             const perrKeys = Object.keys(perr);
             if (perrKeys.length) {
               kmMsg += ` ⚠ Errori: ` + perrKeys.map(kk => `${kk} (${perr[kk]})`).join('; ') + '.';
+            }
+            const parentErrKeys = Object.keys(parentErr);
+            if (parentErrKeys.length) {
+              kmMsg += ` ⚠ Aggiornamento Task padre non riuscito per: ` +
+                       parentErrKeys.map(kk => `${kk} → ${parentErr[kk]}`).join('; ') + '.';
             }
           }
         }

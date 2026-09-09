@@ -111,6 +111,12 @@ Limite noto: il progetto Supabase è sul piano **Free**, che non include backup 
 
 ## Changelog
 
+## v18.153.0
+- feat: **Controllo Produzione — la sincronizzazione "Actual Production" incrementa anche il Task padre diretto del sottotask** — quando si scrive il delta di "Km/Cad" su un sottotask (manuale o da report), la stessa identica differenza viene ora sommata anche al campo "Actual Production" del ticket padre diretto (relazione standard Jira "parent", distinta dall'Epic), tenendone allineato il totale alla somma dei suoi sottotask senza doverlo più aggiornare a mano. Nessun cambiamento nel modello a delta lato sottotask: se l'update sul padre fallisce, l'update sul sottotask resta valido e l'errore viene segnalato a parte (non blocca il bookkeeping locale). Richiede la Edge Function `jira-update-production` aggiornata (v2, non versionata nel repo).
+
+## v18.152.0
+- fix: **Sottotask Jira — campi extra numerici (Production Weight, Target Production, Tempo Team) non più modificabili per sbaglio scrollando** — Chrome/Edge incrementano/decrementano il valore di un `<input type="number">` quando ci si scorre sopra con rotellina/trackpad; la modale "campi extra" (Step 1.5) è scrollabile, quindi bastava scorrere fino al pulsante "Continua" passando sopra il campo per alterarne silenziosamente il valore (es. Production Weight 50 → 5000). I campi numerici ora perdono il focus al primo scroll, ignorando l'evento. Aggiunto anche un riepilogo dei valori dei campi extra nell'anteprima finale (Step 2, prima della creazione reale), per poterli verificare un'ultima volta.
+
 ## v18.151.0
 - feat: **Controllo Produzione — la ricerca operatore/cantiere salta direttamente al primo risultato** — dopo la ricerca introdotta in v18.150.0, ora il testo "N risultati trovati" è cliccabile e porta subito alla prima riga corrispondente (scroll centrato + evidenziazione temporanea, stesso pattern già usato in Griglia per il salto alla cella); premere Invio nella casella di ricerca fa lo stesso.
 

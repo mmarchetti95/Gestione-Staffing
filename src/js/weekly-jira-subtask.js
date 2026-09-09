@@ -747,7 +747,7 @@ async function pwJiraSubtaskOpenExtraFieldsModal(cIdx, commessaNome, meta, items
   }
 
   if (fields.length === 0) {
-    pwJiraSubtaskPreview(cIdx, commessaNome, items, skippedComuni, {});
+    pwJiraSubtaskPreview(cIdx, commessaNome, items, skippedComuni, {}, []);
     return;
   }
 
@@ -779,7 +779,13 @@ async function pwJiraSubtaskOpenExtraFieldsModal(cIdx, commessaNome, meta, items
     } else if (f.type === 'date') {
       inputHtml = `<input type="date" data-extra-key="${esc(f.extraKey)}" value="${esc(val)}" class="w-full border border-slate-300 rounded px-2 py-1.5 text-sm">`;
     } else if (f.type === 'number' || f.key === 'customfield_11280' || f.key === 'customfield_13027') {
-      inputHtml = `<input type="number" data-extra-key="${esc(f.extraKey)}" value="${esc(val)}" class="w-full border border-slate-300 rounded px-2 py-1.5 text-sm">`;
+      // onwheel + blur: Chrome/Edge incrementano/decrementano il valore di un
+      // <input type="number"> quando ci si scorre sopra con la rotellina/trackpad,
+      // anche solo di passaggio scrollando la modale (che e' overflow-y-auto) per
+      // arrivare al pulsante "Continua". Con uno scroll a inerzia bastano pochi
+      // istanti per alterare silenziosamente un valore come 50 senza che l'utente
+      // lo digiti mai (bug segnalato su "Production Weight (%)": 50 -> 5000).
+      inputHtml = `<input type="number" data-extra-key="${esc(f.extraKey)}" value="${esc(val)}" onwheel="this.blur()" class="w-full border border-slate-300 rounded px-2 py-1.5 text-sm">`;
     } else {
       inputHtml = `<input type="text" data-extra-key="${esc(f.extraKey)}" value="${esc(val)}" class="w-full border border-slate-300 rounded px-2 py-1.5 text-sm">`;
     }
@@ -806,12 +812,50 @@ async function pwJiraSubtaskOpenExtraFieldsModal(cIdx, commessaNome, meta, items
       const key = el.dataset.extraKey;
       if (el.value !== '') extraFields[key] = el.value;
     });
-    pwJiraSubtaskPreview(cIdx, commessaNome, items, skippedComuni, extraFields);
+    pwJiraSubtaskPreview(cIdx, commessaNome, items, skippedComuni, extraFields, fields);
   };
 }
 
+// Etichette di fallback per i campi extra note (vedi KNOWN_EXTRA_FIELDS lato
+// Edge Function jira-create-subtask), usate solo se `fields` non e' disponibile
+// (caso fields.length===0, extraFields comunque vuoto in quel caso).
+const PW_JIRA_EXTRA_FIELD_LABELS = {
+  duedate: 'Data scadenza',
+  originalEstimate: 'Stima originale',
+  activityType: 'Activity Type',
+  targetProduction: 'Target Production',
+  productionWeight: 'Production Weight (%)',
+  startDatePianificato: 'Start date pianificato',
+  tempoTeam: 'Tempo Team',
+};
+
+// Riepilogo dei campi extra (Step 1.5) mostrato nell'anteprima finale (Step 2),
+// cosi' il valore che sta per essere scritto su Jira per OGNI sottotask di
+// questo batch resta visibile e verificabile un'ultima volta prima della
+// creazione reale — non solo nel form dove e' stato digitato (vedi fix
+// onwheel su pwJiraSubtaskOpenExtraFieldsModal: senza questo riepilogo, un
+// valore alterato per sbaglio dopo la compilazione del form non sarebbe mai
+// più visibile prima della creazione).
+function pwJiraSubtaskExtraFieldsRecapHtml(extraFields, fields) {
+  const keys = Object.keys(extraFields || {});
+  if (keys.length === 0) return '';
+  const byExtraKey = {};
+  (fields || []).forEach(f => { byExtraKey[f.extraKey] = f; });
+  const rows = keys.map(key => {
+    const f = byExtraKey[key];
+    const label = f ? f.name : (PW_JIRA_EXTRA_FIELD_LABELS[key] || key);
+    let value = extraFields[key];
+    if (f && f.allowedValues) {
+      const match = f.allowedValues.find(v => String(v.id) === String(value));
+      if (match) value = match.value;
+    }
+    return `<div class="flex items-baseline justify-between gap-2"><span class="text-slate-500">${esc(label)}</span><span class="font-medium text-slate-800">${esc(String(value))}</span></div>`;
+  }).join('');
+  return `<div class="border border-slate-200 rounded p-2 mb-3 text-[11px] space-y-0.5">${rows}</div>`;
+}
+
 /* ----- Step 2: anteprima (dryRun) ----- */
-async function pwJiraSubtaskPreview(cIdx, commessaNome, items, skippedComuni, extraFields) {
+async function pwJiraSubtaskPreview(cIdx, commessaNome, items, skippedComuni, extraFields, fields) {
   const root = document.getElementById('modal-root');
   root.innerHTML = `<div class="modal-backdrop"><div class="bg-white rounded-lg shadow-xl w-full max-w-xl mx-4 my-8 p-5 max-h-[90vh] overflow-y-auto">
     <h3 class="font-semibold text-slate-900 mb-3">Crea sottotask Jira — ${esc(commessaNome)}</h3>
@@ -828,12 +872,13 @@ async function pwJiraSubtaskPreview(cIdx, commessaNome, items, skippedComuni, ex
   }
 
   pwJiraSubtaskApplyResultsToBadges(cIdx, items, results, false);
-  pwJiraSubtaskRenderPreview(cIdx, commessaNome, items, results, skippedComuni, extraFields);
+  pwJiraSubtaskRenderPreview(cIdx, commessaNome, items, results, skippedComuni, extraFields, fields);
 }
 
-function pwJiraSubtaskRenderPreview(cIdx, commessaNome, items, results, skippedComuni, extraFields) {
+function pwJiraSubtaskRenderPreview(cIdx, commessaNome, items, results, skippedComuni, extraFields, fields) {
   const root = document.getElementById('modal-root');
   const wouldCreate = results.filter(r => r.status === 'would_create').length;
+  const extraFieldsRecapHtml = pwJiraSubtaskExtraFieldsRecapHtml(extraFields, fields);
 
   const rows = results.map((r, i) => {
     const item = items[i] || {};
@@ -860,6 +905,7 @@ function pwJiraSubtaskRenderPreview(cIdx, commessaNome, items, results, skippedC
   root.innerHTML = `<div class="modal-backdrop"><div class="bg-white rounded-lg shadow-xl w-full max-w-xl mx-4 my-8 p-5 max-h-[90vh] overflow-y-auto">
     <h3 class="font-semibold text-slate-900 mb-1">Crea sottotask Jira — ${esc(commessaNome)}</h3>
     <p class="text-xs text-slate-500 mb-3">${wouldCreate} da creare su ${results.length} totali.</p>
+    ${extraFieldsRecapHtml}
     <div>${rows}</div>
     ${skippedHtml}
     <div class="flex justify-end gap-2 mt-4">
