@@ -1278,10 +1278,10 @@
       "source_location": "L92",
       "_callable": true,
       "_origin": "ast",
-      "id": "src_js_produzione_core_cpbuildrecord",
       "community": 11,
       "community_name": "Controllo Produzione Core",
-      "norm_label": "cpbuildrecord()"
+      "norm_label": "cpbuildrecord()",
+      "id": "src_js_produzione_core_cpbuildrecord"
     },
     {
       "label": "cpDataISO()",
@@ -1290,10 +1290,10 @@
       "source_location": "L64",
       "_callable": true,
       "_origin": "ast",
-      "id": "src_js_produzione_core_cpdataiso",
       "community": 11,
       "community_name": "Controllo Produzione Core",
-      "norm_label": "cpdataiso()"
+      "norm_label": "cpdataiso()",
+      "id": "src_js_produzione_core_cpdataiso"
     },
     {
       "label": "cpDelta()",
@@ -1302,10 +1302,10 @@
       "source_location": "L313",
       "_callable": true,
       "_origin": "ast",
-      "id": "src_js_produzione_core_cpdelta",
       "community": 11,
       "community_name": "Controllo Produzione Core",
-      "norm_label": "cpdelta()"
+      "norm_label": "cpdelta()",
+      "id": "src_js_produzione_core_cpdelta"
     },
     {
       "label": "_cpEdgeErr()",
@@ -1314,10 +1314,10 @@
       "source_location": "L355",
       "_callable": true,
       "_origin": "ast",
-      "id": "src_js_produzione_core_cpedgeerr",
       "community": 11,
       "community_name": "Controllo Produzione Core",
-      "norm_label": "_cpedgeerr()"
+      "norm_label": "_cpedgeerr()",
+      "id": "src_js_produzione_core_cpedgeerr"
     },
     {
       "label": "cpJiraFlagClick()",
@@ -1326,10 +1326,10 @@
       "source_location": "L725",
       "_callable": true,
       "_origin": "ast",
-      "id": "src_js_produzione_core_cpjiraflagclick",
       "community": 11,
       "community_name": "Controllo Produzione Core",
-      "norm_label": "cpjiraflagclick()"
+      "norm_label": "cpjiraflagclick()",
+      "id": "src_js_produzione_core_cpjiraflagclick"
     },
     {
       "label": "cpJiraFlagTicketClick()",
@@ -1338,10 +1338,10 @@
       "source_location": "L798",
       "_callable": true,
       "_origin": "ast",
-      "id": "src_js_produzione_core_cpjiraflagticketclick",
       "community": 11,
       "community_name": "Controllo Produzione Core",
-      "norm_label": "cpjiraflagticketclick()"
+      "norm_label": "cpjiraflagticketclick()",
+      "id": "src_js_produzione_core_cpjiraflagticketclick"
     },
     {
       "label": "cpOreJiraStyle()",
@@ -1350,10 +1350,10 @@
       "source_location": "L332",
       "_callable": true,
       "_origin": "ast",
-      "id": "src_js_produzione_core_cporejirastyle",
       "community": 11,
       "community_name": "Controllo Produzione Core",
-      "norm_label": "cporejirastyle()"
+      "norm_label": "cporejirastyle()",
+      "id": "src_js_produzione_core_cporejirastyle"
     },
     {
       "label": "cpRereadTicket()",
@@ -1362,10 +1362,10 @@
       "source_location": "L855",
       "_callable": true,
       "_origin": "ast",
-      "id": "src_js_produzione_core_cprereadticket",
       "community": 11,
       "community_name": "Controllo Produzione Core",
-      "norm_label": "cprereadticket()"
+      "norm_label": "cprereadticket()",
+      "id": "src_js_produzione_core_cprereadticket"
     },
     {
       "label": "cpRowToCell()",
@@ -1374,10 +1374,10 @@
       "source_location": "L74",
       "_callable": true,
       "_origin": "ast",
-      "id": "src_js_produzione_core_cprowtocell",
       "community": 11,
       "community_name": "Controllo Produzione Core",
-      "norm_label": "cprowtocell()"
+      "norm_label": "cprowtocell()",
+      "id": "src_js_produzione_core_cprowtocell"
     },
     {
       "label": "cpSaveKmTicket()",
@@ -1386,10 +1386,10 @@
       "source_location": "L768",
       "_callable": true,
       "_origin": "ast",
-      "id": "src_js_produzione_core_cpsavekmticket",
       "community": 11,
       "community_name": "Controllo Produzione Core",
-      "norm_label": "cpsavekmticket()"
+      "norm_label": "cpsavekmticket()",
+      "id": "src_js_produzione_core_cpsavekmticket"
     },
     {
       "label": "cpSumKm()",
@@ -1398,10 +1398,10 @@
       "source_location": "L56",
       "_callable": true,
       "_origin": "ast",
-      "id": "src_js_produzione_core_cpsumkm",
       "community": 11,
       "community_name": "Controllo Produzione Core",
-      "norm_label": "cpsumkm()"
+      "norm_label": "cpsumkm()",
+      "id": "src_js_produzione_core_cpsumkm"
     },
     {
       "label": "pwApplyProduzioneColors()",
@@ -1410,10 +1410,10 @@
       "source_location": "L12",
       "_callable": true,
       "_origin": "ast",
-      "id": "src_js_produzione_core_pwapplyproduzionecolors",
       "community": 11,
       "community_name": "Controllo Produzione Core",
-      "norm_label": "pwapplyproduzionecolors()"
+      "norm_label": "pwapplyproduzionecolors()",
+      "id": "src_js_produzione_core_pwapplyproduzionecolors"
     },
     {
       "label": "pwCellaVerificata()",
@@ -1422,10 +1422,10 @@
       "source_location": "L5",
       "_callable": true,
       "_origin": "ast",
-      "id": "src_js_produzione_core_pwcellaverificata",
       "community": 11,
       "community_name": "Controllo Produzione Core",
-      "norm_label": "pwcellaverificata()"
+      "norm_label": "pwcellaverificata()",
+      "id": "src_js_produzione_core_pwcellaverificata"
     },
     {
       "label": "pwControlloLoad()",
@@ -1434,10 +1434,10 @@
       "source_location": "L118",
       "_callable": true,
       "_origin": "ast",
-      "id": "src_js_produzione_core_pwcontrolloload",
       "community": 11,
       "community_name": "Controllo Produzione Core",
-      "norm_label": "pwcontrolloload()"
+      "norm_label": "pwcontrolloload()",
+      "id": "src_js_produzione_core_pwcontrolloload"
     },
     {
       "label": "pwControlloRender()",
@@ -1446,10 +1446,10 @@
       "source_location": "L155",
       "_callable": true,
       "_origin": "ast",
-      "id": "src_js_produzione_core_pwcontrollorender",
       "community": 11,
       "community_name": "Controllo Produzione Core",
-      "norm_label": "pwcontrollorender()"
+      "norm_label": "pwcontrollorender()",
+      "id": "src_js_produzione_core_pwcontrollorender"
     },
     {
       "label": "pwControlloSaveCell()",
@@ -1458,10 +1458,10 @@
       "source_location": "L660",
       "_callable": true,
       "_origin": "ast",
-      "id": "src_js_produzione_core_pwcontrollosavecell",
       "community": 11,
       "community_name": "Controllo Produzione Core",
-      "norm_label": "pwcontrollosavecell()"
+      "norm_label": "pwcontrollosavecell()",
+      "id": "src_js_produzione_core_pwcontrollosavecell"
     },
     {
       "label": "pwControlloSyncJira()",
@@ -1470,10 +1470,10 @@
       "source_location": "L372",
       "_callable": true,
       "_origin": "ast",
-      "id": "src_js_produzione_core_pwcontrollosyncjira",
       "community": 11,
       "community_name": "Controllo Produzione Core",
-      "norm_label": "pwcontrollosyncjira()"
+      "norm_label": "pwcontrollosyncjira()",
+      "id": "src_js_produzione_core_pwcontrollosyncjira"
     },
     {
       "label": "pwSyncCpDataForGrid()",
@@ -1482,10 +1482,10 @@
       "source_location": "L30",
       "_callable": true,
       "_origin": "ast",
-      "id": "src_js_produzione_core_pwsynccpdataforgrid",
       "community": 11,
       "community_name": "Controllo Produzione Core",
-      "norm_label": "pwsynccpdataforgrid()"
+      "norm_label": "pwsynccpdataforgrid()",
+      "id": "src_js_produzione_core_pwsynccpdataforgrid"
     },
     {
       "label": "distanzaLavorazione()",
@@ -5331,13 +5331,37 @@
       "label": "pwJiraBuildSubtaskItem()",
       "file_type": "code",
       "source_file": "src/js/weekly-jira-subtask.js",
-      "source_location": "L205",
+      "source_location": "L209",
       "_callable": true,
       "_origin": "ast",
       "id": "src_js_weekly_jira_subtask_pwjirabuildsubtaskitem",
       "community": 6,
       "community_name": "weekly-jira-subtask.js",
       "norm_label": "pwjirabuildsubtaskitem()"
+    },
+    {
+      "label": "pwJiraComputeOriginalEstimate()",
+      "file_type": "code",
+      "source_file": "src/js/weekly-jira-subtask.js",
+      "source_location": "L746",
+      "_callable": true,
+      "_origin": "ast",
+      "id": "src_js_weekly_jira_subtask_pwjiracomputeoriginalestimate",
+      "community": 6,
+      "community_name": "weekly-jira-subtask.js",
+      "norm_label": "pwjiracomputeoriginalestimate()"
+    },
+    {
+      "label": "pwJiraComputeProductionWeight()",
+      "file_type": "code",
+      "source_file": "src/js/weekly-jira-subtask.js",
+      "source_location": "L756",
+      "_callable": true,
+      "_origin": "ast",
+      "id": "src_js_weekly_jira_subtask_pwjiracomputeproductionweight",
+      "community": 6,
+      "community_name": "weekly-jira-subtask.js",
+      "norm_label": "pwjiracomputeproductionweight()"
     },
     {
       "label": "pwJiraCreateSubtasks()",
@@ -5367,7 +5391,7 @@
       "label": "pwJiraFetchExtraFields()",
       "file_type": "code",
       "source_file": "src/js/weekly-jira-subtask.js",
-      "source_location": "L176",
+      "source_location": "L180",
       "_callable": true,
       "_origin": "ast",
       "id": "src_js_weekly_jira_subtask_pwjirafetchextrafields",
@@ -5391,7 +5415,7 @@
       "label": "pwJiraOperatorEmail()",
       "file_type": "code",
       "source_file": "src/js/weekly-jira-subtask.js",
-      "source_location": "L200",
+      "source_location": "L204",
       "_callable": true,
       "_origin": "ast",
       "id": "src_js_weekly_jira_subtask_pwjiraoperatoremail",
@@ -5403,7 +5427,7 @@
       "label": "pwJiraResolveCognome()",
       "file_type": "code",
       "source_file": "src/js/weekly-jira-subtask.js",
-      "source_location": "L188",
+      "source_location": "L192",
       "_callable": true,
       "_origin": "ast",
       "id": "src_js_weekly_jira_subtask_pwjiraresolvecognome",
@@ -5463,7 +5487,7 @@
       "label": "pwJiraSubtaskApplyBadgesToDom()",
       "file_type": "code",
       "source_file": "src/js/weekly-jira-subtask.js",
-      "source_location": "L320",
+      "source_location": "L334",
       "_callable": true,
       "_origin": "ast",
       "id": "src_js_weekly_jira_subtask_pwjirasubtaskapplybadgestodom",
@@ -5475,7 +5499,7 @@
       "label": "pwJiraSubtaskApplyResultsToBadges()",
       "file_type": "code",
       "source_file": "src/js/weekly-jira-subtask.js",
-      "source_location": "L285",
+      "source_location": "L299",
       "_callable": true,
       "_origin": "ast",
       "id": "src_js_weekly_jira_subtask_pwjirasubtaskapplyresultstobadges",
@@ -5487,7 +5511,7 @@
       "label": "pwJiraSubtaskBadgeHtml()",
       "file_type": "code",
       "source_file": "src/js/weekly-jira-subtask.js",
-      "source_location": "L316",
+      "source_location": "L330",
       "_callable": true,
       "_origin": "ast",
       "id": "src_js_weekly_jira_subtask_pwjirasubtaskbadgehtml",
@@ -5499,7 +5523,7 @@
       "label": "pwJiraSubtaskBadgeInnerHtml()",
       "file_type": "code",
       "source_file": "src/js/weekly-jira-subtask.js",
-      "source_location": "L295",
+      "source_location": "L309",
       "_callable": true,
       "_origin": "ast",
       "id": "src_js_weekly_jira_subtask_pwjirasubtaskbadgeinnerhtml",
@@ -5511,7 +5535,7 @@
       "label": "pwJiraSubtaskBadgeRemove()",
       "file_type": "code",
       "source_file": "src/js/weekly-jira-subtask.js",
-      "source_location": "L266",
+      "source_location": "L280",
       "_callable": true,
       "_origin": "ast",
       "id": "src_js_weekly_jira_subtask_pwjirasubtaskbadgeremove",
@@ -5523,7 +5547,7 @@
       "label": "pwJiraSubtaskConfirmCreate()",
       "file_type": "code",
       "source_file": "src/js/weekly-jira-subtask.js",
-      "source_location": "L928",
+      "source_location": "L996",
       "_callable": true,
       "_origin": "ast",
       "id": "src_js_weekly_jira_subtask_pwjirasubtaskconfirmcreate",
@@ -5535,7 +5559,7 @@
       "label": "pwJiraSubtaskExtraFieldsRecapHtml()",
       "file_type": "code",
       "source_file": "src/js/weekly-jira-subtask.js",
-      "source_location": "L839",
+      "source_location": "L907",
       "_callable": true,
       "_origin": "ast",
       "id": "src_js_weekly_jira_subtask_pwjirasubtaskextrafieldsrecaphtml",
@@ -5547,7 +5571,7 @@
       "label": "pwJiraSubtaskInit()",
       "file_type": "code",
       "source_file": "src/js/weekly-jira-subtask.js",
-      "source_location": "L333",
+      "source_location": "L347",
       "_callable": true,
       "_origin": "ast",
       "id": "src_js_weekly_jira_subtask_pwjirasubtaskinit",
@@ -5559,7 +5583,7 @@
       "label": "pwJiraSubtaskIsResolved()",
       "file_type": "code",
       "source_file": "src/js/weekly-jira-subtask.js",
-      "source_location": "L262",
+      "source_location": "L276",
       "_callable": true,
       "_origin": "ast",
       "id": "src_js_weekly_jira_subtask_pwjirasubtaskisresolved",
@@ -5571,7 +5595,7 @@
       "label": "pwJiraSubtaskMarkBadge()",
       "file_type": "code",
       "source_file": "src/js/weekly-jira-subtask.js",
-      "source_location": "L238",
+      "source_location": "L252",
       "_callable": true,
       "_origin": "ast",
       "id": "src_js_weekly_jira_subtask_pwjirasubtaskmarkbadge",
@@ -5583,7 +5607,7 @@
       "label": "pwJiraSubtaskMarkMissingEmail()",
       "file_type": "code",
       "source_file": "src/js/weekly-jira-subtask.js",
-      "source_location": "L252",
+      "source_location": "L266",
       "_callable": true,
       "_origin": "ast",
       "id": "src_js_weekly_jira_subtask_pwjirasubtaskmarkmissingemail",
@@ -5595,7 +5619,7 @@
       "label": "pwJiraSubtaskOpenComuniModal()",
       "file_type": "code",
       "source_file": "src/js/weekly-jira-subtask.js",
-      "source_location": "L388",
+      "source_location": "L402",
       "_callable": true,
       "_origin": "ast",
       "id": "src_js_weekly_jira_subtask_pwjirasubtaskopencomunimodal",
@@ -5607,7 +5631,7 @@
       "label": "pwJiraSubtaskCheckExisting()",
       "file_type": "code",
       "source_file": "src/js/weekly-jira-subtask.js",
-      "source_location": "L515",
+      "source_location": "L529",
       "_callable": true,
       "_origin": "ast",
       "id": "src_js_weekly_jira_subtask_pwjirasubtaskopencomunimodal_pwjirasubtaskcheckexisting",
@@ -5619,7 +5643,7 @@
       "label": "rowHtml()",
       "file_type": "code",
       "source_file": "src/js/weekly-jira-subtask.js",
-      "source_location": "L408",
+      "source_location": "L422",
       "_callable": true,
       "_origin": "ast",
       "id": "src_js_weekly_jira_subtask_pwjirasubtaskopencomunimodal_rowhtml",
@@ -5631,7 +5655,7 @@
       "label": "setSquadraSkip()",
       "file_type": "code",
       "source_file": "src/js/weekly-jira-subtask.js",
-      "source_location": "L628",
+      "source_location": "L642",
       "_callable": true,
       "_origin": "ast",
       "id": "src_js_weekly_jira_subtask_pwjirasubtaskopencomunimodal_setsquadraskip",
@@ -5643,7 +5667,7 @@
       "label": "statusElFor()",
       "file_type": "code",
       "source_file": "src/js/weekly-jira-subtask.js",
-      "source_location": "L507",
+      "source_location": "L521",
       "_callable": true,
       "_origin": "ast",
       "id": "src_js_weekly_jira_subtask_pwjirasubtaskopencomunimodal_statuselfor",
@@ -5655,7 +5679,7 @@
       "label": "taskTriggerFor()",
       "file_type": "code",
       "source_file": "src/js/weekly-jira-subtask.js",
-      "source_location": "L504",
+      "source_location": "L518",
       "_callable": true,
       "_origin": "ast",
       "id": "src_js_weekly_jira_subtask_pwjirasubtaskopencomunimodal_tasktriggerfor",
@@ -5667,7 +5691,7 @@
       "label": "pwJiraSubtaskOpenExtraFieldsModal()",
       "file_type": "code",
       "source_file": "src/js/weekly-jira-subtask.js",
-      "source_location": "L734",
+      "source_location": "L774",
       "_callable": true,
       "_origin": "ast",
       "id": "src_js_weekly_jira_subtask_pwjirasubtaskopenextrafieldsmodal",
@@ -5679,7 +5703,7 @@
       "label": "pwJiraSubtaskOpenSelectItemsModal()",
       "file_type": "code",
       "source_file": "src/js/weekly-jira-subtask.js",
-      "source_location": "L675",
+      "source_location": "L689",
       "_callable": true,
       "_origin": "ast",
       "id": "src_js_weekly_jira_subtask_pwjirasubtaskopenselectitemsmodal",
@@ -5691,7 +5715,7 @@
       "label": "pwJiraSubtaskPreview()",
       "file_type": "code",
       "source_file": "src/js/weekly-jira-subtask.js",
-      "source_location": "L858",
+      "source_location": "L926",
       "_callable": true,
       "_origin": "ast",
       "id": "src_js_weekly_jira_subtask_pwjirasubtaskpreview",
@@ -5703,7 +5727,7 @@
       "label": "pwJiraSubtaskRenderPreview()",
       "file_type": "code",
       "source_file": "src/js/weekly-jira-subtask.js",
-      "source_location": "L878",
+      "source_location": "L946",
       "_callable": true,
       "_origin": "ast",
       "id": "src_js_weekly_jira_subtask_pwjirasubtaskrenderpreview",
@@ -7006,10 +7030,10 @@
       "source_file": "src/js/produzione-core.js",
       "source_location": "L1",
       "_origin": "ast",
-      "id": "src_js_produzione_core",
       "community": 11,
       "community_name": "Controllo Produzione Core",
-      "norm_label": "produzione-core.js"
+      "norm_label": "produzione-core.js",
+      "id": "src_js_produzione_core"
     },
     {
       "label": "_cpCollapsedComm",
@@ -7017,10 +7041,10 @@
       "source_file": "src/js/produzione-core.js",
       "source_location": "L51",
       "_origin": "ast",
-      "id": "src_js_produzione_core_cpcollapsedcomm",
       "community": 11,
       "community_name": "Controllo Produzione Core",
-      "norm_label": "_cpcollapsedcomm"
+      "norm_label": "_cpcollapsedcomm",
+      "id": "src_js_produzione_core_cpcollapsedcomm"
     },
     {
       "label": "_cpCollapsedSq",
@@ -7028,10 +7052,10 @@
       "source_file": "src/js/produzione-core.js",
       "source_location": "L52",
       "_origin": "ast",
-      "id": "src_js_produzione_core_cpcollapsedsq",
       "community": 11,
       "community_name": "Controllo Produzione Core",
-      "norm_label": "_cpcollapsedsq"
+      "norm_label": "_cpcollapsedsq",
+      "id": "src_js_produzione_core_cpcollapsedsq"
     },
     {
       "label": "_cpData",
@@ -7039,10 +7063,10 @@
       "source_file": "src/js/produzione-core.js",
       "source_location": "L2",
       "_origin": "ast",
-      "id": "src_js_produzione_core_cpdata",
       "community": 11,
       "community_name": "Controllo Produzione Core",
-      "norm_label": "_cpdata"
+      "norm_label": "_cpdata",
+      "id": "src_js_produzione_core_cpdata"
     },
     {
       "label": "_pwCollapsedComm",
@@ -7050,10 +7074,10 @@
       "source_file": "src/js/produzione-core.js",
       "source_location": "L49",
       "_origin": "ast",
-      "id": "src_js_produzione_core_pwcollapsedcomm",
       "community": 11,
       "community_name": "Controllo Produzione Core",
-      "norm_label": "_pwcollapsedcomm"
+      "norm_label": "_pwcollapsedcomm",
+      "id": "src_js_produzione_core_pwcollapsedcomm"
     },
     {
       "label": "_pwCollapsedSq",
@@ -7061,10 +7085,10 @@
       "source_file": "src/js/produzione-core.js",
       "source_location": "L50",
       "_origin": "ast",
-      "id": "src_js_produzione_core_pwcollapsedsq",
       "community": 11,
       "community_name": "Controllo Produzione Core",
-      "norm_label": "_pwcollapsedsq"
+      "norm_label": "_pwcollapsedsq",
+      "id": "src_js_produzione_core_pwcollapsedsq"
     },
     {
       "label": "config.js",
@@ -8004,7 +8028,7 @@
       "label": "PW_JIRA_EXTRA_FIELD_LABELS",
       "file_type": "code",
       "source_file": "src/js/weekly-jira-subtask.js",
-      "source_location": "L822",
+      "source_location": "L890",
       "_origin": "ast",
       "id": "src_js_weekly_jira_subtask_pw_jira_extra_field_labels",
       "community": 6,
@@ -12733,9 +12757,9 @@
       "source_location": "L97",
       "weight": 1.0,
       "_origin": "ast",
+      "confidence_score": 1.0,
       "source": "src_js_produzione_core_cpbuildrecord",
-      "target": "src_js_produzione_core_cpsumkm",
-      "confidence_score": 1.0
+      "target": "src_js_produzione_core_cpsumkm"
     },
     {
       "relation": "calls",
@@ -12745,9 +12769,9 @@
       "source_location": "L763",
       "weight": 1.0,
       "_origin": "ast",
+      "confidence_score": 1.0,
       "source": "src_js_produzione_core_cpjiraflagclick",
-      "target": "src_js_produzione_core_pwcontrollorender",
-      "confidence_score": 1.0
+      "target": "src_js_produzione_core_pwcontrollorender"
     },
     {
       "relation": "calls",
@@ -12757,9 +12781,9 @@
       "source_location": "L764",
       "weight": 1.0,
       "_origin": "ast",
+      "confidence_score": 1.0,
       "source": "src_js_produzione_core_cpjiraflagclick",
-      "target": "src_js_produzione_core_pwapplyproduzionecolors",
-      "confidence_score": 1.0
+      "target": "src_js_produzione_core_pwapplyproduzionecolors"
     },
     {
       "relation": "calls",
@@ -12769,9 +12793,9 @@
       "source_location": "L822",
       "weight": 1.0,
       "_origin": "ast",
+      "confidence_score": 1.0,
       "source": "src_js_produzione_core_cpjiraflagticketclick",
-      "target": "src_js_produzione_core_cpsumkm",
-      "confidence_score": 1.0
+      "target": "src_js_produzione_core_cpsumkm"
     },
     {
       "relation": "calls",
@@ -12781,9 +12805,9 @@
       "source_location": "L846",
       "weight": 1.0,
       "_origin": "ast",
+      "confidence_score": 1.0,
       "source": "src_js_produzione_core_cpjiraflagticketclick",
-      "target": "src_js_produzione_core_pwcontrollorender",
-      "confidence_score": 1.0
+      "target": "src_js_produzione_core_pwcontrollorender"
     },
     {
       "relation": "calls",
@@ -12793,9 +12817,9 @@
       "source_location": "L847",
       "weight": 1.0,
       "_origin": "ast",
+      "confidence_score": 1.0,
       "source": "src_js_produzione_core_cpjiraflagticketclick",
-      "target": "src_js_produzione_core_pwapplyproduzionecolors",
-      "confidence_score": 1.0
+      "target": "src_js_produzione_core_pwapplyproduzionecolors"
     },
     {
       "relation": "calls",
@@ -12805,9 +12829,9 @@
       "source_location": "L875",
       "weight": 1.0,
       "_origin": "ast",
+      "confidence_score": 1.0,
       "source": "src_js_produzione_core_cprereadticket",
-      "target": "src_js_produzione_core_cpedgeerr",
-      "confidence_score": 1.0
+      "target": "src_js_produzione_core_cpedgeerr"
     },
     {
       "relation": "calls",
@@ -12817,9 +12841,9 @@
       "source_location": "L891",
       "weight": 1.0,
       "_origin": "ast",
+      "confidence_score": 1.0,
       "source": "src_js_produzione_core_cprereadticket",
-      "target": "src_js_produzione_core_cpsumkm",
-      "confidence_score": 1.0
+      "target": "src_js_produzione_core_cpsumkm"
     },
     {
       "relation": "calls",
@@ -12829,9 +12853,9 @@
       "source_location": "L893",
       "weight": 1.0,
       "_origin": "ast",
+      "confidence_score": 1.0,
       "source": "src_js_produzione_core_cprereadticket",
-      "target": "src_js_produzione_core_cpbuildrecord",
-      "confidence_score": 1.0
+      "target": "src_js_produzione_core_cpbuildrecord"
     },
     {
       "relation": "calls",
@@ -12841,9 +12865,9 @@
       "source_location": "L893",
       "weight": 1.0,
       "_origin": "ast",
+      "confidence_score": 1.0,
       "source": "src_js_produzione_core_cprereadticket",
-      "target": "src_js_produzione_core_cpdataiso",
-      "confidence_score": 1.0
+      "target": "src_js_produzione_core_cpdataiso"
     },
     {
       "relation": "calls",
@@ -12853,9 +12877,9 @@
       "source_location": "L900",
       "weight": 1.0,
       "_origin": "ast",
+      "confidence_score": 1.0,
       "source": "src_js_produzione_core_cprereadticket",
-      "target": "src_js_produzione_core_pwcontrollorender",
-      "confidence_score": 1.0
+      "target": "src_js_produzione_core_pwcontrollorender"
     },
     {
       "relation": "calls",
@@ -12865,9 +12889,9 @@
       "source_location": "L901",
       "weight": 1.0,
       "_origin": "ast",
+      "confidence_score": 1.0,
       "source": "src_js_produzione_core_cprereadticket",
-      "target": "src_js_produzione_core_pwapplyproduzionecolors",
-      "confidence_score": 1.0
+      "target": "src_js_produzione_core_pwapplyproduzionecolors"
     },
     {
       "relation": "calls",
@@ -12877,9 +12901,9 @@
       "source_location": "L779",
       "weight": 1.0,
       "_origin": "ast",
+      "confidence_score": 1.0,
       "source": "src_js_produzione_core_cpsavekmticket",
-      "target": "src_js_produzione_core_cpsumkm",
-      "confidence_score": 1.0
+      "target": "src_js_produzione_core_cpsumkm"
     },
     {
       "relation": "calls",
@@ -12889,9 +12913,9 @@
       "source_location": "L780",
       "weight": 1.0,
       "_origin": "ast",
+      "confidence_score": 1.0,
       "source": "src_js_produzione_core_cpsavekmticket",
-      "target": "src_js_produzione_core_pwapplyproduzionecolors",
-      "confidence_score": 1.0
+      "target": "src_js_produzione_core_pwapplyproduzionecolors"
     },
     {
       "relation": "calls",
@@ -12901,9 +12925,9 @@
       "source_location": "L784",
       "weight": 1.0,
       "_origin": "ast",
+      "confidence_score": 1.0,
       "source": "src_js_produzione_core_cpsavekmticket",
-      "target": "src_js_produzione_core_cpbuildrecord",
-      "confidence_score": 1.0
+      "target": "src_js_produzione_core_cpbuildrecord"
     },
     {
       "relation": "calls",
@@ -12913,9 +12937,9 @@
       "source_location": "L784",
       "weight": 1.0,
       "_origin": "ast",
+      "confidence_score": 1.0,
       "source": "src_js_produzione_core_cpsavekmticket",
-      "target": "src_js_produzione_core_cpdataiso",
-      "confidence_score": 1.0
+      "target": "src_js_produzione_core_cpdataiso"
     },
     {
       "relation": "calls",
@@ -12925,9 +12949,9 @@
       "source_location": "L25",
       "weight": 1.0,
       "_origin": "ast",
+      "confidence_score": 1.0,
       "source": "src_js_produzione_core_pwapplyproduzionecolors",
-      "target": "src_js_produzione_core_pwcellaverificata",
-      "confidence_score": 1.0
+      "target": "src_js_produzione_core_pwcellaverificata"
     },
     {
       "relation": "calls",
@@ -12937,9 +12961,9 @@
       "source_location": "L139",
       "weight": 1.0,
       "_origin": "ast",
+      "confidence_score": 1.0,
       "source": "src_js_produzione_core_pwcontrolloload",
-      "target": "src_js_produzione_core_cprowtocell",
-      "confidence_score": 1.0
+      "target": "src_js_produzione_core_cprowtocell"
     },
     {
       "relation": "calls",
@@ -12949,9 +12973,9 @@
       "source_location": "L152",
       "weight": 1.0,
       "_origin": "ast",
+      "confidence_score": 1.0,
       "source": "src_js_produzione_core_pwcontrolloload",
-      "target": "src_js_produzione_core_pwcontrollorender",
-      "confidence_score": 1.0
+      "target": "src_js_produzione_core_pwcontrollorender"
     },
     {
       "relation": "calls",
@@ -12961,9 +12985,9 @@
       "source_location": "L287",
       "weight": 1.0,
       "_origin": "ast",
+      "confidence_score": 1.0,
       "source": "src_js_produzione_core_pwcontrollorender",
-      "target": "src_js_produzione_core_cporejirastyle",
-      "confidence_score": 1.0
+      "target": "src_js_produzione_core_cporejirastyle"
     },
     {
       "relation": "calls",
@@ -12973,9 +12997,9 @@
       "source_location": "L677",
       "weight": 1.0,
       "_origin": "ast",
+      "confidence_score": 1.0,
       "source": "src_js_produzione_core_pwcontrollosavecell",
-      "target": "src_js_produzione_core_pwapplyproduzionecolors",
-      "confidence_score": 1.0
+      "target": "src_js_produzione_core_pwapplyproduzionecolors"
     },
     {
       "relation": "calls",
@@ -12985,9 +13009,9 @@
       "source_location": "L448",
       "weight": 1.0,
       "_origin": "ast",
+      "confidence_score": 1.0,
       "source": "src_js_produzione_core_pwcontrollosyncjira",
-      "target": "src_js_produzione_core_cpedgeerr",
-      "confidence_score": 1.0
+      "target": "src_js_produzione_core_cpedgeerr"
     },
     {
       "relation": "calls",
@@ -12997,9 +13021,9 @@
       "source_location": "L468",
       "weight": 1.0,
       "_origin": "ast",
+      "confidence_score": 1.0,
       "source": "src_js_produzione_core_pwcontrollosyncjira",
-      "target": "src_js_produzione_core_cpbuildrecord",
-      "confidence_score": 1.0
+      "target": "src_js_produzione_core_cpbuildrecord"
     },
     {
       "relation": "calls",
@@ -13009,9 +13033,9 @@
       "source_location": "L521",
       "weight": 1.0,
       "_origin": "ast",
+      "confidence_score": 1.0,
       "source": "src_js_produzione_core_pwcontrollosyncjira",
-      "target": "src_js_produzione_core_cpsumkm",
-      "confidence_score": 1.0
+      "target": "src_js_produzione_core_cpsumkm"
     },
     {
       "relation": "calls",
@@ -13021,9 +13045,9 @@
       "source_location": "L634",
       "weight": 1.0,
       "_origin": "ast",
+      "confidence_score": 1.0,
       "source": "src_js_produzione_core_pwcontrollosyncjira",
-      "target": "src_js_produzione_core_pwcontrollorender",
-      "confidence_score": 1.0
+      "target": "src_js_produzione_core_pwcontrollorender"
     },
     {
       "relation": "calls",
@@ -13033,9 +13057,9 @@
       "source_location": "L635",
       "weight": 1.0,
       "_origin": "ast",
+      "confidence_score": 1.0,
       "source": "src_js_produzione_core_pwcontrollosyncjira",
-      "target": "src_js_produzione_core_pwapplyproduzionecolors",
-      "confidence_score": 1.0
+      "target": "src_js_produzione_core_pwapplyproduzionecolors"
     },
     {
       "relation": "calls",
@@ -13045,9 +13069,9 @@
       "source_location": "L31",
       "weight": 1.0,
       "_origin": "ast",
+      "confidence_score": 1.0,
       "source": "src_js_produzione_core_pwsynccpdataforgrid",
-      "target": "src_js_produzione_core_pwapplyproduzionecolors",
-      "confidence_score": 1.0
+      "target": "src_js_produzione_core_pwapplyproduzionecolors"
     },
     {
       "relation": "calls",
@@ -13057,9 +13081,9 @@
       "source_location": "L42",
       "weight": 1.0,
       "_origin": "ast",
+      "confidence_score": 1.0,
       "source": "src_js_produzione_core_pwsynccpdataforgrid",
-      "target": "src_js_produzione_core_cprowtocell",
-      "confidence_score": 1.0
+      "target": "src_js_produzione_core_cprowtocell"
     },
     {
       "relation": "calls",
@@ -14218,7 +14242,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/js/weekly-jira-subtask.js",
-      "source_location": "L207",
+      "source_location": "L211",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_js_weekly_jira_subtask_pwjirabuildsubtaskitem",
@@ -14230,7 +14254,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/js/weekly-jira-subtask.js",
-      "source_location": "L209",
+      "source_location": "L213",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_js_weekly_jira_subtask_pwjirabuildsubtaskitem",
@@ -14302,7 +14326,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/js/weekly-jira-subtask.js",
-      "source_location": "L328",
+      "source_location": "L342",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_js_weekly_jira_subtask_pwjirasubtaskapplybadgestodom",
@@ -14314,7 +14338,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/js/weekly-jira-subtask.js",
-      "source_location": "L290",
+      "source_location": "L304",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_js_weekly_jira_subtask_pwjirasubtaskapplyresultstobadges",
@@ -14326,7 +14350,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/js/weekly-jira-subtask.js",
-      "source_location": "L317",
+      "source_location": "L331",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_js_weekly_jira_subtask_pwjirasubtaskbadgehtml",
@@ -14338,7 +14362,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/js/weekly-jira-subtask.js",
-      "source_location": "L272",
+      "source_location": "L286",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_js_weekly_jira_subtask_pwjirasubtaskbadgeremove",
@@ -14350,7 +14374,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/js/weekly-jira-subtask.js",
-      "source_location": "L937",
+      "source_location": "L1005",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_js_weekly_jira_subtask_pwjirasubtaskconfirmcreate",
@@ -14362,7 +14386,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/js/weekly-jira-subtask.js",
-      "source_location": "L953",
+      "source_location": "L1021",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_js_weekly_jira_subtask_pwjirasubtaskconfirmcreate",
@@ -14374,7 +14398,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/js/weekly-jira-subtask.js",
-      "source_location": "L376",
+      "source_location": "L390",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_js_weekly_jira_subtask_pwjirasubtaskinit",
@@ -14386,7 +14410,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/js/weekly-jira-subtask.js",
-      "source_location": "L245",
+      "source_location": "L259",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_js_weekly_jira_subtask_pwjirasubtaskmarkbadge",
@@ -14398,7 +14422,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/js/weekly-jira-subtask.js",
-      "source_location": "L253",
+      "source_location": "L267",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_js_weekly_jira_subtask_pwjirasubtaskmarkmissingemail",
@@ -14410,7 +14434,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/js/weekly-jira-subtask.js",
-      "source_location": "L569",
+      "source_location": "L583",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_js_weekly_jira_subtask_pwjirasubtaskopencomunimodal",
@@ -14422,7 +14446,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/js/weekly-jira-subtask.js",
-      "source_location": "L570",
+      "source_location": "L584",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_js_weekly_jira_subtask_pwjirasubtaskopencomunimodal",
@@ -14434,7 +14458,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/js/weekly-jira-subtask.js",
-      "source_location": "L597",
+      "source_location": "L611",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_js_weekly_jira_subtask_pwjirasubtaskopencomunimodal",
@@ -14446,7 +14470,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/js/weekly-jira-subtask.js",
-      "source_location": "L658",
+      "source_location": "L672",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_js_weekly_jira_subtask_pwjirasubtaskopencomunimodal",
@@ -14458,7 +14482,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/js/weekly-jira-subtask.js",
-      "source_location": "L660",
+      "source_location": "L674",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_js_weekly_jira_subtask_pwjirasubtaskopencomunimodal",
@@ -14470,7 +14494,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/js/weekly-jira-subtask.js",
-      "source_location": "L665",
+      "source_location": "L679",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_js_weekly_jira_subtask_pwjirasubtaskopencomunimodal",
@@ -14482,7 +14506,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/js/weekly-jira-subtask.js",
-      "source_location": "L516",
+      "source_location": "L530",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_js_weekly_jira_subtask_pwjirasubtaskopencomunimodal_pwjirasubtaskcheckexisting",
@@ -14494,7 +14518,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/js/weekly-jira-subtask.js",
-      "source_location": "L529",
+      "source_location": "L543",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_js_weekly_jira_subtask_pwjirasubtaskopencomunimodal_pwjirasubtaskcheckexisting",
@@ -14506,7 +14530,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/js/weekly-jira-subtask.js",
-      "source_location": "L536",
+      "source_location": "L550",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_js_weekly_jira_subtask_pwjirasubtaskopencomunimodal_pwjirasubtaskcheckexisting",
@@ -14518,7 +14542,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/js/weekly-jira-subtask.js",
-      "source_location": "L544",
+      "source_location": "L558",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_js_weekly_jira_subtask_pwjirasubtaskopencomunimodal_pwjirasubtaskcheckexisting",
@@ -14530,7 +14554,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/js/weekly-jira-subtask.js",
-      "source_location": "L546",
+      "source_location": "L560",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_js_weekly_jira_subtask_pwjirasubtaskopencomunimodal_pwjirasubtaskcheckexisting",
@@ -14542,7 +14566,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/js/weekly-jira-subtask.js",
-      "source_location": "L410",
+      "source_location": "L424",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_js_weekly_jira_subtask_pwjirasubtaskopencomunimodal_rowhtml",
@@ -14554,7 +14578,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/js/weekly-jira-subtask.js",
-      "source_location": "L416",
+      "source_location": "L430",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_js_weekly_jira_subtask_pwjirasubtaskopencomunimodal_rowhtml",
@@ -14566,7 +14590,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/js/weekly-jira-subtask.js",
-      "source_location": "L742",
+      "source_location": "L782",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_js_weekly_jira_subtask_pwjirasubtaskopenextrafieldsmodal",
@@ -14578,7 +14602,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/js/weekly-jira-subtask.js",
-      "source_location": "L750",
+      "source_location": "L799",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_js_weekly_jira_subtask_pwjirasubtaskopenextrafieldsmodal",
@@ -14590,7 +14614,31 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/js/weekly-jira-subtask.js",
-      "source_location": "L684",
+      "source_location": "L809",
+      "weight": 1.0,
+      "_origin": "ast",
+      "source": "src_js_weekly_jira_subtask_pwjirasubtaskopenextrafieldsmodal",
+      "target": "src_js_weekly_jira_subtask_pwjiracomputeoriginalestimate",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "src/js/weekly-jira-subtask.js",
+      "source_location": "L811",
+      "weight": 1.0,
+      "_origin": "ast",
+      "source": "src_js_weekly_jira_subtask_pwjirasubtaskopenextrafieldsmodal",
+      "target": "src_js_weekly_jira_subtask_pwjiracomputeproductionweight",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "src/js/weekly-jira-subtask.js",
+      "source_location": "L698",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_js_weekly_jira_subtask_pwjirasubtaskopenselectitemsmodal",
@@ -14602,7 +14650,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/js/weekly-jira-subtask.js",
-      "source_location": "L724",
+      "source_location": "L738",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_js_weekly_jira_subtask_pwjirasubtaskopenselectitemsmodal",
@@ -14614,7 +14662,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/js/weekly-jira-subtask.js",
-      "source_location": "L867",
+      "source_location": "L935",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_js_weekly_jira_subtask_pwjirasubtaskpreview",
@@ -14626,7 +14674,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/js/weekly-jira-subtask.js",
-      "source_location": "L874",
+      "source_location": "L942",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_js_weekly_jira_subtask_pwjirasubtaskpreview",
@@ -14638,7 +14686,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/js/weekly-jira-subtask.js",
-      "source_location": "L875",
+      "source_location": "L943",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_js_weekly_jira_subtask_pwjirasubtaskpreview",
@@ -14650,7 +14698,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/js/weekly-jira-subtask.js",
-      "source_location": "L881",
+      "source_location": "L949",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_js_weekly_jira_subtask_pwjirasubtaskrenderpreview",
@@ -14662,7 +14710,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/js/weekly-jira-subtask.js",
-      "source_location": "L919",
+      "source_location": "L987",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_js_weekly_jira_subtask_pwjirasubtaskrenderpreview",
@@ -17998,7 +18046,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/js/weekly-jira-subtask.js",
-      "source_location": "L408",
+      "source_location": "L422",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_js_weekly_jira_subtask_pwjirasubtaskopencomunimodal",
@@ -18010,7 +18058,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/js/weekly-jira-subtask.js",
-      "source_location": "L504",
+      "source_location": "L518",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_js_weekly_jira_subtask_pwjirasubtaskopencomunimodal",
@@ -18022,7 +18070,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/js/weekly-jira-subtask.js",
-      "source_location": "L515",
+      "source_location": "L529",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_js_weekly_jira_subtask_pwjirasubtaskopencomunimodal",
@@ -18034,7 +18082,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/js/weekly-jira-subtask.js",
-      "source_location": "L628",
+      "source_location": "L642",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_js_weekly_jira_subtask_pwjirasubtaskopencomunimodal",
@@ -20263,9 +20311,9 @@
       "source_location": "L118",
       "weight": 1.0,
       "_origin": "ast",
+      "confidence_score": 1.0,
       "source": "src_js_produzione_core",
-      "target": "src_js_produzione_core_pwcontrolloload",
-      "confidence_score": 1.0
+      "target": "src_js_produzione_core_pwcontrolloload"
     },
     {
       "relation": "contains",
@@ -20274,9 +20322,9 @@
       "source_location": "L12",
       "weight": 1.0,
       "_origin": "ast",
+      "confidence_score": 1.0,
       "source": "src_js_produzione_core",
-      "target": "src_js_produzione_core_pwapplyproduzionecolors",
-      "confidence_score": 1.0
+      "target": "src_js_produzione_core_pwapplyproduzionecolors"
     },
     {
       "relation": "contains",
@@ -20285,9 +20333,9 @@
       "source_location": "L155",
       "weight": 1.0,
       "_origin": "ast",
+      "confidence_score": 1.0,
       "source": "src_js_produzione_core",
-      "target": "src_js_produzione_core_pwcontrollorender",
-      "confidence_score": 1.0
+      "target": "src_js_produzione_core_pwcontrollorender"
     },
     {
       "relation": "contains",
@@ -20296,9 +20344,9 @@
       "source_location": "L2",
       "weight": 1.0,
       "_origin": "ast",
+      "confidence_score": 1.0,
       "source": "src_js_produzione_core",
-      "target": "src_js_produzione_core_cpdata",
-      "confidence_score": 1.0
+      "target": "src_js_produzione_core_cpdata"
     },
     {
       "relation": "contains",
@@ -20307,9 +20355,9 @@
       "source_location": "L30",
       "weight": 1.0,
       "_origin": "ast",
+      "confidence_score": 1.0,
       "source": "src_js_produzione_core",
-      "target": "src_js_produzione_core_pwsynccpdataforgrid",
-      "confidence_score": 1.0
+      "target": "src_js_produzione_core_pwsynccpdataforgrid"
     },
     {
       "relation": "contains",
@@ -20318,9 +20366,9 @@
       "source_location": "L313",
       "weight": 1.0,
       "_origin": "ast",
+      "confidence_score": 1.0,
       "source": "src_js_produzione_core",
-      "target": "src_js_produzione_core_cpdelta",
-      "confidence_score": 1.0
+      "target": "src_js_produzione_core_cpdelta"
     },
     {
       "relation": "contains",
@@ -20329,9 +20377,9 @@
       "source_location": "L332",
       "weight": 1.0,
       "_origin": "ast",
+      "confidence_score": 1.0,
       "source": "src_js_produzione_core",
-      "target": "src_js_produzione_core_cporejirastyle",
-      "confidence_score": 1.0
+      "target": "src_js_produzione_core_cporejirastyle"
     },
     {
       "relation": "contains",
@@ -20340,9 +20388,9 @@
       "source_location": "L355",
       "weight": 1.0,
       "_origin": "ast",
+      "confidence_score": 1.0,
       "source": "src_js_produzione_core",
-      "target": "src_js_produzione_core_cpedgeerr",
-      "confidence_score": 1.0
+      "target": "src_js_produzione_core_cpedgeerr"
     },
     {
       "relation": "contains",
@@ -20351,9 +20399,9 @@
       "source_location": "L372",
       "weight": 1.0,
       "_origin": "ast",
+      "confidence_score": 1.0,
       "source": "src_js_produzione_core",
-      "target": "src_js_produzione_core_pwcontrollosyncjira",
-      "confidence_score": 1.0
+      "target": "src_js_produzione_core_pwcontrollosyncjira"
     },
     {
       "relation": "contains",
@@ -20362,9 +20410,9 @@
       "source_location": "L49",
       "weight": 1.0,
       "_origin": "ast",
+      "confidence_score": 1.0,
       "source": "src_js_produzione_core",
-      "target": "src_js_produzione_core_pwcollapsedcomm",
-      "confidence_score": 1.0
+      "target": "src_js_produzione_core_pwcollapsedcomm"
     },
     {
       "relation": "contains",
@@ -20373,9 +20421,9 @@
       "source_location": "L5",
       "weight": 1.0,
       "_origin": "ast",
+      "confidence_score": 1.0,
       "source": "src_js_produzione_core",
-      "target": "src_js_produzione_core_pwcellaverificata",
-      "confidence_score": 1.0
+      "target": "src_js_produzione_core_pwcellaverificata"
     },
     {
       "relation": "contains",
@@ -20384,9 +20432,9 @@
       "source_location": "L50",
       "weight": 1.0,
       "_origin": "ast",
+      "confidence_score": 1.0,
       "source": "src_js_produzione_core",
-      "target": "src_js_produzione_core_pwcollapsedsq",
-      "confidence_score": 1.0
+      "target": "src_js_produzione_core_pwcollapsedsq"
     },
     {
       "relation": "contains",
@@ -20395,9 +20443,9 @@
       "source_location": "L51",
       "weight": 1.0,
       "_origin": "ast",
+      "confidence_score": 1.0,
       "source": "src_js_produzione_core",
-      "target": "src_js_produzione_core_cpcollapsedcomm",
-      "confidence_score": 1.0
+      "target": "src_js_produzione_core_cpcollapsedcomm"
     },
     {
       "relation": "contains",
@@ -20406,9 +20454,9 @@
       "source_location": "L52",
       "weight": 1.0,
       "_origin": "ast",
+      "confidence_score": 1.0,
       "source": "src_js_produzione_core",
-      "target": "src_js_produzione_core_cpcollapsedsq",
-      "confidence_score": 1.0
+      "target": "src_js_produzione_core_cpcollapsedsq"
     },
     {
       "relation": "contains",
@@ -20417,9 +20465,9 @@
       "source_location": "L56",
       "weight": 1.0,
       "_origin": "ast",
+      "confidence_score": 1.0,
       "source": "src_js_produzione_core",
-      "target": "src_js_produzione_core_cpsumkm",
-      "confidence_score": 1.0
+      "target": "src_js_produzione_core_cpsumkm"
     },
     {
       "relation": "contains",
@@ -20428,9 +20476,9 @@
       "source_location": "L64",
       "weight": 1.0,
       "_origin": "ast",
+      "confidence_score": 1.0,
       "source": "src_js_produzione_core",
-      "target": "src_js_produzione_core_cpdataiso",
-      "confidence_score": 1.0
+      "target": "src_js_produzione_core_cpdataiso"
     },
     {
       "relation": "contains",
@@ -20439,9 +20487,9 @@
       "source_location": "L660",
       "weight": 1.0,
       "_origin": "ast",
+      "confidence_score": 1.0,
       "source": "src_js_produzione_core",
-      "target": "src_js_produzione_core_pwcontrollosavecell",
-      "confidence_score": 1.0
+      "target": "src_js_produzione_core_pwcontrollosavecell"
     },
     {
       "relation": "contains",
@@ -20450,9 +20498,9 @@
       "source_location": "L725",
       "weight": 1.0,
       "_origin": "ast",
+      "confidence_score": 1.0,
       "source": "src_js_produzione_core",
-      "target": "src_js_produzione_core_cpjiraflagclick",
-      "confidence_score": 1.0
+      "target": "src_js_produzione_core_cpjiraflagclick"
     },
     {
       "relation": "contains",
@@ -20461,9 +20509,9 @@
       "source_location": "L74",
       "weight": 1.0,
       "_origin": "ast",
+      "confidence_score": 1.0,
       "source": "src_js_produzione_core",
-      "target": "src_js_produzione_core_cprowtocell",
-      "confidence_score": 1.0
+      "target": "src_js_produzione_core_cprowtocell"
     },
     {
       "relation": "contains",
@@ -20472,9 +20520,9 @@
       "source_location": "L768",
       "weight": 1.0,
       "_origin": "ast",
+      "confidence_score": 1.0,
       "source": "src_js_produzione_core",
-      "target": "src_js_produzione_core_cpsavekmticket",
-      "confidence_score": 1.0
+      "target": "src_js_produzione_core_cpsavekmticket"
     },
     {
       "relation": "contains",
@@ -20483,9 +20531,9 @@
       "source_location": "L798",
       "weight": 1.0,
       "_origin": "ast",
+      "confidence_score": 1.0,
       "source": "src_js_produzione_core",
-      "target": "src_js_produzione_core_cpjiraflagticketclick",
-      "confidence_score": 1.0
+      "target": "src_js_produzione_core_cpjiraflagticketclick"
     },
     {
       "relation": "contains",
@@ -20494,9 +20542,9 @@
       "source_location": "L855",
       "weight": 1.0,
       "_origin": "ast",
+      "confidence_score": 1.0,
       "source": "src_js_produzione_core",
-      "target": "src_js_produzione_core_cprereadticket",
-      "confidence_score": 1.0
+      "target": "src_js_produzione_core_cprereadticket"
     },
     {
       "relation": "contains",
@@ -20505,9 +20553,9 @@
       "source_location": "L92",
       "weight": 1.0,
       "_origin": "ast",
+      "confidence_score": 1.0,
       "source": "src_js_produzione_core",
-      "target": "src_js_produzione_core_cpbuildrecord",
-      "confidence_score": 1.0
+      "target": "src_js_produzione_core_cpbuildrecord"
     },
     {
       "relation": "contains",
@@ -21855,7 +21903,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/js/weekly-jira-subtask.js",
-      "source_location": "L176",
+      "source_location": "L180",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_js_weekly_jira_subtask",
@@ -21866,7 +21914,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/js/weekly-jira-subtask.js",
-      "source_location": "L188",
+      "source_location": "L192",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_js_weekly_jira_subtask",
@@ -21877,7 +21925,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/js/weekly-jira-subtask.js",
-      "source_location": "L200",
+      "source_location": "L204",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_js_weekly_jira_subtask",
@@ -21888,22 +21936,11 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/js/weekly-jira-subtask.js",
-      "source_location": "L205",
+      "source_location": "L209",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_js_weekly_jira_subtask",
       "target": "src_js_weekly_jira_subtask_pwjirabuildsubtaskitem",
-      "confidence_score": 1.0
-    },
-    {
-      "relation": "contains",
-      "confidence": "EXTRACTED",
-      "source_file": "src/js/weekly-jira-subtask.js",
-      "source_location": "L238",
-      "weight": 1.0,
-      "_origin": "ast",
-      "source": "src_js_weekly_jira_subtask",
-      "target": "src_js_weekly_jira_subtask_pwjirasubtaskmarkbadge",
       "confidence_score": 1.0
     },
     {
@@ -21925,18 +21962,7 @@
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_js_weekly_jira_subtask",
-      "target": "src_js_weekly_jira_subtask_pwjirasubtaskmarkmissingemail",
-      "confidence_score": 1.0
-    },
-    {
-      "relation": "contains",
-      "confidence": "EXTRACTED",
-      "source_file": "src/js/weekly-jira-subtask.js",
-      "source_location": "L262",
-      "weight": 1.0,
-      "_origin": "ast",
-      "source": "src_js_weekly_jira_subtask",
-      "target": "src_js_weekly_jira_subtask_pwjirasubtaskisresolved",
+      "target": "src_js_weekly_jira_subtask_pwjirasubtaskmarkbadge",
       "confidence_score": 1.0
     },
     {
@@ -21947,6 +21973,28 @@
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_js_weekly_jira_subtask",
+      "target": "src_js_weekly_jira_subtask_pwjirasubtaskmarkmissingemail",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "src/js/weekly-jira-subtask.js",
+      "source_location": "L276",
+      "weight": 1.0,
+      "_origin": "ast",
+      "source": "src_js_weekly_jira_subtask",
+      "target": "src_js_weekly_jira_subtask_pwjirasubtaskisresolved",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "src/js/weekly-jira-subtask.js",
+      "source_location": "L280",
+      "weight": 1.0,
+      "_origin": "ast",
+      "source": "src_js_weekly_jira_subtask",
       "target": "src_js_weekly_jira_subtask_pwjirasubtaskbadgeremove",
       "confidence_score": 1.0
     },
@@ -21954,7 +22002,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/js/weekly-jira-subtask.js",
-      "source_location": "L285",
+      "source_location": "L299",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_js_weekly_jira_subtask",
@@ -21965,7 +22013,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/js/weekly-jira-subtask.js",
-      "source_location": "L295",
+      "source_location": "L309",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_js_weekly_jira_subtask",
@@ -21976,7 +22024,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/js/weekly-jira-subtask.js",
-      "source_location": "L316",
+      "source_location": "L330",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_js_weekly_jira_subtask",
@@ -21987,7 +22035,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/js/weekly-jira-subtask.js",
-      "source_location": "L320",
+      "source_location": "L334",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_js_weekly_jira_subtask",
@@ -21998,7 +22046,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/js/weekly-jira-subtask.js",
-      "source_location": "L333",
+      "source_location": "L347",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_js_weekly_jira_subtask",
@@ -22009,7 +22057,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/js/weekly-jira-subtask.js",
-      "source_location": "L388",
+      "source_location": "L402",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_js_weekly_jira_subtask",
@@ -22042,22 +22090,11 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/js/weekly-jira-subtask.js",
-      "source_location": "L675",
+      "source_location": "L689",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_js_weekly_jira_subtask",
       "target": "src_js_weekly_jira_subtask_pwjirasubtaskopenselectitemsmodal",
-      "confidence_score": 1.0
-    },
-    {
-      "relation": "contains",
-      "confidence": "EXTRACTED",
-      "source_file": "src/js/weekly-jira-subtask.js",
-      "source_location": "L734",
-      "weight": 1.0,
-      "_origin": "ast",
-      "source": "src_js_weekly_jira_subtask",
-      "target": "src_js_weekly_jira_subtask_pwjirasubtaskopenextrafieldsmodal",
       "confidence_score": 1.0
     },
     {
@@ -22075,7 +22112,40 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/js/weekly-jira-subtask.js",
-      "source_location": "L822",
+      "source_location": "L746",
+      "weight": 1.0,
+      "_origin": "ast",
+      "source": "src_js_weekly_jira_subtask",
+      "target": "src_js_weekly_jira_subtask_pwjiracomputeoriginalestimate",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "src/js/weekly-jira-subtask.js",
+      "source_location": "L756",
+      "weight": 1.0,
+      "_origin": "ast",
+      "source": "src_js_weekly_jira_subtask",
+      "target": "src_js_weekly_jira_subtask_pwjiracomputeproductionweight",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "src/js/weekly-jira-subtask.js",
+      "source_location": "L774",
+      "weight": 1.0,
+      "_origin": "ast",
+      "source": "src_js_weekly_jira_subtask",
+      "target": "src_js_weekly_jira_subtask_pwjirasubtaskopenextrafieldsmodal",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "src/js/weekly-jira-subtask.js",
+      "source_location": "L890",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_js_weekly_jira_subtask",
@@ -22086,7 +22156,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/js/weekly-jira-subtask.js",
-      "source_location": "L839",
+      "source_location": "L907",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_js_weekly_jira_subtask",
@@ -22097,7 +22167,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/js/weekly-jira-subtask.js",
-      "source_location": "L858",
+      "source_location": "L926",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_js_weekly_jira_subtask",
@@ -22108,7 +22178,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/js/weekly-jira-subtask.js",
-      "source_location": "L878",
+      "source_location": "L946",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_js_weekly_jira_subtask",
@@ -22119,7 +22189,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/js/weekly-jira-subtask.js",
-      "source_location": "L928",
+      "source_location": "L996",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_js_weekly_jira_subtask",
@@ -22130,7 +22200,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/js/weekly-jira-subtask.js",
-      "source_location": "L507",
+      "source_location": "L521",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_js_weekly_jira_subtask_pwjirasubtaskopencomunimodal",
@@ -24921,7 +24991,7 @@
       "confidence": "INFERRED",
       "confidence_score": 0.8,
       "source_file": "src/js/weekly-jira-subtask.js",
-      "source_location": "L537",
+      "source_location": "L551",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_js_weekly_jira_subtask_pwjirasubtaskopencomunimodal_pwjirasubtaskcheckexisting",
@@ -24933,7 +25003,7 @@
       "confidence": "INFERRED",
       "confidence_score": 0.8,
       "source_file": "src/js/weekly-jira-subtask.js",
-      "source_location": "L424",
+      "source_location": "L438",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_js_weekly_jira_subtask_pwjirasubtaskopencomunimodal_rowhtml",
@@ -24945,7 +25015,7 @@
       "confidence": "INFERRED",
       "confidence_score": 0.8,
       "source_file": "src/js/weekly-jira-subtask.js",
-      "source_location": "L903",
+      "source_location": "L971",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_js_weekly_jira_subtask_pwjirasubtaskrenderpreview",
@@ -27022,5 +27092,5 @@
       "source_file": "CLAUDE.md"
     }
   ],
-  "built_at_commit": "3745e67fecf0bea39fbeed57c091d943ebc37cfd"
+  "built_at_commit": "2e270b6f1343d60586907422ab6041328d3a5751"
 }

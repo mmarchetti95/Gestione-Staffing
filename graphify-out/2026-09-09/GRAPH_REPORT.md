@@ -1,16 +1,16 @@
 # Graph Report - Gestione-Staffing  (2026-09-09)
 
 ## Corpus Check
-- 48 files · ~222,387 words
+- 48 files · ~223,378 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
-- 866 nodes · 1393 edges · 81 communities (53 shown, 28 thin omitted)
+- 868 nodes · 1396 edges · 81 communities (53 shown, 28 thin omitted)
 - Extraction: 97% EXTRACTED · 3% INFERRED · 0% AMBIGUOUS · INFERRED: 44 edges (avg confidence: 0.82)
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `ad58387f`
+- Built from commit: `3745e67f`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -156,8 +156,8 @@ Cohesion: 0.12
 Nodes (29): METEO_FASCE, METEO_ICONS, _meteoCache, _meteoCacheSave(), _pcCache, _pcCacheSave(), pcColorePeggiore(), pcColorFromLabel() (+21 more)
 
 ### Community 6 - "weekly-jira-subtask.js"
-Cohesion: 0.12
-Nodes (32): _pwExtraFieldsByKey, pwExtraFieldSelectOpen(), pwExtraFieldSelectPick(), pwJiraBuildSubtaskItem(), pwJiraCreateSubtasks(), pwJiraFetchEpics(), pwJiraFetchExtraFields(), pwJiraFetchTasks() (+24 more)
+Cohesion: 0.11
+Nodes (34): PW_JIRA_EXTRA_FIELD_LABELS, _pwExtraFieldsByKey, pwExtraFieldSelectOpen(), pwExtraFieldSelectPick(), pwJiraBuildSubtaskItem(), pwJiraCreateSubtasks(), pwJiraFetchEpics(), pwJiraFetchExtraFields() (+26 more)
 
 ### Community 7 - "dashboard-crud-helpers.js"
 Cohesion: 0.16
@@ -340,7 +340,7 @@ Nodes (3): v18.69.0 /impeccable-guided restyling (unified accent teal, Inter fon
   README.md · relation: conceptually_related_to
 
 ## Knowledge Gaps
-- **164 isolated node(s):** `pwStrumenti`, `PW_TAB_KEYS`, `SB_PAGE_LABELS`, `_sbDirty`, `_sbRemoteTs` (+159 more)
+- **165 isolated node(s):** `_cpData`, `_pwCollapsedComm`, `_pwCollapsedSq`, `_cpCollapsedComm`, `_cpCollapsedSq` (+160 more)
   These have ≤1 connection - possible missing edges or undocumented components.
 - **28 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
 
@@ -353,11 +353,11 @@ _Questions this graph is uniquely positioned to answer:_
   _High betweenness centrality (0.005) - this node is a cross-community bridge._
 - **Why does `Pianificazione Settimanale screen (pw* namespace)` connect `Weekly Planning Screen Tabs` to `KM Delta Model (Jira Production)`, `Griglia & Jira Subtask Creation`, `Multi-Domain Sync (Planning/Ferie)`, `Dashboard Screen & Core Sync`?**
   _High betweenness centrality (0.002) - this node is a cross-community bridge._
-- **Why does `listBox()` connect `weekly-ferie-import.js` to `dashboard-crud-helpers.js`?**
+- **Why does `pwJiraSubtaskRenderPreview()` connect `weekly-jira-subtask.js` to `dashboard-crud-helpers.js`?**
   _High betweenness centrality (0.002) - this node is a cross-community bridge._
 - **Are the 4 inferred relationships involving `esc()` (e.g. with `listBox()` and `pwJiraSubtaskCheckExisting()`) actually correct?**
   _`esc()` has 4 INFERRED edges - model-reasoned connections that need verification._
-- **What connects `pwStrumenti`, `PW_TAB_KEYS`, `SB_PAGE_LABELS` to the rest of the system?**
-  _164 weakly-connected nodes found - possible documentation gaps or missing edges._
+- **What connects `_cpData`, `_pwCollapsedComm`, `_pwCollapsedSq` to the rest of the system?**
+  _165 weakly-connected nodes found - possible documentation gaps or missing edges._
 - **Should `Supabase Admin & Auth Panel` be split into smaller, more focused modules?**
   _Cohesion score 0.06666666666666667 - nodes in this community are weakly interconnected._
