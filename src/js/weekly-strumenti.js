@@ -232,6 +232,30 @@ async function pwRemoveOp(btn) {
   await pwSave(); pwRender();
 }
 
+async function pwMoveSquadraUp(btn) {
+  if (!sbGuardWrite()) return;
+  const cidx = parseInt(btn.dataset.cidx);
+  const sidx = parseInt(btn.dataset.sidx);
+  const data = pwGetWeekData();
+  const squadre = data[cidx]?.squadre;
+  if (squadre && sidx > 0) {
+    [squadre[sidx - 1], squadre[sidx]] = [squadre[sidx], squadre[sidx - 1]];
+    await pwSave(); pwRender();
+  }
+}
+
+async function pwMoveSquadraDown(btn) {
+  if (!sbGuardWrite()) return;
+  const cidx = parseInt(btn.dataset.cidx);
+  const sidx = parseInt(btn.dataset.sidx);
+  const data = pwGetWeekData();
+  const squadre = data[cidx]?.squadre;
+  if (squadre && sidx < squadre.length - 1) {
+    [squadre[sidx], squadre[sidx + 1]] = [squadre[sidx + 1], squadre[sidx]];
+    await pwSave(); pwRender();
+  }
+}
+
 async function pwRemoveCommessa(btn) {
   if (!sbGuardWrite()) return;
   const cidx = parseInt(btn.dataset.cidx);

@@ -452,6 +452,10 @@ function pwRender() {
             <button class="text-[10px] bg-amber-200 hover:bg-amber-300 text-amber-900 px-2 py-0.5 rounded pw-write-action"
               data-cidx="${cIdx}" data-sidx="${sIdx}"
               onclick="pwAddOp(this)">+ Operatore</button>
+            <button class="text-[10px] bg-amber-200 hover:bg-amber-300 text-amber-900 px-1.5 py-0.5 rounded disabled:opacity-50"
+              data-cidx="${cIdx}" data-sidx="${sIdx}" onclick="pwMoveSquadraUp(this)" ${(sIdx === 0 || !sbCanWrite()) ? 'disabled' : ''} title="Sposta squadra su">▲</button>
+            <button class="text-[10px] bg-amber-200 hover:bg-amber-300 text-amber-900 px-1.5 py-0.5 rounded disabled:opacity-50"
+              data-cidx="${cIdx}" data-sidx="${sIdx}" onclick="pwMoveSquadraDown(this)" ${(sIdx === bloccoCommessa.squadre.length - 1 || !sbCanWrite()) ? 'disabled' : ''} title="Sposta squadra giù">▼</button>
             <button class="text-[10px] text-red-400 hover:text-red-600 pw-write-action"
               data-cidx="${cIdx}" data-sidx="${sIdx}"
               onclick="pwRemoveSquadra(this)">✕ Rimuovi squadra</button>

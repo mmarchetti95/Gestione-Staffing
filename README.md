@@ -111,6 +111,9 @@ Limite noto: il progetto Supabase è sul piano **Free**, che non include backup 
 
 ## Changelog
 
+## v18.158.0
+- feat: **Griglia — riordino squadre su/giù dentro una commessa** — nell'header di ogni squadra, accanto a "+ Operatore" e "✕ Rimuovi squadra", due bottoni ▲/▼ spostano la squadra su o giù rispetto alle altre squadre della stessa commessa (stesso comportamento già presente per riordinare le commesse). Disabilitati per la prima/ultima squadra del blocco o senza permessi di scrittura.
+
 ## v18.157.0
 - feat: **Nuovo KPI "📅 Contratti scaduti/in scadenza" in Dashboard** — evidenzia gli operatori con contratto a termine già scaduto o in scadenza entro 45 giorni che NON sono stati segnati come "Ex Collega": un contratto scaduto rende già oggi l'operatore invisibile agli incarichi (`getOperatoriAttivi()` lo esclude), ma senza questo KPI la scadenza passava inosservata finché non si controllava a mano la scheda. Click sulla card apre il dettaglio (raggruppato Scaduti/In scadenza, con giorni e data fine rapporto) con due azioni dirette per riga: "✎ Modifica" (scheda operatore, per rinnovare il contratto) e "🚪 Gestisci" (segna come Ex Collega o elimina). Soglia di preavviso configurabile via `CONTRATTI_PREAVVISO_GG` (config.js).
 
