@@ -111,6 +111,10 @@ Limite noto: il progetto Supabase è sul piano **Free**, che non include backup 
 
 ## Changelog
 
+## v18.159.2
+- fix: **Assistente AI — corretti i nomi di campo errati in `get_operatori`** (attestati/contratto): il tool leggeva `attestati[].scadenza` come se fosse un array di oggetti, ma è una lista di soli nomi — le scadenze reali stanno in `attestati_dett`; leggeva anche `contratto_inizio`/`contratto_fine`, campi inesistenti (quelli veri sono `data_inizio_rapporto`/`data_fine_rapporto`). L'assistente ora vede le scadenze reali.
+- feat: **Assistente AI — 3 nuovi tool di lettura**: `get_staffing_mensile` (allocazione gg-uomo per commessa/mese, la sezione "Staffing mensile" della Dashboard, prima non coperta), `get_dpi_catalogo` (catalogo DPI e durate di validità), `get_registro_esterno` (archivio Excel import attestati/limitazioni, copre anche dipendenti fuori dal pool rilievi). `get_operatori` include ora anche limitazioni/idoneità mediche, DPI assegnati (con scadenza) e stato ex-collega per ogni operatore. `get_pipeline` include anche le commesse chiuse/archiviate. Richiede la Edge Function `ai-assistant` v2 (non versionata nel repo, già deployata).
+
 ## v18.159.1
 - fix: **Assistente AI — le risposte ora renderizzano grassetto ed elenchi puntati** invece di mostrare gli asterischi markdown letterali (`**testo**`, `* voce`) come testo grezzo. Il testo del modello passa comunque sempre per `esc()` prima di qualunque trasformazione, quindi resta al sicuro da injection HTML.
 
