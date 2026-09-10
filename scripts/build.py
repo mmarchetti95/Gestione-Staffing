@@ -53,6 +53,7 @@ JS_FILES = [
     'weekly-spostamenti.js',
     'weekly-ricerca-squadre.js',
     'weekly-meteo.js',
+    'ai-assistant.js',
 ]
 
 

@@ -613,20 +613,24 @@ async function sbOnLoggedIn() {
   const btnSessions = document.getElementById('sb-btn-sessions');
   const btnBackups = document.getElementById('sb-btn-backups');
   const btnUsers = document.getElementById('sb-btn-users');
+  const btnAiConfig = document.getElementById('sb-btn-ai-config');
   const secRecon = document.getElementById('section-riconciliazione');
   if (sbIsAdmin()) {
     if (btnLog) btnLog.style.visibility = 'visible';
     if (btnSessions) btnSessions.style.visibility = 'visible';
     if (btnBackups) btnBackups.style.visibility = 'visible';
     if (btnUsers) btnUsers.style.visibility = 'visible';
+    if (btnAiConfig) btnAiConfig.style.visibility = 'visible';
     if (secRecon) secRecon.style.display = '';
   } else {
     if (btnLog) btnLog.style.visibility = 'hidden';
     if (btnSessions) btnSessions.style.visibility = 'hidden';
     if (btnBackups) btnBackups.style.visibility = 'hidden';
     if (btnUsers) btnUsers.style.visibility = 'hidden';
+    if (btnAiConfig) btnAiConfig.style.visibility = 'hidden';
     if (secRecon) secRecon.style.display = 'none';
   }
+  if (typeof aiApplyWidgetVisibility === 'function') aiApplyWidgetVisibility();
   sbApplyPageVisibility();
   sbApplyReadOnlyBanner();
   sbUpdateUI('syncing', 'Sync: caricamento dati…');

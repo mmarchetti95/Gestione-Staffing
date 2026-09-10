@@ -1165,7 +1165,7 @@
     <div class="flex items-center gap-2">
       <button id="btn-presentation" class="px-3 py-1.5 text-sm rounded hover:bg-white/10" style="border:1px solid var(--dark-border-strong);color:var(--dark-text);visibility:visible;">📊 Modalità presentazione</button>
       <div class="text-xs pl-2" style="border-left:1px solid var(--dark-border-strong);color:var(--dark-text-muted);">
-        <span id="app-version" class="font-medium" style="color:var(--accent);">v18.158.0</span> · Michele Marchetti
+        <span id="app-version" class="font-medium" style="color:var(--accent);">v18.159.0</span> · Michele Marchetti
         <span id="sb-role-badge" style="margin-left:8px;padding:1px 8px;border-radius:9999px;background:rgba(255,255,255,.1);color:var(--dark-text);font-weight:600;"></span>
       </div>
     </div>
@@ -1231,6 +1231,9 @@
     </button>
     <button id="sb-btn-users" onclick="sbShowUsers()" class="dark-link-btn text-xs px-2 py-1" style="visibility:hidden;">
       👥 Gestione utenti
+    </button>
+    <button id="sb-btn-ai-config" onclick="aiConfigOpen()" class="dark-link-btn text-xs px-2 py-1" style="visibility:hidden;">
+      🤖 Assistente AI
     </button>
     <button onclick="sbShowChangePwd()" class="dark-link-btn text-xs px-2 py-1">
       🔑 Cambia password
@@ -2120,5 +2123,72 @@
 
 <!-- MODALE generica -->
 <div id="modal-root"></div>
+
+<!-- Assistente AI: bottone flottante + pannello chat (nascosto per il ruolo guest,
+     vedi aiApplyWidgetVisibility() in ai-assistant.js). Figlio diretto di <body>,
+     sopravvive a switchScreen()/pwSwitchTab() perché non è dentro <main> né
+     #screen-weekly. z-index tenuto ben sotto il tetto di .modal-backdrop (100050)
+     così un eventuale confirm/alert resta sempre sopra. -->
+<div id="ai-assistant-btn" onclick="aiToggleWidget()" title="Assistente AI" style="display:none;position:fixed;right:20px;bottom:20px;width:52px;height:52px;border-radius:50%;background:var(--accent);color:white;font-size:22px;align-items:center;justify-content:center;cursor:pointer;box-shadow:var(--shadow-lg);z-index:5000;">
+  💬
+</div>
+
+<div id="ai-assistant-panel" style="display:none;position:fixed;right:20px;bottom:84px;width:360px;max-width:92vw;height:480px;max-height:70vh;background:white;border-radius:var(--radius-lg);box-shadow:var(--shadow-lg);border:1px solid #e2e8f0;z-index:5000;flex-direction:column;overflow:hidden;">
+  <div style="padding:12px 14px;background:var(--dark-bg);color:white;display:flex;align-items:center;justify-content:space-between;flex-shrink:0;">
+    <div style="font-weight:700;font-size:13px;">🤖 Assistente AI</div>
+    <button onclick="aiToggleWidget()" style="background:none;border:none;color:white;font-size:18px;cursor:pointer;line-height:1;">&times;</button>
+  </div>
+  <div id="ai-assistant-messages" style="flex:1;overflow-y:auto;padding:12px;font-size:12.5px;display:flex;flex-direction:column;gap:8px;"></div>
+  <div id="ai-assistant-disabled-banner" style="display:none;padding:10px 14px;font-size:11.5px;color:#92400e;background:#fffbeb;border-top:1px solid #fde68a;">L'assistente AI non è al momento disponibile.</div>
+  <div id="ai-assistant-input-row" style="display:none;gap:6px;padding:10px;border-top:1px solid #f1f5f9;flex-shrink:0;">
+    <input id="ai-assistant-input" type="text" placeholder="Fai una domanda…" onkeydown="if(event.key==='Enter')aiSendQuestion()" style="flex:1;border:1px solid #dde3ea;border-radius:8px;padding:8px 10px;font-size:12.5px;outline:none;box-sizing:border-box;">
+    <button id="ai-assistant-send-btn" onclick="aiSendQuestion()" style="padding:8px 14px;background:var(--accent);color:white;border:none;border-radius:8px;font-size:12.5px;font-weight:600;cursor:pointer;">Invia</button>
+  </div>
+</div>
+
+<!-- Modal Gestione Assistente AI (solo admin) -->
+<div id="ai-config-modal" style="display:none;position:fixed;inset:0;z-index:99999;background:var(--backdrop);align-items:center;justify-content:center;">
+  <div style="background:white;border-radius:var(--radius-lg);padding:28px 32px;width:460px;max-width:95vw;box-shadow:var(--shadow-lg);">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">
+      <div>
+        <div style="font-weight:700;font-size:16px;color:#0f172a;font-family:var(--font-display);">🤖 Gestione Assistente AI</div>
+        <div style="font-size:11px;color:#94a3b8;margin-top:2px;">Widget di domande e risposte sui dati dell'app</div>
+      </div>
+      <button onclick="aiConfigClose()" style="padding:5px 12px;font-size:12px;border:1px solid #e2e8f0;border-radius:6px;background:white;cursor:pointer;color:#475569;">Chiudi</button>
+    </div>
+    <div id="ai-config-error" style="display:none;background:#fef2f2;border:1px solid #fecaca;color:#dc2626;font-size:12px;padding:8px 12px;border-radius:6px;margin:12px 0;"></div>
+    <div id="ai-config-success" style="display:none;background:#f0fdf4;border:1px solid #86efac;color:#16a34a;font-size:12px;padding:8px 12px;border-radius:6px;margin:12px 0;"></div>
+
+    <label style="display:flex;align-items:center;gap:8px;font-size:12.5px;color:#374151;margin:16px 0;">
+      <input type="checkbox" id="ai-config-enabled">
+      Assistente attivo (visibile agli utenti non-guest)
+    </label>
+
+    <div style="margin-bottom:12px;">
+      <label style="display:block;font-size:11px;font-weight:600;color:#374151;margin-bottom:4px;">Provider</label>
+      <select id="ai-config-provider" onchange="aiConfigProviderChanged()" style="width:100%;border:1px solid #dde3ea;border-radius:8px;padding:8px 10px;font-size:12.5px;outline:none;box-sizing:border-box;">
+        <option value="gemini">Google Gemini (gratuito)</option>
+        <option value="groq">Groq (gratuito)</option>
+        <option value="anthropic">Anthropic Claude (a pagamento)</option>
+      </select>
+    </div>
+
+    <div style="margin-bottom:12px;">
+      <label style="display:block;font-size:11px;font-weight:600;color:#374151;margin-bottom:4px;">Modello</label>
+      <input id="ai-config-model" type="text" placeholder="es. gemini-2.5-flash" style="width:100%;border:1px solid #dde3ea;border-radius:8px;padding:8px 10px;font-size:12.5px;outline:none;box-sizing:border-box;">
+    </div>
+
+    <div style="margin-bottom:6px;">
+      <label style="display:block;font-size:11px;font-weight:600;color:#374151;margin-bottom:4px;">API Key</label>
+      <input id="ai-config-apikey" type="password" placeholder="Lascia vuoto per non modificare" style="width:100%;border:1px solid #dde3ea;border-radius:8px;padding:8px 10px;font-size:12.5px;outline:none;box-sizing:border-box;">
+      <div id="ai-config-apikey-status" style="font-size:10.5px;color:#94a3b8;margin-top:4px;"></div>
+    </div>
+
+    <div style="display:flex;gap:8px;justify-content:space-between;margin-top:20px;">
+      <button onclick="aiConfigRevokeKey()" style="padding:8px 14px;font-size:12.5px;border:1px solid #fecaca;color:#dc2626;background:white;border-radius:8px;cursor:pointer;">Revoca chiave</button>
+      <button id="ai-config-save-btn" onclick="aiConfigSave()" style="padding:8px 18px;font-size:13px;background:var(--accent);color:white;border:none;border-radius:8px;cursor:pointer;font-weight:600;">Salva</button>
+    </div>
+  </div>
+</div>
 
 <script>
