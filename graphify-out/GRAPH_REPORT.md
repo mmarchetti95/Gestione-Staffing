@@ -1,16 +1,16 @@
-# Graph Report - Gestione-Staffing  (2026-09-09)
+# Graph Report - Gestione-Staffing  (2026-09-10)
 
 ## Corpus Check
-- 48 files · ~224,634 words
+- 49 files · ~234,123 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
-- 870 nodes · 1400 edges · 81 communities (53 shown, 28 thin omitted)
+- 896 nodes · 1444 edges · 82 communities (54 shown, 28 thin omitted)
 - Extraction: 97% EXTRACTED · 3% INFERRED · 0% AMBIGUOUS · INFERRED: 44 edges (avg confidence: 0.82)
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `2e270b6f`
+- Built from commit: `0e1a8bd7`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -28,7 +28,7 @@
 - New-Project Skill Scaffold
 - Controllo Produzione Core
 - Build Pipeline & App Shell
-- App Config & Constants
+- config.js
 - DPI Tracking Admin
 - Operatori Pool Management
 - Claude Skills Scaffolding
@@ -63,7 +63,7 @@
 - Weekly Screen Navigation
 - KM Delta Model (Jira Production)
 - Staffing Grid Cells
-- Build Script (build.py)
+- build_bytes
 - Monthly Detail View
 - Gantt Chart
 - KPI Dashboard
@@ -94,18 +94,19 @@
 - Internal Expert Audience Principle
 - Product Purpose
 - Product Users
+- dashboard-limitazioni.js
 
 ## God Nodes (most connected - your core abstractions)
-1. `pwMapRenderCantieri()` - 14 edges
-2. `new-project` - 14 edges
-3. `pwJiraSubtaskOpenComuniModal()` - 13 edges
-4. `esc()` - 13 edges
-5. `sbOnLoggedIn()` - 11 edges
-6. `rsCalcola()` - 11 edges
-7. `pwGeneraMail()` - 11 edges
-8. `pwGetFerieWeek()` - 11 edges
-9. `renderAttestati()` - 11 edges
-10. `pwSpostDrawMap()` - 11 edges
+1. `esc()` - 14 edges
+2. `pwMapRenderCantieri()` - 14 edges
+3. `new-project` - 14 edges
+4. `pwJiraSubtaskOpenComuniModal()` - 13 edges
+5. `closeModal()` - 11 edges
+6. `sbOnLoggedIn()` - 11 edges
+7. `rsCalcola()` - 11 edges
+8. `pwGeneraMail()` - 11 edges
+9. `pwGetFerieWeek()` - 11 edges
+10. `renderAttestati()` - 11 edges
 
 ## Surprising Connections (you probably didn't know these)
 - `Creative North Star: The Site Foreman's Whiteboard` --semantically_similar_to--> `Principle: information density over whitespace`  [INFERRED] [semantically similar]
@@ -129,7 +130,7 @@
 - **Hard-won conventions enforced by smoke_test.py** — claude_no_native_alert, claude_escape_onclick, claude_no_nested_template_literals, claude_no_duplicate_function_names, claude_smoke_test_py [EXTRACTED 1.00]
 - **Four Supabase staffing_state sync domains (core/planning/ferie/dw)** — claude_sb_row_core, claude_sb_row_planning, claude_sb_row_ferie, claude_sb_row_dw, claude_staffing_state_table, claude_four_sync_domains [EXTRACTED 1.00]
 
-## Communities (81 total, 28 thin omitted)
+## Communities (82 total, 28 thin omitted)
 
 ### Community 0 - "Supabase Admin & Auth Panel"
 Cohesion: 0.07
@@ -160,8 +161,8 @@ Cohesion: 0.11
 Nodes (36): PW_JIRA_EXTRA_FIELD_LABELS, _pwExtraFieldsByKey, pwExtraFieldSelectOpen(), pwExtraFieldSelectPick(), pwJiraBuildSubtaskItem(), pwJiraComputeOriginalEstimate(), pwJiraComputeProductionWeight(), pwJiraCreateSubtasks() (+28 more)
 
 ### Community 7 - "dashboard-crud-helpers.js"
-Cohesion: 0.16
-Nodes (24): closeModal(), cpSelectModal(), deleteCommessa(), deleteOperatore(), esc(), getOperatoriAttivi(), isOperatoreLicenziato(), isOperatoreScaduto() (+16 more)
+Cohesion: 0.13
+Nodes (28): closeModal(), cpSelectModal(), deleteCommessa(), deleteOperatore(), esc(), getOperatoriAttivi(), HELP_TEXTS, isOperatoreLicenziato() (+20 more)
 
 ### Community 8 - "Pianifica Spostamenti (Route Planner)"
 Cohesion: 0.18
@@ -183,9 +184,9 @@ Nodes (22): cpBuildRecord(), _cpCollapsedComm, _cpCollapsedSq, _cpData, cpDataIS
 Cohesion: 0.11
 Nodes (22): scripts/build.py (assembles index.html), esc() escaping helper (HTML content), Escape dynamic strings in onclick attributes (apostrophes break inline handlers), index.html (generated deploy artifact), jsAttr() escaping helper (onclick attribute strings), scripts/smoke_test.py (pre-deploy checks), src/head.html (head/CSS/body markup source), src/js/*.js (JS_FILES ordered sections) (+14 more)
 
-### Community 13 - "App Config & Constants"
-Cohesion: 0.13
-Nodes (21): ANNO, ATTESTATI_COLONNE, ATTESTATI_DURATA, distanzaLavorazione(), distanzaProvince(), DPI_DEFAULT, haversineKm(), INDUSTRIES (+13 more)
+### Community 13 - "config.js"
+Cohesion: 0.12
+Nodes (22): ANNO, ATTESTATI_COLONNE, ATTESTATI_DURATA, distanzaLavorazione(), distanzaProvince(), DPI_DEFAULT, haversineKm(), INDUSTRIES (+14 more)
 
 ### Community 14 - "DPI Tracking Admin"
 Cohesion: 0.19
@@ -323,7 +324,7 @@ Nodes (5): Controllo Produzione (cp*), Delta model for Jira production sync (wri
 Cohesion: 0.60
 Nodes (3): _commitInlineCell(), _refreshFabbisognoBox(), _showInlineAlert()
 
-### Community 48 - "Build Script (build.py)"
+### Community 48 - "build_bytes"
 Cohesion: 0.67
 Nodes (3): build_bytes(), main(), Ritorna il contenuto di index.html così come lo produrrebbe la build, senza…
 
@@ -335,12 +336,16 @@ Nodes (3): v18.25.0 Controllo Produzione Report PDF (jsPDF+autotable), jsPDF-aut
 Cohesion: 0.67
 Nodes (3): v18.69.0 /impeccable-guided restyling (unified accent teal, Inter font actually loaded), :root CSS custom properties — unified accent teal, radius/shadow/backdrop tokens replacing repeated magic values, Inter font declared but never actually loaded — fixed by adding Google Fonts link
 
+### Community 81 - "dashboard-limitazioni.js"
+Cohesion: 0.18
+Nodes (16): exportLimitazioniXlsx(), limBadgeOpCard(), limDescrizioneRegistro(), _limFiltri, limFoglio(), limImportFile(), limImportParseWorkbook(), limImportPick() (+8 more)
+
 ## Ambiguous Edges - Review These
 - `Stack tecnico (Tailwind, Chart.js, Leaflet.js, Supabase, GitHub Pages)` → `v18.58.0 removed unused sortablejs/chart.js CDN references`  [AMBIGUOUS]
   README.md · relation: conceptually_related_to
 
 ## Knowledge Gaps
-- **165 isolated node(s):** `_pwExtraFieldsByKey`, `PW_JIRA_EXTRA_FIELD_LABELS`, `PW_TAB_KEYS`, `SB_PAGE_LABELS`, `_sbDirty` (+160 more)
+- **168 isolated node(s):** `INITIAL_DATA`, `SKILLS`, `MESI`, `MESI_LONG`, `INDUSTRIES` (+163 more)
   These have ≤1 connection - possible missing edges or undocumented components.
 - **28 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
 
@@ -351,13 +356,13 @@ _Questions this graph is uniquely positioned to answer:_
   _Edge tagged AMBIGUOUS (relation: conceptually_related_to) - confidence is low._
 - **Why does `esc()` connect `dashboard-crud-helpers.js` to `weekly-ferie-import.js`, `weekly-jira-subtask.js`?**
   _High betweenness centrality (0.005) - this node is a cross-community bridge._
-- **Why does `Pianificazione Settimanale screen (pw* namespace)` connect `Weekly Planning Screen Tabs` to `KM Delta Model (Jira Production)`, `Griglia & Jira Subtask Creation`, `Multi-Domain Sync (Planning/Ferie)`, `Dashboard Screen & Core Sync`?**
-  _High betweenness centrality (0.002) - this node is a cross-community bridge._
 - **Why does `pwJiraSubtaskRenderPreview()` connect `weekly-jira-subtask.js` to `dashboard-crud-helpers.js`?**
+  _High betweenness centrality (0.002) - this node is a cross-community bridge._
+- **Why does `Pianificazione Settimanale screen (pw* namespace)` connect `Weekly Planning Screen Tabs` to `KM Delta Model (Jira Production)`, `Griglia & Jira Subtask Creation`, `Multi-Domain Sync (Planning/Ferie)`, `Dashboard Screen & Core Sync`?**
   _High betweenness centrality (0.002) - this node is a cross-community bridge._
 - **Are the 4 inferred relationships involving `esc()` (e.g. with `listBox()` and `pwJiraSubtaskCheckExisting()`) actually correct?**
   _`esc()` has 4 INFERRED edges - model-reasoned connections that need verification._
-- **What connects `_pwExtraFieldsByKey`, `PW_JIRA_EXTRA_FIELD_LABELS`, `PW_TAB_KEYS` to the rest of the system?**
-  _165 weakly-connected nodes found - possible documentation gaps or missing edges._
+- **What connects `INITIAL_DATA`, `SKILLS`, `MESI` to the rest of the system?**
+  _168 weakly-connected nodes found - possible documentation gaps or missing edges._
 - **Should `Supabase Admin & Auth Panel` be split into smaller, more focused modules?**
   _Cohesion score 0.06666666666666667 - nodes in this community are weakly interconnected._

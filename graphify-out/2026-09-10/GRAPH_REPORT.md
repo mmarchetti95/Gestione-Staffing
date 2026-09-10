@@ -1,16 +1,16 @@
 # Graph Report - Gestione-Staffing  (2026-09-09)
 
 ## Corpus Check
-- 48 files · ~224,634 words
+- 48 files · ~225,812 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
-- 870 nodes · 1400 edges · 81 communities (53 shown, 28 thin omitted)
+- 872 nodes · 1404 edges · 81 communities (53 shown, 28 thin omitted)
 - Extraction: 97% EXTRACTED · 3% INFERRED · 0% AMBIGUOUS · INFERRED: 44 edges (avg confidence: 0.82)
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `2e270b6f`
+- Built from commit: `72457bec`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -96,16 +96,16 @@
 - Product Users
 
 ## God Nodes (most connected - your core abstractions)
-1. `pwMapRenderCantieri()` - 14 edges
-2. `new-project` - 14 edges
-3. `pwJiraSubtaskOpenComuniModal()` - 13 edges
-4. `esc()` - 13 edges
-5. `sbOnLoggedIn()` - 11 edges
-6. `rsCalcola()` - 11 edges
-7. `pwGeneraMail()` - 11 edges
-8. `pwGetFerieWeek()` - 11 edges
-9. `renderAttestati()` - 11 edges
-10. `pwSpostDrawMap()` - 11 edges
+1. `esc()` - 14 edges
+2. `pwMapRenderCantieri()` - 14 edges
+3. `new-project` - 14 edges
+4. `pwJiraSubtaskOpenComuniModal()` - 13 edges
+5. `closeModal()` - 11 edges
+6. `sbOnLoggedIn()` - 11 edges
+7. `rsCalcola()` - 11 edges
+8. `pwGeneraMail()` - 11 edges
+9. `pwGetFerieWeek()` - 11 edges
+10. `renderAttestati()` - 11 edges
 
 ## Surprising Connections (you probably didn't know these)
 - `Creative North Star: The Site Foreman's Whiteboard` --semantically_similar_to--> `Principle: information density over whitespace`  [INFERRED] [semantically similar]
@@ -160,8 +160,8 @@ Cohesion: 0.11
 Nodes (36): PW_JIRA_EXTRA_FIELD_LABELS, _pwExtraFieldsByKey, pwExtraFieldSelectOpen(), pwExtraFieldSelectPick(), pwJiraBuildSubtaskItem(), pwJiraComputeOriginalEstimate(), pwJiraComputeProductionWeight(), pwJiraCreateSubtasks() (+28 more)
 
 ### Community 7 - "dashboard-crud-helpers.js"
-Cohesion: 0.16
-Nodes (24): closeModal(), cpSelectModal(), deleteCommessa(), deleteOperatore(), esc(), getOperatoriAttivi(), isOperatoreLicenziato(), isOperatoreScaduto() (+16 more)
+Cohesion: 0.15
+Nodes (26): closeModal(), cpSelectModal(), deleteCommessa(), deleteOperatore(), esc(), getOperatoriAttivi(), HELP_TEXTS, isOperatoreLicenziato() (+18 more)
 
 ### Community 8 - "Pianifica Spostamenti (Route Planner)"
 Cohesion: 0.18
@@ -340,7 +340,7 @@ Nodes (3): v18.69.0 /impeccable-guided restyling (unified accent teal, Inter fon
   README.md · relation: conceptually_related_to
 
 ## Knowledge Gaps
-- **165 isolated node(s):** `_pwExtraFieldsByKey`, `PW_JIRA_EXTRA_FIELD_LABELS`, `PW_TAB_KEYS`, `SB_PAGE_LABELS`, `_sbDirty` (+160 more)
+- **166 isolated node(s):** `HELP_TEXTS`, `_cpData`, `_pwCollapsedComm`, `_pwCollapsedSq`, `_cpCollapsedComm` (+161 more)
   These have ≤1 connection - possible missing edges or undocumented components.
 - **28 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
 
@@ -357,7 +357,7 @@ _Questions this graph is uniquely positioned to answer:_
   _High betweenness centrality (0.002) - this node is a cross-community bridge._
 - **Are the 4 inferred relationships involving `esc()` (e.g. with `listBox()` and `pwJiraSubtaskCheckExisting()`) actually correct?**
   _`esc()` has 4 INFERRED edges - model-reasoned connections that need verification._
-- **What connects `_pwExtraFieldsByKey`, `PW_JIRA_EXTRA_FIELD_LABELS`, `PW_TAB_KEYS` to the rest of the system?**
-  _165 weakly-connected nodes found - possible documentation gaps or missing edges._
+- **What connects `HELP_TEXTS`, `_cpData`, `_pwCollapsedComm` to the rest of the system?**
+  _166 weakly-connected nodes found - possible documentation gaps or missing edges._
 - **Should `Supabase Admin & Auth Panel` be split into smaller, more focused modules?**
   _Cohesion score 0.06666666666666667 - nodes in this community are weakly interconnected._

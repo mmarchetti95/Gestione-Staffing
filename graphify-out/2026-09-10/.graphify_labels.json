@@ -12,7 +12,7 @@
   "10": "New-Project Skill Scaffold",
   "11": "Controllo Produzione Core",
   "12": "Build Pipeline & App Shell",
-  "13": "config.js",
+  "13": "App Config & Constants",
   "14": "DPI Tracking Admin",
   "15": "Operatori Pool Management",
   "16": "Claude Skills Scaffolding",
@@ -47,7 +47,7 @@
   "45": "Weekly Screen Navigation",
   "46": "KM Delta Model (Jira Production)",
   "47": "Staffing Grid Cells",
-  "48": "build_bytes",
+  "48": "Build Script (build.py)",
   "49": "Monthly Detail View",
   "50": "Gantt Chart",
   "51": "KPI Dashboard",
@@ -79,6 +79,5 @@
   "77": "Internal Expert Audience Principle",
   "78": "Product Purpose",
   "79": "Product Users",
-  "80": "HTML Tail Document",
-  "81": "dashboard-limitazioni.js"
+  "80": "HTML Tail Document"
 }
