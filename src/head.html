@@ -1176,7 +1176,7 @@
     <div class="flex items-center gap-2">
       <button id="btn-presentation" class="px-3 py-1.5 text-sm rounded hover:bg-white/10" style="border:1px solid var(--dark-border-strong);color:var(--dark-text);visibility:visible;">📊 Modalità presentazione</button>
       <div class="text-xs pl-2" style="border-left:1px solid var(--dark-border-strong);color:var(--dark-text-muted);">
-        <span id="app-version" class="font-medium" style="color:var(--accent);">v18.160.0</span> · Michele Marchetti
+        <span id="app-version" class="font-medium" style="color:var(--accent);">v18.161.0</span> · Michele Marchetti
         <span id="sb-role-badge" style="margin-left:8px;padding:1px 8px;border-radius:9999px;background:rgba(255,255,255,.1);color:var(--dark-text);font-weight:600;"></span>
       </div>
     </div>
@@ -2187,6 +2187,12 @@
     <div style="margin-bottom:12px;">
       <label style="display:block;font-size:11px;font-weight:600;color:#374151;margin-bottom:4px;">Modello</label>
       <input id="ai-config-model" type="text" placeholder="es. gemini-2.5-flash" style="width:100%;border:1px solid #dde3ea;border-radius:8px;padding:8px 10px;font-size:12.5px;outline:none;box-sizing:border-box;">
+    </div>
+
+    <div style="margin-bottom:12px;">
+      <label style="display:block;font-size:11px;font-weight:600;color:#374151;margin-bottom:4px;">Istruzioni personalizzate <span style="font-weight:400;color:#94a3b8;">(facoltative)</span></label>
+      <textarea id="ai-config-instructions" rows="4" placeholder="es. Rispondi sempre indicando anche la provincia dell'operatore. Dai priorità agli operatori senza limitazioni mediche attive." style="width:100%;border:1px solid #dde3ea;border-radius:8px;padding:8px 10px;font-size:12.5px;outline:none;box-sizing:border-box;resize:vertical;font-family:inherit;"></textarea>
+      <div style="font-size:10.5px;color:#94a3b8;margin-top:4px;">Aggiunte alle istruzioni di base dell'assistente: tono, priorità, regole aziendali specifiche.</div>
     </div>
 
     <div style="margin-bottom:6px;">

@@ -111,6 +111,10 @@ Limite noto: il progetto Supabase è sul piano **Free**, che non include backup 
 
 ## Changelog
 
+## v18.161.0
+- feat: **Assistente AI — istruzioni personalizzate**: nuovo campo "Istruzioni personalizzate" nel pannello admin "🤖 Gestione Assistente AI", accodato al system prompt di base ad ogni domanda (tono di risposta, priorità, regole aziendali specifiche). Salvato in `ai_assistant_settings.custom_instructions` (nuova colonna, migrazione applicata). Richiede `ai-assistant` v4 e `ai-assistant-config` v2 (non versionate nel repo, già deployate).
+- fix: **Assistente AI — risposte troncate a metà frase**: il limite di output del modello (`MAX_TOKENS`) era 1280, insufficiente per risposte con elenchi lunghi (es. più operatori con dettagli); alzato a 4096.
+
 ## v18.160.0
 - feat: **Assistente AI — indicatore "sta scrivendo…"** durante l'attesa della risposta (può richiedere qualche secondo per via del tool-use verso il provider LLM): una bollicina con tre puntini animati appare nella chat subito dopo l'invio della domanda e scompare non appena arriva la risposta (o un errore).
 

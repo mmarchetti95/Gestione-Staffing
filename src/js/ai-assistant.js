@@ -167,6 +167,7 @@ async function aiConfigPopulate() {
   document.getElementById('ai-config-enabled').checked = !!data.enabled;
   document.getElementById('ai-config-provider').value = data.provider || 'gemini';
   document.getElementById('ai-config-model').value = data.model || AI_PROVIDER_DEFAULT_MODEL[data.provider] || '';
+  document.getElementById('ai-config-instructions').value = data.custom_instructions || '';
   document.getElementById('ai-config-apikey-status').textContent = data.has_api_key
     ? '✓ Chiave configurata (lascia vuoto per non modificarla)'
     : 'Nessuna chiave configurata';
@@ -192,11 +193,12 @@ async function aiConfigSave() {
   const enabled = document.getElementById('ai-config-enabled').checked;
   const provider = document.getElementById('ai-config-provider').value;
   const model = document.getElementById('ai-config-model').value.trim();
+  const customInstructions = document.getElementById('ai-config-instructions').value.trim();
   const apiKey = document.getElementById('ai-config-apikey').value;
   if (!model) { aiConfigMsg('Il modello non può essere vuoto.', null); return; }
   btn.disabled = true; btn.textContent = 'Salvataggio…';
   try {
-    const body = { enabled, provider, model };
+    const body = { enabled, provider, model, custom_instructions: customInstructions };
     if (apiKey.trim()) body.api_key = apiKey;
     await aiConfigCall('set', body);
     document.getElementById('ai-config-apikey').value = '';
@@ -216,7 +218,8 @@ async function aiConfigRevokeKey() {
     const enabled = document.getElementById('ai-config-enabled').checked;
     const provider = document.getElementById('ai-config-provider').value;
     const model = document.getElementById('ai-config-model').value.trim();
-    await aiConfigCall('set', { enabled, provider, model, revoke_api_key: true });
+    const customInstructions = document.getElementById('ai-config-instructions').value.trim();
+    await aiConfigCall('set', { enabled, provider, model, custom_instructions: customInstructions, revoke_api_key: true });
     await aiConfigPopulate();
     aiConfigMsg(null, '✓ Chiave revocata.');
   } catch (e) {
