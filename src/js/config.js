@@ -38,6 +38,11 @@ const ATTESTATI_PREAVVISO_GG = 90;
    si sostituisce, non si ri-frequenta: qualche settimana basta per ordinarlo e consegnarlo. */
 const DPI_PREAVVISO_GG = 30;
 
+/* Giorni di preavviso per i contratti a termine in scadenza (KPI "Contratti scaduti/in
+   scadenza"). Il rinnovo (o la decisione di non rinnovare) richiede piu' anticipo di un
+   DPI ma meno di un attestato che va ri-frequentato: una via di mezzo tra i due. */
+const CONTRATTI_PREAVVISO_GG = 45;
+
 /* Catalogo DPI di primo avvio. E' solo il seed: da qui in poi il catalogo vive in
    state.dpi_disponibili, che viene persistito (chiave 'dpi_disponibili' del dominio core)
    e puo' essere svuotato del tutto senza che questa lista torni a ripopolarlo. */
@@ -63,6 +68,29 @@ const ATTESTATI_COLONNE = [
   { label: 'RSPP',                voci: ['RSPP'] },
   { label: 'Segnaletica',         voci: ['Segnaletica stradale - Preposto', 'Segnaletica stradale - Addetto'],
     sigle: { 'Segnaletica stradale - Preposto': 'Prep', 'Segnaletica stradale - Addetto': 'Add' } },
+];
+
+/* ===================== LIMITAZIONI OPERATORI (idoneita' mediche) ===================== */
+/* Giorni di preavviso entro cui una scadenza di idoneita' medica viene mostrata "in scadenza". */
+const LIMITAZIONI_PREAVVISO_GG = 60;
+
+/* Catalogo dei "tipo limitazione" di primo avvio, presi dal file "EP - Elenco dipendenti
+   con limitazioni" (colonne "Tipo limitazione 1/2"). E' solo il seed: da qui in poi il
+   catalogo vive in state.limitazioni_catalogo (persistito, dominio core) e si auto-estende
+   quando un import incontra una dicitura non ancora presente — stesso principio di
+   state.dpi_disponibili, perche' anche qui il vocabolario lo definisce di fatto il medico
+   competente, non il codice. */
+const LIMITAZIONI_TIPI_DEFAULT = [
+  'Evitare sollevamento e/o movimentazione pesi eccessivi',
+  'Evitare movimentazione manuale dei carichi al di sopra delle spalle',
+  'Evitare sforzi fisici gravosi',
+  'Evitare sforzi fisici intensi e/o prolungati',
+  'Evitare esposizione prolungata al freddo o al caldo',
+  'Evitare esposizione prolungata a temperature molto basse e/o molto elevate',
+  'Evitare stazione eretta prolungata',
+  'Fare 10 minuti di pausa ogni ora di lavoro',
+  'Fare 10 minuti di pausa attiva ogni ora di lavoro al VDT',
+  'Obbligo di uso di otoprotettori se esposto a rumore',
 ];
 
 /* ===================== ANAGRAFICA PROVINCE/REGIONI ===================== */
@@ -230,5 +258,12 @@ let state = {
   // Per chi e' nel pool la fonte autorevole resta op.attestati_dett, che puo' contenere
   // anche correzioni manuali fatte dalla scheda operatore. Vedi dashboard-attestati.js.
   attestati_registro: { aggiornato_il: '', file: '', da: '', dipendenti: [] },
+  // Catalogo "tipo limitazione": stesso ruolo di dpi_disponibili ma per le idoneita'
+  // mediche. Vedi dashboard-limitazioni.js.
+  limitazioni_catalogo: LIMITAZIONI_TIPI_DEFAULT.slice(),
+  // Registro limitazioni importato da Excel: stessa logica di attestati_registro (copre
+  // anche chi non e' nel pool operatori). Fonte autorevole per chi e' nel pool resta
+  // op.limitazioni_dett, che puo' contenere correzioni manuali dalla scheda operatore.
+  limitazioni_registro: { aggiornato_il: '', file: '', da: '', dipendenti: [] },
 };
 

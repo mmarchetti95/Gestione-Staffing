@@ -136,6 +136,7 @@ function renderOperatori() {
     // Il badge attestato porta il colore dello stato di scadenza (verde/ambra/rosso) e nel
     // tooltip data corso + data scadenza; resta viola neutro se la scadenza non e' nota.
     const attBadges = attBadgesHtml(op);
+    const limBadge = limBadgeOpCard(op);
     // mini sat bar 12 mesi
     let extraPerMese = new Array(12).fill(0);
     state.assegnazioni.filter(a => a.operatore_id === op.id).forEach(a => {
@@ -163,6 +164,7 @@ function renderOperatori() {
             ${contrattoBadge}
             ${!modoEx && isSaturo ? '<span class="text-[9px] bg-red-100 text-red-700 px-1 rounded">SATURO</span>' : ''}
             ${op.orphan ? '<span class="text-[9px] bg-slate-100 text-slate-600 px-1 rounded" title="Non presente nel foglio OPERATORI">no skill matrix</span>' : ''}
+            ${limBadge}
           </div>
           <div class="flex items-center gap-1">
             <button class="view-op text-xs text-slate-400 hover:text-teal-700" data-id="${op.id}" title="Vedi impegni / commesse">📋</button>

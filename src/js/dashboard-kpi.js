@@ -37,7 +37,12 @@ function calcKPI() {
   const nAttScaduti = scadenzeAtt.filter(s => s.stato === 'scaduto').length;
   const nAttInScadenza = scadenzeAtt.length - nAttScaduti;
 
-  return { nAttive, nPipeline, nOperatori, satMedia, gapTot, alertCritici, nAttScaduti, nAttInScadenza };
+  // contratti a termine scaduti / in scadenza, non ancora segnati come ex collega
+  const scadenzeContratti = contrattiScadenzaOperatori();
+  const nContrScaduti = scadenzeContratti.filter(s => s.stato === 'scaduto').length;
+  const nContrInScadenza = scadenzeContratti.length - nContrScaduti;
+
+  return { nAttive, nPipeline, nOperatori, satMedia, gapTot, alertCritici, nAttScaduti, nAttInScadenza, nContrScaduti, nContrInScadenza };
 }
 
 function renderKPI() {
@@ -79,6 +84,9 @@ function renderKPI() {
   const nAttTot = k.nAttScaduti + k.nAttInScadenza;
   const attColor = k.nAttScaduti>0 ? '#dc2626' : (k.nAttInScadenza>0 ? '#c2410c' : '#047857');
   const attPal = k.nAttScaduti>0 ? PAL.attScaduti : (k.nAttInScadenza>0 ? PAL.attScadenza : null);
+  const nContrTot = k.nContrScaduti + k.nContrInScadenza;
+  const contrColor = k.nContrScaduti>0 ? '#dc2626' : (k.nContrInScadenza>0 ? '#c2410c' : '#047857');
+  const contrPal = k.nContrScaduti>0 ? PAL.attScaduti : (k.nContrInScadenza>0 ? PAL.attScadenza : null);
   const html =
     kpiCard('📋', 'Commesse attive', k.nAttive, '#1e40af', 'attive', PAL.attive) +
     kpiCard('🚀', 'Commesse in partenza', k.nPipeline, 'var(--accent-dark)', 'pipeline', PAL.pipeline) +
@@ -86,7 +94,8 @@ function renderKPI() {
     kpiCard('👷', 'Operatori', k.nOperatori, '#4338ca', 'operatori', PAL.operatori) +
     kpiCard('📊', 'Saturazione 3 mesi', (k.satMedia*100).toFixed(0)+'%', satColor, 'saturazione', PAL.saturazione) +
     kpiCard('📉', 'Gap risorse', k.gapTot, gapColor, 'gap', PAL.gap) +
-    kpiCard('🎓', 'Attestati scaduti/in scadenza', nAttTot, attColor, 'attestatiKpi', attPal);
+    kpiCard('🎓', 'Attestati scaduti/in scadenza', nAttTot, attColor, 'attestatiKpi', attPal) +
+    kpiCard('📅', 'Contratti scaduti/in scadenza', nContrTot, contrColor, 'contrattiKpi', contrPal);
   document.getElementById('kpi-grid').innerHTML = html +
     kpiCard('🚨', 'Alert critici', k.alertCritici, k.alertCritici>0?'#dc2626':'#0f172a', 'alert',
             k.alertCritici>0?PAL.alert:null, 'col-span-2 md:col-span-1');
@@ -382,6 +391,48 @@ function showKpiModal(type) {
         <button onclick="closeModal(); const d=document.getElementById('att-details'); if(d){ d.open=true; attToggleSezione(); d.scrollIntoView({behavior:'smooth'}); }"
           style="font-size:12px;padding:6px 12px;background:#0f172a;color:#fff;border:none;border-radius:6px;cursor:pointer;">Apri sezione Attestati &amp; scadenze →</button>
       </div>`;
+    }
+  }
+
+  /* ── CONTRATTI SCADUTI/IN SCADENZA (non segnati come Ex Collega) ── */
+  else if (type === 'contrattiKpi') {
+    title = '📅 Contratti scaduti o in scadenza';
+    headerBg = '#b45309';
+    const scadenze = contrattiScadenzaOperatori();
+    const scaduti = scadenze.filter(s => s.stato === 'scaduto');
+    const inScadenza = scadenze.filter(s => s.stato === 'scadenza');
+
+    const rigaOperatore = (s, color) => `
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;padding:8px 12px;">
+        <div>
+          <div style="font-weight:700;color:#1e293b;font-size:13px;">${esc(s.op.nome_esteso || s.op.nome || '')}</div>
+          <div style="font-size:11px;color:#64748b;">Fine rapporto: ${fmtDate(s.scad)} · <span style="font-weight:700;color:${color};">${s.stato === 'scaduto' ? ('scaduto da ' + Math.abs(s.giorni) + 'gg') : ('tra ' + s.giorni + 'gg')}</span></div>
+        </div>
+        <div style="display:flex;gap:6px;flex-shrink:0;">
+          <button onclick="closeModal(); openOperatoreModal('${jsAttr(s.op.id)}')" style="font-size:11px;padding:5px 10px;background:#fff;color:#334155;border:1px solid #cbd5e1;border-radius:6px;cursor:pointer;white-space:nowrap;">✎ Modifica</button>
+          <button onclick="closeModal(); openLicenziaModal('${jsAttr(s.op.id)}')" style="font-size:11px;padding:5px 10px;background:#fff;color:#b45309;border:1px solid #fde68a;border-radius:6px;cursor:pointer;white-space:nowrap;">🚪 Gestisci</button>
+        </div>
+      </div>`;
+
+    const sezione = (lista, opts) => {
+      if (!lista.length) return '';
+      return `<div style="margin-bottom:20px;">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;">
+          <span style="font-size:12px;font-weight:800;color:${opts.color};text-transform:uppercase;letter-spacing:.04em;">${opts.label}</span>
+          <span style="font-size:11px;font-weight:700;color:#fff;background:${opts.color};padding:1px 8px;border-radius:9999px;">${lista.length}</span>
+        </div>
+        <div style="border:1px solid ${opts.border};border-radius:8px;background:${opts.bg};overflow:hidden;">
+          ${lista.map((s, i) => (i > 0 ? `<div style="border-top:1px solid ${opts.border};"></div>` : '') + rigaOperatore(s, opts.color)).join('')}
+        </div>
+      </div>`;
+    };
+
+    if (scadenze.length === 0) {
+      bodyHtml = `<div style="text-align:center;padding:32px;color:#16a34a;font-size:14px;">✅ Nessun contratto a termine scaduto o in scadenza</div>`;
+    } else {
+      bodyHtml = `<div style="font-size:12px;color:#64748b;margin-bottom:16px;">${scaduti.length} scaduti, ${inScadenza.length} in scadenza entro ${CONTRATTI_PREAVVISO_GG} giorni — non ancora segnati come Ex Collega</div>
+      ${sezione(scaduti, { label: '❌ Scaduti', color: '#dc2626', bg: '#fff5f5', border: '#fecaca' })}
+      ${sezione(inScadenza, { label: '⚠️ In scadenza', color: '#c2410c', bg: '#fffbeb', border: '#fde68a' })}`;
     }
   }
 

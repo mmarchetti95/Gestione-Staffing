@@ -1165,7 +1165,7 @@
     <div class="flex items-center gap-2">
       <button id="btn-presentation" class="px-3 py-1.5 text-sm rounded hover:bg-white/10" style="border:1px solid var(--dark-border-strong);color:var(--dark-text);visibility:visible;">📊 Modalità presentazione</button>
       <div class="text-xs pl-2" style="border-left:1px solid var(--dark-border-strong);color:var(--dark-text-muted);">
-        <span id="app-version" class="font-medium" style="color:var(--accent);">v18.155.0</span> · Michele Marchetti
+        <span id="app-version" class="font-medium" style="color:var(--accent);">v18.157.0</span> · Michele Marchetti
         <span id="sb-role-badge" style="margin-left:8px;padding:1px 8px;border-radius:9999px;background:rgba(255,255,255,.1);color:var(--dark-text);font-weight:600;"></span>
       </div>
     </div>
@@ -1600,6 +1600,51 @@
           <span><span class="att-dot ko"></span> scaduto</span>
           <span><span class="att-dot nodate"></span> scadenza non nota</span>
           <span class="text-slate-400">· la data in cella è la scadenza (mm/aa); il dettaglio completo è nel tooltip</span>
+        </div>
+      </div>
+    </details>
+  </section>
+
+  <!-- 3b-bis. Operatori con limitazioni (collassata: la lista si costruisce solo all'apertura) -->
+  <section id="section-limitazioni" class="bg-white rounded-lg border border-slate-200 p-4 no-present">
+    <details id="lim-details" ontoggle="limToggleSezione()">
+      <summary class="font-semibold text-slate-900 cursor-pointer select-none">
+        ⚠️ Operatori con limitazioni <span id="lim-summary-badges" class="font-normal"></span>
+      </summary>
+      <div class="mt-3">
+        <div class="flex flex-wrap items-center gap-2 mb-2">
+          <input id="lim-search" type="text" placeholder="Cerca dipendente…" class="flex-1 min-w-[180px] px-2 py-1.5 text-sm border border-slate-300 rounded" oninput="limSetFiltro('search', this.value)">
+          <select id="lim-filter-tipo" class="text-xs border border-slate-300 rounded px-1.5 py-1.5" onchange="limSetFiltro('tipo', this.value)">
+            <option value="">Tutti i tipi</option>
+          </select>
+          <select id="lim-filter-stato" class="text-xs border border-slate-300 rounded px-1.5 py-1.5" onchange="limSetFiltro('stato', this.value)">
+            <option value="">Tutti gli stati</option>
+            <option value="scaduto">Visita scaduta</option>
+            <option value="scadenza">Visita in scadenza</option>
+            <option value="valido">Visita valida</option>
+          </select>
+          <select id="lim-filter-ordine" class="text-xs border border-slate-300 rounded px-1.5 py-1.5" onchange="limSetFiltro('ordine', this.value)">
+            <option value="nome">Ordina per nome</option>
+            <option value="scadenza">Ordina per urgenza</option>
+          </select>
+          <label class="flex items-center gap-1 text-xs text-slate-600 whitespace-nowrap">
+            <input type="checkbox" id="lim-filter-pool" onchange="limSetFiltro('soloPool', this.checked)"> Solo pool operatori
+          </label>
+          <span id="lim-count" class="text-[10px] text-slate-400 whitespace-nowrap"></span>
+          <div class="ml-auto flex gap-1">
+            <button onclick="exportLimitazioniXlsx()" class="text-xs px-2 py-1 bg-white text-slate-500 rounded border border-slate-200 hover:bg-slate-50 hover:text-slate-700 whitespace-nowrap" title="Scarica il registro limitazioni in Excel">⬇ Excel</button>
+            <button onclick="document.getElementById('lim-import-file').click()" class="text-xs px-2 py-1 bg-teal-50 text-teal-700 rounded border border-teal-200 hover:bg-teal-100 whitespace-nowrap" title="Importa il file &quot;EP - Elenco dipendenti con limitazioni&quot;">⬆ Importa Excel</button>
+            <input type="file" id="lim-import-file" accept=".xlsx" class="hidden" onchange="limImportPick(this)">
+          </div>
+        </div>
+        <div id="lim-meta" class="text-[10px] text-slate-400 mb-2"></div>
+        <div class="att-scroll"><div id="lim-matrix"></div></div>
+        <div class="flex flex-wrap items-center gap-3 mt-2 text-[10px] text-slate-500">
+          <span><span class="att-dot ok"></span> valida</span>
+          <span><span class="att-dot warn"></span> in scadenza entro 60 giorni</span>
+          <span><span class="att-dot ko"></span> scaduta</span>
+          <span><span class="att-dot nodate"></span> scadenza non nota</span>
+          <span class="text-slate-400">· dati dall'idoneità medica; assegnando in Griglia un operatore con limitazioni compare un avviso col dettaglio</span>
         </div>
       </div>
     </details>

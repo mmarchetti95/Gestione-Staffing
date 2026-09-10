@@ -14,8 +14,8 @@ async function sget(k) {
 }
 
 async function loadState() {
-  const keys = ['commesse_pipeline','operatori','assegnazioni','commesse_attive_extra','staffing_modificato','commesse_chiuse','commesse_attive_meta','commesse_escluse','attestati_registro','dpi_disponibili','dpi_catalogo'];
-  const [p, o, a, ce, sm, cc, cam, cesc, areg, ddisp, dcat] = await Promise.all(keys.map(sget));
+  const keys = ['commesse_pipeline','operatori','assegnazioni','commesse_attive_extra','staffing_modificato','commesse_chiuse','commesse_attive_meta','commesse_escluse','attestati_registro','dpi_disponibili','dpi_catalogo','limitazioni_registro','limitazioni_catalogo'];
+  const [p, o, a, ce, sm, cc, cam, cesc, areg, ddisp, dcat, lreg, lcat] = await Promise.all(keys.map(sget));
   state.pipeline = p || JSON.parse(JSON.stringify(INITIAL_DATA.pipeline));
   state.operatori = o || JSON.parse(JSON.stringify(INITIAL_DATA.operatori));
   state.commesse_chiuse = cc || INITIAL_DATA._chiuse || [];
@@ -45,6 +45,10 @@ async function loadState() {
   // di proposito) e non deve far tornare il seed: si distingue con Array.isArray, non con ||.
   state.dpi_disponibili = Array.isArray(ddisp) ? ddisp : DPI_DEFAULT.slice();
   state.dpi_catalogo = (dcat && typeof dcat === 'object') ? dcat : {};
+  state.limitazioni_registro = lreg || { aggiornato_il: '', file: '', da: '', dipendenti: [] };
+  // Stessa distinzione Array.isArray vista sopra per dpi_disponibili: un catalogo svuotato
+  // di proposito e' un valore legittimo, non deve far tornare il seed.
+  state.limitazioni_catalogo = Array.isArray(lcat) ? lcat : LIMITAZIONI_TIPI_DEFAULT.slice();
   ricalcolaAllocOperatori();
 
   // Seed email operatori una-tantum (solo su quelli ancora senza email).
@@ -67,6 +71,8 @@ async function saveState(logAction, logDetails, immediate) {
     sset('attestati_registro', state.attestati_registro),
     sset('dpi_disponibili', state.dpi_disponibili),
     sset('dpi_catalogo', state.dpi_catalogo),
+    sset('limitazioni_registro', state.limitazioni_registro),
+    sset('limitazioni_catalogo', state.limitazioni_catalogo),
   ]);
   // Log attività se specificata
   if (logAction) sbLogActivity(logAction, logDetails || {});

@@ -97,6 +97,7 @@ function renderAll() {
   renderDpiCatalogo();
   renderOperatori();
   renderAttestati();
+  renderLimitazioni();
   renderDpi();
   renderCommesse();
   renderGap();

@@ -380,7 +380,7 @@ async function promuoviCommessa(id) {
 }
 
 function openOperatoreModal(id) {
-  const op = id ? state.operatori.find(o => o.id === id) : { id:'op_new_'+Date.now(), nome_breve:'', nome_esteso:'', nome:'', cognome:'', email:'', regione:'', provincia:'', comune_residenza:'', contratto_tipo:'indeterminato', data_inizio_rapporto:'', data_fine_rapporto:'', skills:[], attestati:[], attestati_dett:{}, dpi:[], dpi_dett:{}, alloc_mensile:new Array(12).fill(0), data_aggiunta: new Date().toISOString().slice(0,10) };
+  const op = id ? state.operatori.find(o => o.id === id) : { id:'op_new_'+Date.now(), nome_breve:'', nome_esteso:'', nome:'', cognome:'', email:'', regione:'', provincia:'', comune_residenza:'', contratto_tipo:'indeterminato', data_inizio_rapporto:'', data_fine_rapporto:'', skills:[], attestati:[], attestati_dett:{}, dpi:[], dpi_dett:{}, limitazioni_dett:null, alloc_mensile:new Array(12).fill(0), data_aggiunta: new Date().toISOString().slice(0,10) };
   const opAtt = op.attestati || [];
   const regioneIniziale = op.regione || (op.provincia && provinciaInfo(op.provincia)?.regione) || '';
   const root = document.getElementById('modal-root');
@@ -442,6 +442,27 @@ function openOperatoreModal(id) {
       </div>
       <div>
         <div class="flex items-center justify-between mb-1">
+          <div class="text-xs text-slate-600 font-medium">Limitazioni da idoneità medica <span class="text-slate-400 font-normal">(facoltative)</span></div>
+          <button type="button" id="mo-lim-add" class="text-[10px] px-2 py-0.5 bg-slate-100 text-slate-700 rounded border border-slate-300 hover:bg-slate-200">+ Aggiungi limitazione</button>
+        </div>
+        <div class="p-2 bg-orange-50 rounded border border-orange-200">
+          <div class="grid grid-cols-3 gap-2 mb-2">
+            <label class="block text-[10px]"><span class="text-slate-500">Tipo visita</span>
+              <input id="mo-lim-tipovisita" class="mt-0.5 w-full border border-slate-300 rounded px-1.5 py-1 text-xs" value="${((op.limitazioni_dett||{}).tipo_visita||'').replace(/"/g, '&quot;')}"></label>
+            <label class="block text-[10px]"><span class="text-slate-500">Data visita</span>
+              <input id="mo-lim-datavisita" type="date" class="mt-0.5 w-full border border-slate-300 rounded px-1.5 py-1 text-xs" value="${(op.limitazioni_dett||{}).data_visita||''}"></label>
+            <label class="block text-[10px]"><span class="text-slate-500">Scadenza visita</span>
+              <input id="mo-lim-scadvisita" type="date" class="mt-0.5 w-full border border-slate-300 rounded px-1.5 py-1 text-xs" value="${(op.limitazioni_dett||{}).scadenza_visita||''}"></label>
+          </div>
+          <div id="mo-lim-voci" class="space-y-1"></div>
+          <div id="mo-lim-empty" class="text-[10px] text-slate-400 italic">Nessuna limitazione inserita.</div>
+        </div>
+        <datalist id="mo-lim-catalogo-dl">
+          ${(state.limitazioni_catalogo||[]).map(t => '<option value="' + t.replace(/"/g, '&quot;') + '">').join('')}
+        </datalist>
+      </div>
+      <div>
+        <div class="flex items-center justify-between mb-1">
           <div class="text-xs text-slate-600 font-medium">DPI in dotazione <span class="text-slate-400 font-normal">(taglia e date facoltative)</span></div>
           <div class="flex gap-1">
             <button type="button" id="mo-dpi-all" class="text-[10px] px-2 py-0.5 bg-slate-100 text-slate-700 rounded border border-slate-300 hover:bg-slate-200">Tutti</button>
@@ -498,6 +519,22 @@ function openOperatoreModal(id) {
 
   dpiBindModaleOperatore();
 
+  // Righe limitazioni: costruite via JS (non SSR nella stringa del modal) cosi'
+  // aggiunta/rimozione condividono la stessa funzione sia all'apertura sia al click
+  // su "+ Aggiungi limitazione".
+  const moLimVoci = document.getElementById('mo-lim-voci');
+  const moLimEmpty = document.getElementById('mo-lim-empty');
+  function limUpdateEmptyState() { moLimEmpty.classList.toggle('hidden', moLimVoci.children.length > 0); }
+  function limAddRow(voce) {
+    moLimVoci.insertAdjacentHTML('beforeend', limRigaModaleOperatoreHtml(voce));
+    const riga = moLimVoci.lastElementChild;
+    riga.querySelector('.mo-lim-remove').onclick = () => { riga.remove(); limUpdateEmptyState(); };
+    limUpdateEmptyState();
+  }
+  ((op.limitazioni_dett || {}).voci || []).forEach(v => limAddRow(v));
+  limUpdateEmptyState();
+  document.getElementById('mo-lim-add').onclick = () => limAddRow(null);
+
   const contrattoDateBox = document.getElementById('mo-contratto-date');
   document.querySelectorAll('input[name="mo-contratto"]').forEach(r => {
     r.onchange = () => contrattoDateBox.classList.toggle('hidden', !document.getElementById('mo-contratto-det').checked);
@@ -527,6 +564,21 @@ function openOperatoreModal(id) {
     });
     const letturaDpi = dpiLeggiModaleOperatore(op);
     if (letturaDpi.errore) { showAlertModal(letturaDpi.errore); return; }
+    const limVoci = [...document.querySelectorAll('.mo-lim-riga')].map(riga => ({
+      tipo: (riga.querySelector('.mo-lim-tipo')?.value || '').trim(),
+      nota: (riga.querySelector('.mo-lim-nota')?.value || '').trim(),
+    })).filter(v => v.tipo);
+    const limitazioniDett = limVoci.length === 0 ? null : {
+      tipo_visita: (document.getElementById('mo-lim-tipovisita')?.value || '').trim(),
+      data_visita: document.getElementById('mo-lim-datavisita')?.value || '',
+      scadenza_visita: document.getElementById('mo-lim-scadvisita')?.value || '',
+      voci: limVoci, fonte: 'manuale',
+    };
+    if (limVoci.length) {
+      const catalogoSet = new Set(state.limitazioni_catalogo || []);
+      limVoci.forEach(v => catalogoSet.add(v.tipo));
+      state.limitazioni_catalogo = [...catalogoSet];
+    }
     const nome = (document.getElementById('mo-nome')?.value || '').trim();
     const cognome = (document.getElementById('mo-cognome')?.value || '').trim();
     const email = (document.getElementById('mo-email')?.value || '').trim();
@@ -541,8 +593,8 @@ function openOperatoreModal(id) {
     }
     const dataInizioRapporto = contrattoTipo === 'determinato' ? dataInizio : '';
     const dataFineRapporto = contrattoTipo === 'determinato' ? dataFine : '';
-    if (id) { Object.assign(op, { nome_esteso: nomeEsteso, nome, cognome, email, regione, provincia, comune_residenza: comuneResidenza, contratto_tipo: contrattoTipo, data_inizio_rapporto: dataInizioRapporto, data_fine_rapporto: dataFineRapporto, skills, attestati, attestati_dett: attestatiDett, dpi: letturaDpi.dpi, dpi_dett: letturaDpi.dett }); await saveState('Modifica operatore', {operatore: nomeEsteso}, true); }
-    else { state.operatori.push({ ...op, nome_esteso: nomeEsteso, nome_breve: nomeEsteso, nome, cognome, email, regione, provincia, comune_residenza: comuneResidenza, contratto_tipo: contrattoTipo, data_inizio_rapporto: dataInizioRapporto, data_fine_rapporto: dataFineRapporto, skills, attestati, attestati_dett: attestatiDett, dpi: letturaDpi.dpi, dpi_dett: letturaDpi.dett }); await saveState('Nuovo operatore', {operatore: nomeEsteso}, true); }
+    if (id) { Object.assign(op, { nome_esteso: nomeEsteso, nome, cognome, email, regione, provincia, comune_residenza: comuneResidenza, contratto_tipo: contrattoTipo, data_inizio_rapporto: dataInizioRapporto, data_fine_rapporto: dataFineRapporto, skills, attestati, attestati_dett: attestatiDett, dpi: letturaDpi.dpi, dpi_dett: letturaDpi.dett, limitazioni_dett: limitazioniDett }); await saveState('Modifica operatore', {operatore: nomeEsteso}, true); }
+    else { state.operatori.push({ ...op, nome_esteso: nomeEsteso, nome_breve: nomeEsteso, nome, cognome, email, regione, provincia, comune_residenza: comuneResidenza, contratto_tipo: contrattoTipo, data_inizio_rapporto: dataInizioRapporto, data_fine_rapporto: dataFineRapporto, skills, attestati, attestati_dett: attestatiDett, dpi: letturaDpi.dpi, dpi_dett: letturaDpi.dett, limitazioni_dett: limitazioniDett }); await saveState('Nuovo operatore', {operatore: nomeEsteso}, true); }
     renderAll(); closeModal();
   };
 }
@@ -631,6 +683,25 @@ function isOperatoreScaduto(op) {
 
 function getOperatoriAttivi() {
   return (state.operatori || []).filter(o => !o.licenziato && !isOperatoreScaduto(o));
+}
+
+/* Operatori con contratto a termine scaduto o in scadenza che NON sono stati segnati
+   come ex collega: getOperatoriAttivi() li esclude gia' (isOperatoreScaduto), quindi
+   spariscono silenziosamente dagli incarichi senza che nessuno se ne accorga finche' non
+   si controlla a mano la scheda — da qui il bisogno di un KPI dedicato che li tenga
+   visibili finche' non vengono gestiti (rinnovo contratto o "Segna come Ex Collega").
+   Si scansiona l'intero state.operatori (non getOperatoriAttivi) apposta. */
+function contrattiScadenzaOperatori(giorniPreavviso) {
+  const soglia = giorniPreavviso === undefined ? CONTRATTI_PREAVVISO_GG : giorniPreavviso;
+  const out = [];
+  (state.operatori || []).forEach(op => {
+    if (op.licenziato || op.contratto_tipo !== 'determinato' || !op.data_fine_rapporto) return;
+    const gg = attGiorniAllaScadenza(op.data_fine_rapporto);
+    if (gg === null || gg > soglia) return;
+    out.push({ op: op, scad: op.data_fine_rapporto, giorni: gg, stato: gg < 0 ? 'scaduto' : 'scadenza' });
+  });
+  out.sort((a, b) => a.giorni - b.giorni);
+  return out;
 }
 
 /* Indice mese (0-11) di fine rapporto entro l'ANNO visualizzato:

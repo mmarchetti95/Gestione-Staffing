@@ -206,6 +206,20 @@ function pwCloseOpModal() {
 async function pwConfirmOpModal(cidx, sidx, oidx, nome) {
   pwCloseOpModal();
   if (!sbGuardWrite()) return;
+  // Assegnare (non rimuovere) un operatore con limitazioni riportate nell'idoneita'
+  // medica mostra un avviso col dettaglio prima di confermare, cosi' si puo' ancora
+  // annullare la scelta (vedi dashboard-limitazioni.js).
+  if (nome) {
+    const reg = limVociOperatore(nome);
+    if (reg) {
+      const proceed = await showConfirmAsync(
+        '⚠ ' + nome + ' ha limitazioni riportate nell\'idoneità medica:\n\n' + limDescrizioneRegistro(reg) +
+        '\n\nProcedere comunque con l\'assegnazione?',
+        'Assegna comunque'
+      );
+      if (!proceed) return;
+    }
+  }
   const data = pwGetWeekData();
   const op   = data[cidx]?.squadre[sidx]?.operatori[oidx];
   if (op !== undefined) {

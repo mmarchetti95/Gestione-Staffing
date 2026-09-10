@@ -1165,7 +1165,7 @@
     <div class="flex items-center gap-2">
       <button id="btn-presentation" class="px-3 py-1.5 text-sm rounded hover:bg-white/10" style="border:1px solid var(--dark-border-strong);color:var(--dark-text);visibility:visible;">📊 Modalità presentazione</button>
       <div class="text-xs pl-2" style="border-left:1px solid var(--dark-border-strong);color:var(--dark-text-muted);">
-        <span id="app-version" class="font-medium" style="color:var(--accent);">v18.157.0</span> · Michele Marchetti
+        <span id="app-version" class="font-medium" style="color:var(--accent);">v18.155.0</span> · Michele Marchetti
         <span id="sb-role-badge" style="margin-left:8px;padding:1px 8px;border-radius:9999px;background:rgba(255,255,255,.1);color:var(--dark-text);font-weight:600;"></span>
       </div>
     </div>
@@ -1600,51 +1600,6 @@
           <span><span class="att-dot ko"></span> scaduto</span>
           <span><span class="att-dot nodate"></span> scadenza non nota</span>
           <span class="text-slate-400">· la data in cella è la scadenza (mm/aa); il dettaglio completo è nel tooltip</span>
-        </div>
-      </div>
-    </details>
-  </section>
-
-  <!-- 3b-bis. Operatori con limitazioni (collassata: la lista si costruisce solo all'apertura) -->
-  <section id="section-limitazioni" class="bg-white rounded-lg border border-slate-200 p-4 no-present">
-    <details id="lim-details" ontoggle="limToggleSezione()">
-      <summary class="font-semibold text-slate-900 cursor-pointer select-none">
-        ⚠️ Operatori con limitazioni <span id="lim-summary-badges" class="font-normal"></span>
-      </summary>
-      <div class="mt-3">
-        <div class="flex flex-wrap items-center gap-2 mb-2">
-          <input id="lim-search" type="text" placeholder="Cerca dipendente…" class="flex-1 min-w-[180px] px-2 py-1.5 text-sm border border-slate-300 rounded" oninput="limSetFiltro('search', this.value)">
-          <select id="lim-filter-tipo" class="text-xs border border-slate-300 rounded px-1.5 py-1.5" onchange="limSetFiltro('tipo', this.value)">
-            <option value="">Tutti i tipi</option>
-          </select>
-          <select id="lim-filter-stato" class="text-xs border border-slate-300 rounded px-1.5 py-1.5" onchange="limSetFiltro('stato', this.value)">
-            <option value="">Tutti gli stati</option>
-            <option value="scaduto">Visita scaduta</option>
-            <option value="scadenza">Visita in scadenza</option>
-            <option value="valido">Visita valida</option>
-          </select>
-          <select id="lim-filter-ordine" class="text-xs border border-slate-300 rounded px-1.5 py-1.5" onchange="limSetFiltro('ordine', this.value)">
-            <option value="nome">Ordina per nome</option>
-            <option value="scadenza">Ordina per urgenza</option>
-          </select>
-          <label class="flex items-center gap-1 text-xs text-slate-600 whitespace-nowrap">
-            <input type="checkbox" id="lim-filter-pool" onchange="limSetFiltro('soloPool', this.checked)"> Solo pool operatori
-          </label>
-          <span id="lim-count" class="text-[10px] text-slate-400 whitespace-nowrap"></span>
-          <div class="ml-auto flex gap-1">
-            <button onclick="exportLimitazioniXlsx()" class="text-xs px-2 py-1 bg-white text-slate-500 rounded border border-slate-200 hover:bg-slate-50 hover:text-slate-700 whitespace-nowrap" title="Scarica il registro limitazioni in Excel">⬇ Excel</button>
-            <button onclick="document.getElementById('lim-import-file').click()" class="text-xs px-2 py-1 bg-teal-50 text-teal-700 rounded border border-teal-200 hover:bg-teal-100 whitespace-nowrap" title="Importa il file &quot;EP - Elenco dipendenti con limitazioni&quot;">⬆ Importa Excel</button>
-            <input type="file" id="lim-import-file" accept=".xlsx" class="hidden" onchange="limImportPick(this)">
-          </div>
-        </div>
-        <div id="lim-meta" class="text-[10px] text-slate-400 mb-2"></div>
-        <div class="att-scroll"><div id="lim-matrix"></div></div>
-        <div class="flex flex-wrap items-center gap-3 mt-2 text-[10px] text-slate-500">
-          <span><span class="att-dot ok"></span> valida</span>
-          <span><span class="att-dot warn"></span> in scadenza entro 60 giorni</span>
-          <span><span class="att-dot ko"></span> scaduta</span>
-          <span><span class="att-dot nodate"></span> scadenza non nota</span>
-          <span class="text-slate-400">· dati dall'idoneità medica; assegnando in Griglia un operatore con limitazioni compare un avviso col dettaglio</span>
         </div>
       </div>
     </details>
@@ -2162,11 +2117,6 @@ const ATTESTATI_PREAVVISO_GG = 90;
    si sostituisce, non si ri-frequenta: qualche settimana basta per ordinarlo e consegnarlo. */
 const DPI_PREAVVISO_GG = 30;
 
-/* Giorni di preavviso per i contratti a termine in scadenza (KPI "Contratti scaduti/in
-   scadenza"). Il rinnovo (o la decisione di non rinnovare) richiede piu' anticipo di un
-   DPI ma meno di un attestato che va ri-frequentato: una via di mezzo tra i due. */
-const CONTRATTI_PREAVVISO_GG = 45;
-
 /* Catalogo DPI di primo avvio. E' solo il seed: da qui in poi il catalogo vive in
    state.dpi_disponibili, che viene persistito (chiave 'dpi_disponibili' del dominio core)
    e puo' essere svuotato del tutto senza che questa lista torni a ripopolarlo. */
@@ -2192,29 +2142,6 @@ const ATTESTATI_COLONNE = [
   { label: 'RSPP',                voci: ['RSPP'] },
   { label: 'Segnaletica',         voci: ['Segnaletica stradale - Preposto', 'Segnaletica stradale - Addetto'],
     sigle: { 'Segnaletica stradale - Preposto': 'Prep', 'Segnaletica stradale - Addetto': 'Add' } },
-];
-
-/* ===================== LIMITAZIONI OPERATORI (idoneita' mediche) ===================== */
-/* Giorni di preavviso entro cui una scadenza di idoneita' medica viene mostrata "in scadenza". */
-const LIMITAZIONI_PREAVVISO_GG = 60;
-
-/* Catalogo dei "tipo limitazione" di primo avvio, presi dal file "EP - Elenco dipendenti
-   con limitazioni" (colonne "Tipo limitazione 1/2"). E' solo il seed: da qui in poi il
-   catalogo vive in state.limitazioni_catalogo (persistito, dominio core) e si auto-estende
-   quando un import incontra una dicitura non ancora presente — stesso principio di
-   state.dpi_disponibili, perche' anche qui il vocabolario lo definisce di fatto il medico
-   competente, non il codice. */
-const LIMITAZIONI_TIPI_DEFAULT = [
-  'Evitare sollevamento e/o movimentazione pesi eccessivi',
-  'Evitare movimentazione manuale dei carichi al di sopra delle spalle',
-  'Evitare sforzi fisici gravosi',
-  'Evitare sforzi fisici intensi e/o prolungati',
-  'Evitare esposizione prolungata al freddo o al caldo',
-  'Evitare esposizione prolungata a temperature molto basse e/o molto elevate',
-  'Evitare stazione eretta prolungata',
-  'Fare 10 minuti di pausa ogni ora di lavoro',
-  'Fare 10 minuti di pausa attiva ogni ora di lavoro al VDT',
-  'Obbligo di uso di otoprotettori se esposto a rumore',
 ];
 
 /* ===================== ANAGRAFICA PROVINCE/REGIONI ===================== */
@@ -2382,13 +2309,6 @@ let state = {
   // Per chi e' nel pool la fonte autorevole resta op.attestati_dett, che puo' contenere
   // anche correzioni manuali fatte dalla scheda operatore. Vedi dashboard-attestati.js.
   attestati_registro: { aggiornato_il: '', file: '', da: '', dipendenti: [] },
-  // Catalogo "tipo limitazione": stesso ruolo di dpi_disponibili ma per le idoneita'
-  // mediche. Vedi dashboard-limitazioni.js.
-  limitazioni_catalogo: LIMITAZIONI_TIPI_DEFAULT.slice(),
-  // Registro limitazioni importato da Excel: stessa logica di attestati_registro (copre
-  // anche chi non e' nel pool operatori). Fonte autorevole per chi e' nel pool resta
-  // op.limitazioni_dett, che puo' contenere correzioni manuali dalla scheda operatore.
-  limitazioni_registro: { aggiornato_il: '', file: '', da: '', dipendenti: [] },
 };
 
 /* ===================== ACTIVITY LOG ===================== */
@@ -3389,8 +3309,8 @@ async function sget(k) {
 }
 
 async function loadState() {
-  const keys = ['commesse_pipeline','operatori','assegnazioni','commesse_attive_extra','staffing_modificato','commesse_chiuse','commesse_attive_meta','commesse_escluse','attestati_registro','dpi_disponibili','dpi_catalogo','limitazioni_registro','limitazioni_catalogo'];
-  const [p, o, a, ce, sm, cc, cam, cesc, areg, ddisp, dcat, lreg, lcat] = await Promise.all(keys.map(sget));
+  const keys = ['commesse_pipeline','operatori','assegnazioni','commesse_attive_extra','staffing_modificato','commesse_chiuse','commesse_attive_meta','commesse_escluse','attestati_registro','dpi_disponibili','dpi_catalogo'];
+  const [p, o, a, ce, sm, cc, cam, cesc, areg, ddisp, dcat] = await Promise.all(keys.map(sget));
   state.pipeline = p || JSON.parse(JSON.stringify(INITIAL_DATA.pipeline));
   state.operatori = o || JSON.parse(JSON.stringify(INITIAL_DATA.operatori));
   state.commesse_chiuse = cc || INITIAL_DATA._chiuse || [];
@@ -3420,10 +3340,6 @@ async function loadState() {
   // di proposito) e non deve far tornare il seed: si distingue con Array.isArray, non con ||.
   state.dpi_disponibili = Array.isArray(ddisp) ? ddisp : DPI_DEFAULT.slice();
   state.dpi_catalogo = (dcat && typeof dcat === 'object') ? dcat : {};
-  state.limitazioni_registro = lreg || { aggiornato_il: '', file: '', da: '', dipendenti: [] };
-  // Stessa distinzione Array.isArray vista sopra per dpi_disponibili: un catalogo svuotato
-  // di proposito e' un valore legittimo, non deve far tornare il seed.
-  state.limitazioni_catalogo = Array.isArray(lcat) ? lcat : LIMITAZIONI_TIPI_DEFAULT.slice();
   ricalcolaAllocOperatori();
 
   // Seed email operatori una-tantum (solo su quelli ancora senza email).
@@ -3446,8 +3362,6 @@ async function saveState(logAction, logDetails, immediate) {
     sset('attestati_registro', state.attestati_registro),
     sset('dpi_disponibili', state.dpi_disponibili),
     sset('dpi_catalogo', state.dpi_catalogo),
-    sset('limitazioni_registro', state.limitazioni_registro),
-    sset('limitazioni_catalogo', state.limitazioni_catalogo),
   ]);
   // Log attività se specificata
   if (logAction) sbLogActivity(logAction, logDetails || {});
@@ -3582,12 +3496,7 @@ function calcKPI() {
   const nAttScaduti = scadenzeAtt.filter(s => s.stato === 'scaduto').length;
   const nAttInScadenza = scadenzeAtt.length - nAttScaduti;
 
-  // contratti a termine scaduti / in scadenza, non ancora segnati come ex collega
-  const scadenzeContratti = contrattiScadenzaOperatori();
-  const nContrScaduti = scadenzeContratti.filter(s => s.stato === 'scaduto').length;
-  const nContrInScadenza = scadenzeContratti.length - nContrScaduti;
-
-  return { nAttive, nPipeline, nOperatori, satMedia, gapTot, alertCritici, nAttScaduti, nAttInScadenza, nContrScaduti, nContrInScadenza };
+  return { nAttive, nPipeline, nOperatori, satMedia, gapTot, alertCritici, nAttScaduti, nAttInScadenza };
 }
 
 function renderKPI() {
@@ -3629,9 +3538,6 @@ function renderKPI() {
   const nAttTot = k.nAttScaduti + k.nAttInScadenza;
   const attColor = k.nAttScaduti>0 ? '#dc2626' : (k.nAttInScadenza>0 ? '#c2410c' : '#047857');
   const attPal = k.nAttScaduti>0 ? PAL.attScaduti : (k.nAttInScadenza>0 ? PAL.attScadenza : null);
-  const nContrTot = k.nContrScaduti + k.nContrInScadenza;
-  const contrColor = k.nContrScaduti>0 ? '#dc2626' : (k.nContrInScadenza>0 ? '#c2410c' : '#047857');
-  const contrPal = k.nContrScaduti>0 ? PAL.attScaduti : (k.nContrInScadenza>0 ? PAL.attScadenza : null);
   const html =
     kpiCard('📋', 'Commesse attive', k.nAttive, '#1e40af', 'attive', PAL.attive) +
     kpiCard('🚀', 'Commesse in partenza', k.nPipeline, 'var(--accent-dark)', 'pipeline', PAL.pipeline) +
@@ -3639,8 +3545,7 @@ function renderKPI() {
     kpiCard('👷', 'Operatori', k.nOperatori, '#4338ca', 'operatori', PAL.operatori) +
     kpiCard('📊', 'Saturazione 3 mesi', (k.satMedia*100).toFixed(0)+'%', satColor, 'saturazione', PAL.saturazione) +
     kpiCard('📉', 'Gap risorse', k.gapTot, gapColor, 'gap', PAL.gap) +
-    kpiCard('🎓', 'Attestati scaduti/in scadenza', nAttTot, attColor, 'attestatiKpi', attPal) +
-    kpiCard('📅', 'Contratti scaduti/in scadenza', nContrTot, contrColor, 'contrattiKpi', contrPal);
+    kpiCard('🎓', 'Attestati scaduti/in scadenza', nAttTot, attColor, 'attestatiKpi', attPal);
   document.getElementById('kpi-grid').innerHTML = html +
     kpiCard('🚨', 'Alert critici', k.alertCritici, k.alertCritici>0?'#dc2626':'#0f172a', 'alert',
             k.alertCritici>0?PAL.alert:null, 'col-span-2 md:col-span-1');
@@ -3939,48 +3844,6 @@ function showKpiModal(type) {
     }
   }
 
-  /* ── CONTRATTI SCADUTI/IN SCADENZA (non segnati come Ex Collega) ── */
-  else if (type === 'contrattiKpi') {
-    title = '📅 Contratti scaduti o in scadenza';
-    headerBg = '#b45309';
-    const scadenze = contrattiScadenzaOperatori();
-    const scaduti = scadenze.filter(s => s.stato === 'scaduto');
-    const inScadenza = scadenze.filter(s => s.stato === 'scadenza');
-
-    const rigaOperatore = (s, color) => `
-      <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;padding:8px 12px;">
-        <div>
-          <div style="font-weight:700;color:#1e293b;font-size:13px;">${esc(s.op.nome_esteso || s.op.nome || '')}</div>
-          <div style="font-size:11px;color:#64748b;">Fine rapporto: ${fmtDate(s.scad)} · <span style="font-weight:700;color:${color};">${s.stato === 'scaduto' ? ('scaduto da ' + Math.abs(s.giorni) + 'gg') : ('tra ' + s.giorni + 'gg')}</span></div>
-        </div>
-        <div style="display:flex;gap:6px;flex-shrink:0;">
-          <button onclick="closeModal(); openOperatoreModal('${jsAttr(s.op.id)}')" style="font-size:11px;padding:5px 10px;background:#fff;color:#334155;border:1px solid #cbd5e1;border-radius:6px;cursor:pointer;white-space:nowrap;">✎ Modifica</button>
-          <button onclick="closeModal(); openLicenziaModal('${jsAttr(s.op.id)}')" style="font-size:11px;padding:5px 10px;background:#fff;color:#b45309;border:1px solid #fde68a;border-radius:6px;cursor:pointer;white-space:nowrap;">🚪 Gestisci</button>
-        </div>
-      </div>`;
-
-    const sezione = (lista, opts) => {
-      if (!lista.length) return '';
-      return `<div style="margin-bottom:20px;">
-        <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;">
-          <span style="font-size:12px;font-weight:800;color:${opts.color};text-transform:uppercase;letter-spacing:.04em;">${opts.label}</span>
-          <span style="font-size:11px;font-weight:700;color:#fff;background:${opts.color};padding:1px 8px;border-radius:9999px;">${lista.length}</span>
-        </div>
-        <div style="border:1px solid ${opts.border};border-radius:8px;background:${opts.bg};overflow:hidden;">
-          ${lista.map((s, i) => (i > 0 ? `<div style="border-top:1px solid ${opts.border};"></div>` : '') + rigaOperatore(s, opts.color)).join('')}
-        </div>
-      </div>`;
-    };
-
-    if (scadenze.length === 0) {
-      bodyHtml = `<div style="text-align:center;padding:32px;color:#16a34a;font-size:14px;">✅ Nessun contratto a termine scaduto o in scadenza</div>`;
-    } else {
-      bodyHtml = `<div style="font-size:12px;color:#64748b;margin-bottom:16px;">${scaduti.length} scaduti, ${inScadenza.length} in scadenza entro ${CONTRATTI_PREAVVISO_GG} giorni — non ancora segnati come Ex Collega</div>
-      ${sezione(scaduti, { label: '❌ Scaduti', color: '#dc2626', bg: '#fff5f5', border: '#fecaca' })}
-      ${sezione(inScadenza, { label: '⚠️ In scadenza', color: '#c2410c', bg: '#fffbeb', border: '#fde68a' })}`;
-    }
-  }
-
   root.innerHTML = `<div class="modal-backdrop">
     <div style="background:#fff;border-radius:var(--radius-lg);box-shadow:var(--shadow-lg);width:100%;max-width:760px;margin:2rem auto;display:flex;flex-direction:column;max-height:85vh;">
       <div style="background:${headerBg};border-radius:var(--radius-lg) var(--radius-lg) 0 0;padding:14px 18px;display:flex;justify-content:space-between;align-items:center;flex-shrink:0;">
@@ -4136,7 +3999,6 @@ function renderOperatori() {
     // Il badge attestato porta il colore dello stato di scadenza (verde/ambra/rosso) e nel
     // tooltip data corso + data scadenza; resta viola neutro se la scadenza non e' nota.
     const attBadges = attBadgesHtml(op);
-    const limBadge = limBadgeOpCard(op);
     // mini sat bar 12 mesi
     let extraPerMese = new Array(12).fill(0);
     state.assegnazioni.filter(a => a.operatore_id === op.id).forEach(a => {
@@ -4164,7 +4026,6 @@ function renderOperatori() {
             ${contrattoBadge}
             ${!modoEx && isSaturo ? '<span class="text-[9px] bg-red-100 text-red-700 px-1 rounded">SATURO</span>' : ''}
             ${op.orphan ? '<span class="text-[9px] bg-slate-100 text-slate-600 px-1 rounded" title="Non presente nel foglio OPERATORI">no skill matrix</span>' : ''}
-            ${limBadge}
           </div>
           <div class="flex items-center gap-1">
             <button class="view-op text-xs text-slate-400 hover:text-teal-700" data-id="${op.id}" title="Vedi impegni / commesse">📋</button>
@@ -5346,465 +5207,6 @@ function exportAttestatiXlsx() {
   const wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, ws, 'Attestati');
   XLSX.writeFile(wb, 'attestati_dipendenti_' + attOggiIso() + '.xlsx');
-}
-/* ===================== LIMITAZIONI OPERATORI: IDONEITA' MEDICHE ===================== */
-/* Mappa le limitazioni riportate nelle idoneita' mediche periodiche (file "EP - Elenco
-   dipendenti con limitazioni") sugli operatori del pool, alimentando due consumatori:
-
-   1. la sezione "Operatori con limitazioni" della dashboard, fra Attestati e DPI;
-   2. un alert in Griglia settimanale quando si assegna a un cantiere un operatore che
-      ne ha (vedi pwConfirmOpModal in weekly-operatore-modal.js).
-
-   MODELLO DATI (dominio "core", nessuna modifica allo schema Supabase):
-   - op.limitazioni_dett  { tipo_visita, data_visita, scadenza_visita, voci: [{tipo, nota}],
-                            fonte } — UN solo record per operatore (una persona ha
-                            un'idoneita' medica alla volta, a differenza degli attestati che
-                            sono tanti e indipendenti). fonte = 'import' | 'manuale'.
-   - state.limitazioni_catalogo  vocabolario dei "tipo limitazione" visti finora (seed in
-                            LIMITAZIONI_TIPI_DEFAULT, si auto-estende con l'import).
-   - state.limitazioni_registro  archivio grezzo dell'ultimo import, copre anche i
-                            dipendenti fuori dal pool. Consultazione + riabbinamento futuro.
-
-   Per chi e' nel pool, un import successivo SOSTITUISCE l'intero record (e' la fonte
-   autorevole, come un'idoneita' medica reale che si rinnova): chi non compare piu' nel
-   file semplicemente non viene toccato, la correzione manuale sulla scheda operatore resta. */
-
-/* ------------------------------------------------------- stato scadenza ----- */
-
-/* Stato della scadenza di una visita: 'valido' | 'scadenza' | 'scaduto' | 'senza-data'.
-   Riusa attGiorniAllaScadenza (dashboard-attestati.js): e' una pura funzione di date,
-   non specifica degli attestati. */
-function limStatoVisita(reg) {
-  if (!reg || !reg.scadenza_visita) return 'senza-data';
-  const gg = attGiorniAllaScadenza(reg.scadenza_visita);
-  if (gg === null) return 'senza-data';
-  if (gg < 0) return 'scaduto';
-  if (gg <= LIMITAZIONI_PREAVVISO_GG) return 'scadenza';
-  return 'valido';
-}
-
-/* Record limitazioni di un operatore, o null se non ne ha (nessuna voce). */
-function limRegistroOperatore(op) {
-  const reg = op && op.limitazioni_dett;
-  if (!reg || !Array.isArray(reg.voci) || reg.voci.length === 0) return null;
-  return reg;
-}
-
-/* Usata dal picker Griglia (pwConfirmOpModal) per l'alert di assegnazione: cerca
-   l'operatore per nome_esteso/nome, ritorna il suo record limitazioni o null. */
-function limVociOperatore(nomeOperatore) {
-  const op = (state.operatori || []).find(o => (o.nome_esteso || o.nome) === nomeOperatore);
-  return limRegistroOperatore(op);
-}
-
-/* Descrizione testuale multi-riga di un record, per l'alert di assegnazione e i tooltip. */
-function limDescrizioneRegistro(reg) {
-  if (!reg) return '';
-  const righe = [];
-  const meta = [];
-  if (reg.tipo_visita) meta.push(reg.tipo_visita);
-  if (reg.data_visita) meta.push('visita del ' + fmtDate(reg.data_visita));
-  if (reg.scadenza_visita) {
-    const st = limStatoVisita(reg);
-    meta.push(st === 'scaduto' ? 'SCADUTA il ' + fmtDate(reg.scadenza_visita) : 'scade il ' + fmtDate(reg.scadenza_visita));
-  }
-  if (meta.length) righe.push(meta.join(' · '));
-  (reg.voci || []).forEach(v => righe.push('- ' + v.tipo + (v.nota ? ' (' + v.nota + ')' : '')));
-  return righe.join('\n');
-}
-
-/* Tutti i record (pool + fuori pool) in un'unica lista { nome, op, reg, inPool }. */
-function limRigheRegistro() {
-  const righe = [];
-  const nomiPool = new Set();
-
-  (state.operatori || []).forEach(op => {
-    if (op.licenziato || isOperatoreScaduto(op)) return;
-    const nome = op.nome_esteso || op.nome || '';
-    if (!nome) return;
-    nomiPool.add(pwFerieNormTokens(nome).sort().join(' '));
-    const reg = limRegistroOperatore(op);
-    if (!reg) return;
-    righe.push({ nome: nome, op: op, reg: reg, inPool: true });
-  });
-
-  const registro = state.limitazioni_registro || {};
-  (registro.dipendenti || []).forEach(d => {
-    const chiave = pwFerieNormTokens(d.nome || '').sort().join(' ');
-    if (!chiave || nomiPool.has(chiave)) return;
-    if (!d.voci || d.voci.length === 0) return;
-    righe.push({ nome: d.nome, op: null, reg: d, inPool: false });
-  });
-
-  return righe;
-}
-
-/* Badge di avviso per la card operatore nel Pool (dashboard-operatori.js). */
-function limBadgeOpCard(op) {
-  const reg = limRegistroOperatore(op);
-  if (!reg) return '';
-  const st = limStatoVisita(reg);
-  const cls = st === 'scaduto' ? 'bg-red-100 text-red-700' : st === 'scadenza' ? 'bg-amber-100 text-amber-700' : 'bg-orange-50 text-orange-700';
-  return '<span class="text-[9px] ' + cls + ' px-1 rounded" title="' + esc(limDescrizioneRegistro(reg)) + '">⚠ limitazioni</span>';
-}
-
-/* Riga editabile di una voce { tipo, nota } nella scheda operatore: input di testo con
-   suggerimenti dal catalogo (datalist, non <select>: il medico competente puo' sempre
-   scrivere una dicitura nuova, il catalogo e' un aiuto non un vincolo rigido) + nota +
-   rimozione. Costruita per concatenazione, non template literal (vedi convenzione del
-   file: niente template literal annidati). */
-function limRigaModaleOperatoreHtml(voce) {
-  const tipo = (voce && voce.tipo) || '';
-  const nota = (voce && voce.nota) || '';
-  return '<div class="mo-lim-riga flex items-center gap-1.5">' +
-    '<input type="text" class="mo-lim-tipo flex-1 border border-slate-300 rounded px-1.5 py-1 text-xs" list="mo-lim-catalogo-dl" placeholder="Tipo limitazione…" value="' + tipo.replace(/"/g, '&quot;') + '">' +
-    '<input type="text" class="mo-lim-nota flex-1 border border-slate-300 rounded px-1.5 py-1 text-xs" placeholder="Nota (facolt.)" value="' + nota.replace(/"/g, '&quot;') + '">' +
-    '<button type="button" class="mo-lim-remove text-[11px] text-red-400 hover:text-red-600 px-1" title="Rimuovi">✕</button>' +
-  '</div>';
-}
-
-const _limFiltri = { search: '', tipo: '', stato: '', soloPool: false, ordine: 'nome' };
-
-function limSetFiltro(chiave, valore) {
-  _limFiltri[chiave] = valore;
-  renderLimitazioni();
-}
-
-/* ------------------------------------------------------------- render vista ----- */
-
-function renderLimitazioni() {
-  const box = document.getElementById('lim-matrix');
-  const badge = document.getElementById('lim-summary-badges');
-
-  const tutte = limRigheRegistro();
-  const nScaduti = tutte.filter(r => limStatoVisita(r.reg) === 'scaduto').length;
-  const nInScadenza = tutte.filter(r => limStatoVisita(r.reg) === 'scadenza').length;
-  if (badge) {
-    let b = '<span class="att-pill">' + tutte.length + ' operator' + (tutte.length === 1 ? 'e' : 'i') + '</span>';
-    if (nScaduti > 0) b += '<span class="att-pill ko">' + nScaduti + ' visita/e scadut' + (nScaduti === 1 ? 'a' : 'e') + '</span>';
-    if (nInScadenza > 0) b += '<span class="att-pill warn">' + nInScadenza + ' in scadenza</span>';
-    badge.innerHTML = b;
-  }
-
-  if (!box) return;
-  const det = document.getElementById('lim-details');
-  if (det && !det.open) { box.innerHTML = ''; return; }
-
-  const registro = state.limitazioni_registro || {};
-  const metaEl = document.getElementById('lim-meta');
-  if (metaEl) {
-    metaEl.textContent = registro.aggiornato_il
-      ? 'Ultimo import: ' + fmtDate(registro.aggiornato_il) + (registro.file ? ' — ' + registro.file : '') + (registro.da ? ' (' + registro.da + ')' : '')
-      : 'Nessun import effettuato: la lista mostra solo le limitazioni inserite a mano nelle schede operatore.';
-  }
-
-  const selTipo = document.getElementById('lim-filter-tipo');
-  if (selTipo) {
-    const valorePrec = selTipo.value;
-    selTipo.innerHTML = '<option value="">Tutti i tipi</option>' +
-      (state.limitazioni_catalogo || []).map(t => '<option value="' + esc(t) + '">' + esc(t) + '</option>').join('');
-    selTipo.value = valorePrec;
-  }
-
-  const q = (_limFiltri.search || '').trim().toLowerCase();
-
-  let righe = tutte.filter(r => {
-    if (_limFiltri.soloPool && !r.inPool) return false;
-    if (q && !r.nome.toLowerCase().includes(q)) return false;
-    if (_limFiltri.tipo && !(r.reg.voci || []).some(v => v.tipo === _limFiltri.tipo)) return false;
-    if (_limFiltri.stato && limStatoVisita(r.reg) !== _limFiltri.stato) return false;
-    return true;
-  });
-
-  const countEl = document.getElementById('lim-count');
-  if (countEl) countEl.textContent = righe.length + ' dipendenti';
-
-  if (righe.length === 0) {
-    box.innerHTML = '<div class="text-center text-sm text-slate-400 py-6">Nessun dipendente con limitazioni corrisponde ai filtri.</div>';
-    return;
-  }
-
-  if (_limFiltri.ordine === 'scadenza') {
-    righe = righe.slice().sort((a, b) => {
-      const ga = attGiorniAllaScadenza(a.reg.scadenza_visita), gb = attGiorniAllaScadenza(b.reg.scadenza_visita);
-      const va = ga === null ? 999999 : ga, vb = gb === null ? 999999 : gb;
-      return va - vb || a.nome.localeCompare(b.nome);
-    });
-  } else {
-    righe = righe.slice().sort((a, b) => a.nome.localeCompare(b.nome));
-  }
-
-  let html = '<table class="att-matrix" style="width:100%;"><thead><tr>';
-  html += '<th class="att-nome" style="text-align:left;">Dipendente</th>';
-  html += '<th>Tipo visita</th><th>Data visita</th><th>Scadenza</th><th style="text-align:left;">Limitazioni</th></tr></thead><tbody>';
-
-  righe.forEach(r => {
-    const st = limStatoVisita(r.reg);
-    const tagPool = r.inPool ? '' : '<span class="att-fuoripool" title="Presente nel file limitazioni ma non nel pool operatori del reparto">fuori pool</span>';
-    const vociHtml = (r.reg.voci || []).map(v =>
-      '<div>' + esc(v.tipo) + (v.nota ? ' <span class="text-slate-400">(' + esc(v.nota) + ')</span>' : '') + '</div>'
-    ).join('');
-    html += '<tr>' +
-      '<td class="att-nome">' + esc(r.nome) + ' ' + tagPool + '</td>' +
-      '<td>' + esc(r.reg.tipo_visita || '—') + '</td>' +
-      '<td>' + (r.reg.data_visita ? esc(fmtDate(r.reg.data_visita)) : '—') + '</td>' +
-      '<td><span class="att-cell"><span class="att-dot ' + attClasseStato(st) + '"></span>' +
-        (r.reg.scadenza_visita ? esc(fmtDate(r.reg.scadenza_visita)) : '—') + '</span></td>' +
-      '<td style="text-align:left;white-space:normal;">' + vociHtml + '</td>' +
-    '</tr>';
-  });
-  html += '</tbody></table>';
-  box.innerHTML = html;
-}
-
-function limToggleSezione() {
-  renderLimitazioni();
-}
-
-/* -------------------------------------------------------------------- import ----- */
-
-function limFoglio(wb) {
-  // Il file ha un solo foglio dati; se in futuro venisse rinominato si prende comunque
-  // il primo. Nessun nome fisso da cercare (a differenza degli attestati, che hanno
-  // piu' fogli con nomi convenzionali).
-  return wb.Sheets[wb.SheetNames[0]];
-}
-
-/* Estrae dal workbook { perDip, errore }: perDip e' una Map chiave-nome-normalizzata ->
-   { nome, tipo_visita, data_visita, scadenza_visita, voci }. errore valorizzato = file
-   non riconosciuto (intestazione non trovata). */
-function limImportParseWorkbook(wb) {
-  const perDip = new Map();
-  const ws = limFoglio(wb);
-  if (!ws) return { perDip: perDip, errore: 'Nessun foglio leggibile nel file.' };
-
-  const rows = XLSX.utils.sheet_to_json(ws, { header: 1, defval: null, raw: true });
-  const norm = h => ('' + (h || '')).toLowerCase().replace(/[^a-z0-9]/g, '');
-
-  let hIdx = -1;
-  for (let i = 0; i < Math.min(15, rows.length); i++) {
-    const r = rows[i] || [];
-    if (r.some(c => norm(c) === 'nome')) { hIdx = i; break; }
-  }
-  if (hIdx < 0) {
-    return { perDip: perDip,
-      errore: 'Colonna "Nome" non trovata nel file.\n\nVerifica di aver selezionato il file corretto ("EP - Elenco dipendenti con limitazioni").' };
-  }
-
-  const header = (rows[hIdx] || []).map(norm);
-  const iNome = header.findIndex(h => h === 'nome');
-  const iTipoVisita = header.findIndex(h => h === 'tipovisita');
-  const iDataVisita = header.findIndex(h => h === 'datavisita');
-  const iScadVisita = header.findIndex(h => h === 'scadenzavisita');
-  const iTipo1 = header.findIndex(h => h === 'tipolimitazione1');
-  const iNota1 = header.findIndex(h => h === 'notespecifiche');
-  const iTipo2 = header.findIndex(h => h === 'tipolimitazione2');
-  const iNota2 = header.findIndex(h => h === 'notespecifiche2');
-  if (iTipo1 < 0) {
-    return { perDip: perDip, errore: 'Colonna "Tipo limitazione 1" non trovata nel file.\n\nVerifica di aver selezionato il file corretto.' };
-  }
-
-  const cella = (row, i) => i < 0 ? '' : ('' + (row[i] === null || row[i] === undefined ? '' : row[i])).replace(/\s+/g, ' ').trim();
-
-  for (let r = hIdx + 1; r < rows.length; r++) {
-    const row = rows[r] || [];
-    const nomeDip = cella(row, iNome);
-    if (!nomeDip || /^totale$/i.test(nomeDip) || /^legenda/i.test(nomeDip)) continue;
-
-    const voci = [];
-    const tipo1 = cella(row, iTipo1);
-    if (tipo1) voci.push({ tipo: tipo1, nota: cella(row, iNota1) });
-    const tipo2 = cella(row, iTipo2);
-    if (tipo2) voci.push({ tipo: tipo2, nota: cella(row, iNota2) });
-    if (voci.length === 0) continue;
-
-    const chiave = pwFerieNormTokens(nomeDip).sort().join(' ');
-    if (!chiave) continue;
-    perDip.set(chiave, {
-      nome: nomeDip,
-      tipo_visita: cella(row, iTipoVisita),
-      data_visita: iDataVisita >= 0 ? attExcelData(row[iDataVisita]) : '',
-      scadenza_visita: iScadVisita >= 0 ? attExcelData(row[iScadVisita]) : '',
-      voci: voci,
-    });
-  }
-
-  return { perDip: perDip, errore: '' };
-}
-
-function limImportPick(inputEl) {
-  const file = inputEl.files && inputEl.files[0];
-  inputEl.value = '';
-  if (file) limImportFile(file);
-}
-
-function limImportShowConfirm(info) {
-  return new Promise(resolve => {
-    const root = document.getElementById('modal-root');
-
-    function limListBox(items, titolo, colorClass) {
-      if (items.length === 0) return '';
-      const righe = items.slice().sort((a, b) => a.nome.localeCompare(b.nome)).map(it => {
-        const nota = it.nota ? ' <span class="text-slate-400">(' + esc(it.nota) + ')</span>' : '';
-        return '<div class="lni-row px-2 py-1 border-b border-slate-100 last:border-b-0" data-nome="' +
-          esc(it.nome.toLowerCase()) + '">' + esc(it.nome) + nota + '</div>';
-      }).join('');
-      return '<div class="mt-3"><div class="text-xs font-semibold ' + colorClass + ' mb-1">' + titolo +
-        ' (' + items.length + ')</div><div class="border border-slate-200 rounded text-xs" style="max-height:160px;overflow-y:auto;">' +
-        righe + '</div></div>';
-    }
-
-    const nElencati = info.matched.length + info.unmatched.length + info.ambiguous.length;
-    const html =
-      '<div class="modal-backdrop"><div class="bg-white rounded-lg shadow-xl w-full max-w-lg mx-4 flex flex-col" style="max-height:85vh;">' +
-        '<div class="px-5 py-4 border-b border-slate-100">' +
-          '<div class="font-semibold text-slate-900 text-sm">Importazione limitazioni operatori</div>' +
-          '<div class="text-xs text-slate-500 mt-0.5">' + esc(info.fileName) + '</div>' +
-        '</div>' +
-        '<div class="px-5 py-4 text-sm text-slate-700" style="overflow-y:auto;">' +
-          '<ul class="text-xs space-y-1 text-slate-600">' +
-            '<li>• <b>' + info.nDipendenti + '</b> dipendenti con limitazioni letti dal file</li>' +
-            '<li>• <b>' + info.matched.length + '</b> abbinati a operatori del pool: le loro schede verranno aggiornate</li>' +
-            '<li>• ' + (info.nDipendenti - info.matched.length) + ' resteranno solo nel registro consultabile</li>' +
-          '</ul>' +
-          (nElencati > 0 ?
-            '<div class="relative mt-3">' +
-              '<input type="text" id="lni-search" placeholder="Cerca un nominativo negli elenchi qui sotto…" ' +
-              'class="w-full text-xs border border-slate-300 rounded px-2 py-1.5 pr-16 focus:outline-none focus:border-teal-400" ' +
-              'oninput="limImportFilter(this.value)">' +
-              '<span id="lni-search-count" class="absolute right-2 top-1/2 -translate-y-1/2 text-[10px] text-slate-400"></span>' +
-            '</div>' : '') +
-          limListBox(info.matched, '✓ Abbinati al pool operatori', 'text-emerald-700') +
-          limListBox(info.ambiguous, '⚠ Ambigui, più operatori corrispondenti (solo registro)', 'text-amber-700') +
-          limListBox(info.unmatched, 'Non nel pool operatori (solo registro)', 'text-slate-600') +
-          '<div class="text-xs text-slate-500 mt-3">Per gli operatori abbinati, un record di un import precedente viene sostituito da quello del nuovo file; le limitazioni inserite a mano per chi non compare in questo file restano invariate.</div>' +
-        '</div>' +
-        '<div class="px-5 py-3 border-t border-slate-100 flex justify-end gap-2">' +
-          '<button id="lni-cancel" class="px-3 py-1.5 text-sm border border-slate-300 rounded hover:bg-slate-50">Annulla</button>' +
-          '<button id="lni-confirm" class="px-3 py-1.5 text-sm bg-teal-600 text-white rounded hover:bg-teal-700">Importa</button>' +
-        '</div>' +
-      '</div></div>';
-
-    root.innerHTML = html;
-    document.getElementById('lni-cancel').onclick = () => { closeModal(); resolve(false); };
-    document.getElementById('lni-confirm').onclick = () => { closeModal(); resolve(true); };
-    root.querySelector('.modal-backdrop').addEventListener('click', e => {
-      if (e.target.classList.contains('modal-backdrop')) { closeModal(); resolve(false); }
-    });
-  });
-}
-
-function limImportFilter(query) {
-  const q = (query || '').trim().toLowerCase();
-  const rows = document.querySelectorAll('#modal-root .lni-row');
-  let shown = 0;
-  rows.forEach(row => {
-    const match = !q || row.dataset.nome.includes(q);
-    row.classList.toggle('hidden', !match);
-    if (match) shown++;
-  });
-  const countEl = document.getElementById('lni-search-count');
-  if (countEl) countEl.textContent = q ? shown + '/' + rows.length : '';
-}
-
-async function limImportFile(file) {
-  if (!sbGuardWrite()) return;
-  if (typeof XLSX === 'undefined') { showAlertModal('Libreria XLSX non caricata. Verifica la connessione internet e ricarica la pagina.'); return; }
-
-  let wb;
-  try {
-    const buf = await file.arrayBuffer();
-    wb = XLSX.read(buf, { type: 'array' });
-  } catch (err) {
-    showAlertModal('Errore nella lettura del file:\n\n' + err.message);
-    return;
-  }
-
-  const parsed = limImportParseWorkbook(wb);
-  if (parsed.errore) { showAlertModal(parsed.errore); return; }
-  const perDip = parsed.perDip;
-
-  if (perDip.size === 0) {
-    showAlertModal('Nessuna limitazione leggibile trovata nel file.\n\nVerifica che sia l\'export "Elenco dipendenti con limitazioni".');
-    return;
-  }
-
-  const operatori = getOperatoriAttivi();
-  const matched = [], unmatched = [], ambiguous = [];
-  const dipendenti = [];
-
-  perDip.forEach(d => {
-    const res = pwFerieMatchOperatore(d.nome, operatori);
-    let opId = null;
-    if (res.match) {
-      opId = res.match.id;
-      matched.push({ nome: d.nome, nota: d.voci.length + ' limitazion' + (d.voci.length === 1 ? 'e' : 'i') + ' → ' + (res.match.nome_esteso || res.match.nome) });
-    } else if (res.ambiguous) {
-      ambiguous.push({ nome: d.nome, nota: (res.candidates || []).map(c => c.nome_esteso || c.nome).join(', ') });
-    } else {
-      unmatched.push({ nome: d.nome, nota: d.voci.length + ' limitazion' + (d.voci.length === 1 ? 'e' : 'i') });
-    }
-    dipendenti.push({ nome: d.nome, op_id: opId, tipo_visita: d.tipo_visita, data_visita: d.data_visita, scadenza_visita: d.scadenza_visita, voci: d.voci });
-  });
-
-  const ok = await limImportShowConfirm({
-    fileName: file.name, nDipendenti: perDip.size,
-    matched: matched, unmatched: unmatched, ambiguous: ambiguous,
-  });
-  if (!ok) return;
-
-  state.limitazioni_registro = {
-    aggiornato_il: attOggiIso(),
-    file: file.name,
-    da: (typeof _sbUser !== 'undefined' && _sbUser) ? _sbUser.email : '',
-    dipendenti: dipendenti,
-  };
-
-  // Auto-estende il catalogo con eventuali nuove diciture incontrate nel file.
-  const catalogoSet = new Set(state.limitazioni_catalogo || []);
-  dipendenti.forEach(d => (d.voci || []).forEach(v => catalogoSet.add(v.tipo)));
-  state.limitazioni_catalogo = [...catalogoSet];
-
-  let nOpAggiornati = 0;
-  dipendenti.forEach(d => {
-    if (!d.op_id) return;
-    const op = state.operatori.find(o => o.id === d.op_id);
-    if (!op) return;
-    op.limitazioni_dett = {
-      tipo_visita: d.tipo_visita || '', data_visita: d.data_visita || '', scadenza_visita: d.scadenza_visita || '',
-      voci: d.voci, fonte: 'import',
-    };
-    nOpAggiornati++;
-  });
-
-  await saveState('Import limitazioni', { file: file.name, dipendenti: perDip.size, operatori: nOpAggiornati }, true);
-  const det = document.getElementById('lim-details');
-  if (det) det.open = true;
-  renderAll();
-  showAlertModal('✓ Import completato: ' + perDip.size + ' dipendenti nel registro, ' + nOpAggiornati + ' operatori del pool aggiornati.');
-}
-
-/* -------------------------------------------------------------------- export ----- */
-
-function exportLimitazioniXlsx() {
-  if (typeof XLSX === 'undefined') { showAlertModal('Libreria XLSX non caricata. Verifica la connessione internet e ricarica la pagina.'); return; }
-  const header = ['Dipendente', 'Nel pool operatori', 'Tipo visita', 'Data visita', 'Scadenza visita', 'Stato', 'Tipo limitazione', 'Note specifiche', 'Fonte'];
-  const etichettaStato = { valido: 'Valida', scadenza: 'In scadenza', scaduto: 'Scaduta', 'senza-data': 'Scadenza non nota' };
-  const righe = [header];
-  limRigheRegistro()
-    .sort((a, b) => a.nome.localeCompare(b.nome))
-    .forEach(r => {
-      const inPool = r.inPool ? 'Sì' : 'No';
-      const stato = etichettaStato[limStatoVisita(r.reg)] || '';
-      (r.reg.voci || []).forEach(v => {
-        righe.push([r.nome, inPool, r.reg.tipo_visita || '', r.reg.data_visita || '', r.reg.scadenza_visita || '', stato, v.tipo, v.nota || '', r.reg.fonte || '']);
-      });
-    });
-  const ws = XLSX.utils.aoa_to_sheet(righe);
-  ws['!cols'] = [{ wch: 28 }, { wch: 8 }, { wch: 12 }, { wch: 12 }, { wch: 13 }, { wch: 14 }, { wch: 45 }, { wch: 20 }, { wch: 10 }];
-  const wb = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb, ws, 'Limitazioni');
-  XLSX.writeFile(wb, 'limitazioni_operatori_' + attOggiIso() + '.xlsx');
 }
 /* ===================== ANAGRAFICA OPERATORI: IMPORT DA EXCEL ===================== */
 /* Importa comune e provincia di residenza da un export aziendale tipo "Anagrafica
@@ -7572,7 +6974,7 @@ async function promuoviCommessa(id) {
 }
 
 function openOperatoreModal(id) {
-  const op = id ? state.operatori.find(o => o.id === id) : { id:'op_new_'+Date.now(), nome_breve:'', nome_esteso:'', nome:'', cognome:'', email:'', regione:'', provincia:'', comune_residenza:'', contratto_tipo:'indeterminato', data_inizio_rapporto:'', data_fine_rapporto:'', skills:[], attestati:[], attestati_dett:{}, dpi:[], dpi_dett:{}, limitazioni_dett:null, alloc_mensile:new Array(12).fill(0), data_aggiunta: new Date().toISOString().slice(0,10) };
+  const op = id ? state.operatori.find(o => o.id === id) : { id:'op_new_'+Date.now(), nome_breve:'', nome_esteso:'', nome:'', cognome:'', email:'', regione:'', provincia:'', comune_residenza:'', contratto_tipo:'indeterminato', data_inizio_rapporto:'', data_fine_rapporto:'', skills:[], attestati:[], attestati_dett:{}, dpi:[], dpi_dett:{}, alloc_mensile:new Array(12).fill(0), data_aggiunta: new Date().toISOString().slice(0,10) };
   const opAtt = op.attestati || [];
   const regioneIniziale = op.regione || (op.provincia && provinciaInfo(op.provincia)?.regione) || '';
   const root = document.getElementById('modal-root');
@@ -7634,27 +7036,6 @@ function openOperatoreModal(id) {
       </div>
       <div>
         <div class="flex items-center justify-between mb-1">
-          <div class="text-xs text-slate-600 font-medium">Limitazioni da idoneità medica <span class="text-slate-400 font-normal">(facoltative)</span></div>
-          <button type="button" id="mo-lim-add" class="text-[10px] px-2 py-0.5 bg-slate-100 text-slate-700 rounded border border-slate-300 hover:bg-slate-200">+ Aggiungi limitazione</button>
-        </div>
-        <div class="p-2 bg-orange-50 rounded border border-orange-200">
-          <div class="grid grid-cols-3 gap-2 mb-2">
-            <label class="block text-[10px]"><span class="text-slate-500">Tipo visita</span>
-              <input id="mo-lim-tipovisita" class="mt-0.5 w-full border border-slate-300 rounded px-1.5 py-1 text-xs" value="${((op.limitazioni_dett||{}).tipo_visita||'').replace(/"/g, '&quot;')}"></label>
-            <label class="block text-[10px]"><span class="text-slate-500">Data visita</span>
-              <input id="mo-lim-datavisita" type="date" class="mt-0.5 w-full border border-slate-300 rounded px-1.5 py-1 text-xs" value="${(op.limitazioni_dett||{}).data_visita||''}"></label>
-            <label class="block text-[10px]"><span class="text-slate-500">Scadenza visita</span>
-              <input id="mo-lim-scadvisita" type="date" class="mt-0.5 w-full border border-slate-300 rounded px-1.5 py-1 text-xs" value="${(op.limitazioni_dett||{}).scadenza_visita||''}"></label>
-          </div>
-          <div id="mo-lim-voci" class="space-y-1"></div>
-          <div id="mo-lim-empty" class="text-[10px] text-slate-400 italic">Nessuna limitazione inserita.</div>
-        </div>
-        <datalist id="mo-lim-catalogo-dl">
-          ${(state.limitazioni_catalogo||[]).map(t => '<option value="' + t.replace(/"/g, '&quot;') + '">').join('')}
-        </datalist>
-      </div>
-      <div>
-        <div class="flex items-center justify-between mb-1">
           <div class="text-xs text-slate-600 font-medium">DPI in dotazione <span class="text-slate-400 font-normal">(taglia e date facoltative)</span></div>
           <div class="flex gap-1">
             <button type="button" id="mo-dpi-all" class="text-[10px] px-2 py-0.5 bg-slate-100 text-slate-700 rounded border border-slate-300 hover:bg-slate-200">Tutti</button>
@@ -7711,22 +7092,6 @@ function openOperatoreModal(id) {
 
   dpiBindModaleOperatore();
 
-  // Righe limitazioni: costruite via JS (non SSR nella stringa del modal) cosi'
-  // aggiunta/rimozione condividono la stessa funzione sia all'apertura sia al click
-  // su "+ Aggiungi limitazione".
-  const moLimVoci = document.getElementById('mo-lim-voci');
-  const moLimEmpty = document.getElementById('mo-lim-empty');
-  function limUpdateEmptyState() { moLimEmpty.classList.toggle('hidden', moLimVoci.children.length > 0); }
-  function limAddRow(voce) {
-    moLimVoci.insertAdjacentHTML('beforeend', limRigaModaleOperatoreHtml(voce));
-    const riga = moLimVoci.lastElementChild;
-    riga.querySelector('.mo-lim-remove').onclick = () => { riga.remove(); limUpdateEmptyState(); };
-    limUpdateEmptyState();
-  }
-  ((op.limitazioni_dett || {}).voci || []).forEach(v => limAddRow(v));
-  limUpdateEmptyState();
-  document.getElementById('mo-lim-add').onclick = () => limAddRow(null);
-
   const contrattoDateBox = document.getElementById('mo-contratto-date');
   document.querySelectorAll('input[name="mo-contratto"]').forEach(r => {
     r.onchange = () => contrattoDateBox.classList.toggle('hidden', !document.getElementById('mo-contratto-det').checked);
@@ -7756,21 +7121,6 @@ function openOperatoreModal(id) {
     });
     const letturaDpi = dpiLeggiModaleOperatore(op);
     if (letturaDpi.errore) { showAlertModal(letturaDpi.errore); return; }
-    const limVoci = [...document.querySelectorAll('.mo-lim-riga')].map(riga => ({
-      tipo: (riga.querySelector('.mo-lim-tipo')?.value || '').trim(),
-      nota: (riga.querySelector('.mo-lim-nota')?.value || '').trim(),
-    })).filter(v => v.tipo);
-    const limitazioniDett = limVoci.length === 0 ? null : {
-      tipo_visita: (document.getElementById('mo-lim-tipovisita')?.value || '').trim(),
-      data_visita: document.getElementById('mo-lim-datavisita')?.value || '',
-      scadenza_visita: document.getElementById('mo-lim-scadvisita')?.value || '',
-      voci: limVoci, fonte: 'manuale',
-    };
-    if (limVoci.length) {
-      const catalogoSet = new Set(state.limitazioni_catalogo || []);
-      limVoci.forEach(v => catalogoSet.add(v.tipo));
-      state.limitazioni_catalogo = [...catalogoSet];
-    }
     const nome = (document.getElementById('mo-nome')?.value || '').trim();
     const cognome = (document.getElementById('mo-cognome')?.value || '').trim();
     const email = (document.getElementById('mo-email')?.value || '').trim();
@@ -7785,8 +7135,8 @@ function openOperatoreModal(id) {
     }
     const dataInizioRapporto = contrattoTipo === 'determinato' ? dataInizio : '';
     const dataFineRapporto = contrattoTipo === 'determinato' ? dataFine : '';
-    if (id) { Object.assign(op, { nome_esteso: nomeEsteso, nome, cognome, email, regione, provincia, comune_residenza: comuneResidenza, contratto_tipo: contrattoTipo, data_inizio_rapporto: dataInizioRapporto, data_fine_rapporto: dataFineRapporto, skills, attestati, attestati_dett: attestatiDett, dpi: letturaDpi.dpi, dpi_dett: letturaDpi.dett, limitazioni_dett: limitazioniDett }); await saveState('Modifica operatore', {operatore: nomeEsteso}, true); }
-    else { state.operatori.push({ ...op, nome_esteso: nomeEsteso, nome_breve: nomeEsteso, nome, cognome, email, regione, provincia, comune_residenza: comuneResidenza, contratto_tipo: contrattoTipo, data_inizio_rapporto: dataInizioRapporto, data_fine_rapporto: dataFineRapporto, skills, attestati, attestati_dett: attestatiDett, dpi: letturaDpi.dpi, dpi_dett: letturaDpi.dett, limitazioni_dett: limitazioniDett }); await saveState('Nuovo operatore', {operatore: nomeEsteso}, true); }
+    if (id) { Object.assign(op, { nome_esteso: nomeEsteso, nome, cognome, email, regione, provincia, comune_residenza: comuneResidenza, contratto_tipo: contrattoTipo, data_inizio_rapporto: dataInizioRapporto, data_fine_rapporto: dataFineRapporto, skills, attestati, attestati_dett: attestatiDett, dpi: letturaDpi.dpi, dpi_dett: letturaDpi.dett }); await saveState('Modifica operatore', {operatore: nomeEsteso}, true); }
+    else { state.operatori.push({ ...op, nome_esteso: nomeEsteso, nome_breve: nomeEsteso, nome, cognome, email, regione, provincia, comune_residenza: comuneResidenza, contratto_tipo: contrattoTipo, data_inizio_rapporto: dataInizioRapporto, data_fine_rapporto: dataFineRapporto, skills, attestati, attestati_dett: attestatiDett, dpi: letturaDpi.dpi, dpi_dett: letturaDpi.dett }); await saveState('Nuovo operatore', {operatore: nomeEsteso}, true); }
     renderAll(); closeModal();
   };
 }
@@ -7875,25 +7225,6 @@ function isOperatoreScaduto(op) {
 
 function getOperatoriAttivi() {
   return (state.operatori || []).filter(o => !o.licenziato && !isOperatoreScaduto(o));
-}
-
-/* Operatori con contratto a termine scaduto o in scadenza che NON sono stati segnati
-   come ex collega: getOperatoriAttivi() li esclude gia' (isOperatoreScaduto), quindi
-   spariscono silenziosamente dagli incarichi senza che nessuno se ne accorga finche' non
-   si controlla a mano la scheda — da qui il bisogno di un KPI dedicato che li tenga
-   visibili finche' non vengono gestiti (rinnovo contratto o "Segna come Ex Collega").
-   Si scansiona l'intero state.operatori (non getOperatoriAttivi) apposta. */
-function contrattiScadenzaOperatori(giorniPreavviso) {
-  const soglia = giorniPreavviso === undefined ? CONTRATTI_PREAVVISO_GG : giorniPreavviso;
-  const out = [];
-  (state.operatori || []).forEach(op => {
-    if (op.licenziato || op.contratto_tipo !== 'determinato' || !op.data_fine_rapporto) return;
-    const gg = attGiorniAllaScadenza(op.data_fine_rapporto);
-    if (gg === null || gg > soglia) return;
-    out.push({ op: op, scad: op.data_fine_rapporto, giorni: gg, stato: gg < 0 ? 'scaduto' : 'scadenza' });
-  });
-  out.sort((a, b) => a.giorni - b.giorni);
-  return out;
 }
 
 /* Indice mese (0-11) di fine rapporto entro l'ANNO visualizzato:
@@ -10308,7 +9639,6 @@ function renderAll() {
   renderDpiCatalogo();
   renderOperatori();
   renderAttestati();
-  renderLimitazioni();
   renderDpi();
   renderCommesse();
   renderGap();
@@ -12025,20 +11355,6 @@ function pwCloseOpModal() {
 async function pwConfirmOpModal(cidx, sidx, oidx, nome) {
   pwCloseOpModal();
   if (!sbGuardWrite()) return;
-  // Assegnare (non rimuovere) un operatore con limitazioni riportate nell'idoneita'
-  // medica mostra un avviso col dettaglio prima di confermare, cosi' si puo' ancora
-  // annullare la scelta (vedi dashboard-limitazioni.js).
-  if (nome) {
-    const reg = limVociOperatore(nome);
-    if (reg) {
-      const proceed = await showConfirmAsync(
-        '⚠ ' + nome + ' ha limitazioni riportate nell\'idoneità medica:\n\n' + limDescrizioneRegistro(reg) +
-        '\n\nProcedere comunque con l\'assegnazione?',
-        'Assegna comunque'
-      );
-      if (!proceed) return;
-    }
-  }
   const data = pwGetWeekData();
   const op   = data[cidx]?.squadre[sidx]?.operatori[oidx];
   if (op !== undefined) {
