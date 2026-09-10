@@ -77,6 +77,25 @@ function aiAppendMessage(role, text) {
   box.scrollTop = box.scrollHeight;
 }
 
+// Bollicina "sta scrivendo…" mostrata mentre si attende la risposta della Edge
+// Function (può richiedere qualche secondo per via del tool-use loop) — senza
+// questo l'utente non ha alcun segnale che la domanda è stata inviata.
+function aiShowTyping() {
+  const box = document.getElementById('ai-assistant-messages');
+  if (!box || document.getElementById('ai-typing-indicator')) return;
+  const bubble = document.createElement('div');
+  bubble.id = 'ai-typing-indicator';
+  bubble.style.cssText = 'align-self:flex-start;background:#f1f5f9;padding:9px 12px;border-radius:10px;';
+  bubble.innerHTML = '<span class="ai-typing-dots"><span></span><span></span><span></span></span>';
+  box.appendChild(bubble);
+  box.scrollTop = box.scrollHeight;
+}
+
+function aiHideTyping() {
+  const el = document.getElementById('ai-typing-indicator');
+  if (el) el.remove();
+}
+
 async function aiSendQuestion() {
   const input = document.getElementById('ai-assistant-input');
   const btn = document.getElementById('ai-assistant-send-btn');
@@ -87,6 +106,7 @@ async function aiSendQuestion() {
   aiAppendMessage('user', question);
   _aiHistory.push({ role: 'user', content: question });
   if (btn) { btn.disabled = true; btn.textContent = '…'; }
+  aiShowTyping();
   try {
     const { data, error } = await _sbClient.functions.invoke('ai-assistant', {
       body: {
@@ -97,6 +117,7 @@ async function aiSendQuestion() {
         history: _aiHistory.slice(-12),
       }
     });
+    aiHideTyping();
     if (error) throw new Error(await _cpEdgeErr(error, 'ai-assistant'));
     if (data && data.answer) {
       aiAppendMessage('assistant', data.answer);
@@ -106,6 +127,7 @@ async function aiSendQuestion() {
       aiAppendMessage('assistant', (data && data.error) || 'Nessuna risposta.');
     }
   } catch (e) {
+    aiHideTyping();
     aiAppendMessage('assistant', 'Errore: ' + e.message);
   } finally {
     if (btn) { btn.disabled = false; btn.textContent = 'Invia'; }
