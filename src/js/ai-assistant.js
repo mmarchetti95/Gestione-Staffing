@@ -39,14 +39,40 @@ async function aiCheckStatus() {
   }
 }
 
+// Markdown minimale usato dalle risposte dell'assistente (grassetto **testo** ed
+// elenchi puntati "* "/"- ") -> HTML. Esegue sempre prima esc() sul testo grezzo:
+// i tag <strong>/<ul>/<li>/<div> inseriti dopo sono letterali nostri, mai
+// interpretati a partire dal testo del modello (nessun rischio di injection).
+function aiFormatMarkdown(rawText) {
+  const lines = esc(rawText).split('\n');
+  const htmlParts = [];
+  let listBuffer = [];
+  function flushList() {
+    if (!listBuffer.length) return;
+    htmlParts.push('<ul style="margin:4px 0 4px 18px;padding:0;">' + listBuffer.map(li => '<li>' + li + '</li>').join('') + '</ul>');
+    listBuffer = [];
+  }
+  lines.forEach(line => {
+    const bulletMatch = line.match(/^\s*[*-]\s+(.*)$/);
+    if (bulletMatch) {
+      listBuffer.push(bulletMatch[1]);
+      return;
+    }
+    flushList();
+    htmlParts.push(line.trim() === '' ? '<div style="height:6px;"></div>' : '<div>' + line + '</div>');
+  });
+  flushList();
+  return htmlParts.join('').replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+}
+
 function aiAppendMessage(role, text) {
   const box = document.getElementById('ai-assistant-messages');
   if (!box) return;
   const isUser = role === 'user';
   const bubble = document.createElement('div');
-  bubble.style.cssText = 'max-width:88%;padding:8px 10px;border-radius:10px;line-height:1.4;white-space:pre-wrap;' +
-    (isUser ? 'align-self:flex-end;background:var(--accent);color:white;' : 'align-self:flex-start;background:#f1f5f9;color:#334155;');
-  bubble.innerHTML = esc(text);
+  bubble.style.cssText = 'max-width:88%;padding:8px 10px;border-radius:10px;line-height:1.45;' +
+    (isUser ? 'align-self:flex-end;background:var(--accent);color:white;white-space:pre-wrap;' : 'align-self:flex-start;background:#f1f5f9;color:#334155;');
+  bubble.innerHTML = isUser ? esc(text) : aiFormatMarkdown(text);
   box.appendChild(bubble);
   box.scrollTop = box.scrollHeight;
 }

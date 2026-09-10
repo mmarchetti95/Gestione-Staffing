@@ -111,6 +111,9 @@ Limite noto: il progetto Supabase è sul piano **Free**, che non include backup 
 
 ## Changelog
 
+## v18.159.1
+- fix: **Assistente AI — le risposte ora renderizzano grassetto ed elenchi puntati** invece di mostrare gli asterischi markdown letterali (`**testo**`, `* voce`) come testo grezzo. Il testo del modello passa comunque sempre per `esc()` prima di qualunque trasformazione, quindi resta al sicuro da injection HTML.
+
 ## v18.159.0
 - feat: **Assistente AI in-app** — widget flottante (bottone 💬 in basso a destra, visibile in Dashboard e Pianificazione Settimanale, nascosto per il ruolo guest) per fare domande in linguaggio naturale sui dati dell'app: operatori/skill/attestati/contratti, pipeline/commesse, griglia settimanale, ferie, doppia week, produzione. Solo lettura: nessuna azione di scrittura. Le risposte usano un tool-use loop (il modello recupera solo i dati pertinenti alla domanda, non l'intero stato) verso un provider LLM a scelta dell'admin — Google Gemini o Groq (gratuiti) oppure Anthropic Claude (a pagamento). Nuovo pannello admin "🤖 Assistente AI" (banner sync, accanto a "Gestione utenti") per attivare/disattivare l'assistente, scegliere provider/modello e impostare o revocare la API key: la chiave non è mai visibile/riesposta al client (nemmeno all'admin), è salvata cifrata in Supabase Vault e letta solo lato server. Richiede due nuove Edge Function (`ai-assistant`, `ai-assistant-config`, non versionate nel repo), la tabella `ai_assistant_settings` (RLS solo admin) e 4 funzioni wrapper `ai_assistant_*` per Vault (migrazioni applicate).
 
