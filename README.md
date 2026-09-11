@@ -111,6 +111,9 @@ Limite noto: il progetto Supabase è sul piano **Free**, che non include backup 
 
 ## Changelog
 
+## v18.169.0
+- feat: **Sottotask Jira — creazione anche per singola squadra** — accanto al bottone "🎫 Sottotask Jira" nell'header di ogni blocco commessa (che considera tutti i comuni pianificati su tutte le squadre di quella commessa), ora anche l'header di ogni squadra ha un proprio bottone "🎫 Sottotask" che limita comuni e operatori considerati alla sola squadra da cui è lanciato — utile quando si vuole creare i sottotask di una squadra alla volta invece che per l'intera commessa. Stesso flusso (scelta Epic/Task per comune, selezione puntuale, campi extra, anteprima dryRun) di prima.
+
 ## v18.168.0
 - fix: **Genera mail — allineamento "Note & strumenti per squadra" e CC collassabile** — la v18.167.0 non risolveva del tutto lo sfasamento tra le due colonne quando il suggerimento "✓ Da griglia" andava a capo su più righe: ora le due label (Note/Strumenti) sono nella stessa riga di una griglia CSS a 2 colonne, che le allinea automaticamente qualunque sia la lunghezza del testo, con le textarea sempre allineate subito sotto. Il campo "Email sempre in CC" è ora un `<details>` collassato di default (si espande con un click sul titolo, che mostra comunque il numero di indirizzi salvati), invece di stare sempre aperto sotto Orario partenza/lavoro.
 

@@ -1,7 +1,9 @@
 /* ==================== SOTTOTASK JIRA DA GRIGLIA SETTIMANALE ====================
    Flusso: bottone "🎫 Sottotask Jira" nell'header di ogni blocco commessa in
-   Griglia -> pwJiraSubtaskInit(cIdx). Richiede che la commessa abbia "Codice
-   progetto Jira" ed "Epic Jira" configurati in anagrafica (dashboard-commessa-attiva.js).
+   Griglia -> pwJiraSubtaskInit(cIdx), oppure lo stesso bottone nell'header di
+   una singola squadra -> pwJiraSubtaskInit(cIdx, sIdx), che limita i comuni
+   considerati ai soli operatori di quella squadra. Richiede che la commessa
+   abbia "Codice progetto Jira" ed "Epic Jira" configurati in anagrafica (dashboard-commessa-attiva.js).
    Per ogni comune/cantiere pianificato questa settimana si sceglie un Task Jira
    (sotto l'Epic della commessa, scelta da rifare ogni volta, non cacheata), poi
    si seleziona puntualmente quali dei sottotask proposti creare davvero (per
@@ -14,7 +16,7 @@
    Edge Function per il contratto e il check di idempotenza per assignee/Task.
 */
 
-HELP_TEXTS['pw-sottotask-jira'] = 'Crea sottotask su Jira per gli operatori pianificati questa settimana su QUESTA commessa, sotto l\'Epic Jira configurato in anagrafica commessa: uno per operatore/comune ("[Attività] - [Comune] - [Cognome]").\n\nRichiede di scegliere un Task Jira per ogni comune pianificato, poi permette di selezionare puntualmente quali sottotask proposti creare davvero. Mostra sempre un\'anteprima (dryRun) prima di creare qualsiasi cosa su Jira.\n\nRichiede "Codice progetto Jira" ed "Epic Jira" configurati sulla commessa.';
+HELP_TEXTS['pw-sottotask-jira'] = 'Crea sottotask su Jira per gli operatori pianificati questa settimana su QUESTA commessa (o, se lanciato dal bottone nell\'header di una squadra, solo per quella squadra), sotto l\'Epic Jira configurato in anagrafica commessa: uno per operatore/comune ("[Attività] - [Comune] - [Cognome]").\n\nRichiede di scegliere un Task Jira per ogni comune pianificato, poi permette di selezionare puntualmente quali sottotask proposti creare davvero. Mostra sempre un\'anteprima (dryRun) prima di creare qualsiasi cosa su Jira.\n\nRichiede "Codice progetto Jira" ed "Epic Jira" configurati sulla commessa.';
 
 /* ----- Pannello di ricerca condiviso (Epic/Task Jira) -----
    Clone parametrico del pattern "tendina custom" di weekly-strumenti.js
@@ -345,8 +347,11 @@ function pwJiraSubtaskApplyBadgesToDom() {
   });
 }
 
-/* ----- Entry point dal bottone in Griglia ----- */
-function pwJiraSubtaskInit(cIdx) {
+/* ----- Entry point dal bottone in Griglia -----
+   sIdx opzionale: se passato (bottone nell'header della singola squadra),
+   limita i comuni considerati agli operatori di quella squadra soltanto,
+   invece che all'intero blocco commessa. */
+function pwJiraSubtaskInit(cIdx, sIdx) {
   if (!sbGuardWrite()) return;
   const data = pwGetWeekData();
   const bc = data[cIdx];
@@ -358,14 +363,19 @@ function pwJiraSubtaskInit(cIdx) {
     return;
   }
 
-  // Comuni distinti pianificati questa settimana per questa commessa, con gli
-  // operatori distinti assegnati e la prima attività non vuota trovata per coppia.
+  const scopedSquadra = (sIdx !== undefined && sIdx !== null) ? (bc.squadre || [])[sIdx] : null;
+  const squadreScope = scopedSquadra ? [scopedSquadra] : (bc.squadre || []);
+  const displayNome = scopedSquadra ? `${bc.commessa} · ${scopedSquadra.nome || 'Squadra'}` : bc.commessa;
+
+  // Comuni distinti pianificati questa settimana (per l'intera commessa, o per
+  // la sola squadra scelta se scopedSquadra e' valorizzato), con gli operatori
+  // distinti assegnati e la prima attività non vuota trovata per coppia.
   // Ogni comune viene inoltre attribuito alla prima squadra in cui compare, per
   // poter raggruppare la UI per squadra (vedi pwJiraSubtaskOpenComuniModal).
   const comuni = {};
   const comuneSquadra = {}; // comune -> nome squadra
   const squadreOrder = []; // ordine di comparsa delle squadre che hanno almeno un comune
-  (bc.squadre || []).forEach(sq => {
+  squadreScope.forEach(sq => {
     const sqNome = sq.nome || 'Squadra';
     (sq.operatori || []).forEach(op => {
       if (!op.nome) return;
@@ -387,9 +397,12 @@ function pwJiraSubtaskInit(cIdx) {
   });
 
   const comuneNames = Object.keys(comuni);
-  if (comuneNames.length === 0) { showAlertModal('Nessun cantiere pianificato questa settimana per questa commessa.'); return; }
+  if (comuneNames.length === 0) {
+    showAlertModal(scopedSquadra ? 'Nessun cantiere pianificato questa settimana per questa squadra.' : 'Nessun cantiere pianificato questa settimana per questa commessa.');
+    return;
+  }
 
-  pwJiraSubtaskOpenComuniModal(cIdx, bc.commessa, meta, comuneNames, comuni, comuneSquadra, squadreOrder);
+  pwJiraSubtaskOpenComuniModal(cIdx, displayNome, meta, comuneNames, comuni, comuneSquadra, squadreOrder);
 }
 
 /* ----- Step 1: scelta, per ciascun comune, dell'Epic e poi del Task Jira sotto quell'Epic -----

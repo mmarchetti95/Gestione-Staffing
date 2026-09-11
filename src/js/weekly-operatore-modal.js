@@ -449,6 +449,9 @@ function pwRender() {
             <button class="text-[10px] bg-amber-200 hover:bg-amber-300 text-amber-900 px-2 py-0.5 rounded pw-write-action"
               data-cidx="${cIdx}" data-sidx="${sIdx}"
               onclick="pwAddOp(this)">+ Operatore</button>
+            <button class="text-[10px] bg-amber-200 hover:bg-amber-300 text-amber-900 px-2 py-0.5 rounded"
+              data-cidx="${cIdx}" data-sidx="${sIdx}" data-help-key="pw-sottotask-jira" onclick="pwJiraSubtaskInit(${cIdx},${sIdx})"
+              title="Crea sottotask su Jira per i soli operatori pianificati questa settimana in questa squadra — Click destro per la guida">🎫 Sottotask</button>
             <button class="text-[10px] bg-amber-200 hover:bg-amber-300 text-amber-900 px-1.5 py-0.5 rounded disabled:opacity-50"
               data-cidx="${cIdx}" data-sidx="${sIdx}" onclick="pwMoveSquadraUp(this)" ${(sIdx === 0 || !sbCanWrite()) ? 'disabled' : ''} title="Sposta squadra su">▲</button>
             <button class="text-[10px] bg-amber-200 hover:bg-amber-300 text-amber-900 px-1.5 py-0.5 rounded disabled:opacity-50"
