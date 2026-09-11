@@ -1176,7 +1176,7 @@
     <div class="flex items-center gap-2">
       <button id="btn-presentation" class="px-3 py-1.5 text-sm rounded hover:bg-white/10" style="border:1px solid var(--dark-border-strong);color:var(--dark-text);visibility:visible;">📊 Modalità presentazione</button>
       <div class="text-xs pl-2" style="border-left:1px solid var(--dark-border-strong);color:var(--dark-text-muted);">
-        <span id="app-version" class="font-medium" style="color:var(--accent);">v18.162.0</span> · Michele Marchetti
+        <span id="app-version" class="font-medium" style="color:var(--accent);">v18.164.0</span> · Michele Marchetti
         <span id="sb-role-badge" style="margin-left:8px;padding:1px 8px;border-radius:9999px;background:rgba(255,255,255,.1);color:var(--dark-text);font-weight:600;"></span>
       </div>
     </div>
@@ -1246,6 +1246,9 @@
     <button id="sb-btn-ai-config" onclick="aiConfigOpen()" class="dark-link-btn text-xs px-2 py-1" style="visibility:hidden;">
       🤖 Assistente AI
     </button>
+    <button id="sb-btn-ai-history" onclick="aiHistoryShow()" class="dark-link-btn text-xs px-2 py-1" style="visibility:hidden;">
+      🗨️ Storico Assistente AI
+    </button>
     <button onclick="sbShowChangePwd()" class="dark-link-btn text-xs px-2 py-1">
       🔑 Cambia password
     </button>
@@ -1313,6 +1316,38 @@
           </tr>
         </thead>
         <tbody id="sb-log-tbody">
+          <tr><td colspan="4" style="padding:20px;text-align:center;color:#94a3b8;">Caricamento…</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Storico Assistente AI (solo admin) -->
+<div id="ai-history-modal" style="display:none;position:fixed;inset:0;z-index:99999;background:var(--backdrop);align-items:center;justify-content:center;">
+  <div style="background:white;border-radius:var(--radius-lg);padding:28px 32px;width:900px;max-width:96vw;max-height:85vh;box-shadow:var(--shadow-lg);display:flex;flex-direction:column;">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
+      <div>
+        <div style="font-weight:700;font-size:16px;color:#0f172a;font-family:var(--font-display);">🗨️ Storico Assistente AI</div>
+        <div style="font-size:11px;color:#94a3b8;margin-top:2px;">Domande poste all'assistente da ogni utente</div>
+      </div>
+      <div style="display:flex;gap:8px;align-items:center;">
+        <button onclick="aiHistoryLoad()" style="padding:5px 12px;font-size:12px;background:var(--accent);color:white;border:none;border-radius:6px;cursor:pointer;">↺ Aggiorna</button>
+        <button onclick="aiHistoryClose()" style="padding:5px 12px;font-size:12px;border:1px solid #e2e8f0;border-radius:6px;background:white;cursor:pointer;color:#475569;">Chiudi</button>
+      </div>
+    </div>
+    <input id="ai-history-filter" type="text" oninput="aiHistoryFilter()" placeholder="Filtra per utente o testo della domanda/risposta…" style="width:100%;padding:6px 10px;font-size:12px;border:1px solid #e2e8f0;border-radius:6px;margin-bottom:10px;box-sizing:border-box;">
+    <div style="overflow-y:auto;flex:1;">
+      <table style="width:100%;border-collapse:collapse;font-size:12px;">
+        <thead>
+          <tr style="background:#f8fafc;position:sticky;top:0;">
+            <th style="text-align:left;padding:8px 12px;border-bottom:1px solid #e2e8f0;color:#64748b;font-weight:600;white-space:nowrap;">Data/Ora</th>
+            <th style="text-align:left;padding:8px 12px;border-bottom:1px solid #e2e8f0;color:#64748b;font-weight:600;">Utente</th>
+            <th style="text-align:left;padding:8px 12px;border-bottom:1px solid #e2e8f0;color:#64748b;font-weight:600;">Domanda</th>
+            <th style="text-align:left;padding:8px 12px;border-bottom:1px solid #e2e8f0;color:#64748b;font-weight:600;">Risposta</th>
+          </tr>
+        </thead>
+        <tbody id="ai-history-tbody">
           <tr><td colspan="4" style="padding:20px;text-align:center;color:#94a3b8;">Caricamento…</td></tr>
         </tbody>
       </table>
@@ -1425,14 +1460,26 @@
       </div>
     </div>
 
+    <div style="display:flex;gap:8px;align-items:center;margin-bottom:10px;flex-wrap:wrap;">
+      <input id="sb-users-filter-search" type="text" placeholder="Cerca per email…" oninput="sbUsersSetFilter('search', this.value)"
+        style="flex:1;min-width:180px;border:1px solid #dde3ea;border-radius:6px;padding:6px 10px;font-size:12px;outline:none;box-sizing:border-box;">
+      <select id="sb-users-filter-role" onchange="sbUsersSetFilter('role', this.value)"
+        style="border:1px solid #dde3ea;border-radius:6px;padding:6px 10px;font-size:12px;outline:none;">
+        <option value="">Tutti i ruoli</option>
+        <option value="admin">Admin</option>
+        <option value="responsabile">Responsabile</option>
+        <option value="operatore">Operatore</option>
+        <option value="guest">Guest</option>
+      </select>
+    </div>
     <div style="overflow-y:auto;flex:1;">
       <table style="width:100%;border-collapse:collapse;font-size:12px;">
         <thead>
           <tr style="background:#f8fafc;position:sticky;top:0;">
-            <th style="text-align:left;padding:8px 12px;border-bottom:1px solid #e2e8f0;color:#64748b;font-weight:600;">Email</th>
-            <th style="text-align:left;padding:8px 12px;border-bottom:1px solid #e2e8f0;color:#64748b;font-weight:600;">Ruolo</th>
-            <th style="text-align:left;padding:8px 12px;border-bottom:1px solid #e2e8f0;color:#64748b;font-weight:600;white-space:nowrap;">Creato il</th>
-            <th style="text-align:left;padding:8px 12px;border-bottom:1px solid #e2e8f0;color:#64748b;font-weight:600;white-space:nowrap;">Ultimo accesso</th>
+            <th onclick="sbUsersSort('email')" style="cursor:pointer;user-select:none;text-align:left;padding:8px 12px;border-bottom:1px solid #e2e8f0;color:#64748b;font-weight:600;">Email<span id="sb-users-sortmark-email" style="margin-left:4px;color:#94a3b8;"></span></th>
+            <th onclick="sbUsersSort('role')" style="cursor:pointer;user-select:none;text-align:left;padding:8px 12px;border-bottom:1px solid #e2e8f0;color:#64748b;font-weight:600;">Ruolo<span id="sb-users-sortmark-role" style="margin-left:4px;color:#94a3b8;"></span></th>
+            <th onclick="sbUsersSort('created_at')" style="cursor:pointer;user-select:none;text-align:left;padding:8px 12px;border-bottom:1px solid #e2e8f0;color:#64748b;font-weight:600;white-space:nowrap;">Creato il<span id="sb-users-sortmark-created_at" style="margin-left:4px;color:#94a3b8;"></span></th>
+            <th onclick="sbUsersSort('last_sign_in_at')" style="cursor:pointer;user-select:none;text-align:left;padding:8px 12px;border-bottom:1px solid #e2e8f0;color:#64748b;font-weight:600;white-space:nowrap;">Ultimo accesso<span id="sb-users-sortmark-last_sign_in_at" style="margin-left:4px;color:#94a3b8;"></span></th>
             <th style="text-align:right;padding:8px 12px;border-bottom:1px solid #e2e8f0;color:#64748b;font-weight:600;"></th>
           </tr>
         </thead>
@@ -2147,7 +2194,10 @@
 <div id="ai-assistant-panel" style="display:none;position:fixed;right:20px;bottom:84px;width:360px;max-width:92vw;height:480px;max-height:70vh;background:white;border-radius:var(--radius-lg);box-shadow:var(--shadow-lg);border:1px solid #e2e8f0;z-index:5000;flex-direction:column;overflow:hidden;">
   <div style="padding:12px 14px;background:var(--dark-bg);color:white;display:flex;align-items:center;justify-content:space-between;flex-shrink:0;">
     <div style="font-weight:700;font-size:13px;">🤖 Assistente AI</div>
-    <button onclick="aiToggleWidget()" style="background:none;border:none;color:white;font-size:18px;cursor:pointer;line-height:1;">&times;</button>
+    <div style="display:flex;align-items:center;gap:10px;">
+      <button id="ai-widget-history-btn" onclick="aiWidgetToggleHistory()" title="Storico delle tue domande" style="background:none;border:none;color:white;font-size:15px;cursor:pointer;line-height:1;">🕘</button>
+      <button onclick="aiToggleWidget()" style="background:none;border:none;color:white;font-size:18px;cursor:pointer;line-height:1;">&times;</button>
+    </div>
   </div>
   <div id="ai-assistant-messages" style="flex:1;overflow-y:auto;padding:12px;font-size:12.5px;display:flex;flex-direction:column;gap:8px;"></div>
   <div id="ai-assistant-disabled-banner" style="display:none;padding:10px 14px;font-size:11.5px;color:#92400e;background:#fffbeb;border-top:1px solid #fde68a;">L'assistente AI non è al momento disponibile.</div>

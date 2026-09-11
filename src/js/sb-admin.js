@@ -405,6 +405,10 @@ async function sbShowUsers() {
   document.getElementById('sb-users-new-password').value = '';
   document.getElementById('sb-users-new-role').value = 'responsabile';
   sbToggleGuestPagesUI('sb-users-new-guestpages', 'responsabile');
+  document.getElementById('sb-users-filter-search').value = '';
+  document.getElementById('sb-users-filter-role').value = '';
+  _sbUsersFilter = { search: '', role: '' };
+  _sbUsersSort = { key: null, dir: 'asc' };
   await sbLoadUsers();
 }
 
@@ -419,49 +423,116 @@ function sbUsersMsg(errText, okText) {
   if (okText) { okEl.textContent = okText; okEl.style.display = 'block'; } else { okEl.style.display = 'none'; }
 }
 
+// Cache dell'ultima lista utenti caricata (dati grezzi dalla Edge Function) più stato
+// di filtro/ordinamento correnti: filtri e ordinamento operano client-side sulla cache,
+// senza richiamare 'admin-users' ad ogni interazione.
+let _sbUsersCache = [];
+let _sbUsersFilter = { search: '', role: '' };
+let _sbUsersSort = { key: null, dir: 'asc' };
+
+function sbUsersFmtDate(iso) {
+  if (!iso) return '—';
+  const dt = new Date(iso);
+  return dt.toLocaleDateString('it-IT') + ' ' + dt.toLocaleTimeString('it-IT', {hour:'2-digit', minute:'2-digit'});
+}
+
+function sbUsersSetFilter(key, value) {
+  _sbUsersFilter[key] = value;
+  sbRenderUsersTable();
+}
+
+function sbUsersSort(key) {
+  if (_sbUsersSort.key === key) {
+    _sbUsersSort.dir = _sbUsersSort.dir === 'asc' ? 'desc' : 'asc';
+  } else {
+    _sbUsersSort.key = key;
+    _sbUsersSort.dir = 'asc';
+  }
+  sbRenderUsersTable();
+}
+
+function sbUsersUpdateSortMarks() {
+  ['email', 'role', 'created_at', 'last_sign_in_at'].forEach(key => {
+    const el = document.getElementById('sb-users-sortmark-' + key);
+    if (!el) return;
+    el.textContent = _sbUsersSort.key === key ? (_sbUsersSort.dir === 'asc' ? '▲' : '▼') : '';
+  });
+}
+
 async function sbLoadUsers() {
   const tbody = document.getElementById('sb-users-tbody');
   tbody.innerHTML = '<tr><td colspan="5" style="padding:20px;text-align:center;color:#94a3b8;">Caricamento…</td></tr>';
   try {
     const data = await sbCallAdminUsers('list');
-    const users = data.users || [];
-    if (users.length === 0) {
-      tbody.innerHTML = '<tr><td colspan="5" style="padding:20px;text-align:center;color:#94a3b8;">Nessun utente.</td></tr>';
-      return;
-    }
-    const fmt = iso => {
-      if (!iso) return '—';
-      const dt = new Date(iso);
-      return dt.toLocaleDateString('it-IT') + ' ' + dt.toLocaleTimeString('it-IT', {hour:'2-digit', minute:'2-digit'});
-    };
-    tbody.innerHTML = users.map(u => {
-      const isSelf = _sbUser && u.id === _sbUser.id;
-      const pagesJson = jsAttr(JSON.stringify(u.guest_pages || []));
-      return '<tr style="border-bottom:1px solid #f1f5f9;">' +
-        '<td style="padding:7px 12px;color:#374151;">' + esc(u.email || '') + (isSelf ? ' <span style="color:#94a3b8;font-size:10.5px;">(tu)</span>' : '') + '</td>' +
-        '<td style="padding:7px 12px;">' +
-          '<div style="display:flex;align-items:center;gap:6px;">' +
-          '<select onchange="sbUpdateUserRole(\'' + jsAttr(u.id) + '\', this.value, \'' + jsAttr(u.email) + '\')" ' +
-            (isSelf ? 'disabled title="Non puoi modificare il tuo stesso ruolo"' : '') +
-            ' style="border:1px solid #dde3ea;border-radius:6px;padding:4px 8px;font-size:11.5px;outline:none;">' +
-            '<option value="admin"' + (u.role === 'admin' ? ' selected' : '') + '>Admin</option>' +
-            '<option value="responsabile"' + (u.role === 'responsabile' ? ' selected' : '') + '>Responsabile</option>' +
-            '<option value="operatore"' + (u.role === 'operatore' ? ' selected' : '') + '>Operatore</option>' +
-            '<option value="guest"' + (u.role === 'guest' ? ' selected' : '') + '>Guest</option>' +
-          '</select>' +
-          (u.role === 'guest' ? '<button onclick="sbOpenGuestPagesEditor(\'' + jsAttr(u.id) + '\', \'' + jsAttr(u.email) + '\', \'' + pagesJson + '\')" title="Scegli le pagine visibili" style="padding:3px 8px;font-size:10.5px;border:1px solid #dde3ea;border-radius:6px;background:#f8fafc;cursor:pointer;color:#475569;white-space:nowrap;">📄 Pagine (' + (u.guest_pages||[]).length + ')</button>' : '') +
-          '</div>' +
-        '</td>' +
-        '<td style="padding:7px 12px;white-space:nowrap;color:#64748b;">' + fmt(u.created_at) + '</td>' +
-        '<td style="padding:7px 12px;white-space:nowrap;color:#64748b;">' + fmt(u.last_sign_in_at) + '</td>' +
-        '<td style="padding:7px 12px;text-align:right;">' +
-          (isSelf ? '' : '<button onclick="sbDeleteUser(\'' + jsAttr(u.id) + '\', \'' + jsAttr(u.email) + '\')" style="padding:4px 10px;font-size:11px;border:1px solid #fecaca;color:#dc2626;background:white;border-radius:6px;cursor:pointer;">Elimina</button>') +
-        '</td>' +
-        '</tr>';
-    }).join('');
+    _sbUsersCache = data.users || [];
+    sbRenderUsersTable();
   } catch(e) {
     tbody.innerHTML = '<tr><td colspan="5" style="padding:20px;text-align:center;color:#ef4444;">Errore: ' + esc(e.message) + '</td></tr>';
   }
+}
+
+function sbRenderUsersTable() {
+  const tbody = document.getElementById('sb-users-tbody');
+  sbUsersUpdateSortMarks();
+
+  const search = (_sbUsersFilter.search || '').trim().toLowerCase();
+  const role = _sbUsersFilter.role || '';
+  let users = _sbUsersCache.filter(u => {
+    if (search && !(u.email || '').toLowerCase().includes(search)) return false;
+    if (role && u.role !== role) return false;
+    return true;
+  });
+
+  if (_sbUsersSort.key) {
+    const key = _sbUsersSort.key;
+    const dir = _sbUsersSort.dir === 'asc' ? 1 : -1;
+    users = users.slice().sort((a, b) => {
+      let va = a[key], vb = b[key];
+      if (key === 'created_at' || key === 'last_sign_in_at') {
+        va = va ? new Date(va).getTime() : 0;
+        vb = vb ? new Date(vb).getTime() : 0;
+        return (va - vb) * dir;
+      }
+      va = (va || '').toString().toLowerCase();
+      vb = (vb || '').toString().toLowerCase();
+      return va.localeCompare(vb) * dir;
+    });
+  }
+
+  if (_sbUsersCache.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="5" style="padding:20px;text-align:center;color:#94a3b8;">Nessun utente.</td></tr>';
+    return;
+  }
+  if (users.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="5" style="padding:20px;text-align:center;color:#94a3b8;">Nessun utente corrisponde ai filtri.</td></tr>';
+    return;
+  }
+
+  tbody.innerHTML = users.map(u => {
+    const isSelf = _sbUser && u.id === _sbUser.id;
+    const pagesJson = jsAttr(JSON.stringify(u.guest_pages || []));
+    return '<tr style="border-bottom:1px solid #f1f5f9;">' +
+      '<td style="padding:7px 12px;color:#374151;">' + esc(u.email || '') + (isSelf ? ' <span style="color:#94a3b8;font-size:10.5px;">(tu)</span>' : '') + '</td>' +
+      '<td style="padding:7px 12px;">' +
+        '<div style="display:flex;align-items:center;gap:6px;">' +
+        '<select onchange="sbUpdateUserRole(\'' + jsAttr(u.id) + '\', this.value, \'' + jsAttr(u.email) + '\')" ' +
+          (isSelf ? 'disabled title="Non puoi modificare il tuo stesso ruolo"' : '') +
+          ' style="border:1px solid #dde3ea;border-radius:6px;padding:4px 8px;font-size:11.5px;outline:none;">' +
+          '<option value="admin"' + (u.role === 'admin' ? ' selected' : '') + '>Admin</option>' +
+          '<option value="responsabile"' + (u.role === 'responsabile' ? ' selected' : '') + '>Responsabile</option>' +
+          '<option value="operatore"' + (u.role === 'operatore' ? ' selected' : '') + '>Operatore</option>' +
+          '<option value="guest"' + (u.role === 'guest' ? ' selected' : '') + '>Guest</option>' +
+        '</select>' +
+        (u.role === 'guest' ? '<button onclick="sbOpenGuestPagesEditor(\'' + jsAttr(u.id) + '\', \'' + jsAttr(u.email) + '\', \'' + pagesJson + '\')" title="Scegli le pagine visibili" style="padding:3px 8px;font-size:10.5px;border:1px solid #dde3ea;border-radius:6px;background:#f8fafc;cursor:pointer;color:#475569;white-space:nowrap;">📄 Pagine (' + (u.guest_pages||[]).length + ')</button>' : '') +
+        '</div>' +
+      '</td>' +
+      '<td style="padding:7px 12px;white-space:nowrap;color:#64748b;">' + sbUsersFmtDate(u.created_at) + '</td>' +
+      '<td style="padding:7px 12px;white-space:nowrap;color:#64748b;">' + sbUsersFmtDate(u.last_sign_in_at) + '</td>' +
+      '<td style="padding:7px 12px;text-align:right;">' +
+        (isSelf ? '' : '<button onclick="sbDeleteUser(\'' + jsAttr(u.id) + '\', \'' + jsAttr(u.email) + '\')" style="padding:4px 10px;font-size:11px;border:1px solid #fecaca;color:#dc2626;background:white;border-radius:6px;cursor:pointer;">Elimina</button>') +
+      '</td>' +
+      '</tr>';
+  }).join('');
 }
 
 async function sbCreateUser() {
@@ -614,6 +685,7 @@ async function sbOnLoggedIn() {
   const btnBackups = document.getElementById('sb-btn-backups');
   const btnUsers = document.getElementById('sb-btn-users');
   const btnAiConfig = document.getElementById('sb-btn-ai-config');
+  const btnAiHistory = document.getElementById('sb-btn-ai-history');
   const secRecon = document.getElementById('section-riconciliazione');
   if (sbIsAdmin()) {
     if (btnLog) btnLog.style.visibility = 'visible';
@@ -621,6 +693,7 @@ async function sbOnLoggedIn() {
     if (btnBackups) btnBackups.style.visibility = 'visible';
     if (btnUsers) btnUsers.style.visibility = 'visible';
     if (btnAiConfig) btnAiConfig.style.visibility = 'visible';
+    if (btnAiHistory) btnAiHistory.style.visibility = 'visible';
     if (secRecon) secRecon.style.display = '';
   } else {
     if (btnLog) btnLog.style.visibility = 'hidden';
@@ -628,6 +701,7 @@ async function sbOnLoggedIn() {
     if (btnBackups) btnBackups.style.visibility = 'hidden';
     if (btnUsers) btnUsers.style.visibility = 'hidden';
     if (btnAiConfig) btnAiConfig.style.visibility = 'hidden';
+    if (btnAiHistory) btnAiHistory.style.visibility = 'hidden';
     if (secRecon) secRecon.style.display = 'none';
   }
   if (typeof aiApplyWidgetVisibility === 'function') aiApplyWidgetVisibility();

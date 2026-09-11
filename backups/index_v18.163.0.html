@@ -1176,7 +1176,7 @@
     <div class="flex items-center gap-2">
       <button id="btn-presentation" class="px-3 py-1.5 text-sm rounded hover:bg-white/10" style="border:1px solid var(--dark-border-strong);color:var(--dark-text);visibility:visible;">📊 Modalità presentazione</button>
       <div class="text-xs pl-2" style="border-left:1px solid var(--dark-border-strong);color:var(--dark-text-muted);">
-        <span id="app-version" class="font-medium" style="color:var(--accent);">v18.164.0</span> · Michele Marchetti
+        <span id="app-version" class="font-medium" style="color:var(--accent);">v18.163.0</span> · Michele Marchetti
         <span id="sb-role-badge" style="margin-left:8px;padding:1px 8px;border-radius:9999px;background:rgba(255,255,255,.1);color:var(--dark-text);font-weight:600;"></span>
       </div>
     </div>
@@ -1246,9 +1246,6 @@
     <button id="sb-btn-ai-config" onclick="aiConfigOpen()" class="dark-link-btn text-xs px-2 py-1" style="visibility:hidden;">
       🤖 Assistente AI
     </button>
-    <button id="sb-btn-ai-history" onclick="aiHistoryShow()" class="dark-link-btn text-xs px-2 py-1" style="visibility:hidden;">
-      🗨️ Storico Assistente AI
-    </button>
     <button onclick="sbShowChangePwd()" class="dark-link-btn text-xs px-2 py-1">
       🔑 Cambia password
     </button>
@@ -1316,38 +1313,6 @@
           </tr>
         </thead>
         <tbody id="sb-log-tbody">
-          <tr><td colspan="4" style="padding:20px;text-align:center;color:#94a3b8;">Caricamento…</td></tr>
-        </tbody>
-      </table>
-    </div>
-  </div>
-</div>
-
-<!-- Modal Storico Assistente AI (solo admin) -->
-<div id="ai-history-modal" style="display:none;position:fixed;inset:0;z-index:99999;background:var(--backdrop);align-items:center;justify-content:center;">
-  <div style="background:white;border-radius:var(--radius-lg);padding:28px 32px;width:900px;max-width:96vw;max-height:85vh;box-shadow:var(--shadow-lg);display:flex;flex-direction:column;">
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
-      <div>
-        <div style="font-weight:700;font-size:16px;color:#0f172a;font-family:var(--font-display);">🗨️ Storico Assistente AI</div>
-        <div style="font-size:11px;color:#94a3b8;margin-top:2px;">Domande poste all'assistente da ogni utente</div>
-      </div>
-      <div style="display:flex;gap:8px;align-items:center;">
-        <button onclick="aiHistoryLoad()" style="padding:5px 12px;font-size:12px;background:var(--accent);color:white;border:none;border-radius:6px;cursor:pointer;">↺ Aggiorna</button>
-        <button onclick="aiHistoryClose()" style="padding:5px 12px;font-size:12px;border:1px solid #e2e8f0;border-radius:6px;background:white;cursor:pointer;color:#475569;">Chiudi</button>
-      </div>
-    </div>
-    <input id="ai-history-filter" type="text" oninput="aiHistoryFilter()" placeholder="Filtra per utente o testo della domanda/risposta…" style="width:100%;padding:6px 10px;font-size:12px;border:1px solid #e2e8f0;border-radius:6px;margin-bottom:10px;box-sizing:border-box;">
-    <div style="overflow-y:auto;flex:1;">
-      <table style="width:100%;border-collapse:collapse;font-size:12px;">
-        <thead>
-          <tr style="background:#f8fafc;position:sticky;top:0;">
-            <th style="text-align:left;padding:8px 12px;border-bottom:1px solid #e2e8f0;color:#64748b;font-weight:600;white-space:nowrap;">Data/Ora</th>
-            <th style="text-align:left;padding:8px 12px;border-bottom:1px solid #e2e8f0;color:#64748b;font-weight:600;">Utente</th>
-            <th style="text-align:left;padding:8px 12px;border-bottom:1px solid #e2e8f0;color:#64748b;font-weight:600;">Domanda</th>
-            <th style="text-align:left;padding:8px 12px;border-bottom:1px solid #e2e8f0;color:#64748b;font-weight:600;">Risposta</th>
-          </tr>
-        </thead>
-        <tbody id="ai-history-tbody">
           <tr><td colspan="4" style="padding:20px;text-align:center;color:#94a3b8;">Caricamento…</td></tr>
         </tbody>
       </table>
@@ -2194,10 +2159,7 @@
 <div id="ai-assistant-panel" style="display:none;position:fixed;right:20px;bottom:84px;width:360px;max-width:92vw;height:480px;max-height:70vh;background:white;border-radius:var(--radius-lg);box-shadow:var(--shadow-lg);border:1px solid #e2e8f0;z-index:5000;flex-direction:column;overflow:hidden;">
   <div style="padding:12px 14px;background:var(--dark-bg);color:white;display:flex;align-items:center;justify-content:space-between;flex-shrink:0;">
     <div style="font-weight:700;font-size:13px;">🤖 Assistente AI</div>
-    <div style="display:flex;align-items:center;gap:10px;">
-      <button id="ai-widget-history-btn" onclick="aiWidgetToggleHistory()" title="Storico delle tue domande" style="background:none;border:none;color:white;font-size:15px;cursor:pointer;line-height:1;">🕘</button>
-      <button onclick="aiToggleWidget()" style="background:none;border:none;color:white;font-size:18px;cursor:pointer;line-height:1;">&times;</button>
-    </div>
+    <button onclick="aiToggleWidget()" style="background:none;border:none;color:white;font-size:18px;cursor:pointer;line-height:1;">&times;</button>
   </div>
   <div id="ai-assistant-messages" style="flex:1;overflow-y:auto;padding:12px;font-size:12.5px;display:flex;flex-direction:column;gap:8px;"></div>
   <div id="ai-assistant-disabled-banner" style="display:none;padding:10px 14px;font-size:11.5px;color:#92400e;background:#fffbeb;border-top:1px solid #fde68a;">L'assistente AI non è al momento disponibile.</div>
@@ -3215,7 +3177,6 @@ async function sbOnLoggedIn() {
   const btnBackups = document.getElementById('sb-btn-backups');
   const btnUsers = document.getElementById('sb-btn-users');
   const btnAiConfig = document.getElementById('sb-btn-ai-config');
-  const btnAiHistory = document.getElementById('sb-btn-ai-history');
   const secRecon = document.getElementById('section-riconciliazione');
   if (sbIsAdmin()) {
     if (btnLog) btnLog.style.visibility = 'visible';
@@ -3223,7 +3184,6 @@ async function sbOnLoggedIn() {
     if (btnBackups) btnBackups.style.visibility = 'visible';
     if (btnUsers) btnUsers.style.visibility = 'visible';
     if (btnAiConfig) btnAiConfig.style.visibility = 'visible';
-    if (btnAiHistory) btnAiHistory.style.visibility = 'visible';
     if (secRecon) secRecon.style.display = '';
   } else {
     if (btnLog) btnLog.style.visibility = 'hidden';
@@ -3231,7 +3191,6 @@ async function sbOnLoggedIn() {
     if (btnBackups) btnBackups.style.visibility = 'hidden';
     if (btnUsers) btnUsers.style.visibility = 'hidden';
     if (btnAiConfig) btnAiConfig.style.visibility = 'hidden';
-    if (btnAiHistory) btnAiHistory.style.visibility = 'hidden';
     if (secRecon) secRecon.style.display = 'none';
   }
   if (typeof aiApplyWidgetVisibility === 'function') aiApplyWidgetVisibility();
@@ -19787,10 +19746,7 @@ function aiToggleWidget() {
   if (!panel) return;
   _aiPanelOpen = !_aiPanelOpen;
   panel.style.display = _aiPanelOpen ? 'flex' : 'none';
-  if (_aiPanelOpen) {
-    if (_aiWidgetMode !== 'chat') aiWidgetBackToChat();
-    aiCheckStatus();
-  }
+  if (_aiPanelOpen) aiCheckStatus();
 }
 
 async function aiCheckStatus() {
@@ -19892,7 +19848,6 @@ async function aiSendQuestion() {
       aiAppendMessage('assistant', data.answer);
       _aiHistory.push({ role: 'assistant', content: data.answer });
       _aiHistory = _aiHistory.slice(-12);
-      aiLogHistory(question, data.answer);
     } else {
       aiAppendMessage('assistant', (data && data.error) || 'Nessuna risposta.');
     }
@@ -19902,117 +19857,6 @@ async function aiSendQuestion() {
   } finally {
     if (btn) { btn.disabled = false; btn.textContent = 'Invia'; }
   }
-}
-
-// Storico persistente domanda/risposta (tabella ai_assistant_history, insert-only
-// per l'utente stesso, lettura solo admin via RLS) — a differenza di _aiHistory
-// (contesto conversazionale in memoria, azzerato al reload) questo non torna mai
-// indietro al client: serve solo alla vista admin "Storico Assistente AI".
-// Fire-and-forget: un fallimento qui non deve mai rompere la chat.
-async function aiLogHistory(question, answer) {
-  if (!_sbClient || !_sbUser) return;
-  try {
-    await _sbClient.from('ai_assistant_history').insert({
-      user_email: _sbUser.email,
-      question,
-      answer
-    });
-  } catch (e) {
-    console.warn('AI history log error:', e);
-  }
-}
-
-/* ----- Storico personale nel widget (🕘, tutti gli utenti non-guest) -----
-   Legge solo le proprie righe (RLS read_ai_history_own: user_email = proprio
-   JWT). Riapre una domanda passata come due bubble di sola lettura dentro lo
-   stesso contenitore #ai-assistant-messages: la chat live viene salvata in
-   _aiWidgetChatSnapshot e ripristinata tornando indietro, così non si perde
-   nulla della conversazione in corso. */
-
-let _aiWidgetMode = 'chat'; // 'chat' | 'historyList' | 'historyEntry'
-let _aiWidgetChatSnapshot = null;
-let _aiMyHistoryRows = [];
-
-function aiWidgetToggleHistory() {
-  if (_aiWidgetMode === 'chat') {
-    aiWidgetShowHistoryList();
-  } else {
-    aiWidgetBackToChat();
-  }
-}
-
-async function aiWidgetShowHistoryList() {
-  const box = document.getElementById('ai-assistant-messages');
-  const inputRow = document.getElementById('ai-assistant-input-row');
-  if (!box || !_sbUser) return;
-  if (_aiWidgetMode === 'chat') _aiWidgetChatSnapshot = box.innerHTML;
-  _aiWidgetMode = 'historyList';
-  if (inputRow) inputRow.style.display = 'none';
-  box.innerHTML = '<div style="text-align:center;color:#94a3b8;font-size:11.5px;padding:10px;">Caricamento storico…</div>';
-  try {
-    const { data, error } = await _sbClient
-      .from('ai_assistant_history')
-      .select('*')
-      .eq('user_email', _sbUser.email)
-      .order('created_at', { ascending: false })
-      .limit(100);
-    if (error) throw error;
-    _aiMyHistoryRows = data || [];
-    aiWidgetRenderHistoryList();
-  } catch (e) {
-    box.innerHTML = '<div style="text-align:center;color:#ef4444;font-size:11.5px;padding:10px;">Errore: ' + esc(e.message) + '</div>';
-  }
-}
-
-function aiWidgetRenderHistoryList() {
-  const box = document.getElementById('ai-assistant-messages');
-  if (!box) return;
-  const header = '<div style="display:flex;align-items:center;justify-content:space-between;padding:2px 2px 8px;border-bottom:1px solid #f1f5f9;margin-bottom:6px;">' +
-    '<div style="font-weight:600;font-size:11.5px;color:#475569;">🕘 Le tue domande</div>' +
-    '<button onclick="aiWidgetBackToChat()" style="background:none;border:none;color:var(--accent);font-size:11px;cursor:pointer;">← Torna alla chat</button>' +
-    '</div>';
-  if (!_aiMyHistoryRows.length) {
-    box.innerHTML = header + '<div style="text-align:center;color:#94a3b8;font-size:11.5px;padding:14px 6px;">Nessuna domanda registrata.</div>';
-    return;
-  }
-  const items = _aiMyHistoryRows.map((row, idx) => {
-    const dt = new Date(row.created_at);
-    const dateStr = dt.toLocaleDateString('it-IT') + ' ' + dt.toLocaleTimeString('it-IT', {hour:'2-digit', minute:'2-digit'});
-    return '<div onclick="aiWidgetOpenHistoryEntry(' + idx + ')" style="cursor:pointer;padding:8px 9px;border-radius:8px;background:#f8fafc;border:1px solid #f1f5f9;">' +
-      '<div style="font-size:10px;color:#94a3b8;margin-bottom:2px;">' + esc(dateStr) + '</div>' +
-      '<div style="font-size:12px;color:#334155;">' + esc(aiHistoryTruncate(row.question || '', 90)) + '</div>' +
-      '</div>';
-  }).join('');
-  box.innerHTML = header + '<div style="display:flex;flex-direction:column;gap:6px;">' + items + '</div>';
-}
-
-function aiWidgetOpenHistoryEntry(idx) {
-  const box = document.getElementById('ai-assistant-messages');
-  const row = _aiMyHistoryRows[idx];
-  if (!box || !row) return;
-  _aiWidgetMode = 'historyEntry';
-  const dt = new Date(row.created_at);
-  const dateStr = dt.toLocaleDateString('it-IT') + ' ' + dt.toLocaleTimeString('it-IT', {hour:'2-digit', minute:'2-digit'});
-  box.innerHTML = '<div style="display:flex;align-items:center;justify-content:space-between;padding:2px 2px 8px;border-bottom:1px solid #f1f5f9;margin-bottom:8px;">' +
-    '<div style="font-size:10.5px;color:#94a3b8;">🕘 ' + esc(dateStr) + ' · sola lettura</div>' +
-    '<button onclick="aiWidgetShowHistoryList()" style="background:none;border:none;color:var(--accent);font-size:11px;cursor:pointer;">← Elenco</button>' +
-    '</div>';
-  const userBubble = document.createElement('div');
-  userBubble.style.cssText = 'max-width:88%;padding:8px 10px;border-radius:10px;line-height:1.45;align-self:flex-end;background:var(--accent);color:white;white-space:pre-wrap;';
-  userBubble.innerHTML = esc(row.question || '');
-  const assistantBubble = document.createElement('div');
-  assistantBubble.style.cssText = 'max-width:88%;padding:8px 10px;border-radius:10px;line-height:1.45;align-self:flex-start;background:#f1f5f9;color:#334155;';
-  assistantBubble.innerHTML = aiFormatMarkdown(row.answer || '');
-  box.appendChild(userBubble);
-  box.appendChild(assistantBubble);
-}
-
-function aiWidgetBackToChat() {
-  const box = document.getElementById('ai-assistant-messages');
-  if (box && _aiWidgetChatSnapshot !== null) box.innerHTML = _aiWidgetChatSnapshot;
-  _aiWidgetMode = 'chat';
-  _aiWidgetChatSnapshot = null;
-  aiCheckStatus();
 }
 
 /* ----- Modal admin "Gestione Assistente AI" ----- */
@@ -20106,76 +19950,6 @@ async function aiConfigRevokeKey() {
   } catch (e) {
     aiConfigMsg('Errore revoca chiave: ' + e.message, null);
   }
-}
-
-/* ----- Modal admin "Storico Assistente AI" ----- */
-
-let _aiHistoryRows = [];
-
-async function aiHistoryShow() {
-  document.getElementById('ai-history-modal').style.display = 'flex';
-  await aiHistoryLoad();
-}
-
-function aiHistoryClose() {
-  document.getElementById('ai-history-modal').style.display = 'none';
-}
-
-function aiHistoryTruncate(text, max) {
-  if (!text) return '';
-  return text.length > max ? text.slice(0, max) + '…' : text;
-}
-
-function aiHistoryRenderRows(rows) {
-  const tbody = document.getElementById('ai-history-tbody');
-  if (!tbody) return;
-  if (!rows || rows.length === 0) {
-    tbody.innerHTML = '<tr><td colspan="4" style="padding:20px;text-align:center;color:#94a3b8;">Nessuna domanda registrata.</td></tr>';
-    return;
-  }
-  tbody.innerHTML = rows.map(row => {
-    const dt = new Date(row.created_at);
-    const dateStr = dt.toLocaleDateString('it-IT') + ' ' + dt.toLocaleTimeString('it-IT', {hour:'2-digit', minute:'2-digit'});
-    const question = row.question || '';
-    const answer = row.answer || '';
-    return '<tr style="border-bottom:1px solid #f1f5f9;">' +
-      '<td style="padding:7px 12px;white-space:nowrap;color:#64748b;vertical-align:top;">' + esc(dateStr) + '</td>' +
-      '<td style="padding:7px 12px;color:#374151;vertical-align:top;">' + esc(row.user_email || '') + '</td>' +
-      '<td style="padding:7px 12px;color:#0f172a;max-width:220px;vertical-align:top;" title="' + esc(question) + '">' + esc(aiHistoryTruncate(question, 140)) + '</td>' +
-      '<td style="padding:7px 12px;color:#64748b;font-size:11px;max-width:280px;vertical-align:top;" title="' + esc(answer) + '">' + esc(aiHistoryTruncate(answer, 180)) + '</td>' +
-      '</tr>';
-  }).join('');
-}
-
-async function aiHistoryLoad() {
-  const tbody = document.getElementById('ai-history-tbody');
-  tbody.innerHTML = '<tr><td colspan="4" style="padding:20px;text-align:center;color:#94a3b8;">Caricamento…</td></tr>';
-  const filterInput = document.getElementById('ai-history-filter');
-  if (filterInput) filterInput.value = '';
-  try {
-    const { data, error } = await _sbClient
-      .from('ai_assistant_history')
-      .select('*')
-      .order('created_at', { ascending: false })
-      .limit(500);
-    if (error) throw error;
-    _aiHistoryRows = data || [];
-    aiHistoryRenderRows(_aiHistoryRows);
-  } catch (e) {
-    tbody.innerHTML = '<tr><td colspan="4" style="padding:20px;text-align:center;color:#ef4444;">Errore: ' + esc(e.message) + '</td></tr>';
-  }
-}
-
-function aiHistoryFilter() {
-  const input = document.getElementById('ai-history-filter');
-  const term = (input ? input.value : '').trim().toLowerCase();
-  if (!term) { aiHistoryRenderRows(_aiHistoryRows); return; }
-  const filtered = _aiHistoryRows.filter(row =>
-    (row.user_email || '').toLowerCase().includes(term) ||
-    (row.question || '').toLowerCase().includes(term) ||
-    (row.answer || '').toLowerCase().includes(term)
-  );
-  aiHistoryRenderRows(filtered);
 }
 </script>
 

@@ -21,7 +21,10 @@ function aiToggleWidget() {
   if (!panel) return;
   _aiPanelOpen = !_aiPanelOpen;
   panel.style.display = _aiPanelOpen ? 'flex' : 'none';
-  if (_aiPanelOpen) aiCheckStatus();
+  if (_aiPanelOpen) {
+    if (_aiWidgetMode !== 'chat') aiWidgetBackToChat();
+    aiCheckStatus();
+  }
 }
 
 async function aiCheckStatus() {
@@ -123,6 +126,7 @@ async function aiSendQuestion() {
       aiAppendMessage('assistant', data.answer);
       _aiHistory.push({ role: 'assistant', content: data.answer });
       _aiHistory = _aiHistory.slice(-12);
+      aiLogHistory(question, data.answer);
     } else {
       aiAppendMessage('assistant', (data && data.error) || 'Nessuna risposta.');
     }
@@ -132,6 +136,117 @@ async function aiSendQuestion() {
   } finally {
     if (btn) { btn.disabled = false; btn.textContent = 'Invia'; }
   }
+}
+
+// Storico persistente domanda/risposta (tabella ai_assistant_history, insert-only
+// per l'utente stesso, lettura solo admin via RLS) — a differenza di _aiHistory
+// (contesto conversazionale in memoria, azzerato al reload) questo non torna mai
+// indietro al client: serve solo alla vista admin "Storico Assistente AI".
+// Fire-and-forget: un fallimento qui non deve mai rompere la chat.
+async function aiLogHistory(question, answer) {
+  if (!_sbClient || !_sbUser) return;
+  try {
+    await _sbClient.from('ai_assistant_history').insert({
+      user_email: _sbUser.email,
+      question,
+      answer
+    });
+  } catch (e) {
+    console.warn('AI history log error:', e);
+  }
+}
+
+/* ----- Storico personale nel widget (🕘, tutti gli utenti non-guest) -----
+   Legge solo le proprie righe (RLS read_ai_history_own: user_email = proprio
+   JWT). Riapre una domanda passata come due bubble di sola lettura dentro lo
+   stesso contenitore #ai-assistant-messages: la chat live viene salvata in
+   _aiWidgetChatSnapshot e ripristinata tornando indietro, così non si perde
+   nulla della conversazione in corso. */
+
+let _aiWidgetMode = 'chat'; // 'chat' | 'historyList' | 'historyEntry'
+let _aiWidgetChatSnapshot = null;
+let _aiMyHistoryRows = [];
+
+function aiWidgetToggleHistory() {
+  if (_aiWidgetMode === 'chat') {
+    aiWidgetShowHistoryList();
+  } else {
+    aiWidgetBackToChat();
+  }
+}
+
+async function aiWidgetShowHistoryList() {
+  const box = document.getElementById('ai-assistant-messages');
+  const inputRow = document.getElementById('ai-assistant-input-row');
+  if (!box || !_sbUser) return;
+  if (_aiWidgetMode === 'chat') _aiWidgetChatSnapshot = box.innerHTML;
+  _aiWidgetMode = 'historyList';
+  if (inputRow) inputRow.style.display = 'none';
+  box.innerHTML = '<div style="text-align:center;color:#94a3b8;font-size:11.5px;padding:10px;">Caricamento storico…</div>';
+  try {
+    const { data, error } = await _sbClient
+      .from('ai_assistant_history')
+      .select('*')
+      .eq('user_email', _sbUser.email)
+      .order('created_at', { ascending: false })
+      .limit(100);
+    if (error) throw error;
+    _aiMyHistoryRows = data || [];
+    aiWidgetRenderHistoryList();
+  } catch (e) {
+    box.innerHTML = '<div style="text-align:center;color:#ef4444;font-size:11.5px;padding:10px;">Errore: ' + esc(e.message) + '</div>';
+  }
+}
+
+function aiWidgetRenderHistoryList() {
+  const box = document.getElementById('ai-assistant-messages');
+  if (!box) return;
+  const header = '<div style="display:flex;align-items:center;justify-content:space-between;padding:2px 2px 8px;border-bottom:1px solid #f1f5f9;margin-bottom:6px;">' +
+    '<div style="font-weight:600;font-size:11.5px;color:#475569;">🕘 Le tue domande</div>' +
+    '<button onclick="aiWidgetBackToChat()" style="background:none;border:none;color:var(--accent);font-size:11px;cursor:pointer;">← Torna alla chat</button>' +
+    '</div>';
+  if (!_aiMyHistoryRows.length) {
+    box.innerHTML = header + '<div style="text-align:center;color:#94a3b8;font-size:11.5px;padding:14px 6px;">Nessuna domanda registrata.</div>';
+    return;
+  }
+  const items = _aiMyHistoryRows.map((row, idx) => {
+    const dt = new Date(row.created_at);
+    const dateStr = dt.toLocaleDateString('it-IT') + ' ' + dt.toLocaleTimeString('it-IT', {hour:'2-digit', minute:'2-digit'});
+    return '<div onclick="aiWidgetOpenHistoryEntry(' + idx + ')" style="cursor:pointer;padding:8px 9px;border-radius:8px;background:#f8fafc;border:1px solid #f1f5f9;">' +
+      '<div style="font-size:10px;color:#94a3b8;margin-bottom:2px;">' + esc(dateStr) + '</div>' +
+      '<div style="font-size:12px;color:#334155;">' + esc(aiHistoryTruncate(row.question || '', 90)) + '</div>' +
+      '</div>';
+  }).join('');
+  box.innerHTML = header + '<div style="display:flex;flex-direction:column;gap:6px;">' + items + '</div>';
+}
+
+function aiWidgetOpenHistoryEntry(idx) {
+  const box = document.getElementById('ai-assistant-messages');
+  const row = _aiMyHistoryRows[idx];
+  if (!box || !row) return;
+  _aiWidgetMode = 'historyEntry';
+  const dt = new Date(row.created_at);
+  const dateStr = dt.toLocaleDateString('it-IT') + ' ' + dt.toLocaleTimeString('it-IT', {hour:'2-digit', minute:'2-digit'});
+  box.innerHTML = '<div style="display:flex;align-items:center;justify-content:space-between;padding:2px 2px 8px;border-bottom:1px solid #f1f5f9;margin-bottom:8px;">' +
+    '<div style="font-size:10.5px;color:#94a3b8;">🕘 ' + esc(dateStr) + ' · sola lettura</div>' +
+    '<button onclick="aiWidgetShowHistoryList()" style="background:none;border:none;color:var(--accent);font-size:11px;cursor:pointer;">← Elenco</button>' +
+    '</div>';
+  const userBubble = document.createElement('div');
+  userBubble.style.cssText = 'max-width:88%;padding:8px 10px;border-radius:10px;line-height:1.45;align-self:flex-end;background:var(--accent);color:white;white-space:pre-wrap;';
+  userBubble.innerHTML = esc(row.question || '');
+  const assistantBubble = document.createElement('div');
+  assistantBubble.style.cssText = 'max-width:88%;padding:8px 10px;border-radius:10px;line-height:1.45;align-self:flex-start;background:#f1f5f9;color:#334155;';
+  assistantBubble.innerHTML = aiFormatMarkdown(row.answer || '');
+  box.appendChild(userBubble);
+  box.appendChild(assistantBubble);
+}
+
+function aiWidgetBackToChat() {
+  const box = document.getElementById('ai-assistant-messages');
+  if (box && _aiWidgetChatSnapshot !== null) box.innerHTML = _aiWidgetChatSnapshot;
+  _aiWidgetMode = 'chat';
+  _aiWidgetChatSnapshot = null;
+  aiCheckStatus();
 }
 
 /* ----- Modal admin "Gestione Assistente AI" ----- */
@@ -225,4 +340,74 @@ async function aiConfigRevokeKey() {
   } catch (e) {
     aiConfigMsg('Errore revoca chiave: ' + e.message, null);
   }
+}
+
+/* ----- Modal admin "Storico Assistente AI" ----- */
+
+let _aiHistoryRows = [];
+
+async function aiHistoryShow() {
+  document.getElementById('ai-history-modal').style.display = 'flex';
+  await aiHistoryLoad();
+}
+
+function aiHistoryClose() {
+  document.getElementById('ai-history-modal').style.display = 'none';
+}
+
+function aiHistoryTruncate(text, max) {
+  if (!text) return '';
+  return text.length > max ? text.slice(0, max) + '…' : text;
+}
+
+function aiHistoryRenderRows(rows) {
+  const tbody = document.getElementById('ai-history-tbody');
+  if (!tbody) return;
+  if (!rows || rows.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="4" style="padding:20px;text-align:center;color:#94a3b8;">Nessuna domanda registrata.</td></tr>';
+    return;
+  }
+  tbody.innerHTML = rows.map(row => {
+    const dt = new Date(row.created_at);
+    const dateStr = dt.toLocaleDateString('it-IT') + ' ' + dt.toLocaleTimeString('it-IT', {hour:'2-digit', minute:'2-digit'});
+    const question = row.question || '';
+    const answer = row.answer || '';
+    return '<tr style="border-bottom:1px solid #f1f5f9;">' +
+      '<td style="padding:7px 12px;white-space:nowrap;color:#64748b;vertical-align:top;">' + esc(dateStr) + '</td>' +
+      '<td style="padding:7px 12px;color:#374151;vertical-align:top;">' + esc(row.user_email || '') + '</td>' +
+      '<td style="padding:7px 12px;color:#0f172a;max-width:220px;vertical-align:top;" title="' + esc(question) + '">' + esc(aiHistoryTruncate(question, 140)) + '</td>' +
+      '<td style="padding:7px 12px;color:#64748b;font-size:11px;max-width:280px;vertical-align:top;" title="' + esc(answer) + '">' + esc(aiHistoryTruncate(answer, 180)) + '</td>' +
+      '</tr>';
+  }).join('');
+}
+
+async function aiHistoryLoad() {
+  const tbody = document.getElementById('ai-history-tbody');
+  tbody.innerHTML = '<tr><td colspan="4" style="padding:20px;text-align:center;color:#94a3b8;">Caricamento…</td></tr>';
+  const filterInput = document.getElementById('ai-history-filter');
+  if (filterInput) filterInput.value = '';
+  try {
+    const { data, error } = await _sbClient
+      .from('ai_assistant_history')
+      .select('*')
+      .order('created_at', { ascending: false })
+      .limit(500);
+    if (error) throw error;
+    _aiHistoryRows = data || [];
+    aiHistoryRenderRows(_aiHistoryRows);
+  } catch (e) {
+    tbody.innerHTML = '<tr><td colspan="4" style="padding:20px;text-align:center;color:#ef4444;">Errore: ' + esc(e.message) + '</td></tr>';
+  }
+}
+
+function aiHistoryFilter() {
+  const input = document.getElementById('ai-history-filter');
+  const term = (input ? input.value : '').trim().toLowerCase();
+  if (!term) { aiHistoryRenderRows(_aiHistoryRows); return; }
+  const filtered = _aiHistoryRows.filter(row =>
+    (row.user_email || '').toLowerCase().includes(term) ||
+    (row.question || '').toLowerCase().includes(term) ||
+    (row.answer || '').toLowerCase().includes(term)
+  );
+  aiHistoryRenderRows(filtered);
 }
