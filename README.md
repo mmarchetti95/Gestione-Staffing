@@ -111,6 +111,12 @@ Limite noto: il progetto Supabase è sul piano **Free**, che non include backup 
 
 ## Changelog
 
+## v18.168.0
+- fix: **Genera mail — allineamento "Note & strumenti per squadra" e CC collassabile** — la v18.167.0 non risolveva del tutto lo sfasamento tra le due colonne quando il suggerimento "✓ Da griglia" andava a capo su più righe: ora le due label (Note/Strumenti) sono nella stessa riga di una griglia CSS a 2 colonne, che le allinea automaticamente qualunque sia la lunghezza del testo, con le textarea sempre allineate subito sotto. Il campo "Email sempre in CC" è ora un `<details>` collassato di default (si espande con un click sul titolo, che mostra comunque il numero di indirizzi salvati), invece di stare sempre aperto sotto Orario partenza/lavoro.
+
+## v18.167.0
+- fix: **Genera mail (Pianificazione settimanale) — UI "Note & strumenti per squadra" e "Email sempre in CC"** — le due colonne "Note squadra" e "Strumenti/attrezzatura" di ogni squadra non erano allineate in altezza (si sfasavano appena una delle due aveva più testo o il suggerimento "✓ Da griglia"): ora le due textarea si auto-espandono e restano sincronizzate sulla più alta delle due. Il campo "Email sempre in CC" non è più una singola riga con indirizzi separati da virgola, ma una textarea espandibile con un indirizzo per riga, riordinata alfabeticamente ad ogni modifica (al blur) per poter controllare facilmente chi è incluso e aggiungerne di nuovi.
+
 ## v18.166.0
 - fix: **Sottotask Jira — "Production Weight (%)" diviso sul totale del batch invece che per Task** — creando in un'unica sessione sottotask sotto Task Jira diversi (es. 10 operatori su 3 Task distinti), il peso calcolato in automatico era 100% diviso il numero totale di sottotask selezionati (10 → 10% per tutti), invece che diviso per operatore all'interno di ciascun Task (correttamente 25%/33%/33% a seconda di quanti operatori finiscono sotto lo stesso Task). Ora, come già Target Production, il campo non compare più nel form condiviso "campi extra" (Step 1.5): viene calcolato per-Task e mostrato in una sezione a parte con una riga per operatore/comune, precompilata ma modificabile singolarmente prima della creazione reale; il valore scelto per riga resta visibile anche nell'anteprima finale (Step 2) per un ultimo controllo.
   - Aggiornata la Edge Function `jira-create-subtask` (v7, non versionata nel repo): `productionWeight` non è più un campo condiviso da tutto il batch in `extraFields`, ma un campo per-item come `targetProduction` (stesso pattern, nuova `buildItemProductionWeightField`).

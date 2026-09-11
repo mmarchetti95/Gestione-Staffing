@@ -1176,7 +1176,7 @@
     <div class="flex items-center gap-2">
       <button id="btn-presentation" class="px-3 py-1.5 text-sm rounded hover:bg-white/10" style="border:1px solid var(--dark-border-strong);color:var(--dark-text);visibility:visible;">📊 Modalità presentazione</button>
       <div class="text-xs pl-2" style="border-left:1px solid var(--dark-border-strong);color:var(--dark-text-muted);">
-        <span id="app-version" class="font-medium" style="color:var(--accent);">v18.166.0</span> · Michele Marchetti
+        <span id="app-version" class="font-medium" style="color:var(--accent);">v18.168.0</span> · Michele Marchetti
         <span id="sb-role-badge" style="margin-left:8px;padding:1px 8px;border-radius:9999px;background:rgba(255,255,255,.1);color:var(--dark-text);font-weight:600;"></span>
       </div>
     </div>
@@ -10636,6 +10636,43 @@ document.addEventListener('DOMContentLoaded', async () => {
 });
 
 /* ===================== GENERA MAIL PIANIFICAZIONE ===================== */
+// Normalizza una lista di email (una per riga o separate da virgola/punto e virgola):
+// trim, rimuove vuoti, deduplica (case-insensitive) e ordina alfabeticamente.
+function pwMailParseEmailList(text) {
+  const seen = new Set();
+  const out = [];
+  (text || '').split(/[\n,;]+/).forEach(raw => {
+    const e = raw.trim();
+    if (!e) return;
+    const key = e.toLowerCase();
+    if (seen.has(key)) return;
+    seen.add(key);
+    out.push(e);
+  });
+  out.sort((a, b) => a.toLowerCase().localeCompare(b.toLowerCase()));
+  return out;
+}
+
+// Adatta l'altezza di una textarea al proprio contenuto (niente scrollbar interna).
+function pwMailAutoGrow(el) {
+  if (!el) return;
+  el.style.height = 'auto';
+  el.style.height = el.scrollHeight + 'px';
+}
+
+// Sincronizza l'altezza di una coppia di textarea (note/strumenti di una squadra) sulla
+// più alta delle due, così le due colonne restano allineate qualunque sia il contenuto.
+function pwMailAutoGrowPair(idA, idB) {
+  const elA = document.getElementById(idA);
+  const elB = document.getElementById(idB);
+  if (!elA || !elB) return;
+  elA.style.height = 'auto';
+  elB.style.height = 'auto';
+  const h = Math.max(elA.scrollHeight, elB.scrollHeight);
+  elA.style.height = h + 'px';
+  elB.style.height = h + 'px';
+}
+
 function pwGeneraMail() {
   const data = pwGetWeekData();
   const monday = isoWeekToMonday(pwAnno, pwWeek);
@@ -10646,6 +10683,9 @@ function pwGeneraMail() {
     days.push(d);
   }
   const saturday = days[5];
+
+  // Email sempre in CC salvate, normalizzate (ordinate alfabeticamente, deduplicate)
+  const emailSempreArr = pwMailParseEmailList(pwData.emailSempreIncluse || '');
 
   // Raccoglie tutte le squadre per costruire i campi note nel modal
   const squadreInfo = []; // { commessa, squadraNome, idx }
@@ -10666,7 +10706,7 @@ function pwGeneraMail() {
         const strumentiSalvati = (typeof sq?.strumenti === 'string') ? sq.strumenti : '';
         const strumentiJiraLbl = sq ? pwSqStrumentiJira(sq).filter(Boolean).map(k => pwStrLabel(k)) : [];
         const jiraHint = strumentiJiraLbl.length
-          ? `<div style="font-size:10px;color:var(--accent-dark);margin-bottom:2px;">✓ Da griglia: ${esc(strumentiJiraLbl.join(', '))}</div>`
+          ? `<div style="font-size:10px;color:var(--accent-dark);margin-top:1px;">✓ Da griglia: ${esc(strumentiJiraLbl.join(', '))}</div>`
           : '';
         const cognomiSq = sq ? pwSquadraCognomi(sq) : [];
         const cognomiHtml = cognomiSq.length
@@ -10681,20 +10721,20 @@ function pwGeneraMail() {
               <span class="text-amber-700">${esc(s.squadraNome)}</span>
               ${cognomiHtml}
             </summary>
-            <div class="grid grid-cols-2 gap-2" style="margin-top:8px;">
+            <div style="display:grid; grid-template-columns:1fr 1fr; column-gap:8px; row-gap:4px; margin-top:8px;">
+              <label class="block text-[10px] text-slate-500 font-medium">📝 Note squadra <span class="text-slate-400 font-normal">(facoltativo)</span></label>
               <div>
-                <label class="block text-[10px] text-slate-500 font-medium mb-0.5">📝 Note squadra <span class="text-slate-400 font-normal">(facoltativo)</span></label>
+                <label class="block text-[10px] text-slate-500 font-medium">🔧 Strumenti / attrezzatura <span class="text-slate-400 font-normal">(aggiuntivi, facoltativo)</span></label>
+                ${jiraHint}
+              </div>
                 <textarea id="mail-note-sq-${i}" rows="2"
                   class="w-full border border-slate-200 rounded px-2 py-1 text-xs text-slate-700 focus:outline-none focus:border-teal-400 bg-white pw-write-action"
+                  style="resize:none; overflow-y:hidden; box-sizing:border-box;"
                   placeholder="Es: Affiancamento, istruzioni operative…">${esc(noteSalvate)}</textarea>
-              </div>
-              <div>
-                <label class="block text-[10px] text-slate-500 font-medium mb-0.5">🔧 Strumenti / attrezzatura <span class="text-slate-400 font-normal">(aggiuntivi, facoltativo)</span></label>
-                ${jiraHint}
                 <textarea id="mail-strumenti-sq-${i}" rows="2"
                   class="w-full border border-slate-200 rounded px-2 py-1 text-xs text-slate-700 focus:outline-none focus:border-teal-400 bg-white pw-write-action"
+                  style="resize:none; overflow-y:hidden; box-sizing:border-box;"
                   placeholder="Es: GPS Leica RX1250, Auto targa AB123CD…">${esc(strumentiSalvati)}</textarea>
-              </div>
             </div>
           </details>
         </div>`;
@@ -10751,15 +10791,18 @@ function pwGeneraMail() {
                      padding:6px 10px; font-size:13px; outline:none; box-sizing:border-box;">
           </label>
         </div>
-        <label style="font-size:11px; display:block; margin-top:10px;">
-          <div style="color:#475569; font-weight:600; margin-bottom:3px;">📧 Email sempre in CC
-            <span style="font-weight:400; color:#94a3b8;">(separate da virgola, aggiunte sempre in copia conoscenza)</span>
-          </div>
-          <input id="mail-email-sempre" type="text" class="pw-write-action" value="${esc(pwData.emailSempreIncluse || '')}"
-            placeholder="es: ufficio.tecnico@eagleprojects.it, capocommessa@eagleprojects.it"
-            style="width:100%; border:1px solid #e2e8f0; border-radius:6px;
-                   padding:6px 10px; font-size:13px; outline:none; box-sizing:border-box;">
-        </label>
+        <details id="mail-email-sempre-details" style="margin-top:10px;">
+          <summary style="font-size:11px; font-weight:600; color:#475569; cursor:pointer; user-select:none;">
+            📧 Email sempre in CC
+            <span id="mail-email-sempre-count" style="font-weight:400; color:#94a3b8;">(${emailSempreArr.length} indirizzo${emailSempreArr.length === 1 ? '' : 'i'} — una per riga, ordinate alfabeticamente)</span>
+          </summary>
+          <textarea id="mail-email-sempre" rows="3" class="pw-write-action"
+            placeholder="ufficio.tecnico@eagleprojects.it&#10;capocommessa@eagleprojects.it"
+            style="width:100%; margin-top:6px; border:1px solid #e2e8f0; border-radius:6px;
+                   padding:6px 10px; font-size:13px; outline:none; box-sizing:border-box;
+                   font-family:inherit; line-height:1.5; resize:vertical; overflow-y:hidden;"
+            >${esc(emailSempreArr.join('\n'))}</textarea>
+        </details>
       </div>
 
       <!-- Corpo scrollabile: note squadra + note generali + anteprima -->
@@ -10827,6 +10870,16 @@ function pwGeneraMail() {
   // Chiudi solo tramite i bottoni chiudi (niente chiusura su click fuori: si perdono facilmente le note inserite)
   document.getElementById('pw-mail-close-btn').onclick  = () => wrap.remove();
   document.getElementById('pw-mail-chiudi-btn').onclick = () => wrap.remove();
+
+  // Altezza iniziale delle textarea auto-espandibili note/strumenti per squadra, allineate a coppia.
+  squadreInfo.forEach((_, i) => pwMailAutoGrowPair(`mail-note-sq-${i}`, `mail-strumenti-sq-${i}`));
+
+  // "Email sempre in CC" è collassato di default (details senza "open"): l'altezza va
+  // ricalcolata solo quando viene espanso, perché un elemento dentro un <details> chiuso
+  // non è renderizzato e scrollHeight risulterebbe 0.
+  document.getElementById('mail-email-sempre-details').addEventListener('toggle', (e) => {
+    if (e.target.open) pwMailAutoGrow(document.getElementById('mail-email-sempre'));
+  });
 
   // Funzione che compone il testo della mail
   function componiTesto() {
@@ -11001,23 +11054,44 @@ function pwGeneraMail() {
     pwSave();
     document.getElementById('mail-testo').value = componiTesto();
   });
+  // Aggiorna il conteggio indirizzi mostrato nel titolo (visibile anche a details chiuso)
+  function aggiornaContatoreEmailSempre(count) {
+    const el = document.getElementById('mail-email-sempre-count');
+    if (el) el.textContent = `(${count} indirizzo${count === 1 ? '' : 'i'} — una per riga, ordinate alfabeticamente)`;
+  }
   // Email sempre incluse: persistita in pwData, non fa parte del testo della mail
   document.getElementById('mail-email-sempre').addEventListener('input', (e) => {
     if (!sbGuardWrite()) return;
     pwData.emailSempreIncluse = e.target.value;
     pwSave();
+    pwMailAutoGrow(e.target);
+    aggiornaContatoreEmailSempre(pwMailParseEmailList(e.target.value).length);
   });
-  // Note e strumenti squadra: salva in storage + rigenera anteprima
+  // Al blur: riordina alfabeticamente e deduplica, così la lista resta sempre "in ordine"
+  // e si vede subito chi c'è/chi manca senza disturbare la digitazione in corso.
+  document.getElementById('mail-email-sempre').addEventListener('blur', (e) => {
+    if (!sbGuardWrite()) return;
+    const lista = pwMailParseEmailList(e.target.value);
+    e.target.value = lista.join('\n');
+    pwData.emailSempreIncluse = e.target.value;
+    pwSave();
+    pwMailAutoGrow(e.target);
+    aggiornaContatoreEmailSempre(lista.length);
+  });
+  // Note e strumenti squadra: salva in storage + rigenera anteprima, mantenendo le due
+  // colonne (note/strumenti) allineate in altezza qualunque sia il contenuto.
   squadreInfo.forEach((_, i) => {
     const noteEl = document.getElementById(`mail-note-sq-${i}`);
     if (noteEl) noteEl.addEventListener('input', () => {
       salvaNoteSq();
       document.getElementById('mail-testo').value = componiTesto();
+      pwMailAutoGrowPair(`mail-note-sq-${i}`, `mail-strumenti-sq-${i}`);
     });
     const strumentiEl = document.getElementById(`mail-strumenti-sq-${i}`);
     if (strumentiEl) strumentiEl.addEventListener('input', () => {
       salvaNoteSq();
       document.getElementById('mail-testo').value = componiTesto();
+      pwMailAutoGrowPair(`mail-note-sq-${i}`, `mail-strumenti-sq-${i}`);
     });
   });
   document.getElementById('mail-note-generali').addEventListener('input', (e) => {
@@ -11077,8 +11151,7 @@ function pwGeneraMail() {
     });
 
     // Email sempre incluse (impostazione salvata, es. ufficio tecnico, capocommessa…)
-    const emailSempreIncluse = document.getElementById('mail-email-sempre').value || '';
-    const emailSempre = emailSempreIncluse.split(',').map(s => s.trim()).filter(Boolean);
+    const emailSempre = pwMailParseEmailList(document.getElementById('mail-email-sempre').value || '');
 
     // Unico destinatario ("A:"): logistica. Tutti gli altri vanno in copia conoscenza (CC),
     // nell'ordine: email sempre in CC → referenti tecnici → dipendenti (compresi quelli in ferie), deduplicati.
