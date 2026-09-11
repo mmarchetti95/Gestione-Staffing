@@ -1176,7 +1176,7 @@
     <div class="flex items-center gap-2">
       <button id="btn-presentation" class="px-3 py-1.5 text-sm rounded hover:bg-white/10" style="border:1px solid var(--dark-border-strong);color:var(--dark-text);visibility:visible;">📊 Modalità presentazione</button>
       <div class="text-xs pl-2" style="border-left:1px solid var(--dark-border-strong);color:var(--dark-text-muted);">
-        <span id="app-version" class="font-medium" style="color:var(--accent);">v18.162.0</span> · Michele Marchetti
+        <span id="app-version" class="font-medium" style="color:var(--accent);">v18.161.0</span> · Michele Marchetti
         <span id="sb-role-badge" style="margin-left:8px;padding:1px 8px;border-radius:9999px;background:rgba(255,255,255,.1);color:var(--dark-text);font-weight:600;"></span>
       </div>
     </div>
@@ -3239,7 +3239,7 @@ async function sbPull() {
       const snap = rows[SB_ROW_CORE].payload;
       const keys = ['commesse_pipeline','operatori','assegnazioni','commesse_attive_extra',
                     'staffing_modificato','commesse_chiuse','commesse_attive_meta','commesse_escluse',
-                    'attestati_registro','dpi_disponibili','dpi_catalogo','limitazioni_registro','limitazioni_catalogo'];
+                    'attestati_registro','dpi_disponibili','dpi_catalogo'];
       keys.forEach(k => { if (snap[k] !== undefined) sbSetLocal(k, snap[k]); });
       await loadState();
       renderAll();
@@ -3309,7 +3309,7 @@ async function sbPush() {
     if (_sbDirty.core) {
       const keys = ['commesse_pipeline','operatori','assegnazioni','commesse_attive_extra',
                     'staffing_modificato','commesse_chiuse','commesse_attive_meta','commesse_escluse',
-                    'attestati_registro','dpi_disponibili','dpi_catalogo','limitazioni_registro','limitazioni_catalogo'];
+                    'attestati_registro','dpi_disponibili','dpi_catalogo'];
       const snap = { _savedAt: new Date().toISOString(), _version: '18', _savedBy: _sbUser.email };
       for (const k of keys) { try { snap[k] = await sget(k); } catch{} }
       domains.push({ id: SB_ROW_CORE, payload: snap, key: 'core' });

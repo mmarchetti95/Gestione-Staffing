@@ -111,6 +111,9 @@ Limite noto: il progetto Supabase è sul piano **Free**, che non include backup 
 
 ## Changelog
 
+## v18.162.0
+- fix: **Operatori con limitazioni — dati persi dopo refresh/su altro dispositivo**: `limitazioni_registro` e `limitazioni_catalogo` venivano salvati/letti correttamente in locale (`saveState`/`loadState`) ma erano assenti dalla lista campi del dominio "core" sincronizzata su Supabase in `sbPush`/`sbPull` (stesso bug già capitato con `dpi_catalogo` in v18.120.0). Risultato: l'import da Excel non veniva mai realmente propagato su Supabase — i dipendenti "fuori pool" (e in certi casi l'intero registro) sparivano non appena sessionStorage veniva svuotato (nuova scheda, altro dispositivo, refresh dopo un pull da altro utente). Aggiunte le due chiavi mancanti a entrambe le liste.
+
 ## v18.161.0
 - feat: **Assistente AI — istruzioni personalizzate**: nuovo campo "Istruzioni personalizzate" nel pannello admin "🤖 Gestione Assistente AI", accodato al system prompt di base ad ogni domanda (tono di risposta, priorità, regole aziendali specifiche). Salvato in `ai_assistant_settings.custom_instructions` (nuova colonna, migrazione applicata). Richiede `ai-assistant` v4 e `ai-assistant-config` v2 (non versionate nel repo, già deployate).
 - fix: **Assistente AI — risposte troncate a metà frase**: il limite di output del modello (`MAX_TOKENS`) era 1280, insufficiente per risposte con elenchi lunghi (es. più operatori con dettagli); alzato a 4096.
