@@ -111,6 +111,10 @@ Limite noto: il progetto Supabase è sul piano **Free**, che non include backup 
 
 ## Changelog
 
+## v18.166.0
+- fix: **Sottotask Jira — "Production Weight (%)" diviso sul totale del batch invece che per Task** — creando in un'unica sessione sottotask sotto Task Jira diversi (es. 10 operatori su 3 Task distinti), il peso calcolato in automatico era 100% diviso il numero totale di sottotask selezionati (10 → 10% per tutti), invece che diviso per operatore all'interno di ciascun Task (correttamente 25%/33%/33% a seconda di quanti operatori finiscono sotto lo stesso Task). Ora, come già Target Production, il campo non compare più nel form condiviso "campi extra" (Step 1.5): viene calcolato per-Task e mostrato in una sezione a parte con una riga per operatore/comune, precompilata ma modificabile singolarmente prima della creazione reale; il valore scelto per riga resta visibile anche nell'anteprima finale (Step 2) per un ultimo controllo.
+  - Aggiornata la Edge Function `jira-create-subtask` (v7, non versionata nel repo): `productionWeight` non è più un campo condiviso da tutto il batch in `extraFields`, ma un campo per-item come `targetProduction` (stesso pattern, nuova `buildItemProductionWeightField`).
+
 ## v18.165.0
 - fix: **Modali — chiusura solo tramite il bottone di chiusura, non più con click fuori**: tutti i modali dell'app (creazione sottotask Jira, generazione mail pianificazione, import anagrafica/attestati/limitazioni/ferie, editor commesse/operatori/DPI, selezione operatore in Griglia, ecc.) chiudevano il dialog anche con un click accidentale sull'overlay scuro attorno, perdendo il lavoro in corso (form compilati, note, selezioni). Rimossa la chiusura su click-fuori da tutti i modali con `.modal-backdrop`/`.op-modal-backdrop`: restano invariati i popover contestuali (statistiche, menu tasto destro copia/incolla) dove il click-fuori resta il comportamento atteso.
 

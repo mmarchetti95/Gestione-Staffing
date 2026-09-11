@@ -752,25 +752,36 @@ function pwJiraComputeOriginalEstimate(startIso, dueIso) {
 }
 
 // Production Weight (%) = 100 / N, N = numero di sottotask selezionati in
-// questo batch (Step 1.4) — 1 operatore -> 100%, 2 -> 50% ciascuno, ecc.
+// questo batch SOTTO LO STESSO Task Jira (non sul totale del batch, che puo'
+// includere piu' Task diversi — vedi raggruppamento per taskKey in
+// pwJiraSubtaskOpenExtraFieldsModal) — 1 operatore sotto quel Task -> 100%,
+// 2 -> 50% ciascuno, ecc.
 function pwJiraComputeProductionWeight(n) {
   if (!n || n <= 0) return '100';
   return (Math.round((100 / n) * 100) / 100).toString();
 }
 
 /* ----- Step 1.5: campi extra spesso obbligatori in creazione (Data scadenza,
-   Stima originale, Activity Type, Production Weight (%), Start date
-   pianificato, Tempo Team) — vedi commento su pwJiraFetchExtraFields. Un solo
-   form per l'intero batch (si applica a tutti i sottotask creati in questa
-   sessione), con un valore di esempio precompilato ma sempre modificabile.
-   Se il progetto non ha nessuno di questi campi si salta direttamente
+   Stima originale, Activity Type, Start date pianificato, Tempo Team) — vedi
+   commento su pwJiraFetchExtraFields. Un solo form per l'intero batch (si
+   applica a tutti i sottotask creati in questa sessione), con un valore di
+   esempio precompilato ma sempre modificabile. Se il progetto non ha nessuno
+   di questi campi (e nemmeno Production Weight, sotto) si salta direttamente
    all'anteprima.
-   Target Production NON compare in questo form: e' ereditato per-item dal
-   Task padre scelto per quel comune (vedi pwJiraBuildSubtaskItem/
-   jira-list-tasks) invece che da un valore unico condiviso da tutto il
-   batch — un batch puo' includere piu' Task/comuni diversi con Target
-   Production diversi. Applicato qui, prima di ogni render, cosi' vale anche
-   se il progetto non ha altri campi extra (ramo fields.length===0 sotto). */
+   Target Production e Production Weight NON compaiono in questa lista di
+   campi condivisi: sono entrambi per-item, non un valore unico da tutto il
+   batch — un batch puo' includere piu' Task/comuni diversi.
+   - Target Production e' ereditato per-item dal Task padre scelto per quel
+     comune (vedi pwJiraBuildSubtaskItem/jira-list-tasks), non modificabile qui.
+   - Production Weight (%) si calcola per-Task (100% diviso il numero di
+     operatori selezionati sotto lo STESSO Task in questo batch, non sul
+     totale del batch — un batch con piu' Task andrebbe altrimenti diviso in
+     modo scorretto: es. 10 operatori sparsi su 3 Task diversi finivano tutti
+     al 10% invece che, correttamente, 25%/33%/33% ciascuno sul proprio
+     Task), mostrato in una sezione a parte con una riga per item ed
+     editabile singolarmente (a differenza di Target Production).
+   Applicato qui, prima di ogni render, cosi' vale anche se il progetto non
+   ha altri campi extra (ramo visibleFields.length===0 sotto). */
 async function pwJiraSubtaskOpenExtraFieldsModal(cIdx, commessaNome, meta, items, skippedComuni) {
   const root = document.getElementById('modal-root');
   root.innerHTML = `<div class="modal-backdrop"><div class="bg-white rounded-lg shadow-xl w-full max-w-md mx-4 p-5">
@@ -793,9 +804,21 @@ async function pwJiraSubtaskOpenExtraFieldsModal(cIdx, commessaNome, meta, items
       }
     });
   }
-  const visibleFields = fields.filter(f => f.extraKey !== 'targetProduction');
 
-  if (visibleFields.length === 0) {
+  // Production Weight (%): per-Task, non sul totale del batch — raggruppa gli
+  // item selezionati per taskKey e assegna a ciascuno 100 / (operatori sotto
+  // QUEL taskKey), non 100 / items.length come prima (bug: un batch con piu'
+  // Task diversi veniva diviso sul totale invece che per singolo Task).
+  const hasProductionWeight = fields.some(f => f.extraKey === 'productionWeight');
+  if (hasProductionWeight) {
+    const countByTask = {};
+    items.forEach(item => { countByTask[item.taskKey] = (countByTask[item.taskKey] || 0) + 1; });
+    items.forEach(item => { item.productionWeight = pwJiraComputeProductionWeight(countByTask[item.taskKey]); });
+  }
+
+  const visibleFields = fields.filter(f => f.extraKey !== 'targetProduction' && f.extraKey !== 'productionWeight');
+
+  if (visibleFields.length === 0 && !hasProductionWeight) {
     pwJiraSubtaskPreview(cIdx, commessaNome, items, skippedComuni, {}, []);
     return;
   }
@@ -808,7 +831,6 @@ async function pwJiraSubtaskOpenExtraFieldsModal(cIdx, commessaNome, meta, items
     duedate: dueIso,
     originalEstimate: pwJiraComputeOriginalEstimate(startIso, dueIso),
     activityType: '',
-    productionWeight: pwJiraComputeProductionWeight(items.length),
     startDatePianificato: startIso,
     tempoTeam: '',
   };
@@ -828,7 +850,7 @@ async function pwJiraSubtaskOpenExtraFieldsModal(cIdx, commessaNome, meta, items
         </button>`;
     } else if (f.type === 'date') {
       inputHtml = `<input type="date" data-extra-key="${esc(f.extraKey)}" value="${esc(val)}" class="w-full border border-slate-300 rounded px-2 py-1.5 text-sm">`;
-    } else if (f.type === 'number' || f.key === 'customfield_11280' || f.key === 'customfield_13027') {
+    } else if (f.type === 'number' || f.key === 'customfield_11280') {
       // onwheel + blur: Chrome/Edge incrementano/decrementano il valore di un
       // <input type="number"> quando ci si scorre sopra con la rotellina/trackpad,
       // anche solo di passaggio scrollando la modale (che e' overflow-y-auto) per
@@ -845,10 +867,28 @@ async function pwJiraSubtaskOpenExtraFieldsModal(cIdx, commessaNome, meta, items
     </div>`;
   }).join('');
 
+  // Una riga per item (comune — operatore, con il Task tra parentesi) con un
+  // input numerico precompilato col default per-Task calcolato sopra, ma
+  // editabile singolarmente prima della creazione — a differenza degli altri
+  // campi extra, condivisi da tutto il batch (vedi commento sopra la funzione).
+  const productionWeightRowsHtml = hasProductionWeight ? items.map((item, i) => `
+    <div class="flex items-center justify-between gap-2 border-b border-slate-100 py-1 text-sm last:border-b-0">
+      <div class="min-w-0 truncate">
+        <span class="text-slate-700">${esc(item._comune || '')} — ${esc(item._operatore || '')}</span>
+        <span class="text-[11px] text-slate-400"> (${esc(item.taskKey || '')})</span>
+      </div>
+      <input type="number" data-pw-weight-idx="${i}" value="${esc(item.productionWeight)}" onwheel="this.blur()" class="w-20 shrink-0 border border-slate-300 rounded px-2 py-1 text-sm text-right">
+    </div>`).join('') : '';
+  const productionWeightSectionHtml = hasProductionWeight ? `<div class="mb-3">
+      <label class="block text-[11px] text-slate-500 mb-1">Production Weight (%) — precompilato per Task (100% diviso gli operatori sotto lo stesso Task), modificabile riga per riga</label>
+      <div class="border border-slate-200 rounded px-2">${productionWeightRowsHtml}</div>
+    </div>` : '';
+
   root.innerHTML = `<div class="modal-backdrop"><div class="bg-white rounded-lg shadow-xl w-full max-w-md mx-4 my-8 p-5 max-h-[90vh] overflow-y-auto">
     <h3 class="font-semibold text-slate-900 mb-1">Crea sottotask Jira — ${esc(commessaNome)}</h3>
     <p class="text-xs text-slate-500 mb-3">Alcuni campi possono essere obbligatori in creazione su questo progetto Jira. Valori di esempio precompilati, modificabili o lasciabili vuoti.</p>
     <div id="pw-jira-extra-fields">${rowsHtml}</div>
+    ${productionWeightSectionHtml}
     <div class="flex justify-end gap-2 mt-4">
       <button onclick="closeModal()" class="px-3 py-1.5 text-sm border border-slate-300 rounded">Annulla</button>
       <button id="pw-jira-extra-continua" class="px-3 py-1.5 text-sm bg-teal-600 text-white rounded hover:bg-teal-700">Continua</button>
@@ -878,6 +918,12 @@ async function pwJiraSubtaskOpenExtraFieldsModal(cIdx, commessaNome, meta, items
     root.querySelectorAll('[data-extra-key]').forEach(el => {
       const key = el.dataset.extraKey;
       if (el.value !== '') extraFields[key] = el.value;
+    });
+    // Riporta gli eventuali valori corretti a mano nella sezione Production
+    // Weight sugli item stessi (per-item, non in extraFields — vedi sopra).
+    root.querySelectorAll('[data-pw-weight-idx]').forEach(el => {
+      const item = items[parseInt(el.dataset.pwWeightIdx)];
+      if (item) item.productionWeight = el.value !== '' ? el.value : undefined;
     });
     pwJiraSubtaskPreview(cIdx, commessaNome, items, skippedComuni, extraFields, visibleFields);
   };
@@ -957,10 +1003,16 @@ function pwJiraSubtaskRenderPreview(cIdx, commessaNome, items, results, skippedC
     } else {
       statusHtml = `<span class="text-[11px] font-medium text-red-700 bg-red-100 px-1.5 py-0.5 rounded whitespace-nowrap" title="${esc(r.message || '')}">Errore</span>`;
     }
+    // Production Weight mostrato qui perche' e' per-item ed editabile (Step
+    // 1.5), quindi non compare nel recap dei campi condivisi sopra — questa
+    // e' l'ultima occasione per accorgersi di un valore sbagliato prima della
+    // creazione reale.
+    const weightHtml = (item.productionWeight !== undefined && item.productionWeight !== null && item.productionWeight !== '')
+      ? ` <span class="text-slate-400">· Weight ${esc(String(item.productionWeight))}%</span>` : '';
     return `<div class="flex items-center justify-between gap-2 border-b border-slate-100 py-1.5 text-sm">
       <div class="min-w-0">
         <div class="truncate">${esc(item._comune || '')} — ${esc(item._operatore || '')}</div>
-        <div class="text-[11px] text-slate-400 truncate">${esc(item.summary || '')}</div>
+        <div class="text-[11px] text-slate-400 truncate">${esc(item.summary || '')}${weightHtml}</div>
       </div>
       ${statusHtml}
     </div>`;
