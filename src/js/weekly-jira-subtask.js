@@ -492,7 +492,6 @@ function pwJiraSubtaskOpenComuniModal(cIdx, commessaNome, meta, comuneNames, com
       <button id="pw-jira-continua" class="px-3 py-1.5 text-sm bg-teal-600 text-white rounded hover:bg-teal-700">Continua</button>
     </div>
   </div></div>`;
-  root.querySelector('.modal-backdrop').addEventListener('click', e => { if (e.target.classList.contains('modal-backdrop')) closeModal(); });
 
   root.querySelectorAll('.pw-jira-squadra-toggle').forEach(btn => {
     btn.onclick = () => {
@@ -726,7 +725,6 @@ function pwJiraSubtaskOpenSelectItemsModal(cIdx, commessaNome, meta, items, skip
       <button id="pw-jira-select-continua" class="px-3 py-1.5 text-sm bg-teal-600 text-white rounded hover:bg-teal-700">Continua</button>
     </div>
   </div></div>`;
-  root.querySelector('.modal-backdrop').addEventListener('click', e => { if (e.target.classList.contains('modal-backdrop')) closeModal(); });
 
   document.getElementById('pw-jira-select-all').onclick = () => root.querySelectorAll('.pw-jira-select-item').forEach(chk => chk.checked = true);
   document.getElementById('pw-jira-select-none').onclick = () => root.querySelectorAll('.pw-jira-select-item').forEach(chk => chk.checked = false);
@@ -856,7 +854,6 @@ async function pwJiraSubtaskOpenExtraFieldsModal(cIdx, commessaNome, meta, items
       <button id="pw-jira-extra-continua" class="px-3 py-1.5 text-sm bg-teal-600 text-white rounded hover:bg-teal-700">Continua</button>
     </div>
   </div></div>`;
-  root.querySelector('.modal-backdrop').addEventListener('click', e => { if (e.target.classList.contains('modal-backdrop')) closeModal(); });
 
   // Ricalcolo live della Stima originale quando l'utente cambia una delle due
   // date da cui e' derivata — il valore iniziale precompilato sopra resta
@@ -983,7 +980,6 @@ function pwJiraSubtaskRenderPreview(cIdx, commessaNome, items, results, skippedC
       <button id="pw-jira-confirm-create" class="px-3 py-1.5 text-sm bg-teal-600 text-white rounded hover:bg-teal-700 disabled:opacity-50" ${(wouldCreate === 0 || !sbCanWrite()) ? 'disabled' : ''}>Crea ${wouldCreate} sottotask</button>
     </div>
   </div></div>`;
-  root.querySelector('.modal-backdrop').addEventListener('click', e => { if (e.target.classList.contains('modal-backdrop')) closeModal(); });
 
   if (wouldCreate > 0) {
     document.getElementById('pw-jira-confirm-create').onclick = () => pwJiraSubtaskConfirmCreate(cIdx, commessaNome, items, extraFields, results);

@@ -189,9 +189,6 @@ function pwOpenOpModal(cidx, sidx, oidx) {
   backdrop.appendChild(modal);
   document.body.appendChild(backdrop);
 
-  // Chiudi cliccando fuori
-  backdrop.onclick = () => pwCloseOpModal();
-
   // Focus ricerca + filtro live
   setTimeout(() => search.focus(), 50);
   search.addEventListener('input', () => buildList(search.value));

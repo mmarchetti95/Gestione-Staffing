@@ -219,7 +219,6 @@ function renderGantt() {
             </div>
           </div>
         </div>`;
-        root.querySelector('.modal-backdrop').addEventListener('click', e => { if (e.target.classList.contains('modal-backdrop')) closeModal(); });
       }
     });
   });

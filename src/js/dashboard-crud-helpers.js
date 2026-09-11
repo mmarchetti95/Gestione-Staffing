@@ -2,7 +2,6 @@
 function openModal(html) {
   const root = document.getElementById('modal-root');
   root.innerHTML = `<div class="modal-backdrop"><div class="bg-white rounded-lg shadow-xl w-full max-w-md mx-4 p-5">${html}</div></div>`;
-  root.querySelector('.modal-backdrop').addEventListener('click', e => { if (e.target.classList.contains('modal-backdrop')) closeModal(); });
 }
 function closeModal() { document.getElementById('modal-root').innerHTML = ''; }
 
@@ -82,7 +81,6 @@ function openCommessaModal(id) {
       <button id="m-save" class="px-3 py-1.5 text-sm bg-teal-600 text-white rounded hover:bg-teal-700">Salva</button>
     </div>
   </div></div>`;
-  root.querySelector('.modal-backdrop').addEventListener('click', e => { if (e.target.classList.contains('modal-backdrop')) closeModal(); });
 
   function rebuildProvinciaOptionsCommessa(preselect) {
     const regioneSel = document.getElementById('m-regione').value;
@@ -311,7 +309,6 @@ function openFabbisognoModal(commessaId, commessaNome) {
       <button id="fb-save" class="px-3 py-1.5 text-sm bg-teal-600 text-white rounded hover:bg-teal-700">Salva fabbisogno</button>
     </div>
   </div></div>`;
-  root.querySelector('.modal-backdrop').addEventListener('click', e => { if (e.target.classList.contains('modal-backdrop')) closeModal(); });
 
   renderRighe();
 
@@ -482,7 +479,6 @@ function openOperatoreModal(id) {
       <button id="mo-save" class="px-3 py-1.5 text-sm bg-teal-600 text-white rounded hover:bg-teal-700">Salva</button>
     </div>
   </div></div>`;
-  root.querySelector('.modal-backdrop').addEventListener('click', e => { if (e.target.classList.contains('modal-backdrop')) closeModal(); });
 
   function rebuildProvinciaOptionsOperatore(preselect) {
     const regioneSel = document.getElementById('mo-regione').value;
@@ -620,7 +616,6 @@ function showConfirm(htmlMsg, onConfirm) {
   root.innerHTML = '<div class="modal-backdrop"><div class="bg-white rounded-lg shadow-xl w-full max-w-md mx-4 p-5"><div class="mb-4">' + htmlMsg + '</div><div class="flex justify-end gap-2"><button id="sc-cancel" class="px-3 py-1.5 text-sm border border-slate-300 rounded hover:bg-slate-50">Annulla</button><button id="sc-confirm" class="px-3 py-1.5 text-sm bg-red-600 text-white rounded hover:bg-red-700">Conferma eliminazione</button></div></div></div>';
   document.getElementById('sc-cancel').onclick = () => closeModal();
   document.getElementById('sc-confirm').onclick = () => { closeModal(); onConfirm(); };
-  root.querySelector('.modal-backdrop').addEventListener('click', e => { if (e.target.classList.contains('modal-backdrop')) closeModal(); });
 }
 
 function showAlertModal(msg) {
@@ -628,7 +623,6 @@ function showAlertModal(msg) {
   const safeMsg = typeof msg === 'string' ? esc(msg).replace(/\n/g, '<br>') : String(msg);
   root.innerHTML = '<div class="modal-backdrop"><div class="bg-white rounded-lg shadow-xl w-full max-w-md mx-4 p-5"><div class="mb-4 whitespace-pre-line">' + safeMsg + '</div><div class="flex justify-end"><button id="sa-ok" class="px-4 py-1.5 text-sm bg-teal-600 text-white rounded hover:bg-teal-700">OK</button></div></div></div>';
   document.getElementById('sa-ok').onclick = () => closeModal();
-  root.querySelector('.modal-backdrop').addEventListener('click', e => { if (e.target.classList.contains('modal-backdrop')) closeModal(); });
 }
 
 function showConfirmAsync(msg, btnLabel) {
@@ -639,7 +633,6 @@ function showConfirmAsync(msg, btnLabel) {
     root.innerHTML = '<div class="modal-backdrop"><div class="bg-white rounded-lg shadow-xl w-full max-w-md mx-4 p-5"><div class="mb-4 whitespace-pre-line">' + safeMsg + '</div><div class="flex justify-end gap-2"><button id="sca-cancel" class="px-3 py-1.5 text-sm border border-slate-300 rounded hover:bg-slate-50">Annulla</button><button id="sca-confirm" class="px-3 py-1.5 text-sm bg-red-600 text-white rounded hover:bg-red-700">' + esc(label) + '</button></div></div></div>';
     document.getElementById('sca-cancel').onclick = () => { closeModal(); resolve(false); };
     document.getElementById('sca-confirm').onclick = () => { closeModal(); resolve(true); };
-    root.querySelector('.modal-backdrop').addEventListener('click', e => { if (e.target.classList.contains('modal-backdrop')) { closeModal(); resolve(false); } });
   });
 }
 
@@ -660,7 +653,6 @@ function showHelpGuide(key) {
     '<div class="flex items-center justify-between mb-3" style="flex-shrink:0;"><span class="font-semibold text-slate-700">ℹ️ Guida</span><button id="hg-close" class="text-slate-400 hover:text-slate-600 text-xl leading-none">&times;</button></div>' +
     '<div class="text-sm text-slate-700" style="overflow-y:auto;flex:1;min-height:0;">' + safeMsg + '</div></div></div>';
   document.getElementById('hg-close').onclick = () => closeModal();
-  root.querySelector('.modal-backdrop').addEventListener('click', e => { if (e.target.classList.contains('modal-backdrop')) closeModal(); });
 }
 
 // Delegato su document invece che per-elemento: alcuni bottoni con guida (Carica Report,
@@ -731,7 +723,6 @@ function cpSelectModal(title, message, options) {
       '<button id="csm-ok" class="px-3 py-1.5 text-sm bg-teal-600 text-white rounded hover:bg-teal-700">Conferma</button></div></div></div>';
     document.getElementById('csm-cancel').onclick = () => { closeModal(); resolve(null); };
     document.getElementById('csm-ok').onclick = () => { const v = document.getElementById('csm-sel').value; closeModal(); resolve(v); };
-    root.querySelector('.modal-backdrop').addEventListener('click', e => { if (e.target.classList.contains('modal-backdrop')) { closeModal(); resolve(null); } });
   });
 }
 
@@ -813,7 +804,6 @@ function openLicenziaModal(id) {
   document.getElementById('lic-ex').onclick = () => { closeModal(); licenziaOperatore(id); };
   document.getElementById('lic-del').onclick = () => { closeModal(); deleteOperatore(id); };
   document.getElementById('lic-cancel').onclick = () => closeModal();
-  root.querySelector('.modal-backdrop').addEventListener('click', e => { if (e.target.classList.contains('modal-backdrop')) closeModal(); });
 }
 
 async function licenziaOperatore(id) {

@@ -477,9 +477,6 @@ function attImportShowConfirm(info) {
     root.innerHTML = html;
     document.getElementById('ati-cancel').onclick = () => { closeModal(); resolve(false); };
     document.getElementById('ati-confirm').onclick = () => { closeModal(); resolve(true); };
-    root.querySelector('.modal-backdrop').addEventListener('click', e => {
-      if (e.target.classList.contains('modal-backdrop')) { closeModal(); resolve(false); }
-    });
   });
 }
 

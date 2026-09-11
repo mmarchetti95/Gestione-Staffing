@@ -731,7 +731,6 @@ function openOperatoreImpegniModal(opId) {
       </div>
     </div>
   `;
-  root.querySelector('.modal-backdrop').addEventListener('click', e => { if (e.target.classList.contains('modal-backdrop')) closeModal(); });
 
   // binding
   root.querySelectorAll('.del-mese-staffing').forEach(b => {

@@ -183,9 +183,6 @@ function anagImportShowConfirm(info) {
     root.innerHTML = html;
     document.getElementById('ani-cancel').onclick = () => { closeModal(); resolve(false); };
     document.getElementById('ani-confirm').onclick = () => { closeModal(); resolve(true); };
-    root.querySelector('.modal-backdrop').addEventListener('click', e => {
-      if (e.target.classList.contains('modal-backdrop')) { closeModal(); resolve(false); }
-    });
   });
 }
 

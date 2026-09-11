@@ -187,8 +187,7 @@ function pwGeneraMail() {
 
   document.body.appendChild(wrap);
 
-  // Chiudi cliccando fuori o sui bottoni chiudi
-  wrap.addEventListener('click', e => { if (e.target === wrap) wrap.remove(); });
+  // Chiudi solo tramite i bottoni chiudi (niente chiusura su click fuori: si perdono facilmente le note inserite)
   document.getElementById('pw-mail-close-btn').onclick  = () => wrap.remove();
   document.getElementById('pw-mail-chiudi-btn').onclick = () => wrap.remove();
 

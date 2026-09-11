@@ -278,9 +278,6 @@ function pwOpenMeteoModal(cIdx, sIdx, dayIdx) {
       <button onclick="closeModal()" class="px-3 py-1.5 text-sm border border-slate-300 rounded">Chiudi</button>
     </div>
   </div></div>`;
-  root.querySelector('.modal-backdrop').addEventListener('click', e => {
-    if (e.target.classList.contains('modal-backdrop')) closeModal();
-  });
 }
 
 /* ==================== BOLLETTINO PROTEZIONE CIVILE (criticità idrogeologica/idraulica) ====================
@@ -589,9 +586,6 @@ function pwOpenWeatherWeekModal() {
       <button onclick="closeModal()" class="px-3 py-1.5 text-sm border border-slate-300 rounded">Chiudi</button>
     </div>
   </div></div>`;
-  root.querySelector('.modal-backdrop').addEventListener('click', e => {
-    if (e.target.classList.contains('modal-backdrop')) closeModal();
-  });
 }
 
 /* Chiude il modal criticità meteo e porta l'utente esattamente alla cella (commessa/squadra/

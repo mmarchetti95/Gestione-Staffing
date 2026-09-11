@@ -125,7 +125,6 @@ function pwFerieImportShowConfirm({ fileName, righeLette, batchLength, nOpCoinvo
     root.innerHTML = html;
     document.getElementById('pfi-cancel').onclick = () => { closeModal(); resolve(false); };
     document.getElementById('pfi-confirm').onclick = () => { closeModal(); resolve(true); };
-    root.querySelector('.modal-backdrop').addEventListener('click', e => { if (e.target.classList.contains('modal-backdrop')) { closeModal(); resolve(false); } });
   });
 }
 

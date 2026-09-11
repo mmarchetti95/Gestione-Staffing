@@ -137,7 +137,6 @@ function openCommessaAttivaModal(nome) {
       </div>
     </div>
   </div></div>`;
-  root.querySelector('.modal-backdrop').addEventListener('click', e => { if(e.target.classList.contains('modal-backdrop')) closeModal(); });
   function rebuildProvinciaOptionsCommessaAttiva(preselect) {
     const regioneSel = document.getElementById('ma-regione').value;
     const provSel = document.getElementById('ma-provincia');

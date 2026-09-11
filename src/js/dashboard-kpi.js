@@ -445,9 +445,6 @@ function showKpiModal(type) {
       <div style="overflow-y:auto;padding:18px 20px;flex:1;">${bodyHtml}</div>
     </div>
   </div>`;
-  root.querySelector('.modal-backdrop').addEventListener('click', e => {
-    if (e.target.classList.contains('modal-backdrop')) closeModal();
-  });
 }
 
 /* ===================== CHART SATURAZIONE ===================== */
