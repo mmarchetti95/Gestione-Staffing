@@ -111,6 +111,9 @@ Limite noto: il progetto Supabase è sul piano **Free**, che non include backup 
 
 ## Changelog
 
+## v18.170.0
+- fix: **Import limitazioni operatori — memoria cumulativa fra import successivi** — il registro grezzo dell'import (`state.limitazioni_registro`, sezione "Operatori con limitazioni") veniva sostituito per intero ad ogni nuovo file caricato: un dipendente fuori dal pool operatori, presente in un import precedente ma assente nel file più recente (es. import parziali/incrementali), spariva dall'elenco invece di restare memorizzato con l'ultimo dato noto. Ora il registro è cumulativo: chi ricompare nel nuovo file viene aggiornato, chi non ricompare resta con i dati dell'ultimo import in cui era presente. Nessun impatto sulle schede dei singoli operatori del pool, che seguivano già questa logica.
+
 ## v18.169.0
 - feat: **Sottotask Jira — creazione anche per singola squadra** — accanto al bottone "🎫 Sottotask Jira" nell'header di ogni blocco commessa (che considera tutti i comuni pianificati su tutte le squadre di quella commessa), ora anche l'header di ogni squadra ha un proprio bottone "🎫 Sottotask" che limita comuni e operatori considerati alla sola squadra da cui è lanciato — utile quando si vuole creare i sottotask di una squadra alla volta invece che per l'intera commessa. Stesso flusso (scelta Epic/Task per comune, selezione puntuale, campi extra, anteprima dryRun) di prima.
 

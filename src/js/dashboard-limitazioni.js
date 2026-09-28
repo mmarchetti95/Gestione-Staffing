@@ -13,12 +13,16 @@
                             sono tanti e indipendenti). fonte = 'import' | 'manuale'.
    - state.limitazioni_catalogo  vocabolario dei "tipo limitazione" visti finora (seed in
                             LIMITAZIONI_TIPI_DEFAULT, si auto-estende con l'import).
-   - state.limitazioni_registro  archivio grezzo dell'ultimo import, copre anche i
-                            dipendenti fuori dal pool. Consultazione + riabbinamento futuro.
+   - state.limitazioni_registro  archivio CUMULATIVO fra piu' import (chiave = nome
+                            normalizzato), copre anche i dipendenti fuori dal pool.
+                            Consultazione + riabbinamento futuro.
 
    Per chi e' nel pool, un import successivo SOSTITUISCE l'intero record (e' la fonte
    autorevole, come un'idoneita' medica reale che si rinnova): chi non compare piu' nel
-   file semplicemente non viene toccato, la correzione manuale sulla scheda operatore resta. */
+   file semplicemente non viene toccato, la correzione manuale sulla scheda operatore resta.
+   Lo stesso vale per il registro grezzo (anche fuori pool): un dipendente che ricompare
+   viene aggiornato con i dati del nuovo file, chi non ricompare resta memorizzato con
+   l'ultimo dato importato — un import parziale non cancella la storia. */
 
 /* ------------------------------------------------------- stato scadenza ----- */
 
@@ -401,11 +405,24 @@ async function limImportFile(file) {
   });
   if (!ok) return;
 
+  // Il registro e' cumulativo tra piu' import (non solo l'ultimo file): un dipendente
+  // che ricompare nel nuovo file viene aggiornato (e' la fonte piu' recente), ma chi era
+  // gia' nel registro e non compare in questo import resta memorizzato — altrimenti un
+  // import parziale successivo cancellerebbe la memoria dei dipendenti fuori pool.
+  const registroPrec = state.limitazioni_registro || {};
+  const mapDipendenti = new Map(
+    (registroPrec.dipendenti || []).map(d => [pwFerieNormTokens(d.nome || '').sort().join(' '), d])
+  );
+  dipendenti.forEach(d => {
+    const chiave = pwFerieNormTokens(d.nome || '').sort().join(' ');
+    if (chiave) mapDipendenti.set(chiave, d);
+  });
+
   state.limitazioni_registro = {
     aggiornato_il: attOggiIso(),
     file: file.name,
     da: (typeof _sbUser !== 'undefined' && _sbUser) ? _sbUser.email : '',
-    dipendenti: dipendenti,
+    dipendenti: [...mapDipendenti.values()],
   };
 
   // Auto-estende il catalogo con eventuali nuove diciture incontrate nel file.
