@@ -825,10 +825,7 @@ function rsRenderMappa() {
   setTimeout(() => {
     if (!_ricercaSquadreMap) {
       _ricercaSquadreMap = L.map('rs-mappa', { preferCanvas: true }).setView([42.5, 12.5], 6);
-      const _rsMapStreet = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
-        maxZoom: 19
-      }).addTo(_ricercaSquadreMap);
+      const _rsMapStreet = mapStreetLayer().addTo(_ricercaSquadreMap);
       mapAddSatelliteToggle(_ricercaSquadreMap, _rsMapStreet);
     }
     _ricercaSquadreMap.invalidateSize();

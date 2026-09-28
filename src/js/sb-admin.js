@@ -42,18 +42,33 @@ const PW_TAB_KEYS = ['griglia', 'ferie', 'mappa', 'spostamenti', 'ricerca-squadr
 function sbApplyPageVisibility() {
   const navDash = document.getElementById('nav-dashboard');
   const navWk = document.getElementById('nav-weekly');
+  const navMl = document.getElementById('nav-mappa');
   const canDash = sbCanSeePage('dashboard');
   const anyWeekly = PW_TAB_KEYS.some(k => sbCanSeePage('weekly:' + k));
+  const canMappa = sbCanSeePage('mappa');
   if (navDash) navDash.style.display = canDash ? '' : 'none';
   if (navWk) navWk.style.display = anyWeekly ? '' : 'none';
+  if (navMl) navMl.style.display = canMappa ? '' : 'none';
   PW_TAB_KEYS.forEach(k => {
     const el = document.getElementById('pw-tab-' + k);
     if (el) el.style.display = sbCanSeePage('weekly:' + k) ? '' : 'none';
   });
   const weeklyEl = document.getElementById('screen-weekly');
+  const mappaEl = document.getElementById('screen-mappa');
   const onWeekly = weeklyEl && !weeklyEl.classList.contains('hidden');
-  if (onWeekly && !anyWeekly && canDash) switchScreen('dashboard');
-  else if (!onWeekly && !canDash && anyWeekly) switchScreen('weekly');
+  const onMappa = mappaEl && !mappaEl.classList.contains('hidden');
+  // Se lo screen aperto non è più visibile per il ruolo corrente, si ripiega sul
+  // primo consentito nell'ordine Dashboard -> Pianificazione -> Mappa.
+  if (onMappa && !canMappa) {
+    if (canDash) switchScreen('dashboard');
+    else if (anyWeekly) switchScreen('weekly');
+  } else if (onWeekly && !anyWeekly) {
+    if (canDash) switchScreen('dashboard');
+    else if (canMappa) switchScreen('mappa');
+  } else if (!onWeekly && !onMappa && !canDash) {
+    if (anyWeekly) switchScreen('weekly');
+    else if (canMappa) switchScreen('mappa');
+  }
   if (onWeekly && typeof _pwActiveTab !== 'undefined' && !sbCanSeePage('weekly:' + _pwActiveTab)) {
     const allowed = PW_TAB_KEYS.find(k => sbCanSeePage('weekly:' + k));
     if (allowed) pwSwitchTab(allowed);
@@ -348,9 +363,10 @@ const SB_PAGE_LABELS = {
   'weekly:ricerca-squadre': 'Ricerca Squadre',
   'weekly:controllo': 'Controllo Produzione',
   'weekly:doppia': 'Doppia Week',
+  'mappa': 'Mappa (vista d\'insieme)',
 };
 function sbAllPageKeys() {
-  return ['dashboard', ...PW_TAB_KEYS.map(k => 'weekly:' + k)];
+  return ['dashboard', ...PW_TAB_KEYS.map(k => 'weekly:' + k), 'mappa'];
 }
 function sbGuestPagesChecksHtml(checked) {
   return sbAllPageKeys().map(k =>
@@ -872,6 +888,9 @@ async function sbPull() {
     if (weeklyEl && !weeklyEl.classList.contains('hidden')) {
       pwSwitchTab(typeof _pwActiveTab !== 'undefined' ? _pwActiveTab : 'griglia');
     }
+    // Lo screen Mappa legge pwData: va ridisegnato anche lui dopo un pull, altrimenti
+    // resterebbe fermo alla pianificazione precedente finché non si cambia giorno.
+    if (typeof mlOnDataChanged === 'function') mlOnDataChanged();
 
     const ora = new Date().toLocaleTimeString('it-IT', { hour:'2-digit', minute:'2-digit' });
     sbUpdateUI('ok', 'Sync: aggiornato ✓', 'Ultimo sync: ' + ora);

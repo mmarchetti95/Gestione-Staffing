@@ -112,18 +112,12 @@ let _mapRegioneFilter = '';
 function pwMapInit() {
   if (!_map) {
     _map = L.map('pw-map', { preferCanvas: true }).setView([42.5, 12.5], 6);
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-      attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
-      maxZoom: 19
-    }).addTo(_map);
+    mapStreetLayer().addTo(_map);
     setTimeout(() => _map.invalidateSize(), 200);
   }
   if (!_mapOp) {
     _mapOp = L.map('pw-map-op', { preferCanvas: true }).setView([42.5, 12.5], 6);
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-      attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
-      maxZoom: 19
-    }).addTo(_mapOp);
+    mapStreetLayer().addTo(_mapOp);
     setTimeout(() => _mapOp.invalidateSize(), 200);
   }
   pwMapRender(_mapDay);

@@ -214,6 +214,11 @@ document.addEventListener('DOMContentLoaded', async () => {
   // switchScreen è definita globalmente più avanti
   document.getElementById('nav-dashboard').onclick = () => switchScreen('dashboard');
   document.getElementById('nav-weekly').onclick = () => switchScreen('weekly');
+  const _navMappa = document.getElementById('nav-mappa');
+  if (_navMappa) _navMappa.onclick = () => switchScreen('mappa');
+  // Toolbar/filtri dello screen Mappa: agganciati una volta sola qui, non ad ogni
+  // ingresso nello screen, così non si accumulano handler duplicati.
+  if (typeof mlBindToolbar === 'function') mlBindToolbar();
 
   // Tab griglia / ferie / mappa
   document.getElementById('pw-tab-griglia').onclick = () => pwSwitchTab('griglia');
@@ -239,7 +244,8 @@ document.addEventListener('DOMContentLoaded', async () => {
   // fatto qui e non nel secondo DOMContentLoaded (init pianificazione) perché richiede
   // che state/Supabase siano già pronti (loadState + sbInitAndCheck sopra).
   try {
-    if (localStorage.getItem('last_screen') === 'weekly') switchScreen('weekly');
+    const _last = localStorage.getItem('last_screen');
+    if (_last === 'weekly' || _last === 'mappa') switchScreen(_last);
   } catch (_) {}
 });
 

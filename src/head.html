@@ -1159,6 +1159,181 @@
      ad ogni render. */
   body.pw-readonly .pw-write-action { opacity: .45 !important; pointer-events: none !important; cursor: not-allowed !important; }
 
+  /* ===== Screen "Mappa" (ml-*) =====
+     Il drawer di dettaglio è position:absolute dentro .ml-stage, non position:fixed:
+     resta dentro il flusso della pagina e non entra mai in competizione di z-index
+     con .modal-backdrop (vedi la convenzione sui modal in CLAUDE.md). */
+  .ml-days { display: flex; flex-wrap: wrap; gap: 6px; }
+  .ml-day-btn {
+    padding: 5px 11px; font-size: 12px; border: 1px solid var(--border);
+    border-radius: var(--radius-sm); background: white; cursor: pointer;
+    white-space: nowrap;
+  }
+  .ml-day-btn:hover { background: #f1f5f9; }
+  .ml-day-btn.active { background: var(--accent); color: white; border-color: var(--accent); }
+  .ml-day-btn.is-today { border-color: #f59e0b; }
+  .ml-day-btn.active.is-today { background: #f59e0b; border-color: #f59e0b; }
+  .ml-day-btn.ml-week-btn { border-color: #c7d2fe; color: #4f46e5; margin-left: 6px; }
+  .ml-day-btn.ml-week-btn.active { background: #4f46e5; border-color: #4f46e5; color: white; }
+
+  .ml-chips { display: flex; flex-wrap: wrap; gap: 5px; max-height: 84px; overflow-y: auto; }
+  .ml-chip {
+    --chip: #94a3b8;
+    display: inline-flex; align-items: center; gap: 5px;
+    padding: 3px 9px; font-size: 11.5px; border-radius: 999px;
+    border: 1px solid var(--border); background: white; cursor: pointer;
+    color: #475569; white-space: nowrap;
+  }
+  .ml-chip::before {
+    content: ''; width: 8px; height: 8px; border-radius: 50%;
+    background: var(--chip); flex-shrink: 0;
+  }
+  .ml-chip:hover { background: #f8fafc; }
+  .ml-chip.active { background: var(--dark-bg); color: white; border-color: var(--dark-bg); }
+  .ml-empty { font-size: 11.5px; color: #94a3b8; }
+
+  .ml-kpis { display: flex; gap: 10px; flex-wrap: wrap; }
+  /* I riquadri sono cliccabili: aprono nel drawer l'elenco corrispondente
+     (operatori, cantieri non localizzati, cantieri senza stato Jira). */
+  .ml-kpi {
+    background: white; border: 1px solid var(--border); border-radius: var(--radius-sm);
+    padding: 7px 14px; min-width: 88px; display: flex; flex-direction: column;
+    align-items: flex-start; text-align: left; font: inherit; cursor: pointer;
+  }
+  .ml-kpi:hover { border-color: var(--accent); background: #f8fffe; }
+  .ml-kpi-v { display: block; font-size: 19px; font-weight: 700; color: var(--dark-bg); line-height: 1.1; }
+  .ml-kpi-l { display: block; font-size: 10.5px; color: #64748b; text-transform: uppercase; letter-spacing: .03em; }
+
+  /* Correzione posizione dal pannello "Cantieri non localizzati" */
+  .ml-fix { display: flex; gap: 5px; margin-top: 6px; }
+  .ml-fix-input {
+    flex: 1; min-width: 0; font-size: 11.5px; border: 1px solid #d1d5db;
+    border-radius: var(--radius-sm); padding: 4px 6px; outline: none; box-sizing: border-box;
+  }
+  .ml-fix-input:focus { border-color: var(--accent); }
+  .ml-fix-btn {
+    flex-shrink: 0; font-size: 11.5px; font-weight: 600; color: white;
+    background: var(--accent); border: none; border-radius: var(--radius-sm);
+    padding: 4px 10px; cursor: pointer;
+  }
+  .ml-fix-btn:hover { filter: brightness(1.08); }
+  .ml-cant-list { max-height: 260px; overflow-y: auto; }
+
+  .ml-stage {
+    position: relative; display: grid; grid-template-columns: 300px 1fr;
+    gap: 0; border: 1px solid var(--border); border-radius: var(--radius-lg);
+    overflow: hidden; background: white; height: calc(100vh - 330px); min-height: 460px;
+  }
+  @media (max-width: 900px) { .ml-stage { grid-template-columns: 1fr; height: auto; } }
+  .ml-side {
+    border-right: 1px solid var(--border); background: #fbfcfd;
+    display: flex; flex-direction: column; min-height: 0;
+  }
+  .ml-side-tabs { display: flex; border-bottom: 1px solid var(--border); flex-shrink: 0; background: white; }
+  .ml-side-tab {
+    flex: 1; padding: 8px 6px; font-size: 12px; font-weight: 600; color: #64748b;
+    background: transparent; border: none; border-bottom: 2px solid transparent; cursor: pointer;
+  }
+  .ml-side-tab:hover { background: #f8fafc; }
+  .ml-side-tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+  .ml-side-list { flex: 1; overflow-y: auto; min-height: 0; }
+
+  /* Barra di avanzamento della commessa: una fascia per stato, larghezza
+     proporzionale al numero di cantieri in quello stato. */
+  .ml-bar { display: flex; gap: 1px; height: 5px; border-radius: 3px; overflow: hidden; margin-top: 4px; }
+  .ml-bar-seg { display: block; }
+  .ml-row-comm .ml-row-main { gap: 1px; }
+  .ml-map-wrap { position: relative; }
+  #ml-map { width: 100%; height: 100%; min-height: 420px; }
+
+  .ml-row {
+    display: flex; align-items: center; gap: 8px; width: 100%; text-align: left;
+    padding: 8px 10px; border: none; border-bottom: 1px solid #eef2f6;
+    background: transparent; cursor: pointer;
+  }
+  .ml-row:hover { background: #eff6ff; }
+  .ml-row-dot { width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0; }
+  .ml-row-main { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+  .ml-row-t { font-size: 12.5px; font-weight: 600; color: #1e293b; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .ml-row-s { font-size: 10.5px; color: #94a3b8; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .ml-row-n {
+    font-size: 11px; font-weight: 700; color: #475569; background: #e2e8f0;
+    border-radius: 999px; padding: 1px 7px; flex-shrink: 0;
+  }
+  .ml-row-st { width: 8px; height: 22px; border-radius: 3px; flex-shrink: 0; }
+  .ml-warn { font-size: 10px; }
+
+  /* Pin: cerchio commessa + anello stato Task + icona meteo + eventuale allerta PC */
+  .ml-pin-wrap { background: transparent; border: none; }
+  .ml-pin {
+    position: relative; width: 34px; height: 34px; border-radius: 50%;
+    border: 3px solid #cbd5e1; box-shadow: 0 1px 4px rgba(15,23,42,.35);
+    display: flex; align-items: center; justify-content: center;
+  }
+  .ml-pin-n { color: white; font-size: 12.5px; font-weight: 700; text-shadow: 0 1px 2px rgba(0,0,0,.4); }
+  .ml-pin-meteo { position: absolute; top: -9px; right: -9px; font-size: 14px; line-height: 1; }
+  .ml-pin-alert { position: absolute; bottom: -8px; left: -6px; font-size: 12px; line-height: 1; }
+  .ml-pc-gialla { color: #eab308; }
+  .ml-pc-arancione { color: #f97316; }
+  .ml-pc-rossa { color: #dc2626; }
+
+  .ml-loading {
+    position: absolute; inset: 0; background: rgba(255,255,255,.7);
+    display: none; align-items: center; justify-content: center;
+    font-size: 13px; color: #475569; z-index: 500;
+  }
+
+  .ml-drawer {
+    position: absolute; top: 0; right: 0; bottom: 0; width: 370px; max-width: 92%;
+    background: white; border-left: 1px solid var(--border);
+    box-shadow: -4px 0 16px rgba(15,23,42,.10); display: flex; flex-direction: column;
+    /* Sopra i controlli Leaflet (.leaflet-top/.leaflet-bottom stanno a 1000):
+       con uno z-index inferiore il selettore Stradale/Satellite, ancorato in alto
+       a destra, restava disegnato sopra il pannello informazioni. */
+    z-index: 1100;
+  }
+  .ml-drawer.hidden { display: none; }
+  .ml-drawer-head {
+    display: flex; align-items: center; justify-content: space-between; gap: 8px;
+    padding: 10px 12px; background: var(--dark-bg); color: white; flex-shrink: 0;
+  }
+  .ml-drawer-head b { font-size: 13.5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .ml-drawer-head button { background: none; border: none; color: white; font-size: 19px; cursor: pointer; line-height: 1; }
+  .ml-drawer-body { flex: 1; overflow-y: auto; padding: 10px 12px; }
+
+  .ml-sec { border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 9px 11px; margin-bottom: 9px; }
+  .ml-sec-t { display: flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 700; color: #1e293b; margin-bottom: 6px; }
+  .ml-kv { display: flex; gap: 8px; font-size: 12px; padding: 2px 0; }
+  .ml-kv span { color: #64748b; flex-shrink: 0; min-width: 78px; }
+  .ml-kv b { color: #1e293b; font-weight: 600; word-break: break-word; }
+  .ml-note { font-size: 11.5px; color: #94a3b8; font-style: italic; }
+  .ml-link { background: none; border: none; padding: 0; font: inherit; color: var(--accent); cursor: pointer; text-align: left; text-decoration: underline; }
+
+  .ml-meteo-head { display: flex; align-items: center; gap: 9px; margin-bottom: 6px; }
+  .ml-meteo-ico { font-size: 24px; }
+  .ml-meteo-t { font-size: 14px; font-weight: 700; color: #1e293b; }
+  .ml-meteo-p { font-size: 11.5px; color: #0284c7; }
+  .ml-meteo-fasce { display: flex; gap: 4px; }
+  .ml-fascia { flex: 1; text-align: center; background: #f8fafc; border-radius: 4px; padding: 4px 2px; }
+  .ml-fascia-h { font-size: 9.5px; color: #94a3b8; }
+  .ml-fascia-i { font-size: 14px; line-height: 1.2; }
+  .ml-fascia-t { font-size: 10.5px; font-weight: 600; color: #475569; }
+  .ml-alert { margin-top: 7px; font-size: 11.5px; font-weight: 600; }
+
+  .ml-task { border-top: 1px dashed var(--border); margin-top: 7px; padding-top: 7px; }
+  .ml-task-k { font-size: 12px; font-weight: 700; color: #2563eb; text-decoration: none; margin-right: 6px; }
+  .ml-task-s { font-size: 11.5px; color: #475569; margin-top: 3px; }
+  .ml-task-e { font-size: 10.5px; color: #94a3b8; margin-top: 2px; }
+  .ml-badge { display: inline-block; font-size: 10px; font-weight: 700; color: white; border-radius: 999px; padding: 1px 8px; }
+
+  .ml-cant { border-top: 1px solid #f1f5f9; padding: 7px 0; }
+  .ml-cant:first-of-type { border-top: none; }
+  .ml-cant-h { display: flex; align-items: center; gap: 7px; font-size: 12.5px; color: #1e293b; }
+  .ml-cant-m { font-size: 10.5px; color: #94a3b8; margin-top: 2px; margin-left: 2px; }
+
+  .ml-legend { display: flex; gap: 12px; flex-wrap: wrap; font-size: 11px; color: #64748b; }
+  .ml-legend i { display: inline-block; width: 9px; height: 9px; border-radius: 50%; margin-right: 4px; }
+
 </style>
 </head>
 <body class="min-h-screen">
@@ -1176,12 +1351,13 @@
       <div class="flex ml-4 rounded-lg overflow-hidden" style="border:1px solid var(--dark-border-strong);">
         <button id="nav-dashboard" class="topnav-btn active">📊 Dashboard</button>
         <button id="nav-weekly" class="topnav-btn">📅 Pianificazione settimanale</button>
+        <button id="nav-mappa" class="topnav-btn">🗺 Mappa</button>
       </div>
     </div>
     <div class="flex items-center gap-2">
       <button id="btn-presentation" class="px-3 py-1.5 text-sm rounded hover:bg-white/10" style="border:1px solid var(--dark-border-strong);color:var(--dark-text);visibility:visible;">📊 Modalità presentazione</button>
       <div class="text-xs pl-2" style="border-left:1px solid var(--dark-border-strong);color:var(--dark-text-muted);">
-        <span id="app-version" class="font-medium" style="color:var(--accent);">v18.172.0</span> · Michele Marchetti
+        <span id="app-version" class="font-medium" style="color:var(--accent);">v18.175.0</span> · Michele Marchetti
         <span id="sb-role-badge" style="margin-left:8px;padding:1px 8px;border-radius:9999px;background:rgba(255,255,255,.1);color:var(--dark-text);font-weight:600;"></span>
       </div>
     </div>
@@ -2194,6 +2370,96 @@
     <div class="bg-white border border-slate-200 rounded-lg overflow-auto shadow-sm">
       <div id="cp-table-container" style="max-height:600px;overflow-y:auto;">
         <div class="text-center text-slate-400 py-10 text-sm">Seleziona la tab per caricare i dati.</div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- ============ SCREEN "MAPPA" ============
+     Vista d'insieme cantieri/squadre, terzo screen top-level. Logica in
+     src/js/mappa-live.js (prefisso ml*). Sola lettura: non contiene controlli di
+     scrittura, quindi nessuna classe pw-write-action. -->
+<div id="screen-mappa" class="hidden max-w-screen-2xl mx-auto px-4 py-6">
+
+  <!-- Toolbar: settimana mostrata, indipendente da quella della Griglia -->
+  <div class="bg-white border border-slate-200 rounded-lg p-4 mb-3 flex items-center justify-between flex-wrap gap-3">
+    <div class="flex items-center gap-2">
+      <button id="ml-prev" class="px-3 py-1.5 text-sm border border-slate-300 rounded hover:bg-slate-50">← Prec.</button>
+      <div class="flex items-center gap-1 border border-slate-200 rounded px-3 py-1.5 bg-slate-50">
+        <span class="text-xs text-slate-500 font-medium">Anno</span>
+        <select id="ml-anno" class="text-sm border-none bg-transparent font-semibold text-slate-700 focus:outline-none cursor-pointer ml-1">
+          <option value="2025">2025</option>
+          <option value="2026">2026</option>
+          <option value="2027">2027</option>
+          <option value="2028">2028</option>
+        </select>
+        <span class="text-xs text-slate-500 font-medium ml-2">Week</span>
+        <select id="ml-week" class="text-sm border-none bg-transparent font-semibold text-slate-700 focus:outline-none cursor-pointer ml-1 w-16"></select>
+      </div>
+      <button id="ml-next" class="px-3 py-1.5 text-sm border border-slate-300 rounded hover:bg-slate-50">Succ. →</button>
+      <button id="ml-today" class="px-3 py-1.5 text-sm bg-teal-50 text-teal-700 border border-teal-200 rounded hover:bg-teal-100">Adesso</button>
+    </div>
+    <div id="ml-header-dates" class="text-sm font-semibold text-slate-700"></div>
+    <div class="flex items-center gap-3">
+      <span id="ml-jira-status" class="text-[11px] text-slate-400"></span>
+      <label class="flex items-center gap-1.5 text-xs text-slate-600 cursor-pointer" title="Rilegge lo stato dei Task Jira ogni 2 minuti mentre questa schermata è aperta">
+        <input id="ml-auto" type="checkbox" class="cursor-pointer"> auto
+      </label>
+      <button id="ml-refresh" class="px-3 py-1.5 text-sm border border-slate-300 rounded hover:bg-slate-50">🔄 Aggiorna</button>
+    </div>
+  </div>
+
+  <!-- Riepilogo numerico della selezione corrente -->
+  <div id="ml-riepilogo" class="ml-kpis mb-3"></div>
+
+  <!-- Giorno mostrato -->
+  <div id="ml-days" class="ml-days mb-3"></div>
+
+  <!-- Filtri combinabili: commessa AND squadra AND testo cantiere -->
+  <div class="bg-white border border-slate-200 rounded-lg p-3 mb-3">
+    <div class="grid gap-3" style="grid-template-columns: 1fr 1fr 220px;">
+      <div>
+        <div class="text-[11px] font-semibold text-slate-500 uppercase tracking-wide mb-1.5">Commessa</div>
+        <div id="ml-filtro-commesse" class="ml-chips"></div>
+      </div>
+      <div>
+        <div class="text-[11px] font-semibold text-slate-500 uppercase tracking-wide mb-1.5">Squadra</div>
+        <div id="ml-filtro-squadre" class="ml-chips"></div>
+      </div>
+      <div>
+        <div class="text-[11px] font-semibold text-slate-500 uppercase tracking-wide mb-1.5">Cantiere</div>
+        <input id="ml-filtro-cantiere" type="text" placeholder="cerca…"
+               class="w-full text-sm border border-slate-300 rounded px-2 py-1.5 focus:outline-none focus:border-teal-400">
+        <button id="ml-filtro-clear" class="mt-2 text-[11px] text-slate-500 underline" style="display:none;">Azzera filtri</button>
+      </div>
+    </div>
+    <div class="ml-legend mt-3 pt-2.5 border-t border-slate-100">
+      <span><i style="background:#64748b"></i>Da fare</span>
+      <span><i style="background:#f59e0b"></i>In corso</span>
+      <span><i style="background:#10b981"></i>Completato</span>
+      <span><i style="background:#cbd5e1"></i>Stato non disponibile (nessun sottotask Jira)</span>
+    </div>
+  </div>
+
+  <!-- Elenco + mappa + drawer di dettaglio -->
+  <div class="ml-stage">
+    <div class="ml-side">
+      <div class="ml-side-tabs">
+        <button id="ml-side-cantieri" class="ml-side-tab active">📍 Cantieri</button>
+        <button id="ml-side-commesse" class="ml-side-tab">📁 Commesse</button>
+      </div>
+      <div id="ml-lista" class="ml-side-list"></div>
+    </div>
+    <div class="ml-map-wrap">
+      <div id="ml-map"></div>
+      <div id="ml-loading" class="ml-loading">⏳ Localizzazione cantieri…</div>
+      <div id="ml-drawer" class="ml-drawer hidden">
+        <div class="ml-drawer-head">
+          <b id="ml-drawer-title"></b>
+          <button id="ml-drawer-close" title="Chiudi">&times;</button>
+        </div>
+        <div id="ml-drawer-body" class="ml-drawer-body"></div>
       </div>
     </div>
   </div>

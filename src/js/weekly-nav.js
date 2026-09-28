@@ -1,36 +1,91 @@
-/* ==================== HELPER MAPPE (toggle stradale/satellite) ==================== */
+/* ==================== HELPER MAPPE (layer base + toggle stradale/satellite) ==================== */
+
+/* Layer stradale condiviso da TUTTE le mappe dell'app (Mappa squadre, Residenze,
+   Pianifica spostamenti, Ricerca squadre, screen Mappa).
+   NON usa più 'https://{s}.tile.openstreetmap.org/...': i sottodomini a/b/c sono
+   deprecati e il server OSM risponde servendo, al posto della cartografia, tile
+   con scritto "Access blocked — App is not following the tile usage policy" —
+   a video un mosaico di riquadri gialli/neri (fix v18.174.0). La vista satellite
+   non era toccata perché passa da Esri, da cui il sintomo "satellite sì, stradale no".
+   CARTO Voyager serve gli stessi dati OpenStreetMap da una CDN pensata per l'uso
+   applicativo, gratuita e senza API key. Modificare qui vale per tutte le mappe. */
+function mapStreetLayer() {
+  return L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
+    attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> · © <a href="https://carto.com/attributions">CARTO</a>',
+    subdomains: 'abcd',
+    maxZoom: 19
+  });
+}
+
+/* Vista base preferita, ricordata per browser. Il default è SATELLITE: la vista
+   stradale ha dato problemi di resa ripetuti (vedi mapStreetLayer) e il satellite
+   Esri si è sempre comportato bene, quindi è lui a dover essere il punto di
+   partenza. Chi preferisce la stradale la sceglie dal controllo in alto a destra
+   e la scelta resta memorizzata per tutte le mappe dell'app. */
+const MAP_BASE_KEY = 'map_base_layer';
+function mapPreferredBase() {
+  try { return localStorage.getItem(MAP_BASE_KEY) === 'stradale' ? 'stradale' : 'satellite'; }
+  catch (_) { return 'satellite'; }
+}
+
 // Aggiunge un controllo Leaflet in alto a destra per passare dalla vista stradale
-// (OpenStreetMap) a quella satellitare (Esri World Imagery, gratuita, nessuna API key).
+// a quella satellitare (Esri World Imagery, gratuita, nessuna API key).
+// Il chiamante ha già fatto streetLayer.addTo(map): se la preferenza è satellite
+// lo si sostituisce qui, così tutte le mappe partono dalla stessa vista.
 function mapAddSatelliteToggle(map, streetLayer) {
   const satLayer = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
     attribution: 'Tiles © Esri — Source: Esri, Maxar, Earthstar Geographics',
     maxZoom: 19
   });
+  if (mapPreferredBase() === 'satellite') {
+    if (map.hasLayer(streetLayer)) map.removeLayer(streetLayer);
+    satLayer.addTo(map);
+  }
   L.control.layers({ 'Stradale': streetLayer, 'Satellite': satLayer }, null, { position: 'topright' }).addTo(map);
+  map.on('baselayerchange', ev => {
+    try { localStorage.setItem(MAP_BASE_KEY, ev.name === 'Satellite' ? 'satellite' : 'stradale'); } catch (_) {}
+  });
 }
 
 /* ==================== NAVIGAZIONE SCHERMATA ==================== */
 function switchScreen(screen) {
   if (screen === 'dashboard' && !sbCanSeePage('dashboard')) return;
   if (screen === 'weekly' && !PW_TAB_KEYS.some(k => sbCanSeePage('weekly:' + k))) return;
+  if (screen === 'mappa' && !sbCanSeePage('mappa')) return;
   const mainEl   = document.querySelector('main');
   const weeklyEl = document.getElementById('screen-weekly');
+  const mappaEl  = document.getElementById('screen-mappa');
   const navDash  = document.getElementById('nav-dashboard');
   const navWk    = document.getElementById('nav-weekly');
+  const navMl    = document.getElementById('nav-mappa');
   const btnPres  = document.getElementById('btn-presentation');
   try { localStorage.setItem('last_screen', screen); } catch (_) {}
+
+  // Stato "spento" comune, poi si riaccende solo lo screen richiesto: con tre
+  // schermate il vecchio if/else a due rami lasciava scoperte le combinazioni.
+  mainEl.classList.add('hidden');
+  weeklyEl.classList.add('hidden');
+  if (mappaEl) mappaEl.classList.add('hidden');
+  [navDash, navWk, navMl].forEach(n => n && n.classList.remove('active'));
+  // Il timer di refresh Jira della Mappa gira solo mentre la Mappa è aperta
+  // (vedi mlStartAutoRefresh): uscendo da qualsiasi altra parte va fermato.
+  if (typeof mlStopAutoRefresh === 'function') mlStopAutoRefresh();
+
   if (screen === 'weekly') {
-    mainEl.classList.add('hidden');
     weeklyEl.classList.remove('hidden');
-    navDash.classList.remove('active');
-    navWk.classList.add('active');
+    if (navWk) navWk.classList.add('active');
     if (btnPres) btnPres.style.visibility = 'hidden';
     pwLoad().then(() => pwSwitchTab(typeof _pwActiveTab !== 'undefined' ? _pwActiveTab : 'griglia'));
+  } else if (screen === 'mappa') {
+    if (mappaEl) mappaEl.classList.remove('hidden');
+    if (navMl) navMl.classList.add('active');
+    if (btnPres) btnPres.style.visibility = 'hidden';
+    // La Mappa legge pwData: senza pwLoad() la prima apertura diretta (ripristino
+    // di last_screen) troverebbe la pianificazione vuota.
+    pwLoad().then(() => mlEnter());
   } else {
-    weeklyEl.classList.add('hidden');
     mainEl.classList.remove('hidden');
-    navDash.classList.add('active');
-    navWk.classList.remove('active');
+    if (navDash) navDash.classList.add('active');
     if (btnPres) btnPres.style.visibility = 'visible';
   }
 }
@@ -101,19 +156,13 @@ function pwSwitchTab(tab) {
     setTimeout(() => {
       if (!_map) {
         _map = L.map('pw-map', { preferCanvas: true }).setView([42.5, 12.5], 6);
-        const _mapStreet = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-          attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
-          maxZoom: 19
-        }).addTo(_map);
+        const _mapStreet = mapStreetLayer().addTo(_map);
         mapAddSatelliteToggle(_map, _mapStreet);
         setTimeout(() => _map.invalidateSize(), 200);
       }
       if (!_mapOp) {
         _mapOp = L.map('pw-map-op', { preferCanvas: true }).setView([42.5, 12.5], 6);
-        const _mapOpStreet = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-          attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
-          maxZoom: 19
-        }).addTo(_mapOp);
+        const _mapOpStreet = mapStreetLayer().addTo(_mapOp);
         mapAddSatelliteToggle(_mapOp, _mapOpStreet);
         setTimeout(() => _mapOp.invalidateSize(), 200);
       }
