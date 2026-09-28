@@ -1181,7 +1181,7 @@
     <div class="flex items-center gap-2">
       <button id="btn-presentation" class="px-3 py-1.5 text-sm rounded hover:bg-white/10" style="border:1px solid var(--dark-border-strong);color:var(--dark-text);visibility:visible;">📊 Modalità presentazione</button>
       <div class="text-xs pl-2" style="border-left:1px solid var(--dark-border-strong);color:var(--dark-text-muted);">
-        <span id="app-version" class="font-medium" style="color:var(--accent);">v18.172.0</span> · Michele Marchetti
+        <span id="app-version" class="font-medium" style="color:var(--accent);">v18.171.0</span> · Michele Marchetti
         <span id="sb-role-badge" style="margin-left:8px;padding:1px 8px;border-radius:9999px;background:rgba(255,255,255,.1);color:var(--dark-text);font-weight:600;"></span>
       </div>
     </div>
@@ -9391,7 +9391,6 @@ function getCommessaAttivaMeta(nome) {
     dpi_richiesti: stored.dpi_richiesti||[],
     risorse_necessarie: stored.risorse_necessarie !== undefined ? stored.risorse_necessarie : null,
     jira_project_code: stored.jira_project_code||'',
-    documenti: stored.documenti || [],
     _risorseAttuali: risorseAttuali,
     _dedotto: !state.commesse_attive_meta[nome],
   };
@@ -9497,18 +9496,6 @@ function openCommessaAttivaModal(nome) {
           ${(state.dpi_disponibili||[]).length===0?'<div class="text-[10px] text-yellow-700 italic col-span-2">Catalogo DPI vuoto: aggiungi i tipi di DPI dalla sezione “🦺 DPI &amp; scadenze”.</div>':''}
         </div>
       </div>
-      <div>
-        <div class="flex items-center justify-between mb-1">
-          <div class="text-xs font-medium text-slate-600">Documenti</div>
-          <div class="flex items-center gap-2">
-            <span id="ma-docs-status" class="text-[10px] text-slate-400"></span>
-            <button type="button" id="ma-docs-upload-btn" class="text-[10px] px-2 py-0.5 bg-teal-50 text-teal-700 rounded border border-teal-200 hover:bg-teal-100">📎 Carica</button>
-            <input type="file" id="ma-docs-file" class="hidden" multiple>
-          </div>
-        </div>
-        <div class="p-2 bg-slate-50 rounded border border-slate-200 max-h-48 overflow-y-auto" id="ma-docs-list">${_cmDocsListHtml(m.documenti)}</div>
-        <div class="text-[10px] text-slate-400 mt-1">Max 20 MB per file. Contratti, planimetrie, verbali e altri allegati restano associati a questa commessa e scaricabili da chiunque abbia accesso all'app.</div>
-      </div>
     </div>
     <div class="flex justify-between mt-4 gap-2">
       <button id="ma-reset" class="px-3 py-1.5 text-sm border border-slate-300 text-slate-600 rounded hover:bg-slate-50">Reset metadati</button>
@@ -9537,12 +9524,6 @@ function openCommessaAttivaModal(nome) {
   document.getElementById('ma-att-none').onclick = () => document.querySelectorAll('.ma-at').forEach(x => x.checked=false);
   document.getElementById('ma-dpi-all').onclick = () => document.querySelectorAll('.ma-dpi').forEach(x => x.checked=true);
   document.getElementById('ma-dpi-none').onclick = () => document.querySelectorAll('.ma-dpi').forEach(x => x.checked=false);
-  document.getElementById('ma-docs-upload-btn').onclick = () => {
-    if (!sbGuardWrite()) return;
-    document.getElementById('ma-docs-file').click();
-  };
-  document.getElementById('ma-docs-file').onchange = (e) => cmUploadDocumenti(nome, e.target);
-  cmDocsBindListHandlers(nome);
   document.getElementById('ma-btn-fabbisogno').onclick = () => {
     const n = nome;
     closeModal();
@@ -9550,11 +9531,7 @@ function openCommessaAttivaModal(nome) {
   };
   document.getElementById('ma-reset').onclick = async () => {
     if (!sbGuardWrite()) return;
-    const nDocs = (state.commesse_attive_meta[nome]?.documenti || []).length;
-    const msg = nDocs > 0
-      ? `Rimuovere i metadati salvati? Include ${nDocs} document${nDocs===1?'o':'i'} caricat${nDocs===1?'o':'i'}: i riferimenti verranno persi (i file restano nello storage ma non più raggiungibili da qui).`
-      : 'Rimuovere i metadati salvati?';
-    if(!await showConfirmAsync(msg, 'Rimuovi')) return;
+    if(!await showConfirmAsync('Rimuovere i metadati salvati?', 'Rimuovi')) return;
     delete state.commesse_attive_meta[nome]; await saveState(null, null, true); renderAll(); closeModal();
   };
   document.getElementById('ma-save').onclick = async () => {
@@ -9586,146 +9563,6 @@ function openCommessaAttivaModal(nome) {
     };
     await saveState('Modifica commessa attiva', {commessa: nome}, true); renderAll(); closeModal();
   };
-}
-
-/* ===================== DOCUMENTI COMMESSA (Supabase Storage, bucket "commesse-docs") =====================
-   Metadati persistiti in state.commesse_attive_meta[nome].documenti (dominio "core", già
-   sincronizzato); il file binario vive solo nello Storage bucket, mai nel payload jsonb.
-   Bucket privato: download tramite URL firmato temporaneo (createSignedUrl), non pubblico. */
-const CM_DOC_MAX_SIZE = 20 * 1024 * 1024; // coerente col file_size_limit del bucket
-
-function _cmFmtFileSize(bytes) {
-  if (!bytes && bytes !== 0) return '';
-  if (bytes < 1024) return bytes + ' B';
-  if (bytes < 1024*1024) return (bytes/1024).toFixed(1) + ' KB';
-  return (bytes/1024/1024).toFixed(1) + ' MB';
-}
-
-function _cmDocSanitizeNome(nome) {
-  return (nome || 'commessa').replace(/[^\w.-]+/g, '_').slice(0, 80);
-}
-
-function _cmDocsListHtml(documenti) {
-  if (!documenti || !documenti.length) {
-    return '<div class="text-[11px] text-slate-400 italic py-1">Nessun documento caricato.</div>';
-  }
-  return documenti.map(d => `
-    <div class="flex items-center justify-between gap-2 py-1 border-b border-slate-100 last:border-0">
-      <div class="min-w-0">
-        <button type="button" class="cm-doc-download text-xs text-teal-700 hover:underline truncate text-left" data-path="${esc(d.path)}" title="Scarica ${esc(d.nome_file)}">📄 ${esc(d.nome_file)}</button>
-        <div class="text-[10px] text-slate-400">${_cmFmtFileSize(d.size)} · ${esc(d.caricato_da||'')} · ${d.caricato_il ? fmtDate(d.caricato_il.slice(0,10)) : ''}</div>
-      </div>
-      <button type="button" class="cm-doc-delete text-xs text-slate-400 hover:text-red-600 flex-shrink-0" data-id="${esc(d.id)}" title="Elimina documento">🗑</button>
-    </div>`).join('');
-}
-
-// Rigenera solo la lista documenti dentro il modal aperto, senza toccare gli altri campi
-// (che potrebbero avere modifiche non ancora salvate con "Salva").
-function cmDocsRefresh(nome) {
-  const container = document.getElementById('ma-docs-list');
-  if (!container) return;
-  const meta = state.commesse_attive_meta[nome] || {};
-  container.innerHTML = _cmDocsListHtml(meta.documenti || []);
-  cmDocsBindListHandlers(nome);
-}
-
-function cmDocsBindListHandlers(nome) {
-  const container = document.getElementById('ma-docs-list');
-  if (!container) return;
-  container.querySelectorAll('.cm-doc-download').forEach(b => b.onclick = () => cmDownloadDocumento(b.dataset.path));
-  container.querySelectorAll('.cm-doc-delete').forEach(b => b.onclick = () => cmDeleteDocumento(nome, b.dataset.id));
-}
-
-// Alert bloccante come showConfirmAsync: showAlertModal/showConfirmAsync scrivono
-// entrambi su #modal-root, lo stesso nodo dove vive il modal "Modifica commessa attiva"
-// — mostrarli lo sostituisce, non lo sovrappone. Qui dentro serve sempre atteso
-// (await) prima di riaprire il modal sottostante, altrimenti l'alert sparirebbe subito
-// o il modal risulterebbe "chiuso" (root vuoto) finché non lo si riapre esplicitamente.
-function _cmAlertAsync(msg) {
-  return new Promise(resolve => {
-    const root = document.getElementById('modal-root');
-    const safeMsg = typeof msg === 'string' ? esc(msg).replace(/\n/g, '<br>') : String(msg);
-    root.innerHTML = '<div class="modal-backdrop"><div class="bg-white rounded-lg shadow-xl w-full max-w-md mx-4 p-5"><div class="mb-4 whitespace-pre-line">' + safeMsg + '</div><div class="flex justify-end"><button id="cm-alert-ok" class="px-4 py-1.5 text-sm bg-teal-600 text-white rounded hover:bg-teal-700">OK</button></div></div></div>';
-    document.getElementById('cm-alert-ok').onclick = () => { closeModal(); resolve(); };
-  });
-}
-
-async function cmUploadDocumenti(nome, inputEl) {
-  const files = Array.from(inputEl.files || []);
-  inputEl.value = '';
-  if (!files.length) return;
-  if (!sbCanWrite()) { await _cmAlertAsync('Il tuo ruolo è di sola lettura: le modifiche non vengono salvate.'); openCommessaAttivaModal(nome); return; }
-  if (!_sbClient || !_sbUser) { await _cmAlertAsync('Non connesso: impossibile caricare documenti in modalità offline.'); openCommessaAttivaModal(nome); return; }
-  const tooBig = files.filter(f => f.size > CM_DOC_MAX_SIZE);
-  if (tooBig.length) {
-    await _cmAlertAsync(`File troppo grande (max 20 MB): ${tooBig.map(f=>f.name).join(', ')}`);
-    openCommessaAttivaModal(nome);
-    return;
-  }
-  const statusEl = document.getElementById('ma-docs-status');
-  // Se la commessa non ha ancora metadati propri (solo dedotti dallo staffing), li
-  // persiste ora: senza un record in commesse_attive_meta i documenti non avrebbero dove vivere.
-  if (!state.commesse_attive_meta[nome]) {
-    const dedotti = getCommessaAttivaMeta(nome);
-    delete dedotti._dedotto;
-    delete dedotti._risorseAttuali;
-    state.commesse_attive_meta[nome] = dedotti;
-  }
-  const meta = state.commesse_attive_meta[nome];
-  if (!Array.isArray(meta.documenti)) meta.documenti = [];
-  const erroriUpload = [];
-  for (const file of files) {
-    if (statusEl) statusEl.textContent = `Carico "${file.name}"…`;
-    const safeName = file.name.replace(/[^\w.-]+/g, '_');
-    const path = `${_cmDocSanitizeNome(nome)}/${Date.now()}_${Math.random().toString(36).slice(2,8)}_${safeName}`;
-    const { error } = await _sbClient.storage.from('commesse-docs').upload(path, file, { upsert: false });
-    if (error) { erroriUpload.push(`${file.name}: ${error.message}`); continue; }
-    meta.documenti.push({
-      id: 'doc_' + Date.now() + '_' + Math.random().toString(36).slice(2,8),
-      nome_file: file.name,
-      path,
-      size: file.size,
-      caricato_da: _sbUser?.email || '',
-      caricato_il: new Date().toISOString(),
-    });
-  }
-  await saveState('Caricamento documenti commessa', {commessa: nome}, true);
-  if (erroriUpload.length) {
-    // L'alert sostituisce comunque #modal-root: riaprire il modal dopo è l'unico modo
-    // di tornarci, la lista aggiornata (documenti già caricati con successo) arriva
-    // gratis dalla rilettura di state.commesse_attive_meta in openCommessaAttivaModal.
-    await _cmAlertAsync('Alcuni file non sono stati caricati:\n' + erroriUpload.join('\n'));
-    openCommessaAttivaModal(nome);
-  } else {
-    // Nessun dialog mostrato in questo ramo: il DOM del modal è intatto, basta
-    // rigenerare la sola lista invece di riaprire tutto il modal (preserva eventuali
-    // altri campi non ancora salvati con "Salva").
-    cmDocsRefresh(nome);
-  }
-}
-
-async function cmDownloadDocumento(path) {
-  if (!_sbClient) { showAlertModal('Non connesso: impossibile scaricare il documento in modalità offline.'); return; }
-  const { data, error } = await _sbClient.storage.from('commesse-docs').createSignedUrl(path, 60);
-  if (error || !data?.signedUrl) { showAlertModal('Errore nella generazione del link di download: ' + (error?.message||'')); return; }
-  window.open(data.signedUrl, '_blank');
-}
-
-async function cmDeleteDocumento(nome, docId) {
-  if (!sbCanWrite()) { await _cmAlertAsync('Il tuo ruolo è di sola lettura: le modifiche non vengono salvate.'); openCommessaAttivaModal(nome); return; }
-  const meta = state.commesse_attive_meta[nome];
-  const doc = (meta?.documenti || []).find(d => d.id === docId);
-  if (!doc) return;
-  // showConfirmAsync scrive anch'esso su #modal-root: qualunque sia l'esito, il modal
-  // "Modifica commessa attiva" va sempre riaperto esplicitamente dopo, altrimenti resta
-  // vuoto (sembra "chiuso da solo" — comportamento segnalato e da evitare).
-  const ok = await showConfirmAsync(`Eliminare il documento "${doc.nome_file}"? L'operazione non è reversibile.`, 'Elimina');
-  if (!ok) { openCommessaAttivaModal(nome); return; }
-  const { error } = await _sbClient.storage.from('commesse-docs').remove([doc.path]);
-  if (error) { await _cmAlertAsync('Errore nell\'eliminazione del file: ' + error.message); openCommessaAttivaModal(nome); return; }
-  meta.documenti = meta.documenti.filter(d => d.id !== docId);
-  await saveState('Eliminazione documento commessa', {commessa: nome}, true);
-  openCommessaAttivaModal(nome);
 }
 
 /* ===================== CHIUDI / RIPRISTINA COMMESSA ===================== */

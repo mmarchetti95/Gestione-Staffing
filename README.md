@@ -112,6 +112,10 @@ Limite noto: il progetto Supabase è sul piano **Free**, che non include backup 
 
 ## Changelog
 
+## v18.172.0
+- feat: **Commesse attive — sezione "Documenti"**: nel modal "Modifica commessa attiva" si possono ora caricare uno o più file (contratti, planimetrie, verbali, ecc.), scaricarli e cancellarli. I file vivono nel nuovo bucket Supabase Storage `commesse-docs` (privato, limite 20 MB/file, coerente col piano Free — 1 GB totale, 5 GB/mese di banda); solo i metadati (nome file, dimensione, chi e quando ha caricato) sono salvati in `state.commesse_attive_meta[nome].documenti`, nel dominio "core" già sincronizzato — nessuna nuova tabella né Edge Function. Download tramite URL firmato temporaneo (mai pubblico). Upload/eliminazione richiedono ruolo admin/responsabile (stessa policy Storage lato RLS, non solo lato client); il download è consentito a qualunque utente autenticato.
+  - Richiede la migrazione Supabase `commesse_docs_storage_bucket` (bucket + 3 policy su `storage.objects`), già applicata al progetto.
+
 ## v18.171.0
 - feat: **Nuova sezione Dashboard "🏢 Fornitori"** — anagrafiche di fornitori esterni (referente, telefono, email, note), ciascuna con i propri dipendenti (nome, skill, provincia) e strumenti/attrezzature messi a disposizione "di volta in volta". Sezione affiancata a Pool Operatori e Commesse, con ricerca ed espandi/comprimi tutte. È una lista separata da `state.operatori`: non entra in KPI, Gap risorse & raccomandazioni assunzione, coerenza attestati né mappatura email Jira, che restano basati solo sul pool interno.
   - In Griglia (Pianificazione settimanale), il modal "Seleziona operatore" ora include anche i dipendenti dei fornitori (badge 🏢 col nome del fornitore, ricercabili per nome come gli operatori interni); la tendina "🔧 Strumenti" di ogni squadra mostra un gruppo separato per fornitore accanto a quello Jira/GAR. Entrambi i punti riusano la stessa logica di stato libero/assegnato/ferie e compaiono automaticamente anche in "Genera mail" e "Ricerca Squadre".
