@@ -294,11 +294,6 @@
   .commessa-card summary::marker { display: none; content: ''; }
   .commessa-card[open] > summary .chevron { transform: rotate(90deg); }
   .commessa-card summary:hover { background: rgba(13,148,136,.04); border-radius: 4px; }
-  .fornitore-card summary { outline: none; }
-  .fornitore-card summary::-webkit-details-marker { display: none; }
-  .fornitore-card summary::marker { display: none; content: ''; }
-  .fornitore-card[open] > summary .chevron { transform: rotate(90deg); }
-  .fornitore-card summary:hover { background: rgba(13,148,136,.04); border-radius: 4px; }
   .modal-backdrop {
     position: fixed; inset: 0; background: var(--backdrop);
     display: flex; align-items: center; justify-content: center; z-index: 100050;
@@ -735,7 +730,7 @@
     border-radius: 10px;
     box-shadow: var(--shadow-lg);
     width: 360px; max-width: 95vw;
-    max-height: 90vh; overflow-y: auto; overflow-x: hidden;
+    overflow: hidden;
     animation: opModalIn .15s ease;
   }
   @keyframes opModalIn {
@@ -1181,7 +1176,7 @@
     <div class="flex items-center gap-2">
       <button id="btn-presentation" class="px-3 py-1.5 text-sm rounded hover:bg-white/10" style="border:1px solid var(--dark-border-strong);color:var(--dark-text);visibility:visible;">📊 Modalità presentazione</button>
       <div class="text-xs pl-2" style="border-left:1px solid var(--dark-border-strong);color:var(--dark-text-muted);">
-        <span id="app-version" class="font-medium" style="color:var(--accent);">v18.171.0</span> · Michele Marchetti
+        <span id="app-version" class="font-medium" style="color:var(--accent);">v18.170.0</span> · Michele Marchetti
         <span id="sb-role-badge" style="margin-left:8px;padding:1px 8px;border-radius:9999px;background:rgba(255,255,255,.1);color:var(--dark-text);font-weight:600;"></span>
       </div>
     </div>
@@ -1624,22 +1619,6 @@
       </div>
 
     </div>
-  </section>
-
-  <!-- 3a. Fornitori: dipendenti e strumenti esterni disponibili "di volta in volta"
-       per la Griglia settimanale, separati dal pool operatori interno. -->
-  <section class="bg-white rounded-lg border border-slate-200 p-4 no-present">
-    <div class="flex items-center justify-between mb-2 flex-wrap gap-2">
-      <h2 class="font-semibold text-slate-900">🏢 Fornitori <span id="fornitori-count" class="text-slate-400 text-xs font-normal"></span></h2>
-      <div class="flex items-center gap-2">
-        <input id="fornitori-search" type="text" placeholder="Cerca fornitore o referente…" class="text-sm border border-slate-300 rounded px-2 py-1.5 w-56">
-        <button id="btn-expand-all-fornitori" class="text-[11px] px-2 py-1.5 border border-slate-300 rounded text-slate-600 hover:bg-slate-50 whitespace-nowrap" title="Espandi tutti i fornitori">⇕ Espandi tutte</button>
-        <button id="btn-collapse-all-fornitori" class="text-[11px] px-2 py-1.5 border border-slate-300 rounded text-slate-600 hover:bg-slate-50 whitespace-nowrap" title="Comprimi tutti i fornitori">⇕ Comprimi tutte</button>
-        <button id="btn-add-fornitore" class="text-xs px-2 py-1 bg-teal-50 text-teal-700 rounded border border-teal-200 hover:bg-teal-100 whitespace-nowrap">+ Nuovo fornitore</button>
-      </div>
-    </div>
-    <p class="text-xs text-slate-500 mb-3">Anagrafiche fornitori esterni con i loro dipendenti e strumenti: selezionabili in Pianificazione Settimanale → Griglia, ma esclusi dal pool operatori (KPI, gap risorse, attestati).</p>
-    <div class="space-y-2" id="fornitori-list"></div>
   </section>
 
   <!-- 3b. Attestati & scadenze (collassata: la matrice si costruisce solo all'apertura) -->
@@ -2524,10 +2503,6 @@ let state = {
   commesse_escluse: [], // lista permanente: nomi esclusi per sempre dai dati attivi, anche se rimossi dall'archivio
   commesse_attive_meta: {}, // {[nome]: {cliente,industry,inizio,fine,note,skills,attestati_richiesti,dpi_richiesti}}
   assegnazioni: [],
-  // Fornitori esterni: anagrafica + dipendenti e strumenti che ci mettono a disposizione
-  // di volta in volta (visibili/assegnabili in Griglia, ma fuori dal pool interno — non
-  // entrano in KPI, gap risorse, coerenza attestati). Vedi dashboard-fornitori.js.
-  fornitori: [],
   // Catalogo DPI: elenco ordinato dei nomi (colonne della matrice DPI e caselle "DPI
   // richiesti" delle commesse). Vedi dashboard-dpi-admin.js.
   dpi_disponibili: DPI_DEFAULT.slice(),
@@ -2539,7 +2514,6 @@ let state = {
   activeTab: 'pipeline',
   filters: { search:'', skills:new Set(), attestati:new Set(), lowSat:false, regione:'', provincia:'', showEx:false },
   searchCommesse: '',
-  searchFornitori: '', // filtro testo lista Fornitori, solo stato di vista (non persistito)
   // Registro attestati importato da Excel: archivio grezzo dell'ultimo import, che copre
   // TUTTI i dipendenti del file (anche chi non e' nel pool operatori del reparto rilievi).
   // Per chi e' nel pool la fonte autorevole resta op.attestati_dett, che puo' contenere
@@ -3630,8 +3604,8 @@ async function sget(k) {
 }
 
 async function loadState() {
-  const keys = ['commesse_pipeline','operatori','assegnazioni','commesse_attive_extra','staffing_modificato','commesse_chiuse','commesse_attive_meta','commesse_escluse','attestati_registro','dpi_disponibili','dpi_catalogo','limitazioni_registro','limitazioni_catalogo','fornitori'];
-  const [p, o, a, ce, sm, cc, cam, cesc, areg, ddisp, dcat, lreg, lcat, forn] = await Promise.all(keys.map(sget));
+  const keys = ['commesse_pipeline','operatori','assegnazioni','commesse_attive_extra','staffing_modificato','commesse_chiuse','commesse_attive_meta','commesse_escluse','attestati_registro','dpi_disponibili','dpi_catalogo','limitazioni_registro','limitazioni_catalogo'];
+  const [p, o, a, ce, sm, cc, cam, cesc, areg, ddisp, dcat, lreg, lcat] = await Promise.all(keys.map(sget));
   state.pipeline = p || JSON.parse(JSON.stringify(INITIAL_DATA.pipeline));
   state.operatori = o || JSON.parse(JSON.stringify(INITIAL_DATA.operatori));
   state.commesse_chiuse = cc || INITIAL_DATA._chiuse || [];
@@ -3665,7 +3639,6 @@ async function loadState() {
   // Stessa distinzione Array.isArray vista sopra per dpi_disponibili: un catalogo svuotato
   // di proposito e' un valore legittimo, non deve far tornare il seed.
   state.limitazioni_catalogo = Array.isArray(lcat) ? lcat : LIMITAZIONI_TIPI_DEFAULT.slice();
-  state.fornitori = Array.isArray(forn) ? forn : (INITIAL_DATA.fornitori || []);
   ricalcolaAllocOperatori();
 
   // Seed email operatori una-tantum (solo su quelli ancora senza email).
@@ -3690,7 +3663,6 @@ async function saveState(logAction, logDetails, immediate) {
     sset('dpi_catalogo', state.dpi_catalogo),
     sset('limitazioni_registro', state.limitazioni_registro),
     sset('limitazioni_catalogo', state.limitazioni_catalogo),
-    sset('fornitori', state.fornitori),
   ]);
   // Log attività se specificata
   if (logAction) sbLogActivity(logAction, logDetails || {});
@@ -3706,7 +3678,7 @@ async function saveState(logAction, logDetails, immediate) {
 async function resetAll() {
   if (!await showConfirmAsync('Reset completo: tutte le modifiche manuali andranno perse. Procedere?', 'Reset')) return;
   if (hasStorage) {
-    for (const k of ['commesse_pipeline','operatori','assegnazioni','commesse_attive_extra','staffing_modificato','commesse_chiuse','commesse_attive_meta','commesse_escluse','attestati_registro','dpi_disponibili','dpi_catalogo','fornitori']) {
+    for (const k of ['commesse_pipeline','operatori','assegnazioni','commesse_attive_extra','staffing_modificato','commesse_chiuse','commesse_attive_meta','commesse_escluse','attestati_registro','dpi_disponibili','dpi_catalogo']) {
       try { await window.storage.delete(k); } catch{}
     }
   } else {
@@ -6677,249 +6649,6 @@ function renderCommesseAttive() {
   return `<div class="space-y-3">${cardsHtml}</div>${archivioHtml}`;
 }
 
-/* ===================== FORNITORI ===================== */
-// Registro dei fornitori esterni: anagrafica + dipendenti e strumenti che mettono
-// a disposizione di volta in volta per la programmazione settimanale. Lista
-// separata da state.operatori (vedi domanda utente v18.171.0): questi dipendenti
-// e strumenti sono selezionabili in Griglia (weekly-operatore-modal.js,
-// weekly-strumenti.js) ma restano fuori da KPI, gap risorse & raccomandazioni
-// assunzione, coerenza attestati e mappatura email Jira, che lavorano solo sul
-// pool interno.
-
-function fornGenId(prefix) {
-  return prefix + '_' + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2, 8);
-}
-
-function renderFornitori() {
-  const list = document.getElementById('fornitori-list');
-  if (!list) return;
-  const countEl = document.getElementById('fornitori-count');
-  if (countEl) countEl.textContent = `(${state.fornitori.length})`;
-
-  // Ogni azione (aggiungi/rimuovi dipendente o strumento, modifica campo) richiama
-  // renderFornitori() e ricostruisce tutte le card da zero: senza questo, le
-  // <details> già aperte si richiuderebbero ad ogni click. Si salva quali sono
-  // aperte prima di riscrivere l'HTML e si riapplica dopo.
-  const openIds = new Set(
-    [...list.querySelectorAll('details.fornitore-card[open]')].map(d => d.dataset.fid)
-  );
-
-  const q = (state.searchFornitori || '').toLowerCase().trim();
-  const filtered = q
-    ? state.fornitori.filter(f => ((f.nome||'') + ' ' + (f.referente||'')).toLowerCase().includes(q))
-    : state.fornitori;
-
-  list.innerHTML = filtered
-    .slice()
-    .sort((a, b) => (a.nome||'').localeCompare(b.nome||''))
-    .map(f => renderFornitoreCard(f)).join('')
-    || `<div class="text-center text-sm text-slate-400 py-6">${q ? 'Nessun fornitore corrisponde alla ricerca.' : 'Nessun fornitore registrato. Clicca "+ Nuovo fornitore" per aggiungerne uno.'}</div>`;
-
-  list.querySelectorAll('details.fornitore-card').forEach(d => { if (openIds.has(d.dataset.fid)) d.open = true; });
-
-  wireFornitoriEvents(list);
-}
-
-function renderFornitoreCard(f) {
-  const dipHtml = (f.dipendenti || []).map(d => renderFornitoreDipendenteRow(f.id, d)).join('')
-    || '<div class="text-[11px] text-slate-400 italic px-1 py-1">Nessun dipendente.</div>';
-  const strHtml = (f.strumenti || []).map(s => renderFornitoreStrumentoRow(f.id, s)).join('')
-    || '<div class="text-[11px] text-slate-400 italic px-1 py-1">Nessuno strumento.</div>';
-
-  return `<details class="fornitore-card border border-slate-200 rounded-lg" data-fid="${esc(f.id)}">
-    <summary class="flex items-center justify-between px-3 py-2 cursor-pointer select-none">
-      <div class="flex items-center gap-2 min-w-0">
-        <span class="chevron text-slate-400 text-xs">▶</span>
-        <span class="font-medium text-sm text-slate-800 truncate">${esc(f.nome || '(senza nome)')}</span>
-        <span class="text-[10px] text-slate-400 whitespace-nowrap">👷 ${(f.dipendenti||[]).length} · 🔧 ${(f.strumenti||[]).length}</span>
-      </div>
-      <button class="del-fornitore text-xs text-red-400 hover:text-red-600 px-1" data-fid="${esc(f.id)}" title="Elimina fornitore">🗑</button>
-    </summary>
-    <div class="px-3 pb-3 pt-1 space-y-3">
-      <div class="grid grid-cols-2 gap-2">
-        <input class="forn-field text-xs border border-slate-300 rounded px-2 py-1" data-fid="${esc(f.id)}" data-field="nome" placeholder="Nome fornitore" value="${esc(f.nome||'')}">
-        <input class="forn-field text-xs border border-slate-300 rounded px-2 py-1" data-fid="${esc(f.id)}" data-field="referente" placeholder="Referente" value="${esc(f.referente||'')}">
-        <input class="forn-field text-xs border border-slate-300 rounded px-2 py-1" data-fid="${esc(f.id)}" data-field="telefono" placeholder="Telefono" value="${esc(f.telefono||'')}">
-        <input class="forn-field text-xs border border-slate-300 rounded px-2 py-1" data-fid="${esc(f.id)}" data-field="email" placeholder="Email" value="${esc(f.email||'')}">
-        <textarea class="forn-field col-span-2 text-xs border border-slate-300 rounded px-2 py-1" data-fid="${esc(f.id)}" data-field="note" placeholder="Note" rows="2">${esc(f.note||'')}</textarea>
-      </div>
-
-      <div>
-        <div class="flex items-center justify-between mb-1">
-          <span class="text-[10px] uppercase tracking-wider text-slate-500 font-medium">👷 Dipendenti</span>
-          <button class="add-forn-dip text-[11px] px-2 py-0.5 bg-teal-50 text-teal-700 rounded border border-teal-200 hover:bg-teal-100" data-fid="${esc(f.id)}">+ Aggiungi</button>
-        </div>
-        <div class="space-y-1">${dipHtml}</div>
-      </div>
-
-      <div>
-        <div class="flex items-center justify-between mb-1">
-          <span class="text-[10px] uppercase tracking-wider text-slate-500 font-medium">🔧 Strumenti</span>
-          <button class="add-forn-str text-[11px] px-2 py-0.5 bg-teal-50 text-teal-700 rounded border border-teal-200 hover:bg-teal-100" data-fid="${esc(f.id)}">+ Aggiungi</button>
-        </div>
-        <div class="space-y-1">${strHtml}</div>
-      </div>
-    </div>
-  </details>`;
-}
-
-function renderFornitoreDipendenteRow(fid, d) {
-  const skillChips = SKILLS.map(s => {
-    const on = (d.skills||[]).includes(s);
-    return `<button type="button" class="forn-dip-skill text-[9px] px-1.5 py-0.5 rounded border ${on?'bg-teal-100 border-teal-400 text-teal-800':'bg-white border-slate-300 text-slate-500'}"
-      data-fid="${esc(fid)}" data-did="${esc(d.id)}" data-skill="${esc(s)}">${s}</button>`;
-  }).join('');
-  return `<div class="border border-slate-200 rounded px-2 py-1.5 space-y-1" data-fid="${esc(fid)}" data-did="${esc(d.id)}">
-    <div class="flex items-center gap-1">
-      <input class="forn-dip-field flex-1 text-xs border border-slate-300 rounded px-1.5 py-0.5" data-fid="${esc(fid)}" data-did="${esc(d.id)}" data-field="nome_esteso" placeholder="Nome e cognome" value="${esc(d.nome_esteso||'')}">
-      <select class="forn-dip-field text-xs border border-slate-300 rounded px-1 py-0.5" data-fid="${esc(fid)}" data-did="${esc(d.id)}" data-field="provincia">
-        <option value="">Provincia…</option>
-        ${PROVINCE_ITALIA.slice().sort((a,b)=>a.nome.localeCompare(b.nome)).map(p => `<option value="${p.sigla}" ${d.provincia===p.sigla?'selected':''}>${esc(p.nome)} (${p.sigla})</option>`).join('')}
-      </select>
-      <button class="del-forn-dip text-red-400 hover:text-red-600 text-xs px-1" data-fid="${esc(fid)}" data-did="${esc(d.id)}" title="Rimuovi dipendente">✕</button>
-    </div>
-    <div class="flex flex-wrap gap-1">${skillChips}</div>
-  </div>`;
-}
-
-function renderFornitoreStrumentoRow(fid, s) {
-  return `<div class="flex items-center gap-1" data-fid="${esc(fid)}" data-sid="${esc(s.id)}">
-    <input class="forn-str-field flex-1 text-xs border border-slate-300 rounded px-1.5 py-0.5" data-fid="${esc(fid)}" data-sid="${esc(s.id)}" data-field="nome" placeholder="Nome strumento" value="${esc(s.nome||'')}">
-    <input class="forn-str-field w-28 text-xs border border-slate-300 rounded px-1.5 py-0.5" data-fid="${esc(fid)}" data-sid="${esc(s.id)}" data-field="tipo" placeholder="Tipo" value="${esc(s.tipo||'')}">
-    <button class="del-forn-str text-red-400 hover:text-red-600 text-xs px-1" data-fid="${esc(fid)}" data-sid="${esc(s.id)}" title="Rimuovi strumento">✕</button>
-  </div>`;
-}
-
-function wireFornitoriEvents(list) {
-  list.querySelectorAll('.del-fornitore').forEach(b => b.onclick = () => deleteFornitore(b.dataset.fid));
-  list.querySelectorAll('.add-forn-dip').forEach(b => b.onclick = () => addFornitoreDipendente(b.dataset.fid));
-  list.querySelectorAll('.del-forn-dip').forEach(b => b.onclick = () => removeFornitoreDipendente(b.dataset.fid, b.dataset.did));
-  list.querySelectorAll('.add-forn-str').forEach(b => b.onclick = () => addFornitoreStrumento(b.dataset.fid));
-  list.querySelectorAll('.del-forn-str').forEach(b => b.onclick = () => removeFornitoreStrumento(b.dataset.fid, b.dataset.sid));
-
-  list.querySelectorAll('.forn-dip-skill').forEach(b => b.onclick = () => toggleFornitoreDipendenteSkill(b.dataset.fid, b.dataset.did, b.dataset.skill));
-
-  list.querySelectorAll('.forn-field').forEach(el => {
-    el.addEventListener('blur', () => updateFornitoreField(el.dataset.fid, el.dataset.field, el.value, el));
-    el.addEventListener('keydown', e => { if (e.key === 'Enter' && el.tagName !== 'TEXTAREA') el.blur(); });
-  });
-  list.querySelectorAll('.forn-dip-field').forEach(el => {
-    const evt = el.tagName === 'SELECT' ? 'change' : 'blur';
-    el.addEventListener(evt, () => updateFornitoreDipendenteField(el.dataset.fid, el.dataset.did, el.dataset.field, el.value));
-    el.addEventListener('keydown', e => { if (e.key === 'Enter') el.blur(); });
-  });
-  list.querySelectorAll('.forn-str-field').forEach(el => {
-    el.addEventListener('blur', () => updateFornitoreStrumentoField(el.dataset.fid, el.dataset.sid, el.dataset.field, el.value));
-    el.addEventListener('keydown', e => { if (e.key === 'Enter') el.blur(); });
-  });
-}
-
-async function addFornitore() {
-  if (!sbGuardWrite()) return;
-  const f = { id: fornGenId('forn'), nome: 'Nuovo fornitore', referente: '', telefono: '', email: '', note: '', dipendenti: [], strumenti: [] };
-  state.fornitori.push(f);
-  await saveState('Nuovo fornitore', {fornitore: f.nome}, true);
-  renderFornitori();
-  const det = document.querySelector(`details[data-fid="${CSS.escape(f.id)}"]`);
-  if (det) { det.open = true; det.querySelector('.forn-field')?.focus(); det.querySelector('.forn-field')?.select(); }
-}
-
-async function deleteFornitore(fid) {
-  if (!sbGuardWrite()) return;
-  const f = state.fornitori.find(f => f.id === fid);
-  if (!f) return;
-  if (!await showConfirmAsync(`Eliminare il fornitore "${f.nome}" con tutti i suoi ${((f.dipendenti||[]).length)} dipendenti e ${((f.strumenti||[]).length)} strumenti? Le assegnazioni già fatte in Griglia per i suoi dipendenti/strumenti resteranno com'erano, ma non saranno più modificabili dalla tendina.`, 'Elimina fornitore')) return;
-  state.fornitori = state.fornitori.filter(f => f.id !== fid);
-  await saveState('Eliminazione fornitore', {fornitore: f.nome}, true);
-  renderFornitori();
-}
-
-async function updateFornitoreField(fid, field, value, el) {
-  if (!sbGuardWrite()) return;
-  const f = state.fornitori.find(f => f.id === fid);
-  if (!f) return;
-  const v = (value || '').trim();
-  if (f[field] === v) return;
-  f[field] = v;
-  await saveState();
-  if (field === 'nome') renderFornitori();
-}
-
-async function addFornitoreDipendente(fid) {
-  if (!sbGuardWrite()) return;
-  const f = state.fornitori.find(f => f.id === fid);
-  if (!f) return;
-  f.dipendenti = f.dipendenti || [];
-  f.dipendenti.push({ id: fornGenId('dip'), nome_esteso: '', skills: [], provincia: '', telefono: '', note: '' });
-  await saveState('Nuovo dipendente fornitore', {fornitore: f.nome});
-  renderFornitori();
-}
-
-async function removeFornitoreDipendente(fid, did) {
-  if (!sbGuardWrite()) return;
-  const f = state.fornitori.find(f => f.id === fid);
-  if (!f) return;
-  const d = (f.dipendenti||[]).find(d => d.id === did);
-  if (!await showConfirmAsync(`Rimuovere "${d?.nome_esteso || 'questo dipendente'}" dal fornitore "${f.nome}"?`, 'Rimuovi dipendente')) return;
-  f.dipendenti = (f.dipendenti||[]).filter(d => d.id !== did);
-  await saveState('Rimozione dipendente fornitore', {fornitore: f.nome});
-  renderFornitori();
-}
-
-async function updateFornitoreDipendenteField(fid, did, field, value) {
-  if (!sbGuardWrite()) return;
-  const f = state.fornitori.find(f => f.id === fid);
-  const d = f && (f.dipendenti||[]).find(d => d.id === did);
-  if (!d) return;
-  const v = (value || '').trim();
-  if (d[field] === v) return;
-  d[field] = v;
-  await saveState();
-}
-
-async function toggleFornitoreDipendenteSkill(fid, did, skill) {
-  if (!sbGuardWrite()) return;
-  const f = state.fornitori.find(f => f.id === fid);
-  const d = f && (f.dipendenti||[]).find(d => d.id === did);
-  if (!d) return;
-  d.skills = d.skills || [];
-  const i = d.skills.indexOf(skill);
-  if (i >= 0) d.skills.splice(i, 1); else d.skills.push(skill);
-  await saveState();
-  renderFornitori();
-}
-
-async function addFornitoreStrumento(fid) {
-  if (!sbGuardWrite()) return;
-  const f = state.fornitori.find(f => f.id === fid);
-  if (!f) return;
-  f.strumenti = f.strumenti || [];
-  f.strumenti.push({ id: fornGenId('str'), nome: '', tipo: '', note: '' });
-  await saveState('Nuovo strumento fornitore', {fornitore: f.nome});
-  renderFornitori();
-}
-
-async function removeFornitoreStrumento(fid, sid) {
-  if (!sbGuardWrite()) return;
-  const f = state.fornitori.find(f => f.id === fid);
-  if (!f) return;
-  const s = (f.strumenti||[]).find(s => s.id === sid);
-  if (!await showConfirmAsync(`Rimuovere lo strumento "${s?.nome || ''}" dal fornitore "${f.nome}"? Se è assegnato in una Griglia della settimana, l'assegnazione resterà ma non sarà più selezionabile dalla tendina.`, 'Rimuovi strumento')) return;
-  f.strumenti = (f.strumenti||[]).filter(s => s.id !== sid);
-  await saveState('Rimozione strumento fornitore', {fornitore: f.nome});
-  renderFornitori();
-}
-
-async function updateFornitoreStrumentoField(fid, sid, field, value) {
-  if (!sbGuardWrite()) return;
-  const f = state.fornitori.find(f => f.id === fid);
-  const s = f && (f.strumenti||[]).find(s => s.id === sid);
-  if (!s) return;
-  const v = (value || '').trim();
-  if (s[field] === v) return;
-  s[field] = v;
-  await saveState();
-}
 /* ===================== ASSEGNAZIONI ===================== */
 async function assegnaOperatore(commessaId, operatoreId) {
   if (!sbGuardWrite()) return;
@@ -10788,7 +10517,6 @@ function renderAll() {
   renderLimitazioni();
   renderDpi();
   renderCommesse();
-  renderFornitori();
   renderGap();
   // Se la vista operatore è aperta, aggiornala
   if (_vistaOpId && !document.getElementById('op-vista-container')?.classList.contains('hidden')) {
@@ -10830,13 +10558,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     state.searchCommesse = e.target.value;
     renderCommesse();
   });
-  document.getElementById('fornitori-search').addEventListener('input', e => {
-    state.searchFornitori = e.target.value;
-    renderFornitori();
-  });
-  document.getElementById('btn-add-fornitore').onclick = () => addFornitore();
-  document.getElementById('btn-expand-all-fornitori').onclick = () => document.querySelectorAll('.fornitore-card').forEach(d => d.open = true);
-  document.getElementById('btn-collapse-all-fornitori').onclick = () => document.querySelectorAll('.fornitore-card').forEach(d => d.open = false);
   // Gantt controls
   const gPipeline = document.getElementById('gantt-pipeline');
   const gHistoric = document.getElementById('gantt-historic');
@@ -12408,28 +12129,8 @@ function pwOpenOpModal(cidx, sidx, oidx) {
   // Tutti gli operatori attivi nel sistema (nome_esteso o nome)
   const fromOperatori = getOperatoriAttivi().map(o => o.nome_esteso || o.nome).filter(Boolean);
 
-  // Dipendenti dei fornitori esterni (state.fornitori, vedi dashboard-fornitori.js):
-  // risorse occasionali, fuori dal pool interno, ma selezionabili qui — con un
-  // gruppo/badge dedicato — perché di volta in volta un fornitore ce li mette a
-  // disposizione per una commessa. Un nome già presente nel pool interno vince
-  // (fornOfNome non viene impostato per quel nome): l'identità resta quella interna.
-  const fornOfNome = {};
-  const fromFornitori = [];
-  (state.fornitori || []).forEach(f => {
-    (f.dipendenti || []).forEach(d => {
-      const nome = d.nome_esteso;
-      if (!nome || opByNomeHasInterno(nome)) return;
-      fromFornitori.push(nome);
-      if (!fornOfNome[nome]) fornOfNome[nome] = f.nome || 'Fornitore';
-    });
-  });
-  function opByNomeHasInterno(nome) {
-    return (state.operatori || []).some(o => (o.nome_esteso || o.nome) === nome);
-  }
-
-  // Lista finale: prima quelli della commessa, poi gli altri, poi i dipendenti
-  // fornitore — tutti deduplicati
-  const tuttiNomi = [...new Set([...fromStaffing, ...fromOperatori, ...fromFornitori])].sort();
+  // Lista finale: prima quelli della commessa, poi gli altri — tutti deduplicati
+  const tuttiNomi = [...new Set([...fromStaffing, ...fromOperatori])].sort();
 
   // Costruisce il modal
   const existing = document.getElementById('op-select-modal');
@@ -12455,11 +12156,6 @@ function pwOpenOpModal(cidx, sidx, oidx) {
   // chi e' vicino alla zona del rilievo quando si assegna una squadra.
   const opByNome = {};
   (state.operatori || []).forEach(o => { opByNome[o.nome_esteso || o.nome] = o; });
-  // Dipendenti fornitore: solo per i nomi non già presenti nel pool interno (vedi
-  // fromFornitori sopra), così filtro geo/badge funzionano anche per loro.
-  (state.fornitori || []).forEach(f => (f.dipendenti || []).forEach(d => {
-    if (d.nome_esteso && !opByNome[d.nome_esteso]) opByNome[d.nome_esteso] = d;
-  }));
   let filtroRegione = '', filtroProvincia = '';
 
   const geoRow = document.createElement('div');
@@ -12485,52 +12181,6 @@ function pwOpenOpModal(cidx, sidx, oidx) {
   geoRow.appendChild(selProvincia);
   modal.appendChild(geoRow);
 
-  // Filtro skill (chip multi-selezione, AND come nel filtro Pool operatori) e
-  // filtro attestati (checkbox in un pannello a comparsa, stessa logica AND) —
-  // utili per trovare in griglia chi ha davvero la competenza/il certificato
-  // richiesto dalla commessa, non solo chi è libero e vicino.
-  const filtroSkills = new Set();
-  const filtroAttestati = new Set();
-
-  const skillRow = document.createElement('div');
-  skillRow.style.cssText = 'display:flex;flex-wrap:wrap;gap:3px;padding:0 14px 6px;';
-  skillRow.innerHTML = SKILLS.map(s => `<button type="button" class="op-modal-skill-btn" data-skill="${esc(s)}"
-    style="font-size:9px;padding:2px 6px;border-radius:4px;border:1px solid #cbd5e1;background:#fff;color:#475569;cursor:pointer;">${esc(s)}</button>`).join('');
-  modal.appendChild(skillRow);
-  function paintSkillBtn(btn, on) {
-    btn.style.background = on ? '#ccfbf1' : '#fff';
-    btn.style.borderColor = on ? '#14b8a6' : '#cbd5e1';
-    btn.style.color = on ? '#0f766e' : '#475569';
-    btn.style.fontWeight = on ? '700' : '400';
-  }
-  skillRow.querySelectorAll('.op-modal-skill-btn').forEach(btn => {
-    btn.onclick = () => {
-      const s = btn.dataset.skill;
-      if (filtroSkills.has(s)) filtroSkills.delete(s); else filtroSkills.add(s);
-      paintSkillBtn(btn, filtroSkills.has(s));
-      buildList(search.value);
-    };
-  });
-
-  if (ATTESTATI.length > 0) {
-    const attWrap = document.createElement('details');
-    attWrap.style.cssText = 'padding:0 14px 6px;font-size:10px;';
-    attWrap.innerHTML = `<summary style="cursor:pointer;color:#64748b;user-select:none;">🎓 Filtra per attestato <span class="op-modal-att-summary">(tutti)</span></summary>
-      <div style="max-height:110px;overflow-y:auto;margin-top:4px;display:flex;flex-direction:column;gap:3px;padding:2px 2px 2px 4px;">
-        ${ATTESTATI.map(a => `<label style="display:flex;align-items:center;gap:5px;cursor:pointer;color:#334155;">
-          <input type="checkbox" class="op-modal-att-cb" data-att="${esc(a)}"> ${esc(a)}</label>`).join('')}
-      </div>`;
-    modal.appendChild(attWrap);
-    const attSummary = attWrap.querySelector('.op-modal-att-summary');
-    attWrap.querySelectorAll('.op-modal-att-cb').forEach(cb => {
-      cb.onchange = () => {
-        cb.checked ? filtroAttestati.add(cb.dataset.att) : filtroAttestati.delete(cb.dataset.att);
-        attSummary.textContent = filtroAttestati.size ? `(${filtroAttestati.size})` : '(tutti)';
-        buildList(search.value);
-      };
-    });
-  }
-
   // Search
   const search = document.createElement('input');
   search.type = 'text';
@@ -12550,15 +12200,6 @@ function pwOpenOpModal(cidx, sidx, oidx) {
     return operatoreRegione(op) === filtroRegione;
   }
 
-  function passaFiltroSkillAttestati(nome) {
-    if (filtroSkills.size === 0 && filtroAttestati.size === 0) return true;
-    const op = opByNome[nome];
-    if (!op) return false;
-    if (filtroSkills.size > 0 && ![...filtroSkills].every(s => (op.skills||[]).includes(s))) return false;
-    if (filtroAttestati.size > 0 && ![...filtroAttestati].every(a => (op.attestati||[]).includes(a))) return false;
-    return true;
-  }
-
   function buildList(filter) {
     list.innerHTML = '';
 
@@ -12569,7 +12210,7 @@ function pwOpenOpModal(cidx, sidx, oidx) {
     noneEl.onclick = () => pwConfirmOpModal(cidx, sidx, oidx, '');
     list.appendChild(noneEl);
 
-    const filtrati = tuttiNomi.filter(n => (!filter || n.toLowerCase().includes(filter.toLowerCase())) && passaFiltroGeo(n) && passaFiltroSkillAttestati(n));
+    const filtrati = tuttiNomi.filter(n => (!filter || n.toLowerCase().includes(filter.toLowerCase())) && passaFiltroGeo(n));
 
     if (filtrati.length === 0) {
       const empty = document.createElement('div');
@@ -12613,7 +12254,6 @@ function pwOpenOpModal(cidx, sidx, oidx) {
       const inCommessa = fromStaffing.has(nome);
       const provInfo = provinciaInfo(opByNome[nome]?.provincia);
       const geoLabel = provInfo ? provInfo.nome : operatoreRegione(opByNome[nome]);
-      const fornNome = fornOfNome[nome] || '';
 
       const item = document.createElement('div');
       item.className = `op-modal-item stato-${stato}${nome === nomeCorrente ? ' is-selected' : ''}`;
@@ -12622,10 +12262,9 @@ function pwOpenOpModal(cidx, sidx, oidx) {
         <span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">
           ${nome}${inCommessa ? '' : ' <span style="font-size:9px;opacity:.6;">(fuori commessa)</span>'}
           ${geoLabel ? ` <span style="font-size:9px;opacity:.6;">📍 ${esc(geoLabel)}</span>` : ''}
-          ${fornNome ? ` <span style="font-size:9px;background:#e0e7ff;color:#4338ca;border-radius:3px;padding:0 4px;">🏢 ${esc(fornNome)}</span>` : ''}
         </span>
         <span class="op-modal-tag stato-${stato}">${tagLabel}</span>`;
-      item.onclick = () => pwConfirmOpModal(cidx, sidx, oidx, nome, fornNome);
+      item.onclick = () => pwConfirmOpModal(cidx, sidx, oidx, nome);
       list.appendChild(item);
     });
   }
@@ -12657,7 +12296,7 @@ function pwCloseOpModal() {
   if (m) m.remove();
 }
 
-async function pwConfirmOpModal(cidx, sidx, oidx, nome, fornNome) {
+async function pwConfirmOpModal(cidx, sidx, oidx, nome) {
   pwCloseOpModal();
   if (!sbGuardWrite()) return;
   // Assegnare (non rimuovere) un operatore con limitazioni riportate nell'idoneita'
@@ -12678,7 +12317,6 @@ async function pwConfirmOpModal(cidx, sidx, oidx, nome, fornNome) {
   const op   = data[cidx]?.squadre[sidx]?.operatori[oidx];
   if (op !== undefined) {
     op.nome = nome;
-    if (fornNome) op.fornitore = fornNome; else delete op.fornitore;
     await pwSave();
     pwRender();
   }
@@ -12698,42 +12336,28 @@ function pwSquadraCognomi(squadra) {
   return [...new Set(cognomi)];
 }
 
-// Cerca un nome tra i dipendenti di tutti i fornitori (dipendenti esterni non
-// presenti in state.operatori, vedi dashboard-fornitori.js).
-function fornDipendenteByNome(nome) {
-  if (!nome) return null;
-  for (const f of (state.fornitori || [])) {
-    const d = (f.dipendenti || []).find(d => d.nome_esteso === nome);
-    if (d) return d;
-  }
-  return null;
-}
-
 // Provincia (o, in mancanza, regione) di provenienza dell'operatore, per il
 // badge di localizzazione nella griglia — stessa logica del filtro geo del
-// modal di selezione (pwOpenOpModal). Funziona anche per i dipendenti fornitore.
+// modal di selezione (pwOpenOpModal).
 function pwOperatoreGeoLabel(nome) {
-  const op = (state.operatori || []).find(o => (o.nome_esteso || o.nome) === nome) || fornDipendenteByNome(nome);
+  const op = (state.operatori || []).find(o => (o.nome_esteso || o.nome) === nome);
   if (!op) return '';
   const provInfo = provinciaInfo(op.provincia);
   return provInfo ? provInfo.nome : operatoreRegione(op);
 }
 
 /* Costruisce HTML del trigger nella cella operatore */
-function pwRenderOpDropdown(cidx, sidx, oidx, nomeCorrente, fornitoreNome) {
+function pwRenderOpDropdown(cidx, sidx, oidx, nomeCorrente) {
   const stato      = nomeCorrente ? pwStatoOperatore(nomeCorrente, cidx, sidx, oidx) : '';
   const statoClass = nomeCorrente ? `stato-${stato}` : '';
   const label      = nomeCorrente || '— scegli —';
   const exBadge    = nomeCorrente && isOperatoreLicenziato(nomeCorrente)
     ? '<span class="op-ex-tag">ex</span>'
     : '';
-  const fornBadge  = nomeCorrente && fornitoreNome
-    ? `<span class="op-ex-tag" style="background:#e0e7ff;color:#4338ca;" title="Dipendente fornitore esterno">🏢 ${esc(fornitoreNome)}</span>`
-    : '';
   const geoLabel   = nomeCorrente ? pwOperatoreGeoLabel(nomeCorrente) : '';
   return `<button class="op-trigger-btn pw-write-action ${statoClass}"
     onclick="pwOpenOpModal(${cidx}, ${sidx}, ${oidx})">
-    <span class="op-trigger-label">${label}${exBadge}${fornBadge}</span>
+    <span class="op-trigger-label">${label}${exBadge}</span>
     ${geoLabel ? `<span class="op-trigger-geo">📍 ${esc(geoLabel)}</span>` : ''}
     <span class="op-trigger-arrow">▾</span>
   </button>`;
@@ -12892,7 +12516,7 @@ function pwRender() {
           <div class="pw-op-name" style="flex-direction:column;align-items:flex-start;gap:2px;overflow:hidden;padding:4px 8px;"
             title="Click destro per copiare/incollare l'intera settimana (cantieri/attività)"
             oncontextmenu="return pwRowCtxMenu(event, ${cIdx}, ${sIdx}, ${oIdx});">
-            ${pwRenderOpDropdown(cIdx, sIdx, oIdx, op.nome, op.fornitore)}
+            ${pwRenderOpDropdown(cIdx, sIdx, oIdx, op.nome)}
             ${badgeHtml ? `<div>${badgeHtml}</div>` : ''}
             ${dwBadge ? `<div>${dwBadge}</div>` : ''}
             <button class="text-[9px] text-red-400 hover:text-red-600 text-left pw-write-action"
@@ -13575,21 +13199,8 @@ function pwSetSqStrumentiJira(sq, arr) {
   if (Array.isArray(sq.strumenti)) sq.strumenti = '';
 }
 
-// Chiave di uno strumento fornitore nella tendina (per distinguerlo dalle chiavi
-// Jira/GAR, salvate senza prefisso per compatibilità coi dati già esistenti).
-function pwFornStrKey(fornitoreId, strumentoId) { return `forn:${fornitoreId}:${strumentoId}`; }
-function pwFornStrFromKey(key) {
-  if (!key || !key.startsWith('forn:')) return null;
-  const [, fornitoreId, strumentoId] = key.split(':');
-  const f = (state.fornitori || []).find(f => f.id === fornitoreId);
-  const s = f && (f.strumenti || []).find(s => s.id === strumentoId);
-  return s ? { fornitore: f, strumento: s } : null;
-}
-
 function pwStrLabel(key) {
   if (!key) return '— strumento —';
-  const forn = pwFornStrFromKey(key);
-  if (forn) return `🏢 ${forn.fornitore.nome} · ${forn.strumento.nome}`;
   const s = pwStrumenti.find(x => x.key === key);
   return s ? (s.key + ' · ' + s.name) : key;
 }
@@ -13626,9 +13237,7 @@ async function pwRemoveStrumento(btn) {
   pwRender();
 }
 
-/* --- Tendina custom con ricerca: si apre verso il basso se c'è spazio, altrimenti
-   verso l'alto (flip), così coi gruppi Jira+fornitori (più voci di prima) non resta
-   mai tagliata fuori dal viewport quando il bottone è verso il fondo della pagina. --- */
+/* --- Tendina custom con ricerca (si apre verso il basso, non viene clippata) --- */
 let _pwStrTarget = null;
 function pwStrEnsurePanel() {
   let p = document.getElementById('pw-str-panel');
@@ -13658,28 +13267,13 @@ function pwStrOpen(btn) {
   const r = btn.getBoundingClientRect();
   p.style.display = 'block';
   p.style.left = Math.max(6, Math.min(r.left, window.innerWidth - 290)) + 'px';
-
+  p.style.top = (r.bottom + 2) + 'px';
+  const avail = window.innerHeight - r.bottom - 16;
+  const list = p.querySelector('#pw-str-list');
+  list.style.maxHeight = Math.max(120, Math.min(280, avail)) + 'px';
   const search = p.querySelector('#pw-str-search');
   search.value = '';
   pwStrRenderList('');
-
-  // Apre verso il basso se c'è abbastanza spazio (o comunque più che sopra),
-  // altrimenti verso l'alto — evita che la tendina finisca tagliata fuori dal
-  // viewport quando il bottone è vicino al fondo pagina.
-  const SEARCH_BAR_H = 38, MARGIN = 10, MIN_LIST_H = 120, MAX_LIST_H = 320;
-  const spaceBelow = window.innerHeight - r.bottom - MARGIN;
-  const spaceAbove = r.top - MARGIN;
-  const list = p.querySelector('#pw-str-list');
-  if (spaceBelow >= MIN_LIST_H || spaceBelow >= spaceAbove) {
-    p.style.top = (r.bottom + 2) + 'px';
-    p.style.bottom = 'auto';
-    list.style.maxHeight = Math.max(MIN_LIST_H, Math.min(MAX_LIST_H, spaceBelow - SEARCH_BAR_H)) + 'px';
-  } else {
-    p.style.top = 'auto';
-    p.style.bottom = (window.innerHeight - r.top + 2) + 'px';
-    list.style.maxHeight = Math.max(MIN_LIST_H, Math.min(MAX_LIST_H, spaceAbove - SEARCH_BAR_H)) + 'px';
-  }
-
   setTimeout(() => search.focus(), 0);
 }
 function pwStrRenderList(filter) {
@@ -13687,29 +13281,15 @@ function pwStrRenderList(filter) {
   if (!list) return;
   const f = (filter || '').toLowerCase().trim();
   let html = '<div class="pw-str-item empty" data-key="">— nessuno —</div>';
-
-  html += '<div style="padding:4px 8px;font-size:10px;font-weight:600;color:#94a3b8;text-transform:uppercase;">Jira / GAR</div>';
   if (pwStrumenti.length === 0) {
     html += '<div style="padding:8px;font-size:11px;color:#b45309;">Nessuno strumento in cache. Clicca "🔧 Aggiorna strumenti".</div>';
   } else {
     const items = pwStrumenti.filter(s => !f || (s.key + ' ' + s.name).toLowerCase().includes(f));
-    if (items.length === 0) html += '<div style="padding:4px 8px;font-size:11px;color:#94a3b8;">Nessun risultato.</div>';
+    if (items.length === 0) html += '<div style="padding:8px;font-size:11px;color:#94a3b8;">Nessun risultato.</div>';
     else items.forEach(s => {
       html += `<div class="pw-str-item" data-key="${esc(s.key)}"><b>${esc(s.key)}</b> · ${esc(s.name)}</div>`;
     });
   }
-
-  // Strumenti messi a disposizione dai fornitori esterni (state.fornitori, vedi
-  // dashboard-fornitori.js) — stessa tendina, gruppo a parte per fornitore.
-  (state.fornitori || []).forEach(fr => {
-    const strumenti = (fr.strumenti || []).filter(s => !f || ((fr.nome||'') + ' ' + s.nome + ' ' + (s.tipo||'')).toLowerCase().includes(f));
-    if (strumenti.length === 0) return;
-    html += `<div style="padding:4px 8px;font-size:10px;font-weight:600;color:#4338ca;text-transform:uppercase;">🏢 ${esc(fr.nome)}</div>`;
-    strumenti.forEach(s => {
-      html += `<div class="pw-str-item" data-key="${esc(pwFornStrKey(fr.id, s.id))}">${esc(s.nome)}${s.tipo ? ' · ' + esc(s.tipo) : ''}</div>`;
-    });
-  });
-
   list.innerHTML = html;
   list.querySelectorAll('.pw-str-item').forEach(el => { el.onclick = () => pwStrPick(el.dataset.key); });
 }

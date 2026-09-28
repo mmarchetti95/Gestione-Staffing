@@ -100,6 +100,7 @@ function renderAll() {
   renderLimitazioni();
   renderDpi();
   renderCommesse();
+  renderFornitori();
   renderGap();
   // Se la vista operatore è aperta, aggiornala
   if (_vistaOpId && !document.getElementById('op-vista-container')?.classList.contains('hidden')) {
@@ -141,6 +142,13 @@ document.addEventListener('DOMContentLoaded', async () => {
     state.searchCommesse = e.target.value;
     renderCommesse();
   });
+  document.getElementById('fornitori-search').addEventListener('input', e => {
+    state.searchFornitori = e.target.value;
+    renderFornitori();
+  });
+  document.getElementById('btn-add-fornitore').onclick = () => addFornitore();
+  document.getElementById('btn-expand-all-fornitori').onclick = () => document.querySelectorAll('.fornitore-card').forEach(d => d.open = true);
+  document.getElementById('btn-collapse-all-fornitori').onclick = () => document.querySelectorAll('.fornitore-card').forEach(d => d.open = false);
   // Gantt controls
   const gPipeline = document.getElementById('gantt-pipeline');
   const gHistoric = document.getElementById('gantt-historic');

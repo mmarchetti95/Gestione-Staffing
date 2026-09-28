@@ -27,6 +27,7 @@ JS_FILES = [
     'dashboard-limitazioni.js',
     'dashboard-anagrafica-import.js',
     'dashboard-commesse.js',
+    'dashboard-fornitori.js',
     'dashboard-assegnazioni.js',
     'dashboard-crud-helpers.js',
     'dashboard-gap-riconc.js',

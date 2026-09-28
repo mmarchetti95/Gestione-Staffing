@@ -294,6 +294,11 @@
   .commessa-card summary::marker { display: none; content: ''; }
   .commessa-card[open] > summary .chevron { transform: rotate(90deg); }
   .commessa-card summary:hover { background: rgba(13,148,136,.04); border-radius: 4px; }
+  .fornitore-card summary { outline: none; }
+  .fornitore-card summary::-webkit-details-marker { display: none; }
+  .fornitore-card summary::marker { display: none; content: ''; }
+  .fornitore-card[open] > summary .chevron { transform: rotate(90deg); }
+  .fornitore-card summary:hover { background: rgba(13,148,136,.04); border-radius: 4px; }
   .modal-backdrop {
     position: fixed; inset: 0; background: var(--backdrop);
     display: flex; align-items: center; justify-content: center; z-index: 100050;
@@ -730,7 +735,7 @@
     border-radius: 10px;
     box-shadow: var(--shadow-lg);
     width: 360px; max-width: 95vw;
-    overflow: hidden;
+    max-height: 90vh; overflow-y: auto; overflow-x: hidden;
     animation: opModalIn .15s ease;
   }
   @keyframes opModalIn {
@@ -1176,7 +1181,7 @@
     <div class="flex items-center gap-2">
       <button id="btn-presentation" class="px-3 py-1.5 text-sm rounded hover:bg-white/10" style="border:1px solid var(--dark-border-strong);color:var(--dark-text);visibility:visible;">📊 Modalità presentazione</button>
       <div class="text-xs pl-2" style="border-left:1px solid var(--dark-border-strong);color:var(--dark-text-muted);">
-        <span id="app-version" class="font-medium" style="color:var(--accent);">v18.170.0</span> · Michele Marchetti
+        <span id="app-version" class="font-medium" style="color:var(--accent);">v18.171.0</span> · Michele Marchetti
         <span id="sb-role-badge" style="margin-left:8px;padding:1px 8px;border-radius:9999px;background:rgba(255,255,255,.1);color:var(--dark-text);font-weight:600;"></span>
       </div>
     </div>
@@ -1619,6 +1624,22 @@
       </div>
 
     </div>
+  </section>
+
+  <!-- 3a. Fornitori: dipendenti e strumenti esterni disponibili "di volta in volta"
+       per la Griglia settimanale, separati dal pool operatori interno. -->
+  <section class="bg-white rounded-lg border border-slate-200 p-4 no-present">
+    <div class="flex items-center justify-between mb-2 flex-wrap gap-2">
+      <h2 class="font-semibold text-slate-900">🏢 Fornitori <span id="fornitori-count" class="text-slate-400 text-xs font-normal"></span></h2>
+      <div class="flex items-center gap-2">
+        <input id="fornitori-search" type="text" placeholder="Cerca fornitore o referente…" class="text-sm border border-slate-300 rounded px-2 py-1.5 w-56">
+        <button id="btn-expand-all-fornitori" class="text-[11px] px-2 py-1.5 border border-slate-300 rounded text-slate-600 hover:bg-slate-50 whitespace-nowrap" title="Espandi tutti i fornitori">⇕ Espandi tutte</button>
+        <button id="btn-collapse-all-fornitori" class="text-[11px] px-2 py-1.5 border border-slate-300 rounded text-slate-600 hover:bg-slate-50 whitespace-nowrap" title="Comprimi tutti i fornitori">⇕ Comprimi tutte</button>
+        <button id="btn-add-fornitore" class="text-xs px-2 py-1 bg-teal-50 text-teal-700 rounded border border-teal-200 hover:bg-teal-100 whitespace-nowrap">+ Nuovo fornitore</button>
+      </div>
+    </div>
+    <p class="text-xs text-slate-500 mb-3">Anagrafiche fornitori esterni con i loro dipendenti e strumenti: selezionabili in Pianificazione Settimanale → Griglia, ma esclusi dal pool operatori (KPI, gap risorse, attestati).</p>
+    <div class="space-y-2" id="fornitori-list"></div>
   </section>
 
   <!-- 3b. Attestati & scadenze (collassata: la matrice si costruisce solo all'apertura) -->

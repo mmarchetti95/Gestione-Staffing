@@ -10,6 +10,7 @@ Applicazione web per la gestione dello staffing e della pipeline commerciale del
 
 - 📊 **Pipeline commerciale** — gestione commesse in fase di offerta con probabilità e valore
 - 👷 **Operatori** — anagrafica con skill badge (WO, MMS, LIXEL, DRONE, GPS, LASER, ROBOT, GRD)
+- 🏢 **Fornitori** — anagrafiche di fornitori esterni con i loro dipendenti e strumenti, disponibili di volta in volta in Pianificazione settimanale senza entrare nel pool operatori interno
 - 📅 **Staffing mensile** — allocazione gg-uomo per commessa, saturazione e gap analysis
 - 🗓️ **Pianificazione settimanale** — composizione squadre, assegnazione cantieri, gestione ferie
 - 🗺️ **Mappa cantieri** — visualizzazione geografica delle commesse attive
@@ -110,6 +111,11 @@ Limite noto: il progetto Supabase è sul piano **Free**, che non include backup 
 ---
 
 ## Changelog
+
+## v18.171.0
+- feat: **Nuova sezione Dashboard "🏢 Fornitori"** — anagrafiche di fornitori esterni (referente, telefono, email, note), ciascuna con i propri dipendenti (nome, skill, provincia) e strumenti/attrezzature messi a disposizione "di volta in volta". Sezione affiancata a Pool Operatori e Commesse, con ricerca ed espandi/comprimi tutte. È una lista separata da `state.operatori`: non entra in KPI, Gap risorse & raccomandazioni assunzione, coerenza attestati né mappatura email Jira, che restano basati solo sul pool interno.
+  - In Griglia (Pianificazione settimanale), il modal "Seleziona operatore" ora include anche i dipendenti dei fornitori (badge 🏢 col nome del fornitore, ricercabili per nome come gli operatori interni); la tendina "🔧 Strumenti" di ogni squadra mostra un gruppo separato per fornitore accanto a quello Jira/GAR. Entrambi i punti riusano la stessa logica di stato libero/assegnato/ferie e compaiono automaticamente anche in "Genera mail" e "Ricerca Squadre".
+  - Persistenza: nuovo campo `fornitori` nel dominio "core" già sincronizzato su Supabase (stessa riga `staffing_state` di operatori/commesse) — nessuna nuova tabella né Edge Function.
 
 ## v18.170.0
 - fix: **Import limitazioni operatori — memoria cumulativa fra import successivi** — il registro grezzo dell'import (`state.limitazioni_registro`, sezione "Operatori con limitazioni") veniva sostituito per intero ad ogni nuovo file caricato: un dipendente fuori dal pool operatori, presente in un import precedente ma assente nel file più recente (es. import parziali/incrementali), spariva dall'elenco invece di restare memorizzato con l'ultimo dato noto. Ora il registro è cumulativo: chi ricompare nel nuovo file viene aggiornato, chi non ricompare resta con i dati dell'ultimo import in cui era presente. Nessun impatto sulle schede dei singoli operatori del pool, che seguivano già questa logica.

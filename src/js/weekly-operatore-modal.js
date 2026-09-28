@@ -33,8 +33,28 @@ function pwOpenOpModal(cidx, sidx, oidx) {
   // Tutti gli operatori attivi nel sistema (nome_esteso o nome)
   const fromOperatori = getOperatoriAttivi().map(o => o.nome_esteso || o.nome).filter(Boolean);
 
-  // Lista finale: prima quelli della commessa, poi gli altri — tutti deduplicati
-  const tuttiNomi = [...new Set([...fromStaffing, ...fromOperatori])].sort();
+  // Dipendenti dei fornitori esterni (state.fornitori, vedi dashboard-fornitori.js):
+  // risorse occasionali, fuori dal pool interno, ma selezionabili qui — con un
+  // gruppo/badge dedicato — perché di volta in volta un fornitore ce li mette a
+  // disposizione per una commessa. Un nome già presente nel pool interno vince
+  // (fornOfNome non viene impostato per quel nome): l'identità resta quella interna.
+  const fornOfNome = {};
+  const fromFornitori = [];
+  (state.fornitori || []).forEach(f => {
+    (f.dipendenti || []).forEach(d => {
+      const nome = d.nome_esteso;
+      if (!nome || opByNomeHasInterno(nome)) return;
+      fromFornitori.push(nome);
+      if (!fornOfNome[nome]) fornOfNome[nome] = f.nome || 'Fornitore';
+    });
+  });
+  function opByNomeHasInterno(nome) {
+    return (state.operatori || []).some(o => (o.nome_esteso || o.nome) === nome);
+  }
+
+  // Lista finale: prima quelli della commessa, poi gli altri, poi i dipendenti
+  // fornitore — tutti deduplicati
+  const tuttiNomi = [...new Set([...fromStaffing, ...fromOperatori, ...fromFornitori])].sort();
 
   // Costruisce il modal
   const existing = document.getElementById('op-select-modal');
@@ -60,6 +80,11 @@ function pwOpenOpModal(cidx, sidx, oidx) {
   // chi e' vicino alla zona del rilievo quando si assegna una squadra.
   const opByNome = {};
   (state.operatori || []).forEach(o => { opByNome[o.nome_esteso || o.nome] = o; });
+  // Dipendenti fornitore: solo per i nomi non già presenti nel pool interno (vedi
+  // fromFornitori sopra), così filtro geo/badge funzionano anche per loro.
+  (state.fornitori || []).forEach(f => (f.dipendenti || []).forEach(d => {
+    if (d.nome_esteso && !opByNome[d.nome_esteso]) opByNome[d.nome_esteso] = d;
+  }));
   let filtroRegione = '', filtroProvincia = '';
 
   const geoRow = document.createElement('div');
@@ -85,6 +110,52 @@ function pwOpenOpModal(cidx, sidx, oidx) {
   geoRow.appendChild(selProvincia);
   modal.appendChild(geoRow);
 
+  // Filtro skill (chip multi-selezione, AND come nel filtro Pool operatori) e
+  // filtro attestati (checkbox in un pannello a comparsa, stessa logica AND) —
+  // utili per trovare in griglia chi ha davvero la competenza/il certificato
+  // richiesto dalla commessa, non solo chi è libero e vicino.
+  const filtroSkills = new Set();
+  const filtroAttestati = new Set();
+
+  const skillRow = document.createElement('div');
+  skillRow.style.cssText = 'display:flex;flex-wrap:wrap;gap:3px;padding:0 14px 6px;';
+  skillRow.innerHTML = SKILLS.map(s => `<button type="button" class="op-modal-skill-btn" data-skill="${esc(s)}"
+    style="font-size:9px;padding:2px 6px;border-radius:4px;border:1px solid #cbd5e1;background:#fff;color:#475569;cursor:pointer;">${esc(s)}</button>`).join('');
+  modal.appendChild(skillRow);
+  function paintSkillBtn(btn, on) {
+    btn.style.background = on ? '#ccfbf1' : '#fff';
+    btn.style.borderColor = on ? '#14b8a6' : '#cbd5e1';
+    btn.style.color = on ? '#0f766e' : '#475569';
+    btn.style.fontWeight = on ? '700' : '400';
+  }
+  skillRow.querySelectorAll('.op-modal-skill-btn').forEach(btn => {
+    btn.onclick = () => {
+      const s = btn.dataset.skill;
+      if (filtroSkills.has(s)) filtroSkills.delete(s); else filtroSkills.add(s);
+      paintSkillBtn(btn, filtroSkills.has(s));
+      buildList(search.value);
+    };
+  });
+
+  if (ATTESTATI.length > 0) {
+    const attWrap = document.createElement('details');
+    attWrap.style.cssText = 'padding:0 14px 6px;font-size:10px;';
+    attWrap.innerHTML = `<summary style="cursor:pointer;color:#64748b;user-select:none;">🎓 Filtra per attestato <span class="op-modal-att-summary">(tutti)</span></summary>
+      <div style="max-height:110px;overflow-y:auto;margin-top:4px;display:flex;flex-direction:column;gap:3px;padding:2px 2px 2px 4px;">
+        ${ATTESTATI.map(a => `<label style="display:flex;align-items:center;gap:5px;cursor:pointer;color:#334155;">
+          <input type="checkbox" class="op-modal-att-cb" data-att="${esc(a)}"> ${esc(a)}</label>`).join('')}
+      </div>`;
+    modal.appendChild(attWrap);
+    const attSummary = attWrap.querySelector('.op-modal-att-summary');
+    attWrap.querySelectorAll('.op-modal-att-cb').forEach(cb => {
+      cb.onchange = () => {
+        cb.checked ? filtroAttestati.add(cb.dataset.att) : filtroAttestati.delete(cb.dataset.att);
+        attSummary.textContent = filtroAttestati.size ? `(${filtroAttestati.size})` : '(tutti)';
+        buildList(search.value);
+      };
+    });
+  }
+
   // Search
   const search = document.createElement('input');
   search.type = 'text';
@@ -104,6 +175,15 @@ function pwOpenOpModal(cidx, sidx, oidx) {
     return operatoreRegione(op) === filtroRegione;
   }
 
+  function passaFiltroSkillAttestati(nome) {
+    if (filtroSkills.size === 0 && filtroAttestati.size === 0) return true;
+    const op = opByNome[nome];
+    if (!op) return false;
+    if (filtroSkills.size > 0 && ![...filtroSkills].every(s => (op.skills||[]).includes(s))) return false;
+    if (filtroAttestati.size > 0 && ![...filtroAttestati].every(a => (op.attestati||[]).includes(a))) return false;
+    return true;
+  }
+
   function buildList(filter) {
     list.innerHTML = '';
 
@@ -114,7 +194,7 @@ function pwOpenOpModal(cidx, sidx, oidx) {
     noneEl.onclick = () => pwConfirmOpModal(cidx, sidx, oidx, '');
     list.appendChild(noneEl);
 
-    const filtrati = tuttiNomi.filter(n => (!filter || n.toLowerCase().includes(filter.toLowerCase())) && passaFiltroGeo(n));
+    const filtrati = tuttiNomi.filter(n => (!filter || n.toLowerCase().includes(filter.toLowerCase())) && passaFiltroGeo(n) && passaFiltroSkillAttestati(n));
 
     if (filtrati.length === 0) {
       const empty = document.createElement('div');
@@ -158,6 +238,7 @@ function pwOpenOpModal(cidx, sidx, oidx) {
       const inCommessa = fromStaffing.has(nome);
       const provInfo = provinciaInfo(opByNome[nome]?.provincia);
       const geoLabel = provInfo ? provInfo.nome : operatoreRegione(opByNome[nome]);
+      const fornNome = fornOfNome[nome] || '';
 
       const item = document.createElement('div');
       item.className = `op-modal-item stato-${stato}${nome === nomeCorrente ? ' is-selected' : ''}`;
@@ -166,9 +247,10 @@ function pwOpenOpModal(cidx, sidx, oidx) {
         <span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">
           ${nome}${inCommessa ? '' : ' <span style="font-size:9px;opacity:.6;">(fuori commessa)</span>'}
           ${geoLabel ? ` <span style="font-size:9px;opacity:.6;">📍 ${esc(geoLabel)}</span>` : ''}
+          ${fornNome ? ` <span style="font-size:9px;background:#e0e7ff;color:#4338ca;border-radius:3px;padding:0 4px;">🏢 ${esc(fornNome)}</span>` : ''}
         </span>
         <span class="op-modal-tag stato-${stato}">${tagLabel}</span>`;
-      item.onclick = () => pwConfirmOpModal(cidx, sidx, oidx, nome);
+      item.onclick = () => pwConfirmOpModal(cidx, sidx, oidx, nome, fornNome);
       list.appendChild(item);
     });
   }
@@ -200,7 +282,7 @@ function pwCloseOpModal() {
   if (m) m.remove();
 }
 
-async function pwConfirmOpModal(cidx, sidx, oidx, nome) {
+async function pwConfirmOpModal(cidx, sidx, oidx, nome, fornNome) {
   pwCloseOpModal();
   if (!sbGuardWrite()) return;
   // Assegnare (non rimuovere) un operatore con limitazioni riportate nell'idoneita'
@@ -221,6 +303,7 @@ async function pwConfirmOpModal(cidx, sidx, oidx, nome) {
   const op   = data[cidx]?.squadre[sidx]?.operatori[oidx];
   if (op !== undefined) {
     op.nome = nome;
+    if (fornNome) op.fornitore = fornNome; else delete op.fornitore;
     await pwSave();
     pwRender();
   }
@@ -240,28 +323,42 @@ function pwSquadraCognomi(squadra) {
   return [...new Set(cognomi)];
 }
 
+// Cerca un nome tra i dipendenti di tutti i fornitori (dipendenti esterni non
+// presenti in state.operatori, vedi dashboard-fornitori.js).
+function fornDipendenteByNome(nome) {
+  if (!nome) return null;
+  for (const f of (state.fornitori || [])) {
+    const d = (f.dipendenti || []).find(d => d.nome_esteso === nome);
+    if (d) return d;
+  }
+  return null;
+}
+
 // Provincia (o, in mancanza, regione) di provenienza dell'operatore, per il
 // badge di localizzazione nella griglia — stessa logica del filtro geo del
-// modal di selezione (pwOpenOpModal).
+// modal di selezione (pwOpenOpModal). Funziona anche per i dipendenti fornitore.
 function pwOperatoreGeoLabel(nome) {
-  const op = (state.operatori || []).find(o => (o.nome_esteso || o.nome) === nome);
+  const op = (state.operatori || []).find(o => (o.nome_esteso || o.nome) === nome) || fornDipendenteByNome(nome);
   if (!op) return '';
   const provInfo = provinciaInfo(op.provincia);
   return provInfo ? provInfo.nome : operatoreRegione(op);
 }
 
 /* Costruisce HTML del trigger nella cella operatore */
-function pwRenderOpDropdown(cidx, sidx, oidx, nomeCorrente) {
+function pwRenderOpDropdown(cidx, sidx, oidx, nomeCorrente, fornitoreNome) {
   const stato      = nomeCorrente ? pwStatoOperatore(nomeCorrente, cidx, sidx, oidx) : '';
   const statoClass = nomeCorrente ? `stato-${stato}` : '';
   const label      = nomeCorrente || '— scegli —';
   const exBadge    = nomeCorrente && isOperatoreLicenziato(nomeCorrente)
     ? '<span class="op-ex-tag">ex</span>'
     : '';
+  const fornBadge  = nomeCorrente && fornitoreNome
+    ? `<span class="op-ex-tag" style="background:#e0e7ff;color:#4338ca;" title="Dipendente fornitore esterno">🏢 ${esc(fornitoreNome)}</span>`
+    : '';
   const geoLabel   = nomeCorrente ? pwOperatoreGeoLabel(nomeCorrente) : '';
   return `<button class="op-trigger-btn pw-write-action ${statoClass}"
     onclick="pwOpenOpModal(${cidx}, ${sidx}, ${oidx})">
-    <span class="op-trigger-label">${label}${exBadge}</span>
+    <span class="op-trigger-label">${label}${exBadge}${fornBadge}</span>
     ${geoLabel ? `<span class="op-trigger-geo">📍 ${esc(geoLabel)}</span>` : ''}
     <span class="op-trigger-arrow">▾</span>
   </button>`;
@@ -420,7 +517,7 @@ function pwRender() {
           <div class="pw-op-name" style="flex-direction:column;align-items:flex-start;gap:2px;overflow:hidden;padding:4px 8px;"
             title="Click destro per copiare/incollare l'intera settimana (cantieri/attività)"
             oncontextmenu="return pwRowCtxMenu(event, ${cIdx}, ${sIdx}, ${oIdx});">
-            ${pwRenderOpDropdown(cIdx, sIdx, oIdx, op.nome)}
+            ${pwRenderOpDropdown(cIdx, sIdx, oIdx, op.nome, op.fornitore)}
             ${badgeHtml ? `<div>${badgeHtml}</div>` : ''}
             ${dwBadge ? `<div>${dwBadge}</div>` : ''}
             <button class="text-[9px] text-red-400 hover:text-red-600 text-left pw-write-action"

@@ -35,8 +35,21 @@ function pwSetSqStrumentiJira(sq, arr) {
   if (Array.isArray(sq.strumenti)) sq.strumenti = '';
 }
 
+// Chiave di uno strumento fornitore nella tendina (per distinguerlo dalle chiavi
+// Jira/GAR, salvate senza prefisso per compatibilità coi dati già esistenti).
+function pwFornStrKey(fornitoreId, strumentoId) { return `forn:${fornitoreId}:${strumentoId}`; }
+function pwFornStrFromKey(key) {
+  if (!key || !key.startsWith('forn:')) return null;
+  const [, fornitoreId, strumentoId] = key.split(':');
+  const f = (state.fornitori || []).find(f => f.id === fornitoreId);
+  const s = f && (f.strumenti || []).find(s => s.id === strumentoId);
+  return s ? { fornitore: f, strumento: s } : null;
+}
+
 function pwStrLabel(key) {
   if (!key) return '— strumento —';
+  const forn = pwFornStrFromKey(key);
+  if (forn) return `🏢 ${forn.fornitore.nome} · ${forn.strumento.nome}`;
   const s = pwStrumenti.find(x => x.key === key);
   return s ? (s.key + ' · ' + s.name) : key;
 }
@@ -73,7 +86,9 @@ async function pwRemoveStrumento(btn) {
   pwRender();
 }
 
-/* --- Tendina custom con ricerca (si apre verso il basso, non viene clippata) --- */
+/* --- Tendina custom con ricerca: si apre verso il basso se c'è spazio, altrimenti
+   verso l'alto (flip), così coi gruppi Jira+fornitori (più voci di prima) non resta
+   mai tagliata fuori dal viewport quando il bottone è verso il fondo della pagina. --- */
 let _pwStrTarget = null;
 function pwStrEnsurePanel() {
   let p = document.getElementById('pw-str-panel');
@@ -103,13 +118,28 @@ function pwStrOpen(btn) {
   const r = btn.getBoundingClientRect();
   p.style.display = 'block';
   p.style.left = Math.max(6, Math.min(r.left, window.innerWidth - 290)) + 'px';
-  p.style.top = (r.bottom + 2) + 'px';
-  const avail = window.innerHeight - r.bottom - 16;
-  const list = p.querySelector('#pw-str-list');
-  list.style.maxHeight = Math.max(120, Math.min(280, avail)) + 'px';
+
   const search = p.querySelector('#pw-str-search');
   search.value = '';
   pwStrRenderList('');
+
+  // Apre verso il basso se c'è abbastanza spazio (o comunque più che sopra),
+  // altrimenti verso l'alto — evita che la tendina finisca tagliata fuori dal
+  // viewport quando il bottone è vicino al fondo pagina.
+  const SEARCH_BAR_H = 38, MARGIN = 10, MIN_LIST_H = 120, MAX_LIST_H = 320;
+  const spaceBelow = window.innerHeight - r.bottom - MARGIN;
+  const spaceAbove = r.top - MARGIN;
+  const list = p.querySelector('#pw-str-list');
+  if (spaceBelow >= MIN_LIST_H || spaceBelow >= spaceAbove) {
+    p.style.top = (r.bottom + 2) + 'px';
+    p.style.bottom = 'auto';
+    list.style.maxHeight = Math.max(MIN_LIST_H, Math.min(MAX_LIST_H, spaceBelow - SEARCH_BAR_H)) + 'px';
+  } else {
+    p.style.top = 'auto';
+    p.style.bottom = (window.innerHeight - r.top + 2) + 'px';
+    list.style.maxHeight = Math.max(MIN_LIST_H, Math.min(MAX_LIST_H, spaceAbove - SEARCH_BAR_H)) + 'px';
+  }
+
   setTimeout(() => search.focus(), 0);
 }
 function pwStrRenderList(filter) {
@@ -117,15 +147,29 @@ function pwStrRenderList(filter) {
   if (!list) return;
   const f = (filter || '').toLowerCase().trim();
   let html = '<div class="pw-str-item empty" data-key="">— nessuno —</div>';
+
+  html += '<div style="padding:4px 8px;font-size:10px;font-weight:600;color:#94a3b8;text-transform:uppercase;">Jira / GAR</div>';
   if (pwStrumenti.length === 0) {
     html += '<div style="padding:8px;font-size:11px;color:#b45309;">Nessuno strumento in cache. Clicca "🔧 Aggiorna strumenti".</div>';
   } else {
     const items = pwStrumenti.filter(s => !f || (s.key + ' ' + s.name).toLowerCase().includes(f));
-    if (items.length === 0) html += '<div style="padding:8px;font-size:11px;color:#94a3b8;">Nessun risultato.</div>';
+    if (items.length === 0) html += '<div style="padding:4px 8px;font-size:11px;color:#94a3b8;">Nessun risultato.</div>';
     else items.forEach(s => {
       html += `<div class="pw-str-item" data-key="${esc(s.key)}"><b>${esc(s.key)}</b> · ${esc(s.name)}</div>`;
     });
   }
+
+  // Strumenti messi a disposizione dai fornitori esterni (state.fornitori, vedi
+  // dashboard-fornitori.js) — stessa tendina, gruppo a parte per fornitore.
+  (state.fornitori || []).forEach(fr => {
+    const strumenti = (fr.strumenti || []).filter(s => !f || ((fr.nome||'') + ' ' + s.nome + ' ' + (s.tipo||'')).toLowerCase().includes(f));
+    if (strumenti.length === 0) return;
+    html += `<div style="padding:4px 8px;font-size:10px;font-weight:600;color:#4338ca;text-transform:uppercase;">🏢 ${esc(fr.nome)}</div>`;
+    strumenti.forEach(s => {
+      html += `<div class="pw-str-item" data-key="${esc(pwFornStrKey(fr.id, s.id))}">${esc(s.nome)}${s.tipo ? ' · ' + esc(s.tipo) : ''}</div>`;
+    });
+  });
+
   list.innerHTML = html;
   list.querySelectorAll('.pw-str-item').forEach(el => { el.onclick = () => pwStrPick(el.dataset.key); });
 }

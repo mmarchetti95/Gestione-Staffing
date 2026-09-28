@@ -242,6 +242,10 @@ let state = {
   commesse_escluse: [], // lista permanente: nomi esclusi per sempre dai dati attivi, anche se rimossi dall'archivio
   commesse_attive_meta: {}, // {[nome]: {cliente,industry,inizio,fine,note,skills,attestati_richiesti,dpi_richiesti}}
   assegnazioni: [],
+  // Fornitori esterni: anagrafica + dipendenti e strumenti che ci mettono a disposizione
+  // di volta in volta (visibili/assegnabili in Griglia, ma fuori dal pool interno — non
+  // entrano in KPI, gap risorse, coerenza attestati). Vedi dashboard-fornitori.js.
+  fornitori: [],
   // Catalogo DPI: elenco ordinato dei nomi (colonne della matrice DPI e caselle "DPI
   // richiesti" delle commesse). Vedi dashboard-dpi-admin.js.
   dpi_disponibili: DPI_DEFAULT.slice(),
@@ -253,6 +257,7 @@ let state = {
   activeTab: 'pipeline',
   filters: { search:'', skills:new Set(), attestati:new Set(), lowSat:false, regione:'', provincia:'', showEx:false },
   searchCommesse: '',
+  searchFornitori: '', // filtro testo lista Fornitori, solo stato di vista (non persistito)
   // Registro attestati importato da Excel: archivio grezzo dell'ultimo import, che copre
   // TUTTI i dipendenti del file (anche chi non e' nel pool operatori del reparto rilievi).
   // Per chi e' nel pool la fonte autorevole resta op.attestati_dett, che puo' contenere
