@@ -4,7 +4,7 @@
   "2": "Mappa Squadre (Team Map)",
   "3": "weekly-mail-core.js",
   "4": "Attestati (Certifications) Tracking",
-  "5": "weekly-meteo.js",
+  "5": "Meteo & Bollettino Widget",
   "6": "weekly-jira-subtask.js",
   "7": "dashboard-crud-helpers.js",
   "8": "Pianifica Spostamenti (Route Planner)",
@@ -84,13 +84,12 @@
   "82": "ai-assistant.js",
   "83": "dashboard-fornitori.js",
   "84": "index.ts",
-  "85": "mlOpenKpi",
+  "85": "mlGeo",
   "86": "mlRender",
   "87": "mlEnter",
   "88": "weekly-ferie-import.js",
-  "89": "meteo-storico.js",
+  "89": "mlOpenKpi",
   "90": "mlScopeWeeks",
   "91": "mlOpenCommessa",
-  "92": "mlDettaglioHtml",
-  "93": "mlIsActive"
+  "92": "mlDettaglioHtml"
 }

@@ -1,24 +1,24 @@
-# Graph Report - Gestione-Staffing  (2026-09-10)
+# Graph Report - Gestione-Staffing  (2026-09-29)
 
 ## Corpus Check
-- 50 files · ~237,465 words
+- 53 files · ~281,106 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
-- 918 nodes · 1479 edges · 83 communities (55 shown, 28 thin omitted)
-- Extraction: 97% EXTRACTED · 3% INFERRED · 0% AMBIGUOUS · INFERRED: 44 edges (avg confidence: 0.82)
+- 1083 nodes · 1830 edges · 93 communities (65 shown, 28 thin omitted)
+- Extraction: 98% EXTRACTED · 2% INFERRED · 0% AMBIGUOUS · INFERRED: 44 edges (avg confidence: 0.82)
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `1393244f`
+- Built from commit: `aa14daf6`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
 ## Community Hubs (Navigation)
-- Supabase Admin & Auth Panel
+- sb-admin.js
 - Ricerca Squadre (Team Search)
 - Mappa Squadre (Team Map)
-- Weekly Planning Core & Mail
+- weekly-mail-core.js
 - Attestati (Certifications) Tracking
 - Meteo & Bollettino Widget
 - weekly-jira-subtask.js
@@ -35,12 +35,12 @@
 - Search Popover & Stats
 - Design System Tokens
 - Staffing Assignments
-- Operator Selection Modal
+- weekly-operatore-modal.js
 - Jira Custom Fields Docs
 - index.html Build Artifact
 - Storage & State Persistence
-- weekly-ferie-import.js
-- Active Commesse Archive
+- mappa-live.js
+- dashboard-commessa-attiva.js
 - Produzione Report Export
 - Cantiere Clipboard Copy/Paste
 - Multi-Domain Sync (Planning/Ferie)
@@ -60,7 +60,7 @@
 - Smoke Test Script
 - Supabase & GitHub Pages Setup
 - Commesse Pipeline Rendering
-- Weekly Screen Navigation
+- weekly-nav.js
 - KM Delta Model (Jira Production)
 - Staffing Grid Cells
 - build_bytes
@@ -96,18 +96,28 @@
 - Product Users
 - dashboard-limitazioni.js
 - ai-assistant.js
+- dashboard-fornitori.js
+- index.ts
+- mlGeo
+- mlRender
+- mlEnter
+- weekly-ferie-import.js
+- mlOpenKpi
+- mlScopeWeeks
+- mlOpenCommessa
+- mlDettaglioHtml
 
 ## God Nodes (most connected - your core abstractions)
-1. `pwMapRenderCantieri()` - 14 edges
-2. `esc()` - 14 edges
-3. `new-project` - 14 edges
-4. `pwJiraSubtaskOpenComuniModal()` - 13 edges
-5. `sbOnLoggedIn()` - 11 edges
-6. `rsCalcola()` - 11 edges
-7. `pwGeneraMail()` - 11 edges
-8. `pwGetFerieWeek()` - 11 edges
-9. `renderAttestati()` - 11 edges
-10. `closeModal()` - 11 edges
+1. `mlRender()` - 29 edges
+2. `pwGeneraMail()` - 15 edges
+3. `pwMapRenderCantieri()` - 14 edges
+4. `esc()` - 14 edges
+5. `new-project` - 14 edges
+6. `pwJiraSubtaskOpenComuniModal()` - 13 edges
+7. `sbOnLoggedIn()` - 11 edges
+8. `rsCalcola()` - 11 edges
+9. `pwGetFerieWeek()` - 11 edges
+10. `renderAttestati()` - 11 edges
 
 ## Surprising Connections (you probably didn't know these)
 - `Creative North Star: The Site Foreman's Whiteboard` --semantically_similar_to--> `Principle: information density over whitespace`  [INFERRED] [semantically similar]
@@ -131,11 +141,11 @@
 - **Hard-won conventions enforced by smoke_test.py** — claude_no_native_alert, claude_escape_onclick, claude_no_nested_template_literals, claude_no_duplicate_function_names, claude_smoke_test_py [EXTRACTED 1.00]
 - **Four Supabase staffing_state sync domains (core/planning/ferie/dw)** — claude_sb_row_core, claude_sb_row_planning, claude_sb_row_ferie, claude_sb_row_dw, claude_staffing_state_table, claude_four_sync_domains [EXTRACTED 1.00]
 
-## Communities (83 total, 28 thin omitted)
+## Communities (93 total, 28 thin omitted)
 
-### Community 0 - "Supabase Admin & Auth Panel"
-Cohesion: 0.07
-Nodes (53): checkForNewVersion(), PW_TAB_KEYS, SB_PAGE_LABELS, sbAllPageKeys(), sbApplyPageVisibility(), sbApplyReadOnlyBanner(), sbApplyUserRole(), sbCallAdminUsers() (+45 more)
+### Community 0 - "sb-admin.js"
+Cohesion: 0.06
+Nodes (60): checkForNewVersion(), PW_TAB_KEYS, SB_PAGE_LABELS, sbAllPageKeys(), sbApplyPageVisibility(), sbApplyReadOnlyBanner(), sbApplyUserRole(), sbCallAdminUsers() (+52 more)
 
 ### Community 1 - "Ricerca Squadre (Team Search)"
 Cohesion: 0.10
@@ -145,9 +155,9 @@ Nodes (48): _ricercaSquadre, RS_STATI, rsAddTappa(), _rsBadgeHtml(), _rsBuildSqu
 Cohesion: 0.09
 Nodes (41): commessaRegione(), _geoCache, _geoCacheSaveSingle(), geocodifica(), MAP_COLORS, _mapCollapsedCommesse, _mapCollapsedRegioniOp, _mapColor() (+33 more)
 
-### Community 3 - "Weekly Planning Core & Mail"
-Cohesion: 0.10
-Nodes (39): formatDate(), isoWeekToMonday(), isoWeekYear(), pwCellCantieri(), pwData, pwDoppiaWeek, pwDwCount(), pwDwLoad() (+31 more)
+### Community 3 - "weekly-mail-core.js"
+Cohesion: 0.09
+Nodes (42): formatDate(), isoWeekToMonday(), isoWeekYear(), pwCellCantieri(), pwData, pwDoppiaWeek, pwDwCount(), pwDwLoad() (+34 more)
 
 ### Community 4 - "Attestati (Certifications) Tracking"
 Cohesion: 0.12
@@ -163,15 +173,15 @@ Nodes (36): PW_JIRA_EXTRA_FIELD_LABELS, _pwExtraFieldsByKey, pwExtraFieldSelectO
 
 ### Community 7 - "dashboard-crud-helpers.js"
 Cohesion: 0.13
-Nodes (28): closeModal(), cpSelectModal(), deleteCommessa(), deleteOperatore(), esc(), getOperatoriAttivi(), HELP_TEXTS, isOperatoreLicenziato() (+20 more)
+Nodes (27): closeModal(), cpSelectModal(), deleteCommessa(), deleteOperatore(), esc(), getOperatoriAttivi(), HELP_TEXTS, isOperatoreLicenziato() (+19 more)
 
 ### Community 8 - "Pianifica Spostamenti (Route Planner)"
 Cohesion: 0.18
 Nodes (25): _pwSpost, _pwSpost2opt(), _pwSpostBuildOrder(), pwSpostCalcola(), pwSpostClear(), _pwSpostCoordString(), _pwSpostCost(), pwSpostDrawMap() (+17 more)
 
 ### Community 9 - "weekly-strumenti.js"
-Cohesion: 0.12
-Nodes (14): pwAddSquadra(), pwAddStrumento(), pwRemoveSquadra(), pwRemoveStrumento(), pwRinumeraSquadreDefault(), pwSetSqStrumentiJira(), pwSqStrumentiJira(), pwStrClose() (+6 more)
+Cohesion: 0.11
+Nodes (17): pwAddSquadra(), pwAddStrumento(), pwFornStrFromKey(), pwFornStrKey(), pwRemoveSquadra(), pwRemoveStrumento(), pwRinumeraSquadreDefault(), pwSetSqStrumentiJira() (+9 more)
 
 ### Community 10 - "New-Project Skill Scaffold"
 Cohesion: 0.08
@@ -213,9 +223,9 @@ Nodes (13): Alarm Rose (gap risorse/alert), Categorical Color System (colori cat
 Cohesion: 0.21
 Nodes (6): assegnaOperatore(), openOperatoreImpegniModal(), rimuoviAssegnazione(), rimuoviMeseAllocazione(), rimuoviRigaStaffing(), spostaAssegnazione()
 
-### Community 20 - "Operator Selection Modal"
-Cohesion: 0.28
-Nodes (11): pwCloseOpModal(), pwConfirmOpModal(), pwOpenOpModal(), buildList(), passaFiltroGeo(), pwOperatoreGeoLabel(), pwPopulateWeekSelect(), pwRender() (+3 more)
+### Community 20 - "weekly-operatore-modal.js"
+Cohesion: 0.21
+Nodes (13): fornDipendenteByNome(), pwCloseOpModal(), pwConfirmOpModal(), pwOpenOpModal(), buildList(), passaFiltroGeo(), passaFiltroSkillAttestati(), pwOperatoreGeoLabel() (+5 more)
 
 ### Community 21 - "Jira Custom Fields Docs"
 Cohesion: 0.20
@@ -229,13 +239,13 @@ Nodes (12): Unified --accent design token (teal) replacing two divergent hex tea
 Cohesion: 0.24
 Nodes (7): loadState(), monthsBetween(), operatoreSatPeriodo(), ricalcolaAllocOperatori(), saveState(), sget(), sset()
 
-### Community 24 - "weekly-ferie-import.js"
-Cohesion: 0.23
-Nodes (8): PW_FERIE_ACCENTI, PW_FERIE_MESI, pwFerieImportFile(), pwFerieImportPick(), pwFerieImportShowConfirm(), listBox(), pwFerieMatchOperatore(), pwFerieNormTokens()
+### Community 24 - "mappa-live.js"
+Cohesion: 0.08
+Nodes (29): ML_COMM_SORT, ML_DAY_SHORT, ML_STATI_FILTRO, ML_STATUS_COLORS, ML_STATUS_LABELS, mlCommessaDocsHtml(), mlCommessaHtml(), mlCommessaMetaHtml() (+21 more)
 
-### Community 25 - "Active Commesse Archive"
-Cohesion: 0.24
-Nodes (6): _CONFRONTO_STATO_BADGE, _confrontoBodyHtml(), _confrontoTableHtml(), getCommessaAttivaMeta(), openCommessaAttivaModal(), renderConfrontoBox()
+### Community 25 - "dashboard-commessa-attiva.js"
+Cohesion: 0.19
+Nodes (15): _cmAlertAsync(), cmDeleteDocumento(), _cmDocSanitizeNome(), cmDocsBindListHandlers(), _cmDocsListHtml(), cmDocsRefresh(), cmDownloadDocumento(), _cmFmtFileSize() (+7 more)
 
 ### Community 26 - "Produzione Report Export"
 Cohesion: 0.33
@@ -313,9 +323,9 @@ Nodes (5): Legacy sessionStorage keys migration, GitHub Pages deployment steps, 
 Cohesion: 0.53
 Nodes (5): _confrontoMeseSel, getNomiCommesseAttive(), renderCommessaPipelineCard(), renderCommesse(), renderCommesseAttive()
 
-### Community 45 - "Weekly Screen Navigation"
-Cohesion: 0.47
-Nodes (5): mapAddSatelliteToggle(), _pwActiveTab, _pwScrollY, pwSwitchTab(), switchScreen()
+### Community 45 - "weekly-nav.js"
+Cohesion: 0.39
+Nodes (7): mapAddSatelliteToggle(), mapPreferredBase(), mapStreetLayer(), _pwActiveTab, _pwScrollY, pwSwitchTab(), switchScreen()
 
 ### Community 46 - "KM Delta Model (Jira Production)"
 Cohesion: 0.50
@@ -342,15 +352,55 @@ Cohesion: 0.18
 Nodes (16): exportLimitazioniXlsx(), limBadgeOpCard(), limDescrizioneRegistro(), _limFiltri, limFoglio(), limImportFile(), limImportParseWorkbook(), limImportPick() (+8 more)
 
 ### Community 82 - "ai-assistant.js"
-Cohesion: 0.17
-Nodes (15): AI_PROVIDER_DEFAULT_MODEL, aiAppendMessage(), aiCheckStatus(), aiConfigCall(), aiConfigMsg(), aiConfigOpen(), aiConfigPopulate(), aiConfigRevokeKey() (+7 more)
+Cohesion: 0.11
+Nodes (28): AI_PROVIDER_DEFAULT_MODEL, aiAppendMessage(), aiCheckStatus(), aiConfigCall(), aiConfigMsg(), aiConfigOpen(), aiConfigPopulate(), aiConfigRevokeKey() (+20 more)
+
+### Community 83 - "dashboard-fornitori.js"
+Cohesion: 0.29
+Nodes (16): addFornitore(), addFornitoreDipendente(), addFornitoreStrumento(), deleteFornitore(), fornGenId(), removeFornitoreDipendente(), removeFornitoreStrumento(), renderFornitoreCard() (+8 more)
+
+### Community 84 - "index.ts"
+Cohesion: 0.36
+Nodes (8): chunked(), CORS_HEADERS, JIRA_BASE_URL, jiraAuthHeader(), jiraPost(), jiraSearch(), jqlEscape(), json()
+
+### Community 85 - "mlGeo"
+Cohesion: 0.19
+Nodes (13): mlBindGriglia(), mlDateISO(), mlDates(), mlDrawMarkers(), mlFocusGruppo(), mlGeo(), mlGoToGriglia(), mlMarkerHtml() (+5 more)
+
+### Community 86 - "mlRender"
+Cohesion: 0.21
+Nodes (16): mlApplyFilters(), mlApplyFiltroStato(), mlBindSearchColonna(), mlBindToolbar(), mlClearFiltri(), mlCloseDrawer(), mlGeoPending(), mlRegioneCantiere() (+8 more)
+
+### Community 87 - "mlEnter"
+Cohesion: 0.20
+Nodes (12): mlEnsureStrumenti(), mlEnter(), mlGoToday(), mlInit(), mlInvalidateItems(), mlIsActive(), mlJiraCacheLoad(), mlOnDataChanged() (+4 more)
+
+### Community 88 - "weekly-ferie-import.js"
+Cohesion: 0.23
+Nodes (8): PW_FERIE_ACCENTI, PW_FERIE_MESI, pwFerieImportFile(), pwFerieImportPick(), pwFerieImportShowConfirm(), listBox(), pwFerieMatchOperatore(), pwFerieNormTokens()
+
+### Community 89 - "mlOpenKpi"
+Cohesion: 0.40
+Nodes (6): mlBindGeoFix(), mlGeoFixSubmit(), mlKpiNoGeoHtml(), mlKpiNoStatoHtml(), mlKpiOperatoriHtml(), mlOpenKpi()
+
+### Community 90 - "mlScopeWeeks"
+Cohesion: 0.29
+Nodes (7): mlBuildItems(), mlBuildItemsCached(), mlCantieriDiCommessa(), mlRenderToolbar(), mlScopeWeeks(), mlWeekData(), mlWeekLabel()
+
+### Community 91 - "mlOpenCommessa"
+Cohesion: 0.40
+Nodes (6): mlBindCommessa(), mlLoadProduzioneCommessa(), mlOpenCommessa(), mlRenderCommessaCantieri(), mlRenderCommessaStati(), mlRenderCommesseList()
+
+### Community 92 - "mlDettaglioHtml"
+Cohesion: 0.29
+Nodes (7): mlDettaglioHtml(), mlGroupByCantiere(), mlMeteoHtml(), mlProduzioneHtml(), mlStatoGruppo(), mlTaskHtml(), mlTasksOf()
 
 ## Ambiguous Edges - Review These
 - `Stack tecnico (Tailwind, Chart.js, Leaflet.js, Supabase, GitHub Pages)` → `v18.58.0 removed unused sortablejs/chart.js CDN references`  [AMBIGUOUS]
   README.md · relation: conceptually_related_to
 
 ## Knowledge Gaps
-- **170 isolated node(s):** `_aiHistory`, `AI_PROVIDER_DEFAULT_MODEL`, `PW_TAB_KEYS`, `SB_PAGE_LABELS`, `_sbDirty` (+165 more)
+- **195 isolated node(s):** `ML_DAY_SHORT`, `_mlGeoFailed`, `ML_STATUS_COLORS`, `ML_STATUS_LABELS`, `ML_STATI_FILTRO` (+190 more)
   These have ≤1 connection - possible missing edges or undocumented components.
 - **28 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
 
@@ -360,14 +410,14 @@ _Questions this graph is uniquely positioned to answer:_
 - **What is the exact relationship between `Stack tecnico (Tailwind, Chart.js, Leaflet.js, Supabase, GitHub Pages)` and `v18.58.0 removed unused sortablejs/chart.js CDN references`?**
   _Edge tagged AMBIGUOUS (relation: conceptually_related_to) - confidence is low._
 - **Why does `esc()` connect `dashboard-crud-helpers.js` to `weekly-ferie-import.js`, `weekly-jira-subtask.js`?**
-  _High betweenness centrality (0.005) - this node is a cross-community bridge._
+  _High betweenness centrality (0.003) - this node is a cross-community bridge._
+- **Why does `pwJiraSubtaskCheckExisting()` connect `weekly-jira-subtask.js` to `dashboard-crud-helpers.js`?**
+  _High betweenness centrality (0.001) - this node is a cross-community bridge._
 - **Why does `pwJiraSubtaskRenderPreview()` connect `weekly-jira-subtask.js` to `dashboard-crud-helpers.js`?**
-  _High betweenness centrality (0.002) - this node is a cross-community bridge._
-- **Why does `Pianificazione Settimanale screen (pw* namespace)` connect `Weekly Planning Screen Tabs` to `KM Delta Model (Jira Production)`, `Griglia & Jira Subtask Creation`, `Multi-Domain Sync (Planning/Ferie)`, `Dashboard Screen & Core Sync`?**
-  _High betweenness centrality (0.002) - this node is a cross-community bridge._
+  _High betweenness centrality (0.001) - this node is a cross-community bridge._
 - **Are the 4 inferred relationships involving `esc()` (e.g. with `listBox()` and `pwJiraSubtaskCheckExisting()`) actually correct?**
   _`esc()` has 4 INFERRED edges - model-reasoned connections that need verification._
-- **What connects `_aiHistory`, `AI_PROVIDER_DEFAULT_MODEL`, `PW_TAB_KEYS` to the rest of the system?**
-  _170 weakly-connected nodes found - possible documentation gaps or missing edges._
-- **Should `Supabase Admin & Auth Panel` be split into smaller, more focused modules?**
-  _Cohesion score 0.06666666666666667 - nodes in this community are weakly interconnected._
+- **What connects `ML_DAY_SHORT`, `_mlGeoFailed`, `ML_STATUS_COLORS` to the rest of the system?**
+  _195 weakly-connected nodes found - possible documentation gaps or missing edges._
+- **Should `sb-admin.js` be split into smaller, more focused modules?**
+  _Cohesion score 0.058823529411764705 - nodes in this community are weakly interconnected._

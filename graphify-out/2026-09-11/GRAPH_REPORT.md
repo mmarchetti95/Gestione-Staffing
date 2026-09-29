@@ -1,24 +1,24 @@
-# Graph Report - Gestione-Staffing  (2026-09-10)
+# Graph Report - Gestione-Staffing  (2026-09-11)
 
 ## Corpus Check
-- 50 files · ~237,465 words
+- 50 files · ~242,076 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
-- 918 nodes · 1479 edges · 83 communities (55 shown, 28 thin omitted)
+- 943 nodes · 1523 edges · 83 communities (55 shown, 28 thin omitted)
 - Extraction: 97% EXTRACTED · 3% INFERRED · 0% AMBIGUOUS · INFERRED: 44 edges (avg confidence: 0.82)
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `1393244f`
+- Built from commit: `ef355857`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
 ## Community Hubs (Navigation)
-- Supabase Admin & Auth Panel
+- sb-admin.js
 - Ricerca Squadre (Team Search)
 - Mappa Squadre (Team Map)
-- Weekly Planning Core & Mail
+- weekly-mail-core.js
 - Attestati (Certifications) Tracking
 - Meteo & Bollettino Widget
 - weekly-jira-subtask.js
@@ -98,16 +98,16 @@
 - ai-assistant.js
 
 ## God Nodes (most connected - your core abstractions)
-1. `pwMapRenderCantieri()` - 14 edges
-2. `esc()` - 14 edges
-3. `new-project` - 14 edges
-4. `pwJiraSubtaskOpenComuniModal()` - 13 edges
-5. `sbOnLoggedIn()` - 11 edges
-6. `rsCalcola()` - 11 edges
-7. `pwGeneraMail()` - 11 edges
-8. `pwGetFerieWeek()` - 11 edges
+1. `pwGeneraMail()` - 15 edges
+2. `pwMapRenderCantieri()` - 14 edges
+3. `esc()` - 14 edges
+4. `new-project` - 14 edges
+5. `pwJiraSubtaskOpenComuniModal()` - 13 edges
+6. `pwGetFerieWeek()` - 11 edges
+7. `sbOnLoggedIn()` - 11 edges
+8. `rsCalcola()` - 11 edges
 9. `renderAttestati()` - 11 edges
-10. `closeModal()` - 11 edges
+10. `pwSpostDrawMap()` - 11 edges
 
 ## Surprising Connections (you probably didn't know these)
 - `Creative North Star: The Site Foreman's Whiteboard` --semantically_similar_to--> `Principle: information density over whitespace`  [INFERRED] [semantically similar]
@@ -133,9 +133,9 @@
 
 ## Communities (83 total, 28 thin omitted)
 
-### Community 0 - "Supabase Admin & Auth Panel"
-Cohesion: 0.07
-Nodes (53): checkForNewVersion(), PW_TAB_KEYS, SB_PAGE_LABELS, sbAllPageKeys(), sbApplyPageVisibility(), sbApplyReadOnlyBanner(), sbApplyUserRole(), sbCallAdminUsers() (+45 more)
+### Community 0 - "sb-admin.js"
+Cohesion: 0.06
+Nodes (60): checkForNewVersion(), PW_TAB_KEYS, SB_PAGE_LABELS, sbAllPageKeys(), sbApplyPageVisibility(), sbApplyReadOnlyBanner(), sbApplyUserRole(), sbCallAdminUsers() (+52 more)
 
 ### Community 1 - "Ricerca Squadre (Team Search)"
 Cohesion: 0.10
@@ -145,9 +145,9 @@ Nodes (48): _ricercaSquadre, RS_STATI, rsAddTappa(), _rsBadgeHtml(), _rsBuildSqu
 Cohesion: 0.09
 Nodes (41): commessaRegione(), _geoCache, _geoCacheSaveSingle(), geocodifica(), MAP_COLORS, _mapCollapsedCommesse, _mapCollapsedRegioniOp, _mapColor() (+33 more)
 
-### Community 3 - "Weekly Planning Core & Mail"
-Cohesion: 0.10
-Nodes (39): formatDate(), isoWeekToMonday(), isoWeekYear(), pwCellCantieri(), pwData, pwDoppiaWeek, pwDwCount(), pwDwLoad() (+31 more)
+### Community 3 - "weekly-mail-core.js"
+Cohesion: 0.09
+Nodes (42): formatDate(), isoWeekToMonday(), isoWeekYear(), pwCellCantieri(), pwData, pwDoppiaWeek, pwDwCount(), pwDwLoad() (+34 more)
 
 ### Community 4 - "Attestati (Certifications) Tracking"
 Cohesion: 0.12
@@ -163,7 +163,7 @@ Nodes (36): PW_JIRA_EXTRA_FIELD_LABELS, _pwExtraFieldsByKey, pwExtraFieldSelectO
 
 ### Community 7 - "dashboard-crud-helpers.js"
 Cohesion: 0.13
-Nodes (28): closeModal(), cpSelectModal(), deleteCommessa(), deleteOperatore(), esc(), getOperatoriAttivi(), HELP_TEXTS, isOperatoreLicenziato() (+20 more)
+Nodes (27): closeModal(), cpSelectModal(), deleteCommessa(), deleteOperatore(), esc(), getOperatoriAttivi(), HELP_TEXTS, isOperatoreLicenziato() (+19 more)
 
 ### Community 8 - "Pianifica Spostamenti (Route Planner)"
 Cohesion: 0.18
@@ -342,15 +342,15 @@ Cohesion: 0.18
 Nodes (16): exportLimitazioniXlsx(), limBadgeOpCard(), limDescrizioneRegistro(), _limFiltri, limFoglio(), limImportFile(), limImportParseWorkbook(), limImportPick() (+8 more)
 
 ### Community 82 - "ai-assistant.js"
-Cohesion: 0.17
-Nodes (15): AI_PROVIDER_DEFAULT_MODEL, aiAppendMessage(), aiCheckStatus(), aiConfigCall(), aiConfigMsg(), aiConfigOpen(), aiConfigPopulate(), aiConfigRevokeKey() (+7 more)
+Cohesion: 0.11
+Nodes (28): AI_PROVIDER_DEFAULT_MODEL, aiAppendMessage(), aiCheckStatus(), aiConfigCall(), aiConfigMsg(), aiConfigOpen(), aiConfigPopulate(), aiConfigRevokeKey() (+20 more)
 
 ## Ambiguous Edges - Review These
 - `Stack tecnico (Tailwind, Chart.js, Leaflet.js, Supabase, GitHub Pages)` → `v18.58.0 removed unused sortablejs/chart.js CDN references`  [AMBIGUOUS]
   README.md · relation: conceptually_related_to
 
 ## Knowledge Gaps
-- **170 isolated node(s):** `_aiHistory`, `AI_PROVIDER_DEFAULT_MODEL`, `PW_TAB_KEYS`, `SB_PAGE_LABELS`, `_sbDirty` (+165 more)
+- **174 isolated node(s):** `pwData`, `pwFerie`, `pwFerieDettagli`, `pwDoppiaWeek`, `PW_TAB_KEYS` (+169 more)
   These have ≤1 connection - possible missing edges or undocumented components.
 - **28 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
 
@@ -367,7 +367,7 @@ _Questions this graph is uniquely positioned to answer:_
   _High betweenness centrality (0.002) - this node is a cross-community bridge._
 - **Are the 4 inferred relationships involving `esc()` (e.g. with `listBox()` and `pwJiraSubtaskCheckExisting()`) actually correct?**
   _`esc()` has 4 INFERRED edges - model-reasoned connections that need verification._
-- **What connects `_aiHistory`, `AI_PROVIDER_DEFAULT_MODEL`, `PW_TAB_KEYS` to the rest of the system?**
-  _170 weakly-connected nodes found - possible documentation gaps or missing edges._
-- **Should `Supabase Admin & Auth Panel` be split into smaller, more focused modules?**
-  _Cohesion score 0.06666666666666667 - nodes in this community are weakly interconnected._
+- **What connects `pwData`, `pwFerie`, `pwFerieDettagli` to the rest of the system?**
+  _174 weakly-connected nodes found - possible documentation gaps or missing edges._
+- **Should `sb-admin.js` be split into smaller, more focused modules?**
+  _Cohesion score 0.058823529411764705 - nodes in this community are weakly interconnected._
