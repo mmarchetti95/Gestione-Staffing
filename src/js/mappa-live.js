@@ -1003,6 +1003,7 @@ function mlOpenKpi(kind) {
   } else if (kind === 'nostato') {
     if (title) title.textContent = 'Cantieri senza stato Jira';
     body.innerHTML = mlKpiNoStatoHtml();
+    mlBindGriglia(body);
   }
   body.scrollTop = 0;
 }
@@ -1124,8 +1125,21 @@ function mlKpiNoStatoHtml() {
     (n ? conSub : senzaSub).push(g);
   });
 
+  // Pulsante "Apri in Griglia" per ogni squadra del cantiere: per quelli senza
+  // sottotask la Griglia è proprio il posto dove crearlo. Indici su _mlGroups
+  // (non su `senza`) perché l'handler li risolve da lì, vedi mlBindGriglia.
+  const puoGriglia = typeof sbCanSeePage !== 'function' || sbCanSeePage('weekly:griglia');
+  const bottoni = g => {
+    if (!puoGriglia) return '';
+    const gi = _mlGroups.indexOf(g);
+    return '<span class="ml-griglia-btns">' + g.items.map((it, ii) => it.loc
+      ? '<button class="ml-link ml-griglia-link" data-ml-griglia-g="' + gi + '" data-ml-griglia="' + ii + '"' +
+        ' title="Apri la Griglia settimanale su questa cella (' + esc(it.loc.label) + ')">📅 ' +
+        (g.items.length > 1 ? esc(it.squadra) : 'Apri in Griglia') + '</button>'
+      : '').join('') + '</span>';
+  };
   const elenco = arr => '<div class="ml-cant-list">' + arr.map(g =>
-    '<div class="ml-cant"><div class="ml-cant-h"><b>' + esc(g.cantiere) + '</b></div>' +
+    '<div class="ml-cant"><div class="ml-cant-h"><b>' + esc(g.cantiere) + '</b>' + bottoni(g) + '</div>' +
     '<div class="ml-cant-m">' + esc([...g.commesse].join(', ')) + '</div></div>').join('') + '</div>';
 
   let html = '';
@@ -1283,6 +1297,18 @@ function mlOpenDettaglio(idx, silent) {
   });
   if (!silent) body.scrollTop = 0;
   mlEnsureStrumenti(g.items.reduce((acc, it) => acc.concat(it.strumenti || []), []));
+}
+
+/* Pulsanti "Apri in Griglia" dei pannelli KPI: gruppo e voce arrivano come indici
+   su _mlGroups / g.items, mai come nomi, così nessun apostrofo passa per un handler. */
+function mlBindGriglia(root) {
+  root.querySelectorAll('[data-ml-griglia-g]').forEach(b => {
+    b.onclick = () => {
+      const g = _mlGroups[parseInt(b.dataset.mlGrigliaG, 10)];
+      const it = g && g.items[parseInt(b.dataset.mlGriglia, 10)];
+      if (it) mlGoToGriglia(it.loc);
+    };
+  });
 }
 
 /* Porta alla Griglia settimanale sulla cella (commessa/squadra/operatore/giorno)

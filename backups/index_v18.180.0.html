@@ -1371,8 +1371,6 @@
   .ml-link { background: none; border: none; padding: 0; font: inherit; color: var(--accent); cursor: pointer; text-align: left; text-decoration: underline; }
   .ml-griglia-link { margin-left: auto; font-size: 11px; font-weight: 600; text-decoration: none; white-space: nowrap; }
   .ml-griglia-link:hover { text-decoration: underline; }
-  .ml-griglia-btns { margin-left: auto; display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 4px 10px; }
-  .ml-griglia-btns .ml-griglia-link { margin-left: 0; }
 
   .ml-meteo-head { display: flex; align-items: center; gap: 9px; margin-bottom: 6px; }
   .ml-meteo-ico { font-size: 24px; }
@@ -1422,7 +1420,7 @@
     <div class="flex items-center gap-2">
       <button id="btn-presentation" class="px-3 py-1.5 text-sm rounded hover:bg-white/10" style="border:1px solid var(--dark-border-strong);color:var(--dark-text);visibility:visible;">📊 Modalità presentazione</button>
       <div class="text-xs pl-2" style="border-left:1px solid var(--dark-border-strong);color:var(--dark-text-muted);">
-        <span id="app-version" class="font-medium" style="color:var(--accent);">v18.180.1</span> · Michele Marchetti
+        <span id="app-version" class="font-medium" style="color:var(--accent);">v18.180.0</span> · Michele Marchetti
         <span id="sb-role-badge" style="margin-left:8px;padding:1px 8px;border-radius:9999px;background:rgba(255,255,255,.1);color:var(--dark-text);font-weight:600;"></span>
       </div>
     </div>
@@ -21881,7 +21879,6 @@ function mlOpenKpi(kind) {
   } else if (kind === 'nostato') {
     if (title) title.textContent = 'Cantieri senza stato Jira';
     body.innerHTML = mlKpiNoStatoHtml();
-    mlBindGriglia(body);
   }
   body.scrollTop = 0;
 }
@@ -22003,21 +22000,8 @@ function mlKpiNoStatoHtml() {
     (n ? conSub : senzaSub).push(g);
   });
 
-  // Pulsante "Apri in Griglia" per ogni squadra del cantiere: per quelli senza
-  // sottotask la Griglia è proprio il posto dove crearlo. Indici su _mlGroups
-  // (non su `senza`) perché l'handler li risolve da lì, vedi mlBindGriglia.
-  const puoGriglia = typeof sbCanSeePage !== 'function' || sbCanSeePage('weekly:griglia');
-  const bottoni = g => {
-    if (!puoGriglia) return '';
-    const gi = _mlGroups.indexOf(g);
-    return '<span class="ml-griglia-btns">' + g.items.map((it, ii) => it.loc
-      ? '<button class="ml-link ml-griglia-link" data-ml-griglia-g="' + gi + '" data-ml-griglia="' + ii + '"' +
-        ' title="Apri la Griglia settimanale su questa cella (' + esc(it.loc.label) + ')">📅 ' +
-        (g.items.length > 1 ? esc(it.squadra) : 'Apri in Griglia') + '</button>'
-      : '').join('') + '</span>';
-  };
   const elenco = arr => '<div class="ml-cant-list">' + arr.map(g =>
-    '<div class="ml-cant"><div class="ml-cant-h"><b>' + esc(g.cantiere) + '</b>' + bottoni(g) + '</div>' +
+    '<div class="ml-cant"><div class="ml-cant-h"><b>' + esc(g.cantiere) + '</b></div>' +
     '<div class="ml-cant-m">' + esc([...g.commesse].join(', ')) + '</div></div>').join('') + '</div>';
 
   let html = '';
@@ -22175,18 +22159,6 @@ function mlOpenDettaglio(idx, silent) {
   });
   if (!silent) body.scrollTop = 0;
   mlEnsureStrumenti(g.items.reduce((acc, it) => acc.concat(it.strumenti || []), []));
-}
-
-/* Pulsanti "Apri in Griglia" dei pannelli KPI: gruppo e voce arrivano come indici
-   su _mlGroups / g.items, mai come nomi, così nessun apostrofo passa per un handler. */
-function mlBindGriglia(root) {
-  root.querySelectorAll('[data-ml-griglia-g]').forEach(b => {
-    b.onclick = () => {
-      const g = _mlGroups[parseInt(b.dataset.mlGrigliaG, 10)];
-      const it = g && g.items[parseInt(b.dataset.mlGriglia, 10)];
-      if (it) mlGoToGriglia(it.loc);
-    };
-  });
 }
 
 /* Porta alla Griglia settimanale sulla cella (commessa/squadra/operatore/giorno)

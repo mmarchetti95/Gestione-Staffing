@@ -112,6 +112,9 @@ Limite noto: il progetto Supabase è sul piano **Free**, che non include backup 
 
 ## Changelog
 
+## v18.180.1
+- feat: **Mappa — "📅 Apri in Griglia" anche nel pannello "Cantieri senza stato Jira"** (riquadro KPI). Ogni cantiere dell'elenco ha il pulsante (uno per squadra se sul cantiere lavorano più squadre), che porta alla cella della Griglia: utile soprattutto per i cantieri senza sottotask, che si creano proprio da lì. Nessuna modifica Supabase.
+
 ## v18.180.0
 - feat: **Mappa — "📅 Apri in Griglia" nel dettaglio cantiere.** Ogni riquadro squadra del pannello laterale ha un pulsante che apre la Pianificazione Settimanale sulla Griglia, alla settimana della voce, espande commessa/squadra se collassate e scrolla ed evidenzia la cella (operatore + giorno). In vista settimana porta al primo giorno pianificato, in vista storico alla settimana più recente. È l'unico punto in cui la Mappa sposta la settimana della Griglia (per scelta esplicita dell'utente).
 - feat: **Mappa — strumenti con nome**, non solo la chiave: "GAR-190 · Mavic 3" (stessa etichetta della tendina in Griglia, strumenti fornitore compresi). Se nel browser manca l'elenco strumenti viene scaricato da Jira in automatico una volta per sessione. Nessuna modifica Supabase.
