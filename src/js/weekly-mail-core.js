@@ -308,7 +308,7 @@ function pwGeneraMail() {
           operatori.forEach(op => {
             const g = (op.giorni || {})[di] || {};
             pwCellCantieri(g).forEach(c => cantieriSett.add(c));
-            if (g.attivita && g.attivita.trim()) attivitaSett.add(g.attivita.trim());
+            pwCellAttivitaElenco(g).forEach(a => attivitaSett.add(a));
           });
         }
 
@@ -668,6 +668,13 @@ function pwCellVoci(g) {
   return pwCellCantieriRaw(g)
     .map((c, i) => ({ cantiere: (c || '').trim(), attivita: pwCellAttivitaAt(g, i) }))
     .filter(v => v.cantiere);
+}
+
+// Singole attività distinte della cella, per chi raccoglie le attività di più celle:
+// g.attivita è il riepilogo già unito ("A, B"), e aggiungerlo così com'è a un Set
+// ripeterebbe la stessa attività presente in celle diverse.
+function pwCellAttivitaElenco(g) {
+  return [...new Set(pwCellAttivitaRaw(g).filter(Boolean))];
 }
 
 // Converte una cella al formato per-cantiere (se non lo è già) e restituisce l'array,

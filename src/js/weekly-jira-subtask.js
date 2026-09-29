@@ -489,6 +489,60 @@ function pwJiraGruppoLabel(comune, attivita) {
   return comune + (attivita ? ' · ' + attivita : '');
 }
 
+/* ----- Navigazione tra i passi e avvisi che non chiudono il flusso -----
+   Ogni passo riscrive #modal-root. Prima di passare al successivo, il nodo del
+   passo corrente viene messo da parte (pwJiraStepPush) con tutto il suo stato:
+   Epic/Task scelti, spunte, valori digitati, handler. "← Indietro" lo rimette
+   com'era (pwJiraStepBack), senza dover ricominciare dal primo passo.
+   Dentro il flusso gli avvisi usano pwJiraFlowAlert, che si apre SOPRA la
+   modale corrente e alla chiusura la lascia intatta: showAlertModal riscrive
+   #modal-root, quindi il suo "OK" chiudeva l'intero flusso. */
+let _pwJiraSteps = [];
+
+function pwJiraStepPush() {
+  const root = document.getElementById('modal-root');
+  const node = root && root.firstElementChild;
+  if (node) _pwJiraSteps.push(node);
+}
+
+function pwJiraStepBack() {
+  const node = _pwJiraSteps.pop();
+  if (!node) { closeModal(); return; }
+  pwJiraSearchPanelClose();
+  document.getElementById('modal-root').replaceChildren(node);
+}
+
+function pwJiraBackButtonHtml(label) {
+  if (!_pwJiraSteps.length) return '';
+  return '<button type="button" onclick="pwJiraStepBack()" class="px-3 py-1.5 text-sm border border-slate-300 rounded hover:bg-slate-50 mr-auto">← ' + esc(label || 'Indietro') + '</button>';
+}
+
+function pwJiraFlowAlert(msg) {
+  const root = document.getElementById('modal-root');
+  if (!root) return;
+  const layer = document.createElement('div');
+  layer.className = 'modal-backdrop';
+  layer.innerHTML = '<div class="bg-white rounded-lg shadow-xl w-full max-w-md mx-4 p-5"><div class="mb-4 whitespace-pre-line text-sm">' + esc(msg).replace(/\n/g, '<br>') + '</div><div class="flex justify-end"><button type="button" class="px-4 py-1.5 text-sm bg-teal-600 text-white rounded hover:bg-teal-700">OK</button></div></div>';
+  layer.querySelector('button').onclick = () => layer.remove();
+  root.appendChild(layer);
+}
+
+// Schermata di esito/errore con "← Indietro" (al passo dei dati), "Riprova" e
+// "Chiudi". onRetry opzionale.
+function pwJiraFlowResultScreen(commessaNome, bodyHtml, onRetry, retryLabel) {
+  const root = document.getElementById('modal-root');
+  root.innerHTML = `<div class="modal-backdrop"><div class="bg-white rounded-lg shadow-xl w-full max-w-xl mx-4 my-8 p-5 max-h-[90vh] overflow-y-auto">
+    <h3 class="font-semibold text-slate-900 mb-3">Crea sottotask Jira — ${esc(commessaNome)}</h3>
+    <div class="text-sm">${bodyHtml}</div>
+    <div class="flex justify-end gap-2 mt-4">
+      ${pwJiraBackButtonHtml('Indietro, modifica i dati')}
+      <button type="button" onclick="closeModal()" class="px-3 py-1.5 text-sm border border-slate-300 rounded">Chiudi</button>
+      ${onRetry ? '<button type="button" id="pw-jira-retry" class="px-3 py-1.5 text-sm bg-teal-600 text-white rounded hover:bg-teal-700">' + esc(retryLabel || 'Riprova') + '</button>' : ''}
+    </div>
+  </div></div>`;
+  if (onRetry) document.getElementById('pw-jira-retry').onclick = onRetry;
+}
+
 /* ----- Step 1: scelta, per ciascun comune, dell'Epic e poi del Task Jira sotto quell'Epic -----
    Una commessa può avere più Epic (aree/lotti diversi), quindi non è fissato in
    anagrafica: si sceglie qui, comune per comune, a cascata (prima Epic poi Task,
@@ -500,6 +554,7 @@ function pwJiraGruppoLabel(comune, attivita) {
    finale (vedi pwJiraSubtaskCheckExisting). */
 function pwJiraSubtaskOpenComuniModal(cIdx, commessaNome, meta, gruppi, squadreOrder) {
   const root = document.getElementById('modal-root');
+  _pwJiraSteps = []; // nuovo flusso: nessun passo precedente
 
   // Comuni per cui TUTTI gli operatori hanno già un sottotask (creato o già
   // esistente, vedi bc.jiraSubtask) partono con "salta" pre-selezionato e i
@@ -759,7 +814,7 @@ function pwJiraSubtaskOpenComuniModal(cIdx, commessaNome, meta, gruppi, squadreO
       if (skipChk && skipChk.checked) return;
       if (!chosenTasks[i]) missing.push(pwJiraGruppoLabel(gr.comune, gr.attivita));
     });
-    if (missing.length) { showAlertModal('Scegli Epic e Task per: ' + missing.join(', ') + ' (oppure spunta "salta").'); return; }
+    if (missing.length) { pwJiraFlowAlert('Scegli Epic e Task per: ' + missing.join(', ') + ' (oppure spunta "salta").'); return; }
 
     const items = [];
     const skipped = [];
@@ -774,8 +829,8 @@ function pwJiraSubtaskOpenComuniModal(cIdx, commessaNome, meta, gruppi, squadreO
         else { skipped.push(`${label} / ${nomeOp} (email non trovata in anagrafica)`); pwJiraSubtaskMarkMissingEmail(cIdx, gr.comune, nomeOp, gr.attivita); }
       });
     });
-    if (items.length === 0) { showAlertModal('Nessun sottotask da creare' + (skipped.length ? ':\n' + skipped.join('\n') : '.')); return; }
-    closeModal();
+    if (items.length === 0) { pwJiraFlowAlert('Nessun sottotask da creare' + (skipped.length ? ':\n' + skipped.join('\n') : '.')); return; }
+    pwJiraStepPush();
     pwJiraSubtaskOpenSelectItemsModal(cIdx, commessaNome, meta, items, skipped);
   };
 }
@@ -819,6 +874,7 @@ function pwJiraSubtaskOpenSelectItemsModal(cIdx, commessaNome, meta, items, skip
     </div>
     <div id="pw-jira-select-list">${rows}</div>
     <div class="flex justify-end gap-2 mt-4">
+      ${pwJiraBackButtonHtml()}
       <button onclick="closeModal()" class="px-3 py-1.5 text-sm border border-slate-300 rounded">Annulla</button>
       <button id="pw-jira-select-continua" class="px-3 py-1.5 text-sm bg-teal-600 text-white rounded hover:bg-teal-700">Continua</button>
     </div>
@@ -832,7 +888,8 @@ function pwJiraSubtaskOpenSelectItemsModal(cIdx, commessaNome, meta, items, skip
     root.querySelectorAll('.pw-jira-select-item').forEach(chk => {
       if (chk.checked) selected.push(items[parseInt(chk.dataset.idx)]);
     });
-    if (selected.length === 0) { showAlertModal('Seleziona almeno un sottotask da creare.'); return; }
+    if (selected.length === 0) { pwJiraFlowAlert('Seleziona almeno un sottotask da creare.'); return; }
+    pwJiraStepPush();
     pwJiraSubtaskOpenExtraFieldsModal(cIdx, commessaNome, meta, selected, skippedComuni);
   };
 }
@@ -1055,6 +1112,7 @@ async function pwJiraSubtaskOpenExtraFieldsModal(cIdx, commessaNome, meta, items
     ${activitySectionHtml}
     ${productionWeightSectionHtml}
     <div class="flex justify-end gap-2 mt-4">
+      ${pwJiraBackButtonHtml()}
       <button onclick="closeModal()" class="px-3 py-1.5 text-sm border border-slate-300 rounded">Annulla</button>
       <button id="pw-jira-extra-continua" class="px-3 py-1.5 text-sm bg-teal-600 text-white rounded hover:bg-teal-700">Continua</button>
     </div>
@@ -1108,6 +1166,7 @@ async function pwJiraSubtaskOpenExtraFieldsModal(cIdx, commessaNome, meta, items
       });
     }
     pwJiraExtraMemorySave(meta.jira_project_code, { tempoTeam: extraFields.tempoTeam, activityType: memoryActivity });
+    pwJiraStepPush();
     pwJiraSubtaskPreview(cIdx, commessaNome, items, skippedComuni, extraFields, visibleFields);
   };
 }
@@ -1151,8 +1210,17 @@ function pwJiraSubtaskExtraFieldsRecapHtml(extraFields, fields) {
 }
 
 /* ----- Step 2: anteprima (dryRun) ----- */
-async function pwJiraSubtaskPreview(cIdx, commessaNome, items, skippedComuni, extraFields, fields) {
+async function pwJiraSubtaskPreview(cIdx, commessaNome, allItems, skippedComuni, extraFields, fields) {
   const root = document.getElementById('modal-root');
+  // Esclusi gli item già creati in un tentativo precedente di questo flusso
+  // (vedi _done in pwJiraSubtaskConfirmCreate): su "Riprova"/"Indietro" non
+  // ci si affida al solo controllo di esistenza su Jira, la cui ricerca può
+  // non vedere ancora un sottotask creato pochi secondi prima.
+  const items = allItems.filter(it => !it._done);
+  if (items.length === 0) {
+    pwJiraFlowResultScreen(commessaNome, '<div class="text-slate-700">Tutti i sottotask selezionati sono già stati creati.</div>');
+    return;
+  }
   root.innerHTML = `<div class="modal-backdrop"><div class="bg-white rounded-lg shadow-xl w-full max-w-xl mx-4 my-8 p-5 max-h-[90vh] overflow-y-auto">
     <h3 class="font-semibold text-slate-900 mb-3">Crea sottotask Jira — ${esc(commessaNome)}</h3>
     <div id="pw-jira-preview-body" class="text-sm text-slate-500">⏳ Verifica su Jira in corso…</div>
@@ -1162,8 +1230,9 @@ async function pwJiraSubtaskPreview(cIdx, commessaNome, items, skippedComuni, ex
   try {
     results = await pwJiraCreateSubtasks(items, true, extraFields);
   } catch (e) {
-    const body = document.getElementById('pw-jira-preview-body');
-    if (body) body.innerHTML = `<div class="text-red-600 text-sm">Errore durante il controllo su Jira: ${esc(e.message || String(e))}</div><div class="flex justify-end mt-4"><button onclick="closeModal()" class="px-3 py-1.5 text-sm border border-slate-300 rounded">Chiudi</button></div>`;
+    pwJiraFlowResultScreen(commessaNome,
+      `<div class="text-red-600">Errore durante il controllo su Jira: ${esc(e.message || String(e))}</div>`,
+      () => pwJiraSubtaskPreview(cIdx, commessaNome, items, skippedComuni, extraFields, fields), 'Riprova la verifica');
     return;
   }
 
@@ -1211,14 +1280,16 @@ function pwJiraSubtaskRenderPreview(cIdx, commessaNome, items, results, skippedC
     ${extraFieldsRecapHtml}
     <div>${rows}</div>
     ${skippedHtml}
+    ${wouldCreate === 0 ? '<div class="text-[11px] text-slate-500 mt-2">Nessun sottotask da creare: torna indietro per modificare la selezione o i campi.</div>' : ''}
     <div class="flex justify-end gap-2 mt-4">
+      ${pwJiraBackButtonHtml()}
       <button onclick="closeModal()" class="px-3 py-1.5 text-sm border border-slate-300 rounded">Annulla</button>
       <button id="pw-jira-confirm-create" class="px-3 py-1.5 text-sm bg-teal-600 text-white rounded hover:bg-teal-700 disabled:opacity-50" ${(wouldCreate === 0 || !sbCanWrite()) ? 'disabled' : ''}>Crea ${wouldCreate} sottotask</button>
     </div>
   </div></div>`;
 
   if (wouldCreate > 0) {
-    document.getElementById('pw-jira-confirm-create').onclick = () => pwJiraSubtaskConfirmCreate(cIdx, commessaNome, items, extraFields, results);
+    document.getElementById('pw-jira-confirm-create').onclick = () => pwJiraSubtaskConfirmCreate(cIdx, commessaNome, items, extraFields, results, skippedComuni, fields);
   }
 }
 
@@ -1227,7 +1298,7 @@ function pwJiraSubtaskRenderPreview(cIdx, commessaNome, items, results, skippedC
    usati SOLO come fallback se la chiamata reale fallisce nel suo insieme
    (vedi catch sotto) — non per la marcatura badge del percorso normale, che
    usa sempre i risultati reali. */
-async function pwJiraSubtaskConfirmCreate(cIdx, commessaNome, items, extraFields, previewResults) {
+async function pwJiraSubtaskConfirmCreate(cIdx, commessaNome, items, extraFields, previewResults, skippedComuni, fields) {
   if (!sbGuardWrite()) return;
   const root = document.getElementById('modal-root');
   root.innerHTML = `<div class="modal-backdrop"><div class="bg-white rounded-lg shadow-xl w-full max-w-md mx-4 p-5">
@@ -1253,11 +1324,18 @@ async function pwJiraSubtaskConfirmCreate(cIdx, commessaNome, items, extraFields
     const msg = e.message || String(e);
     const toMark = items.filter((_, i) => !(previewResults && previewResults[i] && (previewResults[i].status === 'already_exists' || previewResults[i].status === 'error')));
     pwJiraSubtaskApplyResultsToBadges(cIdx, toMark, toMark.map(() => ({ status: 'error', message: msg })), true);
-    showAlertModal('Errore durante la creazione: ' + msg);
+    // "Riprova" rifà l'anteprima (dryRun): i sottotask eventualmente creati
+    // prima dell'errore risultano "già esistenti" e non vengono duplicati.
+    pwJiraFlowResultScreen(commessaNome,
+      `<div class="text-red-600">Errore durante la creazione: ${esc(msg)}</div>`,
+      () => pwJiraSubtaskPreview(cIdx, commessaNome, items, skippedComuni, extraFields, fields), 'Riprova');
     return;
   }
 
   pwJiraSubtaskApplyResultsToBadges(cIdx, items, results, true);
+  results.forEach((r, i) => {
+    if (items[i] && (r.status === 'created' || r.status === 'already_exists')) items[i]._done = true;
+  });
 
   const created = results.filter(r => r.status === 'created');
   const already = results.filter(r => r.status === 'already_exists');
@@ -1265,6 +1343,19 @@ async function pwJiraSubtaskConfirmCreate(cIdx, commessaNome, items, extraFields
 
   let msg = `Sottotask creati: ${created.length}`;
   if (already.length) msg += `\nGià esistenti (non ricreati): ${already.length}`;
-  if (errors.length) msg += `\nErrori: ${errors.length}\n` + errors.map(e => `• ${e.taskKey} / ${e.operatorEmail}: ${e.message}`).join('\n');
-  showAlertModal(msg);
+  if (!errors.length) { showAlertModal(msg); return; }
+
+  // Con errori il flusso resta aperto: "← Indietro" torna ai dati da
+  // correggere, "Riprova" rifà l'anteprima (i sottotask appena creati
+  // risultano "già esistenti", quindi si ritentano solo quelli falliti).
+  const errorRows = results.map((r, i) => ({ r, item: items[i] || {} })).filter(x => x.r.status === 'error').map(({ r, item }) =>
+    `<div class="border-b border-slate-100 py-1.5">
+      <div class="truncate">${esc(pwJiraGruppoLabel(item._comune || '', item._attivita))} — ${esc(item._operatore || r.operatorEmail || '')} <span class="text-[11px] text-slate-400">(${esc(r.taskKey || '')})</span></div>
+      <div class="text-[11px] text-red-700 break-words">${esc(r.message || 'Errore sconosciuto')}</div>
+    </div>`).join('');
+  pwJiraFlowResultScreen(commessaNome,
+    `<div class="text-slate-700 mb-2 whitespace-pre-line">${esc(msg)}</div>
+     <div class="text-red-700 font-medium mb-1">Errori: ${errors.length}</div>
+     <div>${errorRows}</div>`,
+    () => pwJiraSubtaskPreview(cIdx, commessaNome, items, skippedComuni, extraFields, fields), 'Riprova i falliti');
 }

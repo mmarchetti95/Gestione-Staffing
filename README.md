@@ -114,6 +114,12 @@ Limite noto: il progetto Supabase è sul piano **Free**, che non include backup 
 
 ## Changelog
 
+## v18.182.1
+- fix: **Sottotask Jira: un errore non chiude più tutto il flusso.** Gli avvisi dentro il flusso (es. "Seleziona almeno un sottotask da creare", "Scegli Epic e Task per…") si aprono sopra la finestra corrente e, premendo OK, la lasciano com'era, con tutte le scelte fatte.
+- feat: **pulsante "← Indietro"** in ogni passo dopo il primo (selezione sottotask, campi extra, anteprima): si torna al passo precedente con Epic/Task, spunte e valori già inseriti, senza ricominciare da capo.
+- feat: se la **verifica o la creazione su Jira fallisce**, o solo alcuni sottotask vengono creati, invece del semplice messaggio compare una schermata con gli errori per riga e i pulsanti "← Indietro, modifica i dati", "Riprova" e "Chiudi". Riprova e Indietro ritentano solo i sottotask non ancora creati, senza duplicare quelli già creati.
+- fix: **mail squadre e Mappa squadre**: la stessa attività non compare più ripetuta nella riga "📌 Attività" quando è presente in più celle (effetto delle attività per cantiere della v18.182.0).
+
 ## v18.182.0
 - feat: **Griglia — un'attività per ogni cantiere.** Ogni cantiere di una cella ha ora il suo campo attività, subito sotto; "+ cantiere" aggiunge un cantiere con un'attività nuova, vuota. Lo stesso cantiere può comparire due volte nello stesso giorno con due attività diverse. Le celle esistenti non cambiano: l'attività unica della cella vale per tutti i suoi cantieri finché non la si modifica. Copia/incolla di cella e settimana mantengono l'abbinamento cantiere/attività. Controllo Produzione, mail, report e Mappa squadre vedono l'elenco delle attività della cella.
 - feat: **Sottotask Jira — un sottotask per attività.** Nel primo passo c'è una riga per ogni coppia cantiere + attività, ciascuna con il suo Epic/Task: lo stesso cantiere con due attività produce due sottotask sotto due Task diversi. Il badge 🎫 in Griglia è legato alla singola coppia cantiere/attività (i badge creati prima restano validi finché sul cantiere c'è una sola attività). La Mappa raccoglie lo stato di tutti i sottotask del cantiere.

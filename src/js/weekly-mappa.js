@@ -285,7 +285,7 @@ function pwMapBuildSquadItems(dayIdx) {
       ops.forEach(op => {
         const g = (op.giorni || {})[dayIdx] || {};
         pwCellCantieri(g).forEach(c => cantieriOggi.add(c));
-        if (g.attivita && g.attivita.trim()) attvOggi.add(g.attivita.trim());
+        pwCellAttivitaElenco(g).forEach(a => attvOggi.add(a));
       });
       if (!cantieriOggi.size) return;
 
@@ -336,7 +336,7 @@ function pwMapBuildSquadItemsWeek() {
         ops.forEach(op => {
           const g = (op.giorni || {})[d] || {};
           pwCellCantieri(g).forEach(c => cantieriGiorno.add(c));
-          if (g.attivita && g.attivita.trim()) attvGiorno.add(g.attivita.trim());
+          pwCellAttivitaElenco(g).forEach(a => attvGiorno.add(a));
         });
         if (!cantieriGiorno.size) continue;
 
