@@ -112,6 +112,9 @@ Limite noto: il progetto Supabase è sul piano **Free**, che non include backup 
 
 ## Changelog
 
+## v18.179.2
+- fix: **Mappa — colonna Regione non più bloccata su 'n/d' all'apertura.** All'avvio la rubrica luoghi (`geo_cache`) veniva ancora scaricata da Supabase mentre la Mappa si disegnava: tutti i cantieri risultavano non localizzati e la colonna mostrava solo 'n/d' finché non si cambiava data. Ora la Mappa attende la rubrica, mentre la geocodifica è in corso la colonna mostra "⏳ in caricamento…" (i cantieri non ancora cercati non finiscono più sotto 'n/d') e al termine filtri ed elenco si aggiornano da soli. Con un filtro Regione attivo i cantieri non ancora localizzati vengono comunque geocodificati, e la regione selezionata non viene scartata durante il caricamento. Nessuna modifica Supabase.
+
 ## v18.179.1
 - fix: **Mappa — casella di ricerca anche sulla colonna Regione**, per uniformità con Commessa/Operatore/Cantiere: restava l'unica colonna a elenco senza modo di restringere le chip digitando.
 

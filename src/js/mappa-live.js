@@ -41,6 +41,12 @@ const ML_JIRA_MAX_CHUNKS = 12;
    minuti. Se ne fa un blocco per volta e si riprende da soli poco dopo. */
 const ML_GEO_MAX_PER_RENDER = 25;
 
+/* Regione di un cantiere non ancora geocodificato (vedi mlRegioneCantiere): non
+   compare come chip, fa mostrare "in caricamento" nella colonna Regione. */
+const ML_REGIONE_PENDING = '__pending__';
+let _mlGeoCacheReady = false;       // rubrica geo_cache caricata da Supabase
+const _mlGeoFailed = new Set();     // ricerche fallite per errore di rete in questa sessione
+
 /* Cache persistenti (localStorage, per browser). Sono solo acceleratori: se
    mancano o sono scadute la Mappa funziona identica, solo più lenta al primo giro.
    Il TTL lungo sugli stati Jira è sostenibile perché la vista giorno/settimana li
@@ -281,6 +287,10 @@ function mlBuildItems(scope) {
    la stessa condizione già mostrata dal riquadro KPI "Non localizzati". */
 function mlRegioneCantiere(cantiere) {
   const key = (cantiere || '').toLowerCase().trim().replace(/\s+/g, ' ');
+  // Non ancora cercato: la regione non è "ignota", è in arrivo. Va distinto da
+  // 'n/d', altrimenti all'apertura tutti i cantieri finirebbero sotto 'n/d'
+  // finché la geocodifica non ha finito.
+  if (mlGeoPending(key)) return ML_REGIONE_PENDING;
   const g = mlGeo(key);
   if (!g || !g.label) return 'n/d';
   return ML_REGIONI.find(r => g.label.indexOf(r) !== -1) || 'n/d';
@@ -370,6 +380,15 @@ function mlTasksOf(it) {
    refresh _geoCacheLoad() la rilegge come oggetto valido. Senza questo controllo
    un cantiere non geocodificabile verrebbe disegnato al largo dell'Africa (0,0) e
    sparirebbe dal conteggio "Non localizzati" invece di essere segnalato. */
+/* Cantiere la cui geocodifica non è ancora avvenuta: rubrica non ancora caricata
+   da Supabase, oppure nome mai cercato. Un nome la cui ricerca è fallita per
+   errore di rete (geocodifica() in quel caso non scrive nulla in _geoCache) non
+   conta come in attesa, o la colonna Regione resterebbe "in caricamento" per sempre. */
+function mlGeoPending(key) {
+  if (!_mlGeoCacheReady) return true;
+  return !(key in _geoCache) && !_mlGeoFailed.has(key);
+}
+
 function mlGeo(key) {
   const g = _geoCache[key];
   if (!g) return null;
@@ -623,17 +642,36 @@ async function mlRender(opts) {
 
     if (loading) loading.style.display = 'flex';
 
+    // All'apertura dell'app la rubrica luoghi si sta ancora scaricando da Supabase:
+    // senza attenderla ogni cantiere risulterebbe non localizzato (regione 'n/d')
+    // e verrebbe ricercato di nuovo su Nominatim.
+    if (!_mlGeoCacheReady) {
+      if (!_geoCacheLoading) _geoCacheLoad();
+      await _geoCacheLoading;
+      _mlGeoCacheReady = true;
+    }
+
     // Geocodifica sequenziale dei cantieri non ancora in rubrica (rate-limit Nominatim),
     // a blocchi: quelli che avanzano vengono ripresi dal render di coda qui sotto.
+    // Si scorrono TUTTI i cantieri dello scope, non solo quelli filtrati: con un
+    // filtro Regione attivo un cantiere non ancora localizzato verrebbe escluso e
+    // così non verrebbe mai localizzato, restando fuori per sempre.
     let geocodificati = 0;
     let daGeocodificare = 0;
-    for (const g of groups) {
-      if (g.key in _geoCache) continue;
+    for (const g of mlGroupByCantiere(tutti)) {
+      if (!mlGeoPending(g.key)) continue;
       if (geocodificati >= ML_GEO_MAX_PER_RENDER) { daGeocodificare++; continue; }
       await geocodifica(g.cantiere);
+      if (!(g.key in _geoCache)) _mlGeoFailed.add(g.key);
       await new Promise(r => setTimeout(r, 300));
       geocodificati++;
     }
+
+    // Le regioni dipendono dalla geocodifica appena fatta: filtri ed elenco vanno
+    // ricalcolati adesso, non al prossimo cambio data (prima restavano 'n/d').
+    mlRenderFiltri(tutti);
+    items = mlApplyFilters(tutti);
+    groups = mlGroupByCantiere(items);
 
     if (o.reloadProduzione !== false) await mlLoadProduzione();
     if (o.reloadJira !== false) await mlRefreshTaskStatus(items, o.forceJira === true);
@@ -754,19 +792,32 @@ function mlRenderFiltri(tutti) {
   // Regione dedotta dal cantiere (geocoding), non dalla commessa — vedi mlRegioneCantiere.
   // 'n/d' sempre in fondo: è un ripiego, non una regione vera, e mischiata in
   // ordine alfabetico (tra "Molise" e "Piemonte") sembrerebbe una svista.
-  const regioni = [...new Set(cantieri.map(c => mlRegioneCantiere(c)))]
+  const regioniCantieri = cantieri.map(c => mlRegioneCantiere(c));
+  const regioniInCaricamento = regioniCantieri.includes(ML_REGIONE_PENDING);
+  const regioni = [...new Set(regioniCantieri.filter(r => r !== ML_REGIONE_PENDING))]
     .sort((a, b) => (a === 'n/d') - (b === 'n/d') || a.localeCompare(b));
 
   // Un filtro su una voce non più presente (cambio settimana) va scartato, altrimenti
   // resterebbe attivo e invisibile, filtrando via tutto senza spiegazione.
   [..._mlFiltroCommesse].forEach(c => { if (!commesse.includes(c)) _mlFiltroCommesse.delete(c); });
   [..._mlFiltroOperatori].forEach(o => { if (!operatori.includes(o)) _mlFiltroOperatori.delete(o); });
-  [..._mlFiltroRegioni].forEach(r => { if (!regioni.includes(r)) _mlFiltroRegioni.delete(r); });
+  // Mentre la geocodifica è in corso una regione selezionata può non comparire
+  // ancora solo perché i suoi cantieri non sono stati localizzati: non la si scarta.
+  if (!regioniInCaricamento) {
+    [..._mlFiltroRegioni].forEach(r => { if (!regioni.includes(r)) _mlFiltroRegioni.delete(r); });
+  }
   [..._mlFiltroCantieri].forEach(c => { if (!cantieri.includes(c)) _mlFiltroCantieri.delete(c); });
 
   mlRenderChips('ml-filtro-commesse', commesse, _mlFiltroCommesse, _mlSearchCommesse, 'nessuna commessa pianificata', true);
   mlRenderChips('ml-filtro-operatori', operatori, _mlFiltroOperatori, _mlSearchOperatori, 'nessun operatore pianificato', false);
-  mlRenderChips('ml-filtro-regioni', regioni, _mlFiltroRegioni, _mlSearchRegioni, 'nessuna regione nota', false);
+  mlRenderChips('ml-filtro-regioni', regioni, _mlFiltroRegioni, _mlSearchRegioni,
+    regioniInCaricamento ? '⏳ in caricamento…' : 'nessuna regione nota', false);
+  // Chip già disponibili ma altri cantieri ancora da localizzare: lo si dice in coda,
+  // così l'elenco parziale non sembra definitivo.
+  if (regioniInCaricamento && regioni.length) {
+    const elReg = document.getElementById('ml-filtro-regioni');
+    if (elReg) elReg.insertAdjacentHTML('beforeend', '<span class="ml-empty">⏳ in caricamento…</span>');
+  }
   mlRenderChips('ml-filtro-cantieri', cantieri, _mlFiltroCantieri, _mlSearchCantieri, 'nessun cantiere pianificato', false);
   mlRenderChipsStato();
 

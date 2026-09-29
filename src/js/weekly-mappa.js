@@ -35,19 +35,30 @@ function _mapColorStrumento(key) {
 
 /* Rubrica luoghi persistente (sincronizzata su Supabase) */
 let _geoCache = {};
-async function _geoCacheLoad() {
-  try {
-    const { data, error } = await _sbClient.from('geo_cache').select('key, lat, lng, label');
-    if (error) throw error;
-    if (data) {
-      _geoCache = {};
-      data.forEach(row => {
-        _geoCache[row.key] = { lat: row.lat, lng: row.lng, label: row.label };
-      });
+/* Promise del caricamento in corso (null = mai avviato). All'avvio _geoCacheLoad()
+   parte senza await: chi deve leggere la rubrica appena aperta l'app (es. la Mappa
+   ripristinata come ultimo screen) deve attendere questa, altrimenti vede una
+   rubrica vuota e tutti i cantieri risultano "non localizzati". */
+let _geoCacheLoading = null;
+function _geoCacheLoad() {
+  _geoCacheLoading = (async () => {
+    try {
+      const { data, error } = await _sbClient.from('geo_cache').select('key, lat, lng, label');
+      if (error) throw error;
+      if (data) {
+        const fresh = {};
+        data.forEach(row => {
+          fresh[row.key] = { lat: row.lat, lng: row.lng, label: row.label };
+        });
+        // Le voci geocodificate in questa sessione mentre il caricamento era in
+        // corso non vanno perse (sono già state salvate anche su Supabase).
+        _geoCache = Object.assign(fresh, _geoCache);
+      }
+    } catch(e) {
+      console.warn('Errore caricamento geo_cache da Supabase:', e);
     }
-  } catch(e) {
-    console.warn('Errore caricamento geo_cache da Supabase:', e);
-  }
+  })();
+  return _geoCacheLoading;
 }
 async function _geoCacheSaveSingle(key, value) {
   try {
