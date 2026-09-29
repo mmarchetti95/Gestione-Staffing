@@ -182,7 +182,7 @@ function mlWeekLabel(anno, week) {
    giorno/settimana, tutte quelle presenti in pwData per ML_ALL. */
 function mlScopeWeeks(scope) {
   if (scope !== ML_ALL) {
-    return [{ blocchi: mlWeekData(), label: mlWeekLabel(_mlAnno, _mlWeek) }];
+    return [{ blocchi: mlWeekData(), label: mlWeekLabel(_mlAnno, _mlWeek), anno: _mlAnno, week: _mlWeek }];
   }
   const out = [];
   Object.keys(pwData).sort().forEach(anno => {
@@ -191,7 +191,7 @@ function mlScopeWeeks(scope) {
     Object.keys(perWeek).sort((a, b) => Number(a) - Number(b)).forEach(week => {
       const blocchi = perWeek[week];
       if (Array.isArray(blocchi) && blocchi.length) {
-        out.push({ blocchi, label: mlWeekLabel(anno, week) });
+        out.push({ blocchi, label: mlWeekLabel(anno, week), anno, week });
       }
     });
   });
@@ -227,18 +227,19 @@ function mlBuildItems(scope) {
   const giorniDaScorrere = scope < 0 ? [0, 1, 2, 3, 4, 5] : [scope];
 
   mlScopeWeeks(scope).forEach(blk => {
-    blk.blocchi.forEach(bc => {
+    blk.blocchi.forEach((bc, cIdx) => {
       if (!bc.commessa) return;
       const color = _mapColor(bc.commessa);
       const jiraMap = bc.jiraSubtask || {};
 
-      (bc.squadre || []).forEach(sq => {
+      (bc.squadre || []).forEach((sq, sIdx) => {
         const squadra = sq.nome || 'Squadra';
-        const ops = (sq.operatori || []).filter(o => o.nome && o.nome.trim());
+        // Indice nell'array ORIGINALE (non filtrato): serve per ritrovare la cella in Griglia.
+        const ops = (sq.operatori || []).map((o, oIdx) => ({ o, oIdx })).filter(x => x.o.nome && x.o.nome.trim());
         const strumenti = (typeof pwSqStrumentiJira === 'function') ? pwSqStrumentiJira(sq).filter(k => k) : [];
 
         giorniDaScorrere.forEach(d => {
-          ops.forEach(op => {
+          ops.forEach(({ o: op, oIdx }) => {
             const g = (op.giorni || {})[d] || {};
             const attivita = (g.attivita || '').trim();
             pwCellCantieri(g).forEach(cantiere => {
@@ -254,6 +255,11 @@ function mlBuildItems(scope) {
                 items.push(byKey[key]);
               }
               const it = byKey[key];
+              // Cella della Griglia a cui porta "Apri in Griglia": la prima (giorno più
+              // basso) della settimana più recente in cui compare la voce.
+              if (!it.loc || it.loc.label !== blk.label) {
+                it.loc = { anno: blk.anno, week: blk.week, label: blk.label, cIdx, sIdx, oIdx, day: d };
+              }
               if (!it.operatori.includes(op.nome)) it.operatori.push(op.nome);
               if (attivita) it.attivita.add(attivita);
               it.giorni.add(d);
@@ -1272,16 +1278,68 @@ function mlOpenDettaglio(idx, silent) {
   body.querySelectorAll('[data-ml-commessa]').forEach(b => {
     b.onclick = () => mlOpenCommessa(b.dataset.mlCommessa);
   });
+  body.querySelectorAll('[data-ml-griglia]').forEach(b => {
+    b.onclick = () => { const it = g.items[parseInt(b.dataset.mlGriglia, 10)]; if (it) mlGoToGriglia(it.loc); };
+  });
   if (!silent) body.scrollTop = 0;
+  mlEnsureStrumenti(g.items.reduce((acc, it) => acc.concat(it.strumenti || []), []));
+}
+
+/* Porta alla Griglia settimanale sulla cella (commessa/squadra/operatore/giorno)
+   della voce. È una scelta esplicita dell'utente, quindi qui — e solo qui — la
+   settimana della Griglia viene spostata su quella della Mappa. switchScreen()
+   ricarica pwData e ridisegna in asincrono: si attende che la cella compaia e poi
+   si riusa pwGoToSearchCell (espande commessa/squadra collassate, scrolla, evidenzia). */
+function mlGoToGriglia(loc) {
+  if (!loc) return;
+  pwAnno = Number(loc.anno);
+  pwWeek = Number(loc.week);
+  _pwActiveTab = 'griglia';
+  switchScreen('weekly');
+  const sel = '#pw-view-griglia .pw-day-cell[data-cidx="' + loc.cIdx + '"][data-sidx="' + loc.sIdx +
+    '"][data-oidx="' + loc.oIdx + '"][data-day="' + loc.day + '"]';
+  let tentativi = 0;
+  const attendi = () => {
+    const vg = document.getElementById('pw-view-griglia');
+    const pronta = vg && !vg.classList.contains('hidden') && pwAnno === Number(loc.anno) && pwWeek === Number(loc.week);
+    if (pronta && document.querySelector(sel)) { pwGoToSearchCell(loc.cIdx, loc.sIdx, loc.oIdx, loc.day); return; }
+    if (++tentativi < 40) setTimeout(attendi, 100);
+  };
+  setTimeout(attendi, 100);
+}
+
+/* Nomi degli strumenti (GAR-190 -> "GAR-190 · Mavic 3"): vengono dalla cache
+   pw_strumenti_cache, che si riempie solo premendo "aggiorna strumenti" in Griglia.
+   Se nel browser manca qualche chiave la si scarica in silenzio una volta per
+   sessione e si ridisegna il pannello; se fallisce restano le sole chiavi. */
+let _mlStrumentiFetched = false;
+async function mlEnsureStrumenti(keys) {
+  if (_mlStrumentiFetched || typeof _sbClient === 'undefined' || !_sbClient || !_sbUser) return;
+  const manca = keys.some(k => k && k.indexOf('forn:') !== 0 && !pwStrumenti.some(s => s.key === k));
+  if (!manca) return;
+  _mlStrumentiFetched = true;
+  try {
+    const { data, error } = await _sbClient.functions.invoke('jira-list-strumenti', { body: {} });
+    if (error || !data || data.error || !Array.isArray(data.strumenti)) return;
+    pwStrumenti = data.strumenti;
+    try { localStorage.setItem('pw_strumenti_cache', JSON.stringify(pwStrumenti)); } catch (_) {}
+    if (_mlSelCantiere && mlIsActive()) {
+      const i = _mlGroups.findIndex(x => x.key === _mlSelCantiere);
+      if (i >= 0) mlOpenDettaglio(i, true);
+    }
+  } catch (_) {}
 }
 
 function mlDettaglioHtml(g) {
   const dateISO = mlDateISO(_mlDay);
   let html = '<div class="ml-sec"><div class="ml-sec-t">Meteo</div>' + mlMeteoHtml(g, dateISO) + '</div>';
 
-  g.items.forEach(it => {
+  const puoGriglia = typeof sbCanSeePage !== 'function' || sbCanSeePage('weekly:griglia');
+  g.items.forEach((it, i) => {
     html += '<div class="ml-sec">';
-    html += '<div class="ml-sec-t"><span class="ml-row-dot" style="background:' + esc(it.color) + '"></span>' + esc(it.squadra) + '</div>';
+    html += '<div class="ml-sec-t"><span class="ml-row-dot" style="background:' + esc(it.color) + '"></span>' + esc(it.squadra) +
+      (puoGriglia && it.loc ? '<button class="ml-link ml-griglia-link" data-ml-griglia="' + i + '" title="Apri la Griglia settimanale su questa cella (' + esc(it.loc.label) + ')">📅 Apri in Griglia</button>' : '') +
+      '</div>';
     html += '<div class="ml-kv"><span>Commessa</span><b><button class="ml-link" data-ml-commessa="' + esc(it.commessa) + '">' + esc(it.commessa) + '</button></b></div>';
     if (it.attivita) html += '<div class="ml-kv"><span>Attività</span><b>' + esc(it.attivita) + '</b></div>';
     html += '<div class="ml-kv"><span>Operatori</span><b>' + esc(it.operatori.join(', ')) + '</b></div>';
@@ -1291,7 +1349,7 @@ function mlDettaglioHtml(g) {
       html += '<div class="ml-kv"><span>Giorni</span><b>' + it.giorni.map(d => ML_DAY_SHORT[d]).join(' · ') + '</b></div>';
     }
     if (it.strumenti && it.strumenti.length) {
-      html += '<div class="ml-kv"><span>Strumenti</span><b>' + esc(it.strumenti.join(', ')) + '</b></div>';
+      html += '<div class="ml-kv"><span>Strumenti</span><b>' + it.strumenti.map(k => esc(pwStrLabel(k))).join('<br>') + '</b></div>';
     }
     html += mlProduzioneHtml(it);
     html += mlTaskHtml(mlTasksOf(it));
