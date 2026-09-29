@@ -1176,7 +1176,43 @@
   .ml-day-btn.ml-week-btn { border-color: #c7d2fe; color: #4f46e5; margin-left: 6px; }
   .ml-day-btn.ml-week-btn.active { background: #4f46e5; border-color: #4f46e5; color: white; }
 
+  /* Pannello filtri: una colonna per dimensione (commessa / operatore / cantiere /
+     stato), ciascuna con la propria ricerca. La ricerca filtra le CHIP disponibili,
+     non i dati: serve a trovare una voce in un elenco lungo, mentre a filtrare la
+     mappa è la selezione delle chip. */
+  .ml-filtri {
+    display: grid; gap: 14px; align-items: start;
+    grid-template-columns: 1.2fr 1.1fr .9fr .85fr .8fr;
+  }
+  @media (max-width: 1400px) { .ml-filtri { grid-template-columns: 1fr 1fr 1fr; } }
+  @media (max-width: 1150px) { .ml-filtri { grid-template-columns: 1fr 1fr; } }
+  @media (max-width: 640px)  { .ml-filtri { grid-template-columns: 1fr; } }
+  .ml-filtro-col { min-width: 0; display: flex; flex-direction: column; gap: 6px; }
+  .ml-filtro-h {
+    display: flex; align-items: center; justify-content: space-between; gap: 6px;
+    font-size: 11px; font-weight: 600; color: #64748b;
+    text-transform: uppercase; letter-spacing: .04em;
+  }
+  .ml-filtro-n {
+    font-size: 10px; font-weight: 700; color: var(--accent);
+    background: #ecfdf5; border: 1px solid #a7f3d0; border-radius: 999px; padding: 0 6px;
+  }
+  .ml-filtro-search {
+    width: 100%; box-sizing: border-box; font-size: 12px; outline: none;
+    border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 4px 7px;
+  }
+  .ml-filtro-search:focus { border-color: var(--accent); }
+  .ml-filtro-hint { font-size: 10.5px; color: #94a3b8; line-height: 1.35; }
+  .ml-filtri-foot {
+    display: flex; align-items: center; justify-content: space-between; gap: 10px;
+    margin-top: 10px; padding-top: 8px; border-top: 1px solid #f1f5f9;
+  }
+
   .ml-chips { display: flex; flex-wrap: wrap; gap: 5px; max-height: 84px; overflow-y: auto; }
+  /* Colonna "Stato": poche voci fisse, incolonnate e sempre tutte visibili. */
+  .ml-chips-col { flex-direction: column; flex-wrap: nowrap; max-height: none; overflow: visible; }
+  .ml-chips-col .ml-chip { justify-content: flex-start; width: 100%; box-sizing: border-box; }
+  .ml-chip-n { margin-left: auto; font-size: 10px; font-weight: 700; opacity: .75; }
   .ml-chip {
     --chip: #94a3b8;
     display: inline-flex; align-items: center; gap: 5px;
@@ -1218,6 +1254,31 @@
   }
   .ml-fix-btn:hover { filter: brightness(1.08); }
   .ml-cant-list { max-height: 260px; overflow-y: auto; }
+
+  /* Drawer commessa: barra di ricerca/ordinamento dei cantieri. Resta agganciata in
+     alto mentre si scorre un elenco lungo (una commessa può avere 100+ cantieri). */
+  .ml-comm-tools {
+    position: sticky; top: 0; z-index: 2; background: white;
+    display: flex; gap: 6px; align-items: center; flex-wrap: wrap; padding: 2px 0 6px;
+  }
+  .ml-comm-tools input, .ml-comm-tools select {
+    font-size: 11.5px; outline: none; background: white;
+    border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 3px 6px;
+  }
+  .ml-comm-tools input { flex: 1; min-width: 100px; }
+  .ml-comm-tools input:focus, .ml-comm-tools select:focus { border-color: var(--accent); }
+  .ml-comm-n { font-size: 10.5px; color: #94a3b8; margin: 2px 0 6px; }
+  .ml-tags { display: flex; flex-wrap: wrap; gap: 4px; }
+  .ml-tag {
+    font-size: 10px; color: #475569; background: #f1f5f9;
+    border-radius: 999px; padding: 1px 7px;
+  }
+  .ml-doc {
+    display: block; width: 100%; text-align: left; background: none; border: none;
+    padding: 3px 0; font: inherit; font-size: 11.5px; color: var(--accent); cursor: pointer;
+  }
+  .ml-doc:hover { text-decoration: underline; }
+  .ml-doc-m { font-size: 10px; color: #94a3b8; }
 
   .ml-stage {
     position: relative; display: grid; grid-template-columns: 300px 1fr;
@@ -1357,7 +1418,7 @@
     <div class="flex items-center gap-2">
       <button id="btn-presentation" class="px-3 py-1.5 text-sm rounded hover:bg-white/10" style="border:1px solid var(--dark-border-strong);color:var(--dark-text);visibility:visible;">📊 Modalità presentazione</button>
       <div class="text-xs pl-2" style="border-left:1px solid var(--dark-border-strong);color:var(--dark-text-muted);">
-        <span id="app-version" class="font-medium" style="color:var(--accent);">v18.175.0</span> · Michele Marchetti
+        <span id="app-version" class="font-medium" style="color:var(--accent);">v18.177.0</span> · Michele Marchetti
         <span id="sb-role-badge" style="margin-left:8px;padding:1px 8px;border-radius:9999px;background:rgba(255,255,255,.1);color:var(--dark-text);font-weight:600;"></span>
       </div>
     </div>
@@ -2416,29 +2477,39 @@
   <!-- Giorno mostrato -->
   <div id="ml-days" class="ml-days mb-3"></div>
 
-  <!-- Filtri combinabili: commessa AND squadra AND testo cantiere -->
+  <!-- Filtri combinabili: commessa AND operatore AND regione AND cantiere AND stato.
+       Ogni colonna è autonoma: ha la propria ricerca sui valori disponibili e il
+       proprio insieme di selezioni, così liste lunghe (commesse, operatori) restano
+       navigabili senza scorrere un unico blocco di chip. -->
   <div class="bg-white border border-slate-200 rounded-lg p-3 mb-3">
-    <div class="grid gap-3" style="grid-template-columns: 1fr 1fr 220px;">
-      <div>
-        <div class="text-[11px] font-semibold text-slate-500 uppercase tracking-wide mb-1.5">Commessa</div>
+    <div class="ml-filtri">
+      <div class="ml-filtro-col">
+        <div class="ml-filtro-h"><span>Commessa</span><span id="ml-n-commesse" class="ml-filtro-n" style="display:none;"></span></div>
+        <input id="ml-search-commesse" type="text" placeholder="filtra commesse&hellip;" class="ml-filtro-search">
         <div id="ml-filtro-commesse" class="ml-chips"></div>
       </div>
-      <div>
-        <div class="text-[11px] font-semibold text-slate-500 uppercase tracking-wide mb-1.5">Squadra</div>
-        <div id="ml-filtro-squadre" class="ml-chips"></div>
+      <div class="ml-filtro-col">
+        <div class="ml-filtro-h"><span>Operatore</span><span id="ml-n-operatori" class="ml-filtro-n" style="display:none;"></span></div>
+        <input id="ml-search-operatori" type="text" placeholder="filtra operatori&hellip;" class="ml-filtro-search">
+        <div id="ml-filtro-operatori" class="ml-chips"></div>
       </div>
-      <div>
-        <div class="text-[11px] font-semibold text-slate-500 uppercase tracking-wide mb-1.5">Cantiere</div>
-        <input id="ml-filtro-cantiere" type="text" placeholder="cerca…"
-               class="w-full text-sm border border-slate-300 rounded px-2 py-1.5 focus:outline-none focus:border-teal-400">
-        <button id="ml-filtro-clear" class="mt-2 text-[11px] text-slate-500 underline" style="display:none;">Azzera filtri</button>
+      <div class="ml-filtro-col">
+        <div class="ml-filtro-h"><span>Regione</span><span id="ml-n-regioni" class="ml-filtro-n" style="display:none;"></span></div>
+        <div id="ml-filtro-regioni" class="ml-chips"></div>
+      </div>
+      <div class="ml-filtro-col">
+        <div class="ml-filtro-h"><span>Cantiere</span><span id="ml-n-cantieri" class="ml-filtro-n" style="display:none;"></span></div>
+        <input id="ml-filtro-cantiere" type="text" placeholder="cerca cantiere&hellip;" class="ml-filtro-search">
+        <div class="ml-filtro-hint">Ricerca libera sul nome del cantiere.</div>
+      </div>
+      <div class="ml-filtro-col">
+        <div class="ml-filtro-h"><span>Stato</span><span id="ml-n-stati" class="ml-filtro-n" style="display:none;"></span></div>
+        <div id="ml-filtro-stati" class="ml-chips ml-chips-col"></div>
       </div>
     </div>
-    <div class="ml-legend mt-3 pt-2.5 border-t border-slate-100">
-      <span><i style="background:#64748b"></i>Da fare</span>
-      <span><i style="background:#f59e0b"></i>In corso</span>
-      <span><i style="background:#10b981"></i>Completato</span>
-      <span><i style="background:#cbd5e1"></i>Stato non disponibile (nessun sottotask Jira)</span>
+    <div class="ml-filtri-foot">
+      <span class="ml-filtro-hint">Il colore del pin indica la commessa, il bordo lo stato del cantiere.</span>
+      <button id="ml-filtro-clear" class="text-[11px] text-slate-500 underline" style="display:none;">Azzera filtri</button>
     </div>
   </div>
 

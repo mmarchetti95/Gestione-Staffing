@@ -58,6 +58,17 @@ const ML_STATUS_COLORS = { new: '#64748b', indeterminate: '#f59e0b', done: '#10b
 const ML_STATUS_LABELS = { new: 'Da fare', indeterminate: 'In corso', done: 'Completato' };
 const ML_STATUS_NOTA = 'Stato non disponibile: nessun sottotask Jira creato per questo cantiere.';
 
+/* Voci del filtro "Stato", nell'ordine in cui interessano a chi guarda la mappa:
+   prima quello che si sta facendo, poi quello che resta da fare. La chiave 'nd'
+   non esiste in Jira: è il segnaposto locale per "nessun sottotask, stato ignoto",
+   e va tenuta filtrabile perché è proprio l'elenco che si vuole bonificare. */
+const ML_STATI_FILTRO = [
+  { v: 'indeterminate', l: 'In corso' },
+  { v: 'new',           l: 'Da fare' },
+  { v: 'done',          l: 'Completato' },
+  { v: 'nd',            l: 'Stato n/d' },
+];
+
 let _mlMap = null;
 let _mlLayer = null;                      // LayerGroup dei marker, svuotato ad ogni render
 let _mlInited = false;
@@ -66,8 +77,12 @@ let _mlWeek = null;
 let _mlDay = 0;
 
 let _mlFiltroCommesse = new Set();        // vuoto = nessun filtro (tutte)
-let _mlFiltroSquadre = new Set();
+let _mlFiltroOperatori = new Set();       // nomi degli operatori selezionati
+let _mlFiltroStati = new Set();           // 'new' | 'indeterminate' | 'done' | 'nd'
+let _mlFiltroRegioni = new Set();         // regione della commessa, 'n/d' se ignota
 let _mlFiltroCantiere = '';
+let _mlSearchCommesse = '';               // ricerca DENTRO l'elenco chip, non sui dati
+let _mlSearchOperatori = '';
 
 let _mlSideTab = 'cantieri';              // elenco laterale: 'cantieri' | 'commesse'
 
@@ -249,15 +264,41 @@ function mlBuildItems(scope) {
   return items;
 }
 
-/* Filtri combinati: AND fra le tre dimensioni, OR all'interno di ciascuna. */
+/* Regione di una commessa: usa il campo esplicito salvato in commesse_attive_meta
+   e, se assente, lo deduce dalla provincia — stessa logica di fallback del modal
+   "Modifica commessa attiva" (openCommessaAttivaModal). Le commesse senza né
+   l'uno né l'altra finiscono nel bucket 'n/d', filtrabile come nel filtro Stato. */
+function mlRegioneCommessa(nome) {
+  if (typeof getCommessaAttivaMeta !== 'function') return 'n/d';
+  const m = getCommessaAttivaMeta(nome);
+  const reg = m.regione || (m.provincia && typeof provinciaInfo === 'function' && provinciaInfo(m.provincia)?.regione) || '';
+  return reg || 'n/d';
+}
+
+/* Filtri combinati: AND fra le dimensioni, OR all'interno di ciascuna.
+   Una voce sopravvive al filtro operatore se ALMENO UNO dei suoi operatori è
+   selezionato, e resta intera: la domanda a cui risponde è "dove lavora X", e
+   nascondere i colleghi che sono con lui sullo stesso cantiere la falserebbe.
+   Lo stato NON si filtra qui: è una proprietà del cantiere (gruppo), non della
+   singola coppia commessa/squadra — vedi mlApplyFiltroStato. */
 function mlApplyFilters(items) {
   const q = _mlFiltroCantiere.toLowerCase().trim();
   return items.filter(it => {
     if (_mlFiltroCommesse.size && !_mlFiltroCommesse.has(it.commessa)) return false;
-    if (_mlFiltroSquadre.size && !_mlFiltroSquadre.has(it.squadra)) return false;
+    if (_mlFiltroOperatori.size && !it.operatori.some(o => _mlFiltroOperatori.has(o))) return false;
+    if (_mlFiltroRegioni.size && !_mlFiltroRegioni.has(mlRegioneCommessa(it.commessa))) return false;
     if (q && it.cantiere.toLowerCase().indexOf(q) === -1) return false;
     return true;
   });
+}
+
+/* Filtro sullo stato del cantiere. Va applicato ai gruppi e solo DOPO
+   mlRefreshTaskStatus: prima di quella chiamata g.stato riflette ancora i Task del
+   render precedente, e filtrare lì farebbe sparire cantieri il cui stato era
+   semplicemente non ancora scaricato. */
+function mlApplyFiltroStato(groups) {
+  if (!_mlFiltroStati.size) return groups;
+  return groups.filter(g => _mlFiltroStati.has(g.stato || 'nd'));
 }
 
 /* Un marker per cantiere: più squadre/commesse sullo stesso cantiere finiscono
@@ -566,9 +607,9 @@ async function mlRender(opts) {
     // tutte le settimane di pwData, non conviene farla due volte per render.
     const tutti = mlBuildItemsCached(_mlDay);
     mlRenderFiltri(tutti);
-    const items = mlApplyFilters(tutti);
+    let items = mlApplyFilters(tutti);
 
-    const groups = mlGroupByCantiere(items);
+    let groups = mlGroupByCantiere(items);
 
     if (loading) loading.style.display = 'flex';
 
@@ -591,6 +632,14 @@ async function mlRender(opts) {
     // Lo stato dei gruppi va ricalcolato DOPO mlRefreshTaskStatus: alla prima
     // costruzione _mlTasks è ancora quello del render precedente.
     groups.forEach(g => { g.stato = mlStatoGruppo(g); });
+
+    // Solo ora lo stato è attendibile: si può applicare il filtro e riallineare
+    // gli item (usati da elenco commesse, riepilogo e pannelli KPI) ai soli
+    // cantieri superstiti, altrimenti i conteggi contraddirebbero la mappa.
+    if (_mlFiltroStati.size) {
+      groups = mlApplyFiltroStato(groups);
+      items = groups.reduce((acc, g) => acc.concat(g.items), []);
+    }
 
     _mlGroups = groups;
     _mlItems = items;
@@ -688,37 +737,81 @@ function mlRenderDays() {
    altre dall'elenco e non si potrebbe più deselezionare. */
 function mlRenderFiltri(tutti) {
   const all = tutti || mlBuildItemsCached(_mlDay);
-  const commesse = [...new Set(all.map(i => i.commessa))].sort();
-  const squadre = [...new Set(all.map(i => i.squadra))].sort();
+  const commesse = [...new Set(all.map(i => i.commessa))].sort((a, b) => a.localeCompare(b));
+  const operatori = [...new Set(all.reduce((acc, i) => acc.concat(i.operatori), []))]
+    .sort((a, b) => a.localeCompare(b));
+  // 'n/d' sempre in fondo: è un ripiego, non una regione vera, e mischiata in
+  // ordine alfabetico (tra "Molise" e "Piemonte") sembrerebbe una svista.
+  const regioni = [...new Set(commesse.map(c => mlRegioneCommessa(c)))]
+    .sort((a, b) => (a === 'n/d') - (b === 'n/d') || a.localeCompare(b));
 
   // Un filtro su una voce non più presente (cambio settimana) va scartato, altrimenti
   // resterebbe attivo e invisibile, filtrando via tutto senza spiegazione.
   [..._mlFiltroCommesse].forEach(c => { if (!commesse.includes(c)) _mlFiltroCommesse.delete(c); });
-  [..._mlFiltroSquadre].forEach(s => { if (!squadre.includes(s)) _mlFiltroSquadre.delete(s); });
+  [..._mlFiltroOperatori].forEach(o => { if (!operatori.includes(o)) _mlFiltroOperatori.delete(o); });
+  [..._mlFiltroRegioni].forEach(r => { if (!regioni.includes(r)) _mlFiltroRegioni.delete(r); });
 
-  const elC = document.getElementById('ml-filtro-commesse');
-  if (elC) {
-    elC.innerHTML = commesse.length
-      ? commesse.map(c => '<button class="ml-chip' + (_mlFiltroCommesse.has(c) ? ' active' : '') +
-          '" style="--chip:' + esc(_mapColor(c)) + '" data-v="' + jsAttr(c) + '">' + esc(c) + '</button>').join('')
-      : '<span class="ml-empty">nessuna commessa pianificata</span>';
-    elC.querySelectorAll('.ml-chip').forEach(b => {
-      b.onclick = () => { mlToggleSet(_mlFiltroCommesse, b.dataset.v); mlRender({ reloadJira: false, reloadProduzione: false, keepView: true }); };
-    });
-  }
-  const elS = document.getElementById('ml-filtro-squadre');
-  if (elS) {
-    elS.innerHTML = squadre.length
-      ? squadre.map(s => '<button class="ml-chip' + (_mlFiltroSquadre.has(s) ? ' active' : '') +
-          '" data-v="' + jsAttr(s) + '">' + esc(s) + '</button>').join('')
-      : '<span class="ml-empty">nessuna squadra</span>';
-    elS.querySelectorAll('.ml-chip').forEach(b => {
-      b.onclick = () => { mlToggleSet(_mlFiltroSquadre, b.dataset.v); mlRender({ reloadJira: false, reloadProduzione: false, keepView: true }); };
-    });
-  }
-  const nAttivi = _mlFiltroCommesse.size + _mlFiltroSquadre.size + (_mlFiltroCantiere ? 1 : 0);
+  mlRenderChips('ml-filtro-commesse', commesse, _mlFiltroCommesse, _mlSearchCommesse, 'nessuna commessa pianificata', true);
+  mlRenderChips('ml-filtro-operatori', operatori, _mlFiltroOperatori, _mlSearchOperatori, 'nessun operatore pianificato', false);
+  mlRenderChips('ml-filtro-regioni', regioni, _mlFiltroRegioni, '', 'nessuna regione nota', false);
+  mlRenderChipsStato();
+
+  mlSetFiltroCount('ml-n-commesse', _mlFiltroCommesse.size);
+  mlSetFiltroCount('ml-n-operatori', _mlFiltroOperatori.size);
+  mlSetFiltroCount('ml-n-regioni', _mlFiltroRegioni.size);
+  mlSetFiltroCount('ml-n-cantieri', _mlFiltroCantiere ? 1 : 0);
+  mlSetFiltroCount('ml-n-stati', _mlFiltroStati.size);
+
+  const nAttivi = _mlFiltroCommesse.size + _mlFiltroOperatori.size + _mlFiltroRegioni.size +
+    _mlFiltroStati.size + (_mlFiltroCantiere ? 1 : 0);
   const btnClear = document.getElementById('ml-filtro-clear');
   if (btnClear) btnClear.style.display = nAttivi ? '' : 'none';
+}
+
+/* Una colonna di chip. `ricerca` è il testo della casella di quella colonna e
+   nasconde le voci che non corrispondono, ma MAI quelle già selezionate: sparendo
+   dall'elenco diventerebbero un filtro attivo e invisibile, impossibile da togliere
+   senza svuotare il campo di ricerca. */
+function mlRenderChips(elId, valori, sel, ricerca, vuoto, colorate) {
+  const el = document.getElementById(elId);
+  if (!el) return;
+  if (!valori.length) { el.innerHTML = '<span class="ml-empty">' + esc(vuoto) + '</span>'; return; }
+  const q = (ricerca || '').toLowerCase().trim();
+  const visibili = q ? valori.filter(v => sel.has(v) || v.toLowerCase().indexOf(q) !== -1) : valori;
+  if (!visibili.length) { el.innerHTML = '<span class="ml-empty">nessun risultato</span>'; return; }
+  el.innerHTML = visibili.map(v => {
+    const style = colorate ? ' style="--chip:' + esc(_mapColor(v)) + '"' : '';
+    return '<button class="ml-chip' + (sel.has(v) ? ' active' : '') + '"' + style +
+      ' data-v="' + esc(v) + '" title="' + esc(v) + '">' + esc(v) + '</button>';
+  }).join('');
+  el.querySelectorAll('.ml-chip').forEach(b => {
+    b.onclick = () => { mlToggleSet(sel, b.dataset.v); mlRender({ reloadJira: false, reloadProduzione: false, keepView: true }); };
+  });
+}
+
+/* Colonna "Stato": voci fisse, non derivate dai dati — devono restare selezionabili
+   anche quando nessun cantiere è in quello stato, altrimenti non si potrebbe mai
+   chiedere "mostrami solo i completati" partendo da una settimana senza completati. */
+function mlRenderChipsStato() {
+  const el = document.getElementById('ml-filtro-stati');
+  if (!el) return;
+  el.innerHTML = ML_STATI_FILTRO.map(s => {
+    const col = ML_STATUS_COLORS[s.v] || '#cbd5e1';
+    const tit = s.v === 'nd' ? ML_STATUS_NOTA : 'Cantieri nello stato "' + s.l + '"';
+    return '<button class="ml-chip' + (_mlFiltroStati.has(s.v) ? ' active' : '') +
+      '" style="--chip:' + col + '" data-v="' + s.v + '" title="' + esc(tit) + '">' + esc(s.l) + '</button>';
+  }).join('');
+  el.querySelectorAll('.ml-chip').forEach(b => {
+    b.onclick = () => { mlToggleSet(_mlFiltroStati, b.dataset.v); mlRender({ reloadJira: false, reloadProduzione: false, keepView: true }); };
+  });
+}
+
+/* Pastiglia col numero di selezioni attive accanto al titolo della colonna. */
+function mlSetFiltroCount(id, n) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  el.textContent = n ? String(n) : '';
+  el.style.display = n ? '' : 'none';
 }
 
 function mlToggleSet(set, v) {
@@ -727,10 +820,16 @@ function mlToggleSet(set, v) {
 
 function mlClearFiltri() {
   _mlFiltroCommesse.clear();
-  _mlFiltroSquadre.clear();
+  _mlFiltroOperatori.clear();
+  _mlFiltroStati.clear();
+  _mlFiltroRegioni.clear();
   _mlFiltroCantiere = '';
-  const inp = document.getElementById('ml-filtro-cantiere');
-  if (inp) inp.value = '';
+  _mlSearchCommesse = '';
+  _mlSearchOperatori = '';
+  ['ml-filtro-cantiere', 'ml-search-commesse', 'ml-search-operatori'].forEach(id => {
+    const inp = document.getElementById(id);
+    if (inp) inp.value = '';
+  });
   mlRender({ reloadJira: false, reloadProduzione: false, keepView: true });
 }
 
@@ -1045,7 +1144,7 @@ function mlRenderCommesseList(items) {
     chiavi.forEach(ck => { cnt[mlStatoGruppo({ items: c.cantieri[ck] }) || 'nd']++; });
     const titolo = chiavi.length + ' cantieri · ' + cnt.done + ' completati · ' + cnt.indeterminate + ' in corso · ' +
                    cnt.new + ' da fare · ' + cnt.nd + ' senza stato';
-    return '<button class="ml-row ml-row-comm" data-comm="' + jsAttr(c.nome) + '" title="' + esc(titolo) + '">' +
+    return '<button class="ml-row ml-row-comm" data-comm="' + esc(c.nome) + '" title="' + esc(titolo) + '">' +
       '<span class="ml-row-dot" style="background:' + esc(c.color) + '"></span>' +
       '<span class="ml-row-main">' +
         '<span class="ml-row-t">' + esc(c.nome) + '</span>' +
@@ -1100,6 +1199,9 @@ function mlOpenDettaglio(idx, silent) {
   // Handler agganciati via addEventListener e non con onclick="..." inline: i nomi
   // di commessa contengono apostrofi (vedi convenzione jsAttr/esc in CLAUDE.md) e
   // qui il valore viaggia in un data-attribute, mai dentro codice JS interpolato.
+  // Per questo l'escape è esc() e NON jsAttr(): jsAttr trasforma "D'Ivrea" in
+  // "D\'Ivrea" — corretto dentro una stringa JS, ma qui il browser restituirebbe
+  // la barra rovescia in dataset e il confronto col nome originale fallirebbe.
   body.querySelectorAll('[data-ml-commessa]').forEach(b => {
     b.onclick = () => mlOpenCommessa(b.dataset.mlCommessa);
   });
@@ -1113,7 +1215,7 @@ function mlDettaglioHtml(g) {
   g.items.forEach(it => {
     html += '<div class="ml-sec">';
     html += '<div class="ml-sec-t"><span class="ml-row-dot" style="background:' + esc(it.color) + '"></span>' + esc(it.squadra) + '</div>';
-    html += '<div class="ml-kv"><span>Commessa</span><b><button class="ml-link" data-ml-commessa="' + jsAttr(it.commessa) + '">' + esc(it.commessa) + '</button></b></div>';
+    html += '<div class="ml-kv"><span>Commessa</span><b><button class="ml-link" data-ml-commessa="' + esc(it.commessa) + '">' + esc(it.commessa) + '</button></b></div>';
     if (it.attivita) html += '<div class="ml-kv"><span>Attività</span><b>' + esc(it.attivita) + '</b></div>';
     html += '<div class="ml-kv"><span>Operatori</span><b>' + esc(it.operatori.join(', ')) + '</b></div>';
     if (_mlDay === ML_ALL && it.weeks.length) {
@@ -1205,10 +1307,28 @@ function mlTaskHtml(tasks) {
 
 /* ----- Drawer commessa ----- */
 
-/* Vista commessa: tutti i cantieri di quella commessa presenti in pwData (tutte le
-   settimane, non solo quella mostrata), con stato Jira dove noto e produzione
-   totale. Risponde a "quali cantieri sono attivi e quali già fatti". La produzione
-   viene riletta da controllo_produzione senza filtro di settimana. */
+/* Dati della commessa attualmente aperta nel drawer, tenuti a parte perché
+   l'elenco dei cantieri si ri-filtra e si riordina senza rileggere nulla: Jira e
+   controllo_produzione vengono interrogati una volta sola, all'apertura. */
+let _mlComm = null;                       // { nome, meta, cantieri, prod, statoCompleto }
+let _mlCommFiltro = { q: '', stati: new Set(), sort: 'nome' };
+/* Le due letture remote di mlOpenCommessa durano secondi: se nel frattempo si apre
+   un'altra commessa, la risposta lenta della prima non deve sovrascrivere la seconda. */
+let _mlCommSeq = 0;
+
+const ML_COMM_SORT = [
+  { v: 'nome',       l: 'Nome A-Z' },
+  { v: 'nome-desc',  l: 'Nome Z-A' },
+  { v: 'stato',      l: 'Stato' },
+  { v: 'settimana',  l: 'Settimana (recenti)' },
+  { v: 'produzione', l: 'Produzione (km)' },
+];
+
+/* Vista commessa: anagrafica completa, documenti allegati e tutti i cantieri di
+   quella commessa presenti in pwData (tutte le settimane, non solo quella mostrata),
+   con stato Jira dove noto e produzione totale. Risponde a "quali cantieri sono
+   attivi e quali già fatti". La produzione viene riletta da controllo_produzione
+   senza filtro di settimana. */
 async function mlOpenCommessa(nome) {
   const d = document.getElementById('ml-drawer');
   const body = document.getElementById('ml-drawer-body');
@@ -1221,6 +1341,7 @@ async function mlOpenCommessa(nome) {
   if (title) title.textContent = nome;
   body.innerHTML = '<div class="ml-note">⏳ Caricamento…</div>';
 
+  const seq = ++_mlCommSeq;
   const meta = (typeof getCommessaAttivaMeta === 'function') ? getCommessaAttivaMeta(nome) : {};
 
   // Primo giro solo per raccogliere le chiavi dei sottotask di TUTTE le settimane
@@ -1230,38 +1351,206 @@ async function mlOpenCommessa(nome) {
   const statoCompleto = await mlEnsureTaskStatus(mlCantieriDiCommessa(nome).flatMap(c => c.subtaskKeys));
   const cantieri = mlCantieriDiCommessa(nome);
   const prod = await mlLoadProduzioneCommessa(nome);
+  if (seq !== _mlCommSeq) return;         // nel frattempo è stata aperta un'altra commessa
 
-  let html = '<div class="ml-sec">';
-  if (meta.cliente) html += '<div class="ml-kv"><span>Cliente</span><b>' + esc(meta.cliente) + '</b></div>';
-  if (meta.codice_commessa) html += '<div class="ml-kv"><span>Codice</span><b>' + esc(meta.codice_commessa) + '</b></div>';
-  if (meta.regione) html += '<div class="ml-kv"><span>Regione</span><b>' + esc(meta.regione) + '</b></div>';
-  if (meta.jira_project_code) html += '<div class="ml-kv"><span>Progetto Jira</span><b>' + esc(meta.jira_project_code) + '</b></div>';
-  html += '<div class="ml-kv"><span>Cantieri</span><b>' + cantieri.length + '</b></div>';
-  html += '</div>';
+  _mlComm = { nome, meta, cantieri, prod, statoCompleto };
+  _mlCommFiltro = { q: '', stati: new Set(), sort: 'nome' };
+  body.innerHTML = mlCommessaHtml();
+  mlBindCommessa(body);
+  body.scrollTop = 0;
+}
+
+function mlCommessaHtml() {
+  const c = _mlComm;
+  if (!c) return '';
+  let html = mlCommessaMetaHtml(c.meta, c.cantieri.length);
+  html += mlCommessaDocsHtml(c.meta);
 
   html += '<div class="ml-sec"><div class="ml-sec-t">Cantieri</div>';
-  if (!statoCompleto) {
+  if (!c.statoCompleto) {
     html += '<div class="ml-note">Commessa molto grande: lo stato Jira è stato caricato solo in parte, alcuni cantieri restano "Stato n/d".</div>';
   }
-  if (!cantieri.length) {
-    html += '<div class="ml-note">Nessun cantiere pianificato per questa commessa.</div>';
-  } else {
-    html += cantieri.map(c => {
-      const col = c.stato ? ML_STATUS_COLORS[c.stato] : '#cbd5e1';
-      const lbl = c.stato ? ML_STATUS_LABELS[c.stato] : 'Stato n/d';
-      const p = prod[c.key];
-      let h = '<div class="ml-cant">' +
-        '<div class="ml-cant-h"><span class="ml-badge" style="background:' + esc(col) + '">' + esc(lbl) + '</span>' +
-        '<b>' + esc(c.cantiere) + '</b></div>';
-      h += '<div class="ml-cant-m">Settimane: ' + esc(c.weeks.join(', ')) + '</div>';
-      if (p) h += '<div class="ml-cant-m">' + (Math.round(p.ore * 10) / 10) + ' h · ' + (Math.round(p.km * 10) / 10) + ' km/cad</div>';
-      return h + '</div>';
-    }).join('');
+  if (!c.cantieri.length) {
+    html += '<div class="ml-note">Nessun cantiere pianificato per questa commessa.</div></div>';
+    return html;
+  }
+  html += '<div class="ml-comm-tools">' +
+    '<input id="ml-comm-q" type="text" placeholder="cerca cantiere&hellip;">' +
+    '<select id="ml-comm-sort" title="Ordinamento dei cantieri">' +
+      ML_COMM_SORT.map(o => '<option value="' + o.v + '">' + esc(o.l) + '</option>').join('') +
+    '</select>' +
+  '</div>';
+  html += '<div id="ml-comm-stati" class="ml-chips" style="margin-bottom:6px;"></div>';
+  html += '<div id="ml-comm-n" class="ml-comm-n"></div>';
+  html += '<div id="ml-comm-cant"></div>';
+  html += '</div>';
+  return html;
+}
+
+/* Anagrafica: gli stessi campi del modal "Modifica commessa attiva" del Dashboard,
+   in sola lettura. Le voci vuote non vengono stampate, così una commessa con pochi
+   metadati non produce una colonna di righe vuote. */
+function mlCommessaMetaHtml(meta, nCantieri) {
+  const m = meta || {};
+  const kv = (label, val) => val ? '<div class="ml-kv"><span>' + esc(label) + '</span><b>' + esc(String(val)) + '</b></div>' : '';
+  const dt = v => (v && typeof fmtDate === 'function') ? fmtDate(String(v).slice(0, 10)) : (v || '');
+  const tags = (label, arr) => (arr && arr.length)
+    ? '<div class="ml-kv"><span>' + esc(label) + '</span><b class="ml-tags">' +
+      arr.map(x => '<span class="ml-tag">' + esc(String(x)) + '</span>').join('') + '</b></div>'
+    : '';
+
+  let html = '<div class="ml-sec">';
+  html += kv('Cliente', m.cliente);
+  html += kv('Codice', m.codice_commessa);
+  html += kv('Industry', m.industry);
+  html += kv('Progetto Jira', m.jira_project_code);
+  html += kv('Luogo', [m.provincia, m.regione].filter(x => x).join(' · '));
+  html += kv('Periodo', [dt(m.inizio), dt(m.fine)].filter(x => x).join(' → '));
+  if (m.risorse_necessarie != null && m.risorse_necessarie !== '') {
+    html += kv('Risorse', m.risorse_necessarie + ' previste' + (m._risorseAttuali != null ? ' · ' + m._risorseAttuali + ' allocate' : ''));
+  } else if (m._risorseAttuali) {
+    html += kv('Risorse allocate', m._risorseAttuali);
+  }
+  html += kv('Referente', m.email_referente);
+  html += tags('Skills', m.skills);
+  html += tags('Attestati', m.attestati_richiesti);
+  html += tags('DPI', m.dpi_richiesti);
+  html += kv('Note', m.note);
+  html += '<div class="ml-kv"><span>Cantieri</span><b>' + nCantieri + '</b></div>';
+  if (m._dedotto) {
+    html += '<div class="ml-note" style="margin-top:5px;">Anagrafica dedotta dallo staffing: questa commessa non ha ancora metadati salvati nel Dashboard.</div>';
   }
   html += '</div>';
+  return html;
+}
 
-  body.innerHTML = html;
-  body.scrollTop = 0;
+/* Documenti allegati alla commessa (bucket privato "commesse-docs"): qui solo in
+   lettura — caricamento ed eliminazione restano nel Dashboard, che è la schermata
+   di modifica. Il link viene firmato al click e non generato ora: gli URL firmati
+   di Supabase Storage scadono dopo 60 secondi. */
+function mlCommessaDocsHtml(meta) {
+  const docs = (meta && meta.documenti) || [];
+  if (!docs.length) return '';
+  let html = '<div class="ml-sec"><div class="ml-sec-t">📎 Documenti <span class="ml-note">(' + docs.length + ')</span></div>';
+  html += docs.map(d => {
+    const info = [
+      (typeof _cmFmtFileSize === 'function' && d.size != null) ? _cmFmtFileSize(d.size) : '',
+      d.caricato_da || '',
+      (d.caricato_il && typeof fmtDate === 'function') ? fmtDate(String(d.caricato_il).slice(0, 10)) : '',
+    ].filter(x => x).join(' · ');
+    return '<div>' +
+      '<button class="ml-doc" data-ml-doc="' + esc(d.path || '') + '" title="Scarica ' + esc(d.nome_file || '') + '">📄 ' + esc(d.nome_file || d.path || '') + '</button>' +
+      (info ? '<div class="ml-doc-m">' + esc(info) + '</div>' : '') +
+    '</div>';
+  }).join('');
+  return html + '</div>';
+}
+
+function mlBindCommessa(body) {
+  // Handler via addEventListener e mai con onclick="..." inline: nomi di file e di
+  // commessa contengono apostrofi (vedi convenzione jsAttr/esc in CLAUDE.md).
+  // Il percorso viaggia in un data-attribute riletto via dataset, quindi esc().
+  body.querySelectorAll('[data-ml-doc]').forEach(b => {
+    b.onclick = () => {
+      if (typeof cmDownloadDocumento === 'function') cmDownloadDocumento(b.dataset.mlDoc);
+      else showAlertModal('Download documenti non disponibile.');
+    };
+  });
+
+  const q = document.getElementById('ml-comm-q');
+  if (q) {
+    let t = null;
+    q.oninput = () => {
+      clearTimeout(t);
+      t = setTimeout(() => { _mlCommFiltro.q = q.value || ''; mlRenderCommessaCantieri(); }, 180);
+    };
+  }
+  const sort = document.getElementById('ml-comm-sort');
+  if (sort) {
+    sort.value = _mlCommFiltro.sort;
+    sort.onchange = () => { _mlCommFiltro.sort = sort.value; mlRenderCommessaCantieri(); };
+  }
+  mlRenderCommessaStati();
+  mlRenderCommessaCantieri();
+}
+
+/* Chip di stato del drawer commessa: indipendenti da quelle della toolbar (che
+   filtrano la mappa) e con il conteggio dei cantieri, calcolato sempre sul totale
+   della commessa così i numeri non ballano mentre si filtra. */
+function mlRenderCommessaStati() {
+  const el = document.getElementById('ml-comm-stati');
+  if (!el || !_mlComm) return;
+  const cnt = { new: 0, indeterminate: 0, done: 0, nd: 0 };
+  _mlComm.cantieri.forEach(c => { cnt[c.stato || 'nd']++; });
+  el.innerHTML = ML_STATI_FILTRO.map(s => {
+    const col = ML_STATUS_COLORS[s.v] || '#cbd5e1';
+    return '<button class="ml-chip' + (_mlCommFiltro.stati.has(s.v) ? ' active' : '') +
+      '" style="--chip:' + col + '" data-v="' + s.v + '">' + esc(s.l) +
+      '<span class="ml-chip-n">' + cnt[s.v] + '</span></button>';
+  }).join('');
+  el.querySelectorAll('.ml-chip').forEach(b => {
+    b.onclick = () => {
+      mlToggleSet(_mlCommFiltro.stati, b.dataset.v);
+      mlRenderCommessaStati();
+      mlRenderCommessaCantieri();
+    };
+  });
+}
+
+function mlRenderCommessaCantieri() {
+  const el = document.getElementById('ml-comm-cant');
+  if (!el || !_mlComm) return;
+  const f = _mlCommFiltro;
+  const prod = _mlComm.prod || {};
+  const q = (f.q || '').toLowerCase().trim();
+  const lista = _mlComm.cantieri.filter(c => {
+    if (q && c.cantiere.toLowerCase().indexOf(q) === -1) return false;
+    if (f.stati.size && !f.stati.has(c.stato || 'nd')) return false;
+    return true;
+  });
+
+  // "In corso" prima di "Da fare" e "Completato" per ultimo: l'ordinamento per stato
+  // serve a vedere subito su cosa si sta lavorando, non a raggruppare alfabeticamente.
+  const rank = { indeterminate: 0, new: 1, done: 2, nd: 3 };
+  const km = c => ((prod[c.key] || {}).km) || 0;
+  const ultimaWeek = c => (c.weeks && c.weeks.length) ? c.weeks[c.weeks.length - 1] : '';
+  lista.sort((a, b) => {
+    if (f.sort === 'nome-desc') return b.cantiere.localeCompare(a.cantiere);
+    if (f.sort === 'stato') {
+      const d = rank[a.stato || 'nd'] - rank[b.stato || 'nd'];
+      if (d) return d;
+    } else if (f.sort === 'settimana') {
+      const d = ultimaWeek(b).localeCompare(ultimaWeek(a));
+      if (d) return d;
+    } else if (f.sort === 'produzione') {
+      const d = km(b) - km(a);
+      if (d) return d;
+    }
+    return a.cantiere.localeCompare(b.cantiere);
+  });
+
+  const n = document.getElementById('ml-comm-n');
+  if (n) {
+    n.textContent = lista.length === _mlComm.cantieri.length
+      ? _mlComm.cantieri.length + ' cantieri'
+      : lista.length + ' di ' + _mlComm.cantieri.length + ' cantieri';
+  }
+
+  if (!lista.length) {
+    el.innerHTML = '<div class="ml-note">Nessun cantiere con i filtri attivi.</div>';
+    return;
+  }
+  el.innerHTML = lista.map(c => {
+    const col = c.stato ? ML_STATUS_COLORS[c.stato] : '#cbd5e1';
+    const lbl = c.stato ? ML_STATUS_LABELS[c.stato] : 'Stato n/d';
+    const p = prod[c.key];
+    let h = '<div class="ml-cant">' +
+      '<div class="ml-cant-h"><span class="ml-badge" style="background:' + esc(col) + '">' + esc(lbl) + '</span>' +
+      '<b>' + esc(c.cantiere) + '</b></div>';
+    h += '<div class="ml-cant-m">Settimane: ' + esc(c.weeks.join(', ')) + '</div>';
+    if (p) h += '<div class="ml-cant-m">' + (Math.round(p.ore * 10) / 10) + ' h · ' + (Math.round(p.km * 10) / 10) + ' km/cad</div>';
+    return h + '</div>';
+  }).join('');
 }
 
 /* Tutti i cantieri di una commessa in pwData, con le settimane in cui compaiono e
@@ -1445,6 +1734,22 @@ function mlBindToolbar() {
       }, 250);
     };
   }
+
+  // Le ricerche di colonna restringono solo l'elenco delle chip: nulla cambia sulla
+  // mappa finché non si seleziona qualcosa, quindi basta ridisegnare i filtri —
+  // un mlRender() completo qui rifarebbe geocodifica e meteo a ogni tasto premuto.
+  mlBindSearchColonna('ml-search-commesse', v => { _mlSearchCommesse = v; });
+  mlBindSearchColonna('ml-search-operatori', v => { _mlSearchOperatori = v; });
+}
+
+function mlBindSearchColonna(id, setter) {
+  const inp = document.getElementById(id);
+  if (!inp) return;
+  let t = null;
+  inp.oninput = () => {
+    clearTimeout(t);
+    t = setTimeout(() => { setter(inp.value || ''); mlRenderFiltri(); }, 180);
+  };
 }
 
 function mlShiftWeek(delta) {
