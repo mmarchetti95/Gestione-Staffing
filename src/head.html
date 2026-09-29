@@ -1182,7 +1182,7 @@
      mappa è la selezione delle chip. */
   .ml-filtri {
     display: grid; gap: 14px; align-items: start;
-    grid-template-columns: 1.2fr 1.1fr .9fr .85fr .8fr;
+    grid-template-columns: 1.15fr 1.05fr .8fr 1.05fr .75fr;
   }
   @media (max-width: 1400px) { .ml-filtri { grid-template-columns: 1fr 1fr 1fr; } }
   @media (max-width: 1150px) { .ml-filtri { grid-template-columns: 1fr 1fr; } }
@@ -1418,7 +1418,7 @@
     <div class="flex items-center gap-2">
       <button id="btn-presentation" class="px-3 py-1.5 text-sm rounded hover:bg-white/10" style="border:1px solid var(--dark-border-strong);color:var(--dark-text);visibility:visible;">📊 Modalità presentazione</button>
       <div class="text-xs pl-2" style="border-left:1px solid var(--dark-border-strong);color:var(--dark-text-muted);">
-        <span id="app-version" class="font-medium" style="color:var(--accent);">v18.178.0</span> · Michele Marchetti
+        <span id="app-version" class="font-medium" style="color:var(--accent);">v18.179.0</span> · Michele Marchetti
         <span id="sb-role-badge" style="margin-left:8px;padding:1px 8px;border-radius:9999px;background:rgba(255,255,255,.1);color:var(--dark-text);font-weight:600;"></span>
       </div>
     </div>
@@ -2499,8 +2499,8 @@
       </div>
       <div class="ml-filtro-col">
         <div class="ml-filtro-h"><span>Cantiere</span><span id="ml-n-cantieri" class="ml-filtro-n" style="display:none;"></span></div>
-        <input id="ml-filtro-cantiere" type="text" placeholder="cerca cantiere&hellip;" class="ml-filtro-search">
-        <div class="ml-filtro-hint">Ricerca libera sul nome del cantiere.</div>
+        <input id="ml-search-cantieri" type="text" placeholder="filtra cantieri&hellip;" class="ml-filtro-search">
+        <div id="ml-filtro-cantieri" class="ml-chips"></div>
       </div>
       <div class="ml-filtro-col">
         <div class="ml-filtro-h"><span>Stato</span><span id="ml-n-stati" class="ml-filtro-n" style="display:none;"></span></div>

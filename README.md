@@ -112,6 +112,9 @@ Limite noto: il progetto Supabase è sul piano **Free**, che non include backup 
 
 ## Changelog
 
+## v18.179.0
+- feat: **Mappa — colonna Cantiere trasformata in elenco, come Commessa/Operatore/Regione.** Prima era una singola casella di ricerca libera (sottostringa sul nome, un solo cantiere alla volta); ora è un elenco di chip con tutti i cantieri dell'intervallo mostrato (giorno / settimana / storico) e la propria casella di ricerca per restringerlo — selezione multipla come le altre colonne. Stessa semantica delle altre: OR fra i cantieri selezionati, AND con le altre colonne. La griglia dei filtri (5 colonne) ha le proporzioni ritoccate di conseguenza.
+
 ## v18.178.0
 - fix: **Mappa — filtro Regione, per la seconda volta quasi vuoto: cambiata la fonte del dato.** Il fix v18.177.1 (fallback su pipeline) non bastava: la stragrande maggioranza dei cantieri restava comunque "n/d" perché né la commessa né la relativa riga pipeline hanno quasi mai provincia/regione compilate — sono campi opzionali del tutto indipendenti dal fatto che il cantiere sia operativo. La regione ora si deduce **dal cantiere, non dalla commessa**, usando lo stesso identico dato già scaricato per posizionare il pin sulla mappa: `_geoCache` (via `mlGeo()`, che scarta le righe sentinella "non trovato"). Il campo `label` geocodificato da Nominatim è una stringa tipo "Comune, Provincia, Regione, CAP, Italia"; vi si cerca il nome di una delle 20 regioni italiane (elenco derivato da `PROVINCE_ITALIA`, non duplicato). Un cantiere resta "n/d" solo se non è ancora geocodificato o non è stato trovato — la stessa condizione già segnalata dal riquadro KPI "Non localizzati".
 

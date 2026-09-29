@@ -84,9 +84,10 @@ let _mlFiltroCommesse = new Set();        // vuoto = nessun filtro (tutte)
 let _mlFiltroOperatori = new Set();       // nomi degli operatori selezionati
 let _mlFiltroStati = new Set();           // 'new' | 'indeterminate' | 'done' | 'nd'
 let _mlFiltroRegioni = new Set();         // regione del cantiere (da geocoding), 'n/d' se ignota
-let _mlFiltroCantiere = '';
+let _mlFiltroCantieri = new Set();        // nomi esatti dei cantieri selezionati
 let _mlSearchCommesse = '';               // ricerca DENTRO l'elenco chip, non sui dati
 let _mlSearchOperatori = '';
+let _mlSearchCantieri = '';
 
 let _mlSideTab = 'cantieri';              // elenco laterale: 'cantieri' | 'commesse'
 
@@ -291,12 +292,11 @@ function mlRegioneCantiere(cantiere) {
    Lo stato NON si filtra qui: è una proprietà del cantiere (gruppo), non della
    singola coppia commessa/squadra — vedi mlApplyFiltroStato. */
 function mlApplyFilters(items) {
-  const q = _mlFiltroCantiere.toLowerCase().trim();
   return items.filter(it => {
     if (_mlFiltroCommesse.size && !_mlFiltroCommesse.has(it.commessa)) return false;
     if (_mlFiltroOperatori.size && !it.operatori.some(o => _mlFiltroOperatori.has(o))) return false;
     if (_mlFiltroRegioni.size && !_mlFiltroRegioni.has(mlRegioneCantiere(it.cantiere))) return false;
-    if (q && it.cantiere.toLowerCase().indexOf(q) === -1) return false;
+    if (_mlFiltroCantieri.size && !_mlFiltroCantieri.has(it.cantiere)) return false;
     return true;
   });
 }
@@ -749,11 +749,11 @@ function mlRenderFiltri(tutti) {
   const commesse = [...new Set(all.map(i => i.commessa))].sort((a, b) => a.localeCompare(b));
   const operatori = [...new Set(all.reduce((acc, i) => acc.concat(i.operatori), []))]
     .sort((a, b) => a.localeCompare(b));
+  const cantieri = [...new Set(all.map(i => i.cantiere))].sort((a, b) => a.localeCompare(b));
   // Regione dedotta dal cantiere (geocoding), non dalla commessa — vedi mlRegioneCantiere.
   // 'n/d' sempre in fondo: è un ripiego, non una regione vera, e mischiata in
   // ordine alfabetico (tra "Molise" e "Piemonte") sembrerebbe una svista.
-  const cantieriUnici = [...new Set(all.map(i => i.cantiere))];
-  const regioni = [...new Set(cantieriUnici.map(c => mlRegioneCantiere(c)))]
+  const regioni = [...new Set(cantieri.map(c => mlRegioneCantiere(c)))]
     .sort((a, b) => (a === 'n/d') - (b === 'n/d') || a.localeCompare(b));
 
   // Un filtro su una voce non più presente (cambio settimana) va scartato, altrimenti
@@ -761,20 +761,22 @@ function mlRenderFiltri(tutti) {
   [..._mlFiltroCommesse].forEach(c => { if (!commesse.includes(c)) _mlFiltroCommesse.delete(c); });
   [..._mlFiltroOperatori].forEach(o => { if (!operatori.includes(o)) _mlFiltroOperatori.delete(o); });
   [..._mlFiltroRegioni].forEach(r => { if (!regioni.includes(r)) _mlFiltroRegioni.delete(r); });
+  [..._mlFiltroCantieri].forEach(c => { if (!cantieri.includes(c)) _mlFiltroCantieri.delete(c); });
 
   mlRenderChips('ml-filtro-commesse', commesse, _mlFiltroCommesse, _mlSearchCommesse, 'nessuna commessa pianificata', true);
   mlRenderChips('ml-filtro-operatori', operatori, _mlFiltroOperatori, _mlSearchOperatori, 'nessun operatore pianificato', false);
   mlRenderChips('ml-filtro-regioni', regioni, _mlFiltroRegioni, '', 'nessuna regione nota', false);
+  mlRenderChips('ml-filtro-cantieri', cantieri, _mlFiltroCantieri, _mlSearchCantieri, 'nessun cantiere pianificato', false);
   mlRenderChipsStato();
 
   mlSetFiltroCount('ml-n-commesse', _mlFiltroCommesse.size);
   mlSetFiltroCount('ml-n-operatori', _mlFiltroOperatori.size);
   mlSetFiltroCount('ml-n-regioni', _mlFiltroRegioni.size);
-  mlSetFiltroCount('ml-n-cantieri', _mlFiltroCantiere ? 1 : 0);
+  mlSetFiltroCount('ml-n-cantieri', _mlFiltroCantieri.size);
   mlSetFiltroCount('ml-n-stati', _mlFiltroStati.size);
 
   const nAttivi = _mlFiltroCommesse.size + _mlFiltroOperatori.size + _mlFiltroRegioni.size +
-    _mlFiltroStati.size + (_mlFiltroCantiere ? 1 : 0);
+    _mlFiltroCantieri.size + _mlFiltroStati.size;
   const btnClear = document.getElementById('ml-filtro-clear');
   if (btnClear) btnClear.style.display = nAttivi ? '' : 'none';
 }
@@ -834,10 +836,11 @@ function mlClearFiltri() {
   _mlFiltroOperatori.clear();
   _mlFiltroStati.clear();
   _mlFiltroRegioni.clear();
-  _mlFiltroCantiere = '';
+  _mlFiltroCantieri.clear();
   _mlSearchCommesse = '';
   _mlSearchOperatori = '';
-  ['ml-filtro-cantiere', 'ml-search-commesse', 'ml-search-operatori'].forEach(id => {
+  _mlSearchCantieri = '';
+  ['ml-search-commesse', 'ml-search-operatori', 'ml-search-cantieri'].forEach(id => {
     const inp = document.getElementById(id);
     if (inp) inp.value = '';
   });
@@ -1712,7 +1715,6 @@ function mlBindToolbar() {
   const today = document.getElementById('ml-today');
   const anno = document.getElementById('ml-anno');
   const week = document.getElementById('ml-week');
-  const cant = document.getElementById('ml-filtro-cantiere');
   const clear = document.getElementById('ml-filtro-clear');
   const auto = document.getElementById('ml-auto');
   const refresh = document.getElementById('ml-refresh');
@@ -1735,22 +1737,12 @@ function mlBindToolbar() {
   if (sideC) sideC.onclick = () => mlSwitchSideTab('cantieri');
   if (sideM) sideM.onclick = () => mlSwitchSideTab('commesse');
 
-  if (cant) {
-    let t = null;
-    cant.oninput = () => {
-      clearTimeout(t);
-      t = setTimeout(() => {
-        _mlFiltroCantiere = cant.value || '';
-        mlRender({ reloadJira: false, reloadProduzione: false, keepView: true });
-      }, 250);
-    };
-  }
-
   // Le ricerche di colonna restringono solo l'elenco delle chip: nulla cambia sulla
   // mappa finché non si seleziona qualcosa, quindi basta ridisegnare i filtri —
   // un mlRender() completo qui rifarebbe geocodifica e meteo a ogni tasto premuto.
   mlBindSearchColonna('ml-search-commesse', v => { _mlSearchCommesse = v; });
   mlBindSearchColonna('ml-search-operatori', v => { _mlSearchOperatori = v; });
+  mlBindSearchColonna('ml-search-cantieri', v => { _mlSearchCantieri = v; });
 }
 
 function mlBindSearchColonna(id, setter) {
