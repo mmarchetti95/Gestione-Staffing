@@ -112,6 +112,9 @@ Limite noto: il progetto Supabase è sul piano **Free**, che non include backup 
 
 ## Changelog
 
+## v18.179.1
+- fix: **Mappa — casella di ricerca anche sulla colonna Regione**, per uniformità con Commessa/Operatore/Cantiere: restava l'unica colonna a elenco senza modo di restringere le chip digitando.
+
 ## v18.179.0
 - feat: **Mappa — colonna Cantiere trasformata in elenco, come Commessa/Operatore/Regione.** Prima era una singola casella di ricerca libera (sottostringa sul nome, un solo cantiere alla volta); ora è un elenco di chip con tutti i cantieri dell'intervallo mostrato (giorno / settimana / storico) e la propria casella di ricerca per restringerlo — selezione multipla come le altre colonne. Stessa semantica delle altre: OR fra i cantieri selezionati, AND con le altre colonne. La griglia dei filtri (5 colonne) ha le proporzioni ritoccate di conseguenza.
 

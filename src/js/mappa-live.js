@@ -87,6 +87,7 @@ let _mlFiltroRegioni = new Set();         // regione del cantiere (da geocoding)
 let _mlFiltroCantieri = new Set();        // nomi esatti dei cantieri selezionati
 let _mlSearchCommesse = '';               // ricerca DENTRO l'elenco chip, non sui dati
 let _mlSearchOperatori = '';
+let _mlSearchRegioni = '';
 let _mlSearchCantieri = '';
 
 let _mlSideTab = 'cantieri';              // elenco laterale: 'cantieri' | 'commesse'
@@ -765,7 +766,7 @@ function mlRenderFiltri(tutti) {
 
   mlRenderChips('ml-filtro-commesse', commesse, _mlFiltroCommesse, _mlSearchCommesse, 'nessuna commessa pianificata', true);
   mlRenderChips('ml-filtro-operatori', operatori, _mlFiltroOperatori, _mlSearchOperatori, 'nessun operatore pianificato', false);
-  mlRenderChips('ml-filtro-regioni', regioni, _mlFiltroRegioni, '', 'nessuna regione nota', false);
+  mlRenderChips('ml-filtro-regioni', regioni, _mlFiltroRegioni, _mlSearchRegioni, 'nessuna regione nota', false);
   mlRenderChips('ml-filtro-cantieri', cantieri, _mlFiltroCantieri, _mlSearchCantieri, 'nessun cantiere pianificato', false);
   mlRenderChipsStato();
 
@@ -839,8 +840,9 @@ function mlClearFiltri() {
   _mlFiltroCantieri.clear();
   _mlSearchCommesse = '';
   _mlSearchOperatori = '';
+  _mlSearchRegioni = '';
   _mlSearchCantieri = '';
-  ['ml-search-commesse', 'ml-search-operatori', 'ml-search-cantieri'].forEach(id => {
+  ['ml-search-commesse', 'ml-search-operatori', 'ml-search-regioni', 'ml-search-cantieri'].forEach(id => {
     const inp = document.getElementById(id);
     if (inp) inp.value = '';
   });
@@ -1742,6 +1744,7 @@ function mlBindToolbar() {
   // un mlRender() completo qui rifarebbe geocodifica e meteo a ogni tasto premuto.
   mlBindSearchColonna('ml-search-commesse', v => { _mlSearchCommesse = v; });
   mlBindSearchColonna('ml-search-operatori', v => { _mlSearchOperatori = v; });
+  mlBindSearchColonna('ml-search-regioni', v => { _mlSearchRegioni = v; });
   mlBindSearchColonna('ml-search-cantieri', v => { _mlSearchCantieri = v; });
 }
 
