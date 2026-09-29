@@ -460,7 +460,7 @@ function pwRender() {
           const dKey     = di;
           const cantieriArr = pwCellCantieriRaw(giorni[dKey]);
           const cantiereList = cantieriArr.length ? cantieriArr : [''];
-          const attivita = (giorni[dKey] || {}).attivita || '';
+          const attivitaList = pwCellAttivitaRaw(giorni[dKey]);
           const isSab    = di === 5;
           const tipoGiorno = pwFerieTipo(opFerie[di]);
           const isInFerie = !!tipoGiorno;
@@ -472,10 +472,14 @@ function pwRender() {
               <input class="pw-cantiere-input pw-write-action" type="text" placeholder="${cantierePlaceholder}"
                 value="${c.replace(/"/g, '&quot;')}"
                 data-cidx="${cIdx}" data-sidx="${sIdx}" data-oidx="${oIdx}" data-day="${dKey}" data-idx="${ci}"
-                onchange="pwUpdateCantiere(this)">${pwJiraSubtaskBadgeHtml(cIdx, sIdx, oIdx, dKey, ci, bloccoCommessa, op.nome, c)}${cantiereList.length > 1 ? `<button type="button" class="pw-cantiere-remove pw-write-action" title="Rimuovi cantiere"
+                onchange="pwUpdateCantiere(this)">${pwJiraSubtaskBadgeHtml(cIdx, sIdx, oIdx, dKey, ci, bloccoCommessa, op.nome, c, attivitaList[ci])}${cantiereList.length > 1 ? `<button type="button" class="pw-cantiere-remove pw-write-action" title="Rimuovi cantiere"
                 data-cidx="${cIdx}" data-sidx="${sIdx}" data-oidx="${oIdx}" data-day="${dKey}" data-idx="${ci}"
                 onclick="pwRemoveCantiereField(this)">✕</button>` : ''}
-            </div>`).join('');
+            </div>
+            <input class="pw-attivita-input pw-write-action" type="text" placeholder="${attivitaPlaceholder}"
+              value="${(attivitaList[ci] || '').replace(/"/g, '&quot;')}"
+              data-cidx="${cIdx}" data-sidx="${sIdx}" data-oidx="${oIdx}" data-day="${dKey}" data-idx="${ci}"
+              onchange="pwUpdateAttivitaCantiere(this)">`).join('');
           return `<div class="pw-day-cell${isSab ? ' sabato' : ''}${ferieClass}" data-cidx="${cIdx}" data-sidx="${sIdx}" data-oidx="${oIdx}" data-day="${dKey}"
             title="Click destro per copiare/incollare cantiere e attività"
             oncontextmenu="return pwCellCtxMenu(event, ${cIdx}, ${sIdx}, ${oIdx}, ${dKey});">
@@ -485,10 +489,6 @@ function pwRender() {
                 data-cidx="${cIdx}" data-sidx="${sIdx}" data-oidx="${oIdx}" data-day="${dKey}"
                 onclick="pwAddCantiereField(this)">+ cantiere</button>
             </div>
-            <input class="pw-attivita-input pw-write-action" type="text" placeholder="${attivitaPlaceholder}"
-              value="${attivita.replace(/"/g, '&quot;')}"
-              data-cidx="${cIdx}" data-sidx="${sIdx}" data-oidx="${oIdx}" data-day="${dKey}" data-field="attivita"
-              onchange="pwUpdateCell(this)">
           </div>`;
         }).join('');
 

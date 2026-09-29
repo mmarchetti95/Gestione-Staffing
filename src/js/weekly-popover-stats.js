@@ -260,20 +260,6 @@ function pwTitleCase(str) {
   return str.replace(/\S+/g, w => w.charAt(0).toLocaleUpperCase('it-IT') + w.slice(1).toLocaleLowerCase('it-IT'));
 }
 
-async function pwUpdateCell(inp) {
-  if (!sbGuardWrite()) return;
-  const { cidx, sidx, oidx, day, field } = inp.dataset;
-  const data = pwGetWeekData();
-  const op = data[cidx]?.squadre[sidx]?.operatori[oidx];
-  if (!op) return;
-  if (!op.giorni) op.giorni = {};
-  if (!op.giorni[day]) op.giorni[day] = {};
-  const value = pwTitleCase(inp.value.trim());
-  inp.value = value;
-  op.giorni[day][field] = value;
-  await pwSave();
-}
-
 /* ----- Più cantieri per operatore/giorno (giorni[d].cantieri: string[]) ----- */
 function pwCantiereCellOf(dataset) {
   const { cidx, sidx, oidx, day } = dataset;
@@ -306,16 +292,40 @@ async function pwUpdateCantiere(inp) {
   pwJiraSubtaskApplyBadgesToDom();
 }
 
+// Attività del singolo cantiere (giorni[d].attivitaCantieri[idx], vedi pwCellAttivitaAt).
+async function pwUpdateAttivitaCantiere(inp) {
+  if (!sbGuardWrite()) return;
+  const g = pwCantiereCellOf(inp.dataset);
+  if (!g) return;
+  const arr = pwCellEnsureAttivitaArray(g);
+  const idx = Number(inp.dataset.idx);
+  const value = pwTitleCase(inp.value.trim());
+  inp.value = value;
+  while (arr.length <= idx) arr.push('');
+  arr[idx] = value;
+  pwCellSyncAttivita(g);
+  await pwSave();
+  // Il badge "sottotask Jira" dipende anche dall'attività (chiave
+  // comune+operatore+attività, vedi pwJiraSubtaskMapKey): va ricalcolato come
+  // dopo la rinomina di un cantiere.
+  pwJiraSubtaskApplyBadgesToDom();
+}
+
 async function pwAddCantiereField(btn) {
   if (!sbGuardWrite()) return;
   const g = pwCantiereCellOf(btn.dataset);
   if (!g) return;
+  // Prima di toccare i cantieri: una cella legacy con una sola attività per
+  // tutta la cella la conserva sui cantieri esistenti, il nuovo parte vuoto.
+  const attivitaArr = pwCellEnsureAttivitaArray(g);
   // Cella vuota: la UI mostra già un campo vuoto "sintetico" (non salvato) come
   // placeholder. Se non lo si materializza prima di aggiungerne un altro, il primo
   // click su "+ cantiere" produce un array di un solo elemento — identico a quello
   // già mostrato — e sembra non fare nulla.
   if (g.cantieri.length === 0) g.cantieri.push('');
   g.cantieri.push('');
+  attivitaArr.push('');
+  pwCellSyncAttivita(g);
   await pwSave();
   pwRender();
 }
@@ -325,7 +335,10 @@ async function pwRemoveCantiereField(btn) {
   const g = pwCantiereCellOf(btn.dataset);
   if (!g) return;
   const idx = Number(btn.dataset.idx);
+  const attivitaArr = pwCellEnsureAttivitaArray(g);
   g.cantieri.splice(idx, 1);
+  attivitaArr.splice(idx, 1);
+  pwCellSyncAttivita(g);
   await pwSave();
   pwRender();
 }

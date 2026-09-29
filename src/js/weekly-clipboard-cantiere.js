@@ -5,8 +5,8 @@
 // giorno apre il menu per quella cella; il click destro sulla colonna nome
 // operatore apre il menu per l'intera riga (tutti e 6 i giorni).
 
-let _pwClipCell = null; // { cantieri: string[], attivita: string }
-let _pwClipRow  = null; // { giorni: { [day]: { cantieri: string[], attivita: string } } }
+let _pwClipCell = null; // pwCellCopy(): { cantieri: string[], attivitaCantieri?: string[], attivita: string }
+let _pwClipRow  = null; // { giorni: { [day]: pwCellCopy() } }
 
 function _pwCtxMenuEsc(e) {
   if (e.key === 'Escape') _pwCloseCtxMenu();
@@ -62,7 +62,7 @@ function pwCopyCell(cidx, sidx, oidx, day) {
   const op = data[cidx]?.squadre[sidx]?.operatori[oidx];
   if (!op) return;
   const g = (op.giorni || {})[day] || {};
-  _pwClipCell = { cantieri: pwCellCantieri(g), attivita: g.attivita || '' };
+  _pwClipCell = pwCellCopy(g);
 }
 
 async function pwPasteCell(cidx, sidx, oidx, day) {
@@ -72,7 +72,7 @@ async function pwPasteCell(cidx, sidx, oidx, day) {
   const op = data[cidx]?.squadre[sidx]?.operatori[oidx];
   if (!op) return;
   if (!op.giorni) op.giorni = {};
-  op.giorni[day] = { cantieri: _pwClipCell.cantieri.slice(), attivita: _pwClipCell.attivita };
+  op.giorni[day] = pwCellCopy(_pwClipCell);
   await pwSave();
   pwRender();
   pwRefreshMeteoWeek();
@@ -95,7 +95,7 @@ function pwCopyRow(cidx, sidx, oidx) {
   const giorni = {};
   for (let d = 0; d < 6; d++) {
     const g = (op.giorni || {})[d] || {};
-    giorni[d] = { cantieri: pwCellCantieri(g), attivita: g.attivita || '' };
+    giorni[d] = pwCellCopy(g);
   }
   _pwClipRow = { giorni };
 }
@@ -108,8 +108,7 @@ async function pwPasteRow(cidx, sidx, oidx) {
   if (!op) return;
   op.giorni = {};
   for (let d = 0; d < 6; d++) {
-    const src = _pwClipRow.giorni[d] || { cantieri: [], attivita: '' };
-    op.giorni[d] = { cantieri: src.cantieri.slice(), attivita: src.attivita };
+    op.giorni[d] = pwCellCopy(_pwClipRow.giorni[d] || {});
   }
   await pwSave();
   pwRender();

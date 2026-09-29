@@ -639,6 +639,63 @@ function pwCellCantieriRaw(g) {
   return [];
 }
 
+// Attività PER CANTIERE: giorni[d].attivitaCantieri: string[], allineato per indice a
+// giorni[d].cantieri. Lo stesso cantiere può comparire due volte nella stessa cella con
+// due attività diverse (es. due sottotask Jira sotto due Task diversi, vedi
+// weekly-jira-subtask.js). giorni[d].attivita resta scritto come RIEPILOGO della cella
+// (attività distinte separate da ", ") per tutti i lettori che ragionano per cella
+// (Controllo Produzione, mail, report, Mappa squadre): si aggiorna solo tramite
+// pwCellSyncAttivita(), mai a mano. Le celle salvate prima di questa modifica hanno solo
+// giorni[d].attivita, che vale per tutti i cantieri della cella.
+function pwCellAttivitaAt(g, i) {
+  if (!g) return '';
+  if (Array.isArray(g.attivitaCantieri)) return (g.attivitaCantieri[i] || '').trim();
+  return (g.attivita || '').trim();
+}
+
+// Allineata a pwCellCantieriRaw(g), con almeno un elemento: la cella vuota mostra
+// comunque una riga cantiere "sintetica" con il suo campo attività.
+function pwCellAttivitaRaw(g) {
+  const n = Math.max(pwCellCantieriRaw(g).length, 1);
+  const out = [];
+  for (let i = 0; i < n; i++) out.push(pwCellAttivitaAt(g, i));
+  return out;
+}
+
+// Coppie { cantiere, attivita } dei soli cantieri non vuoti — l'equivalente di
+// pwCellCantieri() per chi ha bisogno dell'attività del singolo cantiere.
+function pwCellVoci(g) {
+  return pwCellCantieriRaw(g)
+    .map((c, i) => ({ cantiere: (c || '').trim(), attivita: pwCellAttivitaAt(g, i) }))
+    .filter(v => v.cantiere);
+}
+
+// Converte una cella al formato per-cantiere (se non lo è già) e restituisce l'array,
+// da chiamare PRIMA di aggiungere/togliere cantieri, per non perdere l'attività legacy.
+function pwCellEnsureAttivitaArray(g) {
+  if (!Array.isArray(g.attivitaCantieri)) g.attivitaCantieri = pwCellAttivitaRaw(g);
+  const n = Math.max(pwCellCantieriRaw(g).length, 1);
+  while (g.attivitaCantieri.length < n) g.attivitaCantieri.push('');
+  return g.attivitaCantieri;
+}
+
+function pwCellSyncAttivita(g) {
+  if (!g || !Array.isArray(g.attivitaCantieri)) return;
+  const n = Math.max(pwCellCantieriRaw(g).length, 1);
+  g.attivitaCantieri.length = Math.min(g.attivitaCantieri.length, n);
+  g.attivita = [...new Set(g.attivitaCantieri.map(a => (a || '').trim()).filter(Boolean))].join(', ');
+}
+
+// Copia indipendente di una cella (copia/incolla in Griglia): solo i cantieri non vuoti,
+// ciascuno con la sua attività.
+function pwCellCopy(g) {
+  const voci = pwCellVoci(g);
+  if (!voci.length) return { cantieri: [], attivita: (g && g.attivita) || '' };
+  const out = { cantieri: voci.map(v => v.cantiere), attivitaCantieri: voci.map(v => v.attivita) };
+  pwCellSyncAttivita(out);
+  return out;
+}
+
 /* ----- Stato ferie ----- */
 // Struttura: pwFerie[anno][week][nomeOperatore] = { 0: tipo, 1: tipo, ..., 5: tipo }
 // dove tipo è 'ferie' | 'non_disponibile' (assente, blocca l'assegnazione in Griglia esattamente

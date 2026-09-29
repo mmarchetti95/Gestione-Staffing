@@ -135,9 +135,9 @@ function pwExtraFieldSelectOpen(btn) {
 }
 
 function pwExtraFieldSelectPick(key, v) {
-  const container = document.getElementById('pw-jira-extra-fields');
+  const container = document.getElementById('modal-root');
   if (!container) return;
-  const hidden = Array.from(container.querySelectorAll('input[type="hidden"][data-extra-key]')).find(el => el.dataset.extraKey === key);
+  const hidden = Array.from(container.querySelectorAll('input[type="hidden"][data-select-value]')).find(el => el.dataset.selectValue === key);
   const trigger = Array.from(container.querySelectorAll('.pw-extra-select-trigger')).find(el => el.dataset.selectFor === key);
   if (hidden) hidden.value = v ? String(v.id) : '';
   if (trigger) {
@@ -228,6 +228,7 @@ function pwJiraBuildSubtaskItem(meta, task, comune, nomeOperatore, attivita) {
     summary,
     _comune: comune,
     _operatore: nomeOperatore,
+    _attivita: attivita || '',
     // Target Production del Task padre (vedi jira-list-tasks), ereditato
     // cosi' com'e' senza ricalcolo. Puo' mancare (progetto/Task senza il
     // campo): in tal caso resta undefined e non viene mai inviato alla Edge
@@ -238,7 +239,11 @@ function pwJiraBuildSubtaskItem(meta, task, comune, nomeOperatore, attivita) {
 
 /* ----- Badge persistente in Griglia (stato "sottotask già esistente/creato/errore") -----
    Il dato vive in bc.jiraSubtask (oggetto sibling di `squadre` sul blocco
-   commessa), chiave "<comune>|||<operatore>" -> {status, key, url, message, ts}.
+   commessa), chiave "<comune>|||<operatore>|||<attività>" -> {status, key, url,
+   message, ts} (vedi pwJiraSubtaskMapKey): lo stesso operatore può avere due
+   sottotask sullo stesso cantiere nella stessa week, uno per attività, sotto
+   due Task diversi. Senza attività, e per tutti gli entry salvati prima della
+   v18.182.0, la chiave è "<comune>|||<operatore>" (vedi pwJiraSubtaskLookup).
    status 'error' (fallito su Jira: sia in anteprima/dryRun — Step 1 o Step 2
    — sia in creazione reale, Step 3) mostra un badge rosso ⚠️ con il messaggio
    d'errore in tooltip, ma NON viene trattato come "coperto" altrove nel
@@ -253,12 +258,67 @@ function pwJiraBuildSubtaskItem(meta, task, comune, nomeOperatore, attivita) {
       (weekly-clipboard-cantiere.js) copia solo {cantieri, attivita}, mai
       bc.jiraSubtask: il badge non segue mai il copia/incolla su un altro
       operatore/cantiere. */
-function pwJiraSubtaskMarkBadge(cIdx, comune, operatoreNome, status, key, url, message) {
+function pwJiraSubtaskMapKey(comune, operatoreNome, attivita) {
+  const a = (attivita || '').trim();
+  return comune + '|||' + operatoreNome + (a ? '|||' + a : '');
+}
+
+// Attività distinte con cui un operatore compare su un comune nella week del
+// blocco (tutte le squadre, tutti i giorni).
+function pwJiraSubtaskAttivitaDiOperatore(bc, comune, operatoreNome) {
+  const out = new Set();
+  ((bc && bc.squadre) || []).forEach(sq => (sq.operatori || []).forEach(op => {
+    if (op.nome !== operatoreNome) return;
+    Object.keys(op.giorni || {}).forEach(d => pwCellVoci(op.giorni[d]).forEach(v => {
+      if (v.cantiere === comune) out.add(v.attivita);
+    }));
+  }));
+  return [...out];
+}
+
+// Entry del sottotask per comune+operatore+attività. Un entry legacy (chiave
+// senza attività, salvato prima della v18.182.0, quando esisteva un solo
+// sottotask per comune+operatore) vale solo se l'operatore ha UNA sola
+// attività su quel comune: con due attività non si sa a quale apparteneva, e
+// attribuirlo a entrambe farebbe saltare la creazione del secondo sottotask.
+function pwJiraSubtaskLookup(bc, comune, operatoreNome, attivita) {
+  const map = (bc && bc.jiraSubtask) || {};
+  const mapKey = pwJiraSubtaskMapKey(comune, operatoreNome, attivita);
+  if (map[mapKey]) return { entry: map[mapKey], mapKey };
+  const legacyKey = comune + '|||' + operatoreNome;
+  if (legacyKey !== mapKey && map[legacyKey] && pwJiraSubtaskAttivitaDiOperatore(bc, comune, operatoreNome).length <= 1) {
+    return { entry: map[legacyKey], mapKey: legacyKey };
+  }
+  return null;
+}
+
+function pwJiraSubtaskEntry(bc, comune, operatoreNome, attivita) {
+  const found = pwJiraSubtaskLookup(bc, comune, operatoreNome, attivita);
+  return found ? found.entry : null;
+}
+
+// Tutti gli entry di un comune+operatore, qualunque attività (per chi, come la
+// Mappa, raccoglie i sottotask di un cantiere senza distinguere l'attività).
+function pwJiraSubtaskEntriesFor(jiraMap, comune, operatoreNome) {
+  const prefix = comune + '|||' + operatoreNome;
+  return Object.keys(jiraMap || {})
+    .filter(k => k === prefix || k.startsWith(prefix + '|||'))
+    .map(k => jiraMap[k]);
+}
+
+function pwJiraSubtaskMarkBadge(cIdx, comune, operatoreNome, attivita, status, key, url, message) {
   if (!sbGuardWrite()) return;
   const bc = pwGetWeekData()[cIdx];
   if (!bc || !comune || !operatoreNome) return;
   if (!bc.jiraSubtask) bc.jiraSubtask = {};
-  bc.jiraSubtask[comune + '|||' + operatoreNome] = { status, key: key || '', url: url || '', message: message || '', ts: new Date().toISOString() };
+  const mapKey = pwJiraSubtaskMapKey(comune, operatoreNome, attivita);
+  // Un entry legacy dello stesso comune+operatore, se l'attività è una sola,
+  // descrive questo stesso sottotask: lo sostituisce invece di duplicarlo.
+  const legacyKey = comune + '|||' + operatoreNome;
+  if (legacyKey !== mapKey && bc.jiraSubtask[legacyKey] && pwJiraSubtaskAttivitaDiOperatore(bc, comune, operatoreNome).length <= 1) {
+    delete bc.jiraSubtask[legacyKey];
+  }
+  bc.jiraSubtask[mapKey] = { status, key: key || '', url: url || '', message: message || '', ts: new Date().toISOString() };
   pwSave();
   pwJiraSubtaskApplyBadgesToDom();
 }
@@ -267,8 +327,8 @@ function pwJiraSubtaskMarkBadge(cIdx, comune, operatoreNome, status, key, url, m
 // non genera mai un item da inviare a Jira, quindi va marcato "a mano" con lo
 // stesso badge rosso ⚠️ usato per gli errori restituiti dalla Edge Function,
 // altrimenti sparisce dalla creazione senza alcuna evidenza in griglia.
-function pwJiraSubtaskMarkMissingEmail(cIdx, comune, operatoreNome) {
-  pwJiraSubtaskMarkBadge(cIdx, comune, operatoreNome, 'error', '', '', 'Email non trovata in anagrafica: sottotask non creato.');
+function pwJiraSubtaskMarkMissingEmail(cIdx, comune, operatoreNome, attivita) {
+  pwJiraSubtaskMarkBadge(cIdx, comune, operatoreNome, attivita, 'error', '', '', 'Email non trovata in anagrafica: sottotask non creato.');
 }
 
 // Un entry va considerato "risolto" (sottotask presente su Jira, o già
@@ -305,17 +365,17 @@ function pwJiraSubtaskApplyResultsToBadges(cIdx, items, results, includeCreated)
     const item = items[i];
     if (!item) return;
     if (r.status === 'already_exists' || r.status === 'error' || (includeCreated && r.status === 'created')) {
-      pwJiraSubtaskMarkBadge(cIdx, item._comune, item._operatore, r.status, r.key, r.url, r.message);
+      pwJiraSubtaskMarkBadge(cIdx, item._comune, item._operatore, item._attivita, r.status, r.key, r.url, r.message);
     }
   });
 }
 
-function pwJiraSubtaskBadgeInnerHtml(cIdx, bc, operatoreNome, cantiere) {
+function pwJiraSubtaskBadgeInnerHtml(cIdx, bc, operatoreNome, cantiere, attivita) {
   const c = (cantiere || '').trim();
   if (!c || !operatoreNome || !bc || !bc.jiraSubtask) return '';
-  const mapKey = c + '|||' + operatoreNome;
-  const entry = bc.jiraSubtask[mapKey];
-  if (!entry) return '';
+  const found = pwJiraSubtaskLookup(bc, c, operatoreNome, attivita);
+  if (!found) return '';
+  const { entry, mapKey } = found;
   const isError = entry.status === 'error';
   const label = entry.status === 'created' ? 'creato' : (isError ? 'creazione fallita' : 'già esistente');
   const title = `Sottotask Jira ${label}${entry.key ? ': ' + entry.key : ''}${isError && entry.message ? ' — ' + entry.message : ''}`;
@@ -331,8 +391,8 @@ function pwJiraSubtaskBadgeInnerHtml(cIdx, bc, operatoreNome, cantiere) {
 // pattern del badge meteo (pwWeatherBadgeHtml/pwApplyMeteoBadgesToDom in
 // weekly-meteo.js), per poter aggiornare il singolo badge senza un pwRender()
 // completo (che farebbe perdere il focus a un input cantiere/attività).
-function pwJiraSubtaskBadgeHtml(cIdx, sIdx, oIdx, dKey, ci, bc, operatoreNome, cantiere) {
-  return `<span class="pw-jira-sub-slot" data-cidx="${cIdx}" data-sidx="${sIdx}" data-oidx="${oIdx}" data-day="${dKey}" data-idx="${ci}">${pwJiraSubtaskBadgeInnerHtml(cIdx, bc, operatoreNome, cantiere)}</span>`;
+function pwJiraSubtaskBadgeHtml(cIdx, sIdx, oIdx, dKey, ci, bc, operatoreNome, cantiere, attivita) {
+  return `<span class="pw-jira-sub-slot" data-cidx="${cIdx}" data-sidx="${sIdx}" data-oidx="${oIdx}" data-day="${dKey}" data-idx="${ci}">${pwJiraSubtaskBadgeInnerHtml(cIdx, bc, operatoreNome, cantiere, attivita)}</span>`;
 }
 
 function pwJiraSubtaskApplyBadgesToDom() {
@@ -342,8 +402,9 @@ function pwJiraSubtaskApplyBadgesToDom() {
     const bc = data[cIdx];
     const op = bc && bc.squadre && bc.squadre[sIdx] && bc.squadre[sIdx].operatori[oIdx];
     if (!bc || !op) { slot.innerHTML = ''; return; }
-    const cantieri = pwCellCantieriRaw(op.giorni && op.giorni[dKey]);
-    slot.innerHTML = pwJiraSubtaskBadgeInnerHtml(cIdx, bc, op.nome, cantieri[ci] || '');
+    const g = op.giorni && op.giorni[dKey];
+    const cantieri = pwCellCantieriRaw(g);
+    slot.innerHTML = pwJiraSubtaskBadgeInnerHtml(cIdx, bc, op.nome, cantieri[ci] || '', pwCellAttivitaAt(g, ci));
   });
 }
 
@@ -367,12 +428,16 @@ function pwJiraSubtaskInit(cIdx, sIdx) {
   const squadreScope = scopedSquadra ? [scopedSquadra] : (bc.squadre || []);
   const displayNome = scopedSquadra ? `${bc.commessa} · ${scopedSquadra.nome || 'Squadra'}` : bc.commessa;
 
-  // Comuni distinti pianificati questa settimana (per l'intera commessa, o per
-  // la sola squadra scelta se scopedSquadra e' valorizzato), con gli operatori
-  // distinti assegnati e la prima attività non vuota trovata per coppia.
-  // Ogni comune viene inoltre attribuito alla prima squadra in cui compare, per
-  // poter raggruppare la UI per squadra (vedi pwJiraSubtaskOpenComuniModal).
-  const comuni = {};
+  // Gruppi comune+attività pianificati questa settimana (per l'intera
+  // commessa, o per la sola squadra scelta se scopedSquadra e' valorizzato):
+  // ogni cantiere della cella ha la sua attività (pwCellVoci), e lo stesso
+  // comune con due attività diverse diventa due gruppi, ciascuno col suo
+  // Epic/Task — un sottotask per operatore per gruppo. Se un operatore ha su
+  // un comune sia giorni con attività sia giorni senza, quelli senza non fanno
+  // un gruppo a sé (produrrebbero un secondo sottotask "senza attività" per lo
+  // stesso lavoro). Ogni gruppo viene attribuito alla prima squadra in cui
+  // compare il comune, per raggruppare la UI per squadra.
+  const perComuneOp = {}; // comune -> nomeOp -> Set(attività)
   const comuneSquadra = {}; // comune -> nome squadra
   const squadreOrder = []; // ordine di comparsa delle squadre che hanno almeno un comune
   squadreScope.forEach(sq => {
@@ -381,28 +446,47 @@ function pwJiraSubtaskInit(cIdx, sIdx) {
       if (!op.nome) return;
       const giorni = op.giorni || {};
       Object.keys(giorni).forEach(dKey => {
-        const attivita = (giorni[dKey] || {}).attivita || '';
-        pwCellCantieri(giorni[dKey]).forEach(cantiere => {
-          if (!comuni[cantiere]) {
-            comuni[cantiere] = {};
-            comuneSquadra[cantiere] = sqNome;
+        pwCellVoci(giorni[dKey]).forEach(v => {
+          if (!perComuneOp[v.cantiere]) {
+            perComuneOp[v.cantiere] = {};
+            comuneSquadra[v.cantiere] = sqNome;
             if (!squadreOrder.includes(sqNome)) squadreOrder.push(sqNome);
           }
-          if (!(op.nome in comuni[cantiere]) || (!comuni[cantiere][op.nome] && attivita)) {
-            comuni[cantiere][op.nome] = attivita;
-          }
+          if (!perComuneOp[v.cantiere][op.nome]) perComuneOp[v.cantiere][op.nome] = new Set();
+          perComuneOp[v.cantiere][op.nome].add(v.attivita);
         });
       });
     });
   });
 
-  const comuneNames = Object.keys(comuni);
-  if (comuneNames.length === 0) {
+  const gruppi = []; // { comune, attivita, squadra, operatori: string[] }
+  const byKey = {};
+  Object.keys(perComuneOp).forEach(comune => {
+    Object.keys(perComuneOp[comune]).forEach(nomeOp => {
+      const set = perComuneOp[comune][nomeOp];
+      if (set.size > 1) set.delete('');
+      set.forEach(attivita => {
+        const k = comune + '|||' + attivita;
+        if (!byKey[k]) {
+          byKey[k] = { comune, attivita, squadra: comuneSquadra[comune], operatori: [] };
+          gruppi.push(byKey[k]);
+        }
+        byKey[k].operatori.push(nomeOp);
+      });
+    });
+  });
+
+  if (gruppi.length === 0) {
     showAlertModal(scopedSquadra ? 'Nessun cantiere pianificato questa settimana per questa squadra.' : 'Nessun cantiere pianificato questa settimana per questa commessa.');
     return;
   }
 
-  pwJiraSubtaskOpenComuniModal(cIdx, displayNome, meta, comuneNames, comuni, comuneSquadra, squadreOrder);
+  pwJiraSubtaskOpenComuniModal(cIdx, displayNome, meta, gruppi, squadreOrder);
+}
+
+// Etichetta di un gruppo comune+attività nelle modali Jira.
+function pwJiraGruppoLabel(comune, attivita) {
+  return comune + (attivita ? ' · ' + attivita : '');
 }
 
 /* ----- Step 1: scelta, per ciascun comune, dell'Epic e poi del Task Jira sotto quell'Epic -----
@@ -414,7 +498,7 @@ function pwJiraSubtaskInit(cIdx, sIdx) {
    parte in automatico una verifica dryRun che mostra, riga per riga, quanti
    sottotask sono già presenti su Jira — senza dover arrivare fino all'anteprima
    finale (vedi pwJiraSubtaskCheckExisting). */
-function pwJiraSubtaskOpenComuniModal(cIdx, commessaNome, meta, comuneNames, comuni, comuneSquadra, squadreOrder) {
+function pwJiraSubtaskOpenComuniModal(cIdx, commessaNome, meta, gruppi, squadreOrder) {
   const root = document.getElementById('modal-root');
 
   // Comuni per cui TUTTI gli operatori hanno già un sottotask (creato o già
@@ -423,20 +507,21 @@ function pwJiraSubtaskOpenComuniModal(cIdx, commessaNome, meta, comuneNames, com
   // Epic/Task per un comune già completamente coperto solo per poi doverlo
   // saltare a mano. Resta comunque deselezionabile per rifare la verifica.
   const bcForBadges = pwGetWeekData()[cIdx];
-  const jiraMap = (bcForBadges && bcForBadges.jiraSubtask) || {};
+  const entryOf = (gr, op) => pwJiraSubtaskEntry(bcForBadges, gr.comune, op, gr.attivita);
 
   const bySquadra = {};
   (squadreOrder || []).forEach(sq => { bySquadra[sq] = []; });
-  comuneNames.forEach(comune => {
-    const sq = (comuneSquadra && comuneSquadra[comune]) || 'Squadra';
+  gruppi.forEach((gr, i) => {
+    const sq = gr.squadra || 'Squadra';
     if (!bySquadra[sq]) bySquadra[sq] = [];
-    bySquadra[sq].push(comune);
+    bySquadra[sq].push(i);
   });
   const squadreNames = (squadreOrder && squadreOrder.length) ? squadreOrder : Object.keys(bySquadra);
 
-  function rowHtml(comune, i) {
-    const operatori = Object.keys(comuni[comune]);
-    const doneOperatori = operatori.filter(op => pwJiraSubtaskIsResolved(jiraMap[comune + '|||' + op]));
+  function rowHtml(i) {
+    const gr = gruppi[i];
+    const operatori = gr.operatori;
+    const doneOperatori = operatori.filter(op => pwJiraSubtaskIsResolved(entryOf(gr, op)));
     // Calcolato subito, indipendentemente da badge pregressi e dalla scelta
     // di Epic/Task, così un operatore senza email in anagrafica (es. appena
     // inserito, mai ancora tentato per questo comune) è visibile fin dalla
@@ -445,7 +530,7 @@ function pwJiraSubtaskOpenComuniModal(cIdx, commessaNome, meta, comuneNames, com
     const noEmailOperatori = operatori.filter(op => !pwJiraOperatorEmail(op));
     // Esclude chi è già coperto da noEmailNote sotto, per non duplicare lo
     // stesso operatore in due avvisi rossi separati.
-    const erroredOperatori = operatori.filter(op => { const e = jiraMap[comune + '|||' + op]; return e && e.status === 'error'; }).filter(op => !noEmailOperatori.includes(op));
+    const erroredOperatori = operatori.filter(op => { const e = entryOf(gr, op); return e && e.status === 'error'; }).filter(op => !noEmailOperatori.includes(op));
     const allDone = operatori.length > 0 && doneOperatori.length === operatori.length;
     const someDone = doneOperatori.length > 0 && !allDone;
     const operatoriNote = someDone ? ` <span class="text-blue-600">(${doneOperatori.length}/${operatori.length} già con sottotask)</span>` : '';
@@ -454,7 +539,7 @@ function pwJiraSubtaskOpenComuniModal(cIdx, commessaNome, meta, comuneNames, com
     const noEmailNote = noEmailOperatori.length ? `<div class="text-[11px] text-red-700 mb-1">⚠️ Email mancante in anagrafica, verranno esclusi: ${noEmailOperatori.map(esc).join(', ')}</div>` : '';
     return `<div class="border border-slate-200 rounded p-2 mb-2" data-comune-idx="${i}">
       <div class="flex items-center justify-between gap-2 mb-1">
-        <div class="text-sm font-medium text-slate-800">${esc(comune)}</div>
+        <div class="text-sm font-medium text-slate-800">${esc(gr.comune)}${gr.attivita ? ' <span class="text-[11px] font-normal text-slate-500">· ' + esc(gr.attivita) + '</span>' : ''}</div>
         <label class="text-[11px] text-slate-500 flex items-center gap-1 cursor-pointer">
           <input type="checkbox" class="pw-jira-skip-comune" data-idx="${i}"${allDone ? ' checked' : ''}> salta
         </label>
@@ -474,12 +559,12 @@ function pwJiraSubtaskOpenComuniModal(cIdx, commessaNome, meta, comuneNames, com
   const groupsHtml = squadreNames.map((sqNome, gi) => {
     const list = bySquadra[sqNome] || [];
     if (!list.length) return '';
-    const rows = list.map(comune => rowHtml(comune, comuneNames.indexOf(comune))).join('');
+    const rows = list.map(i => rowHtml(i)).join('');
     return `<div class="pw-jira-squadra-group border border-slate-200 rounded mb-2 overflow-hidden">
       <div class="w-full flex items-center justify-between gap-2 px-2.5 py-2 bg-slate-50 hover:bg-slate-100">
         <button type="button" class="pw-jira-squadra-toggle flex items-center gap-1.5 text-sm font-medium text-slate-700 flex-1 min-w-0 text-left" data-squadra-idx="${gi}">
           <span class="pw-jira-squadra-arrow text-slate-400 shrink-0">▾</span>
-          <span class="truncate">${esc(sqNome)} <span class="text-slate-400 font-normal">(${list.length} comun${list.length === 1 ? 'e' : 'i'})</span></span>
+          <span class="truncate">${esc(sqNome)} <span class="text-slate-400 font-normal">(${list.length} cantier${list.length === 1 ? 'e' : 'i'})</span></span>
         </button>
         <div class="flex gap-2 shrink-0 text-[11px]">
           <button type="button" class="pw-jira-squadra-skip-all text-slate-500 hover:underline whitespace-nowrap" data-squadra-idx="${gi}">salta tutti</button>
@@ -493,7 +578,7 @@ function pwJiraSubtaskOpenComuniModal(cIdx, commessaNome, meta, comuneNames, com
   root.innerHTML = `<div class="modal-backdrop"><div class="bg-white rounded-lg shadow-xl w-full max-w-xl mx-4 my-8 p-5 max-h-[90vh] overflow-y-auto">
     <h3 class="font-semibold text-slate-900 mb-1">Crea sottotask Jira — ${esc(commessaNome)}</h3>
     <div class="flex items-center justify-between mb-3">
-      <p class="text-xs text-slate-500">Per ciascun comune scegli Epic e Task Jira, oppure spunta "salta".</p>
+      <p class="text-xs text-slate-500">Per ciascun cantiere (e attività) scegli Epic e Task Jira, oppure spunta "salta".</p>
       <div class="flex gap-2 shrink-0">
         <button type="button" id="pw-jira-expand-all" class="text-[11px] text-teal-700 hover:underline whitespace-nowrap">Espandi tutto</button>
         <button type="button" id="pw-jira-collapse-all" class="text-[11px] text-slate-500 hover:underline whitespace-nowrap">Comprimi tutto</button>
@@ -550,18 +635,18 @@ function pwJiraSubtaskOpenComuniModal(cIdx, commessaNome, meta, comuneNames, com
     existingReqIds[idx] = myReq;
     const task = chosenTasks[idx];
     if (!task) { if (statusEl) statusEl.innerHTML = ''; return; }
-    const comune = comuneNames[idx];
+    const gr = gruppi[idx];
     const items = [];
     const noEmail = [];
-    Object.keys(comuni[comune]).forEach(nomeOp => {
-      const built = pwJiraBuildSubtaskItem(meta, task, comune, nomeOp, comuni[comune][nomeOp]);
+    gr.operatori.forEach(nomeOp => {
+      const built = pwJiraBuildSubtaskItem(meta, task, gr.comune, nomeOp, gr.attivita);
       if (built) items.push(built); else noEmail.push(nomeOp);
     });
     // Un operatore senza email va segnalato anche quando NON è l'unico del
     // comune (items.length > 0): altrimenti resta escluso senza alcun avviso,
     // visibile solo — se lo si nota — nel piccolo elenco "Esclusi" in fondo
     // all'anteprima finale (vedi Tajar Lico, caso segnalato dall'utente).
-    noEmail.forEach(nomeOp => pwJiraSubtaskMarkMissingEmail(cIdx, comune, nomeOp));
+    noEmail.forEach(nomeOp => pwJiraSubtaskMarkMissingEmail(cIdx, gr.comune, nomeOp, gr.attivita));
     const noEmailHtml = noEmail.length ? `<span class="text-red-700">⚠️ senza email: ${noEmail.map(esc).join(', ')}</span>&nbsp; ` : '';
     if (items.length === 0) {
       if (statusEl) statusEl.innerHTML = noEmailHtml || '<span class="text-amber-600">Nessuna email operatore trovata in anagrafica.</span>';
@@ -669,23 +754,24 @@ function pwJiraSubtaskOpenComuniModal(cIdx, commessaNome, meta, comuneNames, com
 
   document.getElementById('pw-jira-continua').onclick = () => {
     const missing = [];
-    comuneNames.forEach((comune, i) => {
+    gruppi.forEach((gr, i) => {
       const skipChk = root.querySelector(`.pw-jira-skip-comune[data-idx="${i}"]`);
       if (skipChk && skipChk.checked) return;
-      if (!chosenTasks[i]) missing.push(comune);
+      if (!chosenTasks[i]) missing.push(pwJiraGruppoLabel(gr.comune, gr.attivita));
     });
     if (missing.length) { showAlertModal('Scegli Epic e Task per: ' + missing.join(', ') + ' (oppure spunta "salta").'); return; }
 
     const items = [];
     const skipped = [];
-    comuneNames.forEach((comune, i) => {
+    gruppi.forEach((gr, i) => {
+      const label = pwJiraGruppoLabel(gr.comune, gr.attivita);
       const skipChk = root.querySelector(`.pw-jira-skip-comune[data-idx="${i}"]`);
-      if (skipChk && skipChk.checked) { skipped.push(comune); return; }
+      if (skipChk && skipChk.checked) { skipped.push(label); return; }
       const task = chosenTasks[i];
-      Object.keys(comuni[comune]).forEach(nomeOp => {
-        const built = pwJiraBuildSubtaskItem(meta, task, comune, nomeOp, comuni[comune][nomeOp]);
+      gr.operatori.forEach(nomeOp => {
+        const built = pwJiraBuildSubtaskItem(meta, task, gr.comune, nomeOp, gr.attivita);
         if (built) items.push(built);
-        else { skipped.push(`${comune} / ${nomeOp} (email non trovata in anagrafica)`); pwJiraSubtaskMarkMissingEmail(cIdx, comune, nomeOp); }
+        else { skipped.push(`${label} / ${nomeOp} (email non trovata in anagrafica)`); pwJiraSubtaskMarkMissingEmail(cIdx, gr.comune, nomeOp, gr.attivita); }
       });
     });
     if (items.length === 0) { showAlertModal('Nessun sottotask da creare' + (skipped.length ? ':\n' + skipped.join('\n') : '.')); return; }
@@ -703,12 +789,11 @@ function pwJiraSubtaskOpenComuniModal(cIdx, commessaNome, meta, comuneNames, com
 function pwJiraSubtaskOpenSelectItemsModal(cIdx, commessaNome, meta, items, skippedComuni) {
   const root = document.getElementById('modal-root');
   const bcForBadges = pwGetWeekData()[cIdx];
-  const jiraMap = (bcForBadges && bcForBadges.jiraSubtask) || {};
   // Un operatore/comune che ha già un sottotask (creato o già esistente) parte
   // deselezionato: inutile riproporlo per poi doverlo scartare a mano. Resta
   // comunque visibile e riselezionabile (es. per rifare la verifica).
   const rows = items.map((item, i) => {
-    const entry = jiraMap[(item._comune || '') + '|||' + (item._operatore || '')];
+    const entry = pwJiraSubtaskEntry(bcForBadges, item._comune || '', item._operatore || '', item._attivita);
     const already = pwJiraSubtaskIsResolved(entry) ? entry : null;
     const erroredBefore = entry && entry.status === 'error';
     let noteHtml = '';
@@ -717,7 +802,7 @@ function pwJiraSubtaskOpenSelectItemsModal(cIdx, commessaNome, meta, items, skip
     return `<label class="flex items-center gap-2 border-b border-slate-100 py-1.5 text-sm cursor-pointer${already ? ' opacity-70' : ''}">
       <input type="checkbox" class="pw-jira-select-item" data-idx="${i}"${already ? '' : ' checked'}>
       <div class="min-w-0">
-        <div class="truncate">${esc(item._comune || '')} — ${esc(item._operatore || '')} <span class="text-[11px] text-slate-400">(${esc(item.taskKey || '')})</span>${noteHtml}</div>
+        <div class="truncate">${esc(pwJiraGruppoLabel(item._comune || '', item._attivita))} — ${esc(item._operatore || '')} <span class="text-[11px] text-slate-400">(${esc(item.taskKey || '')})</span>${noteHtml}</div>
         <div class="text-[11px] text-slate-400 truncate">${esc(item.summary || '')}</div>
       </div>
     </label>`;
@@ -774,6 +859,41 @@ function pwJiraComputeProductionWeight(n) {
   return (Math.round((100 / n) * 100) / 100).toString();
 }
 
+/* ----- Scelte ricordate per i campi extra (per browser, localStorage) -----
+   Activity Type per attività della Griglia e Tempo Team (sempre lo stesso),
+   per progetto Jira: solo una precompilazione, sempre modificabile. */
+const PW_JIRA_EXTRA_MEMORY_KEY = 'pw_jira_extra_memory_v1';
+
+function pwJiraExtraMemoryLoad() {
+  try { return JSON.parse(localStorage.getItem(PW_JIRA_EXTRA_MEMORY_KEY) || '{}') || {}; } catch (e) { return {}; }
+}
+
+function pwJiraExtraMemorySave(projectKey, patch) {
+  try {
+    const all = pwJiraExtraMemoryLoad();
+    const cur = all[projectKey] || {};
+    all[projectKey] = {
+      tempoTeam: patch.tempoTeam !== undefined ? patch.tempoTeam : cur.tempoTeam,
+      activityType: Object.assign({}, cur.activityType || {}, patch.activityType || {}),
+    };
+    localStorage.setItem(PW_JIRA_EXTRA_MEMORY_KEY, JSON.stringify(all));
+  } catch (e) { /* solo una comodità */ }
+}
+
+// Activity Type proposto per un'attività della Griglia: l'ultimo scelto per
+// quell'attività su questo progetto, altrimenti la voce Jira con lo stesso
+// nome, altrimenti l'unica voce disponibile.
+function pwJiraActivityTypeGuess(projectKey, attivita, field) {
+  const values = (field && field.allowedValues) || [];
+  const has = id => values.some(v => String(v.id) === String(id));
+  const mem = (pwJiraExtraMemoryLoad()[projectKey] || {}).activityType || {};
+  const a = (attivita || '').trim().toLowerCase();
+  if (mem[a] && has(mem[a])) return String(mem[a]);
+  const byName = a ? values.find(v => String(v.value || '').trim().toLowerCase() === a) : null;
+  if (byName) return String(byName.id);
+  return values.length === 1 ? String(values[0].id) : '';
+}
+
 /* ----- Step 1.5: campi extra spesso obbligatori in creazione (Data scadenza,
    Stima originale, Activity Type, Start date pianificato, Tempo Team) — vedi
    commento su pwJiraFetchExtraFields. Un solo form per l'intero batch (si
@@ -783,7 +903,9 @@ function pwJiraComputeProductionWeight(n) {
    all'anteprima.
    Target Production e Production Weight NON compaiono in questa lista di
    campi condivisi: sono entrambi per-item, non un valore unico da tutto il
-   batch — un batch puo' includere piu' Task/comuni diversi.
+   batch — un batch puo' includere piu' Task/comuni diversi. Lo stesso vale
+   per Activity Type quando Jira ne espone le voci: una tendina per ogni
+   attività della Griglia presente nel batch (vedi activityField sotto).
    - Target Production e' ereditato per-item dal Task padre scelto per quel
      comune (vedi pwJiraBuildSubtaskItem/jira-list-tasks), non modificabile qui.
    - Production Weight (%) si calcola per-Task (100% diviso il numero di
@@ -829,9 +951,15 @@ async function pwJiraSubtaskOpenExtraFieldsModal(cIdx, commessaNome, meta, items
     items.forEach(item => { item.productionWeight = pwJiraComputeProductionWeight(countByTask[item.taskKey]); });
   }
 
-  const visibleFields = fields.filter(f => f.extraKey !== 'targetProduction' && f.extraKey !== 'productionWeight');
+  // Activity Type per attività della Griglia (non condiviso dal batch): lo
+  // stesso cantiere può avere due attività, con due Activity Type diversi.
+  // Resta un campo condiviso solo se Jira non ne espone le voci.
+  const activityField = fields.find(f => f.extraKey === 'activityType' && f.allowedValues && f.allowedValues.length) || null;
+  const attivitaDistinte = [...new Set(items.map(it => it._attivita || ''))];
 
-  if (visibleFields.length === 0 && !hasProductionWeight) {
+  const visibleFields = fields.filter(f => f.extraKey !== 'targetProduction' && f.extraKey !== 'productionWeight' && !(activityField && f.extraKey === 'activityType'));
+
+  if (visibleFields.length === 0 && !hasProductionWeight && !activityField) {
     pwJiraSubtaskPreview(cIdx, commessaNome, items, skippedComuni, {}, []);
     return;
   }
@@ -845,7 +973,7 @@ async function pwJiraSubtaskOpenExtraFieldsModal(cIdx, commessaNome, meta, items
     originalEstimate: pwJiraComputeOriginalEstimate(startIso, dueIso),
     activityType: '',
     startDatePianificato: startIso,
-    tempoTeam: '',
+    tempoTeam: (pwJiraExtraMemoryLoad()[meta.jira_project_code] || {}).tempoTeam || '',
   };
 
   _pwExtraFieldsByKey = {};
@@ -854,10 +982,11 @@ async function pwJiraSubtaskOpenExtraFieldsModal(cIdx, commessaNome, meta, items
     let inputHtml;
     if (f.allowedValues && f.allowedValues.length) {
       _pwExtraFieldsByKey[f.extraKey] = f;
-      const preselect = f.allowedValues.length === 1 ? String(f.allowedValues[0].id) : '';
+      const remembered = val && f.allowedValues.some(v => String(v.id) === String(val)) ? String(val) : '';
+      const preselect = remembered || (f.allowedValues.length === 1 ? String(f.allowedValues[0].id) : '');
       const selected = f.allowedValues.find(v => String(v.id) === preselect);
       const label = selected ? selected.value : '— seleziona —';
-      inputHtml = `<input type="hidden" data-extra-key="${esc(f.extraKey)}" value="${esc(preselect)}">
+      inputHtml = `<input type="hidden" data-extra-key="${esc(f.extraKey)}" data-select-value="${esc(f.extraKey)}" value="${esc(preselect)}">
         <button type="button" class="pw-jira-panel-trigger pw-extra-select-trigger w-full border border-slate-300 rounded px-2 py-1.5 text-sm text-left bg-white flex items-center justify-between gap-2" data-select-for="${esc(f.extraKey)}" onclick="pwExtraFieldSelectOpen(this)">
           <span class="pw-extra-select-label truncate">${esc(label)}</span><span class="text-slate-400 text-[10px]">▾</span>
         </button>`;
@@ -887,7 +1016,7 @@ async function pwJiraSubtaskOpenExtraFieldsModal(cIdx, commessaNome, meta, items
   const productionWeightRowsHtml = hasProductionWeight ? items.map((item, i) => `
     <div class="flex items-center justify-between gap-2 border-b border-slate-100 py-1 text-sm last:border-b-0">
       <div class="min-w-0 truncate">
-        <span class="text-slate-700">${esc(item._comune || '')} — ${esc(item._operatore || '')}</span>
+        <span class="text-slate-700">${esc(pwJiraGruppoLabel(item._comune || '', item._attivita))} — ${esc(item._operatore || '')}</span>
         <span class="text-[11px] text-slate-400"> (${esc(item.taskKey || '')})</span>
       </div>
       <input type="number" data-pw-weight-idx="${i}" value="${esc(item.productionWeight)}" onwheel="this.blur()" class="w-20 shrink-0 border border-slate-300 rounded px-2 py-1 text-sm text-right">
@@ -897,10 +1026,33 @@ async function pwJiraSubtaskOpenExtraFieldsModal(cIdx, commessaNome, meta, items
       <div class="border border-slate-200 rounded px-2">${productionWeightRowsHtml}</div>
     </div>` : '';
 
+  // Una tendina Activity Type per ciascuna attività presente nel batch.
+  let activitySectionHtml = '';
+  if (activityField) {
+    const rows = attivitaDistinte.map((attivita, i) => {
+      const selKey = 'activityType::' + i;
+      _pwExtraFieldsByKey[selKey] = activityField;
+      const preselect = pwJiraActivityTypeGuess(meta.jira_project_code, attivita, activityField);
+      const selected = activityField.allowedValues.find(v => String(v.id) === preselect);
+      return `<div class="flex items-center justify-between gap-2 py-1 text-sm border-b border-slate-100 last:border-b-0">
+        <span class="min-w-0 truncate ${attivita ? 'text-slate-700' : 'text-slate-400 italic'}">${esc(attivita || '(senza attività)')}</span>
+        <input type="hidden" data-select-value="${esc(selKey)}" data-attv-idx="${i}" value="${esc(preselect)}">
+        <button type="button" class="pw-jira-panel-trigger pw-extra-select-trigger w-48 shrink-0 border border-slate-300 rounded px-2 py-1 text-sm text-left bg-white flex items-center justify-between gap-2" data-select-for="${esc(selKey)}" onclick="pwExtraFieldSelectOpen(this)">
+          <span class="pw-extra-select-label truncate">${esc(selected ? selected.value : '— seleziona —')}</span><span class="text-slate-400 text-[10px]">▾</span>
+        </button>
+      </div>`;
+    }).join('');
+    activitySectionHtml = `<div class="mb-3">
+      <label class="block text-[11px] text-slate-500 mb-1">${esc(activityField.name)} — uno per attività della Griglia</label>
+      <div class="border border-slate-200 rounded px-2">${rows}</div>
+    </div>`;
+  }
+
   root.innerHTML = `<div class="modal-backdrop"><div class="bg-white rounded-lg shadow-xl w-full max-w-md mx-4 my-8 p-5 max-h-[90vh] overflow-y-auto">
     <h3 class="font-semibold text-slate-900 mb-1">Crea sottotask Jira — ${esc(commessaNome)}</h3>
     <p class="text-xs text-slate-500 mb-3">Alcuni campi possono essere obbligatori in creazione su questo progetto Jira. Valori di esempio precompilati, modificabili o lasciabili vuoti.</p>
     <div id="pw-jira-extra-fields">${rowsHtml}</div>
+    ${activitySectionHtml}
     ${productionWeightSectionHtml}
     <div class="flex justify-end gap-2 mt-4">
       <button onclick="closeModal()" class="px-3 py-1.5 text-sm border border-slate-300 rounded">Annulla</button>
@@ -938,6 +1090,24 @@ async function pwJiraSubtaskOpenExtraFieldsModal(cIdx, commessaNome, meta, items
       const item = items[parseInt(el.dataset.pwWeightIdx)];
       if (item) item.productionWeight = el.value !== '' ? el.value : undefined;
     });
+    // Activity Type per attività -> per item (inviato per-item alla Edge
+    // Function, vedi buildItemActivityTypeField lato server).
+    const memoryActivity = {};
+    if (activityField) {
+      const byAttivita = {};
+      root.querySelectorAll('[data-attv-idx]').forEach(el => {
+        const attivita = attivitaDistinte[parseInt(el.dataset.attvIdx)];
+        byAttivita[attivita] = el.value;
+        if (el.value) memoryActivity[(attivita || '').trim().toLowerCase()] = el.value;
+      });
+      items.forEach(item => {
+        const id = byAttivita[item._attivita || ''];
+        const match = id ? activityField.allowedValues.find(v => String(v.id) === String(id)) : null;
+        item.activityType = id || undefined;
+        item._activityTypeLabel = match ? match.value : undefined;
+      });
+    }
+    pwJiraExtraMemorySave(meta.jira_project_code, { tempoTeam: extraFields.tempoTeam, activityType: memoryActivity });
     pwJiraSubtaskPreview(cIdx, commessaNome, items, skippedComuni, extraFields, visibleFields);
   };
 }
@@ -1022,10 +1192,11 @@ function pwJiraSubtaskRenderPreview(cIdx, commessaNome, items, results, skippedC
     // creazione reale.
     const weightHtml = (item.productionWeight !== undefined && item.productionWeight !== null && item.productionWeight !== '')
       ? ` <span class="text-slate-400">· Weight ${esc(String(item.productionWeight))}%</span>` : '';
+    const activityTypeHtml = item._activityTypeLabel ? ` <span class="text-slate-400">· ${esc(item._activityTypeLabel)}</span>` : '';
     return `<div class="flex items-center justify-between gap-2 border-b border-slate-100 py-1.5 text-sm">
       <div class="min-w-0">
-        <div class="truncate">${esc(item._comune || '')} — ${esc(item._operatore || '')}</div>
-        <div class="text-[11px] text-slate-400 truncate">${esc(item.summary || '')}${weightHtml}</div>
+        <div class="truncate">${esc(pwJiraGruppoLabel(item._comune || '', item._attivita))} — ${esc(item._operatore || '')}</div>
+        <div class="text-[11px] text-slate-400 truncate">${esc(item.summary || '')}${activityTypeHtml}${weightHtml}</div>
       </div>
       ${statusHtml}
     </div>`;

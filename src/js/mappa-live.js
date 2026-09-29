@@ -241,8 +241,8 @@ function mlBuildItems(scope) {
         giorniDaScorrere.forEach(d => {
           ops.forEach(({ o: op, oIdx }) => {
             const g = (op.giorni || {})[d] || {};
-            const attivita = (g.attivita || '').trim();
-            pwCellCantieri(g).forEach(cantiere => {
+            // Ogni cantiere ha la sua attività (pwCellVoci, v18.182.0).
+            pwCellVoci(g).forEach(({ cantiere, attivita }) => {
               // Chiave sul NOME della commessa, non sull'indice del blocco: in vista
               // storico lo stesso indice appartiene a commesse diverse in settimane diverse.
               const key = bc.commessa + '|||' + squadra + '|||' + cantiere;
@@ -264,8 +264,10 @@ function mlBuildItems(scope) {
               if (attivita) it.attivita.add(attivita);
               it.giorni.add(d);
               it.weeks.add(blk.label);
-              const sub = jiraMap[cantiere + '|||' + op.nome];
-              if (sub && sub.key) it.subtaskKeys.add(sub.key);
+              // Tutti i sottotask del cantiere per l'operatore, uno per attività.
+              pwJiraSubtaskEntriesFor(jiraMap, cantiere, op.nome).forEach(sub => {
+                if (sub && sub.key) it.subtaskKeys.add(sub.key);
+              });
             });
           });
         });
@@ -1753,12 +1755,13 @@ function mlCantieriDiCommessa(nome) {
                   out.push(byKey[key]);
                 }
                 byKey[key].weeks.add(mlWeekLabel(anno, week));
-                const sub = jiraMap[cantiere + '|||' + op.nome];
-                if (!sub || !sub.key) return;
-                byKey[key].subtaskKeys.add(sub.key);
-                const tk = _mlTaskBySubtask[sub.key];
-                const t = tk ? _mlTasks[tk] : null;
-                if (t && t.statusCategory) byKey[key].cats.add(t.statusCategory);
+                pwJiraSubtaskEntriesFor(jiraMap, cantiere, op.nome).forEach(sub => {
+                  if (!sub || !sub.key) return;
+                  byKey[key].subtaskKeys.add(sub.key);
+                  const tk = _mlTaskBySubtask[sub.key];
+                  const t = tk ? _mlTasks[tk] : null;
+                  if (t && t.statusCategory) byKey[key].cats.add(t.statusCategory);
+                });
               });
             }
           });

@@ -470,6 +470,8 @@
     padding: 1px 2px;
   }
   .pw-cantiere-add:hover { text-decoration: underline; }
+  /* Ogni cantiere ha la sua attività sotto: separa una coppia dalla successiva. */
+  .pw-cantiere-list .pw-attivita-input + .pw-cantiere-row { border-top: 1px dashed #e2e8f0; margin-top: 2px; padding-top: 2px; }
   .pw-attivita-input {
     width: 100%;
     font-size: 10px;
@@ -1523,7 +1525,7 @@
     <div class="flex items-center gap-2">
       <button id="btn-presentation" class="px-3 py-1.5 text-sm rounded hover:bg-white/10" style="border:1px solid var(--dark-border-strong);color:var(--dark-text);visibility:visible;">📊 Modalità presentazione</button>
       <div class="text-xs pl-2" style="border-left:1px solid var(--dark-border-strong);color:var(--dark-text-muted);">
-        <span id="app-version" class="font-medium" style="color:var(--accent);">v18.181.1</span> · Michele Marchetti
+        <span id="app-version" class="font-medium" style="color:var(--accent);">v18.182.0</span> · Michele Marchetti
         <span id="sb-role-badge" style="margin-left:8px;padding:1px 8px;border-radius:9999px;background:rgba(255,255,255,.1);color:var(--dark-text);font-weight:600;"></span>
       </div>
     </div>
