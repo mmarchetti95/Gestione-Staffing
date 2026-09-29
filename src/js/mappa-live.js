@@ -264,14 +264,20 @@ function mlBuildItems(scope) {
   return items;
 }
 
-/* Regione di una commessa: usa il campo esplicito salvato in commesse_attive_meta
-   e, se assente, lo deduce dalla provincia — stessa logica di fallback del modal
-   "Modifica commessa attiva" (openCommessaAttivaModal). Le commesse senza né
-   l'uno né l'altra finiscono nel bucket 'n/d', filtrabile come nel filtro Stato. */
+/* Regione di una commessa. La maggior parte delle commesse attive non ha MAI
+   avuto il modal "Modifica commessa attiva" compilato (arrivano dalla pipeline
+   commerciale e restano "dedotte" — vedi getCommessaAttivaMeta._dedotto), quindi
+   commesse_attive_meta da solo lascerebbe quasi tutto in 'n/d'. Stessa catena di
+   fallback già usata in pwOpenOpModal (weekly-operatore-modal.js) per lo stesso
+   identico problema: regione/provincia salvate su commesse_attive_meta, poi
+   quelle della riga pipeline con lo stesso nome progetto, poi la provincia
+   tradotta in regione. Le commesse senza nessuna delle due finiscono in 'n/d'. */
 function mlRegioneCommessa(nome) {
-  if (typeof getCommessaAttivaMeta !== 'function') return 'n/d';
-  const m = getCommessaAttivaMeta(nome);
-  const reg = m.regione || (m.provincia && typeof provinciaInfo === 'function' && provinciaInfo(m.provincia)?.regione) || '';
+  const meta = (typeof state !== 'undefined' && state.commesse_attive_meta && state.commesse_attive_meta[nome]) || {};
+  const pipe = (typeof state !== 'undefined' && Array.isArray(state.pipeline) && state.pipeline.find(p => p.progetto === nome)) || {};
+  const provincia = meta.provincia || pipe.provincia || '';
+  const reg = meta.regione || pipe.regione ||
+    (provincia && typeof provinciaInfo === 'function' && provinciaInfo(provincia)?.regione) || '';
   return reg || 'n/d';
 }
 

@@ -112,6 +112,9 @@ Limite noto: il progetto Supabase è sul piano **Free**, che non include backup 
 
 ## Changelog
 
+## v18.177.1
+- fix: **Mappa — filtro Regione trovava quasi solo "n/d".** `mlRegioneCommessa` leggeva la regione/provincia solo da `commesse_attive_meta`, ma la maggior parte delle commesse attive arriva dalla pipeline commerciale e non ha **mai** avuto il modal "Modifica commessa attiva" compilato (restano "dedotte", vedi `_dedotto` in `getCommessaAttivaMeta`) — quindi quasi tutte finivano in "n/d" anche quando la regione era nota. Aggiunta la stessa catena di fallback già usata altrove per lo stesso identico problema (`pwOpenOpModal` in `weekly-operatore-modal.js`): dopo `commesse_attive_meta`, prova la riga della pipeline con lo stesso nome progetto, poi la provincia tradotta in regione.
+
 ## v18.177.0
 - feat: **Mappa — filtro per Regione.** Nuova colonna nel pannello filtri, tra Operatore e Cantiere: mostra le regioni delle commesse presenti nella settimana/giorno a video, con le voci senza regione nota raggruppate in "n/d" (sempre in fondo, dopo quelle vere). La regione è quella salvata sulla commessa (modal "Modifica commessa attiva" del Dashboard) o, se assente, dedotta dalla provincia — stesso fallback già usato lì. Si combina come le altre colonne (AND fra colonne, OR dentro la colonna). La griglia dei filtri passa da 4 a 5 colonne con un breakpoint intermedio (3 colonne sotto i 1400px, oltre i due già esistenti a 1150px e 640px).
 
