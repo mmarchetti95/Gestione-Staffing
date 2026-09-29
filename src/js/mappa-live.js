@@ -25,6 +25,7 @@
 const ML_DAY_SHORT = ['Lun', 'Mar', 'Mer', 'Gio', 'Ven', 'Sab'];
 const ML_WEEK = -1;                       // "tutta la settimana" (nessun giorno selezionato)
 const ML_ALL  = -2;                       // "tutto lo storico" (tutte le settimane in pwData)
+const ML_RANGE = -3;                      // "intervallo date" (dal/al scelti con i selettori, modalità Intervallo)
 const ML_REFRESH_MS = 120000;             // polling Jira: 2 min (vedi mlStartAutoRefresh)
 
 /* La Edge Function jira-task-status accetta al massimo 500 sottotask per chiamata.
@@ -85,6 +86,16 @@ let _mlInited = false;
 let _mlAnno = null;
 let _mlWeek = null;
 let _mlDay = 0;
+
+/* Modalità di navigazione temporale: 'week' (settimana + giorno/settimana/storico,
+   come sempre) o 'range' (intervallo libero dal/al, _mlDay === ML_RANGE). In
+   modalità range si ricorda l'ultimo scope della modalità week, per ritrovarlo
+   tornando indietro. L'intervallo è stato locale del browser (localStorage). */
+let _mlMode = 'week';
+let _mlDayWeekMode = 0;
+let _mlRangeFrom = null;                  // 'YYYY-MM-DD'
+let _mlRangeTo = null;
+const ML_RANGE_KEY = 'ml_range_v1';
 
 let _mlFiltroCommesse = new Set();        // vuoto = nessun filtro (tutte)
 let _mlFiltroOperatori = new Set();       // nomi degli operatori selezionati
@@ -172,6 +183,101 @@ function mlWeekLabel(anno, week) {
   return anno + '/W' + (Number(week) < 10 ? '0' + Number(week) : week);
 }
 
+/* ----- Intervallo date (modalità "range") ----- */
+
+function mlIsoToLocalDate(iso) {
+  const p = String(iso).split('-').map(Number);
+  return new Date(p[0], p[1] - 1, p[2]);
+}
+
+function mlIsoFmt(iso) {
+  return iso.slice(8, 10) + '/' + iso.slice(5, 7) + '/' + iso.slice(0, 4);
+}
+
+/* Estremi dell'intervallo, sempre validi e ordinati. Senza una scelta salvata
+   si parte dalla settimana mostrata (Lun-Sab), così passare a "Intervallo" non
+   cambia di colpo cosa si vede. */
+function mlRangeBounds() {
+  const ok = v => typeof v === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(v);
+  let from = _mlRangeFrom, to = _mlRangeTo;
+  if (!ok(from) || !ok(to)) {
+    const days = mlDates();
+    from = ok(from) ? from : days[0].toISOString().slice(0, 10);
+    to = ok(to) ? to : days[5].toISOString().slice(0, 10);
+  }
+  if (from > to) { const t = from; from = to; to = t; }
+  return { from, to };
+}
+
+function mlRangeDays() {
+  const r = mlRangeBounds();
+  return Math.round((mlIsoToLocalDate(r.to) - mlIsoToLocalDate(r.from)) / 86400000) + 1;
+}
+
+/* Coppie (anno ISO, week) toccate dall'intervallo. */
+function mlRangeWeeks() {
+  const r = mlRangeBounds();
+  const a = isoWeekYear(mlIsoToLocalDate(r.from));
+  const b = isoWeekYear(mlIsoToLocalDate(r.to));
+  const out = [];
+  for (let y = a.year; y <= b.year; y++) {
+    const w0 = y === a.year ? a.week : 1;
+    const w1 = y === b.year ? b.week : weeksInYear(y);
+    for (let w = w0; w <= w1; w++) out.push({ anno: y, week: w });
+  }
+  return out;
+}
+
+/* Indici giorno (0=Lun … 5=Sab) di una settimana che cadono nell'intervallo. */
+function mlRangeDaysOfWeek(anno, week) {
+  const r = mlRangeBounds();
+  const monday = isoWeekToMonday(Number(anno), Number(week));
+  const out = [];
+  for (let d = 0; d < 6; d++) {
+    const dt = new Date(monday);
+    dt.setUTCDate(monday.getUTCDate() + d);
+    const iso = dt.toISOString().slice(0, 10);
+    if (iso >= r.from && iso <= r.to) out.push(d);
+  }
+  return out;
+}
+
+function mlRangeLoad() {
+  try {
+    const c = JSON.parse(localStorage.getItem(ML_RANGE_KEY) || 'null');
+    if (c) { _mlRangeFrom = c.from || null; _mlRangeTo = c.to || null; if (c.mode === 'range') _mlMode = 'range'; }
+  } catch (_) { /* preferenza illeggibile: si riparte dalla settimana */ }
+}
+
+function mlRangeSave() {
+  try { localStorage.setItem(ML_RANGE_KEY, JSON.stringify({ mode: _mlMode, from: _mlRangeFrom, to: _mlRangeTo })); } catch (_) {}
+}
+
+function mlSetMode(mode) {
+  if (mode === _mlMode) return;
+  if (mode === 'range') {
+    _mlDayWeekMode = _mlDay;
+    const r = mlRangeBounds();         // fissa gli estremi (default = settimana mostrata)
+    _mlRangeFrom = r.from; _mlRangeTo = r.to;
+    _mlMode = 'range';
+    _mlDay = ML_RANGE;
+  } else {
+    _mlMode = 'week';
+    _mlDay = _mlDayWeekMode === ML_RANGE ? ML_WEEK : _mlDayWeekMode;
+  }
+  mlRangeSave();
+  mlRender({});
+}
+
+function mlSetRange(from, to) {
+  _mlRangeFrom = from || null;
+  _mlRangeTo = to || null;
+  const r = mlRangeBounds();
+  _mlRangeFrom = r.from; _mlRangeTo = r.to;
+  mlRangeSave();
+  mlRender({});
+}
+
 /* ----- Costruzione dati ----- */
 
 /* Voci pianificate del giorno (o dell'intera settimana con ML_WEEK), una per
@@ -179,8 +285,19 @@ function mlWeekLabel(anno, week) {
    della Mappa squadre, ma con in più cIdx, i giorni coperti e le chiavi dei
    sottotask Jira degli operatori su quel cantiere — da cui si risale al Task. */
 /* Le settimane su cui lavora lo scope richiesto: una sola (quella mostrata) per
-   giorno/settimana, tutte quelle presenti in pwData per ML_ALL. */
+   giorno/settimana, tutte quelle presenti in pwData per ML_ALL, quelle toccate
+   dall'intervallo per ML_RANGE (con in `giorni` i soli giorni che vi ricadono). */
 function mlScopeWeeks(scope) {
+  if (scope === ML_RANGE) {
+    const out = [];
+    mlRangeWeeks().forEach(({ anno, week }) => {
+      const blocchi = (pwData[anno] || {})[week];
+      if (!Array.isArray(blocchi) || !blocchi.length) return;
+      const giorni = mlRangeDaysOfWeek(anno, week);
+      if (giorni.length) out.push({ blocchi, label: mlWeekLabel(anno, week), anno, week, giorni });
+    });
+    return out;
+  }
   if (scope !== ML_ALL) {
     return [{ blocchi: mlWeekData(), label: mlWeekLabel(_mlAnno, _mlWeek), anno: _mlAnno, week: _mlWeek }];
   }
@@ -206,6 +323,14 @@ function mlScopeWeeks(scope) {
    Gli item, una volta costruiti, non vengono mai mutati dai render (stato e filtri
    sono ricalcolati a parte), quindi condividerli fra render è sicuro. */
 let _mlItemsCache = { scope: null, rev: -1, items: null };
+
+/* Chiave di cache dello scope: per ML_RANGE conta anche l'intervallo, altrimenti
+   cambiando le date si rivedrebbero gli item del vecchio intervallo. */
+function mlScopeKey(scope) {
+  if (scope !== ML_RANGE) return String(scope);
+  const r = mlRangeBounds();
+  return 'r:' + r.from + ':' + r.to;
+}
 let _mlDataRev = 0;
 
 function mlInvalidateItems() {
@@ -214,9 +339,10 @@ function mlInvalidateItems() {
 
 function mlBuildItemsCached(scope) {
   const c = _mlItemsCache;
-  if (c.items && c.scope === scope && c.rev === _mlDataRev) return c.items;
+  const sk = mlScopeKey(scope);
+  if (c.items && c.scope === sk && c.rev === _mlDataRev) return c.items;
   const items = mlBuildItems(scope);
-  _mlItemsCache = { scope, rev: _mlDataRev, items };
+  _mlItemsCache = { scope: sk, rev: _mlDataRev, items };
   return items;
 }
 
@@ -227,6 +353,8 @@ function mlBuildItems(scope) {
   const giorniDaScorrere = scope < 0 ? [0, 1, 2, 3, 4, 5] : [scope];
 
   mlScopeWeeks(scope).forEach(blk => {
+    const giorniBlk = blk.giorni || giorniDaScorrere;
+    const monday = scope === ML_RANGE ? isoWeekToMonday(Number(blk.anno), Number(blk.week)) : null;
     blk.blocchi.forEach((bc, cIdx) => {
       if (!bc.commessa) return;
       const color = _mapColor(bc.commessa);
@@ -238,7 +366,7 @@ function mlBuildItems(scope) {
         const ops = (sq.operatori || []).map((o, oIdx) => ({ o, oIdx })).filter(x => x.o.nome && x.o.nome.trim());
         const strumenti = (typeof pwSqStrumentiJira === 'function') ? pwSqStrumentiJira(sq).filter(k => k) : [];
 
-        giorniDaScorrere.forEach(d => {
+        giorniBlk.forEach(d => {
           ops.forEach(({ o: op, oIdx }) => {
             const g = (op.giorni || {})[d] || {};
             // Ogni cantiere ha la sua attività (pwCellVoci, v18.182.0).
@@ -250,7 +378,7 @@ function mlBuildItems(scope) {
                 byKey[key] = {
                   commessa: bc.commessa, squadra, cantiere, color, strumenti,
                   operatori: [], attivita: new Set(), giorni: new Set(),
-                  weeks: new Set(), subtaskKeys: new Set(),
+                  weeks: new Set(), subtaskKeys: new Set(), dates: new Set(),
                 };
                 items.push(byKey[key]);
               }
@@ -264,6 +392,11 @@ function mlBuildItems(scope) {
               if (attivita) it.attivita.add(attivita);
               it.giorni.add(d);
               it.weeks.add(blk.label);
+              if (monday) {
+                const dt = new Date(monday);
+                dt.setUTCDate(monday.getUTCDate() + d);
+                it.dates.add(dt.toISOString().slice(0, 10));
+              }
               // Tutti i sottotask del cantiere per l'operatore, uno per attività.
               pwJiraSubtaskEntriesFor(jiraMap, cantiere, op.nome).forEach(sub => {
                 if (sub && sub.key) it.subtaskKeys.add(sub.key);
@@ -280,6 +413,7 @@ function mlBuildItems(scope) {
     it.giorni = [...it.giorni].sort((a, b) => a - b);
     it.weeks = [...it.weeks].sort();
     it.subtaskKeys = [...it.subtaskKeys];
+    it.dates = [...it.dates].sort();
   });
   return items;
 }
@@ -442,6 +576,7 @@ function mlJiraCacheSave() {
 async function mlLoadProduzione() {
   if (!_sbClient || !_sbUser) return;
   if (_mlDay === ML_ALL) { await mlLoadProduzioneStorico(); return; }
+  if (_mlDay === ML_RANGE) { await mlLoadProduzioneRange(); return; }
   _mlCp = {};
   try {
     const { data, error } = await _sbClient
@@ -507,6 +642,58 @@ async function mlLoadProduzioneStorico() {
   }
 }
 
+/* Vista intervallo: ore/km per commessa+squadra+cantiere dei soli giorni
+   dell'intervallo. Si scaricano le settimane toccate (anno per anno, week fra gli
+   estremi) e si scartano lato client i giorni fuori dall'intervallo. Paginato come
+   lo storico, per lo stesso tetto di 1000 righe di PostgREST. */
+let _mlCpRange = {};
+let _mlCpRangeKey = null;
+
+async function mlLoadProduzioneRange() {
+  const key = mlScopeKey(ML_RANGE);
+  const perAnno = {};
+  mlRangeWeeks().forEach(({ anno, week }) => {
+    if (!perAnno[anno]) perAnno[anno] = { w0: week, w1: week };
+    perAnno[anno].w0 = Math.min(perAnno[anno].w0, week);
+    perAnno[anno].w1 = Math.max(perAnno[anno].w1, week);
+  });
+  const PAGE = 1000;
+  const MAX_PAGES = 30;
+  const agg = {};
+  const giorniOk = {};                  // "anno|week" -> Set di giorni nell'intervallo
+  try {
+    for (const anno of Object.keys(perAnno)) {
+      const { w0, w1 } = perAnno[anno];
+      for (let p = 0; p < MAX_PAGES; p++) {
+        const { data, error } = await _sbClient
+          .from('controllo_produzione')
+          .select('commessa,squadra,cantiere,anno,week,giorno,ore_jira,km_cad')
+          .eq('anno', Number(anno))
+          .gte('week', w0)
+          .lte('week', w1)
+          .range(p * PAGE, p * PAGE + PAGE - 1);
+        if (error) throw error;
+        const rows = data || [];
+        rows.forEach(r => {
+          if (!r.cantiere) return;
+          const wk = r.anno + '|' + r.week;
+          if (!giorniOk[wk]) giorniOk[wk] = new Set(mlRangeDaysOfWeek(r.anno, r.week));
+          if (!giorniOk[wk].has(Number(r.giorno))) return;
+          const k = r.commessa + '|||' + r.squadra + '|||' + r.cantiere;
+          if (!agg[k]) agg[k] = { ore: 0, km: 0 };
+          if (r.ore_jira != null) agg[k].ore += Number(r.ore_jira) || 0;
+          if (r.km_cad != null) agg[k].km += Number(r.km_cad) || 0;
+        });
+        if (rows.length < PAGE) break;
+      }
+    }
+    _mlCpRange = agg;
+    _mlCpRangeKey = key;
+  } catch (e) {
+    console.error('mlLoadProduzioneRange error:', e);
+  }
+}
+
 /* Stato dei Task Jira dei cantieri visibili. Parte dalle chiavi dei sottotask
    salvate in bc.jiraSubtask e lascia alla Edge Function il salto sottotask->Task
    (campo "parent"): è l'unico legame certo cantiere->Task, vedi il commento in
@@ -521,7 +708,9 @@ async function mlRefreshTaskStatus(items, force) {
   // sottotask di tutto lo storico significherebbe decine di chiamate a Jira per un
   // dato che, per le settimane passate, non cambia più. Nella vista giorno/settimana
   // l'insieme è piccolo e conviene rileggerlo sempre, per cogliere i cambi di stato.
-  const daChiedere = (_mlDay === ML_ALL && !force) ? keys.filter(k => !(k in _mlTaskBySubtask)) : keys;
+  // Un intervallo lungo si comporta come lo storico; uno breve come la settimana.
+  const soloBuchi = _mlDay === ML_ALL || (_mlDay === ML_RANGE && mlRangeDays() > 14);
+  const daChiedere = (soloBuchi && !force) ? keys.filter(k => !(k in _mlTaskBySubtask)) : keys;
   if (!daChiedere.length) { mlSetJiraStatus('Stato Jira già aggiornato per lo storico.'); return; }
 
   _mlBusyJira = true;
@@ -587,7 +776,8 @@ function mlSetJiraStatus(txt) {
 async function mlRefreshMeteo(groups) {
   // In vista storico il meteo non ha significato (cantieri di settimane diverse,
   // molte già passate e fuori dall'orizzonte di previsione): si salta del tutto.
-  if (_mlDay === ML_ALL) return;
+  // Stesso discorso per l'intervallo: nessuna data singola a cui riferire il meteo.
+  if (_mlDay === ML_ALL || _mlDay === ML_RANGE) return;
   const days = mlDates();
   const startISO = days[0].toISOString().slice(0, 10);
   const endISO = days[5].toISOString().slice(0, 10);
@@ -756,14 +946,35 @@ function mlRenderToolbar() {
     }
   }
   const days = mlDates();
+  const range = _mlMode === 'range';
+  const r = mlRangeBounds();
   const lbl = document.getElementById('ml-header-dates');
   if (lbl) {
-    lbl.textContent = _mlDay === ML_ALL
+    lbl.textContent = range
+      ? '📆 ' + mlIsoFmt(r.from) + ' — ' + mlIsoFmt(r.to) + ' · ' + mlRangeDays() + ' giorni · ' + mlScopeWeeks(ML_RANGE).length + ' settimane pianificate'
+      : _mlDay === ML_ALL
       ? '🗂 Tutto lo storico · ' + mlScopeWeeks(ML_ALL).length + ' settimane pianificate'
       : 'WEEK ' + _mlWeek + ' · ' + formatDate(days[0]) + ' — ' + formatDate(days[5]) + ' ' + _mlAnno;
   }
   const auto = document.getElementById('ml-auto');
   if (auto) auto.checked = _mlAuto;
+
+  // Selettore modalità: in "Intervallo" la navigazione per settimana e la barra
+  // dei giorni spariscono, al loro posto i due selettori data.
+  const mw = document.getElementById('ml-mode-week');
+  const mr = document.getElementById('ml-mode-range');
+  if (mw) mw.classList.toggle('active', !range);
+  if (mr) mr.classList.toggle('active', range);
+  const wn = document.getElementById('ml-week-nav');
+  const rn = document.getElementById('ml-range-nav');
+  if (wn) wn.style.display = range ? 'none' : 'flex';
+  if (rn) rn.style.display = range ? 'flex' : 'none';
+  const dd = document.getElementById('ml-days');
+  if (dd) dd.style.display = range ? 'none' : '';
+  const rf = document.getElementById('ml-range-from');
+  const rt = document.getElementById('ml-range-to');
+  if (rf && document.activeElement !== rf) rf.value = r.from;
+  if (rt && document.activeElement !== rt) rt.value = r.to;
 
   // In vista storico i selettori di settimana non governano più nulla: si
   // disabilitano, invece di lasciarli attivi e apparentemente senza effetto.
@@ -1391,7 +1602,12 @@ function mlDettaglioHtml(g) {
     html += '<div class="ml-kv"><span>Commessa</span><b><button class="ml-link" data-ml-commessa="' + esc(it.commessa) + '">' + esc(it.commessa) + '</button></b></div>';
     if (it.attivita) html += '<div class="ml-kv"><span>Attività</span><b>' + esc(it.attivita) + '</b></div>';
     html += '<div class="ml-kv"><span>Operatori</span><b>' + esc(it.operatori.join(', ')) + '</b></div>';
-    if (_mlDay === ML_ALL && it.weeks.length) {
+    if (_mlDay === ML_RANGE && it.dates.length) {
+      const MAXD = 15;
+      const shown = it.dates.slice(0, MAXD).map(d => d.slice(8, 10) + '/' + d.slice(5, 7)).join(' · ');
+      html += '<div class="ml-kv"><span>Giorni</span><b>' + esc(shown) +
+        (it.dates.length > MAXD ? ' <i style="color:#94a3b8;font-weight:400;">(+' + (it.dates.length - MAXD) + ')</i>' : '') + '</b></div>';
+    } else if (_mlDay === ML_ALL && it.weeks.length) {
       html += '<div class="ml-kv"><span>Settimane</span><b>' + esc(it.weeks.join(', ')) + '</b></div>';
     } else if (_mlDay === ML_WEEK && it.giorni.length) {
       html += '<div class="ml-kv"><span>Giorni</span><b>' + it.giorni.map(d => ML_DAY_SHORT[d]).join(' · ') + '</b></div>';
@@ -1450,6 +1666,12 @@ function mlProduzioneHtml(it) {
     if (!agg) return '';
     return '<div class="ml-kv"><span>Produzione</span><b>' +
       (Math.round(agg.ore * 10) / 10) + ' h · ' + (Math.round(agg.km * 10) / 10) + ' km/cad <i style="color:#94a3b8;font-weight:400;">(totale)</i></b></div>';
+  }
+  if (_mlDay === ML_RANGE) {
+    const agg = _mlCpRangeKey === mlScopeKey(ML_RANGE) ? _mlCpRange[it.commessa + '|||' + it.squadra + '|||' + it.cantiere] : null;
+    if (!agg) return '';
+    return '<div class="ml-kv"><span>Produzione</span><b>' +
+      (Math.round(agg.ore * 10) / 10) + ' h · ' + (Math.round(agg.km * 10) / 10) + ' km/cad <i style="color:#94a3b8;font-weight:400;">(intervallo)</i></b></div>';
   }
   const giorni = _mlDay === ML_WEEK ? it.giorni : [_mlDay];
   let ore = 0, km = 0, trovati = 0;
@@ -1863,7 +2085,12 @@ function mlEnter() {
   // pwData può essere cambiato mentre si era su un altro screen (modifiche in Griglia).
   mlInvalidateItems();
   mlJiraCacheLoad();
-  if (_mlAnno == null || _mlWeek == null) mlGoToday();
+  if (_mlAnno == null || _mlWeek == null) {
+    mlGoToday();
+    // Primo ingresso: si riprende la modalità (e l'intervallo) dell'ultima volta.
+    mlRangeLoad();
+    if (_mlMode === 'range') { _mlDayWeekMode = _mlDay; _mlDay = ML_RANGE; }
+  }
   mlInit();
   setTimeout(() => {
     _mlMap.invalidateSize();
@@ -1896,6 +2123,15 @@ function mlBindToolbar() {
   // normale si limita a riempire i buchi usando la cache.
   if (refresh) refresh.onclick = () => mlRender({ keepView: true, forceJira: true });
   if (closeBtn) closeBtn.onclick = () => mlCloseDrawer();
+
+  const modeW = document.getElementById('ml-mode-week');
+  const modeR = document.getElementById('ml-mode-range');
+  const rFrom = document.getElementById('ml-range-from');
+  const rTo = document.getElementById('ml-range-to');
+  if (modeW) modeW.onclick = () => mlSetMode('week');
+  if (modeR) modeR.onclick = () => mlSetMode('range');
+  if (rFrom) rFrom.onchange = () => { if (rFrom.value) mlSetRange(rFrom.value, rTo ? rTo.value : null); };
+  if (rTo) rTo.onchange = () => { if (rTo.value) mlSetRange(rFrom ? rFrom.value : null, rTo.value); };
 
   const sideC = document.getElementById('ml-side-cantieri');
   const sideM = document.getElementById('ml-side-commesse');

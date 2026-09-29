@@ -114,6 +114,9 @@ Limite noto: il progetto Supabase è sul piano **Free**, che non include backup 
 
 ## Changelog
 
+## v18.183.0
+- feat: **Mappa: navigazione per intervallo di date.** In toolbar un selettore "📅 Per week" / "📆 Intervallo date". In modalità Intervallo spariscono settimana e barra dei giorni e compaiono i selettori **Dal / Al**: mappa, filtri, elenchi, riepilogo e dettaglio mostrano solo i cantieri pianificati in quei giorni (anche a cavallo di più settimane o di fine anno). Il dettaglio cantiere elenca le date coperte e la produzione (ore/km) sommata sui soli giorni dell'intervallo. Il meteo non viene mostrato (nessun giorno singolo). Modalità e intervallo scelti restano memorizzati nel browser. Nessuna modifica a Supabase.
+
 ## v18.182.1
 - fix: **Sottotask Jira: un errore non chiude più tutto il flusso.** Gli avvisi dentro il flusso (es. "Seleziona almeno un sottotask da creare", "Scegli Epic e Task per…") si aprono sopra la finestra corrente e, premendo OK, la lasciano com'era, con tutte le scelte fatte.
 - feat: **pulsante "← Indietro"** in ogni passo dopo il primo (selezione sottotask, campi extra, anteprima): si torna al passo precedente con Epic/Task, spunte e valori già inseriti, senza ricominciare da capo.
