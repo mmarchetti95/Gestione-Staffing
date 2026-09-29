@@ -427,8 +427,16 @@ function msMeteoDescr(code) {
   return METEO_DESCR[code] || (code != null ? 'Codice ' + code : '');
 }
 
-let _msFiltri = { dal: null, al: null, commessa: '', q: '', soloMaltempo: false };
-let _msRows = [];            // righe visualizzate (dopo i filtri), indicizzate da data-ms-row
+let _msFiltri = { dal: null, al: null, q: '' };
+/* Filtri per colonna, combinabili tra loro (AND tra colonne, OR tra i valori scelti di una
+   stessa colonna): col -> Set(valori ammessi) per le colonne a elenco, {min, max} per quelle
+   numeriche. Colonna assente = nessun filtro. */
+let _msColFiltri = {};
+/* Ordinamento multiplo: click sull'intestazione = ordina solo per quella colonna (secondo
+   click inverte), Maiusc+click = aggiunge/inverte un criterio successivo. */
+let _msSort = [{ col: 'data', dir: 'desc' }];
+let _msAllRows = [];         // righe del periodo + ricerca libera, con meteo/PC calcolati
+let _msRows = [];            // dopo i filtri di colonna e l'ordinamento (tabella + export)
 let _msUiInited = false;
 let _msFillKey = null;       // intervallo per cui è già stato avviato il recupero
 let _msRenderTimer = null;
@@ -443,17 +451,69 @@ function msDefaultRange() {
   return { dal: msAddDays(ieri, -29), al: ieri };
 }
 
+const MS_SEV_LABEL = { alta: 'Alto', media: 'Medio' };
+const MS_PC_RANK = { rossa: 3, arancione: 2, gialla: 1 };
+
+/* Colonne della tabella: val = valore usato da filtro (e ordinamento, salvo sortVal),
+   lbl = come mostrarlo nell'elenco del filtro, order = ordine dell'elenco del filtro. */
+const MS_COLS = [
+  { key: 'data', label: 'Data', type: 'cat', val: r => r.dateISO, lbl: v => msFormatData(v), order: (a, b) => b.localeCompare(a) },
+  { key: 'commessa', label: 'Commessa', type: 'cat', val: r => r.commessa },
+  { key: 'squadra', label: 'Squadra', type: 'cat', val: r => r.squadra || '(senza nome)' },
+  { key: 'cantiere', label: 'Cantiere', type: 'cat', val: r => r.cantiere },
+  { key: 'meteo', label: 'Meteo', type: 'cat', val: r => (r.info ? msMeteoDescr(r.info.code) : 'Non disponibile'),
+    sortVal: r => (r.info ? r.info.code : null) },
+  { key: 'tmin', label: 'Min', type: 'num', unit: '°C', val: r => (r.info ? r.info.tmin : null) },
+  { key: 'tmax', label: 'Max', type: 'num', unit: '°C', val: r => (r.info ? r.info.tmax : null) },
+  { key: 'pioggia', label: 'Pioggia', type: 'num', unit: 'mm', val: r => (r.info ? r.info.precip : null),
+    presets: [{ label: '≥ 1 mm', min: 1 }, { label: '≥ 8 mm', min: 8 }, { label: '≥ 20 mm', min: 20 }, { label: 'Asciutto (< 1 mm)', max: 0.9 }] },
+  { key: 'maltempo', label: 'Maltempo', type: 'cat', val: r => MS_SEV_LABEL[r.severity] || 'Nessuno',
+    sortVal: r => (r.severity === 'alta' ? 2 : r.severity === 'media' ? 1 : 0),
+    order: (a, b) => ['Alto', 'Medio', 'Nessuno'].indexOf(a) - ['Alto', 'Medio', 'Nessuno'].indexOf(b) },
+  { key: 'pc', label: 'Allerta PC', type: 'cat', val: r => r.pcColor || 'Nessuna', sortVal: r => MS_PC_RANK[r.pcColor] || 0,
+    lbl: v => (v === 'Nessuna' ? v : 'Allerta ' + v), order: (a, b) => (MS_PC_RANK[b] || 0) - (MS_PC_RANK[a] || 0) },
+  { key: 'operatori', label: 'Operatori', type: 'cat', multi: true, val: r => (r.operatori.length ? r.operatori : ['(nessuno)']),
+    sortVal: r => r.operatori.join(', ') },
+];
+function msCol(key) {
+  return MS_COLS.find(c => c.key === key);
+}
+
 function msInitUi() {
   if (_msUiInited) return;
   _msUiInited = true;
   const on = (id, ev, fn) => { const el = document.getElementById(id); if (el) el.addEventListener(ev, fn); };
   on('ms-dal', 'change', e => { _msFiltri.dal = e.target.value || null; msRender(); });
   on('ms-al', 'change', e => { _msFiltri.al = e.target.value || null; msRender(); });
-  on('ms-commessa', 'change', e => { _msFiltri.commessa = e.target.value; msRender(); });
   on('ms-q', 'input', e => { _msFiltri.q = e.target.value; msScheduleRender(); });
-  on('ms-solo-maltempo', 'change', e => { _msFiltri.soloMaltempo = e.target.checked; msRender(); });
   on('ms-export', 'click', () => msExportExcel());
   document.querySelectorAll('[data-ms-range]').forEach(b => b.addEventListener('click', () => msSetRange(b.dataset.msRange)));
+
+  // Un solo listener per tabella, riquadri e chip: il contenuto viene ridisegnato spesso.
+  const table = document.getElementById('ms-table');
+  if (table) {
+    table.addEventListener('click', e => {
+      const f = e.target.closest('[data-ms-filter]');
+      if (f) { e.stopPropagation(); msOpenPop(f.dataset.msFilter, f); return; }
+      const s = e.target.closest('[data-ms-sort]');
+      if (s) { msToggleSort(s.dataset.msSort, e.shiftKey); return; }
+      const tr = e.target.closest('[data-ms-row]');
+      if (tr) msOpenDettaglio(parseInt(tr.dataset.msRow, 10));
+    });
+    table.addEventListener('scroll', () => msClosePop());
+  }
+  on('ms-kpi', 'click', e => { const t = e.target.closest('[data-ms-kpi]'); if (t) msKpiFilter(t.dataset.msKpi); });
+  on('ms-chips', 'click', e => {
+    const c = e.target.closest('[data-ms-chip]');
+    if (!c) return;
+    const k = c.dataset.msChip;
+    if (k === '*') { _msColFiltri = {}; _msFiltri.q = ''; const q = document.getElementById('ms-q'); if (q) q.value = ''; msRender(); return; }
+    if (k === 'q') { _msFiltri.q = ''; const q = document.getElementById('ms-q'); if (q) q.value = ''; msRender(); return; }
+    delete _msColFiltri[k];
+    msApply();
+  });
+  window.addEventListener('resize', () => msClosePop());
+  document.addEventListener('keydown', e => { if (e.key === 'Escape') msClosePop(); });
 }
 
 function msSetRange(kind) {
@@ -466,7 +526,8 @@ function msSetRange(kind) {
 
 /* Aperto dal dettaglio cantiere della Mappa: tutto lo storico di quel cantiere. */
 function msOpenStoricoCantiere(cantiere) {
-  _msFiltri = { dal: msPrimaData() || msDefaultRange().dal, al: msAddDays(meteoTodayISO(), -1), commessa: '', q: cantiere || '', soloMaltempo: false };
+  _msFiltri = { dal: msPrimaData() || msDefaultRange().dal, al: msAddDays(meteoTodayISO(), -1), q: '' };
+  _msColFiltri = cantiere ? { cantiere: new Set([cantiere]) } : {};
   _pwActiveTab = 'meteo-storico';
   switchScreen('weekly');
 }
@@ -489,27 +550,82 @@ function msRowSeverity(r) {
   return sev === 'alta' || pcSev === 'alta' ? 'alta' : (sev || pcSev);
 }
 
-function msComputeRows() {
-  const f = _msFiltri;
-  const q = (f.q || '').toLowerCase().trim();
-  let rows = msBuildRows(f.dal, f.al);
-  if (f.commessa) rows = rows.filter(r => r.commessa === f.commessa);
-  if (q) rows = rows.filter(r => (r.cantiere + ' ' + r.squadra + ' ' + r.commessa + ' ' + r.operatori.join(' ')).toLowerCase().indexOf(q) !== -1);
-  rows.forEach(r => {
-    r.info = pwMeteoInfoFor(r.cantiere, r.dateISO);
-    r.pcInfo = pcInfoFor(r.cantiere, r.dateISO);
-    r.pcColor = pcColorePeggiore(r.pcInfo);
-    r.severity = msRowSeverity(r);
-  });
-  if (f.soloMaltempo) rows = rows.filter(r => r.severity);
-  rows.sort((a, b) => b.dateISO.localeCompare(a.dateISO) || a.commessa.localeCompare(b.commessa) || a.cantiere.localeCompare(b.cantiere));
-  return rows;
-}
-
 function msFormatData(dateISO) {
   const d = new Date(dateISO + 'T00:00:00Z');
   return d.toLocaleDateString('it-IT', { weekday: 'short', day: '2-digit', month: '2-digit', year: 'numeric', timeZone: 'UTC' });
 }
+function msFormatDataLunga(dateISO) {
+  const d = new Date(dateISO + 'T00:00:00Z');
+  const s = d.toLocaleDateString('it-IT', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric', timeZone: 'UTC' });
+  return s.charAt(0).toUpperCase() + s.slice(1);
+}
+
+/* ----- Filtri, ordinamento ----- */
+
+function msPassCol(r, col, f) {
+  const v = col.val(r);
+  if (col.type === 'num') {
+    if (f.min != null && (v == null || v < f.min)) return false;
+    if (f.max != null && (v == null || v > f.max)) return false;
+    return true;
+  }
+  return col.multi ? v.some(x => f.has(x)) : f.has(v);
+}
+
+/* Righe che passano tutti i filtri di colonna, eventualmente ignorando quello di una colonna
+   (serve all'elenco valori del filtro stesso: mostra ciò che resta con gli ALTRI filtri). */
+function msApplyColFilters(rows, exceptKey) {
+  const attivi = MS_COLS.filter(c => c.key !== exceptKey && _msColFiltri[c.key]);
+  if (!attivi.length) return rows.slice();
+  return rows.filter(r => attivi.every(c => msPassCol(r, c, _msColFiltri[c.key])));
+}
+
+function msSortVal(col, r) {
+  if (col.sortVal) return col.sortVal(r);
+  const v = col.val(r);
+  return col.multi ? v.join(', ') : v;
+}
+
+function msComparator(a, b) {
+  for (const s of _msSort) {
+    const col = msCol(s.col);
+    if (!col) continue;
+    const va = msSortVal(col, a), vb = msSortVal(col, b);
+    const na = va == null || va === '', nb = vb == null || vb === '';
+    if (na && nb) continue;
+    if (na) return 1;          // valori mancanti sempre in fondo, in entrambi i versi
+    if (nb) return -1;
+    const c = typeof va === 'number' && typeof vb === 'number' ? va - vb : String(va).localeCompare(String(vb), 'it', { sensitivity: 'base', numeric: true });
+    if (c) return s.dir === 'desc' ? -c : c;
+  }
+  return b.dateISO.localeCompare(a.dateISO) || a.commessa.localeCompare(b.commessa) || a.cantiere.localeCompare(b.cantiere);
+}
+
+function msToggleSort(key, add) {
+  const col = msCol(key);
+  if (!col) return;
+  const defDir = col.type === 'num' || key === 'data' || key === 'maltempo' || key === 'pc' ? 'desc' : 'asc';
+  const i = _msSort.findIndex(s => s.col === key);
+  if (add) {
+    if (i === -1) _msSort.push({ col: key, dir: defDir });
+    else _msSort[i].dir = _msSort[i].dir === 'asc' ? 'desc' : 'asc';
+  } else if (i === 0 && _msSort.length === 1) {
+    _msSort[0].dir = _msSort[0].dir === 'asc' ? 'desc' : 'asc';
+  } else {
+    _msSort = [{ col: key, dir: i === -1 ? defDir : _msSort[i].dir }];
+  }
+  msApply();
+}
+
+function msKpiFilter(kind) {
+  if (kind === 'all') _msColFiltri = {};
+  else if (kind === 'pioggia') _msColFiltri.pioggia = { min: 1, max: null };
+  else if (kind === 'maltempo') _msColFiltri.maltempo = new Set(['Alto', 'Medio']);
+  else if (kind === 'pc') _msColFiltri.pc = new Set(['gialla', 'arancione', 'rossa']);
+  msApply();
+}
+
+/* ----- Render ----- */
 
 async function msRender() {
   const view = document.getElementById('pw-view-meteo-storico');
@@ -521,23 +637,21 @@ async function msRender() {
   setVal('ms-dal', _msFiltri.dal);
   setVal('ms-al', _msFiltri.al);
   setVal('ms-q', _msFiltri.q || '');
-  const chk = document.getElementById('ms-solo-maltempo');
-  if (chk) chk.checked = !!_msFiltri.soloMaltempo;
-
-  // Tendina commesse: tutte quelle pianificate nell'intervallo
-  const sel = document.getElementById('ms-commessa');
-  if (sel) {
-    const commesse = [...new Set(msBuildRows(_msFiltri.dal, _msFiltri.al).map(r => r.commessa))].sort((a, b) => a.localeCompare(b));
-    if (_msFiltri.commessa && commesse.indexOf(_msFiltri.commessa) === -1) commesse.unshift(_msFiltri.commessa);
-    sel.innerHTML = '<option value="">Tutte le commesse</option>' +
-      commesse.map(c => '<option value="' + esc(c) + '"' + (c === _msFiltri.commessa ? ' selected' : '') + '>' + esc(c) + '</option>').join('');
-  }
 
   await msLoadRange(_msFiltri.dal, _msFiltri.al, { hourly: false });
   if (_pwActiveTab !== 'meteo-storico') return;
-  _msRows = msComputeRows();
-  msRenderKpi(_msRows);
-  msRenderTable(_msRows);
+
+  const q = (_msFiltri.q || '').toLowerCase().trim();
+  let rows = msBuildRows(_msFiltri.dal, _msFiltri.al);
+  if (q) rows = rows.filter(r => (r.cantiere + ' ' + r.squadra + ' ' + r.commessa + ' ' + r.operatori.join(' ')).toLowerCase().indexOf(q) !== -1);
+  rows.forEach(r => {
+    r.info = pwMeteoInfoFor(r.cantiere, r.dateISO);
+    r.pcInfo = pcInfoFor(r.cantiere, r.dateISO);
+    r.pcColor = pcColorePeggiore(r.pcInfo);
+    r.severity = msRowSeverity(r);
+  });
+  _msAllRows = rows;
+  msApply();
   msUpdateStatus();
 
   // Recupero di quanto manca nell'intervallo mostrato (tutti i cantieri, non solo i filtrati)
@@ -551,78 +665,305 @@ async function msRender() {
   }
 }
 
-function msRenderKpi(rows) {
+/* Riapplica filtri di colonna e ordinamento sulle righe già calcolate (nessuna lettura). */
+function msApply() {
+  const rows = msApplyColFilters(_msAllRows, null);
+  rows.sort(msComparator);
+  _msRows = rows;
+  msRenderKpi();
+  msRenderChips();
+  msRenderTable(rows);
+  if (_msPop) msRenderPopList();
+}
+
+function msRenderKpi() {
   const el = document.getElementById('ms-kpi');
   if (!el) return;
+  const rows = _msRows;
   const conMeteo = rows.filter(r => r.info).length;
   const pioggia = rows.filter(r => r.info && r.info.precip != null && r.info.precip >= 1).length;
   const maltempo = rows.filter(r => r.severity).length;
   const allerte = rows.filter(r => r.pcColor).length;
-  const tile = (label, val, sub, cls) =>
-    '<div class="bg-white border border-slate-200 rounded-lg px-4 py-3">' +
-      '<div class="text-xs text-slate-500">' + label + '</div>' +
-      '<div class="text-2xl font-semibold ' + (cls || 'text-slate-800') + '">' + val + '</div>' +
-      (sub ? '<div class="text-xs text-slate-400">' + sub + '</div>' : '') +
-    '</div>';
+  const f = _msColFiltri;
+  const attivo = {
+    all: !Object.keys(f).length,
+    pioggia: !!(f.pioggia && f.pioggia.min === 1 && f.pioggia.max == null),
+    maltempo: !!(f.maltempo && f.maltempo.size === 2 && f.maltempo.has('Alto') && f.maltempo.has('Medio')),
+    pc: !!(f.pc && f.pc.size === 3 && !f.pc.has('Nessuna')),
+  };
+  const tile = (kind, label, val, sub, tone) =>
+    '<button type="button" data-ms-kpi="' + kind + '" class="ms-kpi ms-kpi-' + tone + (attivo[kind] ? ' ms-kpi-on' : '') + '" title="' +
+      (kind === 'all' ? 'Rimuovi i filtri di colonna' : 'Mostra solo queste righe') + '">' +
+      '<span class="ms-kpi-l">' + label + '</span><span class="ms-kpi-v">' + val + '</span>' +
+      (sub ? '<span class="ms-kpi-s">' + sub + '</span>' : '') +
+    '</button>';
+  const pct = n => (rows.length ? Math.round(n / rows.length * 100) + '% dei giorni' : '');
+  const tot = _msAllRows.length;
   el.innerHTML =
-    tile('Giorni-cantiere', rows.length, conMeteo < rows.length ? 'con meteo: ' + conMeteo + ' (resto in recupero o non localizzato)' : 'tutti con meteo') +
-    tile('Con pioggia (≥ 1 mm)', pioggia, rows.length ? Math.round(pioggia / rows.length * 100) + '% dei giorni' : '', 'text-sky-700') +
-    tile('Maltempo', maltempo, 'pioggia ≥ 8 mm, neve, temporali o allerta', maltempo ? 'text-amber-700' : 'text-slate-800') +
-    tile('Allerte Protezione Civile', allerte, 'bollettino del giorno', allerte ? 'text-red-700' : 'text-slate-800');
+    tile('all', 'Giorni-cantiere', rows.length + (rows.length !== tot ? '<span class="ms-kpi-of"> / ' + tot + '</span>' : ''),
+      conMeteo < rows.length ? (rows.length - conMeteo) + ' senza meteo (in recupero o non localizzati)' : 'tutti con meteo', 'slate') +
+    tile('pioggia', '🌧️ Con pioggia (≥ 1 mm)', pioggia, pct(pioggia), 'sky') +
+    tile('maltempo', '⚠️ Maltempo', maltempo, 'pioggia ≥ 8 mm, neve, temporali o allerta', 'amber') +
+    tile('pc', '▲ Allerte Protezione Civile', allerte, 'bollettino del giorno', 'red');
 }
 
-function msMeteoCellHtml(r) {
-  if (!r.info) return '<span class="text-slate-400">' + esc(pwMeteoMissingReason(r.cantiere, r.dateISO)) + '</span>';
-  return pwMeteoIconFor(r.info.code) + ' ' + esc(msMeteoDescr(r.info.code));
+function msFiltroTesto(col, f) {
+  if (col.type === 'num') {
+    const u = ' ' + col.unit;
+    if (f.min != null && f.max != null) return 'tra ' + f.min + ' e ' + f.max + u;
+    return f.min != null ? '≥ ' + f.min + u : '≤ ' + f.max + u;
+  }
+  const lbl = col.lbl || (v => v);
+  const vals = [...f].map(lbl);
+  if (!vals.length) return 'nessun valore';
+  return vals.slice(0, 2).join(', ') + (vals.length > 2 ? ' +' + (vals.length - 2) : '');
+}
+
+function msRenderChips() {
+  const el = document.getElementById('ms-chips');
+  if (!el) return;
+  const chips = [];
+  if (_msFiltri.q) chips.push('<span class="ms-chip">Ricerca: <b>' + esc(_msFiltri.q) + '</b><button data-ms-chip="q" title="Rimuovi">✕</button></span>');
+  MS_COLS.forEach(c => {
+    const f = _msColFiltri[c.key];
+    if (f) chips.push('<span class="ms-chip">' + esc(c.label) + ': <b>' + esc(msFiltroTesto(c, f)) + '</b><button data-ms-chip="' + c.key + '" title="Rimuovi">✕</button></span>');
+  });
+  if (chips.length > 1) chips.push('<button class="ms-chip-clear" data-ms-chip="*">Azzera tutti i filtri</button>');
+  const sortTxt = _msSort.map((s, i) => (i ? ', poi ' : '') + msCol(s.col).label + (s.dir === 'asc' ? ' ↑' : ' ↓')).join('');
+  el.innerHTML = (chips.length ? chips.join('') : '<span class="ms-chip-none">Nessun filtro di colonna — usa ⏷ nelle intestazioni</span>') +
+    '<span class="ms-sort-txt">Ordinato per ' + esc(sortTxt) + ' · Maiusc+click su un\'intestazione per aggiungere un criterio</span>';
+}
+
+function msRainHtml(v) {
+  if (v == null) return '<span class="ms-muted">—</span>';
+  const mm = Math.round(v * 10) / 10;
+  const cls = v >= 20 ? 'ms-rain-4' : v >= 8 ? 'ms-rain-3' : v >= 1 ? 'ms-rain-2' : v > 0 ? 'ms-rain-1' : 'ms-rain-0';
+  return '<span class="ms-rain ' + cls + '">' + (v > 0 ? mm + ' mm' : '0') + '</span>';
 }
 
 function msPcCellHtml(r) {
-  if (!r.pcColor) return '<span class="text-slate-300">—</span>';
-  const COL = { gialla: 'bg-yellow-100 text-yellow-800', arancione: 'bg-orange-100 text-orange-800', rossa: 'bg-red-100 text-red-800' };
-  return '<span class="px-1.5 py-0.5 rounded text-xs ' + (COL[r.pcColor] || '') + '">▲ ' + esc(r.pcColor) + '</span>';
+  if (!r.pcColor) return '<span class="ms-muted">—</span>';
+  return '<span class="ms-pc ms-pc-' + esc(r.pcColor) + '">▲ ' + esc(r.pcColor) + '</span>';
+}
+
+function msOperatoriHtml(ops) {
+  if (!ops.length) return '<span class="ms-muted">—</span>';
+  const vis = ops.slice(0, 2).map(esc).join(', ');
+  return '<span title="' + esc(ops.join(', ')) + '">' + vis + (ops.length > 2 ? ' <span class="ms-more">+' + (ops.length - 2) + '</span>' : '') + '</span>';
+}
+
+function msThHtml(col, extraCls) {
+  const i = _msSort.findIndex(s => s.col === col.key);
+  const ind = i === -1 ? '<span class="ms-sort-ind ms-sort-off">↕</span>'
+    : '<span class="ms-sort-ind">' + (_msSort[i].dir === 'asc' ? '▲' : '▼') + (_msSort.length > 1 ? '<sup>' + (i + 1) + '</sup>' : '') + '</span>';
+  const fOn = !!_msColFiltri[col.key];
+  return '<th class="' + (extraCls || '') + '"><div class="ms-th">' +
+    '<button type="button" class="ms-th-sort" data-ms-sort="' + col.key + '" title="Ordina (Maiusc+click: aggiungi criterio)">' + esc(col.label) + ind + '</button>' +
+    '<button type="button" class="ms-th-f' + (fOn ? ' ms-th-f-on' : '') + '" data-ms-filter="' + col.key + '" title="Filtra ' + esc(col.label) + '">⏷</button>' +
+  '</div></th>';
 }
 
 function msRenderTable(rows) {
   const el = document.getElementById('ms-table');
   if (!el) return;
-  if (!rows.length) {
-    el.innerHTML = '<div class="text-center text-slate-400 py-10 text-sm">Nessun cantiere pianificato nei giorni passati di questo intervallo' +
-      (_msFiltri.q || _msFiltri.commessa || _msFiltri.soloMaltempo ? ' con i filtri attivi' : '') + '.</div>';
+  if (!_msAllRows.length) {
+    el.innerHTML = '<div class="ms-empty">Nessun cantiere pianificato nei giorni passati di questo intervallo' + (_msFiltri.q ? ' con la ricerca attiva' : '') + '.</div>';
     return;
   }
   const shown = rows.slice(0, MS_MAX_RIGHE_TABELLA);
-  const th = t => '<th class="px-3 py-2 text-left font-semibold text-slate-600 whitespace-nowrap">' + t + '</th>';
-  let html = '<table class="w-full text-sm"><thead class="bg-slate-50 sticky top-0 z-10"><tr>' +
-    th('Data') + th('Commessa') + th('Squadra') + th('Cantiere') + th('Meteo') + th('Min / Max') + th('Pioggia') + th('Allerta PC') + th('Operatori') +
-    '</tr></thead><tbody>';
+  const NUM = { tmin: 1, tmax: 1, pioggia: 1 };
+  let html = '<table class="ms-tbl"><thead><tr>' + MS_COLS.map(c => msThHtml(c, NUM[c.key] ? 'ms-num' : '')).join('') + '</tr></thead><tbody>';
+  if (!rows.length) {
+    html += '<tr><td colspan="' + MS_COLS.length + '" class="ms-empty">Nessuna riga con i filtri attivi.</td></tr>';
+  }
+  // Ordinamento principale per data: righe raggruppate per giorno sotto un'intestazione
+  // con il riepilogo, e la data non si ripete su ogni riga.
+  const perGiorno = _msSort[0] && _msSort[0].col === 'data';
   let lastDate = null;
   shown.forEach((r, i) => {
-    const sevBg = r.severity === 'alta' ? 'background:#fef2f2;' : (r.severity === 'media' ? 'background:#fffbeb;' : '');
-    const sepTop = lastDate && lastDate !== r.dateISO ? 'border-top:2px solid #e2e8f0;' : 'border-top:1px solid #f1f5f9;';
-    lastDate = r.dateISO;
-    const temps = r.info ? Math.round(r.info.tmin) + '° / ' + Math.round(r.info.tmax) + '°' : '';
-    const rain = r.info && r.info.precip != null ? (Math.round(r.info.precip * 10) / 10) + ' mm' : '';
-    html += '<tr class="hover:bg-slate-50 cursor-pointer" style="' + sepTop + sevBg + '" data-ms-row="' + i + '" title="Dettaglio orario e bollettino">' +
-      '<td class="px-3 py-1.5 whitespace-nowrap">' + esc(msFormatData(r.dateISO)) + '</td>' +
-      '<td class="px-3 py-1.5">' + esc(r.commessa) + '</td>' +
-      '<td class="px-3 py-1.5">' + esc(r.squadra) + '</td>' +
-      '<td class="px-3 py-1.5 font-medium">' + esc(r.cantiere) + '</td>' +
-      '<td class="px-3 py-1.5 whitespace-nowrap">' + msMeteoCellHtml(r) + '</td>' +
-      '<td class="px-3 py-1.5 whitespace-nowrap">' + temps + '</td>' +
-      '<td class="px-3 py-1.5 whitespace-nowrap">' + rain + '</td>' +
-      '<td class="px-3 py-1.5">' + msPcCellHtml(r) + '</td>' +
-      '<td class="px-3 py-1.5 text-xs text-slate-500">' + esc(r.operatori.join(', ')) + '</td>' +
+    if (perGiorno && r.dateISO !== lastDate) {
+      lastDate = r.dateISO;
+      const gruppo = rows.filter(x => x.dateISO === r.dateISO);
+      const nPioggia = gruppo.filter(x => x.info && x.info.precip != null && x.info.precip >= 1).length;
+      const nMal = gruppo.filter(x => x.severity).length;
+      html += '<tr class="ms-day"><td colspan="' + MS_COLS.length + '"><span class="ms-day-d">' + esc(msFormatDataLunga(r.dateISO)) + '</span>' +
+        '<span class="ms-day-s">' + gruppo.length + (gruppo.length === 1 ? ' cantiere' : ' cantieri') +
+        (nPioggia ? ' · 🌧️ ' + nPioggia + ' con pioggia' : '') + (nMal ? ' · ⚠️ ' + nMal + ' con maltempo' : '') + '</span></td></tr>';
+    }
+    const i0 = r.info;
+    html += '<tr class="ms-row' + (r.severity ? ' ms-sev-' + r.severity : '') + '" data-ms-row="' + i + '" title="Clicca per il dettaglio orario e il bollettino">' +
+      '<td class="ms-c-data">' + (perGiorno ? '<span class="ms-muted">' + esc(msFormatData(r.dateISO).split(' ')[0]) + '</span>' : esc(msFormatData(r.dateISO))) + '</td>' +
+      '<td class="ms-c-comm" title="' + esc(r.commessa) + '">' + esc(r.commessa) + '</td>' +
+      '<td class="ms-c-sq">' + esc(r.squadra) + '</td>' +
+      '<td class="ms-c-cant">' + esc(r.cantiere) + '</td>' +
+      '<td class="ms-c-meteo">' + (i0
+        ? '<span class="ms-ico">' + pwMeteoIconFor(i0.code) + '</span>' + esc(msMeteoDescr(i0.code))
+        : '<span class="ms-muted">' + esc(pwMeteoMissingReason(r.cantiere, r.dateISO)) + '</span>') + '</td>' +
+      '<td class="ms-num ms-tmin">' + (i0 && i0.tmin != null ? Math.round(i0.tmin) + '°' : '') + '</td>' +
+      '<td class="ms-num ms-tmax">' + (i0 && i0.tmax != null ? Math.round(i0.tmax) + '°' : '') + '</td>' +
+      '<td class="ms-num">' + msRainHtml(i0 ? i0.precip : null) + '</td>' +
+      '<td>' + (r.severity ? '<span class="ms-sev ms-sev-b-' + r.severity + '">' + (r.severity === 'alta' ? '🔴 Alto' : '🟠 Medio') + '</span>' : '<span class="ms-muted">—</span>') + '</td>' +
+      '<td>' + msPcCellHtml(r) + '</td>' +
+      '<td class="ms-c-ops">' + msOperatoriHtml(r.operatori) + '</td>' +
     '</tr>';
   });
   html += '</tbody></table>';
   if (rows.length > shown.length) {
-    html += '<div class="text-xs text-slate-400 px-3 py-2">Mostrate le prime ' + shown.length + ' righe di ' + rows.length +
+    html += '<div class="ms-foot">Mostrate le prime ' + shown.length + ' righe di ' + rows.length +
       ': restringi periodo o filtri (l\'export Excel le contiene tutte).</div>';
   }
   el.innerHTML = html;
-  el.querySelectorAll('[data-ms-row]').forEach(tr => {
-    tr.addEventListener('click', () => msOpenDettaglio(parseInt(tr.dataset.msRow, 10)));
+}
+
+/* ----- Popover filtro di colonna (stile Excel) ----- */
+
+let _msPop = null;
+let _msPopSearch = '';
+function msClosePop() {
+  if (!_msPop) return;
+  _msPop.remove();
+  _msPop = null;
+  document.removeEventListener('mousedown', msPopOutside, true);
+}
+function msPopOutside(e) {
+  if (_msPop && !_msPop.contains(e.target) && !e.target.closest('[data-ms-filter]')) msClosePop();
+}
+
+function msOpenPop(key, anchor) {
+  if (_msPop && _msPop.dataset.key === key) { msClosePop(); return; }
+  msClosePop();
+  const col = msCol(key);
+  if (!col) return;
+  _msPopSearch = '';
+  const pop = document.createElement('div');
+  pop.className = 'ms-pop';
+  pop.dataset.key = key;
+  const ord = col.type === 'num' || key === 'data' ? ['↑ Dal più basso', '↓ Dal più alto'] : ['↑ A → Z', '↓ Z → A'];
+  if (key === 'data') { ord[0] = '↑ Dal più vecchio'; ord[1] = '↓ Dal più recente'; }
+  let html = '<div class="ms-pop-h">' + esc(col.label) + '</div>' +
+    '<div class="ms-pop-sort"><button type="button" data-pop-sort="asc">' + ord[0] + '</button><button type="button" data-pop-sort="desc">' + ord[1] + '</button></div>';
+  if (col.type === 'num') {
+    const f = _msColFiltri[key] || {};
+    html += '<div class="ms-pop-num">' +
+      '<label>Da <input type="number" step="0.1" data-pop-min value="' + (f.min != null ? f.min : '') + '"></label>' +
+      '<label>a <input type="number" step="0.1" data-pop-max value="' + (f.max != null ? f.max : '') + '"></label>' +
+      '<span>' + esc(col.unit) + '</span></div>' +
+      (col.presets ? '<div class="ms-pop-presets">' + col.presets.map((p, i) => '<button type="button" data-pop-preset="' + i + '">' + esc(p.label) + '</button>').join('') + '</div>' : '');
+  } else {
+    html += '<input type="text" class="ms-pop-search" placeholder="Cerca valori…" data-pop-search>' +
+      '<div class="ms-pop-bulk"><button type="button" data-pop-bulk="all">Seleziona tutti</button><button type="button" data-pop-bulk="none">Deseleziona tutti</button></div>' +
+      '<div class="ms-pop-list" data-pop-list></div>';
+  }
+  html += '<div class="ms-pop-foot"><button type="button" data-pop-clear>Rimuovi filtro</button><button type="button" data-pop-close class="ms-pop-ok">Chiudi</button></div>';
+  pop.innerHTML = html;
+  document.body.appendChild(pop);
+  const rc = anchor.getBoundingClientRect();
+  const w = pop.offsetWidth || 280;
+  pop.style.left = Math.max(8, Math.min(rc.right - w, window.innerWidth - w - 8)) + 'px';
+  const h = pop.offsetHeight || 360;
+  pop.style.top = (rc.bottom + 4 + h > window.innerHeight ? Math.max(8, rc.top - h - 4) : rc.bottom + 4) + 'px';
+  _msPop = pop;
+  msBindPop(pop, col);
+  if (col.type !== 'num') msRenderPopList();
+  document.addEventListener('mousedown', msPopOutside, true);
+  const first = pop.querySelector('[data-pop-search], [data-pop-min]');
+  if (first) first.focus();
+}
+
+/* Valori dell'elenco: quelli presenti nelle righe che passano gli ALTRI filtri (con il
+   conteggio), più quelli già selezionati rimasti senza righe, così restano deselezionabili. */
+function msPopValues(col) {
+  const counts = new Map();
+  msApplyColFilters(_msAllRows, col.key).forEach(r => {
+    const v = col.val(r);
+    (col.multi ? v : [v]).forEach(x => counts.set(x, (counts.get(x) || 0) + 1));
   });
+  const f = _msColFiltri[col.key];
+  if (f) f.forEach(v => { if (!counts.has(v)) counts.set(v, 0); });
+  const vals = [...counts.keys()];
+  vals.sort(col.order || ((a, b) => String(a).localeCompare(String(b), 'it', { sensitivity: 'base', numeric: true })));
+  return vals.map(v => ({ v, n: counts.get(v) }));
+}
+
+function msUniverse(col) {
+  const s = new Set();
+  _msAllRows.forEach(r => { const v = col.val(r); (col.multi ? v : [v]).forEach(x => s.add(x)); });
+  return s;
+}
+
+function msRenderPopList() {
+  if (!_msPop) return;
+  const col = msCol(_msPop.dataset.key);
+  const list = _msPop.querySelector('[data-pop-list]');
+  if (!col || !list) return;
+  const f = _msColFiltri[col.key];
+  const lbl = col.lbl || (v => v);
+  const q = _msPopSearch.toLowerCase().trim();
+  const vals = msPopValues(col).filter(x => !q || String(lbl(x.v)).toLowerCase().indexOf(q) !== -1);
+  const st = list.scrollTop;
+  list.innerHTML = vals.length ? vals.map((x, i) =>
+    '<label class="ms-pop-item' + (x.n ? '' : ' ms-pop-zero') + '"><input type="checkbox" data-pop-i="' + i + '"' + (!f || f.has(x.v) ? ' checked' : '') + '>' +
+      '<span class="ms-pop-v">' + esc(lbl(x.v)) + '</span><span class="ms-pop-n">' + x.n + '</span></label>').join('')
+    : '<div class="ms-pop-emptyl">Nessun valore</div>';
+  list._vals = vals.map(x => x.v);
+  list.scrollTop = st;
+}
+
+function msBindPop(pop, col) {
+  pop.addEventListener('click', e => {
+    const b = e.target.closest('button');
+    if (!b) return;
+    if (b.dataset.popSort) { _msSort = [{ col: col.key, dir: b.dataset.popSort }]; msApply(); return; }
+    if (b.hasAttribute('data-pop-clear')) { delete _msColFiltri[col.key]; msClosePop(); msApply(); return; }
+    if (b.hasAttribute('data-pop-close')) { msClosePop(); return; }
+    if (b.dataset.popPreset != null) {
+      const p = col.presets[Number(b.dataset.popPreset)];
+      _msColFiltri[col.key] = { min: p.min != null ? p.min : null, max: p.max != null ? p.max : null };
+      pop.querySelector('[data-pop-min]').value = p.min != null ? p.min : '';
+      pop.querySelector('[data-pop-max]').value = p.max != null ? p.max : '';
+      msApply();
+      return;
+    }
+    if (b.dataset.popBulk) {
+      // Agisce sui valori visibili (quindi anche solo su quelli trovati con "Cerca valori")
+      const visibili = pop.querySelector('[data-pop-list]')._vals || [];
+      const sel = _msColFiltri[col.key] ? new Set(_msColFiltri[col.key]) : msUniverse(col);
+      visibili.forEach(v => (b.dataset.popBulk === 'all' ? sel.add(v) : sel.delete(v)));
+      msSetCatFilter(col, sel);
+    }
+  });
+  pop.addEventListener('change', e => {
+    const cb = e.target.closest('[data-pop-i]');
+    if (!cb) return;
+    const v = pop.querySelector('[data-pop-list]')._vals[Number(cb.dataset.popI)];
+    const sel = _msColFiltri[col.key] ? new Set(_msColFiltri[col.key]) : msUniverse(col);
+    if (cb.checked) sel.add(v); else sel.delete(v);
+    msSetCatFilter(col, sel);
+  });
+  let t = null;
+  pop.addEventListener('input', e => {
+    if (e.target.hasAttribute('data-pop-search')) { _msPopSearch = e.target.value; msRenderPopList(); return; }
+    if (e.target.hasAttribute('data-pop-min') || e.target.hasAttribute('data-pop-max')) {
+      clearTimeout(t);
+      t = setTimeout(() => {
+        const num = s => (s === '' || isNaN(Number(s)) ? null : Number(s));
+        const min = num(pop.querySelector('[data-pop-min]').value);
+        const max = num(pop.querySelector('[data-pop-max]').value);
+        if (min == null && max == null) delete _msColFiltri[col.key];
+        else _msColFiltri[col.key] = { min, max };
+        msApply();
+      }, 350);
+    }
+  });
+}
+
+/* Tutti i valori selezionati = nessun filtro (le righe nuove in arrivo dal recupero non
+   vengono escluse per il solo fatto di non essere state spuntate). */
+function msSetCatFilter(col, sel) {
+  const uni = msUniverse(col);
+  if ([...uni].every(v => sel.has(v))) delete _msColFiltri[col.key];
+  else _msColFiltri[col.key] = sel;
+  msApply();
 }
 
 /* Dettaglio di una riga: meteo per fasce orarie (scaricato su richiesta, la tabella legge
@@ -692,7 +1033,7 @@ function msExportExcel() {
     const i = r.info, p = r.pcInfo;
     aoa.push([r.dateISO, r.commessa, r.squadra, r.cantiere, r.operatori.join(', '),
       i ? msMeteoDescr(i.code) : '', i && i.tmin != null ? Math.round(i.tmin * 10) / 10 : '', i && i.tmax != null ? Math.round(i.tmax * 10) / 10 : '',
-      i && i.precip != null ? Math.round(i.precip * 10) / 10 : '', r.severity || '', r.pcColor || '',
+      i && i.precip != null ? Math.round(i.precip * 10) / 10 : '', MS_SEV_LABEL[r.severity] || '', r.pcColor || '',
       p ? p.zona || '' : '', p ? p.idraulico || '' : '', p ? p.temporali || '' : '', p ? p.idrogeologico || '' : '']);
   });
   const wb = XLSX.utils.book_new();

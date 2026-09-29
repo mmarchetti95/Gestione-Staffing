@@ -1203,107 +1203,6 @@
   }
   .ml-filtro-search:focus { border-color: var(--accent); }
   .ml-filtro-hint { font-size: 10.5px; color: #94a3b8; line-height: 1.35; }
-
-  /* ----- Tab Storico meteo (meteo-storico.js) ----- */
-  .ms-kpi { display: flex; flex-direction: column; align-items: flex-start; text-align: left; gap: 2px;
-    background: #fff; border: 1px solid #e2e8f0; border-left-width: 4px; border-radius: 8px; padding: 10px 14px;
-    cursor: pointer; transition: box-shadow .15s, background .15s; }
-  .ms-kpi:hover { box-shadow: 0 1px 6px rgba(15,23,42,.08); }
-  .ms-kpi-l { font-size: 12px; color: #64748b; }
-  .ms-kpi-v { font-size: 24px; font-weight: 600; color: #0f172a; line-height: 1.15; }
-  .ms-kpi-of { font-size: 14px; font-weight: 400; color: #94a3b8; }
-  .ms-kpi-s { font-size: 11px; color: #94a3b8; }
-  .ms-kpi-slate { border-left-color: #94a3b8; }
-  .ms-kpi-sky { border-left-color: #0ea5e9; } .ms-kpi-sky .ms-kpi-v { color: #0369a1; }
-  .ms-kpi-amber { border-left-color: #f59e0b; } .ms-kpi-amber .ms-kpi-v { color: #b45309; }
-  .ms-kpi-red { border-left-color: #ef4444; } .ms-kpi-red .ms-kpi-v { color: #b91c1c; }
-  .ms-kpi-on { background: #f0f9ff; box-shadow: inset 0 0 0 1px #7dd3fc; }
-  .ms-chips { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin: 0 0 8px; min-height: 26px; }
-  .ms-chip { display: inline-flex; align-items: center; gap: 4px; font-size: 12px; color: #334155;
-    background: #e0f2fe; border: 1px solid #bae6fd; border-radius: 999px; padding: 2px 4px 2px 10px; }
-  .ms-chip b { font-weight: 600; }
-  .ms-chip button { width: 18px; height: 18px; border-radius: 999px; color: #0369a1; font-size: 11px; line-height: 18px; }
-  .ms-chip button:hover { background: #bae6fd; }
-  .ms-chip-clear { font-size: 12px; color: #b91c1c; text-decoration: underline; padding: 2px 6px; }
-  .ms-chip-none { font-size: 12px; color: #94a3b8; }
-  .ms-sort-txt { font-size: 11px; color: #94a3b8; margin-left: auto; }
-  .ms-table-wrap { max-height: 68vh; overflow: auto; border-radius: 8px; }
-  .ms-tbl { width: 100%; border-collapse: separate; border-spacing: 0; font-size: 13px; color: #1e293b; }
-  .ms-tbl thead th { position: sticky; top: 0; z-index: 3; background: #f8fafc; border-bottom: 1px solid #e2e8f0;
-    padding: 0; text-align: left; font-weight: 600; color: #475569; white-space: nowrap; }
-  .ms-th { display: flex; align-items: stretch; }
-  .ms-th-sort { flex: 1; display: flex; align-items: center; gap: 4px; padding: 9px 4px 9px 12px; font-weight: 600; text-align: left; }
-  .ms-th-sort:hover { color: #0f172a; background: #f1f5f9; }
-  .ms-sort-ind { font-size: 10px; color: #0369a1; }
-  .ms-sort-ind sup { font-size: 9px; }
-  .ms-sort-off { color: #cbd5e1; }
-  .ms-th-f { padding: 0 8px; color: #94a3b8; font-size: 12px; }
-  .ms-th-f:hover { color: #334155; background: #f1f5f9; }
-  .ms-th-f-on { color: #fff; background: #0ea5e9; border-radius: 4px; margin: 5px 4px; }
-  .ms-th-f-on:hover { color: #fff; background: #0284c7; }
-  .ms-tbl td { padding: 8px 12px; border-bottom: 1px solid #f1f5f9; vertical-align: middle; }
-  .ms-tbl .ms-num { text-align: right; }
-  .ms-tbl thead th.ms-num .ms-th-sort { justify-content: flex-end; }
-  .ms-row { cursor: pointer; }
-  .ms-row:hover td { background: #f8fafc; }
-  .ms-row td:first-child { border-left: 4px solid transparent; }
-  .ms-row.ms-sev-media td:first-child { border-left-color: #f59e0b; }
-  .ms-row.ms-sev-alta td:first-child { border-left-color: #ef4444; }
-  .ms-day td { background: #f1f5f9; padding: 6px 12px; border-bottom: 1px solid #e2e8f0; border-top: 8px solid #fff; }
-  .ms-day-d { font-weight: 600; color: #0f172a; margin-right: 10px; }
-  .ms-day-s { font-size: 12px; color: #64748b; }
-  .ms-c-data { white-space: nowrap; color: #475569; }
-  .ms-c-comm { max-width: 220px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: #475569; }
-  .ms-c-sq { white-space: nowrap; color: #475569; }
-  .ms-c-cant { font-weight: 600; }
-  .ms-c-meteo { white-space: nowrap; }
-  .ms-ico { font-size: 17px; margin-right: 6px; vertical-align: -2px; }
-  .ms-tmin { color: #2563eb; white-space: nowrap; }
-  .ms-tmax { color: #dc2626; white-space: nowrap; }
-  .ms-rain { display: inline-block; min-width: 54px; text-align: center; font-size: 12px; border-radius: 999px; padding: 1px 8px; }
-  .ms-rain-0 { color: #94a3b8; }
-  .ms-rain-1 { background: #f0f9ff; color: #0369a1; }
-  .ms-rain-2 { background: #e0f2fe; color: #075985; }
-  .ms-rain-3 { background: #fef3c7; color: #92400e; font-weight: 600; }
-  .ms-rain-4 { background: #fee2e2; color: #991b1b; font-weight: 600; }
-  .ms-sev { font-size: 12px; white-space: nowrap; }
-  .ms-sev-b-alta { color: #b91c1c; font-weight: 600; }
-  .ms-sev-b-media { color: #b45309; font-weight: 600; }
-  .ms-pc { font-size: 12px; border-radius: 4px; padding: 1px 6px; white-space: nowrap; }
-  .ms-pc-gialla { background: #fef9c3; color: #854d0e; }
-  .ms-pc-arancione { background: #ffedd5; color: #9a3412; }
-  .ms-pc-rossa { background: #fee2e2; color: #991b1b; }
-  .ms-c-ops { font-size: 12px; color: #64748b; max-width: 220px; }
-  .ms-more { background: #f1f5f9; border-radius: 999px; padding: 0 6px; color: #475569; }
-  .ms-muted { color: #94a3b8; }
-  .ms-empty { text-align: center; color: #94a3b8; padding: 40px 12px; font-size: 13px; }
-  .ms-foot { font-size: 12px; color: #94a3b8; padding: 8px 12px; }
-  .ms-pop { position: fixed; z-index: 1000; width: 280px; background: #fff; border: 1px solid #e2e8f0; border-radius: 8px;
-    box-shadow: 0 10px 30px rgba(15,23,42,.15); padding: 10px; font-size: 13px; color: #1e293b; }
-  .ms-pop-h { font-weight: 600; margin-bottom: 6px; }
-  .ms-pop-sort { display: flex; gap: 4px; margin-bottom: 8px; }
-  .ms-pop-sort button, .ms-pop-presets button { flex: 1; font-size: 12px; border: 1px solid #e2e8f0; border-radius: 6px; padding: 4px 6px; }
-  .ms-pop-sort button:hover, .ms-pop-presets button:hover { background: #f1f5f9; }
-  .ms-pop-search { width: 100%; border: 1px solid #e2e8f0; border-radius: 6px; padding: 5px 8px; font-size: 13px; outline: none; }
-  .ms-pop-search:focus, .ms-pop-num input:focus { border-color: #0ea5e9; }
-  .ms-pop-bulk { display: flex; justify-content: space-between; margin: 6px 0 4px; }
-  .ms-pop-bulk button { font-size: 12px; color: #0369a1; }
-  .ms-pop-bulk button:hover { text-decoration: underline; }
-  .ms-pop-list { max-height: 240px; overflow-y: auto; border-top: 1px solid #f1f5f9; border-bottom: 1px solid #f1f5f9; }
-  .ms-pop-item { display: flex; align-items: center; gap: 8px; padding: 4px 2px; cursor: pointer; }
-  .ms-pop-item:hover { background: #f8fafc; }
-  .ms-pop-v { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  .ms-pop-n { font-size: 11px; color: #94a3b8; }
-  .ms-pop-zero .ms-pop-v { color: #94a3b8; }
-  .ms-pop-emptyl { color: #94a3b8; padding: 8px 2px; }
-  .ms-pop-num { display: flex; align-items: center; gap: 6px; margin-bottom: 6px; }
-  .ms-pop-num input { width: 76px; border: 1px solid #e2e8f0; border-radius: 6px; padding: 4px 6px; outline: none; }
-  .ms-pop-presets { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; }
-  .ms-pop-foot { display: flex; justify-content: space-between; margin-top: 8px; }
-  .ms-pop-foot button { font-size: 12px; padding: 4px 10px; border-radius: 6px; border: 1px solid #e2e8f0; }
-  .ms-pop-foot button:hover { background: #f1f5f9; }
-  .ms-pop-foot .ms-pop-ok { background: #0f172a; color: #fff; border-color: #0f172a; }
-  .ms-pop-foot .ms-pop-ok:hover { background: #1e293b; }
   .ml-filtri-foot {
     display: flex; align-items: center; justify-content: space-between; gap: 10px;
     margin-top: 10px; padding-top: 8px; border-top: 1px solid #f1f5f9;
@@ -1523,7 +1422,7 @@
     <div class="flex items-center gap-2">
       <button id="btn-presentation" class="px-3 py-1.5 text-sm rounded hover:bg-white/10" style="border:1px solid var(--dark-border-strong);color:var(--dark-text);visibility:visible;">📊 Modalità presentazione</button>
       <div class="text-xs pl-2" style="border-left:1px solid var(--dark-border-strong);color:var(--dark-text-muted);">
-        <span id="app-version" class="font-medium" style="color:var(--accent);">v18.181.1</span> · Michele Marchetti
+        <span id="app-version" class="font-medium" style="color:var(--accent);">v18.181.0</span> · Michele Marchetti
         <span id="sb-role-badge" style="margin-left:8px;padding:1px 8px;border-radius:9999px;background:rgba(255,255,255,.1);color:var(--dark-text);font-weight:600;"></span>
       </div>
     </div>
@@ -2264,18 +2163,20 @@
         <button data-ms-range="30" class="px-2 py-1 text-xs border border-slate-300 rounded hover:bg-slate-50">30 gg</button>
         <button data-ms-range="all" class="px-2 py-1 text-xs border border-slate-300 rounded hover:bg-slate-50" title="Dal primo giorno pianificato in Griglia">Tutto</button>
       </div>
+      <select id="ms-commessa" class="px-2 py-1 text-sm border border-slate-200 rounded max-w-xs"></select>
       <div class="relative flex-1 min-w-[180px] max-w-sm">
         <span class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm pointer-events-none">🔍</span>
         <input id="ms-q" type="text" placeholder="Cerca cantiere, squadra o operatore…"
           class="w-full pl-8 pr-3 py-1.5 text-sm border border-slate-200 rounded-lg focus:outline-none focus:border-teal-400 bg-slate-50">
       </div>
+      <label class="text-xs text-slate-600 flex items-center gap-1 cursor-pointer">
+        <input id="ms-solo-maltempo" type="checkbox"> Solo giorni con maltempo</label>
       <button id="ms-export" class="px-3 py-1.5 text-sm font-medium bg-teal-600 text-white rounded-lg hover:bg-teal-700">⬇ Esporta Excel</button>
       <span id="ms-status" class="text-xs text-slate-400"></span>
     </div>
     <div id="ms-kpi" class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-3"></div>
-    <div id="ms-chips" class="ms-chips"></div>
-    <div class="bg-white border border-slate-200 rounded-lg shadow-sm">
-      <div id="ms-table" class="ms-table-wrap">
+    <div class="bg-white border border-slate-200 rounded-lg overflow-auto shadow-sm">
+      <div id="ms-table" style="max-height:640px;overflow-y:auto;">
         <div class="text-center text-slate-400 py-10 text-sm">Caricamento…</div>
       </div>
     </div>
@@ -21512,16 +21413,8 @@ function msMeteoDescr(code) {
   return METEO_DESCR[code] || (code != null ? 'Codice ' + code : '');
 }
 
-let _msFiltri = { dal: null, al: null, q: '' };
-/* Filtri per colonna, combinabili tra loro (AND tra colonne, OR tra i valori scelti di una
-   stessa colonna): col -> Set(valori ammessi) per le colonne a elenco, {min, max} per quelle
-   numeriche. Colonna assente = nessun filtro. */
-let _msColFiltri = {};
-/* Ordinamento multiplo: click sull'intestazione = ordina solo per quella colonna (secondo
-   click inverte), Maiusc+click = aggiunge/inverte un criterio successivo. */
-let _msSort = [{ col: 'data', dir: 'desc' }];
-let _msAllRows = [];         // righe del periodo + ricerca libera, con meteo/PC calcolati
-let _msRows = [];            // dopo i filtri di colonna e l'ordinamento (tabella + export)
+let _msFiltri = { dal: null, al: null, commessa: '', q: '', soloMaltempo: false };
+let _msRows = [];            // righe visualizzate (dopo i filtri), indicizzate da data-ms-row
 let _msUiInited = false;
 let _msFillKey = null;       // intervallo per cui è già stato avviato il recupero
 let _msRenderTimer = null;
@@ -21536,69 +21429,17 @@ function msDefaultRange() {
   return { dal: msAddDays(ieri, -29), al: ieri };
 }
 
-const MS_SEV_LABEL = { alta: 'Alto', media: 'Medio' };
-const MS_PC_RANK = { rossa: 3, arancione: 2, gialla: 1 };
-
-/* Colonne della tabella: val = valore usato da filtro (e ordinamento, salvo sortVal),
-   lbl = come mostrarlo nell'elenco del filtro, order = ordine dell'elenco del filtro. */
-const MS_COLS = [
-  { key: 'data', label: 'Data', type: 'cat', val: r => r.dateISO, lbl: v => msFormatData(v), order: (a, b) => b.localeCompare(a) },
-  { key: 'commessa', label: 'Commessa', type: 'cat', val: r => r.commessa },
-  { key: 'squadra', label: 'Squadra', type: 'cat', val: r => r.squadra || '(senza nome)' },
-  { key: 'cantiere', label: 'Cantiere', type: 'cat', val: r => r.cantiere },
-  { key: 'meteo', label: 'Meteo', type: 'cat', val: r => (r.info ? msMeteoDescr(r.info.code) : 'Non disponibile'),
-    sortVal: r => (r.info ? r.info.code : null) },
-  { key: 'tmin', label: 'Min', type: 'num', unit: '°C', val: r => (r.info ? r.info.tmin : null) },
-  { key: 'tmax', label: 'Max', type: 'num', unit: '°C', val: r => (r.info ? r.info.tmax : null) },
-  { key: 'pioggia', label: 'Pioggia', type: 'num', unit: 'mm', val: r => (r.info ? r.info.precip : null),
-    presets: [{ label: '≥ 1 mm', min: 1 }, { label: '≥ 8 mm', min: 8 }, { label: '≥ 20 mm', min: 20 }, { label: 'Asciutto (< 1 mm)', max: 0.9 }] },
-  { key: 'maltempo', label: 'Maltempo', type: 'cat', val: r => MS_SEV_LABEL[r.severity] || 'Nessuno',
-    sortVal: r => (r.severity === 'alta' ? 2 : r.severity === 'media' ? 1 : 0),
-    order: (a, b) => ['Alto', 'Medio', 'Nessuno'].indexOf(a) - ['Alto', 'Medio', 'Nessuno'].indexOf(b) },
-  { key: 'pc', label: 'Allerta PC', type: 'cat', val: r => r.pcColor || 'Nessuna', sortVal: r => MS_PC_RANK[r.pcColor] || 0,
-    lbl: v => (v === 'Nessuna' ? v : 'Allerta ' + v), order: (a, b) => (MS_PC_RANK[b] || 0) - (MS_PC_RANK[a] || 0) },
-  { key: 'operatori', label: 'Operatori', type: 'cat', multi: true, val: r => (r.operatori.length ? r.operatori : ['(nessuno)']),
-    sortVal: r => r.operatori.join(', ') },
-];
-function msCol(key) {
-  return MS_COLS.find(c => c.key === key);
-}
-
 function msInitUi() {
   if (_msUiInited) return;
   _msUiInited = true;
   const on = (id, ev, fn) => { const el = document.getElementById(id); if (el) el.addEventListener(ev, fn); };
   on('ms-dal', 'change', e => { _msFiltri.dal = e.target.value || null; msRender(); });
   on('ms-al', 'change', e => { _msFiltri.al = e.target.value || null; msRender(); });
+  on('ms-commessa', 'change', e => { _msFiltri.commessa = e.target.value; msRender(); });
   on('ms-q', 'input', e => { _msFiltri.q = e.target.value; msScheduleRender(); });
+  on('ms-solo-maltempo', 'change', e => { _msFiltri.soloMaltempo = e.target.checked; msRender(); });
   on('ms-export', 'click', () => msExportExcel());
   document.querySelectorAll('[data-ms-range]').forEach(b => b.addEventListener('click', () => msSetRange(b.dataset.msRange)));
-
-  // Un solo listener per tabella, riquadri e chip: il contenuto viene ridisegnato spesso.
-  const table = document.getElementById('ms-table');
-  if (table) {
-    table.addEventListener('click', e => {
-      const f = e.target.closest('[data-ms-filter]');
-      if (f) { e.stopPropagation(); msOpenPop(f.dataset.msFilter, f); return; }
-      const s = e.target.closest('[data-ms-sort]');
-      if (s) { msToggleSort(s.dataset.msSort, e.shiftKey); return; }
-      const tr = e.target.closest('[data-ms-row]');
-      if (tr) msOpenDettaglio(parseInt(tr.dataset.msRow, 10));
-    });
-    table.addEventListener('scroll', () => msClosePop());
-  }
-  on('ms-kpi', 'click', e => { const t = e.target.closest('[data-ms-kpi]'); if (t) msKpiFilter(t.dataset.msKpi); });
-  on('ms-chips', 'click', e => {
-    const c = e.target.closest('[data-ms-chip]');
-    if (!c) return;
-    const k = c.dataset.msChip;
-    if (k === '*') { _msColFiltri = {}; _msFiltri.q = ''; const q = document.getElementById('ms-q'); if (q) q.value = ''; msRender(); return; }
-    if (k === 'q') { _msFiltri.q = ''; const q = document.getElementById('ms-q'); if (q) q.value = ''; msRender(); return; }
-    delete _msColFiltri[k];
-    msApply();
-  });
-  window.addEventListener('resize', () => msClosePop());
-  document.addEventListener('keydown', e => { if (e.key === 'Escape') msClosePop(); });
 }
 
 function msSetRange(kind) {
@@ -21611,8 +21452,7 @@ function msSetRange(kind) {
 
 /* Aperto dal dettaglio cantiere della Mappa: tutto lo storico di quel cantiere. */
 function msOpenStoricoCantiere(cantiere) {
-  _msFiltri = { dal: msPrimaData() || msDefaultRange().dal, al: msAddDays(meteoTodayISO(), -1), q: '' };
-  _msColFiltri = cantiere ? { cantiere: new Set([cantiere]) } : {};
+  _msFiltri = { dal: msPrimaData() || msDefaultRange().dal, al: msAddDays(meteoTodayISO(), -1), commessa: '', q: cantiere || '', soloMaltempo: false };
   _pwActiveTab = 'meteo-storico';
   switchScreen('weekly');
 }
@@ -21635,82 +21475,27 @@ function msRowSeverity(r) {
   return sev === 'alta' || pcSev === 'alta' ? 'alta' : (sev || pcSev);
 }
 
+function msComputeRows() {
+  const f = _msFiltri;
+  const q = (f.q || '').toLowerCase().trim();
+  let rows = msBuildRows(f.dal, f.al);
+  if (f.commessa) rows = rows.filter(r => r.commessa === f.commessa);
+  if (q) rows = rows.filter(r => (r.cantiere + ' ' + r.squadra + ' ' + r.commessa + ' ' + r.operatori.join(' ')).toLowerCase().indexOf(q) !== -1);
+  rows.forEach(r => {
+    r.info = pwMeteoInfoFor(r.cantiere, r.dateISO);
+    r.pcInfo = pcInfoFor(r.cantiere, r.dateISO);
+    r.pcColor = pcColorePeggiore(r.pcInfo);
+    r.severity = msRowSeverity(r);
+  });
+  if (f.soloMaltempo) rows = rows.filter(r => r.severity);
+  rows.sort((a, b) => b.dateISO.localeCompare(a.dateISO) || a.commessa.localeCompare(b.commessa) || a.cantiere.localeCompare(b.cantiere));
+  return rows;
+}
+
 function msFormatData(dateISO) {
   const d = new Date(dateISO + 'T00:00:00Z');
   return d.toLocaleDateString('it-IT', { weekday: 'short', day: '2-digit', month: '2-digit', year: 'numeric', timeZone: 'UTC' });
 }
-function msFormatDataLunga(dateISO) {
-  const d = new Date(dateISO + 'T00:00:00Z');
-  const s = d.toLocaleDateString('it-IT', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric', timeZone: 'UTC' });
-  return s.charAt(0).toUpperCase() + s.slice(1);
-}
-
-/* ----- Filtri, ordinamento ----- */
-
-function msPassCol(r, col, f) {
-  const v = col.val(r);
-  if (col.type === 'num') {
-    if (f.min != null && (v == null || v < f.min)) return false;
-    if (f.max != null && (v == null || v > f.max)) return false;
-    return true;
-  }
-  return col.multi ? v.some(x => f.has(x)) : f.has(v);
-}
-
-/* Righe che passano tutti i filtri di colonna, eventualmente ignorando quello di una colonna
-   (serve all'elenco valori del filtro stesso: mostra ciò che resta con gli ALTRI filtri). */
-function msApplyColFilters(rows, exceptKey) {
-  const attivi = MS_COLS.filter(c => c.key !== exceptKey && _msColFiltri[c.key]);
-  if (!attivi.length) return rows.slice();
-  return rows.filter(r => attivi.every(c => msPassCol(r, c, _msColFiltri[c.key])));
-}
-
-function msSortVal(col, r) {
-  if (col.sortVal) return col.sortVal(r);
-  const v = col.val(r);
-  return col.multi ? v.join(', ') : v;
-}
-
-function msComparator(a, b) {
-  for (const s of _msSort) {
-    const col = msCol(s.col);
-    if (!col) continue;
-    const va = msSortVal(col, a), vb = msSortVal(col, b);
-    const na = va == null || va === '', nb = vb == null || vb === '';
-    if (na && nb) continue;
-    if (na) return 1;          // valori mancanti sempre in fondo, in entrambi i versi
-    if (nb) return -1;
-    const c = typeof va === 'number' && typeof vb === 'number' ? va - vb : String(va).localeCompare(String(vb), 'it', { sensitivity: 'base', numeric: true });
-    if (c) return s.dir === 'desc' ? -c : c;
-  }
-  return b.dateISO.localeCompare(a.dateISO) || a.commessa.localeCompare(b.commessa) || a.cantiere.localeCompare(b.cantiere);
-}
-
-function msToggleSort(key, add) {
-  const col = msCol(key);
-  if (!col) return;
-  const defDir = col.type === 'num' || key === 'data' || key === 'maltempo' || key === 'pc' ? 'desc' : 'asc';
-  const i = _msSort.findIndex(s => s.col === key);
-  if (add) {
-    if (i === -1) _msSort.push({ col: key, dir: defDir });
-    else _msSort[i].dir = _msSort[i].dir === 'asc' ? 'desc' : 'asc';
-  } else if (i === 0 && _msSort.length === 1) {
-    _msSort[0].dir = _msSort[0].dir === 'asc' ? 'desc' : 'asc';
-  } else {
-    _msSort = [{ col: key, dir: i === -1 ? defDir : _msSort[i].dir }];
-  }
-  msApply();
-}
-
-function msKpiFilter(kind) {
-  if (kind === 'all') _msColFiltri = {};
-  else if (kind === 'pioggia') _msColFiltri.pioggia = { min: 1, max: null };
-  else if (kind === 'maltempo') _msColFiltri.maltempo = new Set(['Alto', 'Medio']);
-  else if (kind === 'pc') _msColFiltri.pc = new Set(['gialla', 'arancione', 'rossa']);
-  msApply();
-}
-
-/* ----- Render ----- */
 
 async function msRender() {
   const view = document.getElementById('pw-view-meteo-storico');
@@ -21722,21 +21507,23 @@ async function msRender() {
   setVal('ms-dal', _msFiltri.dal);
   setVal('ms-al', _msFiltri.al);
   setVal('ms-q', _msFiltri.q || '');
+  const chk = document.getElementById('ms-solo-maltempo');
+  if (chk) chk.checked = !!_msFiltri.soloMaltempo;
+
+  // Tendina commesse: tutte quelle pianificate nell'intervallo
+  const sel = document.getElementById('ms-commessa');
+  if (sel) {
+    const commesse = [...new Set(msBuildRows(_msFiltri.dal, _msFiltri.al).map(r => r.commessa))].sort((a, b) => a.localeCompare(b));
+    if (_msFiltri.commessa && commesse.indexOf(_msFiltri.commessa) === -1) commesse.unshift(_msFiltri.commessa);
+    sel.innerHTML = '<option value="">Tutte le commesse</option>' +
+      commesse.map(c => '<option value="' + esc(c) + '"' + (c === _msFiltri.commessa ? ' selected' : '') + '>' + esc(c) + '</option>').join('');
+  }
 
   await msLoadRange(_msFiltri.dal, _msFiltri.al, { hourly: false });
   if (_pwActiveTab !== 'meteo-storico') return;
-
-  const q = (_msFiltri.q || '').toLowerCase().trim();
-  let rows = msBuildRows(_msFiltri.dal, _msFiltri.al);
-  if (q) rows = rows.filter(r => (r.cantiere + ' ' + r.squadra + ' ' + r.commessa + ' ' + r.operatori.join(' ')).toLowerCase().indexOf(q) !== -1);
-  rows.forEach(r => {
-    r.info = pwMeteoInfoFor(r.cantiere, r.dateISO);
-    r.pcInfo = pcInfoFor(r.cantiere, r.dateISO);
-    r.pcColor = pcColorePeggiore(r.pcInfo);
-    r.severity = msRowSeverity(r);
-  });
-  _msAllRows = rows;
-  msApply();
+  _msRows = msComputeRows();
+  msRenderKpi(_msRows);
+  msRenderTable(_msRows);
   msUpdateStatus();
 
   // Recupero di quanto manca nell'intervallo mostrato (tutti i cantieri, non solo i filtrati)
@@ -21750,305 +21537,78 @@ async function msRender() {
   }
 }
 
-/* Riapplica filtri di colonna e ordinamento sulle righe già calcolate (nessuna lettura). */
-function msApply() {
-  const rows = msApplyColFilters(_msAllRows, null);
-  rows.sort(msComparator);
-  _msRows = rows;
-  msRenderKpi();
-  msRenderChips();
-  msRenderTable(rows);
-  if (_msPop) msRenderPopList();
-}
-
-function msRenderKpi() {
+function msRenderKpi(rows) {
   const el = document.getElementById('ms-kpi');
   if (!el) return;
-  const rows = _msRows;
   const conMeteo = rows.filter(r => r.info).length;
   const pioggia = rows.filter(r => r.info && r.info.precip != null && r.info.precip >= 1).length;
   const maltempo = rows.filter(r => r.severity).length;
   const allerte = rows.filter(r => r.pcColor).length;
-  const f = _msColFiltri;
-  const attivo = {
-    all: !Object.keys(f).length,
-    pioggia: !!(f.pioggia && f.pioggia.min === 1 && f.pioggia.max == null),
-    maltempo: !!(f.maltempo && f.maltempo.size === 2 && f.maltempo.has('Alto') && f.maltempo.has('Medio')),
-    pc: !!(f.pc && f.pc.size === 3 && !f.pc.has('Nessuna')),
-  };
-  const tile = (kind, label, val, sub, tone) =>
-    '<button type="button" data-ms-kpi="' + kind + '" class="ms-kpi ms-kpi-' + tone + (attivo[kind] ? ' ms-kpi-on' : '') + '" title="' +
-      (kind === 'all' ? 'Rimuovi i filtri di colonna' : 'Mostra solo queste righe') + '">' +
-      '<span class="ms-kpi-l">' + label + '</span><span class="ms-kpi-v">' + val + '</span>' +
-      (sub ? '<span class="ms-kpi-s">' + sub + '</span>' : '') +
-    '</button>';
-  const pct = n => (rows.length ? Math.round(n / rows.length * 100) + '% dei giorni' : '');
-  const tot = _msAllRows.length;
+  const tile = (label, val, sub, cls) =>
+    '<div class="bg-white border border-slate-200 rounded-lg px-4 py-3">' +
+      '<div class="text-xs text-slate-500">' + label + '</div>' +
+      '<div class="text-2xl font-semibold ' + (cls || 'text-slate-800') + '">' + val + '</div>' +
+      (sub ? '<div class="text-xs text-slate-400">' + sub + '</div>' : '') +
+    '</div>';
   el.innerHTML =
-    tile('all', 'Giorni-cantiere', rows.length + (rows.length !== tot ? '<span class="ms-kpi-of"> / ' + tot + '</span>' : ''),
-      conMeteo < rows.length ? (rows.length - conMeteo) + ' senza meteo (in recupero o non localizzati)' : 'tutti con meteo', 'slate') +
-    tile('pioggia', '🌧️ Con pioggia (≥ 1 mm)', pioggia, pct(pioggia), 'sky') +
-    tile('maltempo', '⚠️ Maltempo', maltempo, 'pioggia ≥ 8 mm, neve, temporali o allerta', 'amber') +
-    tile('pc', '▲ Allerte Protezione Civile', allerte, 'bollettino del giorno', 'red');
+    tile('Giorni-cantiere', rows.length, conMeteo < rows.length ? 'con meteo: ' + conMeteo + ' (resto in recupero o non localizzato)' : 'tutti con meteo') +
+    tile('Con pioggia (≥ 1 mm)', pioggia, rows.length ? Math.round(pioggia / rows.length * 100) + '% dei giorni' : '', 'text-sky-700') +
+    tile('Maltempo', maltempo, 'pioggia ≥ 8 mm, neve, temporali o allerta', maltempo ? 'text-amber-700' : 'text-slate-800') +
+    tile('Allerte Protezione Civile', allerte, 'bollettino del giorno', allerte ? 'text-red-700' : 'text-slate-800');
 }
 
-function msFiltroTesto(col, f) {
-  if (col.type === 'num') {
-    const u = ' ' + col.unit;
-    if (f.min != null && f.max != null) return 'tra ' + f.min + ' e ' + f.max + u;
-    return f.min != null ? '≥ ' + f.min + u : '≤ ' + f.max + u;
-  }
-  const lbl = col.lbl || (v => v);
-  const vals = [...f].map(lbl);
-  if (!vals.length) return 'nessun valore';
-  return vals.slice(0, 2).join(', ') + (vals.length > 2 ? ' +' + (vals.length - 2) : '');
-}
-
-function msRenderChips() {
-  const el = document.getElementById('ms-chips');
-  if (!el) return;
-  const chips = [];
-  if (_msFiltri.q) chips.push('<span class="ms-chip">Ricerca: <b>' + esc(_msFiltri.q) + '</b><button data-ms-chip="q" title="Rimuovi">✕</button></span>');
-  MS_COLS.forEach(c => {
-    const f = _msColFiltri[c.key];
-    if (f) chips.push('<span class="ms-chip">' + esc(c.label) + ': <b>' + esc(msFiltroTesto(c, f)) + '</b><button data-ms-chip="' + c.key + '" title="Rimuovi">✕</button></span>');
-  });
-  if (chips.length > 1) chips.push('<button class="ms-chip-clear" data-ms-chip="*">Azzera tutti i filtri</button>');
-  const sortTxt = _msSort.map((s, i) => (i ? ', poi ' : '') + msCol(s.col).label + (s.dir === 'asc' ? ' ↑' : ' ↓')).join('');
-  el.innerHTML = (chips.length ? chips.join('') : '<span class="ms-chip-none">Nessun filtro di colonna — usa ⏷ nelle intestazioni</span>') +
-    '<span class="ms-sort-txt">Ordinato per ' + esc(sortTxt) + ' · Maiusc+click su un\'intestazione per aggiungere un criterio</span>';
-}
-
-function msRainHtml(v) {
-  if (v == null) return '<span class="ms-muted">—</span>';
-  const mm = Math.round(v * 10) / 10;
-  const cls = v >= 20 ? 'ms-rain-4' : v >= 8 ? 'ms-rain-3' : v >= 1 ? 'ms-rain-2' : v > 0 ? 'ms-rain-1' : 'ms-rain-0';
-  return '<span class="ms-rain ' + cls + '">' + (v > 0 ? mm + ' mm' : '0') + '</span>';
+function msMeteoCellHtml(r) {
+  if (!r.info) return '<span class="text-slate-400">' + esc(pwMeteoMissingReason(r.cantiere, r.dateISO)) + '</span>';
+  return pwMeteoIconFor(r.info.code) + ' ' + esc(msMeteoDescr(r.info.code));
 }
 
 function msPcCellHtml(r) {
-  if (!r.pcColor) return '<span class="ms-muted">—</span>';
-  return '<span class="ms-pc ms-pc-' + esc(r.pcColor) + '">▲ ' + esc(r.pcColor) + '</span>';
-}
-
-function msOperatoriHtml(ops) {
-  if (!ops.length) return '<span class="ms-muted">—</span>';
-  const vis = ops.slice(0, 2).map(esc).join(', ');
-  return '<span title="' + esc(ops.join(', ')) + '">' + vis + (ops.length > 2 ? ' <span class="ms-more">+' + (ops.length - 2) + '</span>' : '') + '</span>';
-}
-
-function msThHtml(col, extraCls) {
-  const i = _msSort.findIndex(s => s.col === col.key);
-  const ind = i === -1 ? '<span class="ms-sort-ind ms-sort-off">↕</span>'
-    : '<span class="ms-sort-ind">' + (_msSort[i].dir === 'asc' ? '▲' : '▼') + (_msSort.length > 1 ? '<sup>' + (i + 1) + '</sup>' : '') + '</span>';
-  const fOn = !!_msColFiltri[col.key];
-  return '<th class="' + (extraCls || '') + '"><div class="ms-th">' +
-    '<button type="button" class="ms-th-sort" data-ms-sort="' + col.key + '" title="Ordina (Maiusc+click: aggiungi criterio)">' + esc(col.label) + ind + '</button>' +
-    '<button type="button" class="ms-th-f' + (fOn ? ' ms-th-f-on' : '') + '" data-ms-filter="' + col.key + '" title="Filtra ' + esc(col.label) + '">⏷</button>' +
-  '</div></th>';
+  if (!r.pcColor) return '<span class="text-slate-300">—</span>';
+  const COL = { gialla: 'bg-yellow-100 text-yellow-800', arancione: 'bg-orange-100 text-orange-800', rossa: 'bg-red-100 text-red-800' };
+  return '<span class="px-1.5 py-0.5 rounded text-xs ' + (COL[r.pcColor] || '') + '">▲ ' + esc(r.pcColor) + '</span>';
 }
 
 function msRenderTable(rows) {
   const el = document.getElementById('ms-table');
   if (!el) return;
-  if (!_msAllRows.length) {
-    el.innerHTML = '<div class="ms-empty">Nessun cantiere pianificato nei giorni passati di questo intervallo' + (_msFiltri.q ? ' con la ricerca attiva' : '') + '.</div>';
+  if (!rows.length) {
+    el.innerHTML = '<div class="text-center text-slate-400 py-10 text-sm">Nessun cantiere pianificato nei giorni passati di questo intervallo' +
+      (_msFiltri.q || _msFiltri.commessa || _msFiltri.soloMaltempo ? ' con i filtri attivi' : '') + '.</div>';
     return;
   }
   const shown = rows.slice(0, MS_MAX_RIGHE_TABELLA);
-  const NUM = { tmin: 1, tmax: 1, pioggia: 1 };
-  let html = '<table class="ms-tbl"><thead><tr>' + MS_COLS.map(c => msThHtml(c, NUM[c.key] ? 'ms-num' : '')).join('') + '</tr></thead><tbody>';
-  if (!rows.length) {
-    html += '<tr><td colspan="' + MS_COLS.length + '" class="ms-empty">Nessuna riga con i filtri attivi.</td></tr>';
-  }
-  // Ordinamento principale per data: righe raggruppate per giorno sotto un'intestazione
-  // con il riepilogo, e la data non si ripete su ogni riga.
-  const perGiorno = _msSort[0] && _msSort[0].col === 'data';
+  const th = t => '<th class="px-3 py-2 text-left font-semibold text-slate-600 whitespace-nowrap">' + t + '</th>';
+  let html = '<table class="w-full text-sm"><thead class="bg-slate-50 sticky top-0 z-10"><tr>' +
+    th('Data') + th('Commessa') + th('Squadra') + th('Cantiere') + th('Meteo') + th('Min / Max') + th('Pioggia') + th('Allerta PC') + th('Operatori') +
+    '</tr></thead><tbody>';
   let lastDate = null;
   shown.forEach((r, i) => {
-    if (perGiorno && r.dateISO !== lastDate) {
-      lastDate = r.dateISO;
-      const gruppo = rows.filter(x => x.dateISO === r.dateISO);
-      const nPioggia = gruppo.filter(x => x.info && x.info.precip != null && x.info.precip >= 1).length;
-      const nMal = gruppo.filter(x => x.severity).length;
-      html += '<tr class="ms-day"><td colspan="' + MS_COLS.length + '"><span class="ms-day-d">' + esc(msFormatDataLunga(r.dateISO)) + '</span>' +
-        '<span class="ms-day-s">' + gruppo.length + (gruppo.length === 1 ? ' cantiere' : ' cantieri') +
-        (nPioggia ? ' · 🌧️ ' + nPioggia + ' con pioggia' : '') + (nMal ? ' · ⚠️ ' + nMal + ' con maltempo' : '') + '</span></td></tr>';
-    }
-    const i0 = r.info;
-    html += '<tr class="ms-row' + (r.severity ? ' ms-sev-' + r.severity : '') + '" data-ms-row="' + i + '" title="Clicca per il dettaglio orario e il bollettino">' +
-      '<td class="ms-c-data">' + (perGiorno ? '<span class="ms-muted">' + esc(msFormatData(r.dateISO).split(' ')[0]) + '</span>' : esc(msFormatData(r.dateISO))) + '</td>' +
-      '<td class="ms-c-comm" title="' + esc(r.commessa) + '">' + esc(r.commessa) + '</td>' +
-      '<td class="ms-c-sq">' + esc(r.squadra) + '</td>' +
-      '<td class="ms-c-cant">' + esc(r.cantiere) + '</td>' +
-      '<td class="ms-c-meteo">' + (i0
-        ? '<span class="ms-ico">' + pwMeteoIconFor(i0.code) + '</span>' + esc(msMeteoDescr(i0.code))
-        : '<span class="ms-muted">' + esc(pwMeteoMissingReason(r.cantiere, r.dateISO)) + '</span>') + '</td>' +
-      '<td class="ms-num ms-tmin">' + (i0 && i0.tmin != null ? Math.round(i0.tmin) + '°' : '') + '</td>' +
-      '<td class="ms-num ms-tmax">' + (i0 && i0.tmax != null ? Math.round(i0.tmax) + '°' : '') + '</td>' +
-      '<td class="ms-num">' + msRainHtml(i0 ? i0.precip : null) + '</td>' +
-      '<td>' + (r.severity ? '<span class="ms-sev ms-sev-b-' + r.severity + '">' + (r.severity === 'alta' ? '🔴 Alto' : '🟠 Medio') + '</span>' : '<span class="ms-muted">—</span>') + '</td>' +
-      '<td>' + msPcCellHtml(r) + '</td>' +
-      '<td class="ms-c-ops">' + msOperatoriHtml(r.operatori) + '</td>' +
+    const sevBg = r.severity === 'alta' ? 'background:#fef2f2;' : (r.severity === 'media' ? 'background:#fffbeb;' : '');
+    const sepTop = lastDate && lastDate !== r.dateISO ? 'border-top:2px solid #e2e8f0;' : 'border-top:1px solid #f1f5f9;';
+    lastDate = r.dateISO;
+    const temps = r.info ? Math.round(r.info.tmin) + '° / ' + Math.round(r.info.tmax) + '°' : '';
+    const rain = r.info && r.info.precip != null ? (Math.round(r.info.precip * 10) / 10) + ' mm' : '';
+    html += '<tr class="hover:bg-slate-50 cursor-pointer" style="' + sepTop + sevBg + '" data-ms-row="' + i + '" title="Dettaglio orario e bollettino">' +
+      '<td class="px-3 py-1.5 whitespace-nowrap">' + esc(msFormatData(r.dateISO)) + '</td>' +
+      '<td class="px-3 py-1.5">' + esc(r.commessa) + '</td>' +
+      '<td class="px-3 py-1.5">' + esc(r.squadra) + '</td>' +
+      '<td class="px-3 py-1.5 font-medium">' + esc(r.cantiere) + '</td>' +
+      '<td class="px-3 py-1.5 whitespace-nowrap">' + msMeteoCellHtml(r) + '</td>' +
+      '<td class="px-3 py-1.5 whitespace-nowrap">' + temps + '</td>' +
+      '<td class="px-3 py-1.5 whitespace-nowrap">' + rain + '</td>' +
+      '<td class="px-3 py-1.5">' + msPcCellHtml(r) + '</td>' +
+      '<td class="px-3 py-1.5 text-xs text-slate-500">' + esc(r.operatori.join(', ')) + '</td>' +
     '</tr>';
   });
   html += '</tbody></table>';
   if (rows.length > shown.length) {
-    html += '<div class="ms-foot">Mostrate le prime ' + shown.length + ' righe di ' + rows.length +
+    html += '<div class="text-xs text-slate-400 px-3 py-2">Mostrate le prime ' + shown.length + ' righe di ' + rows.length +
       ': restringi periodo o filtri (l\'export Excel le contiene tutte).</div>';
   }
   el.innerHTML = html;
-}
-
-/* ----- Popover filtro di colonna (stile Excel) ----- */
-
-let _msPop = null;
-let _msPopSearch = '';
-function msClosePop() {
-  if (!_msPop) return;
-  _msPop.remove();
-  _msPop = null;
-  document.removeEventListener('mousedown', msPopOutside, true);
-}
-function msPopOutside(e) {
-  if (_msPop && !_msPop.contains(e.target) && !e.target.closest('[data-ms-filter]')) msClosePop();
-}
-
-function msOpenPop(key, anchor) {
-  if (_msPop && _msPop.dataset.key === key) { msClosePop(); return; }
-  msClosePop();
-  const col = msCol(key);
-  if (!col) return;
-  _msPopSearch = '';
-  const pop = document.createElement('div');
-  pop.className = 'ms-pop';
-  pop.dataset.key = key;
-  const ord = col.type === 'num' || key === 'data' ? ['↑ Dal più basso', '↓ Dal più alto'] : ['↑ A → Z', '↓ Z → A'];
-  if (key === 'data') { ord[0] = '↑ Dal più vecchio'; ord[1] = '↓ Dal più recente'; }
-  let html = '<div class="ms-pop-h">' + esc(col.label) + '</div>' +
-    '<div class="ms-pop-sort"><button type="button" data-pop-sort="asc">' + ord[0] + '</button><button type="button" data-pop-sort="desc">' + ord[1] + '</button></div>';
-  if (col.type === 'num') {
-    const f = _msColFiltri[key] || {};
-    html += '<div class="ms-pop-num">' +
-      '<label>Da <input type="number" step="0.1" data-pop-min value="' + (f.min != null ? f.min : '') + '"></label>' +
-      '<label>a <input type="number" step="0.1" data-pop-max value="' + (f.max != null ? f.max : '') + '"></label>' +
-      '<span>' + esc(col.unit) + '</span></div>' +
-      (col.presets ? '<div class="ms-pop-presets">' + col.presets.map((p, i) => '<button type="button" data-pop-preset="' + i + '">' + esc(p.label) + '</button>').join('') + '</div>' : '');
-  } else {
-    html += '<input type="text" class="ms-pop-search" placeholder="Cerca valori…" data-pop-search>' +
-      '<div class="ms-pop-bulk"><button type="button" data-pop-bulk="all">Seleziona tutti</button><button type="button" data-pop-bulk="none">Deseleziona tutti</button></div>' +
-      '<div class="ms-pop-list" data-pop-list></div>';
-  }
-  html += '<div class="ms-pop-foot"><button type="button" data-pop-clear>Rimuovi filtro</button><button type="button" data-pop-close class="ms-pop-ok">Chiudi</button></div>';
-  pop.innerHTML = html;
-  document.body.appendChild(pop);
-  const rc = anchor.getBoundingClientRect();
-  const w = pop.offsetWidth || 280;
-  pop.style.left = Math.max(8, Math.min(rc.right - w, window.innerWidth - w - 8)) + 'px';
-  const h = pop.offsetHeight || 360;
-  pop.style.top = (rc.bottom + 4 + h > window.innerHeight ? Math.max(8, rc.top - h - 4) : rc.bottom + 4) + 'px';
-  _msPop = pop;
-  msBindPop(pop, col);
-  if (col.type !== 'num') msRenderPopList();
-  document.addEventListener('mousedown', msPopOutside, true);
-  const first = pop.querySelector('[data-pop-search], [data-pop-min]');
-  if (first) first.focus();
-}
-
-/* Valori dell'elenco: quelli presenti nelle righe che passano gli ALTRI filtri (con il
-   conteggio), più quelli già selezionati rimasti senza righe, così restano deselezionabili. */
-function msPopValues(col) {
-  const counts = new Map();
-  msApplyColFilters(_msAllRows, col.key).forEach(r => {
-    const v = col.val(r);
-    (col.multi ? v : [v]).forEach(x => counts.set(x, (counts.get(x) || 0) + 1));
+  el.querySelectorAll('[data-ms-row]').forEach(tr => {
+    tr.addEventListener('click', () => msOpenDettaglio(parseInt(tr.dataset.msRow, 10)));
   });
-  const f = _msColFiltri[col.key];
-  if (f) f.forEach(v => { if (!counts.has(v)) counts.set(v, 0); });
-  const vals = [...counts.keys()];
-  vals.sort(col.order || ((a, b) => String(a).localeCompare(String(b), 'it', { sensitivity: 'base', numeric: true })));
-  return vals.map(v => ({ v, n: counts.get(v) }));
-}
-
-function msUniverse(col) {
-  const s = new Set();
-  _msAllRows.forEach(r => { const v = col.val(r); (col.multi ? v : [v]).forEach(x => s.add(x)); });
-  return s;
-}
-
-function msRenderPopList() {
-  if (!_msPop) return;
-  const col = msCol(_msPop.dataset.key);
-  const list = _msPop.querySelector('[data-pop-list]');
-  if (!col || !list) return;
-  const f = _msColFiltri[col.key];
-  const lbl = col.lbl || (v => v);
-  const q = _msPopSearch.toLowerCase().trim();
-  const vals = msPopValues(col).filter(x => !q || String(lbl(x.v)).toLowerCase().indexOf(q) !== -1);
-  const st = list.scrollTop;
-  list.innerHTML = vals.length ? vals.map((x, i) =>
-    '<label class="ms-pop-item' + (x.n ? '' : ' ms-pop-zero') + '"><input type="checkbox" data-pop-i="' + i + '"' + (!f || f.has(x.v) ? ' checked' : '') + '>' +
-      '<span class="ms-pop-v">' + esc(lbl(x.v)) + '</span><span class="ms-pop-n">' + x.n + '</span></label>').join('')
-    : '<div class="ms-pop-emptyl">Nessun valore</div>';
-  list._vals = vals.map(x => x.v);
-  list.scrollTop = st;
-}
-
-function msBindPop(pop, col) {
-  pop.addEventListener('click', e => {
-    const b = e.target.closest('button');
-    if (!b) return;
-    if (b.dataset.popSort) { _msSort = [{ col: col.key, dir: b.dataset.popSort }]; msApply(); return; }
-    if (b.hasAttribute('data-pop-clear')) { delete _msColFiltri[col.key]; msClosePop(); msApply(); return; }
-    if (b.hasAttribute('data-pop-close')) { msClosePop(); return; }
-    if (b.dataset.popPreset != null) {
-      const p = col.presets[Number(b.dataset.popPreset)];
-      _msColFiltri[col.key] = { min: p.min != null ? p.min : null, max: p.max != null ? p.max : null };
-      pop.querySelector('[data-pop-min]').value = p.min != null ? p.min : '';
-      pop.querySelector('[data-pop-max]').value = p.max != null ? p.max : '';
-      msApply();
-      return;
-    }
-    if (b.dataset.popBulk) {
-      // Agisce sui valori visibili (quindi anche solo su quelli trovati con "Cerca valori")
-      const visibili = pop.querySelector('[data-pop-list]')._vals || [];
-      const sel = _msColFiltri[col.key] ? new Set(_msColFiltri[col.key]) : msUniverse(col);
-      visibili.forEach(v => (b.dataset.popBulk === 'all' ? sel.add(v) : sel.delete(v)));
-      msSetCatFilter(col, sel);
-    }
-  });
-  pop.addEventListener('change', e => {
-    const cb = e.target.closest('[data-pop-i]');
-    if (!cb) return;
-    const v = pop.querySelector('[data-pop-list]')._vals[Number(cb.dataset.popI)];
-    const sel = _msColFiltri[col.key] ? new Set(_msColFiltri[col.key]) : msUniverse(col);
-    if (cb.checked) sel.add(v); else sel.delete(v);
-    msSetCatFilter(col, sel);
-  });
-  let t = null;
-  pop.addEventListener('input', e => {
-    if (e.target.hasAttribute('data-pop-search')) { _msPopSearch = e.target.value; msRenderPopList(); return; }
-    if (e.target.hasAttribute('data-pop-min') || e.target.hasAttribute('data-pop-max')) {
-      clearTimeout(t);
-      t = setTimeout(() => {
-        const num = s => (s === '' || isNaN(Number(s)) ? null : Number(s));
-        const min = num(pop.querySelector('[data-pop-min]').value);
-        const max = num(pop.querySelector('[data-pop-max]').value);
-        if (min == null && max == null) delete _msColFiltri[col.key];
-        else _msColFiltri[col.key] = { min, max };
-        msApply();
-      }, 350);
-    }
-  });
-}
-
-/* Tutti i valori selezionati = nessun filtro (le righe nuove in arrivo dal recupero non
-   vengono escluse per il solo fatto di non essere state spuntate). */
-function msSetCatFilter(col, sel) {
-  const uni = msUniverse(col);
-  if ([...uni].every(v => sel.has(v))) delete _msColFiltri[col.key];
-  else _msColFiltri[col.key] = sel;
-  msApply();
 }
 
 /* Dettaglio di una riga: meteo per fasce orarie (scaricato su richiesta, la tabella legge
@@ -22118,7 +21678,7 @@ function msExportExcel() {
     const i = r.info, p = r.pcInfo;
     aoa.push([r.dateISO, r.commessa, r.squadra, r.cantiere, r.operatori.join(', '),
       i ? msMeteoDescr(i.code) : '', i && i.tmin != null ? Math.round(i.tmin * 10) / 10 : '', i && i.tmax != null ? Math.round(i.tmax * 10) / 10 : '',
-      i && i.precip != null ? Math.round(i.precip * 10) / 10 : '', MS_SEV_LABEL[r.severity] || '', r.pcColor || '',
+      i && i.precip != null ? Math.round(i.precip * 10) / 10 : '', r.severity || '', r.pcColor || '',
       p ? p.zona || '' : '', p ? p.idraulico || '' : '', p ? p.temporali || '' : '', p ? p.idrogeologico || '' : '']);
   });
   const wb = XLSX.utils.book_new();
