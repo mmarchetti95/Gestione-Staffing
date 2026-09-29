@@ -69,6 +69,10 @@ const ML_STATI_FILTRO = [
   { v: 'nd',            l: 'Stato n/d' },
 ];
 
+/* Elenco delle 20 regioni italiane, derivato da PROVINCE_ITALIA (config.js, carica
+   PRIMA di questo file — vedi JS_FILES in scripts/build.py) invece di duplicarlo. */
+const ML_REGIONI = (typeof PROVINCE_ITALIA !== 'undefined') ? [...new Set(PROVINCE_ITALIA.map(p => p.regione))] : [];
+
 let _mlMap = null;
 let _mlLayer = null;                      // LayerGroup dei marker, svuotato ad ogni render
 let _mlInited = false;
@@ -79,7 +83,7 @@ let _mlDay = 0;
 let _mlFiltroCommesse = new Set();        // vuoto = nessun filtro (tutte)
 let _mlFiltroOperatori = new Set();       // nomi degli operatori selezionati
 let _mlFiltroStati = new Set();           // 'new' | 'indeterminate' | 'done' | 'nd'
-let _mlFiltroRegioni = new Set();         // regione della commessa, 'n/d' se ignota
+let _mlFiltroRegioni = new Set();         // regione del cantiere (da geocoding), 'n/d' se ignota
 let _mlFiltroCantiere = '';
 let _mlSearchCommesse = '';               // ricerca DENTRO l'elenco chip, non sui dati
 let _mlSearchOperatori = '';
@@ -264,21 +268,20 @@ function mlBuildItems(scope) {
   return items;
 }
 
-/* Regione di una commessa. La maggior parte delle commesse attive non ha MAI
-   avuto il modal "Modifica commessa attiva" compilato (arrivano dalla pipeline
-   commerciale e restano "dedotte" — vedi getCommessaAttivaMeta._dedotto), quindi
-   commesse_attive_meta da solo lascerebbe quasi tutto in 'n/d'. Stessa catena di
-   fallback già usata in pwOpenOpModal (weekly-operatore-modal.js) per lo stesso
-   identico problema: regione/provincia salvate su commesse_attive_meta, poi
-   quelle della riga pipeline con lo stesso nome progetto, poi la provincia
-   tradotta in regione. Le commesse senza nessuna delle due finiscono in 'n/d'. */
-function mlRegioneCommessa(nome) {
-  const meta = (typeof state !== 'undefined' && state.commesse_attive_meta && state.commesse_attive_meta[nome]) || {};
-  const pipe = (typeof state !== 'undefined' && Array.isArray(state.pipeline) && state.pipeline.find(p => p.progetto === nome)) || {};
-  const provincia = meta.provincia || pipe.provincia || '';
-  const reg = meta.regione || pipe.regione ||
-    (provincia && typeof provinciaInfo === 'function' && provinciaInfo(provincia)?.regione) || '';
-  return reg || 'n/d';
+/* Regione di un CANTIERE (non della commessa: i metadati commessa quasi non
+   sono mai compilati, vedi changelog v18.177.0/v18.177.1 — tentativo precedente
+   e insufficiente). Si usa lo stesso identico dato già scaricato per posizionare
+   il pin sulla mappa: _geoCache, letto tramite mlGeo() per scartare le righe
+   sentinella "non trovato" (vedi commento sopra mlGeo). Il campo `label` è il
+   display_name restituito da Nominatim — una stringa tipo "Comune, Provincia,
+   Regione, CAP, Italia" — in cui basta cercare il nome di una delle 20 regioni
+   italiane. Un cantiere non ancora geocodificato (o non trovato) resta 'n/d',
+   la stessa condizione già mostrata dal riquadro KPI "Non localizzati". */
+function mlRegioneCantiere(cantiere) {
+  const key = (cantiere || '').toLowerCase().trim().replace(/\s+/g, ' ');
+  const g = mlGeo(key);
+  if (!g || !g.label) return 'n/d';
+  return ML_REGIONI.find(r => g.label.indexOf(r) !== -1) || 'n/d';
 }
 
 /* Filtri combinati: AND fra le dimensioni, OR all'interno di ciascuna.
@@ -292,7 +295,7 @@ function mlApplyFilters(items) {
   return items.filter(it => {
     if (_mlFiltroCommesse.size && !_mlFiltroCommesse.has(it.commessa)) return false;
     if (_mlFiltroOperatori.size && !it.operatori.some(o => _mlFiltroOperatori.has(o))) return false;
-    if (_mlFiltroRegioni.size && !_mlFiltroRegioni.has(mlRegioneCommessa(it.commessa))) return false;
+    if (_mlFiltroRegioni.size && !_mlFiltroRegioni.has(mlRegioneCantiere(it.cantiere))) return false;
     if (q && it.cantiere.toLowerCase().indexOf(q) === -1) return false;
     return true;
   });
@@ -746,9 +749,11 @@ function mlRenderFiltri(tutti) {
   const commesse = [...new Set(all.map(i => i.commessa))].sort((a, b) => a.localeCompare(b));
   const operatori = [...new Set(all.reduce((acc, i) => acc.concat(i.operatori), []))]
     .sort((a, b) => a.localeCompare(b));
+  // Regione dedotta dal cantiere (geocoding), non dalla commessa — vedi mlRegioneCantiere.
   // 'n/d' sempre in fondo: è un ripiego, non una regione vera, e mischiata in
   // ordine alfabetico (tra "Molise" e "Piemonte") sembrerebbe una svista.
-  const regioni = [...new Set(commesse.map(c => mlRegioneCommessa(c)))]
+  const cantieriUnici = [...new Set(all.map(i => i.cantiere))];
+  const regioni = [...new Set(cantieriUnici.map(c => mlRegioneCantiere(c)))]
     .sort((a, b) => (a === 'n/d') - (b === 'n/d') || a.localeCompare(b));
 
   // Un filtro su una voce non più presente (cambio settimana) va scartato, altrimenti

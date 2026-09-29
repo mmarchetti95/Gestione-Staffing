@@ -112,6 +112,9 @@ Limite noto: il progetto Supabase è sul piano **Free**, che non include backup 
 
 ## Changelog
 
+## v18.178.0
+- fix: **Mappa — filtro Regione, per la seconda volta quasi vuoto: cambiata la fonte del dato.** Il fix v18.177.1 (fallback su pipeline) non bastava: la stragrande maggioranza dei cantieri restava comunque "n/d" perché né la commessa né la relativa riga pipeline hanno quasi mai provincia/regione compilate — sono campi opzionali del tutto indipendenti dal fatto che il cantiere sia operativo. La regione ora si deduce **dal cantiere, non dalla commessa**, usando lo stesso identico dato già scaricato per posizionare il pin sulla mappa: `_geoCache` (via `mlGeo()`, che scarta le righe sentinella "non trovato"). Il campo `label` geocodificato da Nominatim è una stringa tipo "Comune, Provincia, Regione, CAP, Italia"; vi si cerca il nome di una delle 20 regioni italiane (elenco derivato da `PROVINCE_ITALIA`, non duplicato). Un cantiere resta "n/d" solo se non è ancora geocodificato o non è stato trovato — la stessa condizione già segnalata dal riquadro KPI "Non localizzati".
+
 ## v18.177.1
 - fix: **Mappa — filtro Regione trovava quasi solo "n/d".** `mlRegioneCommessa` leggeva la regione/provincia solo da `commesse_attive_meta`, ma la maggior parte delle commesse attive arriva dalla pipeline commerciale e non ha **mai** avuto il modal "Modifica commessa attiva" compilato (restano "dedotte", vedi `_dedotto` in `getCommessaAttivaMeta`) — quindi quasi tutte finivano in "n/d" anche quando la regione era nota. Aggiunta la stessa catena di fallback già usata altrove per lo stesso identico problema (`pwOpenOpModal` in `weekly-operatore-modal.js`): dopo `commesse_attive_meta`, prova la riga della pipeline con lo stesso nome progetto, poi la provincia tradotta in regione.
 
