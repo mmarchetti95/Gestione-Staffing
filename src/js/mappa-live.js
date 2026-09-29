@@ -589,6 +589,23 @@ async function mlRefreshMeteo(groups) {
   const days = mlDates();
   const startISO = days[0].toISOString().slice(0, 10);
   const endISO = days[5].toISOString().slice(0, 10);
+
+  // Giorno passato selezionato: meteo osservato (meteo-storico.js). Si attende solo la
+  // lettura da Supabase; l'eventuale recupero dall'archivio gira in coda e, se aggiunge
+  // qualcosa, ridisegna — così un giorno mai recuperato non blocca il disegno dei pin.
+  const dayISO = mlDateISO(_mlDay);
+  if (dayISO && dayISO < meteoTodayISO()) {
+    await msLoadRange(dayISO, dayISO, { hourly: true });
+    const anno = _mlAnno, week = _mlWeek, day = _mlDay;
+    const pairs = groups.map(g => ({ cantiere: g.cantiere, dateISO: dayISO }));
+    msRun(() => msEnsurePast(pairs)).then(changed => {
+      if (changed && mlIsActive() && _mlAnno === anno && _mlWeek === week && _mlDay === day) {
+        mlRender({ reloadJira: false, reloadProduzione: false, keepView: true });
+      }
+    });
+    return;
+  }
+
   const todayISO = new Date().toISOString().slice(0, 10);
   const maxDate = new Date(); maxDate.setUTCDate(maxDate.getUTCDate() + METEO_MAX_FORECAST_DAYS);
   const maxISO = maxDate.toISOString().slice(0, 10);
@@ -1295,6 +1312,9 @@ function mlOpenDettaglio(idx, silent) {
   body.querySelectorAll('[data-ml-griglia]').forEach(b => {
     b.onclick = () => { const it = g.items[parseInt(b.dataset.mlGriglia, 10)]; if (it) mlGoToGriglia(it.loc); };
   });
+  body.querySelectorAll('[data-ml-storico]').forEach(b => {
+    b.onclick = () => msOpenStoricoCantiere(g.cantiere);
+  });
   if (!silent) body.scrollTop = 0;
   mlEnsureStrumenti(g.items.reduce((acc, it) => acc.concat(it.strumenti || []), []));
 }
@@ -1386,15 +1406,20 @@ function mlDettaglioHtml(g) {
 }
 
 function mlMeteoHtml(g, dateISO) {
-  if (!dateISO) return '<div class="ml-note">Seleziona un giorno per vedere la previsione.</div>';
+  const puoStorico = typeof sbCanSeePage !== 'function' || sbCanSeePage('weekly:meteo-storico');
+  const linkStorico = puoStorico
+    ? '<button class="ml-link" data-ml-storico="1" title="Meteo osservato di questo cantiere in tutti i giorni in cui è stato pianificato">🌦️ Storico meteo del cantiere</button>'
+    : '';
+  if (!dateISO) return '<div class="ml-note">Seleziona un giorno per vedere la previsione.</div>' + linkStorico;
   const info = pwMeteoInfoFor(g.cantiere, dateISO);
-  if (!info) return '<div class="ml-note">' + esc(pwMeteoMissingReason(g.cantiere)) + '</div>';
+  if (!info) return '<div class="ml-note">' + esc(pwMeteoMissingReason(g.cantiere, dateISO)) + '</div>' + linkStorico;
 
   let html = '<div class="ml-meteo-head">' +
     '<span class="ml-meteo-ico">' + pwMeteoIconFor(info.code) + '</span>' +
     '<span class="ml-meteo-t">' + (info.tmin != null ? Math.round(info.tmin) + '° / ' : '') +
       (info.tmax != null ? Math.round(info.tmax) + '°' : '') + '</span>' +
-    (info.pop != null ? '<span class="ml-meteo-p">💧 ' + Math.round(info.pop) + '%</span>' : '') +
+    (pwMeteoRainLabel(info) ? '<span class="ml-meteo-p">' + pwMeteoRainLabel(info) + '</span>' : '') +
+    (info.storico ? '<span class="ml-note" style="margin-left:6px;">osservato</span>' : '') +
   '</div>';
 
   const fasce = pwFasceOrarieFor(info);
@@ -1410,7 +1435,7 @@ function mlMeteoHtml(g, dateISO) {
   if (pcCol) {
     html += '<div class="ml-alert ml-pc-' + esc(pcCol) + '">▲ Allerta Protezione Civile: ' + esc(pcCol) + '</div>';
   }
-  return html;
+  return html + linkStorico;
 }
 
 /* Ore e km realmente registrati in Controllo Produzione per gli operatori di

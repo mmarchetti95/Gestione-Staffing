@@ -14,6 +14,7 @@ Applicazione web per la gestione dello staffing e della pipeline commerciale del
 - 📅 **Staffing mensile** — allocazione gg-uomo per commessa, saturazione e gap analysis
 - 🗓️ **Pianificazione settimanale** — composizione squadre, assegnazione cantieri, gestione ferie
 - 🗺️ **Mappa cantieri** — visualizzazione geografica delle commesse attive
+- 🌦️ **Meteo cantieri** — previsioni e criticità (Open-Meteo + bollettino Protezione Civile) in Griglia e Mappa, e storico del meteo osservato nei giorni passati (tab "Storico meteo")
 - 📈 **Gantt** — timeline visiva pipeline e commesse attive
 - ☁️ **Sync automatico** — ogni modifica viene salvata su database cloud (Supabase) in tempo reale
 - 🔑 **Cambio password** — ogni utente può cambiare la propria password dal banner sync
@@ -96,6 +97,7 @@ Limite noto: il progetto Supabase è sul piano **Free**, che non include backup 
 | `SETUP_SUPABASE_GITHUB.md` | Guida setup iniziale Supabase + GitHub Pages |
 | `README.md` | Questo file |
 | `backups/` | Backup versioni precedenti |
+| `supabase/migrations/` | SQL delle modifiche di schema Supabase (già applicate sul progetto) |
 
 ---
 
@@ -111,6 +113,13 @@ Limite noto: il progetto Supabase è sul piano **Free**, che non include backup 
 ---
 
 ## Changelog
+
+## v18.181.0
+- feat: **Storico meteo.** Il meteo dei giorni passati non va più perso. Per ogni cantiere pianificato in Griglia in un giorno già trascorso si salvano su Supabase, condivisi tra tutti gli utenti, il **meteo realmente osservato** (archivio Open-Meteo: condizione, min/max, pioggia caduta in mm, dettaglio orario) e le **criticità del bollettino Protezione Civile di quel giorno**. Il recupero è automatico, anche all'indietro per tutta la pianificazione **dal primo inserimento**. Ha la precedenza ciò che si sta guardando (settimana della Griglia, giorno della Mappa); il resto viene recuperato in background, a partire dalle settimane più recenti, con al massimo 60 bollettini PC per sessione (circa 1 MB l'uno). Gli ultimi 7 giorni sono provvisori e vengono riscaricati da soli quando l'archivio si consolida.
+- feat: **Griglia e Mappa sui giorni passati**: badge, dettaglio per fasce orarie, widget criticità e pin mostrano il meteo osservato (pioggia in mm al posto della probabilità, etichetta "osservato") invece di "non disponibile". Il widget criticità usa anche la pioggia caduta: ≥ 8 mm è criticità media, ≥ 20 mm alta.
+- feat: **nuova tab "🌦️ Storico meteo"** in Pianificazione Settimanale. Mostra una riga per giorno, commessa, squadra e cantiere, con filtri (periodo 7 gg / 30 gg / Tutto, commessa, ricerca per cantiere/squadra/operatore, solo giorni con maltempo), riepilogo (giorni con pioggia, maltempo, allerte PC) ed export Excel. Cliccando una riga si apre il dettaglio orario, con il bollettino per tipo di rischio e il pulsante "Apri in Griglia". Dal dettaglio cantiere della Mappa, "🌦️ Storico meteo del cantiere" apre la tab già filtrata. Per i Guest è una pagina assegnabile a parte (`weekly:meteo-storico`).
+- fix: il meteo non viene più scaricato per i cantieri non geocodificabili (riga "[non trovato]" di `geo_cache` letta come coordinata 0,0).
+- **Supabase**: nuove tabelle `meteo_storico` e `pc_storico` (RLS: lettura e scrittura per tutti gli autenticati, nessuna cancellazione), già applicate. SQL in `supabase/migrations/20260929_meteo_storico.sql`.
 
 ## v18.180.1
 - feat: **Mappa — "📅 Apri in Griglia" anche nel pannello "Cantieri senza stato Jira"** (riquadro KPI). Ogni cantiere dell'elenco ha il pulsante (uno per squadra se sul cantiere lavorano più squadre), che porta alla cella della Griglia: utile soprattutto per i cantieri senza sottotask, che si creano proprio da lì. Nessuna modifica Supabase.

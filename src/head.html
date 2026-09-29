@@ -1422,7 +1422,7 @@
     <div class="flex items-center gap-2">
       <button id="btn-presentation" class="px-3 py-1.5 text-sm rounded hover:bg-white/10" style="border:1px solid var(--dark-border-strong);color:var(--dark-text);visibility:visible;">📊 Modalità presentazione</button>
       <div class="text-xs pl-2" style="border-left:1px solid var(--dark-border-strong);color:var(--dark-text-muted);">
-        <span id="app-version" class="font-medium" style="color:var(--accent);">v18.180.1</span> · Michele Marchetti
+        <span id="app-version" class="font-medium" style="color:var(--accent);">v18.181.0</span> · Michele Marchetti
         <span id="sb-role-badge" style="margin-left:8px;padding:1px 8px;border-radius:9999px;background:rgba(255,255,255,.1);color:var(--dark-text);font-weight:600;"></span>
       </div>
     </div>
@@ -2090,6 +2090,7 @@
     <button id="pw-tab-spostamenti" class="tab-btn text-sm py-3">🧭 Pianifica spostamenti</button>
     <button id="pw-tab-ricerca-squadre" class="tab-btn text-sm py-3">🔍 Ricerca Squadre</button>
     <button id="pw-tab-controllo" class="tab-btn text-sm py-3">📊 Controllo produzione</button>
+    <button id="pw-tab-meteo-storico" class="tab-btn text-sm py-3">🌦️ Storico meteo</button>
     <button id="pw-tab-doppia" class="tab-btn text-sm py-3">🔁 Doppia Week</button>
   </div>
 
@@ -2147,6 +2148,39 @@
       <div class="text-xs font-semibold text-slate-700 mb-3 uppercase tracking-wide">Operatori disponibili per giorno</div>
       <div id="pw-ferie-summary" class="overflow-x-auto"></div>
     </div>
+  </div>
+
+  <!-- Vista Storico meteo (meteo osservato nei giorni passati, per cantiere pianificato) -->
+  <div id="pw-view-meteo-storico" class="hidden">
+    <div class="bg-white border border-slate-200 rounded-lg px-4 py-3 mb-3 no-print flex items-center gap-3 flex-wrap">
+      <span class="text-xs font-semibold text-slate-600">🌦️ Storico meteo cantieri</span>
+      <label class="text-xs text-slate-500 flex items-center gap-1">Dal
+        <input id="ms-dal" type="date" class="px-2 py-1 text-sm border border-slate-200 rounded"></label>
+      <label class="text-xs text-slate-500 flex items-center gap-1">Al
+        <input id="ms-al" type="date" class="px-2 py-1 text-sm border border-slate-200 rounded"></label>
+      <div class="flex gap-1">
+        <button data-ms-range="7" class="px-2 py-1 text-xs border border-slate-300 rounded hover:bg-slate-50">7 gg</button>
+        <button data-ms-range="30" class="px-2 py-1 text-xs border border-slate-300 rounded hover:bg-slate-50">30 gg</button>
+        <button data-ms-range="all" class="px-2 py-1 text-xs border border-slate-300 rounded hover:bg-slate-50" title="Dal primo giorno pianificato in Griglia">Tutto</button>
+      </div>
+      <select id="ms-commessa" class="px-2 py-1 text-sm border border-slate-200 rounded max-w-xs"></select>
+      <div class="relative flex-1 min-w-[180px] max-w-sm">
+        <span class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm pointer-events-none">🔍</span>
+        <input id="ms-q" type="text" placeholder="Cerca cantiere, squadra o operatore…"
+          class="w-full pl-8 pr-3 py-1.5 text-sm border border-slate-200 rounded-lg focus:outline-none focus:border-teal-400 bg-slate-50">
+      </div>
+      <label class="text-xs text-slate-600 flex items-center gap-1 cursor-pointer">
+        <input id="ms-solo-maltempo" type="checkbox"> Solo giorni con maltempo</label>
+      <button id="ms-export" class="px-3 py-1.5 text-sm font-medium bg-teal-600 text-white rounded-lg hover:bg-teal-700">⬇ Esporta Excel</button>
+      <span id="ms-status" class="text-xs text-slate-400"></span>
+    </div>
+    <div id="ms-kpi" class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-3"></div>
+    <div class="bg-white border border-slate-200 rounded-lg overflow-auto shadow-sm">
+      <div id="ms-table" style="max-height:640px;overflow-y:auto;">
+        <div class="text-center text-slate-400 py-10 text-sm">Caricamento…</div>
+      </div>
+    </div>
+    <p class="text-xs text-slate-400 mt-2">Meteo realmente osservato (archivio Open-Meteo) e bollettino Protezione Civile del giorno, per ogni cantiere pianificato in Griglia nei giorni già passati. Lo storico viene recuperato e salvato in automatico, anche per le settimane pianificate in passato; gli ultimi 7 giorni sono provvisori e si consolidano da soli. Clicca una riga per il dettaglio orario.</p>
   </div>
 
   <!-- Vista Doppia Week -->

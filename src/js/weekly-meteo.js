@@ -44,26 +44,54 @@ function pwSquadraCantieriGiorno(squadra, dayIdx) {
   return [...set];
 }
 
-/* Legge dalla cache il meteo di un cantiere in una data, sfruttando il geocoding già
-   disponibile in _geoCache (condivisa con la Mappa). null se non geocodificato/non ancora
-   scaricato. */
+/* Coordinate di un cantiere dalla rubrica _geoCache, scartando la riga SENTINELLA
+   "[non trovato]" (lat/lng 0,0) che _geoCacheLoad() rilegge da Supabase come oggetto
+   valido: senza il filtro si scaricherebbe il meteo del Golfo di Guinea (vedi mlGeo). */
+function meteoGeoFor(cantiere) {
+  const g = _geoCache[cantiere.toLowerCase().trim().replace(/\s+/g, ' ')];
+  if (!g || g.label === '[non trovato]' || (!g.lat && !g.lng)) return null;
+  return g;
+}
+function meteoPosKey(geo) {
+  return geo.lat.toFixed(2) + ',' + geo.lng.toFixed(2);
+}
+
+/* Legge il meteo di un cantiere in una data, sfruttando il geocoding già disponibile in
+   _geoCache (condivisa con la Mappa). Per i giorni PASSATI legge solo lo storico osservato
+   (_meteoStorico, vedi meteo-storico.js), mai la vecchia previsione rimasta in cache: così
+   tornando indietro di settimana si vede il meteo reale. null se non geocodificato/non
+   ancora scaricato. */
 function pwMeteoInfoFor(cantiere, dateISO) {
-  const key = cantiere.toLowerCase().trim().replace(/\s+/g, ' ');
-  const geo = _geoCache[key];
+  const geo = meteoGeoFor(cantiere);
   if (!geo) return null;
-  const mk = geo.lat.toFixed(2) + ',' + geo.lng.toFixed(2) + '|' + dateISO;
+  const mk = meteoPosKey(geo) + '|' + dateISO;
+  if (dateISO < meteoTodayISO()) {
+    const s = _meteoStorico[mk];
+    if (!s) return null;
+    return { cantiere, storico: true, code: s.code, tmax: s.tmax, tmin: s.tmin, pop: null, precip: s.precip, hourly: s.hourly || [] };
+  }
   const m = _meteoCache[mk];
   if (!m) return null;
   return { cantiere, code: m.code, tmax: m.tmax, tmin: m.tmin, pop: m.pop, hourly: m.hourly || [] };
 }
 
+/* Etichetta pioggia di un giorno o di una fascia oraria: probabilità (%) per le previsioni,
+   millimetri caduti per lo storico osservato. '' se il dato manca. */
+function pwMeteoRainLabel(x) {
+  if (!x) return '';
+  if (x.pop != null) return '💧' + Math.round(x.pop) + '%';
+  if (x.precip != null) return '💧' + (Math.round(x.precip * 10) / 10) + ' mm';
+  return '';
+}
+
 /* Motivo per cui pwMeteoInfoFor ha restituito null, per mostrare nel modal un messaggio
    diagnostico invece del generico "Meteo non disponibile" — utile per distinguere un
    cantiere non geocodificabile da un servizio meteo momentaneamente irraggiungibile. */
-function pwMeteoMissingReason(cantiere) {
+function pwMeteoMissingReason(cantiere, dateISO) {
   const key = cantiere.toLowerCase().trim().replace(/\s+/g, ' ');
   if (!(key in _geoCache)) return 'Localizzazione in corso…';
-  if (!_geoCache[key]) return 'Località non riconosciuta (geocoding non riuscito)';
+  if (!meteoGeoFor(cantiere)) return 'Località non riconosciuta (geocoding non riuscito)';
+  if (dateISO && dateISO < meteoTodayISO()) return 'Storico meteo in recupero…';
   return 'Servizio meteo momentaneamente non raggiungibile';
 }
 
@@ -144,17 +172,34 @@ async function pwRefreshMeteoWeek() {
     const todayISO = new Date().toISOString().slice(0, 10);
     const maxDate = new Date(); maxDate.setUTCDate(maxDate.getUTCDate() + METEO_MAX_FORECAST_DAYS);
     const maxISO = maxDate.toISOString().slice(0, 10);
-    if (endISO < todayISO || startISO > maxISO) return; // settimana fuori dal range forecast
-
-    const fetchStartISO = startISO < todayISO ? todayISO : startISO;
-    const fetchEndISO = endISO > maxISO ? maxISO : endISO;
+    if (startISO > maxISO) return; // settimana oltre l'orizzonte di previsione
 
     const data = pwGetWeekData();
     const cantieriSet = new Set();
+    const pastPairs = [];   // cantiere+giorno già trascorsi: vanno allo storico osservato
+    const localToday = meteoTodayISO();
     data.forEach(bc => (bc.squadre || []).forEach(sq => (sq.operatori || []).forEach(op => {
-      for (let di = 0; di < 6; di++) pwCellCantieri((op.giorni || {})[di]).forEach(c => cantieriSet.add(c));
+      for (let di = 0; di < 6; di++) {
+        const d = new Date(monday); d.setUTCDate(monday.getUTCDate() + di);
+        const dateISO = d.toISOString().slice(0, 10);
+        pwCellCantieri((op.giorni || {})[di]).forEach(c => {
+          cantieriSet.add(c);
+          if (dateISO < localToday) pastPairs.push({ cantiere: c, dateISO });
+        });
+      }
     })));
     if (!cantieriSet.size) return;
+
+    // Giorni già passati: storico osservato (Supabase meteo_storico, recuperato
+    // dall'archivio Open-Meteo se manca). Settimana tutta nel passato: solo questo.
+    if (pastPairs.length) {
+      await msEnsureAndLoad(pastPairs, startISO, endISO);
+      pwApplyMeteoBadgesToDom();
+    }
+    if (endISO < todayISO) return;
+
+    const fetchStartISO = startISO < todayISO ? todayISO : startISO;
+    const fetchEndISO = endISO > maxISO ? maxISO : endISO;
 
     // Geocodifica sequenziale (rate-limit Nominatim), riusa _geoCache condivisa con la Mappa
     for (const cantiere of cantieriSet) {
@@ -169,10 +214,9 @@ async function pwRefreshMeteoWeek() {
     const now = Date.now();
     const seenPos = new Set();
     for (const cantiere of cantieriSet) {
-      const key = cantiere.toLowerCase().trim().replace(/\s+/g, ' ');
-      const geo = _geoCache[key];
+      const geo = meteoGeoFor(cantiere);
       if (!geo) continue; // non geocodificabile: niente meteo per questo cantiere
-      const posKey = geo.lat.toFixed(2) + ',' + geo.lng.toFixed(2);
+      const posKey = meteoPosKey(geo);
       if (seenPos.has(posKey)) continue;
       seenPos.add(posKey);
       // "Fresca" solo se anche il dettaglio orario è presente: un'entry con solo l'aggregato
@@ -248,7 +292,7 @@ function pwOpenMeteoModal(cIdx, sIdx, dayIdx) {
     if (!info) {
       return `<div class="pw-meteo-modal-block">
         <div class="pw-meteo-modal-cantiere">${esc(cantiere)}</div>
-        <div class="pw-meteo-modal-missing">${esc(pwMeteoMissingReason(cantiere))}</div>
+        <div class="pw-meteo-modal-missing">${esc(pwMeteoMissingReason(cantiere, dateISO))}</div>
       </div>`;
     }
     const fasce = pwFasceOrarieFor(info);
@@ -258,12 +302,17 @@ function pwOpenMeteoModal(cIdx, sIdx, dayIdx) {
             <div class="pw-meteo-fascia-ora">${h.hour}</div>
             <div class="pw-meteo-fascia-icon">${pwMeteoIconFor(h.code)}</div>
             <div class="pw-meteo-fascia-temp">${Math.round(h.temp)}°</div>
-            ${h.pop != null ? `<div class="pw-meteo-fascia-pop">💧${Math.round(h.pop)}%</div>` : ''}
+            ${pwMeteoRainLabel(h) ? '<div class="pw-meteo-fascia-pop">' + pwMeteoRainLabel(h) + '</div>' : ''}
           </div>`).join('')}
         </div>`
       : `<div class="pw-meteo-modal-info">${pwMeteoIconFor(info.code)} ${Math.round(info.tmax)}° / ${Math.round(info.tmin)}° <span class="pw-meteo-modal-missing">(dettaglio orario non disponibile)</span></div>`;
+    const totale = info.storico
+      ? '<div class="pw-meteo-modal-missing">Osservato nel giorno: ' + pwMeteoIconFor(info.code) + ' ' + Math.round(info.tmax) + '° / ' + Math.round(info.tmin) + '°' +
+        (pwMeteoRainLabel(info) ? ' · ' + pwMeteoRainLabel(info) : '') + '</div>'
+      : '';
     return `<div class="pw-meteo-modal-block">
       <div class="pw-meteo-modal-cantiere">${esc(cantiere)}</div>
+      ${totale}
       ${fasceHtml}
     </div>`;
   }).join('');
@@ -272,7 +321,7 @@ function pwOpenMeteoModal(cIdx, sIdx, dayIdx) {
   if (!root) return;
   root.innerHTML = `<div class="modal-backdrop"><div class="bg-white rounded-lg shadow-xl w-full max-w-lg mx-4 my-8 p-5">
     <h3 class="font-semibold text-slate-900 mb-1">Meteo — ${esc(squadra.nome || 'Squadra')}</h3>
-    <p class="text-xs text-slate-500 mb-3">${DAY_NAMES_FULL[dayIdx]} ${formatDate(d)}</p>
+    <p class="text-xs text-slate-500 mb-3">${DAY_NAMES_FULL[dayIdx]} ${formatDate(d)}${dateISO < meteoTodayISO() ? ' · meteo osservato (storico)' : ''}</p>
     <div>${blocks || '<div class="text-slate-400 text-sm">Nessun cantiere pianificato.</div>'}</div>
     <div class="flex justify-end mt-4">
       <button onclick="closeModal()" class="px-3 py-1.5 text-sm border border-slate-300 rounded">Chiudi</button>
@@ -410,9 +459,20 @@ async function pcRefreshBollettino() {
    oggi/domani del bollettino, comune non riconosciuto, o dati non ancora scaricati. Oltre al
    match esatto sul nome comune prova un contains, per cantieri scritti come "Cantiere - Comune". */
 function pcInfoFor(cantiere, dateISO) {
+  const key = cantiere.toLowerCase().trim().replace(/\s+/g, ' ');
+  // Giorni passati: criticità già abbinata al cantiere e salvata in pc_storico.
+  if (dateISO < meteoTodayISO()) {
+    const giorno = _pcStorico[dateISO];
+    return (giorno && giorno[key]) || null;
+  }
   const byComune = _pcCache.byDate && _pcCache.byDate[dateISO];
   if (!byComune) return null;
-  const key = cantiere.toLowerCase().trim().replace(/\s+/g, ' ');
+  return pcMatchComune(byComune, key);
+}
+
+/* Abbinamento cantiere→comune del bollettino: match esatto, poi contains (cantieri
+   scritti come "Cantiere - Comune"). Condiviso con lo storico (meteo-storico.js). */
+function pcMatchComune(byComune, key) {
   if (byComune[key]) return byComune[key];
   const found = Object.keys(byComune).find(c => key.indexOf(c) !== -1 || c.indexOf(key) !== -1);
   return found ? byComune[found] : null;
@@ -440,8 +500,9 @@ function pwMeteoSeverityFor(info) {
   if (!info) return null;
   const CODICI_ALTA = [65, 66, 67, 82, 86, 95, 96, 99];   // pioggia intensa/gelata, neve intensa, temporali
   const CODICI_MEDIA = [56, 57, 63, 73, 75, 77, 81];      // pioggia gelata leggera, pioggia/neve moderate
-  if (CODICI_ALTA.includes(info.code) || (info.pop != null && info.pop >= 80)) return 'alta';
-  if (CODICI_MEDIA.includes(info.code) || (info.pop != null && info.pop >= 55)) return 'media';
+  // Storico osservato: niente probabilità, conta la pioggia realmente caduta (mm nel giorno).
+  if (CODICI_ALTA.includes(info.code) || (info.pop != null && info.pop >= 80) || (info.precip != null && info.precip >= 20)) return 'alta';
+  if (CODICI_MEDIA.includes(info.code) || (info.pop != null && info.pop >= 55) || (info.precip != null && info.precip >= 8)) return 'media';
   return null;
 }
 
@@ -531,7 +592,7 @@ function pwOpenWeatherWeekModal() {
 
   const infoLine = c => {
     const meteoLine = c.info
-      ? `${pwMeteoIconFor(c.info.code)} ${Math.round(c.info.tmax)}°/${Math.round(c.info.tmin)}°${c.info.pop != null ? ' · 💧' + Math.round(c.info.pop) + '%' : ''}`
+      ? `${pwMeteoIconFor(c.info.code)} ${Math.round(c.info.tmax)}°/${Math.round(c.info.tmin)}°${pwMeteoRainLabel(c.info) ? ' · ' + pwMeteoRainLabel(c.info) : ''}`
       : '';
     const pcLine = c.pcColor
       ? `📋 Bollettino PC: allerta ${c.pcColor}${c.pcInfo && c.pcInfo.zona ? ' — zona ' + esc(c.pcInfo.zona) : ''}`
@@ -580,7 +641,7 @@ function pwOpenWeatherWeekModal() {
     : `<div class="text-slate-400 text-sm">Nessuna criticità meteo rilevata nei cantieri pianificati questa settimana.</div>`;
   root.innerHTML = `<div class="modal-backdrop"><div class="bg-white rounded-lg shadow-xl w-full max-w-xl mx-4 my-8 p-5 max-h-[90vh] overflow-y-auto">
     <h3 class="font-semibold text-slate-900 mb-1">⛈️ Criticità meteo — settimana</h3>
-    <p class="text-xs text-slate-500 mb-3">Soglie sulle previsioni Open-Meteo (tutta la settimana) + bollettino ufficiale Protezione Civile quando disponibile (solo oggi/domani). Clicca una riga per andare alla cella corrispondente nella Griglia.</p>
+    <p class="text-xs text-slate-500 mb-3">Soglie sulle previsioni Open-Meteo (tutta la settimana) + bollettino ufficiale Protezione Civile quando disponibile (solo oggi/domani). Per i giorni già passati: meteo osservato (pioggia caduta) e bollettino di quel giorno. Clicca una riga per andare alla cella corrispondente nella Griglia.</p>
     <div>${rows}</div>
     <div class="flex justify-end mt-4">
       <button onclick="closeModal()" class="px-3 py-1.5 text-sm border border-slate-300 rounded">Chiudi</button>

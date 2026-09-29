@@ -54,6 +54,7 @@ JS_FILES = [
     'weekly-spostamenti.js',
     'weekly-ricerca-squadre.js',
     'weekly-meteo.js',
+    'meteo-storico.js',
     'mappa-live.js',
     'ai-assistant.js',
 ]

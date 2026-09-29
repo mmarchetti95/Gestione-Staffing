@@ -94,7 +94,7 @@ function switchScreen(screen) {
 let _pwActiveTab = (function(){ try { return localStorage.getItem('pw_last_tab') || 'griglia'; } catch(_) { return 'griglia'; } })();
 // Ricorda la posizione di scroll di ciascun tab (Griglia/Ferie/Mappa = scroll pagina,
 // Controllo Produzione = scroll interno alla tabella) finché non si fa il refresh.
-let _pwScrollY = { griglia: 0, ferie: 0, mappa: 0, spostamenti: 0, ricerca_squadre: 0, controllo: 0, doppia: 0 };
+let _pwScrollY = { griglia: 0, ferie: 0, mappa: 0, spostamenti: 0, ricerca_squadre: 0, controllo: 0, doppia: 0, 'meteo-storico': 0 };
 let _cpTableScrollTop = 0;
 
 function pwSwitchTab(tab) {
@@ -138,6 +138,7 @@ function pwSwitchTab(tab) {
   const trs = document.getElementById('pw-tab-ricerca-squadre');
   const tc = document.getElementById('pw-tab-controllo');
   const td = document.getElementById('pw-tab-doppia');
+  const tms = document.getElementById('pw-tab-meteo-storico');
   const vg = document.getElementById('pw-view-griglia');
   const vf = document.getElementById('pw-view-ferie');
   const vm = document.getElementById('pw-view-mappa');
@@ -145,9 +146,10 @@ function pwSwitchTab(tab) {
   const vrs = document.getElementById('pw-view-ricerca-squadre');
   const vc = document.getElementById('pw-view-controllo');
   const vd = document.getElementById('pw-view-doppia');
+  const vms = document.getElementById('pw-view-meteo-storico');
 
-  [tg, tf, tm, ts, trs, tc, td].forEach(t => t && t.classList.remove('active'));
-  [vg, vf, vm, vs, vrs, vc, vd].forEach(v => v && v.classList.add('hidden'));
+  [tg, tf, tm, ts, trs, tc, td, tms].forEach(t => t && t.classList.remove('active'));
+  [vg, vf, vm, vs, vrs, vc, vd, vms].forEach(v => v && v.classList.add('hidden'));
 
   if (tab === 'mappa') {
     tm.classList.add('active');
@@ -198,6 +200,12 @@ function pwSwitchTab(tab) {
     vd.classList.remove('hidden');
     pwDoppiaWeekRender();
     window.scrollTo(0, _pwScrollY.doppia || 0);
+  } else if (tab === 'meteo-storico') {
+    // Periodo indipendente dalla settimana della Griglia (filtri propri Dal/Al).
+    tms.classList.add('active');
+    vms.classList.remove('hidden');
+    msRender();
+    window.scrollTo(0, _pwScrollY['meteo-storico'] || 0);
   } else {
     tg.classList.add('active');
     vg.classList.remove('hidden');
