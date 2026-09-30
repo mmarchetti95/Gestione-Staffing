@@ -9,7 +9,9 @@
    - il contesto della settimana (disponibilità, posizioni, attestati, staffing)
    - la scrittura in Griglia e l'annullamento.
    La lista e la bozza sono locali (localStorage per settimana): nessun nuovo dominio di
-   sync. In pwData arriva solo quello che l'utente applica, con un unico pwSave(). */
+   sync. In pwData arriva solo quello che l'utente applica, con un unico pwSave().
+   L'assistente in chat (weekly-autoplan-chat.js, apc*) lavora su questo stesso stato con
+   gli stessi helper: modifica righe/opzioni/precedenze e ricalcola, mai la Griglia. */
 
 let _ap = {
   anno: null,
@@ -20,7 +22,9 @@ let _ap = {
   modelloInfo: '',
   opzioni: { sabato: false, maxKm: 250, meteo: true },
   precedenze: [],       // [[primaId, dopoId]] scelte dall'utente dai suggerimenti
-  stato: { msg: '', err: false }
+  stato: { msg: '', err: false },
+  toccate: new Set(),   // righe modificate dall'assistente nell'ultima risposta (evidenziate)
+  fontiAperte: false    // con la chat aperta le fonti stanno in un pannello richiudibile
 };
 let _apSeq = 0;
 const AP_STORAGE_KEY = 'ap_righe_v1';
@@ -34,12 +38,16 @@ function _apWkKey(anno, week) { return anno + '-' + week; }
 
 /* Ogni modifica a righe o opzioni rende vecchia la bozza: via lei e il suo messaggio */
 function _apInvalidaBozza() {
+  /* L'ultima bozza calcolata resta come termine di confronto per l'assistente ("cosa è
+     cambiato rispetto a prima"), anche se non è più valida per applicarla. */
+  if (_ap.bozza) _ap.ultimaBozza = _ap.bozza;
   _ap.bozza = null;
   _ap.stato = { msg: '', err: false };
 }
 
 function _apStatus(msg, isError) {
   _ap.stato = { msg: msg || '', err: !!isError };
+  if (typeof apcProgresso === 'function') apcProgresso(msg);
   const el = document.getElementById('ap-status');
   if (!el) return;
   el.textContent = msg || '';
@@ -81,7 +89,10 @@ function apInit() {
     _ap.anno = pwAnno;
     _ap.week = pwWeek;
     _ap.bozza = null;
+    _ap.ultimaBozza = null;
+    _ap.toccate = new Set();
     _apCaricaLocale();
+    if (typeof apcOnSettimana === 'function') apcOnSettimana();
   }
   apRender();
   if (!_ap.modello) apCaricaStorico(false);
@@ -211,10 +222,17 @@ function apNormRiga(o, fonte) {
     skills: _apLista(o.skills),
     preferiti: _apOperatoriCanonici(o.preferiti),
     esclusi: _apOperatoriCanonici(o.esclusi),
+    giorniEsclusi: _apGiorniLista(o.giorniEsclusi),
     note: String(o.note || '').trim(),
     fonte: fonte || 'manuale',
     includi: true
   };
+}
+
+/* Indici di giorno 0..5 (Lun..Sab), senza doppioni, in ordine */
+function _apGiorniLista(v) {
+  const arr = Array.isArray(v) ? v : (v == null || v === '' ? [] : [v]);
+  return Array.from(new Set(arr.map(x => parseInt(x, 10)).filter(d => d >= 0 && d <= 5))).sort((a, b) => a - b);
 }
 
 function _apAggiungiRighe(nuove, fonte) {
@@ -267,6 +285,13 @@ function apAggiungiRiga() {
 
 /* Fonte 4: cantieri pianificati la settimana precedente (da completare: km residui) */
 function apDaSettimanaPrecedente() {
+  const { prev, nuove } = _apRigheSettimanaPrecedente();
+  if (!nuove.length) { showAlertModal('La settimana ' + prev.week + ' non ha cantieri nuovi da riportare.'); return; }
+  _apAggiungiRighe(nuove, 'settimana ' + prev.week);
+}
+
+/* Righe nuove (non già in lista) dai cantieri in Griglia la settimana precedente */
+function _apRigheSettimanaPrecedente() {
   const prev = pwWeekAdd(pwAnno, pwWeek, -1);
   const wk = (pwData[prev.anno] && pwData[prev.anno][prev.week]) || [];
   const visti = new Set(_ap.righe.map(r => _apNorm(r.commessa) + '|' + _apNorm(r.cantiere) + '|' + _apNorm(r.attivita)));
@@ -281,8 +306,7 @@ function apDaSettimanaPrecedente() {
       });
     }
   })));
-  if (!nuove.length) { showAlertModal('La settimana ' + prev.week + ' non ha cantieri nuovi da riportare.'); return; }
-  _apAggiungiRighe(nuove, 'settimana ' + prev.week);
+  return { prev, nuove };
 }
 
 function apScaricaModello() {
@@ -637,12 +661,15 @@ function _apRigaCompleta(r) {
   return r.cantiere && r.commessa;
 }
 
-async function apCalcola() {
+/* opts.silenzioso (usato dall'assistente): niente modali, l'esito torna come valore
+   { ok, errore } così l'agente può riferirlo in chat. */
+async function apCalcola(opts) {
+  const silenzioso = !!(opts && opts.silenzioso);
+  const fallisci = msg => { if (!silenzioso) showAlertModal(msg); return { ok: false, errore: msg }; };
   const righe = _ap.righe.filter(r => r.includi && _apRigaCompleta(r));
-  if (!righe.length) { showAlertModal('Serve almeno una riga inclusa con cantiere e commessa.'); return; }
+  if (!righe.length) return fallisci('Serve almeno una riga inclusa con cantiere e commessa.');
   if (_apPrimoGiorno() > (_ap.opzioni.sabato ? 5 : 4)) {
-    showAlertModal('Questa settimana è già passata (o non ha più giorni utili): scegli una settimana futura.');
-    return;
+    return fallisci('Questa settimana è già passata (o non ha più giorni utili): scegli una settimana futura.');
   }
   const btn = document.getElementById('ap-calcola-btn');
   if (btn) btn.disabled = true;
@@ -674,6 +701,7 @@ async function apCalcola() {
         priorita: r.priorita || 3,
         scadenzaGiorno: sg == null ? null : (sg > 5 ? null : sg),
         dalGiorno: dg == null ? 0 : Math.max(0, dg),
+        giorniEsclusi: _apGiorniLista(r.giorniEsclusi),
         /* Skill della riga + quelle dell'anagrafica commessa: solo preferenza (la squadra
            che le copre è favorita, se mancano c'è un avviso), mai motivo di esclusione */
         skills: Array.from(new Set((r.skills || []).concat(meta.skills || []))),
@@ -706,17 +734,21 @@ async function apCalcola() {
     _apStatus('Calcolo la bozza…');
     await new Promise(res => setTimeout(res, 0)); // lascia disegnare lo stato prima del calcolo
     const risultato = apRisolvi(ctx, righeSolver);
+    /* ctx resta in memoria con la bozza (non va in localStorage: contiene funzioni) per
+       la diagnosi dei "perché" dell'assistente; nuove = celle da evidenziare */
     _ap.bozza = { anno: _ap.anno, week: _ap.week, risultato, righeSolver, ctxGiorni: ctx.giorni, creata: Date.now(),
-      infoDistanze: dist.info, infoMeteo: met.info,
+      ctx, infoDistanze: dist.info, infoMeteo: met.info, nuove: null,
       dwDisponibili: ctx.operatori.filter(o => o.dwDisponibile).map(o => o.nome) };
     const es = Object.values(risultato.esiti);
     apRender();
     _apStatus('Bozza pronta: ' + es.filter(e => e.stato === 'assegnato').length + ' assegnati, ' +
       es.filter(e => e.stato === 'parziale').length + ' parziali, ' +
       es.filter(e => e.stato === 'non_assegnato').length + ' non assegnati.');
+    return { ok: true };
   } catch (e) {
     console.error('apCalcola', e);
     _apStatus('Errore nel calcolo: ' + (e.message || e), true);
+    return { ok: false, errore: 'errore nel calcolo: ' + (e.message || e) };
   } finally {
     if (btn) btn.disabled = false;
   }
@@ -862,6 +894,17 @@ function apSetCampo(el) {
   apRender();
 }
 
+async function apTogliGiorniEsclusi(el) {
+  const r = _apRigaDaEl(el);
+  if (!r) return;
+  const ok = await showConfirmAsync('Togliere il vincolo "mai di ' + _apGiorniLista(r.giorniEsclusi).map(d => AP_GIORNI[d]).join(', ') + '" da ' + (r.cantiere || 'questo cantiere') + '?', 'Togli vincolo');
+  if (!ok) return;
+  r.giorniEsclusi = [];
+  _apInvalidaBozza();
+  _apSalvaLocale();
+  apRender();
+}
+
 function apRimuoviRiga(el) {
   const r = _apRigaDaEl(el);
   if (!r) return;
@@ -915,10 +958,13 @@ function apRender() {
   try { undo = JSON.parse(localStorage.getItem(AP_UNDO_KEY) || 'null'); } catch (_) {}
   const puoAnnullare = undo && undo.anno === pwAnno && undo.week === pwWeek;
 
+  /* Con la chat aperta la colonna delle fonti lascia il posto alla chat: le fonti
+     diventano un pannello richiudibile sopra la tabella. */
+  const chat = typeof apcAperta === 'function' && apcAperta();
   root.innerHTML =
-    '<div class="grid grid-cols-1 xl:grid-cols-5 gap-4 items-start">' +
-      _apPannelloFontiHtml() +
-      '<div class="xl:col-span-4 space-y-4" style="min-width:0;">' +
+    '<div class="grid grid-cols-1 ' + (chat ? '' : 'xl:grid-cols-5 ') + 'gap-4 items-start">' +
+      (chat ? _apFontiRichiudibiliHtml() : _apPannelloFontiHtml()) +
+      '<div class="' + (chat ? '' : 'xl:col-span-4 ') + 'space-y-4" style="min-width:0;">' +
         '<div class="bg-white border border-slate-200 rounded-lg p-3 shadow-sm">' +
           '<div class="flex flex-wrap items-center gap-2 mb-2">' +
             '<div class="text-xs font-semibold text-slate-700 uppercase tracking-wide">📋 Cantieri da pianificare · ' + _apE(giorniLabel) + '</div>' +
@@ -928,6 +974,7 @@ function apRender() {
             '<label class="text-xs text-slate-600 flex items-center gap-1">max km trasferta <input type="number" min="20" step="10" data-opz="maxKm" onchange="apSetOpzione(this)" value="' + _apE(_ap.opzioni.maxKm) + '" class="w-16 border border-slate-300 rounded px-1 py-0.5 text-xs"></label>' +
             '<button type="button" onclick="apSvuota()" class="text-xs px-2 py-1 border border-slate-300 rounded hover:bg-slate-50">Svuota</button>' +
             '<button type="button" id="ap-calcola-btn" onclick="apCalcola()" class="text-xs px-3 py-1.5 rounded font-semibold text-white" style="background:var(--accent,#0d9488);">🤖 Calcola bozza</button>' +
+            (typeof apcToggle === 'function' ? '<button type="button" onclick="apcToggle()" class="apc-toggle' + (chat ? ' on' : '') + '" title="Chiedi all\'assistente di modificare la bozza in linguaggio naturale"><span class="apc-spark">✦</span> Assistente</button>' : '') +
           '</div>' +
           '<div class="text-[11px] text-slate-500 mb-2">' + _apE(_ap.modelloInfo) +
             ' <button type="button" onclick="apCaricaStorico(true)" class="underline">aggiorna</button></div>' +
@@ -940,14 +987,27 @@ function apRender() {
     '</div>';
 }
 
+function _apFontiRichiudibiliHtml() {
+  return '<details class="ap-fonti-box no-print"' + (_ap.fontiAperte ? ' open' : '') + ' ontoggle="apFontiToggle(this)">' +
+    '<summary><span class="text-xs font-semibold text-slate-700">📥 Aggiungi cantieri</span>' +
+    '<span class="text-[11px] text-slate-400">incolla da Excel · file · settimana precedente · riga manuale</span></summary>' +
+    '<div class="pt-2 grid grid-cols-1 md:grid-cols-2 gap-3">' + _apFontiCorpoHtml() + '</div></details>';
+}
+
+function apFontiToggle(el) { _ap.fontiAperte = !!el.open; }
+
 function _apPannelloFontiHtml() {
   /* Colonna a sinistra da 1280px in su; sotto, sta sopra la tabella e si dispone su due
      colonne (incolla | altre fonti) per non occupare mezza pagina in altezza. */
   return '<div class="xl:col-span-1 bg-white border border-slate-200 rounded-lg p-3 shadow-sm no-print">' +
     '<div class="text-xs font-semibold text-slate-700 uppercase tracking-wide mb-1">🤖 Auto-pianifica</div>' +
     '<div class="text-[11px] text-slate-500 leading-snug mb-3">Carica i cantieri da una o più fonti, controlla stima e priorità, poi calcola una bozza: la Griglia cambia solo quando premi <b>Applica</b>.</div>' +
-    '<div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-1 gap-3">' +
-      '<div>' +
+    '<div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-1 gap-3">' + _apFontiCorpoHtml() + '</div>' +
+  '</div>';
+}
+
+function _apFontiCorpoHtml() {
+  return '<div>' +
         '<label class="block text-xs font-semibold text-slate-600 mb-1">Incolla da Excel / CSV</label>' +
         '<textarea id="ap-incolla" rows="4" placeholder="Cantiere&#9;Commessa&#9;Attività&#9;Km&#9;…&#9;Priorità" class="w-full px-2 py-1.5 text-xs border border-slate-300 rounded font-mono"></textarea>' +
         '<button type="button" onclick="apImportaTesto()" class="mt-1 w-full text-xs px-2 py-1.5 border border-slate-300 rounded hover:bg-slate-50">⬇ Importa righe incollate</button>' +
@@ -960,9 +1020,7 @@ function _apPannelloFontiHtml() {
           '<button type="button" onclick="apScaricaModello()" class="text-xs px-2 py-1.5 text-slate-500 hover:text-slate-800 text-left underline">Scarica il modello Excel</button>' +
         '</div>' +
         '<div class="text-[10px] text-slate-400 leading-snug mt-2">Colonne riconosciute: Cantiere, Commessa, Attività, Km, Giorni, Operatori, Priorità (P1/P2/P3), Scadenza, Dal, Skill, Preferiti, Esclusi, Note. Giorni vuoto = stima dallo storico di produzione.</div>' +
-      '</div>' +
-    '</div>' +
-  '</div>';
+      '</div>';
 }
 
 /* ---------- cataloghi per i menu a tendina ---------- */
@@ -1284,9 +1342,12 @@ function _apTabellaRigheHtml() {
       esitoHtml = '<span class="text-slate-300">—</span>';
     }
     const warn = 'border-color:#f59e0b;background:#fffbeb;';
-    html += '<tr data-ap-id="' + _apE(r.id) + '" class="border-t border-slate-100' + (r.includi ? '' : ' opacity-50') + '">' +
+    const ge = _apGiorniLista(r.giorniEsclusi);
+    html += '<tr data-ap-id="' + _apE(r.id) + '" class="border-t border-slate-100' + (r.includi ? '' : ' opacity-50') + (_ap.toccate.has(r.id) ? ' ap-riga-toccata' : '') + '">' +
       '<td class="px-1 py-1"><input type="checkbox" data-campo="includi" onchange="apSetCampo(this)"' + (r.includi ? ' checked' : '') + ' title="Includi nel calcolo e nell\'applicazione"></td>' +
-      '<td class="px-1 py-1">' + inp('cantiere', r.cantiere, ' placeholder="Comune / sito" title="' + _apE(r.cantiere + (r.fonte ? ' · fonte: ' + r.fonte : '')) + '"') + '</td>' +
+      '<td class="px-1 py-1"><div class="flex items-center gap-1">' + inp('cantiere', r.cantiere, ' placeholder="Comune / sito" title="' + _apE(r.cantiere + (r.fonte ? ' · fonte: ' + r.fonte : '')) + '"') +
+        (ge.length ? '<button type="button" onclick="apTogliGiorniEsclusi(this)" class="ap-ge-badge" title="' + _apE('Mai di ' + ge.map(d => AP_GIORNI[d]).join(', ') + ' — clic per togliere il vincolo') + '">⊘ ' + _apE(ge.map(d => AP_GIORNI[d].charAt(0)).join('')) + '</button>' : '') +
+        '</div></td>' +
       '<td class="px-1 py-1"' + (commessaOk ? '' : ' title="Commessa non trovata fra quelle attive"') + '>' +
         _apDdBottone(r, 'commessa', r.commessa || 'Scegli la commessa').replace('class="ap-cell', commessaOk ? 'class="ap-cell' : 'style="' + warn + '" class="ap-cell') + '</td>' +
       '<td class="px-1 py-1">' + _apDdBottone(r, 'attivita', r.attivita || 'Scegli o aggiungi l\'attività') + '</td>' +
@@ -1382,7 +1443,8 @@ function _apBozzaHtml(puoAnnullare) {
     a.operatori.forEach(n => {
       if (!perOp[n]) perOp[n] = {};
       if (!perOp[n][a.giorno]) perOp[n][a.giorno] = [];
-      perOp[n][a.giorno].push({ r, quota: a.quota, compagni: a.operatori.filter(x => x !== n) });
+      perOp[n][a.giorno].push({ r, quota: a.quota, compagni: a.operatori.filter(x => x !== n),
+        nuova: !!(b.nuove && b.nuove.has(n + '|' + a.giorno + '|' + a.rigaId)) });
     });
   });
   const esistenti = {};
@@ -1410,7 +1472,7 @@ function _apBozzaHtml(puoAnnullare) {
       const pr = (perOp[n] || {})[d] || [];
       tab += '<td class="px-1 py-1 align-top">' +
         ex.map(c => '<div style="background:#f1f5f9;color:#64748b;border-radius:3px;padding:1px 4px;margin-bottom:2px;">' + _apE(c) + '</div>').join('') +
-        pr.map(p => '<div title="' + _apE(p.r.commessa + ' · ' + (p.r.attivita || '') + (p.compagni.length ? ' · con ' + p.compagni.join(', ') : '')) + '" style="border:1.5px dashed #0d9488;background:#f0fdfa;color:#0f766e;border-radius:3px;padding:1px 4px;margin-bottom:2px;font-weight:600;">' +
+        pr.map(p => '<div' + (p.nuova ? ' class="ap-cella-nuova"' : '') + ' title="' + _apE(p.r.commessa + ' · ' + (p.r.attivita || '') + (p.compagni.length ? ' · con ' + p.compagni.join(', ') : '') + (p.nuova ? ' · cambiata dall\'assistente' : '')) + '" style="border:1.5px dashed #0d9488;background:#f0fdfa;color:#0f766e;border-radius:3px;padding:1px 4px;margin-bottom:2px;font-weight:600;">' +
           _apE(p.r.cantiere) + (p.quota < 1 ? ' <span style="font-weight:400;">(½)</span>' : '') + ' <span style="font-weight:400;color:#64748b;">P' + p.r.priorita + '</span></div>').join('') +
         '</td>';
     });
@@ -1431,6 +1493,8 @@ function _apBozzaHtml(puoAnnullare) {
       '<b>P' + r.priorita + ' · ' + _apE(r.cantiere) + '</b> <span class="text-slate-500">' + _apE(r.commessa) + (r.attivita ? ' · ' + _apE(r.attivita) : '') + '</span> ' +
       '<span style="color:' + st.fg + ';font-weight:700;">' + st.t + '</span>' +
       (e.kmMedi != null ? ' <span class="text-slate-500">· ~' + Math.round(e.kmMedi) + ' km di spostamento medio</span>' : '') +
+      (typeof apcPerche === 'function' && (e.stato !== 'assegnato' || e.oltreScadenza)
+        ? ' <button type="button" data-ap-perche="' + _apE(r.id) + '" onclick="apcPerche(this)" class="apc-perche" title="Chiedi all\'assistente perché">✦ Perché?</button>' : '') +
       (quando ? '<div class="text-slate-700">' + _apE(quando) + '</div>' : '') +
       ([].concat(e.motivi, e.avvisi).length ? '<div class="text-amber-700">' + _apE([].concat(e.motivi, e.avvisi).join(' · ')) + '</div>' : '') +
       '<div class="text-slate-400">stima: ' + apFmtNum(r.giorni) + ' gg × ' + r.nOp + ' op — ' + _apE(r.stimaFonte) + '</div>' +
@@ -1439,7 +1503,7 @@ function _apBozzaHtml(puoAnnullare) {
   lista += '</div>';
 
   const nCelle = res.assegnazioni.filter(a => incluse.has(a.rigaId)).reduce((n, a) => n + a.operatori.length, 0);
-  return '<div class="bg-white border border-slate-200 rounded-lg p-3 shadow-sm">' +
+  return '<div id="ap-bozza-box" class="bg-white border border-slate-200 rounded-lg p-3 shadow-sm">' +
     '<div class="flex flex-wrap items-center gap-2 mb-3">' +
       '<div class="text-xs font-semibold text-slate-700 uppercase tracking-wide">📝 Bozza · ' + nCelle + ' celle proposte</div>' +
       '<div class="flex-1"></div>' + annullaBtn +

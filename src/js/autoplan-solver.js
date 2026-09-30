@@ -292,8 +292,8 @@ function _apViolaPrecedenze(ordine, precedenze) {
      modello, pesi
    }
    righe = [{ id, cantiere, commessa, attivita, famiglia, geo:{lat,lng}|null, giorni, nOp,
-              priorita, scadenzaGiorno (indice o null), dalGiorno, skills:[], attestati:[],
-              preferiti:[], esclusi:[] }]
+              priorita, scadenzaGiorno (indice o null), dalGiorno, giorniEsclusi:[indici],
+              skills:[], attestati:[], preferiti:[], esclusi:[] }]
    Output: { assegnazioni: [{rigaId, giorno, operatori:[], quota}], esiti: {rigaId: {...}},
              miglioramenti: [...], suggerimenti: [...], distanze: {stradali, stimate}, ... } */
 function apRisolvi(ctx, righe) {
@@ -525,9 +525,12 @@ function _apGreedy(ctx, pesi, ordinate) {
     }
 
     const primoGiorno = Math.max(ctx.giorni[0], r.dalGiorno || 0);
-    const giorniUtili = ctx.giorni.filter(d => d >= primoGiorno);
+    /* giorniEsclusi: vincolo rigido deciso dall'utente (o dall'agente su sua richiesta),
+       es. "Brescia non di venerdì" */
+    const giorniUtili = ctx.giorni.filter(d => d >= primoGiorno && !(r.giorniEsclusi || []).includes(d));
     if (!giorniUtili.length) {
-      esito.motivi.push('nessun giorno utile dopo il "non prima di"');
+      esito.motivi.push((r.giorniEsclusi || []).length ? 'nessun giorno utile fra "non prima di" e giorni esclusi'
+        : 'nessun giorno utile dopo il "non prima di"');
       valore -= r.giorni * pesi.ritardoGiorno * peso;
       return;
     }
@@ -623,4 +626,56 @@ function apMotiviEsclusione(esclusioni) {
   const k = Object.keys(esclusioni);
   if (!k.length) return '';
   return ' (' + k.map(m => esclusioni[m] + ' ' + m).join('; ') + ')';
+}
+
+/* ---------- diagnosi di una riga (per i "perché" dell'agente e della UI) ----------
+   Dato il risultato di apRisolvi, dice giorno per giorno quanti operatori c'erano per la
+   riga e dove sono finiti gli altri. Non rifà il calcolo: legge disponibilità iniziale
+   (ctx.disp), capacità residua a fine calcolo e assegnazioni. La distanza è misurata dalla
+   residenza o dall'ultima posizione nota in Griglia, quindi è indicativa (nel calcolo vero
+   conta anche dove l'operatore si trova per effetto della bozza stessa). */
+function apDiagnostica(ctx, righe, risultato, rigaId) {
+  const r = righe.find(x => x.id === rigaId);
+  if (!r) return null;
+  const pesi = Object.assign({}, AP_PESI_DEFAULT, ctx.pesi || {});
+  const e = risultato.esiti[r.id] || {};
+  const righeById = {};
+  righe.forEach(x => { righeById[x.id] = x; });
+  const km = (a, b) => {
+    if (!a || !b) return null;
+    const v = ctx.distanzaKm ? ctx.distanzaKm(a, b) : null;
+    return v != null ? v : haversineKm(a.lat, a.lng, b.lat, b.lng) * AP_FATTORE_STRADA;
+  };
+  const presoDa = {};  // "nome|giorno" -> [righe che lo usano]
+  risultato.assegnazioni.forEach(a => a.operatori.forEach(n => {
+    const k = n + '|' + a.giorno;
+    (presoDa[k] = presoDa[k] || []).push(a.rigaId);
+  }));
+  const meteoRiga = (ctx.meteo || {})[r.id] || {};
+  const giorni = ctx.giorni.map(d => {
+    const out = { giorno: d, libero: 0, stati: {}, fuoriRaggio: 0, attestati: 0, esclusiMano: 0, usatiQui: 0,
+      presiAltrove: [], restanoLiberi: [], meteo: meteoRiga[d] ? meteoRiga[d].motivo + (meteoRiga[d].blocco ? ' (giorno escluso)' : '') : null,
+      fuoriFinestra: d < (r.dalGiorno || 0) || (r.giorniEsclusi || []).includes(d) };
+    ctx.operatori.forEach(o => {
+      const st = (ctx.disp[o.nome] || {})[d] || 'libero';
+      if (st !== 'libero') { out.stati[st] = (out.stati[st] || 0) + 1; return; }
+      out.libero++;
+      if ((r.esclusi || []).includes(o.nome)) { out.esclusiMano++; return; }
+      if ((r.attestati || []).some(a => !o.attestatiValidi(a, ctx.giorniISO[d]))) { out.attestati++; return; }
+      let p = null;
+      for (let x = d - 1; x >= 0 && !p; x--) p = ((ctx.posizione || {})[o.nome] || {})[x] || null;
+      const dist = km(p || o.base, r.geo);
+      if (dist != null && dist > pesi.maxKmTrasferta) { out.fuoriRaggio++; return; }
+      const usi = presoDa[o.nome + '|' + d] || [];
+      if (usi.includes(r.id)) { out.usatiQui++; return; }
+      const voce = { nome: o.nome, km: dist == null ? null : Math.round(dist) };
+      if (usi.length) { voce.cantieri = usi.map(id => righeById[id] ? 'P' + righeById[id].priorita + ' ' + righeById[id].cantiere : id); out.presiAltrove.push(voce); }
+      else if ((((risultato.capacitaResidua || {})[o.nome] || {})[d] || 0) > 1e-6) out.restanoLiberi.push(voce);
+    });
+    const perKm = (a, b) => (a.km == null ? 9999 : a.km) - (b.km == null ? 9999 : b.km);
+    out.presiAltrove.sort(perKm); out.presiAltrove = out.presiAltrove.slice(0, 6);
+    out.restanoLiberi.sort(perKm); out.restanoLiberi = out.restanoLiberi.slice(0, 6);
+    return out;
+  });
+  return { riga: r, esito: e, giorni, maxKm: pesi.maxKmTrasferta };
 }

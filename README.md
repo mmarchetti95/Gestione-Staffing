@@ -114,6 +114,23 @@ Limite noto: il progetto Supabase è sul piano **Free**, che non include backup 
 
 ## Changelog
 
+## v18.187.0
+- feat: **Assistente AI: provider OpenRouter e una chiave per ogni provider.** In **Gestione Assistente AI** (menu admin) il provider si sceglie fra Gemini, Groq, **OpenRouter** e Anthropic; vale sia per il widget di domande e risposte sia per l'assistente dell'Auto-pianifica.
+  - **Una API key per provider**, salvata in Vault: si passa da un provider all'altro dal menu senza reinserire la chiave. Accanto al menu, lo stato delle chiavi (Gemini ✓, Groq —…); **Revoca chiave** agisce sul provider selezionato. Cambiando provider torna l'ultimo modello usato con quello.
+  - **OpenRouter**: selettore dei modelli con ricerca, letto dal vivo dal catalogo pubblico di OpenRouter. Mostra solo i modelli che supportano gli strumenti; di default i **gratuiti**, con la casella "anche a pagamento" tutti (con prezzo per milione di token). **openrouter/free** sceglie da solo un modello gratuito adatto. Sotto il menu, una nota per provider con link alla chiave, limiti del piano gratuito e uso dei dati.
+  - Errori più chiari: limite del piano gratuito raggiunto (429), chiave rifiutata, credito insufficiente, modello senza supporto agli strumenti. La chat dell'Auto-pianifica avvisa subito se il provider scelto non ha una chiave.
+  - Supabase: migrazione `20260930_ai_assistant_chiavi_per_provider` (colonna `provider_models`, funzioni Vault per provider eseguibili solo con la service_role; la chiave esistente è stata copiata sotto il nome per provider). Edge Function `ai-assistant`, `ai-assistant-config` e `ai-autoplan` aggiornate e **ora versionate in `supabase/functions/`**. Già applicato e deployato.
+
+## v18.186.0
+- feat: **Auto-pianifica: assistente in chat dedicato alla bozza.** Bottone **✦ Assistente** nella barra dei cantieri: apre una chat a destra della tab (sotto i 1280px un pannello flottante), separata dall'assistente generico, che lavora in linguaggio naturale sulla bozza della settimana mostrata.
+  - Può **aggiungere, modificare e togliere cantieri**, cambiare priorità, scadenza, "dal", operatori preferiti/esclusi, **giorni esclusi** ("Brescia mai di venerdì"), precedenze e opzioni (sabato, meteo, raggio km), **ricalcolare** e **spiegare i perché** ("i 3 operatori vicini sono già su Ivrea, P1"): per ogni cantiere legge giorno per giorno chi era libero, chi è stato scartato (raggio, attestati, esclusi) e chi è finito su un altro cantiere.
+  - **Non scrive mai la Griglia**: la bozza arriva in Griglia solo con **✓ Applica alla Griglia**, premuto dall'utente (anche dalla chat).
+  - Ogni risposta mostra i **passaggi** eseguiti (dal vivo, poi richiusi in una riga) e una scheda **Modifiche alla bozza** con quello che è cambiato, assegnati/parziali/non assegnati con la differenza, celle +/−. Le celle cambiate sono **evidenziate nell'anteprima**, le righe toccate nella tabella. **↶ Annulla** riporta lista e bozza a prima della risposta.
+  - Suggerimenti cliccabili costruiti sullo stato reale (es. "Perché Cuneo è parziale?"); bottone **✦ Perché?** accanto ai cantieri scoperti, parziali o in ritardo nell'elenco della bozza. Esc o ■ ferma la risposta.
+  - Nuovo vincolo per cantiere **giorni esclusi** (etichetta ⊘ accanto al nome, clic per toglierlo); con la chat aperta le fonti diventano un pannello richiudibile "📥 Aggiungi cantieri".
+  - Conversazione per settimana salvata nel browser; le domande finiscono nello storico admin dell'assistente con prefisso `[Auto-pianifica wNN]`.
+  - Supabase: nuova Edge Function **`ai-autoplan`** (sorgente in `supabase/functions/ai-autoplan/`, già deployata): relè a un passo verso il provider dell'assistente AI (stessa configurazione, modello e API key di "Gestione Assistente AI"); gli strumenti girano nel browser sulla bozza. Nessuna modifica di schema.
+
 ## v18.185.0
 - feat: **Auto-pianifica: distanze stradali, meteo, bozza migliorata.**
   - **Distanze stradali vere** (OSRM, lo stesso di Pianifica spostamenti) dalla residenza, dal cantiere già in Griglia o dal cantiere del giorno prima, invece della linea d'aria × 1,3. Poche chiamate a blocchi per bozza, risultati tenuti in memoria per la sessione; se il servizio non risponde quelle distanze tornano stimate e la bozza lo dice (riga 📏).

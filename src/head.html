@@ -1511,6 +1511,203 @@
   .ap-tabella .ap-cell { min-width: 0; height: 24px; box-sizing: border-box; }
   .ap-tabella input[type=date].ap-cell { padding-right: 0; }
   .ap-tabella input[type=date]::-webkit-calendar-picker-indicator { margin: 0; padding: 0; width: 12px; }
+
+  /* ---------- Auto-pianifica: assistente in chat (weekly-autoplan-chat.js) ----------
+     Da 1280px è una colonna a destra della tab, agganciata sotto l'header (sticky) e alta
+     quanto lo schermo; sotto è un pannello flottante in basso a destra. z-index sotto
+     .modal-backdrop (100050): conferme e avvisi aperti dalla chat restano visibili. */
+  /* Pannello admin "Gestione Assistente AI": stato chiavi e selettore modelli OpenRouter */
+  .aic-keys { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 6px; }
+  .aic-key { font-size: 10.5px; padding: 1px 7px; border-radius: 999px; border: 1px solid #e2e8f0; color: #94a3b8; background: #f8fafc; }
+  .aic-key.ok { border-color: #bbf7d0; color: #15803d; background: #f0fdf4; }
+  .aic-key.sel { box-shadow: 0 0 0 1.5px var(--accent); }
+  .aic-note { font-size: 10.5px; color: #64748b; margin-top: 5px; line-height: 1.45; }
+  .aic-note:empty { display: none; }
+  .aic-note a { color: var(--accent-dark); text-decoration: underline; }
+  .aic-or { margin-top: 8px; border: 1px solid #e2e8f0; border-radius: 8px; padding: 8px; background: #fbfdfd; }
+  .aic-or-bar { display: flex; gap: 6px; align-items: center; }
+  .aic-or-bar input[type=text] { flex: 1; min-width: 0; border: 1px solid #dde3ea; border-radius: 6px; padding: 5px 8px; font-size: 12px; outline: none; }
+  .aic-or-bar label { font-size: 11px; color: #475569; display: flex; align-items: center; gap: 4px; white-space: nowrap; }
+  .aic-or-bar button { border: 1px solid #dde3ea; border-radius: 6px; background: #fff; width: 28px; height: 28px; color: #475569; }
+  .aic-or-lista { max-height: 210px; overflow-y: auto; margin-top: 6px; display: flex; flex-direction: column; gap: 2px; }
+  .aic-or-item { display: flex; align-items: center; gap: 8px; text-align: left; width: 100%; padding: 5px 7px; border-radius: 6px; border: 1px solid transparent; background: none; }
+  .aic-or-item:hover { background: #f0fdfa; border-color: #99f6e4; }
+  .aic-or-item.sel { background: #f0fdfa; border-color: var(--accent); }
+  .aic-or-item .n { flex: 1; min-width: 0; }
+  .aic-or-item .n b { display: block; font-size: 12px; font-weight: 600; color: #0f172a; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .aic-or-item .n small { display: block; font-size: 10.5px; color: #94a3b8; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .aic-tag { flex: none; font-size: 10px; font-weight: 700; padding: 1px 6px; border-radius: 999px; }
+  .aic-tag.free { background: #dcfce7; color: #15803d; }
+  .aic-tag.paid { background: #f1f5f9; color: #475569; font-weight: 600; }
+  .aic-or-vuoto { font-size: 11.5px; color: #94a3b8; padding: 10px; text-align: center; }
+
+  .ap-layout > .apc-panel { display: none; }
+  .ap-layout.apc-aperta { display: grid; grid-template-columns: minmax(0, 1fr) 390px; gap: 16px; align-items: start; }
+  @media (min-width: 1680px) { .ap-layout.apc-aperta { grid-template-columns: minmax(0, 1fr) 440px; } }
+  .ap-layout.apc-aperta > .apc-panel {
+    display: flex; flex-direction: column; overflow: hidden;
+    position: sticky; top: calc(var(--pw-toolbar-top) + 12px);
+    height: calc(100vh - var(--pw-toolbar-top) - 24px); min-height: 460px;
+    background: var(--card); border: 1px solid var(--border); border-radius: var(--radius-lg); box-shadow: var(--shadow-md);
+  }
+  @media (max-width: 1279px) {
+    .ap-layout.apc-aperta { display: block; }
+    .ap-layout.apc-aperta > .apc-panel {
+      position: fixed; top: auto; right: 12px; bottom: 12px; z-index: 4500;
+      width: min(420px, calc(100vw - 24px)); height: min(660px, calc(100vh - 90px)); min-height: 0;
+      box-shadow: var(--shadow-lg); animation: apcIn .18s ease-out;
+    }
+  }
+  @keyframes apcIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
+  /* La chat di pianificazione occupa l'angolo del widget generico: quando è aperta e
+     visibile il widget si nasconde (torna da solo cambiando tab o chiudendo la chat). */
+  body:has(#screen-weekly:not(.hidden) #pw-view-autoplan:not(.hidden) .ap-layout.apc-aperta) #ai-assistant-btn,
+  body:has(#screen-weekly:not(.hidden) #pw-view-autoplan:not(.hidden) .ap-layout.apc-aperta) #ai-assistant-panel { display: none !important; }
+
+  .apc-head { display: flex; align-items: center; gap: 10px; padding: 11px 12px; border-bottom: 1px solid var(--border);
+    background: linear-gradient(180deg, #f0fdfa 0%, #fff 100%); }
+  .apc-head-ic { width: 32px; height: 32px; flex: none; border-radius: 10px; display: flex; align-items: center; justify-content: center;
+    color: #fff; font-size: 16px; background: linear-gradient(135deg, var(--accent) 0%, #0e7490 100%); box-shadow: 0 2px 6px rgba(13,148,136,.35); }
+  .apc-head-t { font-size: 13px; font-weight: 700; color: var(--text); line-height: 1.2; }
+  .apc-head-s { font-size: var(--text-2xs); color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .apc-ibtn { width: 28px; height: 28px; flex: none; border-radius: 7px; color: var(--muted); font-size: 14px; line-height: 1;
+    display: flex; align-items: center; justify-content: center; transition: background .12s, color .12s; }
+  .apc-ibtn:hover { background: #e2e8f0; color: var(--text); }
+
+  .apc-msgs { flex: 1; overflow-y: auto; padding: 14px 12px 6px; display: flex; flex-direction: column; gap: 12px; scroll-behavior: smooth; }
+  .apc-row { display: flex; gap: 8px; align-items: flex-start; }
+  .apc-row-u { justify-content: flex-end; }
+  .apc-u { max-width: 86%; background: var(--accent); color: #fff; padding: 8px 11px; border-radius: 14px 14px 4px 14px;
+    font-size: 12.5px; line-height: 1.45; box-shadow: var(--shadow-sm); overflow-wrap: anywhere; }
+  .apc-av { width: 24px; height: 24px; flex: none; border-radius: 8px; background: var(--accent-soft); color: var(--accent-dark);
+    font-size: 12px; display: flex; align-items: center; justify-content: center; margin-top: 1px; }
+  .apc-a { flex: 1; min-width: 0; font-size: 12.5px; line-height: 1.5; color: #1e293b; }
+  .apc-testo { overflow-wrap: anywhere; }
+  .apc-testo ul, .apc-nota ul { margin: 4px 0 4px 16px !important; list-style: disc; }
+  .apc-testo li { margin: 1px 0; }
+  .apc-ora { font-size: 10px; color: #94a3b8; margin-top: 4px; }
+  .apc-pensa { display: flex; align-items: center; gap: 8px; color: var(--muted); font-size: 12px; padding: 4px 0; }
+  .apc-err { margin-top: 6px; padding: 7px 9px; border-radius: 8px; background: #fff1f2; border: 1px solid #fecdd3; color: #9f1239; font-size: 12px; }
+
+  .apc-passi { margin-bottom: 6px; border: 1px solid #e2e8f0; border-radius: 9px; background: #f8fafc; }
+  .apc-passi > summary { cursor: pointer; list-style: none; padding: 5px 9px; font-size: 11px; font-weight: 600; color: var(--muted);
+    display: flex; align-items: center; gap: 6px; user-select: none; }
+  .apc-passi > summary::-webkit-details-marker { display: none; }
+  .apc-passi > summary::before { content: '▸'; font-size: 9px; transition: transform .15s; }
+  .apc-passi[open] > summary::before { transform: rotate(90deg); }
+  .apc-passi[open] > summary { border-bottom: 1px solid #e2e8f0; }
+  .apc-passo { display: flex; gap: 8px; align-items: flex-start; padding: 5px 9px; }
+  .apc-passo + .apc-passo { border-top: 1px dashed #e2e8f0; }
+  .apc-passo-t { font-size: 11.5px; color: #334155; font-weight: 500; display: flex; gap: 5px; align-items: baseline; }
+  .apc-passo-i { width: 14px; text-align: center; color: #94a3b8; flex: none; }
+  .apc-passo-det { font-size: 10.5px; color: var(--muted); margin-left: 19px; overflow-wrap: anywhere; }
+  .apc-passo-det:empty { display: none; }
+  .apc-passo-errore .apc-passo-det { color: #be123c; }
+  .apc-ok, .apc-ko { width: 15px; height: 15px; flex: none; border-radius: 50%; font-size: 9px; font-weight: 800; margin-top: 1px;
+    display: flex; align-items: center; justify-content: center; }
+  .apc-ok { background: #dcfce7; color: #15803d; }
+  .apc-ko { background: #ffe4e6; color: #be123c; }
+  .apc-spin { width: 15px; height: 15px; flex: none; border-radius: 50%; border: 2px solid var(--accent-soft); border-top-color: var(--accent);
+    animation: apcSpin .7s linear infinite; margin-top: 1px; }
+  @keyframes apcSpin { to { transform: rotate(360deg); } }
+  .apc-nota { padding: 5px 9px; font-size: 11.5px; color: #475569; font-style: italic; border-top: 1px dashed #e2e8f0; }
+  .apc-passi > summary + .apc-nota { border-top: none; }
+
+  .apc-diff { margin-top: 8px; border: 1px solid #99f6e4; border-radius: 10px; background: #fff; overflow: hidden; box-shadow: var(--shadow-sm); }
+  .apc-diff.annullato { border-color: #e2e8f0; opacity: .7; }
+  .apc-diff-h { padding: 6px 10px; font-size: 10.5px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; color: var(--accent-dark);
+    background: #f0fdfa; border-bottom: 1px solid #ccfbf1; }
+  .apc-diff.annullato .apc-diff-h { color: var(--muted); background: #f8fafc; border-color: #e2e8f0; }
+  .apc-diff-list { padding: 6px 10px; display: flex; flex-direction: column; gap: 3px; }
+  .apc-diff-list + .apc-diff-list { border-top: 1px solid #f1f5f9; }
+  .apc-diff-row { display: flex; gap: 7px; align-items: baseline; font-size: 11.5px; color: #334155; }
+  .apc-diff-ic { width: 15px; height: 15px; flex: none; border-radius: 4px; font-size: 9px; font-weight: 800; display: inline-flex;
+    align-items: center; justify-content: center; position: relative; top: 2px; }
+  .apc-diff-ic.add { background: #dcfce7; color: #15803d; }
+  .apc-diff-ic.mod { background: #e0f2fe; color: #0369a1; }
+  .apc-diff-ic.del { background: #ffe4e6; color: #be123c; }
+  .apc-diff-more { font-size: 10.5px; color: var(--muted); margin-left: 22px; }
+  .apc-kpi { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; padding: 8px 10px; border-top: 1px solid #f1f5f9; }
+  .apc-diff-h + .apc-kpi { border-top: none; }
+  .apc-kpi-c { border-radius: 8px; padding: 5px 7px; background: #f8fafc; display: flex; flex-wrap: wrap; align-items: baseline; gap: 0 5px; }
+  .apc-kpi-c b { font-size: 16px; line-height: 1.1; color: var(--text); }
+  .apc-kpi-c small { flex-basis: 100%; font-size: 10px; color: var(--muted); }
+  .apc-kpi-assegnati { background: #f0fdf4; } .apc-kpi-parziali { background: #fffbeb; } .apc-kpi-non_assegnati { background: #fff1f2; }
+  .apc-delta { font-size: 10.5px; font-weight: 700; border-radius: 999px; padding: 0 5px; }
+  .apc-delta.su { background: #dcfce7; color: #15803d; } .apc-delta.giu { background: #ffe4e6; color: #be123c; }
+  .apc-diff-celle { padding: 5px 10px 7px; font-size: 10.5px; color: var(--muted); border-top: 1px solid #f1f5f9; }
+  .apc-diff-celle .su { color: #15803d; } .apc-diff-celle .giu { color: #be123c; }
+  .apc-diff-az { display: flex; flex-wrap: wrap; gap: 6px; padding: 7px 10px; border-top: 1px solid #f1f5f9; background: #fcfdfd; }
+  .apc-diff-az:empty { display: none; }
+  .apc-btn { font-size: 11px; font-weight: 600; padding: 4px 10px; border-radius: 7px; border: 1px solid #cbd5e1; background: #fff; color: #334155;
+    transition: background .12s, border-color .12s; }
+  .apc-btn:hover { background: #f1f5f9; border-color: #94a3b8; }
+  .apc-btn.primario { background: #15803d; border-color: #15803d; color: #fff; margin-left: auto; }
+  .apc-btn.primario:hover { background: #166534; }
+
+  .apc-vuoto { margin: auto 4px; padding: 18px 8px; text-align: center; }
+  .apc-vuoto-ic { width: 48px; height: 48px; margin: 0 auto 10px; border-radius: 15px; display: flex; align-items: center; justify-content: center;
+    font-size: 22px; color: #fff; background: linear-gradient(135deg, var(--accent) 0%, #0e7490 100%); box-shadow: 0 6px 18px rgba(13,148,136,.3); }
+  .apc-vuoto-t { font-size: 14px; font-weight: 700; color: var(--text); }
+  .apc-vuoto-s { font-size: 12px; color: var(--muted); margin: 4px auto 12px; max-width: 300px; line-height: 1.5; }
+  .apc-vuoto-l { text-align: left; font-size: 11.5px; color: #475569; display: inline-flex; flex-direction: column; gap: 5px; margin: 0 auto; padding: 0; list-style: none; }
+  .apc-vuoto-l li { padding-left: 14px; position: relative; }
+  .apc-vuoto-l li::before { content: '✦'; position: absolute; left: 0; color: var(--accent); font-size: 9px; top: 3px; }
+  .apc-vuoto-l b { color: #1e293b; font-weight: 600; }
+  .apc-vuoto-n { margin-top: 14px; font-size: 10.5px; color: var(--muted); }
+
+  .apc-chips { display: flex; gap: 6px; padding: 4px 12px 8px; overflow-x: auto; scrollbar-width: none;
+    -webkit-mask-image: linear-gradient(90deg, #000 88%, transparent); mask-image: linear-gradient(90deg, #000 88%, transparent); }
+  .apc-chips::-webkit-scrollbar { display: none; }
+  .apc-chips:empty { display: none; }
+  .apc-chip { flex: none; font-size: 11.5px; padding: 5px 10px; border-radius: 999px; border: 1px solid #99f6e4; background: #f0fdfa;
+    color: var(--accent-dark); white-space: nowrap; transition: background .12s, border-color .12s, transform .12s; }
+  .apc-chip:hover { background: var(--accent-soft); border-color: var(--accent); transform: translateY(-1px); }
+
+  .apc-comp { padding: 8px 12px 10px; border-top: 1px solid var(--border); background: #fff; }
+  .apc-banner { font-size: 11.5px; color: #92400e; background: #fffbeb; border: 1px solid #fde68a; border-radius: 8px; padding: 7px 9px; margin-bottom: 7px; }
+  .apc-link { color: var(--accent-dark); text-decoration: underline; font-weight: 600; }
+  .apc-box { display: flex; align-items: flex-end; gap: 6px; border: 1.5px solid #cbd5e1; border-radius: 12px; padding: 5px 5px 5px 10px;
+    background: #fff; transition: border-color .15s, box-shadow .15s; }
+  .apc-box:focus-within { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-ring); }
+  .apc-box.disabled { background: #f8fafc; opacity: .7; }
+  .apc-box textarea { flex: 1; border: none; outline: none; resize: none; font: inherit; font-size: 12.5px; line-height: 1.45;
+    padding: 4px 0; max-height: 140px; background: transparent; box-shadow: none !important; }
+  .apc-send { width: 30px; height: 30px; flex: none; border-radius: 9px; background: var(--accent); color: #fff; font-size: 15px; font-weight: 700;
+    display: flex; align-items: center; justify-content: center; transition: background .12s, transform .12s; }
+  .apc-send:hover:not(:disabled) { background: var(--accent-dark); }
+  .apc-send:active:not(:disabled) { transform: scale(.94); }
+  .apc-send:disabled { background: #cbd5e1; cursor: not-allowed; }
+  .apc-send.stop { background: #334155; font-size: 11px; }
+  .apc-hint { font-size: 10px; color: #94a3b8; margin-top: 5px; text-align: center; }
+
+  /* Agganci nella tab Auto-pianifica */
+  .apc-toggle { font-size: 12px; font-weight: 600; padding: 5px 11px; border-radius: 6px; border: 1.5px solid var(--accent); color: var(--accent-dark);
+    background: #fff; display: inline-flex; align-items: center; gap: 5px; transition: background .12s; }
+  .apc-toggle:hover { background: #f0fdfa; }
+  .apc-toggle.on { background: var(--accent); color: #fff; }
+  .apc-spark { font-size: 11px; }
+  .apc-perche { font-size: 10.5px; font-weight: 600; color: var(--accent-dark); background: #f0fdfa; border: 1px solid #99f6e4;
+    border-radius: 999px; padding: 0 7px; margin-left: 4px; line-height: 17px; vertical-align: 1px; }
+  .apc-perche:hover { background: var(--accent-soft); }
+  .ap-fonti-box { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius-md); padding: 8px 12px; box-shadow: var(--shadow-sm); }
+  .ap-fonti-box > summary { cursor: pointer; list-style: none; display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 10px; }
+  .ap-fonti-box > summary::-webkit-details-marker { display: none; }
+  .ap-fonti-box > summary::before { content: '▸'; font-size: 10px; color: var(--muted); transition: transform .15s; }
+  .ap-fonti-box[open] > summary::before { transform: rotate(90deg); }
+  .ap-tabella tr.ap-riga-toccata > td { background: #f0fdfa; }
+  .ap-tabella tr.ap-riga-toccata > td:first-child { box-shadow: inset 3px 0 0 var(--accent); }
+  .ap-ge-badge { flex: none; font-size: 10px; font-weight: 700; line-height: 18px; padding: 0 5px; border-radius: 4px;
+    background: #fef3c7; color: #92400e; border: 1px solid #fcd34d; white-space: nowrap; }
+  .ap-ge-badge:hover { background: #fde68a; }
+  .ap-cella-nuova { box-shadow: 0 0 0 2px var(--accent); border-style: solid !important; animation: apcPulse 1.6s ease-out 2; }
+  @keyframes apcPulse { 0% { box-shadow: 0 0 0 0 rgba(13,148,136,.55); } 70% { box-shadow: 0 0 0 6px rgba(13,148,136,0); } 100% { box-shadow: 0 0 0 2px var(--accent); } }
+  .apc-flash { animation: apcFlash 1.4s ease-out; }
+  @keyframes apcFlash { 0% { box-shadow: 0 0 0 0 rgba(13,148,136,.5); } 40% { box-shadow: 0 0 0 6px rgba(13,148,136,.18); } 100% { box-shadow: var(--shadow-sm); } }
+  @media (prefers-reduced-motion: reduce) {
+    .apc-spin, .ap-cella-nuova, .apc-flash, .ap-layout.apc-aperta > .apc-panel { animation: none !important; }
+    .apc-msgs { scroll-behavior: auto; }
+  }
 </style>
 </head>
 <body class="min-h-screen">
@@ -1534,7 +1731,7 @@
     <div class="flex items-center gap-2">
       <button id="btn-presentation" class="px-3 py-1.5 text-sm rounded hover:bg-white/10" style="border:1px solid var(--dark-border-strong);color:var(--dark-text);visibility:visible;">📊 Modalità presentazione</button>
       <div class="text-xs pl-2" style="border-left:1px solid var(--dark-border-strong);color:var(--dark-text-muted);">
-        <span id="app-version" class="font-medium" style="color:var(--accent);">v18.185.0</span> · Michele Marchetti
+        <span id="app-version" class="font-medium" style="color:var(--accent);">v18.187.0</span> · Michele Marchetti
         <span id="sb-role-badge" style="margin-left:8px;padding:1px 8px;border-radius:9999px;background:rgba(255,255,255,.1);color:var(--dark-text);font-weight:600;"></span>
       </div>
     </div>
@@ -2451,7 +2648,11 @@
   <!-- Vista Auto-pianifica (contenuto generato da weekly-autoplan.js) -->
   <div id="pw-view-autoplan" class="hidden">
     <input type="file" id="ap-file" accept=".xlsx,.xls,.csv" class="hidden" onchange="apImportaFile(this)">
-    <div id="ap-root"></div>
+    <div id="ap-layout" class="ap-layout">
+      <div id="ap-root" style="min-width:0;"></div>
+      <!-- Assistente pianificazione (contenuto generato da weekly-autoplan-chat.js) -->
+      <aside id="apc-panel" class="apc-panel no-print" aria-label="Assistente pianificazione"></aside>
+    </div>
   </div>
 
   <!-- Vista Ricerca Squadre -->
@@ -2737,11 +2938,11 @@
 
 <!-- Modal Gestione Assistente AI (solo admin) -->
 <div id="ai-config-modal" style="display:none;position:fixed;inset:0;z-index:99999;background:var(--backdrop);align-items:center;justify-content:center;">
-  <div style="background:white;border-radius:var(--radius-lg);padding:28px 32px;width:460px;max-width:95vw;box-shadow:var(--shadow-lg);">
+  <div style="background:white;border-radius:var(--radius-lg);padding:28px 32px;width:540px;max-width:95vw;max-height:92vh;overflow-y:auto;box-shadow:var(--shadow-lg);">
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">
       <div>
         <div style="font-weight:700;font-size:16px;color:#0f172a;font-family:var(--font-display);">🤖 Gestione Assistente AI</div>
-        <div style="font-size:11px;color:#94a3b8;margin-top:2px;">Widget di domande e risposte sui dati dell'app</div>
+        <div style="font-size:11px;color:#94a3b8;margin-top:2px;">Vale per il widget di domande e risposte e per l'assistente dell'Auto-pianifica</div>
       </div>
       <button onclick="aiConfigClose()" style="padding:5px 12px;font-size:12px;border:1px solid #e2e8f0;border-radius:6px;background:white;cursor:pointer;color:#475569;">Chiudi</button>
     </div>
@@ -2756,15 +2957,28 @@
     <div style="margin-bottom:12px;">
       <label style="display:block;font-size:11px;font-weight:600;color:#374151;margin-bottom:4px;">Provider</label>
       <select id="ai-config-provider" onchange="aiConfigProviderChanged()" style="width:100%;border:1px solid #dde3ea;border-radius:8px;padding:8px 10px;font-size:12.5px;outline:none;box-sizing:border-box;">
-        <option value="gemini">Google Gemini (gratuito)</option>
-        <option value="groq">Groq (gratuito)</option>
+        <option value="gemini">Google Gemini (piano gratuito disponibile)</option>
+        <option value="groq">Groq (piano gratuito disponibile)</option>
+        <option value="openrouter">OpenRouter (modelli gratuiti e a pagamento)</option>
         <option value="anthropic">Anthropic Claude (a pagamento)</option>
       </select>
+      <div id="ai-config-keys" class="aic-keys"></div>
+      <div id="ai-config-provider-note" class="aic-note"></div>
     </div>
 
     <div style="margin-bottom:12px;">
       <label style="display:block;font-size:11px;font-weight:600;color:#374151;margin-bottom:4px;">Modello</label>
-      <input id="ai-config-model" type="text" placeholder="es. gemini-2.5-flash" style="width:100%;border:1px solid #dde3ea;border-radius:8px;padding:8px 10px;font-size:12.5px;outline:none;box-sizing:border-box;">
+      <input id="ai-config-model" type="text" list="ai-config-model-list" placeholder="es. gemini-2.5-flash" autocomplete="off" oninput="aiConfigOrRender()" style="width:100%;border:1px solid #dde3ea;border-radius:8px;padding:8px 10px;font-size:12.5px;outline:none;box-sizing:border-box;">
+      <datalist id="ai-config-model-list"></datalist>
+      <div id="ai-config-or" class="aic-or" style="display:none;">
+        <div class="aic-or-bar">
+          <input id="ai-config-or-cerca" type="text" placeholder="Cerca un modello OpenRouter…" oninput="aiConfigOrRender()" autocomplete="off">
+          <label title="Mostra anche i modelli a pagamento (servono crediti su OpenRouter)"><input type="checkbox" id="ai-config-or-pagamento" onchange="aiConfigOrRender()"> anche a pagamento</label>
+          <button type="button" onclick="aiConfigOrCarica(true)" title="Ricarica l'elenco da OpenRouter">↻</button>
+        </div>
+        <div id="ai-config-or-lista" class="aic-or-lista"></div>
+        <div class="aic-note">Sono elencati solo i modelli che supportano gli strumenti (servono all'assistente). Il catalogo gratuito cambia spesso: <b>openrouter/free</b> sceglie da solo un modello gratuito adatto.</div>
+      </div>
     </div>
 
     <div style="margin-bottom:12px;">

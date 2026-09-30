@@ -254,8 +254,28 @@ function aiWidgetBackToChat() {
 const AI_PROVIDER_DEFAULT_MODEL = {
   gemini: 'gemini-2.5-flash',
   groq: 'llama-3.3-70b-versatile',
+  openrouter: 'openrouter/free',
   anthropic: 'claude-haiku-4-5-20251001',
 };
+const AI_PROVIDER_NOME = { gemini: 'Gemini', groq: 'Groq', openrouter: 'OpenRouter', anthropic: 'Anthropic' };
+
+/* Suggerimenti nel campo Modello (datalist): si può sempre scrivere un altro nome.
+   Per OpenRouter l'elenco vero arriva dal vivo dal selettore sotto il campo. */
+const AI_PROVIDER_MODELLI = {
+  gemini: ['gemini-2.5-flash', 'gemini-2.5-flash-lite', 'gemini-2.5-pro'],
+  groq: ['llama-3.3-70b-versatile', 'openai/gpt-oss-120b', 'qwen/qwen3-32b'],
+  openrouter: ['openrouter/free'],
+  anthropic: ['claude-haiku-4-5-20251001', 'claude-sonnet-5', 'claude-opus-5-5'],
+};
+
+const AI_PROVIDER_NOTA = {
+  gemini: 'Chiave su <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener">Google AI Studio</a>. Con il piano gratuito Google può usare i dati inviati per migliorare i suoi prodotti; con la fatturazione attiva no.',
+  groq: 'Chiave su <a href="https://console.groq.com/keys" target="_blank" rel="noopener">console.groq.com</a>. Piano gratuito con limiti di token al minuto: con l\'Auto-pianifica si raggiungono facilmente.',
+  openrouter: 'Chiave su <a href="https://openrouter.ai/keys" target="_blank" rel="noopener">openrouter.ai/keys</a>. Modelli <b>:free</b>: 20 richieste/min e 50/giorno senza crediti, 1.000/giorno dopo aver caricato almeno 10 $ una volta. Chi fornisce i modelli gratuiti può usare i dati inviati (impostazioni privacy di OpenRouter).',
+  anthropic: 'Chiave su <a href="https://console.anthropic.com/settings/keys" target="_blank" rel="noopener">console.anthropic.com</a>. A pagamento; i dati inviati via API non sono usati per l\'addestramento.',
+};
+
+let _aiCfg = { providers_with_key: [], provider_models: {}, provider: 'gemini' };
 
 async function aiConfigCall(action, extra) {
   const { data, error } = await _sbClient.functions.invoke('ai-assistant-config', { body: { action, ...extra } });
@@ -271,21 +291,57 @@ function aiConfigMsg(errText, okText) {
   if (okText) { okEl.textContent = okText; okEl.style.display = 'block'; } else { okEl.style.display = 'none'; }
 }
 
+/* Stato chiavi (una per provider) accanto al menu, e il suffisso "✓ chiave" nelle voci */
+function aiConfigRenderChiavi() {
+  const sel = document.getElementById('ai-config-provider');
+  const provider = sel.value;
+  const conChiave = new Set(_aiCfg.providers_with_key || []);
+  Array.from(sel.options).forEach(o => {
+    if (!o.dataset.base) o.dataset.base = o.textContent;
+    o.textContent = o.dataset.base + (conChiave.has(o.value) ? '  ·  ✓ chiave' : '');
+  });
+  document.getElementById('ai-config-keys').innerHTML = Object.keys(AI_PROVIDER_NOME).map(k =>
+    '<span class="aic-key' + (conChiave.has(k) ? ' ok' : '') + (k === provider ? ' sel' : '') + '">' +
+    esc(AI_PROVIDER_NOME[k]) + ' ' + (conChiave.has(k) ? '✓' : '—') + '</span>').join('');
+  document.getElementById('ai-config-provider-note').innerHTML = AI_PROVIDER_NOTA[provider] || '';
+  document.getElementById('ai-config-apikey-status').textContent = conChiave.has(provider)
+    ? '✓ Chiave ' + AI_PROVIDER_NOME[provider] + ' configurata (lascia vuoto per non modificarla)'
+    : 'Nessuna chiave per ' + AI_PROVIDER_NOME[provider] + ': inseriscila per usare questo provider';
+  document.getElementById('ai-config-apikey').placeholder = conChiave.has(provider) ? 'Lascia vuoto per non modificare' : 'Incolla la chiave ' + AI_PROVIDER_NOME[provider];
+}
+
+function aiConfigRenderSuggerimenti(provider) {
+  const dl = document.getElementById('ai-config-model-list');
+  const voci = new Set(AI_PROVIDER_MODELLI[provider] || []);
+  if (_aiCfg.provider_models[provider]) voci.add(_aiCfg.provider_models[provider]);
+  dl.innerHTML = Array.from(voci).map(m => '<option value="' + esc(m) + '"></option>').join('');
+  const or = document.getElementById('ai-config-or');
+  or.style.display = provider === 'openrouter' ? 'block' : 'none';
+  if (provider === 'openrouter') aiConfigOrCarica(false);
+}
+
+/* Cambio provider: il modello torna all'ultimo scelto per quel provider (o al default) */
 function aiConfigProviderChanged() {
   const provider = document.getElementById('ai-config-provider').value;
-  const modelInput = document.getElementById('ai-config-model');
-  if (modelInput && !modelInput.value.trim()) modelInput.value = AI_PROVIDER_DEFAULT_MODEL[provider] || '';
+  document.getElementById('ai-config-model').value = _aiCfg.provider_models[provider] || AI_PROVIDER_DEFAULT_MODEL[provider] || '';
+  document.getElementById('ai-config-apikey').value = '';
+  aiConfigRenderChiavi();
+  aiConfigRenderSuggerimenti(provider);
 }
 
 async function aiConfigPopulate() {
   const data = await aiConfigCall('get');
+  _aiCfg = {
+    providers_with_key: data.providers_with_key || (data.has_api_key ? [data.provider] : []),
+    provider_models: data.provider_models || {},
+    provider: data.provider || 'gemini'
+  };
   document.getElementById('ai-config-enabled').checked = !!data.enabled;
-  document.getElementById('ai-config-provider').value = data.provider || 'gemini';
-  document.getElementById('ai-config-model').value = data.model || AI_PROVIDER_DEFAULT_MODEL[data.provider] || '';
+  document.getElementById('ai-config-provider').value = _aiCfg.provider;
+  document.getElementById('ai-config-model').value = data.model || AI_PROVIDER_DEFAULT_MODEL[_aiCfg.provider] || '';
   document.getElementById('ai-config-instructions').value = data.custom_instructions || '';
-  document.getElementById('ai-config-apikey-status').textContent = data.has_api_key
-    ? '✓ Chiave configurata (lascia vuoto per non modificarla)'
-    : 'Nessuna chiave configurata';
+  aiConfigRenderChiavi();
+  aiConfigRenderSuggerimenti(_aiCfg.provider);
 }
 
 async function aiConfigOpen() {
@@ -311,6 +367,10 @@ async function aiConfigSave() {
   const customInstructions = document.getElementById('ai-config-instructions').value.trim();
   const apiKey = document.getElementById('ai-config-apikey').value;
   if (!model) { aiConfigMsg('Il modello non può essere vuoto.', null); return; }
+  if (enabled && !apiKey.trim() && !(_aiCfg.providers_with_key || []).includes(provider)) {
+    const ok = await showConfirmAsync('Non c\'è una chiave per ' + AI_PROVIDER_NOME[provider] + ': l\'assistente resterà attivo ma non potrà rispondere finché non la inserisci. Salvare comunque?', 'Salva comunque');
+    if (!ok) return;
+  }
   btn.disabled = true; btn.textContent = 'Salvataggio…';
   try {
     const body = { enabled, provider, model, custom_instructions: customInstructions };
@@ -318,7 +378,8 @@ async function aiConfigSave() {
     await aiConfigCall('set', body);
     document.getElementById('ai-config-apikey').value = '';
     await aiConfigPopulate();
-    aiConfigMsg(null, '✓ Configurazione salvata.');
+    if (typeof _apc !== 'undefined') _apc.stato = null; // la chat dell'Auto-pianifica rilegge lo stato
+    aiConfigMsg(null, '✓ Configurazione salvata: ' + AI_PROVIDER_NOME[provider] + ' · ' + model);
   } catch (e) {
     aiConfigMsg('Errore salvataggio: ' + e.message, null);
   } finally {
@@ -327,19 +388,87 @@ async function aiConfigSave() {
 }
 
 async function aiConfigRevokeKey() {
-  const conferma = await showConfirmAsync('Revocare la API key configurata? L\'assistente smetterà di funzionare finché non ne verrà impostata una nuova.', 'Revoca chiave');
+  const provider = document.getElementById('ai-config-provider').value;
+  if (!(_aiCfg.providers_with_key || []).includes(provider)) { aiConfigMsg('Non c\'è una chiave ' + AI_PROVIDER_NOME[provider] + ' da revocare.', null); return; }
+  const attivo = provider === _aiCfg.provider;
+  const conferma = await showConfirmAsync('Revocare la API key di ' + AI_PROVIDER_NOME[provider] + '?' +
+    (attivo ? ' È il provider in uso: l\'assistente smetterà di funzionare finché non ne verrà impostata una nuova o non si sceglierà un altro provider.' : ''), 'Revoca chiave');
   if (!conferma) return;
   try {
     const enabled = document.getElementById('ai-config-enabled').checked;
-    const provider = document.getElementById('ai-config-provider').value;
-    const model = document.getElementById('ai-config-model').value.trim();
+    const model = document.getElementById('ai-config-model').value.trim() || AI_PROVIDER_DEFAULT_MODEL[provider];
     const customInstructions = document.getElementById('ai-config-instructions').value.trim();
     await aiConfigCall('set', { enabled, provider, model, custom_instructions: customInstructions, revoke_api_key: true });
     await aiConfigPopulate();
-    aiConfigMsg(null, '✓ Chiave revocata.');
+    aiConfigMsg(null, '✓ Chiave ' + AI_PROVIDER_NOME[provider] + ' revocata.');
   } catch (e) {
     aiConfigMsg('Errore revoca chiave: ' + e.message, null);
   }
+}
+
+/* ----- Selettore modelli OpenRouter -----
+   Il catalogo è pubblico (https://openrouter.ai/api/v1/models, CORS aperto, senza chiave)
+   e cambia spesso, soprattutto i gratuiti: si legge dal vivo invece di tenerne una copia.
+   Solo modelli che supportano gli strumenti, perché entrambi gli assistenti li usano. */
+let _aiOrModelli = null;
+let _aiOrCaricamento = null;
+
+async function aiConfigOrCarica(forza) {
+  const lista = document.getElementById('ai-config-or-lista');
+  if (_aiOrModelli && !forza) { aiConfigOrRender(); return; }
+  if (_aiOrCaricamento) return _aiOrCaricamento;
+  lista.innerHTML = '<div class="aic-or-vuoto">Carico il catalogo di OpenRouter…</div>';
+  _aiOrCaricamento = (async () => {
+    try {
+      const res = await fetch('https://openrouter.ai/api/v1/models', { signal: AbortSignal.timeout(15000) });
+      if (!res.ok) throw new Error('HTTP ' + res.status);
+      const data = await res.json();
+      _aiOrModelli = (data.data || [])
+        .filter(m => (m.supported_parameters || []).includes('tools'))
+        .map(m => {
+          const pin = Number((m.pricing || {}).prompt) || 0;
+          const pout = Number((m.pricing || {}).completion) || 0;
+          return { id: m.id, nome: m.name || m.id, ctx: m.context_length || 0, gratis: pin === 0 && pout === 0, pin, pout };
+        })
+        .sort((a, b) => (a.id === 'openrouter/free' ? -1 : b.id === 'openrouter/free' ? 1 : 0) ||
+          (b.gratis - a.gratis) || a.nome.localeCompare(b.nome));
+      aiConfigOrRender();
+    } catch (e) {
+      lista.innerHTML = '<div class="aic-or-vuoto">Catalogo non raggiungibile (' + esc(e.message || e) + '): scrivi il nome del modello a mano.</div>';
+    } finally {
+      _aiOrCaricamento = null;
+    }
+  })();
+  return _aiOrCaricamento;
+}
+
+function _aiOrPrezzo(m) {
+  if (m.gratis) return 'gratis';
+  const perM = v => (v * 1e6).toFixed(v * 1e6 < 1 ? 2 : 1).replace('.', ',');
+  return perM(m.pin) + ' / ' + perM(m.pout) + ' $';
+}
+
+function aiConfigOrRender() {
+  const lista = document.getElementById('ai-config-or-lista');
+  if (!lista || !_aiOrModelli) return;
+  const q = (document.getElementById('ai-config-or-cerca').value || '').trim().toLowerCase();
+  const pagamento = document.getElementById('ai-config-or-pagamento').checked;
+  const attuale = document.getElementById('ai-config-model').value.trim();
+  const voci = _aiOrModelli.filter(m => (pagamento || m.gratis) && (!q || m.id.toLowerCase().includes(q) || m.nome.toLowerCase().includes(q)));
+  if (!voci.length) { lista.innerHTML = '<div class="aic-or-vuoto">Nessun modello' + (pagamento ? '' : ' gratuito') + ' con strumenti corrisponde alla ricerca.</div>'; return; }
+  lista.innerHTML = voci.slice(0, 150).map(m =>
+    '<button type="button" class="aic-or-item' + (m.id === attuale ? ' sel' : '') + '" data-model="' + esc(m.id) + '" onclick="aiConfigOrScegli(this)" title="' + esc(m.id) + '">' +
+      '<span class="n"><b>' + esc(m.id === 'openrouter/free' ? 'Scelta automatica fra i gratuiti' : m.nome) + '</b><small>' + esc(m.id) + (m.ctx ? ' · ' + Math.round(m.ctx / 1000) + 'k token' : '') + '</small></span>' +
+      '<span class="aic-tag ' + (m.gratis ? 'free' : 'paid') + '" title="' + (m.gratis ? 'Nessun costo per token' : 'Costo per milione di token: ingresso / uscita') + '">' + esc(_aiOrPrezzo(m)) + '</span>' +
+    '</button>').join('') +
+    (voci.length > 150 ? '<div class="aic-or-vuoto">… e altri ' + (voci.length - 150) + ': restringi la ricerca</div>' : '');
+}
+
+function aiConfigOrScegli(el) {
+  const id = el && el.dataset.model;
+  if (!id) return;
+  document.getElementById('ai-config-model').value = id;
+  aiConfigOrRender();
 }
 
 /* ----- Modal admin "Storico Assistente AI" ----- */

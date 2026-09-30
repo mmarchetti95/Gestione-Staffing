@@ -1511,203 +1511,6 @@
   .ap-tabella .ap-cell { min-width: 0; height: 24px; box-sizing: border-box; }
   .ap-tabella input[type=date].ap-cell { padding-right: 0; }
   .ap-tabella input[type=date]::-webkit-calendar-picker-indicator { margin: 0; padding: 0; width: 12px; }
-
-  /* ---------- Auto-pianifica: assistente in chat (weekly-autoplan-chat.js) ----------
-     Da 1280px è una colonna a destra della tab, agganciata sotto l'header (sticky) e alta
-     quanto lo schermo; sotto è un pannello flottante in basso a destra. z-index sotto
-     .modal-backdrop (100050): conferme e avvisi aperti dalla chat restano visibili. */
-  /* Pannello admin "Gestione Assistente AI": stato chiavi e selettore modelli OpenRouter */
-  .aic-keys { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 6px; }
-  .aic-key { font-size: 10.5px; padding: 1px 7px; border-radius: 999px; border: 1px solid #e2e8f0; color: #94a3b8; background: #f8fafc; }
-  .aic-key.ok { border-color: #bbf7d0; color: #15803d; background: #f0fdf4; }
-  .aic-key.sel { box-shadow: 0 0 0 1.5px var(--accent); }
-  .aic-note { font-size: 10.5px; color: #64748b; margin-top: 5px; line-height: 1.45; }
-  .aic-note:empty { display: none; }
-  .aic-note a { color: var(--accent-dark); text-decoration: underline; }
-  .aic-or { margin-top: 8px; border: 1px solid #e2e8f0; border-radius: 8px; padding: 8px; background: #fbfdfd; }
-  .aic-or-bar { display: flex; gap: 6px; align-items: center; }
-  .aic-or-bar input[type=text] { flex: 1; min-width: 0; border: 1px solid #dde3ea; border-radius: 6px; padding: 5px 8px; font-size: 12px; outline: none; }
-  .aic-or-bar label { font-size: 11px; color: #475569; display: flex; align-items: center; gap: 4px; white-space: nowrap; }
-  .aic-or-bar button { border: 1px solid #dde3ea; border-radius: 6px; background: #fff; width: 28px; height: 28px; color: #475569; }
-  .aic-or-lista { max-height: 210px; overflow-y: auto; margin-top: 6px; display: flex; flex-direction: column; gap: 2px; }
-  .aic-or-item { display: flex; align-items: center; gap: 8px; text-align: left; width: 100%; padding: 5px 7px; border-radius: 6px; border: 1px solid transparent; background: none; }
-  .aic-or-item:hover { background: #f0fdfa; border-color: #99f6e4; }
-  .aic-or-item.sel { background: #f0fdfa; border-color: var(--accent); }
-  .aic-or-item .n { flex: 1; min-width: 0; }
-  .aic-or-item .n b { display: block; font-size: 12px; font-weight: 600; color: #0f172a; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .aic-or-item .n small { display: block; font-size: 10.5px; color: #94a3b8; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .aic-tag { flex: none; font-size: 10px; font-weight: 700; padding: 1px 6px; border-radius: 999px; }
-  .aic-tag.free { background: #dcfce7; color: #15803d; }
-  .aic-tag.paid { background: #f1f5f9; color: #475569; font-weight: 600; }
-  .aic-or-vuoto { font-size: 11.5px; color: #94a3b8; padding: 10px; text-align: center; }
-
-  .ap-layout > .apc-panel { display: none; }
-  .ap-layout.apc-aperta { display: grid; grid-template-columns: minmax(0, 1fr) 390px; gap: 16px; align-items: start; }
-  @media (min-width: 1680px) { .ap-layout.apc-aperta { grid-template-columns: minmax(0, 1fr) 440px; } }
-  .ap-layout.apc-aperta > .apc-panel {
-    display: flex; flex-direction: column; overflow: hidden;
-    position: sticky; top: calc(var(--pw-toolbar-top) + 12px);
-    height: calc(100vh - var(--pw-toolbar-top) - 24px); min-height: 460px;
-    background: var(--card); border: 1px solid var(--border); border-radius: var(--radius-lg); box-shadow: var(--shadow-md);
-  }
-  @media (max-width: 1279px) {
-    .ap-layout.apc-aperta { display: block; }
-    .ap-layout.apc-aperta > .apc-panel {
-      position: fixed; top: auto; right: 12px; bottom: 12px; z-index: 4500;
-      width: min(420px, calc(100vw - 24px)); height: min(660px, calc(100vh - 90px)); min-height: 0;
-      box-shadow: var(--shadow-lg); animation: apcIn .18s ease-out;
-    }
-  }
-  @keyframes apcIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
-  /* La chat di pianificazione occupa l'angolo del widget generico: quando è aperta e
-     visibile il widget si nasconde (torna da solo cambiando tab o chiudendo la chat). */
-  body:has(#screen-weekly:not(.hidden) #pw-view-autoplan:not(.hidden) .ap-layout.apc-aperta) #ai-assistant-btn,
-  body:has(#screen-weekly:not(.hidden) #pw-view-autoplan:not(.hidden) .ap-layout.apc-aperta) #ai-assistant-panel { display: none !important; }
-
-  .apc-head { display: flex; align-items: center; gap: 10px; padding: 11px 12px; border-bottom: 1px solid var(--border);
-    background: linear-gradient(180deg, #f0fdfa 0%, #fff 100%); }
-  .apc-head-ic { width: 32px; height: 32px; flex: none; border-radius: 10px; display: flex; align-items: center; justify-content: center;
-    color: #fff; font-size: 16px; background: linear-gradient(135deg, var(--accent) 0%, #0e7490 100%); box-shadow: 0 2px 6px rgba(13,148,136,.35); }
-  .apc-head-t { font-size: 13px; font-weight: 700; color: var(--text); line-height: 1.2; }
-  .apc-head-s { font-size: var(--text-2xs); color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .apc-ibtn { width: 28px; height: 28px; flex: none; border-radius: 7px; color: var(--muted); font-size: 14px; line-height: 1;
-    display: flex; align-items: center; justify-content: center; transition: background .12s, color .12s; }
-  .apc-ibtn:hover { background: #e2e8f0; color: var(--text); }
-
-  .apc-msgs { flex: 1; overflow-y: auto; padding: 14px 12px 6px; display: flex; flex-direction: column; gap: 12px; scroll-behavior: smooth; }
-  .apc-row { display: flex; gap: 8px; align-items: flex-start; }
-  .apc-row-u { justify-content: flex-end; }
-  .apc-u { max-width: 86%; background: var(--accent); color: #fff; padding: 8px 11px; border-radius: 14px 14px 4px 14px;
-    font-size: 12.5px; line-height: 1.45; box-shadow: var(--shadow-sm); overflow-wrap: anywhere; }
-  .apc-av { width: 24px; height: 24px; flex: none; border-radius: 8px; background: var(--accent-soft); color: var(--accent-dark);
-    font-size: 12px; display: flex; align-items: center; justify-content: center; margin-top: 1px; }
-  .apc-a { flex: 1; min-width: 0; font-size: 12.5px; line-height: 1.5; color: #1e293b; }
-  .apc-testo { overflow-wrap: anywhere; }
-  .apc-testo ul, .apc-nota ul { margin: 4px 0 4px 16px !important; list-style: disc; }
-  .apc-testo li { margin: 1px 0; }
-  .apc-ora { font-size: 10px; color: #94a3b8; margin-top: 4px; }
-  .apc-pensa { display: flex; align-items: center; gap: 8px; color: var(--muted); font-size: 12px; padding: 4px 0; }
-  .apc-err { margin-top: 6px; padding: 7px 9px; border-radius: 8px; background: #fff1f2; border: 1px solid #fecdd3; color: #9f1239; font-size: 12px; }
-
-  .apc-passi { margin-bottom: 6px; border: 1px solid #e2e8f0; border-radius: 9px; background: #f8fafc; }
-  .apc-passi > summary { cursor: pointer; list-style: none; padding: 5px 9px; font-size: 11px; font-weight: 600; color: var(--muted);
-    display: flex; align-items: center; gap: 6px; user-select: none; }
-  .apc-passi > summary::-webkit-details-marker { display: none; }
-  .apc-passi > summary::before { content: '▸'; font-size: 9px; transition: transform .15s; }
-  .apc-passi[open] > summary::before { transform: rotate(90deg); }
-  .apc-passi[open] > summary { border-bottom: 1px solid #e2e8f0; }
-  .apc-passo { display: flex; gap: 8px; align-items: flex-start; padding: 5px 9px; }
-  .apc-passo + .apc-passo { border-top: 1px dashed #e2e8f0; }
-  .apc-passo-t { font-size: 11.5px; color: #334155; font-weight: 500; display: flex; gap: 5px; align-items: baseline; }
-  .apc-passo-i { width: 14px; text-align: center; color: #94a3b8; flex: none; }
-  .apc-passo-det { font-size: 10.5px; color: var(--muted); margin-left: 19px; overflow-wrap: anywhere; }
-  .apc-passo-det:empty { display: none; }
-  .apc-passo-errore .apc-passo-det { color: #be123c; }
-  .apc-ok, .apc-ko { width: 15px; height: 15px; flex: none; border-radius: 50%; font-size: 9px; font-weight: 800; margin-top: 1px;
-    display: flex; align-items: center; justify-content: center; }
-  .apc-ok { background: #dcfce7; color: #15803d; }
-  .apc-ko { background: #ffe4e6; color: #be123c; }
-  .apc-spin { width: 15px; height: 15px; flex: none; border-radius: 50%; border: 2px solid var(--accent-soft); border-top-color: var(--accent);
-    animation: apcSpin .7s linear infinite; margin-top: 1px; }
-  @keyframes apcSpin { to { transform: rotate(360deg); } }
-  .apc-nota { padding: 5px 9px; font-size: 11.5px; color: #475569; font-style: italic; border-top: 1px dashed #e2e8f0; }
-  .apc-passi > summary + .apc-nota { border-top: none; }
-
-  .apc-diff { margin-top: 8px; border: 1px solid #99f6e4; border-radius: 10px; background: #fff; overflow: hidden; box-shadow: var(--shadow-sm); }
-  .apc-diff.annullato { border-color: #e2e8f0; opacity: .7; }
-  .apc-diff-h { padding: 6px 10px; font-size: 10.5px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; color: var(--accent-dark);
-    background: #f0fdfa; border-bottom: 1px solid #ccfbf1; }
-  .apc-diff.annullato .apc-diff-h { color: var(--muted); background: #f8fafc; border-color: #e2e8f0; }
-  .apc-diff-list { padding: 6px 10px; display: flex; flex-direction: column; gap: 3px; }
-  .apc-diff-list + .apc-diff-list { border-top: 1px solid #f1f5f9; }
-  .apc-diff-row { display: flex; gap: 7px; align-items: baseline; font-size: 11.5px; color: #334155; }
-  .apc-diff-ic { width: 15px; height: 15px; flex: none; border-radius: 4px; font-size: 9px; font-weight: 800; display: inline-flex;
-    align-items: center; justify-content: center; position: relative; top: 2px; }
-  .apc-diff-ic.add { background: #dcfce7; color: #15803d; }
-  .apc-diff-ic.mod { background: #e0f2fe; color: #0369a1; }
-  .apc-diff-ic.del { background: #ffe4e6; color: #be123c; }
-  .apc-diff-more { font-size: 10.5px; color: var(--muted); margin-left: 22px; }
-  .apc-kpi { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; padding: 8px 10px; border-top: 1px solid #f1f5f9; }
-  .apc-diff-h + .apc-kpi { border-top: none; }
-  .apc-kpi-c { border-radius: 8px; padding: 5px 7px; background: #f8fafc; display: flex; flex-wrap: wrap; align-items: baseline; gap: 0 5px; }
-  .apc-kpi-c b { font-size: 16px; line-height: 1.1; color: var(--text); }
-  .apc-kpi-c small { flex-basis: 100%; font-size: 10px; color: var(--muted); }
-  .apc-kpi-assegnati { background: #f0fdf4; } .apc-kpi-parziali { background: #fffbeb; } .apc-kpi-non_assegnati { background: #fff1f2; }
-  .apc-delta { font-size: 10.5px; font-weight: 700; border-radius: 999px; padding: 0 5px; }
-  .apc-delta.su { background: #dcfce7; color: #15803d; } .apc-delta.giu { background: #ffe4e6; color: #be123c; }
-  .apc-diff-celle { padding: 5px 10px 7px; font-size: 10.5px; color: var(--muted); border-top: 1px solid #f1f5f9; }
-  .apc-diff-celle .su { color: #15803d; } .apc-diff-celle .giu { color: #be123c; }
-  .apc-diff-az { display: flex; flex-wrap: wrap; gap: 6px; padding: 7px 10px; border-top: 1px solid #f1f5f9; background: #fcfdfd; }
-  .apc-diff-az:empty { display: none; }
-  .apc-btn { font-size: 11px; font-weight: 600; padding: 4px 10px; border-radius: 7px; border: 1px solid #cbd5e1; background: #fff; color: #334155;
-    transition: background .12s, border-color .12s; }
-  .apc-btn:hover { background: #f1f5f9; border-color: #94a3b8; }
-  .apc-btn.primario { background: #15803d; border-color: #15803d; color: #fff; margin-left: auto; }
-  .apc-btn.primario:hover { background: #166534; }
-
-  .apc-vuoto { margin: auto 4px; padding: 18px 8px; text-align: center; }
-  .apc-vuoto-ic { width: 48px; height: 48px; margin: 0 auto 10px; border-radius: 15px; display: flex; align-items: center; justify-content: center;
-    font-size: 22px; color: #fff; background: linear-gradient(135deg, var(--accent) 0%, #0e7490 100%); box-shadow: 0 6px 18px rgba(13,148,136,.3); }
-  .apc-vuoto-t { font-size: 14px; font-weight: 700; color: var(--text); }
-  .apc-vuoto-s { font-size: 12px; color: var(--muted); margin: 4px auto 12px; max-width: 300px; line-height: 1.5; }
-  .apc-vuoto-l { text-align: left; font-size: 11.5px; color: #475569; display: inline-flex; flex-direction: column; gap: 5px; margin: 0 auto; padding: 0; list-style: none; }
-  .apc-vuoto-l li { padding-left: 14px; position: relative; }
-  .apc-vuoto-l li::before { content: '✦'; position: absolute; left: 0; color: var(--accent); font-size: 9px; top: 3px; }
-  .apc-vuoto-l b { color: #1e293b; font-weight: 600; }
-  .apc-vuoto-n { margin-top: 14px; font-size: 10.5px; color: var(--muted); }
-
-  .apc-chips { display: flex; gap: 6px; padding: 4px 12px 8px; overflow-x: auto; scrollbar-width: none;
-    -webkit-mask-image: linear-gradient(90deg, #000 88%, transparent); mask-image: linear-gradient(90deg, #000 88%, transparent); }
-  .apc-chips::-webkit-scrollbar { display: none; }
-  .apc-chips:empty { display: none; }
-  .apc-chip { flex: none; font-size: 11.5px; padding: 5px 10px; border-radius: 999px; border: 1px solid #99f6e4; background: #f0fdfa;
-    color: var(--accent-dark); white-space: nowrap; transition: background .12s, border-color .12s, transform .12s; }
-  .apc-chip:hover { background: var(--accent-soft); border-color: var(--accent); transform: translateY(-1px); }
-
-  .apc-comp { padding: 8px 12px 10px; border-top: 1px solid var(--border); background: #fff; }
-  .apc-banner { font-size: 11.5px; color: #92400e; background: #fffbeb; border: 1px solid #fde68a; border-radius: 8px; padding: 7px 9px; margin-bottom: 7px; }
-  .apc-link { color: var(--accent-dark); text-decoration: underline; font-weight: 600; }
-  .apc-box { display: flex; align-items: flex-end; gap: 6px; border: 1.5px solid #cbd5e1; border-radius: 12px; padding: 5px 5px 5px 10px;
-    background: #fff; transition: border-color .15s, box-shadow .15s; }
-  .apc-box:focus-within { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-ring); }
-  .apc-box.disabled { background: #f8fafc; opacity: .7; }
-  .apc-box textarea { flex: 1; border: none; outline: none; resize: none; font: inherit; font-size: 12.5px; line-height: 1.45;
-    padding: 4px 0; max-height: 140px; background: transparent; box-shadow: none !important; }
-  .apc-send { width: 30px; height: 30px; flex: none; border-radius: 9px; background: var(--accent); color: #fff; font-size: 15px; font-weight: 700;
-    display: flex; align-items: center; justify-content: center; transition: background .12s, transform .12s; }
-  .apc-send:hover:not(:disabled) { background: var(--accent-dark); }
-  .apc-send:active:not(:disabled) { transform: scale(.94); }
-  .apc-send:disabled { background: #cbd5e1; cursor: not-allowed; }
-  .apc-send.stop { background: #334155; font-size: 11px; }
-  .apc-hint { font-size: 10px; color: #94a3b8; margin-top: 5px; text-align: center; }
-
-  /* Agganci nella tab Auto-pianifica */
-  .apc-toggle { font-size: 12px; font-weight: 600; padding: 5px 11px; border-radius: 6px; border: 1.5px solid var(--accent); color: var(--accent-dark);
-    background: #fff; display: inline-flex; align-items: center; gap: 5px; transition: background .12s; }
-  .apc-toggle:hover { background: #f0fdfa; }
-  .apc-toggle.on { background: var(--accent); color: #fff; }
-  .apc-spark { font-size: 11px; }
-  .apc-perche { font-size: 10.5px; font-weight: 600; color: var(--accent-dark); background: #f0fdfa; border: 1px solid #99f6e4;
-    border-radius: 999px; padding: 0 7px; margin-left: 4px; line-height: 17px; vertical-align: 1px; }
-  .apc-perche:hover { background: var(--accent-soft); }
-  .ap-fonti-box { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius-md); padding: 8px 12px; box-shadow: var(--shadow-sm); }
-  .ap-fonti-box > summary { cursor: pointer; list-style: none; display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 10px; }
-  .ap-fonti-box > summary::-webkit-details-marker { display: none; }
-  .ap-fonti-box > summary::before { content: '▸'; font-size: 10px; color: var(--muted); transition: transform .15s; }
-  .ap-fonti-box[open] > summary::before { transform: rotate(90deg); }
-  .ap-tabella tr.ap-riga-toccata > td { background: #f0fdfa; }
-  .ap-tabella tr.ap-riga-toccata > td:first-child { box-shadow: inset 3px 0 0 var(--accent); }
-  .ap-ge-badge { flex: none; font-size: 10px; font-weight: 700; line-height: 18px; padding: 0 5px; border-radius: 4px;
-    background: #fef3c7; color: #92400e; border: 1px solid #fcd34d; white-space: nowrap; }
-  .ap-ge-badge:hover { background: #fde68a; }
-  .ap-cella-nuova { box-shadow: 0 0 0 2px var(--accent); border-style: solid !important; animation: apcPulse 1.6s ease-out 2; }
-  @keyframes apcPulse { 0% { box-shadow: 0 0 0 0 rgba(13,148,136,.55); } 70% { box-shadow: 0 0 0 6px rgba(13,148,136,0); } 100% { box-shadow: 0 0 0 2px var(--accent); } }
-  .apc-flash { animation: apcFlash 1.4s ease-out; }
-  @keyframes apcFlash { 0% { box-shadow: 0 0 0 0 rgba(13,148,136,.5); } 40% { box-shadow: 0 0 0 6px rgba(13,148,136,.18); } 100% { box-shadow: var(--shadow-sm); } }
-  @media (prefers-reduced-motion: reduce) {
-    .apc-spin, .ap-cella-nuova, .apc-flash, .ap-layout.apc-aperta > .apc-panel { animation: none !important; }
-    .apc-msgs { scroll-behavior: auto; }
-  }
 </style>
 </head>
 <body class="min-h-screen">
@@ -1731,7 +1534,7 @@
     <div class="flex items-center gap-2">
       <button id="btn-presentation" class="px-3 py-1.5 text-sm rounded hover:bg-white/10" style="border:1px solid var(--dark-border-strong);color:var(--dark-text);visibility:visible;">📊 Modalità presentazione</button>
       <div class="text-xs pl-2" style="border-left:1px solid var(--dark-border-strong);color:var(--dark-text-muted);">
-        <span id="app-version" class="font-medium" style="color:var(--accent);">v18.187.0</span> · Michele Marchetti
+        <span id="app-version" class="font-medium" style="color:var(--accent);">v18.185.0</span> · Michele Marchetti
         <span id="sb-role-badge" style="margin-left:8px;padding:1px 8px;border-radius:9999px;background:rgba(255,255,255,.1);color:var(--dark-text);font-weight:600;"></span>
       </div>
     </div>
@@ -2648,11 +2451,7 @@
   <!-- Vista Auto-pianifica (contenuto generato da weekly-autoplan.js) -->
   <div id="pw-view-autoplan" class="hidden">
     <input type="file" id="ap-file" accept=".xlsx,.xls,.csv" class="hidden" onchange="apImportaFile(this)">
-    <div id="ap-layout" class="ap-layout">
-      <div id="ap-root" style="min-width:0;"></div>
-      <!-- Assistente pianificazione (contenuto generato da weekly-autoplan-chat.js) -->
-      <aside id="apc-panel" class="apc-panel no-print" aria-label="Assistente pianificazione"></aside>
-    </div>
+    <div id="ap-root"></div>
   </div>
 
   <!-- Vista Ricerca Squadre -->
@@ -2938,11 +2737,11 @@
 
 <!-- Modal Gestione Assistente AI (solo admin) -->
 <div id="ai-config-modal" style="display:none;position:fixed;inset:0;z-index:99999;background:var(--backdrop);align-items:center;justify-content:center;">
-  <div style="background:white;border-radius:var(--radius-lg);padding:28px 32px;width:540px;max-width:95vw;max-height:92vh;overflow-y:auto;box-shadow:var(--shadow-lg);">
+  <div style="background:white;border-radius:var(--radius-lg);padding:28px 32px;width:460px;max-width:95vw;box-shadow:var(--shadow-lg);">
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">
       <div>
         <div style="font-weight:700;font-size:16px;color:#0f172a;font-family:var(--font-display);">🤖 Gestione Assistente AI</div>
-        <div style="font-size:11px;color:#94a3b8;margin-top:2px;">Vale per il widget di domande e risposte e per l'assistente dell'Auto-pianifica</div>
+        <div style="font-size:11px;color:#94a3b8;margin-top:2px;">Widget di domande e risposte sui dati dell'app</div>
       </div>
       <button onclick="aiConfigClose()" style="padding:5px 12px;font-size:12px;border:1px solid #e2e8f0;border-radius:6px;background:white;cursor:pointer;color:#475569;">Chiudi</button>
     </div>
@@ -2957,28 +2756,15 @@
     <div style="margin-bottom:12px;">
       <label style="display:block;font-size:11px;font-weight:600;color:#374151;margin-bottom:4px;">Provider</label>
       <select id="ai-config-provider" onchange="aiConfigProviderChanged()" style="width:100%;border:1px solid #dde3ea;border-radius:8px;padding:8px 10px;font-size:12.5px;outline:none;box-sizing:border-box;">
-        <option value="gemini">Google Gemini (piano gratuito disponibile)</option>
-        <option value="groq">Groq (piano gratuito disponibile)</option>
-        <option value="openrouter">OpenRouter (modelli gratuiti e a pagamento)</option>
+        <option value="gemini">Google Gemini (gratuito)</option>
+        <option value="groq">Groq (gratuito)</option>
         <option value="anthropic">Anthropic Claude (a pagamento)</option>
       </select>
-      <div id="ai-config-keys" class="aic-keys"></div>
-      <div id="ai-config-provider-note" class="aic-note"></div>
     </div>
 
     <div style="margin-bottom:12px;">
       <label style="display:block;font-size:11px;font-weight:600;color:#374151;margin-bottom:4px;">Modello</label>
-      <input id="ai-config-model" type="text" list="ai-config-model-list" placeholder="es. gemini-2.5-flash" autocomplete="off" oninput="aiConfigOrRender()" style="width:100%;border:1px solid #dde3ea;border-radius:8px;padding:8px 10px;font-size:12.5px;outline:none;box-sizing:border-box;">
-      <datalist id="ai-config-model-list"></datalist>
-      <div id="ai-config-or" class="aic-or" style="display:none;">
-        <div class="aic-or-bar">
-          <input id="ai-config-or-cerca" type="text" placeholder="Cerca un modello OpenRouter…" oninput="aiConfigOrRender()" autocomplete="off">
-          <label title="Mostra anche i modelli a pagamento (servono crediti su OpenRouter)"><input type="checkbox" id="ai-config-or-pagamento" onchange="aiConfigOrRender()"> anche a pagamento</label>
-          <button type="button" onclick="aiConfigOrCarica(true)" title="Ricarica l'elenco da OpenRouter">↻</button>
-        </div>
-        <div id="ai-config-or-lista" class="aic-or-lista"></div>
-        <div class="aic-note">Sono elencati solo i modelli che supportano gli strumenti (servono all'assistente). Il catalogo gratuito cambia spesso: <b>openrouter/free</b> sceglie da solo un modello gratuito adatto.</div>
-      </div>
+      <input id="ai-config-model" type="text" placeholder="es. gemini-2.5-flash" style="width:100%;border:1px solid #dde3ea;border-radius:8px;padding:8px 10px;font-size:12.5px;outline:none;box-sizing:border-box;">
     </div>
 
     <div style="margin-bottom:12px;">
@@ -21309,8 +21095,8 @@ function _apViolaPrecedenze(ordine, precedenze) {
      modello, pesi
    }
    righe = [{ id, cantiere, commessa, attivita, famiglia, geo:{lat,lng}|null, giorni, nOp,
-              priorita, scadenzaGiorno (indice o null), dalGiorno, giorniEsclusi:[indici],
-              skills:[], attestati:[], preferiti:[], esclusi:[] }]
+              priorita, scadenzaGiorno (indice o null), dalGiorno, skills:[], attestati:[],
+              preferiti:[], esclusi:[] }]
    Output: { assegnazioni: [{rigaId, giorno, operatori:[], quota}], esiti: {rigaId: {...}},
              miglioramenti: [...], suggerimenti: [...], distanze: {stradali, stimate}, ... } */
 function apRisolvi(ctx, righe) {
@@ -21542,12 +21328,9 @@ function _apGreedy(ctx, pesi, ordinate) {
     }
 
     const primoGiorno = Math.max(ctx.giorni[0], r.dalGiorno || 0);
-    /* giorniEsclusi: vincolo rigido deciso dall'utente (o dall'agente su sua richiesta),
-       es. "Brescia non di venerdì" */
-    const giorniUtili = ctx.giorni.filter(d => d >= primoGiorno && !(r.giorniEsclusi || []).includes(d));
+    const giorniUtili = ctx.giorni.filter(d => d >= primoGiorno);
     if (!giorniUtili.length) {
-      esito.motivi.push((r.giorniEsclusi || []).length ? 'nessun giorno utile fra "non prima di" e giorni esclusi'
-        : 'nessun giorno utile dopo il "non prima di"');
+      esito.motivi.push('nessun giorno utile dopo il "non prima di"');
       valore -= r.giorni * pesi.ritardoGiorno * peso;
       return;
     }
@@ -21644,58 +21427,6 @@ function apMotiviEsclusione(esclusioni) {
   if (!k.length) return '';
   return ' (' + k.map(m => esclusioni[m] + ' ' + m).join('; ') + ')';
 }
-
-/* ---------- diagnosi di una riga (per i "perché" dell'agente e della UI) ----------
-   Dato il risultato di apRisolvi, dice giorno per giorno quanti operatori c'erano per la
-   riga e dove sono finiti gli altri. Non rifà il calcolo: legge disponibilità iniziale
-   (ctx.disp), capacità residua a fine calcolo e assegnazioni. La distanza è misurata dalla
-   residenza o dall'ultima posizione nota in Griglia, quindi è indicativa (nel calcolo vero
-   conta anche dove l'operatore si trova per effetto della bozza stessa). */
-function apDiagnostica(ctx, righe, risultato, rigaId) {
-  const r = righe.find(x => x.id === rigaId);
-  if (!r) return null;
-  const pesi = Object.assign({}, AP_PESI_DEFAULT, ctx.pesi || {});
-  const e = risultato.esiti[r.id] || {};
-  const righeById = {};
-  righe.forEach(x => { righeById[x.id] = x; });
-  const km = (a, b) => {
-    if (!a || !b) return null;
-    const v = ctx.distanzaKm ? ctx.distanzaKm(a, b) : null;
-    return v != null ? v : haversineKm(a.lat, a.lng, b.lat, b.lng) * AP_FATTORE_STRADA;
-  };
-  const presoDa = {};  // "nome|giorno" -> [righe che lo usano]
-  risultato.assegnazioni.forEach(a => a.operatori.forEach(n => {
-    const k = n + '|' + a.giorno;
-    (presoDa[k] = presoDa[k] || []).push(a.rigaId);
-  }));
-  const meteoRiga = (ctx.meteo || {})[r.id] || {};
-  const giorni = ctx.giorni.map(d => {
-    const out = { giorno: d, libero: 0, stati: {}, fuoriRaggio: 0, attestati: 0, esclusiMano: 0, usatiQui: 0,
-      presiAltrove: [], restanoLiberi: [], meteo: meteoRiga[d] ? meteoRiga[d].motivo + (meteoRiga[d].blocco ? ' (giorno escluso)' : '') : null,
-      fuoriFinestra: d < (r.dalGiorno || 0) || (r.giorniEsclusi || []).includes(d) };
-    ctx.operatori.forEach(o => {
-      const st = (ctx.disp[o.nome] || {})[d] || 'libero';
-      if (st !== 'libero') { out.stati[st] = (out.stati[st] || 0) + 1; return; }
-      out.libero++;
-      if ((r.esclusi || []).includes(o.nome)) { out.esclusiMano++; return; }
-      if ((r.attestati || []).some(a => !o.attestatiValidi(a, ctx.giorniISO[d]))) { out.attestati++; return; }
-      let p = null;
-      for (let x = d - 1; x >= 0 && !p; x--) p = ((ctx.posizione || {})[o.nome] || {})[x] || null;
-      const dist = km(p || o.base, r.geo);
-      if (dist != null && dist > pesi.maxKmTrasferta) { out.fuoriRaggio++; return; }
-      const usi = presoDa[o.nome + '|' + d] || [];
-      if (usi.includes(r.id)) { out.usatiQui++; return; }
-      const voce = { nome: o.nome, km: dist == null ? null : Math.round(dist) };
-      if (usi.length) { voce.cantieri = usi.map(id => righeById[id] ? 'P' + righeById[id].priorita + ' ' + righeById[id].cantiere : id); out.presiAltrove.push(voce); }
-      else if ((((risultato.capacitaResidua || {})[o.nome] || {})[d] || 0) > 1e-6) out.restanoLiberi.push(voce);
-    });
-    const perKm = (a, b) => (a.km == null ? 9999 : a.km) - (b.km == null ? 9999 : b.km);
-    out.presiAltrove.sort(perKm); out.presiAltrove = out.presiAltrove.slice(0, 6);
-    out.restanoLiberi.sort(perKm); out.restanoLiberi = out.restanoLiberi.slice(0, 6);
-    return out;
-  });
-  return { riga: r, esito: e, giorni, maxKm: pesi.maxKmTrasferta };
-}
 /* ==================== AUTO-PIANIFICA (tab Pianificazione settimanale) ==================== */
 /* Da una lista di cantieri con priorità produce una BOZZA della Griglia della settimana
    mostrata, la fa rivedere e solo su conferma la scrive in pwData (annullabile).
@@ -21707,9 +21438,7 @@ function apDiagnostica(ctx, righe, risultato, rigaId) {
    - il contesto della settimana (disponibilità, posizioni, attestati, staffing)
    - la scrittura in Griglia e l'annullamento.
    La lista e la bozza sono locali (localStorage per settimana): nessun nuovo dominio di
-   sync. In pwData arriva solo quello che l'utente applica, con un unico pwSave().
-   L'assistente in chat (weekly-autoplan-chat.js, apc*) lavora su questo stesso stato con
-   gli stessi helper: modifica righe/opzioni/precedenze e ricalcola, mai la Griglia. */
+   sync. In pwData arriva solo quello che l'utente applica, con un unico pwSave(). */
 
 let _ap = {
   anno: null,
@@ -21720,9 +21449,7 @@ let _ap = {
   modelloInfo: '',
   opzioni: { sabato: false, maxKm: 250, meteo: true },
   precedenze: [],       // [[primaId, dopoId]] scelte dall'utente dai suggerimenti
-  stato: { msg: '', err: false },
-  toccate: new Set(),   // righe modificate dall'assistente nell'ultima risposta (evidenziate)
-  fontiAperte: false    // con la chat aperta le fonti stanno in un pannello richiudibile
+  stato: { msg: '', err: false }
 };
 let _apSeq = 0;
 const AP_STORAGE_KEY = 'ap_righe_v1';
@@ -21736,16 +21463,12 @@ function _apWkKey(anno, week) { return anno + '-' + week; }
 
 /* Ogni modifica a righe o opzioni rende vecchia la bozza: via lei e il suo messaggio */
 function _apInvalidaBozza() {
-  /* L'ultima bozza calcolata resta come termine di confronto per l'assistente ("cosa è
-     cambiato rispetto a prima"), anche se non è più valida per applicarla. */
-  if (_ap.bozza) _ap.ultimaBozza = _ap.bozza;
   _ap.bozza = null;
   _ap.stato = { msg: '', err: false };
 }
 
 function _apStatus(msg, isError) {
   _ap.stato = { msg: msg || '', err: !!isError };
-  if (typeof apcProgresso === 'function') apcProgresso(msg);
   const el = document.getElementById('ap-status');
   if (!el) return;
   el.textContent = msg || '';
@@ -21787,10 +21510,7 @@ function apInit() {
     _ap.anno = pwAnno;
     _ap.week = pwWeek;
     _ap.bozza = null;
-    _ap.ultimaBozza = null;
-    _ap.toccate = new Set();
     _apCaricaLocale();
-    if (typeof apcOnSettimana === 'function') apcOnSettimana();
   }
   apRender();
   if (!_ap.modello) apCaricaStorico(false);
@@ -21920,17 +21640,10 @@ function apNormRiga(o, fonte) {
     skills: _apLista(o.skills),
     preferiti: _apOperatoriCanonici(o.preferiti),
     esclusi: _apOperatoriCanonici(o.esclusi),
-    giorniEsclusi: _apGiorniLista(o.giorniEsclusi),
     note: String(o.note || '').trim(),
     fonte: fonte || 'manuale',
     includi: true
   };
-}
-
-/* Indici di giorno 0..5 (Lun..Sab), senza doppioni, in ordine */
-function _apGiorniLista(v) {
-  const arr = Array.isArray(v) ? v : (v == null || v === '' ? [] : [v]);
-  return Array.from(new Set(arr.map(x => parseInt(x, 10)).filter(d => d >= 0 && d <= 5))).sort((a, b) => a - b);
 }
 
 function _apAggiungiRighe(nuove, fonte) {
@@ -21983,13 +21696,6 @@ function apAggiungiRiga() {
 
 /* Fonte 4: cantieri pianificati la settimana precedente (da completare: km residui) */
 function apDaSettimanaPrecedente() {
-  const { prev, nuove } = _apRigheSettimanaPrecedente();
-  if (!nuove.length) { showAlertModal('La settimana ' + prev.week + ' non ha cantieri nuovi da riportare.'); return; }
-  _apAggiungiRighe(nuove, 'settimana ' + prev.week);
-}
-
-/* Righe nuove (non già in lista) dai cantieri in Griglia la settimana precedente */
-function _apRigheSettimanaPrecedente() {
   const prev = pwWeekAdd(pwAnno, pwWeek, -1);
   const wk = (pwData[prev.anno] && pwData[prev.anno][prev.week]) || [];
   const visti = new Set(_ap.righe.map(r => _apNorm(r.commessa) + '|' + _apNorm(r.cantiere) + '|' + _apNorm(r.attivita)));
@@ -22004,7 +21710,8 @@ function _apRigheSettimanaPrecedente() {
       });
     }
   })));
-  return { prev, nuove };
+  if (!nuove.length) { showAlertModal('La settimana ' + prev.week + ' non ha cantieri nuovi da riportare.'); return; }
+  _apAggiungiRighe(nuove, 'settimana ' + prev.week);
 }
 
 function apScaricaModello() {
@@ -22359,15 +22066,12 @@ function _apRigaCompleta(r) {
   return r.cantiere && r.commessa;
 }
 
-/* opts.silenzioso (usato dall'assistente): niente modali, l'esito torna come valore
-   { ok, errore } così l'agente può riferirlo in chat. */
-async function apCalcola(opts) {
-  const silenzioso = !!(opts && opts.silenzioso);
-  const fallisci = msg => { if (!silenzioso) showAlertModal(msg); return { ok: false, errore: msg }; };
+async function apCalcola() {
   const righe = _ap.righe.filter(r => r.includi && _apRigaCompleta(r));
-  if (!righe.length) return fallisci('Serve almeno una riga inclusa con cantiere e commessa.');
+  if (!righe.length) { showAlertModal('Serve almeno una riga inclusa con cantiere e commessa.'); return; }
   if (_apPrimoGiorno() > (_ap.opzioni.sabato ? 5 : 4)) {
-    return fallisci('Questa settimana è già passata (o non ha più giorni utili): scegli una settimana futura.');
+    showAlertModal('Questa settimana è già passata (o non ha più giorni utili): scegli una settimana futura.');
+    return;
   }
   const btn = document.getElementById('ap-calcola-btn');
   if (btn) btn.disabled = true;
@@ -22399,7 +22103,6 @@ async function apCalcola(opts) {
         priorita: r.priorita || 3,
         scadenzaGiorno: sg == null ? null : (sg > 5 ? null : sg),
         dalGiorno: dg == null ? 0 : Math.max(0, dg),
-        giorniEsclusi: _apGiorniLista(r.giorniEsclusi),
         /* Skill della riga + quelle dell'anagrafica commessa: solo preferenza (la squadra
            che le copre è favorita, se mancano c'è un avviso), mai motivo di esclusione */
         skills: Array.from(new Set((r.skills || []).concat(meta.skills || []))),
@@ -22432,21 +22135,17 @@ async function apCalcola(opts) {
     _apStatus('Calcolo la bozza…');
     await new Promise(res => setTimeout(res, 0)); // lascia disegnare lo stato prima del calcolo
     const risultato = apRisolvi(ctx, righeSolver);
-    /* ctx resta in memoria con la bozza (non va in localStorage: contiene funzioni) per
-       la diagnosi dei "perché" dell'assistente; nuove = celle da evidenziare */
     _ap.bozza = { anno: _ap.anno, week: _ap.week, risultato, righeSolver, ctxGiorni: ctx.giorni, creata: Date.now(),
-      ctx, infoDistanze: dist.info, infoMeteo: met.info, nuove: null,
+      infoDistanze: dist.info, infoMeteo: met.info,
       dwDisponibili: ctx.operatori.filter(o => o.dwDisponibile).map(o => o.nome) };
     const es = Object.values(risultato.esiti);
     apRender();
     _apStatus('Bozza pronta: ' + es.filter(e => e.stato === 'assegnato').length + ' assegnati, ' +
       es.filter(e => e.stato === 'parziale').length + ' parziali, ' +
       es.filter(e => e.stato === 'non_assegnato').length + ' non assegnati.');
-    return { ok: true };
   } catch (e) {
     console.error('apCalcola', e);
     _apStatus('Errore nel calcolo: ' + (e.message || e), true);
-    return { ok: false, errore: 'errore nel calcolo: ' + (e.message || e) };
   } finally {
     if (btn) btn.disabled = false;
   }
@@ -22592,17 +22291,6 @@ function apSetCampo(el) {
   apRender();
 }
 
-async function apTogliGiorniEsclusi(el) {
-  const r = _apRigaDaEl(el);
-  if (!r) return;
-  const ok = await showConfirmAsync('Togliere il vincolo "mai di ' + _apGiorniLista(r.giorniEsclusi).map(d => AP_GIORNI[d]).join(', ') + '" da ' + (r.cantiere || 'questo cantiere') + '?', 'Togli vincolo');
-  if (!ok) return;
-  r.giorniEsclusi = [];
-  _apInvalidaBozza();
-  _apSalvaLocale();
-  apRender();
-}
-
 function apRimuoviRiga(el) {
   const r = _apRigaDaEl(el);
   if (!r) return;
@@ -22656,13 +22344,10 @@ function apRender() {
   try { undo = JSON.parse(localStorage.getItem(AP_UNDO_KEY) || 'null'); } catch (_) {}
   const puoAnnullare = undo && undo.anno === pwAnno && undo.week === pwWeek;
 
-  /* Con la chat aperta la colonna delle fonti lascia il posto alla chat: le fonti
-     diventano un pannello richiudibile sopra la tabella. */
-  const chat = typeof apcAperta === 'function' && apcAperta();
   root.innerHTML =
-    '<div class="grid grid-cols-1 ' + (chat ? '' : 'xl:grid-cols-5 ') + 'gap-4 items-start">' +
-      (chat ? _apFontiRichiudibiliHtml() : _apPannelloFontiHtml()) +
-      '<div class="' + (chat ? '' : 'xl:col-span-4 ') + 'space-y-4" style="min-width:0;">' +
+    '<div class="grid grid-cols-1 xl:grid-cols-5 gap-4 items-start">' +
+      _apPannelloFontiHtml() +
+      '<div class="xl:col-span-4 space-y-4" style="min-width:0;">' +
         '<div class="bg-white border border-slate-200 rounded-lg p-3 shadow-sm">' +
           '<div class="flex flex-wrap items-center gap-2 mb-2">' +
             '<div class="text-xs font-semibold text-slate-700 uppercase tracking-wide">📋 Cantieri da pianificare · ' + _apE(giorniLabel) + '</div>' +
@@ -22672,7 +22357,6 @@ function apRender() {
             '<label class="text-xs text-slate-600 flex items-center gap-1">max km trasferta <input type="number" min="20" step="10" data-opz="maxKm" onchange="apSetOpzione(this)" value="' + _apE(_ap.opzioni.maxKm) + '" class="w-16 border border-slate-300 rounded px-1 py-0.5 text-xs"></label>' +
             '<button type="button" onclick="apSvuota()" class="text-xs px-2 py-1 border border-slate-300 rounded hover:bg-slate-50">Svuota</button>' +
             '<button type="button" id="ap-calcola-btn" onclick="apCalcola()" class="text-xs px-3 py-1.5 rounded font-semibold text-white" style="background:var(--accent,#0d9488);">🤖 Calcola bozza</button>' +
-            (typeof apcToggle === 'function' ? '<button type="button" onclick="apcToggle()" class="apc-toggle' + (chat ? ' on' : '') + '" title="Chiedi all\'assistente di modificare la bozza in linguaggio naturale"><span class="apc-spark">✦</span> Assistente</button>' : '') +
           '</div>' +
           '<div class="text-[11px] text-slate-500 mb-2">' + _apE(_ap.modelloInfo) +
             ' <button type="button" onclick="apCaricaStorico(true)" class="underline">aggiorna</button></div>' +
@@ -22685,27 +22369,14 @@ function apRender() {
     '</div>';
 }
 
-function _apFontiRichiudibiliHtml() {
-  return '<details class="ap-fonti-box no-print"' + (_ap.fontiAperte ? ' open' : '') + ' ontoggle="apFontiToggle(this)">' +
-    '<summary><span class="text-xs font-semibold text-slate-700">📥 Aggiungi cantieri</span>' +
-    '<span class="text-[11px] text-slate-400">incolla da Excel · file · settimana precedente · riga manuale</span></summary>' +
-    '<div class="pt-2 grid grid-cols-1 md:grid-cols-2 gap-3">' + _apFontiCorpoHtml() + '</div></details>';
-}
-
-function apFontiToggle(el) { _ap.fontiAperte = !!el.open; }
-
 function _apPannelloFontiHtml() {
   /* Colonna a sinistra da 1280px in su; sotto, sta sopra la tabella e si dispone su due
      colonne (incolla | altre fonti) per non occupare mezza pagina in altezza. */
   return '<div class="xl:col-span-1 bg-white border border-slate-200 rounded-lg p-3 shadow-sm no-print">' +
     '<div class="text-xs font-semibold text-slate-700 uppercase tracking-wide mb-1">🤖 Auto-pianifica</div>' +
     '<div class="text-[11px] text-slate-500 leading-snug mb-3">Carica i cantieri da una o più fonti, controlla stima e priorità, poi calcola una bozza: la Griglia cambia solo quando premi <b>Applica</b>.</div>' +
-    '<div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-1 gap-3">' + _apFontiCorpoHtml() + '</div>' +
-  '</div>';
-}
-
-function _apFontiCorpoHtml() {
-  return '<div>' +
+    '<div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-1 gap-3">' +
+      '<div>' +
         '<label class="block text-xs font-semibold text-slate-600 mb-1">Incolla da Excel / CSV</label>' +
         '<textarea id="ap-incolla" rows="4" placeholder="Cantiere&#9;Commessa&#9;Attività&#9;Km&#9;…&#9;Priorità" class="w-full px-2 py-1.5 text-xs border border-slate-300 rounded font-mono"></textarea>' +
         '<button type="button" onclick="apImportaTesto()" class="mt-1 w-full text-xs px-2 py-1.5 border border-slate-300 rounded hover:bg-slate-50">⬇ Importa righe incollate</button>' +
@@ -22718,7 +22389,9 @@ function _apFontiCorpoHtml() {
           '<button type="button" onclick="apScaricaModello()" class="text-xs px-2 py-1.5 text-slate-500 hover:text-slate-800 text-left underline">Scarica il modello Excel</button>' +
         '</div>' +
         '<div class="text-[10px] text-slate-400 leading-snug mt-2">Colonne riconosciute: Cantiere, Commessa, Attività, Km, Giorni, Operatori, Priorità (P1/P2/P3), Scadenza, Dal, Skill, Preferiti, Esclusi, Note. Giorni vuoto = stima dallo storico di produzione.</div>' +
-      '</div>';
+      '</div>' +
+    '</div>' +
+  '</div>';
 }
 
 /* ---------- cataloghi per i menu a tendina ---------- */
@@ -23040,12 +22713,9 @@ function _apTabellaRigheHtml() {
       esitoHtml = '<span class="text-slate-300">—</span>';
     }
     const warn = 'border-color:#f59e0b;background:#fffbeb;';
-    const ge = _apGiorniLista(r.giorniEsclusi);
-    html += '<tr data-ap-id="' + _apE(r.id) + '" class="border-t border-slate-100' + (r.includi ? '' : ' opacity-50') + (_ap.toccate.has(r.id) ? ' ap-riga-toccata' : '') + '">' +
+    html += '<tr data-ap-id="' + _apE(r.id) + '" class="border-t border-slate-100' + (r.includi ? '' : ' opacity-50') + '">' +
       '<td class="px-1 py-1"><input type="checkbox" data-campo="includi" onchange="apSetCampo(this)"' + (r.includi ? ' checked' : '') + ' title="Includi nel calcolo e nell\'applicazione"></td>' +
-      '<td class="px-1 py-1"><div class="flex items-center gap-1">' + inp('cantiere', r.cantiere, ' placeholder="Comune / sito" title="' + _apE(r.cantiere + (r.fonte ? ' · fonte: ' + r.fonte : '')) + '"') +
-        (ge.length ? '<button type="button" onclick="apTogliGiorniEsclusi(this)" class="ap-ge-badge" title="' + _apE('Mai di ' + ge.map(d => AP_GIORNI[d]).join(', ') + ' — clic per togliere il vincolo') + '">⊘ ' + _apE(ge.map(d => AP_GIORNI[d].charAt(0)).join('')) + '</button>' : '') +
-        '</div></td>' +
+      '<td class="px-1 py-1">' + inp('cantiere', r.cantiere, ' placeholder="Comune / sito" title="' + _apE(r.cantiere + (r.fonte ? ' · fonte: ' + r.fonte : '')) + '"') + '</td>' +
       '<td class="px-1 py-1"' + (commessaOk ? '' : ' title="Commessa non trovata fra quelle attive"') + '>' +
         _apDdBottone(r, 'commessa', r.commessa || 'Scegli la commessa').replace('class="ap-cell', commessaOk ? 'class="ap-cell' : 'style="' + warn + '" class="ap-cell') + '</td>' +
       '<td class="px-1 py-1">' + _apDdBottone(r, 'attivita', r.attivita || 'Scegli o aggiungi l\'attività') + '</td>' +
@@ -23141,8 +22811,7 @@ function _apBozzaHtml(puoAnnullare) {
     a.operatori.forEach(n => {
       if (!perOp[n]) perOp[n] = {};
       if (!perOp[n][a.giorno]) perOp[n][a.giorno] = [];
-      perOp[n][a.giorno].push({ r, quota: a.quota, compagni: a.operatori.filter(x => x !== n),
-        nuova: !!(b.nuove && b.nuove.has(n + '|' + a.giorno + '|' + a.rigaId)) });
+      perOp[n][a.giorno].push({ r, quota: a.quota, compagni: a.operatori.filter(x => x !== n) });
     });
   });
   const esistenti = {};
@@ -23170,7 +22839,7 @@ function _apBozzaHtml(puoAnnullare) {
       const pr = (perOp[n] || {})[d] || [];
       tab += '<td class="px-1 py-1 align-top">' +
         ex.map(c => '<div style="background:#f1f5f9;color:#64748b;border-radius:3px;padding:1px 4px;margin-bottom:2px;">' + _apE(c) + '</div>').join('') +
-        pr.map(p => '<div' + (p.nuova ? ' class="ap-cella-nuova"' : '') + ' title="' + _apE(p.r.commessa + ' · ' + (p.r.attivita || '') + (p.compagni.length ? ' · con ' + p.compagni.join(', ') : '') + (p.nuova ? ' · cambiata dall\'assistente' : '')) + '" style="border:1.5px dashed #0d9488;background:#f0fdfa;color:#0f766e;border-radius:3px;padding:1px 4px;margin-bottom:2px;font-weight:600;">' +
+        pr.map(p => '<div title="' + _apE(p.r.commessa + ' · ' + (p.r.attivita || '') + (p.compagni.length ? ' · con ' + p.compagni.join(', ') : '')) + '" style="border:1.5px dashed #0d9488;background:#f0fdfa;color:#0f766e;border-radius:3px;padding:1px 4px;margin-bottom:2px;font-weight:600;">' +
           _apE(p.r.cantiere) + (p.quota < 1 ? ' <span style="font-weight:400;">(½)</span>' : '') + ' <span style="font-weight:400;color:#64748b;">P' + p.r.priorita + '</span></div>').join('') +
         '</td>';
     });
@@ -23191,8 +22860,6 @@ function _apBozzaHtml(puoAnnullare) {
       '<b>P' + r.priorita + ' · ' + _apE(r.cantiere) + '</b> <span class="text-slate-500">' + _apE(r.commessa) + (r.attivita ? ' · ' + _apE(r.attivita) : '') + '</span> ' +
       '<span style="color:' + st.fg + ';font-weight:700;">' + st.t + '</span>' +
       (e.kmMedi != null ? ' <span class="text-slate-500">· ~' + Math.round(e.kmMedi) + ' km di spostamento medio</span>' : '') +
-      (typeof apcPerche === 'function' && (e.stato !== 'assegnato' || e.oltreScadenza)
-        ? ' <button type="button" data-ap-perche="' + _apE(r.id) + '" onclick="apcPerche(this)" class="apc-perche" title="Chiedi all\'assistente perché">✦ Perché?</button>' : '') +
       (quando ? '<div class="text-slate-700">' + _apE(quando) + '</div>' : '') +
       ([].concat(e.motivi, e.avvisi).length ? '<div class="text-amber-700">' + _apE([].concat(e.motivi, e.avvisi).join(' · ')) + '</div>' : '') +
       '<div class="text-slate-400">stima: ' + apFmtNum(r.giorni) + ' gg × ' + r.nOp + ' op — ' + _apE(r.stimaFonte) + '</div>' +
@@ -23201,7 +22868,7 @@ function _apBozzaHtml(puoAnnullare) {
   lista += '</div>';
 
   const nCelle = res.assegnazioni.filter(a => incluse.has(a.rigaId)).reduce((n, a) => n + a.operatori.length, 0);
-  return '<div id="ap-bozza-box" class="bg-white border border-slate-200 rounded-lg p-3 shadow-sm">' +
+  return '<div class="bg-white border border-slate-200 rounded-lg p-3 shadow-sm">' +
     '<div class="flex flex-wrap items-center gap-2 mb-3">' +
       '<div class="text-xs font-semibold text-slate-700 uppercase tracking-wide">📝 Bozza · ' + nCelle + ' celle proposte</div>' +
       '<div class="flex-1"></div>' + annullaBtn +
@@ -23215,978 +22882,6 @@ function _apBozzaHtml(puoAnnullare) {
     lista +
   '</div>';
 }
-/* ==================== AUTO-PIANIFICA: ASSISTENTE IN CHAT (apc*) ==================== */
-/* Chat dedicata alla bozza della tab Auto-pianifica, distinta dall'assistente generico
-   (ai-assistant.js), con cui condivide solo la configurazione del provider e il rendering
-   del markdown. L'utente scrive in linguaggio naturale; l'Edge Function 'ai-autoplan' fa
-   da relè verso l'LLM un passo alla volta e gli STRUMENTI girano qui, sulla bozza locale
-   (_ap in weekly-autoplan.js):
-     browser → ai-autoplan (trascrizione) → LLM → richieste di strumenti → browser esegue
-     → ai-autoplan (con i risultati) → … → risposta finale.
-   Regola ferma: nessuno strumento tocca pwData. Gli strumenti modificano righe, opzioni e
-   precedenze e richiamano il solver; la Griglia cambia solo con "Applica" dell'utente.
-   Ogni risposta che modifica qualcosa mostra le differenze e si può annullare (pila in
-   memoria). La conversazione è per settimana, salvata in localStorage (per browser). */
-
-const APC_MAX_PASSI = 10;          // richieste al modello per ogni messaggio dell'utente
-const APC_STORAGE_KEY = 'ap_chat_v1';
-const APC_MAX_TRASCR = 50;         // messaggi di trascrizione inviati/salvati
-const APC_MAX_MSGS = 60;           // bolle visibili salvate
-
-let _apc = {
-  aperta: false,
-  anno: null,
-  week: null,
-  msgs: [],        // bolle: { tipo:'utente'|'agente', testo, passi, diff, undo, annullato, errore, ts }
-  trascr: [],      // trascrizione normalizzata per ai-autoplan (vedi supabase/functions/ai-autoplan)
-  busy: false,
-  stop: false,
-  stato: null,     // { enabled, provider, model } | { errore }
-  undo: [],        // [{ id, snap, firmaDopo }]
-  passoCorrente: null
-};
-let _apcSeq = 0;
-
-try { _apc.aperta = localStorage.getItem('ap_chat_aperta') === '1'; } catch (_) {}
-
-function apcAperta() { return _apc.aperta; }
-
-/* ---------- persistenza per settimana ---------- */
-
-function _apcKey() { return _apWkKey(_ap.anno, _ap.week); }
-
-function _apcSalva() {
-  try {
-    const raw = localStorage.getItem(APC_STORAGE_KEY);
-    const all = raw ? JSON.parse(raw) : {};
-    /* I risultati degli strumenti sono voluminosi e servono al modello solo nel turno in
-       corso: nel salvataggio si accorciano. */
-    const trascr = _apc.trascr.slice(-APC_MAX_TRASCR).map(m => m.role !== 'tool' ? m : {
-      role: 'tool',
-      results: m.results.map(r => ({ id: r.id, name: r.name, result: _apcCorto(r.result, 1500) }))
-    });
-    const msgs = _apc.msgs.slice(-APC_MAX_MSGS).map(m => Object.assign({}, m, { undo: null }));
-    all[_apcKey()] = { msgs, trascr, ts: Date.now() };
-    const keys = Object.keys(all).sort((a, b) => (all[b].ts || 0) - (all[a].ts || 0));
-    keys.slice(6).forEach(k => delete all[k]);
-    localStorage.setItem(APC_STORAGE_KEY, JSON.stringify(all));
-  } catch (_) { /* storage pieno o bloccato: la chat resta in memoria */ }
-}
-
-function _apcCarica() {
-  _apc.msgs = [];
-  _apc.trascr = [];
-  _apc.undo = [];
-  try {
-    const all = JSON.parse(localStorage.getItem(APC_STORAGE_KEY) || '{}');
-    const s = all[_apcKey()];
-    if (s) {
-      _apc.msgs = Array.isArray(s.msgs) ? s.msgs : [];
-      _apc.trascr = Array.isArray(s.trascr) ? s.trascr : [];
-    }
-  } catch (_) {}
-  /* Un turno interrotto dal reload non è più "in corso" */
-  _apc.msgs.forEach(m => { (m.passi || []).forEach(p => { if (p.stato === 'corso') p.stato = 'errore'; }); });
-  _apc.anno = _ap.anno;
-  _apc.week = _ap.week;
-}
-
-function _apcCorto(v, n) {
-  const s = typeof v === 'string' ? v : JSON.stringify(v == null ? null : v);
-  return s.length > n ? s.slice(0, n) + '…' : (typeof v === 'string' ? v : JSON.parse(s));
-}
-
-/* Cambio settimana (da apInit): ogni settimana ha la sua conversazione */
-function apcOnSettimana() {
-  if (_apc.busy) _apc.stop = true;
-  _apcCarica();
-  if (_apc.aperta) { apcRender(); if (!_apc.stato) apcControllaStato(); }
-}
-
-/* ---------- apertura / chiusura ---------- */
-
-function apcToggle(forza) {
-  _apc.aperta = typeof forza === 'boolean' ? forza : !_apc.aperta;
-  try { localStorage.setItem('ap_chat_aperta', _apc.aperta ? '1' : '0'); } catch (_) {}
-  _apcSyncLayout();
-  apRender();
-  if (_apc.aperta) {
-    if (_apc.anno !== _ap.anno || _apc.week !== _ap.week) _apcCarica();
-    apcRender();
-    apcControllaStato();
-    setTimeout(() => { const t = document.getElementById('apc-input'); if (t) t.focus(); }, 60);
-  }
-}
-
-function _apcSyncLayout() {
-  const lay = document.getElementById('ap-layout');
-  if (lay) lay.classList.toggle('apc-aperta', _apc.aperta);
-}
-
-async function apcControllaStato(forza) {
-  if (_apc.stato && !_apc.stato.errore && !forza) { _apcRenderComposer(); return; }
-  if (!_sbClient || !_sbUser) { _apc.stato = { errore: 'Serve l\'accesso: l\'assistente usa il server.' }; apcRender(); return; }
-  try {
-    const { data, error } = await _sbClient.functions.invoke('ai-autoplan', { body: { action: 'status' } });
-    if (error) throw new Error(await _cpEdgeErr(error, 'ai-autoplan'));
-    _apc.stato = data || { enabled: false };
-  } catch (e) {
-    _apc.stato = { errore: 'Assistente non raggiungibile: ' + (e.message || e) };
-  }
-  apcRender();
-}
-
-/* ================= STRUMENTI (eseguiti sulla bozza locale) ================= */
-
-const APC_MODIFICANO = new Set(['aggiungi_cantieri', 'modifica_cantiere', 'rimuovi_cantiere',
-  'importa_settimana_precedente', 'imposta_precedenza', 'imposta_opzioni', 'calcola_bozza']);
-
-/* Riferimento a una riga: id ("r12") oppure nome del cantiere, se univoco */
-function _apcRiga(rif) {
-  const k = String(rif == null ? '' : rif).trim();
-  const perId = _ap.righe.find(r => r.id === k);
-  if (perId) return perId;
-  const n = _apNorm(k);
-  const perNome = _ap.righe.filter(r => _apNorm(r.cantiere) === n);
-  if (perNome.length === 1) return perNome[0];
-  if (perNome.length > 1) {
-    throw new Error('nome ambiguo, ' + perNome.length + ' righe: ' +
-      perNome.map(r => r.id + ' (' + (r.commessa || 'senza commessa') + (r.attivita ? ', ' + r.attivita : '') + ')').join('; ') + '. Usa l\'id.');
-  }
-  const simili = _ap.righe.filter(r => _apNorm(r.cantiere).includes(n) || n.includes(_apNorm(r.cantiere)));
-  if (simili.length === 1) return simili[0];
-  throw new Error('cantiere "' + k + '" non trovato nella lista' +
-    (simili.length ? ' (simili: ' + simili.map(r => r.id + ' ' + r.cantiere).join(', ') + ')' : ''));
-}
-
-function _apcNomeGiorni(arr) { return (arr || []).map(d => AP_GIORNI[d]).join(', '); }
-
-/* Commessa della richiesta -> nome esatto fra le attive, o errore con l'elenco */
-function _apcCommessa(v) {
-  const c = _apCommessaCanonica(v);
-  const valide = pwGetCommesseValide();
-  if (valide.includes(c)) return c;
-  throw new Error('commessa "' + v + '" non trovata fra le attive. Attive: ' + valide.slice(0, 40).join(' | '));
-}
-
-/* Nomi operatori -> nomi del pool; quelli non riconosciuti tornano come avviso */
-function _apcOperatori(lista, avvisi) {
-  const pool = new Set(_apOperatoriCatalogo());
-  const out = _apOperatoriCanonici(lista);
-  const ignoti = out.filter(n => !pool.has(n));
-  if (ignoti.length) avvisi.push('operatori non riconosciuti (ignorati dal calcolo): ' + ignoti.join(', '));
-  return out;
-}
-
-function _apcAggiorna(righeToccate) {
-  (righeToccate || []).forEach(id => _ap.toccate.add(id));
-  _apInvalidaBozza();
-  _apSalvaLocale();
-  apRender();
-}
-
-function _apcRigaPerAgente(r) {
-  const st = apStimaImpegno(r, _ap.modello);
-  const o = {
-    id: r.id, cantiere: r.cantiere, commessa: r.commessa || null, attivita: r.attivita || null,
-    priorita: 'P' + (r.priorita || 3)
-  };
-  if (r.km != null) o.km = r.km;
-  o.giorni = r.giorniManuali > 0 ? r.giorniManuali + ' (fissati a mano)' : st.giorni + ' (stima: ' + st.fonte + ')';
-  o.operatori = r.nOp || st.nOp;
-  if (r.scadenza) o.scadenza = r.scadenza;
-  if (r.dal) o.dal = r.dal;
-  const ge = _apGiorniLista(r.giorniEsclusi);
-  if (ge.length) o.giorni_esclusi = _apcNomeGiorni(ge);
-  if (r.preferiti.length) o.preferiti = r.preferiti;
-  if (r.esclusi.length) o.esclusi = r.esclusi;
-  if (r.skills.length) o.skill = r.skills;
-  if (r.note) o.note = r.note;
-  if (!r.includi) o.escluso_dal_calcolo = true;
-  if (!_apRigaCompleta(r)) o.incompleto = 'manca ' + (r.cantiere ? 'la commessa' : 'il cantiere');
-  else if (!pwGetCommesseValide().includes(r.commessa)) o.avviso = 'commessa non fra le attive';
-  return o;
-}
-
-function _apcEsitoPerAgente(b, id) {
-  const e = b.risultato.esiti[id];
-  const r = b.righeSolver.find(x => x.id === id);
-  if (!e || !r) return null;
-  const quando = b.risultato.assegnazioni.filter(a => a.rigaId === id)
-    .map(a => AP_GIORNI[a.giorno] + (a.quota < 1 ? '½' : '') + ': ' + a.operatori.join(' + ')).join(' · ');
-  const o = { id, cantiere: r.cantiere, stato: e.stato.replace('_', ' '), giorni: apFmtNum(e.giorniAssegnati) + '/' + apFmtNum(e.richiesti) };
-  if (quando) o.piano = quando;
-  if (e.oltreScadenza) o.oltre_scadenza = true;
-  const note = [].concat(e.motivi, e.avvisi);
-  if (note.length) o.note = note;
-  return o;
-}
-
-function _apcRiepilogo(b) {
-  const es = Object.values(b.risultato.esiti);
-  const n = st => es.filter(e => e.stato === st).length;
-  return {
-    assegnati: n('assegnato'), parziali: n('parziale'), non_assegnati: n('non_assegnato'),
-    oltre_scadenza: es.filter(e => e.oltreScadenza).length,
-    celle: b.risultato.assegnazioni.reduce((t, a) => t + a.operatori.length, 0)
-  };
-}
-
-const APC_TOOLS = {
-  leggi_bozza() {
-    const b = _ap.bozza;
-    let giorni;
-    try { giorni = b ? b.ctxGiorni : apBuildContesto().giorni; } catch (_) { giorni = []; }
-    const out = {
-      settimana: _ap.week, anno: _ap.anno,
-      giorni_pianificabili: _apcNomeGiorni(giorni) || 'nessuno (settimana passata)',
-      opzioni: { sabato: !!_ap.opzioni.sabato, meteo: !!_ap.opzioni.meteo, max_km: _ap.opzioni.maxKm || 250 },
-      storico: _ap.modelloInfo || '',
-      commesse_attive: pwGetCommesseValide(),
-      cantieri: _ap.righe.map(_apcRigaPerAgente),
-      precedenze: _ap.precedenze.map(([a, c]) => _apNomeRiga(null, a) + ' prima di ' + _apNomeRiga(null, c))
-    };
-    if (!b) {
-      out.bozza = null;
-      out.nota_bozza = _ap.righe.length ? 'bozza non calcolata o non più aggiornata dopo le modifiche: chiama calcola_bozza' : 'lista vuota';
-      return out;
-    }
-    const res = b.risultato;
-    out.bozza = {
-      riepilogo: _apcRiepilogo(b),
-      esiti: b.righeSolver.map(r => _apcEsitoPerAgente(b, r.id)).filter(Boolean),
-      migliorie: res.miglioramenti.map(m => _apNomeRiga(b, m.rigaId) + ' anticipato prima di ' + _apNomeRiga(b, m.primaDi) + ': ' + _apEffettiTesto(b, m.effetti)),
-      suggerimenti: res.suggerimenti.map(sg => _apNomeRiga(b, sg.rigaId) + ' entra (+' + apFmtNum(sg.guadagno) + ' gg) se passa davanti a ' +
-        _apNomeRiga(b, sg.primaDi) + ': ' + _apEffettiTesto(b, sg.effetti) + ' → imposta_precedenza(prima="' + sg.rigaId + '", dopo="' + sg.primaDi + '")'),
-      operatori_su_piu_commesse: res.operatoriSuPiuCommesse,
-      distanze: b.infoDistanze, meteo: b.infoMeteo
-    };
-    return out;
-  },
-
-  leggi_operatori(args) {
-    const b = _ap.bozza;
-    const ctx = b ? b.ctx : apBuildContesto();
-    const filtroNome = _apNorm(args && args.nome);
-    const libero = args && args.libero_il != null && args.libero_il !== '' ? parseInt(args.libero_il, 10) : null;
-    const skill = _apNorm(args && args.skill);
-    const inBozza = {};
-    if (b) b.risultato.assegnazioni.forEach(a => {
-      const r = b.righeSolver.find(x => x.id === a.rigaId);
-      a.operatori.forEach(n => { (inBozza[n] = inBozza[n] || []).push(AP_GIORNI[a.giorno] + ' ' + (r ? r.cantiere : a.rigaId)); });
-    });
-    const ETICHETTA = { libero: 'libero', ferie: 'ferie', dw: 'doppia week', occupato: 'in Griglia', sabato: 'sabato non previsto' };
-    let ops = ctx.operatori.filter(o => {
-      if (filtroNome && !_apNorm(o.nome).includes(filtroNome)) return false;
-      if (skill && !Array.from(o.skills).some(s => _apNorm(s).includes(skill))) return false;
-      if (libero != null && ((ctx.disp[o.nome] || {})[libero] || 'libero') !== 'libero') return false;
-      return true;
-    });
-    const totale = ops.length;
-    ops = ops.slice(0, 60);
-    return {
-      totale, mostrati: ops.length,
-      operatori: ops.map(o => {
-        const x = {
-          nome: o.nome,
-          giorni: ctx.giorni.map(d => AP_GIORNI[d] + ' ' + (ETICHETTA[(ctx.disp[o.nome] || {})[d] || 'libero'] || '?')).join(', ')
-        };
-        if (o.base && o.base.label) x.residenza = o.base.label;
-        if (o.skills.size) x.skill = Array.from(o.skills);
-        if (o.commessaSettimana) x.commessa_settimana = o.commessaSettimana;
-        if (o.dwDisponibile) x.doppia_week = 'disponibile (anche sabato)';
-        if (inBozza[o.nome]) x.in_bozza = inBozza[o.nome].join(', ');
-        return x;
-      })
-    };
-  },
-
-  spiega_cantiere(args) {
-    const r = _apcRiga(args.rif);
-    const b = _ap.bozza;
-    if (!b || !b.ctx) return { error: 'bozza non calcolata o non aggiornata: chiama prima calcola_bozza' };
-    if (!b.righeSolver.some(x => x.id === r.id)) return { error: r.cantiere + ' non è nel calcolo (escluso o incompleto)' };
-    const d = apDiagnostica(b.ctx, b.righeSolver, b.risultato, r.id);
-    const rs = d.riga;
-    const ST = { ferie: 'ferie', dw: 'doppia week', occupato: 'già in Griglia', sabato: 'sabato non previsto' };
-    return {
-      cantiere: rs.cantiere, commessa: rs.commessa, priorita: 'P' + rs.priorita,
-      esito: _apcEsitoPerAgente(b, r.id),
-      stima: apFmtNum(rs.giorni) + ' gg × ' + rs.nOp + ' operatori — ' + rs.stimaFonte,
-      localizzato: !!rs.geo,
-      raggio_max_km: d.maxKm,
-      attestati_richiesti: rs.attestati,
-      per_giorno: d.giorni.map(g => {
-        const o = { giorno: AP_GIORNI[g.giorno] };
-        if (g.fuoriFinestra) o.fuori_finestra = 'giorno escluso da "dal" o giorni_esclusi';
-        if (g.meteo) o.meteo = g.meteo;
-        o.liberi = g.libero;
-        const nd = Object.keys(g.stati).map(k => g.stati[k] + ' ' + (ST[k] || k));
-        if (nd.length) o.non_disponibili = nd.join(', ');
-        const scart = [];
-        if (g.fuoriRaggio) scart.push(g.fuoriRaggio + ' oltre ' + d.maxKm + ' km');
-        if (g.attestati) scart.push(g.attestati + ' senza attestati');
-        if (g.esclusiMano) scart.push(g.esclusiMano + ' esclusi a mano');
-        if (scart.length) o.scartati = scart.join(', ');
-        if (g.usatiQui) o.assegnati_qui = g.usatiQui;
-        if (g.presiAltrove.length) o.vicini_presi_da_altri = g.presiAltrove.map(v => v.nome + (v.km != null ? ' (' + v.km + ' km)' : '') + ' → ' + v.cantieri.join(', ')).join('; ');
-        if (g.restanoLiberi.length) o.idonei_rimasti_liberi = g.restanoLiberi.map(v => v.nome + (v.km != null ? ' (' + v.km + ' km)' : '')).join('; ');
-        return o;
-      }),
-      nota: 'distanze indicative, misurate dalla residenza o dall\'ultima posizione in Griglia'
-    };
-  },
-
-  aggiungi_cantieri(args) {
-    const lista = Array.isArray(args.cantieri) ? args.cantieri : [];
-    const aggiunti = [], scartati = [], avvisi = [];
-    const visti = new Set(_ap.righe.map(r => _apNorm(r.cantiere) + '|' + _apNorm(r.commessa) + '|' + _apNorm(r.attivita)));
-    lista.forEach(c => {
-      try {
-        if (!c || !String(c.cantiere || '').trim()) throw new Error('manca il cantiere');
-        if (!String(c.commessa || '').trim()) throw new Error('manca la commessa');
-        const commessa = _apcCommessa(c.commessa);
-        const r = apNormRiga({
-          cantiere: c.cantiere, commessa, attivita: c.attivita, km: c.km, giorni: c.giorni, nOp: c.operatori,
-          priorita: parseInt(c.priorita, 10) || 3, scadenza: c.scadenza, dal: c.dal, note: c.note,
-          giorniEsclusi: c.giorni_esclusi
-        }, 'assistente');
-        r.preferiti = _apcOperatori(c.preferiti, avvisi);
-        r.esclusi = _apcOperatori(c.esclusi, avvisi).filter(n => !r.preferiti.includes(n));
-        const k = _apNorm(r.cantiere) + '|' + _apNorm(r.commessa) + '|' + _apNorm(r.attivita);
-        if (visti.has(k)) throw new Error('già in lista');
-        visti.add(k);
-        _ap.righe.push(r);
-        aggiunti.push(r);
-      } catch (e) {
-        scartati.push((c && c.cantiere ? c.cantiere : '?') + ': ' + e.message);
-      }
-    });
-    if (aggiunti.length) _apcAggiorna(aggiunti.map(r => r.id));
-    return { aggiunti: aggiunti.map(r => r.id + ' ' + r.cantiere), scartati, avvisi, nota: aggiunti.length ? 'ricorda calcola_bozza' : undefined };
-  },
-
-  modifica_cantiere(args) {
-    const r = _apcRiga(args.rif);
-    const cambi = [], avvisi = [];
-    const set = (campo, etichetta, nuovo, fmt) => {
-      const f = fmt || (v => (v == null || v === '' || (Array.isArray(v) && !v.length) ? '—' : (Array.isArray(v) ? v.join(', ') : String(v))));
-      if (JSON.stringify(r[campo]) === JSON.stringify(nuovo)) return;
-      cambi.push(etichetta + ': ' + f(r[campo]) + ' → ' + f(nuovo));
-      r[campo] = nuovo;
-    };
-    const has = k => Object.prototype.hasOwnProperty.call(args, k);
-    if (has('cantiere') && String(args.cantiere).trim()) set('cantiere', 'cantiere', String(args.cantiere).trim());
-    if (has('commessa')) set('commessa', 'commessa', _apcCommessa(args.commessa));
-    if (has('attivita')) set('attivita', 'attività', String(args.attivita || '').trim());
-    if (has('km')) set('km', 'km', _apNum(args.km));
-    if (has('giorni')) { const g = _apNum(args.giorni); set('giorniManuali', 'giorni', g > 0 ? g : null, v => v > 0 ? apFmtNum(v) : 'stima'); }
-    if (has('operatori')) { const n = _apNum(args.operatori); set('nOp', 'operatori', n ? Math.max(1, Math.round(n)) : null, v => v || 'stima'); }
-    if (has('priorita')) { const p = parseInt(args.priorita, 10); if (p >= 1 && p <= 3) set('priorita', 'priorità', p, v => 'P' + v); }
-    if (has('scadenza')) set('scadenza', 'scadenza', _apData(args.scadenza));
-    if (has('dal')) set('dal', 'dal', _apData(args.dal));
-    if (has('giorni_esclusi')) set('giorniEsclusi', 'mai di', _apGiorniLista(args.giorni_esclusi), v => _apcNomeGiorni(v) || '—');
-    if (has('preferiti')) {
-      const pref = _apcOperatori(args.preferiti, avvisi);
-      set('preferiti', 'preferiti', pref);
-      if (pref.length) r.esclusi = r.esclusi.filter(n => !pref.includes(n));
-    }
-    if (has('esclusi')) {
-      const escl = _apcOperatori(args.esclusi, avvisi);
-      set('esclusi', 'esclusi', escl);
-      if (escl.length) r.preferiti = r.preferiti.filter(n => !escl.includes(n));
-    }
-    if (has('note')) set('note', 'note', String(args.note || '').trim());
-    if (has('includi')) set('includi', 'incluso', !!args.includi, v => v ? 'sì' : 'no');
-    if (cambi.length) _apcAggiorna([r.id]);
-    return { cantiere: r.cantiere, modifiche: cambi.length ? cambi : ['nessuna: valori già così'], avvisi };
-  },
-
-  rimuovi_cantiere(args) {
-    const r = _apcRiga(args.rif);
-    _ap.righe = _ap.righe.filter(x => x !== r);
-    _ap.precedenze = _ap.precedenze.filter(([x, y]) => x !== r.id && y !== r.id);
-    _apcAggiorna([]);
-    return { rimosso: r.cantiere };
-  },
-
-  importa_settimana_precedente() {
-    const { prev, nuove } = _apRigheSettimanaPrecedente();
-    if (!nuove.length) return { aggiunti: [], nota: 'la settimana ' + prev.week + ' non ha cantieri nuovi da riportare' };
-    _ap.righe = _ap.righe.concat(nuove);
-    _apcAggiorna(nuove.map(r => r.id));
-    return { aggiunti: nuove.map(r => r.id + ' ' + r.cantiere + ' (' + r.commessa + ')'), nota: 'senza km: stima a 1 giorno finché non si indicano km o giorni' };
-  },
-
-  imposta_precedenza(args) {
-    const a = _apcRiga(args.prima), c = _apcRiga(args.dopo);
-    if (a === c) return { error: 'serve due cantieri diversi' };
-    _ap.precedenze = _ap.precedenze.filter(([x, y]) => !(x === a.id && y === c.id) && !(x === c.id && y === a.id));
-    if (args.attiva !== false) _ap.precedenze.push([a.id, c.id]);
-    _apcAggiorna([a.id, c.id]);
-    return { precedenza: a.cantiere + ' prima di ' + c.cantiere + (args.attiva === false ? ' (tolta)' : '') };
-  },
-
-  imposta_opzioni(args) {
-    const cambi = [];
-    if (typeof args.sabato === 'boolean' && args.sabato !== !!_ap.opzioni.sabato) { _ap.opzioni.sabato = args.sabato; cambi.push('sabato ' + (args.sabato ? 'sì' : 'no')); }
-    if (typeof args.meteo === 'boolean' && args.meteo !== !!_ap.opzioni.meteo) { _ap.opzioni.meteo = args.meteo; cambi.push('meteo ' + (args.meteo ? 'considerato' : 'ignorato')); }
-    const mk = parseInt(args.max_km, 10);
-    if (mk >= 20 && mk <= 1000 && mk !== _ap.opzioni.maxKm) { _ap.opzioni.maxKm = mk; cambi.push('raggio ' + mk + ' km'); }
-    if (cambi.length) _apcAggiorna([]);
-    return { modifiche: cambi.length ? cambi : ['nessuna'] };
-  },
-
-  async calcola_bozza() {
-    const prima = _ap.bozza || _ap.ultimaBozza;
-    const res = await apCalcola({ silenzioso: true });
-    if (!res || !res.ok) return { error: (res && res.errore) || 'calcolo non riuscito' };
-    const b = _ap.bozza;
-    const out = { riepilogo: _apcRiepilogo(b), esiti: b.righeSolver.map(r => _apcEsitoPerAgente(b, r.id)).filter(Boolean) };
-    if (b.risultato.suggerimenti.length) out.suggerimenti = APC_TOOLS.leggi_bozza().bozza.suggerimenti;
-    if (prima) {
-      const d = _apcDiffBozze(prima, b);
-      out.rispetto_a_prima = d.righe.length ? d.righe.map(x => x.testo) : ['nessun cambio negli esiti'];
-      out.celle = '+' + d.celleAggiunte + ' −' + d.celleTolte;
-    }
-    return out;
-  }
-};
-
-/* ================= DIFFERENZE E ANNULLA ================= */
-
-function _apcSnapshot() {
-  return {
-    righe: JSON.parse(JSON.stringify(_ap.righe)),
-    opzioni: Object.assign({}, _ap.opzioni),
-    precedenze: JSON.parse(JSON.stringify(_ap.precedenze)),
-    bozza: _ap.bozza
-  };
-}
-
-function _apcFirma() {
-  return JSON.stringify([_ap.righe, _ap.opzioni, _ap.precedenze, _ap.bozza ? _ap.bozza.creata : 0]);
-}
-
-function _apcCelle(b) {
-  const s = new Set();
-  if (b) b.risultato.assegnazioni.forEach(a => a.operatori.forEach(n => s.add(n + '|' + a.giorno + '|' + a.rigaId)));
-  return s;
-}
-
-/* Esiti e celle fra due bozze, riga per riga */
-function _apcDiffBozze(prima, dopo) {
-  const out = { righe: [], celleAggiunte: 0, celleTolte: 0, nuove: new Set() };
-  const cp = _apcCelle(prima), cd = _apcCelle(dopo);
-  cd.forEach(k => { if (!cp.has(k)) { out.celleAggiunte++; out.nuove.add(k); } });
-  cp.forEach(k => { if (!cd.has(k)) out.celleTolte++; });
-  const ST = { assegnato: 'assegnato', parziale: 'parziale', non_assegnato: 'non assegnato' };
-  dopo.righeSolver.forEach(r => {
-    const a = prima && prima.risultato.esiti[r.id], b = dopo.risultato.esiti[r.id];
-    if (!b) return;
-    if (!a) { out.righe.push({ id: r.id, verso: b.stato === 'assegnato' ? 'su' : 'giu', testo: r.cantiere + ': ' + ST[b.stato] + ' (' + apFmtNum(b.giorniAssegnati) + '/' + apFmtNum(b.richiesti) + ' gg)' }); return; }
-    const dg = b.giorniAssegnati - a.giorniAssegnati;
-    if (a.stato === b.stato && Math.abs(dg) < 1e-6 && !!a.oltreScadenza === !!b.oltreScadenza) return;
-    let t = r.cantiere + ': ';
-    t += a.stato !== b.stato ? ST[a.stato] + ' → ' + ST[b.stato] : apFmtNum(a.giorniAssegnati) + ' → ' + apFmtNum(b.giorniAssegnati) + ' gg';
-    if (b.oltreScadenza && !a.oltreScadenza) t += ' (oltre la scadenza)';
-    if (!b.oltreScadenza && a.oltreScadenza) t += ' (ora entro la scadenza)';
-    out.righe.push({ id: r.id, verso: dg > 1e-6 || (a.oltreScadenza && !b.oltreScadenza) ? 'su' : (dg < -1e-6 || (b.oltreScadenza && !a.oltreScadenza) ? 'giu' : 'pari'), testo: t });
-  });
-  return out;
-}
-
-/* Riassunto di cosa ha cambiato un turno: lista (righe/opzioni/precedenze) e bozza */
-function _apcDiffTurno(snap) {
-  const d = { lista: [], bozza: null, kpi: null };
-  const primaById = {};
-  snap.righe.forEach(r => { primaById[r.id] = r; });
-  const oraIds = new Set(_ap.righe.map(r => r.id));
-  _ap.righe.forEach(r => {
-    const p = primaById[r.id];
-    if (!p) { d.lista.push({ tipo: 'add', testo: r.cantiere + (r.commessa ? ' · ' + r.commessa : '') + ' · P' + r.priorita }); return; }
-    const c = [];
-    if (p.priorita !== r.priorita) c.push('P' + p.priorita + ' → P' + r.priorita);
-    if (p.commessa !== r.commessa) c.push('commessa ' + r.commessa);
-    if (p.attivita !== r.attivita) c.push('attività ' + (r.attivita || '—'));
-    if (p.km !== r.km) c.push('km ' + (r.km == null ? '—' : apFmtNum(r.km)));
-    if (p.giorniManuali !== r.giorniManuali) c.push(r.giorniManuali > 0 ? apFmtNum(r.giorniManuali) + ' gg a mano' : 'giorni da stima');
-    if (p.nOp !== r.nOp) c.push((r.nOp || 'stima') + ' operatori');
-    if (p.scadenza !== r.scadenza) c.push(r.scadenza ? 'entro ' + formatDate(new Date(r.scadenza + 'T00:00:00Z')) : 'senza scadenza');
-    if (p.dal !== r.dal) c.push(r.dal ? 'dal ' + formatDate(new Date(r.dal + 'T00:00:00Z')) : 'senza "dal"');
-    if (JSON.stringify(_apGiorniLista(p.giorniEsclusi)) !== JSON.stringify(_apGiorniLista(r.giorniEsclusi))) {
-      const g = _apGiorniLista(r.giorniEsclusi);
-      c.push(g.length ? 'mai di ' + _apcNomeGiorni(g) : 'tutti i giorni');
-    }
-    if (JSON.stringify(p.preferiti) !== JSON.stringify(r.preferiti)) c.push(r.preferiti.length ? 'preferiti ' + r.preferiti.map(n => n.split(' ')[0]).join(', ') : 'nessun preferito');
-    if (JSON.stringify(p.esclusi) !== JSON.stringify(r.esclusi)) c.push(r.esclusi.length ? 'esclusi ' + r.esclusi.map(n => n.split(' ')[0]).join(', ') : 'nessun escluso');
-    if (p.includi !== r.includi) c.push(r.includi ? 'di nuovo incluso' : 'escluso dal calcolo');
-    if (p.cantiere !== r.cantiere) c.unshift('rinominato da ' + p.cantiere);
-    if (c.length) d.lista.push({ tipo: 'mod', testo: r.cantiere + ': ' + c.join(', ') });
-  });
-  snap.righe.forEach(r => { if (!oraIds.has(r.id)) d.lista.push({ tipo: 'del', testo: r.cantiere }); });
-  const op = [];
-  if (!!snap.opzioni.sabato !== !!_ap.opzioni.sabato) op.push(_ap.opzioni.sabato ? 'anche sabato' : 'niente sabato');
-  if (!!snap.opzioni.meteo !== !!_ap.opzioni.meteo) op.push(_ap.opzioni.meteo ? 'meteo considerato' : 'meteo ignorato');
-  if (snap.opzioni.maxKm !== _ap.opzioni.maxKm) op.push('raggio ' + _ap.opzioni.maxKm + ' km');
-  if (op.length) d.lista.push({ tipo: 'opz', testo: op.join(', ') });
-  const k = p => p[0] + '>' + p[1];
-  const pp = new Set(snap.precedenze.map(k)), po = new Set(_ap.precedenze.map(k));
-  _ap.precedenze.forEach(p => { if (!pp.has(k(p))) d.lista.push({ tipo: 'prec', testo: _apNomeRiga(null, p[0]) + ' prima di ' + _apNomeRiga(null, p[1]) }); });
-  snap.precedenze.forEach(p => { if (!po.has(k(p))) d.lista.push({ tipo: 'del', testo: 'precedenza ' + _apNomeRiga(null, p[0]) + ' → ' + _apNomeRiga(null, p[1]) }); });
-
-  const b = _ap.bozza;
-  if (b && b !== snap.bozza) {
-    const db = _apcDiffBozze(snap.bozza, b);
-    d.bozza = { righe: db.righe, piu: db.celleAggiunte, meno: db.celleTolte, confronto: !!snap.bozza };
-    /* Celle da evidenziare nell'anteprima: solo se c'era una bozza con cui confrontare */
-    b.nuove = snap.bozza ? db.nuove : null;
-    const r1 = _apcRiepilogo(b), r0 = snap.bozza ? _apcRiepilogo(snap.bozza) : null;
-    d.kpi = ['assegnati', 'parziali', 'non_assegnati'].map(key => ({ key, v: r1[key], delta: r0 ? r1[key] - r0[key] : null }));
-  } else if (!b && snap.bozza && d.lista.length) {
-    d.bozza = { daRicalcolare: true };
-  }
-  return (d.lista.length || d.bozza) ? d : null;
-}
-
-async function apcAnnulla(i) {
-  const m = _apc.msgs[i];
-  const top = _apc.undo[_apc.undo.length - 1];
-  if (!m || !m.undo || !top || top.id !== m.undo || _apc.busy) return;
-  if (_apcFirma() !== top.firmaDopo) {
-    const ok = await showConfirmAsync('Dopo questa risposta la lista è stata modificata ancora. Annullando torna com\'era PRIMA della risposta e anche le modifiche successive andranno perse.', 'Annulla comunque');
-    if (!ok) return;
-  }
-  const s = top.snap;
-  _ap.righe = s.righe;
-  _ap.opzioni = s.opzioni;
-  _ap.precedenze = s.precedenze;
-  _ap.bozza = s.bozza;
-  if (_ap.bozza) _ap.bozza.nuove = null;
-  _ap.toccate = new Set();
-  _apc.undo.pop();
-  m.annullato = true;
-  /* Il modello deve saperlo, altrimenti al turno dopo ragiona sulla bozza che non c'è più */
-  _apc.trascr.push({ role: 'user', text: '[Nota di sistema: l\'utente ha annullato tutte le modifiche della tua ultima risposta; la bozza è tornata allo stato precedente.]' });
-  _apSalvaLocale();
-  _apcSalva();
-  apRender();
-  apcRender();
-}
-
-/* ================= CICLO DELL'AGENTE ================= */
-
-function _apcEtichetta(nome, args) {
-  const nr = rif => { try { return _apcRiga(rif).cantiere; } catch (_) { return String(rif || '?'); } };
-  switch (nome) {
-    case 'leggi_bozza': return 'Leggo la bozza';
-    case 'leggi_operatori': return 'Controllo le disponibilità' + (args && args.nome ? ' di ' + args.nome : (args && args.libero_il != null ? ' di ' + (AP_GIORNI[args.libero_il] || '') : ''));
-    case 'spiega_cantiere': return 'Analizzo ' + nr(args && args.rif);
-    case 'aggiungi_cantieri': { const n = (args && args.cantieri || []).length; return 'Aggiungo ' + (n === 1 ? args.cantieri[0].cantiere : n + ' cantieri'); }
-    case 'modifica_cantiere': return 'Modifico ' + nr(args && args.rif);
-    case 'rimuovi_cantiere': return 'Tolgo ' + nr(args && args.rif);
-    case 'importa_settimana_precedente': return 'Riporto i cantieri della settimana precedente';
-    case 'imposta_precedenza': return (args && args.attiva === false ? 'Tolgo la precedenza ' : 'Metto ') + nr(args && args.prima) + ' prima di ' + nr(args && args.dopo);
-    case 'imposta_opzioni': return 'Aggiorno le opzioni';
-    case 'calcola_bozza': return 'Ricalcolo la bozza';
-    default: return nome;
-  }
-}
-
-const APC_ICONA = {
-  leggi_bozza: '📋', leggi_operatori: '👷', spiega_cantiere: '🔎', aggiungi_cantieri: '＋', modifica_cantiere: 'Δ',
-  rimuovi_cantiere: '−', importa_settimana_precedente: '↩', imposta_precedenza: '⇅', imposta_opzioni: '⚙︎', calcola_bozza: '⟳'
-};
-
-/* Avanzamento del calcolo (da _apStatus): mostrato sotto il passo in corso */
-function apcProgresso(msg) {
-  const p = _apc.passoCorrente;
-  if (!p || !_apc.busy) return;
-  p.dettaglio = msg || '';
-  const el = document.querySelector('[data-apc-passo="' + p.id + '"] .apc-passo-det');
-  if (el) el.textContent = p.dettaglio;
-}
-
-async function apcInvia(testoForzato) {
-  if (_apc.busy) return;
-  const input = document.getElementById('apc-input');
-  const testo = String(testoForzato != null ? testoForzato : (input ? input.value : '')).trim();
-  if (!testo) return;
-  if (!_apc.stato || _apc.stato.errore || !_apc.stato.enabled || _apc.stato.has_key === false) {
-    await apcControllaStato(true);
-    if (!_apc.stato || !_apc.stato.enabled || _apc.stato.has_key === false) return;
-  }
-  if (input && testoForzato == null) { input.value = ''; _apcAutoAltezza(input); }
-
-  const anno = _ap.anno, week = _ap.week;
-  _apc.msgs.push({ tipo: 'utente', testo, ts: Date.now() });
-  _apc.trascr.push({ role: 'user', text: testo });
-  const bolla = { tipo: 'agente', testo: '', passi: [], diff: null, undo: null, ts: Date.now() };
-  _apc.msgs.push(bolla);
-  const snap = _apcSnapshot();
-  _ap.toccate = new Set();
-  if (_ap.bozza) _ap.bozza.nuove = null;
-  _apc.busy = true;
-  _apc.stop = false;
-  apRender();
-  apcRender(true);
-
-  let passi = 0;
-  try {
-    while (passi < APC_MAX_PASSI) {
-      passi++;
-      const { data, error } = await _sbClient.functions.invoke('ai-autoplan', {
-        body: { action: 'step', anno, settimana: week, oggi: meteoTodayISO(), messages: _apc.trascr.slice(-APC_MAX_TRASCR) }
-      });
-      if (error) throw new Error(await _cpEdgeErr(error, 'ai-autoplan'));
-      if (!data || data.error) throw new Error((data && data.error) || 'nessuna risposta');
-      if (_ap.anno !== anno || _ap.week !== week) throw new Error('settimana cambiata durante la risposta: mi fermo');
-      const m = data.message || {};
-      const calls = Array.isArray(m.toolCalls) ? m.toolCalls : [];
-      if (!calls.length) {
-        _apc.trascr.push({ role: 'assistant', text: m.text || '' });
-        bolla.testo = m.text || 'Fatto.';
-        break;
-      }
-      if (_apc.stop) break; // non si eseguono strumenti dopo "Ferma": la richiesta non entra in trascrizione
-      _apc.trascr.push({ role: 'assistant', text: m.text || '', toolCalls: calls });
-      if (m.text) bolla.passi.push({ id: 'n' + (++_apcSeq), nota: m.text });
-      const risultati = [];
-      for (const c of calls) {
-        const passo = { id: 'p' + (++_apcSeq), nome: c.name, etichetta: _apcEtichetta(c.name, c.args || {}), stato: 'corso', dettaglio: '' };
-        bolla.passi.push(passo);
-        _apc.passoCorrente = passo;
-        apcRender(true);
-        let result;
-        try {
-          const fn = APC_TOOLS[c.name];
-          if (!fn) throw new Error('strumento sconosciuto');
-          result = await fn(c.args || {});
-          if (result && result.error) { passo.stato = 'errore'; passo.dettaglio = result.error; }
-          else { passo.stato = 'ok'; passo.dettaglio = _apcEsitoBreve(c.name, result); }
-        } catch (e) {
-          result = { error: e.message || String(e) };
-          passo.stato = 'errore';
-          passo.dettaglio = result.error;
-        }
-        _apc.passoCorrente = null;
-        risultati.push({ id: c.id, name: c.name, result });
-      }
-      _apc.trascr.push({ role: 'tool', results: risultati });
-      apcRender(true);
-      if (_apc.stop) { bolla.testo = bolla.testo || 'Fermato su tua richiesta.'; break; }
-    }
-    if (!bolla.testo) bolla.testo = passi >= APC_MAX_PASSI
-      ? 'Mi sono fermato dopo ' + APC_MAX_PASSI + ' passaggi: la richiesta forse va divisa in parti più piccole.'
-      : 'Fermato su tua richiesta.';
-  } catch (e) {
-    bolla.errore = e.message || String(e);
-    /* Una richiesta di strumenti rimasta senza risultati renderebbe invalida la trascrizione */
-    const ult = _apc.trascr[_apc.trascr.length - 1];
-    if (ult && ult.role === 'assistant' && ult.toolCalls && ult.toolCalls.length) _apc.trascr.pop();
-  } finally {
-    _apc.busy = false;
-    _apc.stop = false;
-    _apc.passoCorrente = null;
-  }
-
-  if (_ap.anno === anno && _ap.week === week) {
-    bolla.diff = _apcDiffTurno(snap);
-    if (bolla.diff) {
-      bolla.undo = 'u' + (++_apcSeq);
-      _apc.undo.push({ id: bolla.undo, snap, firmaDopo: _apcFirma() });
-    }
-  }
-  _apc.trascr = _apc.trascr.slice(-APC_MAX_TRASCR);
-  _apcSalva();
-  apRender();
-  apcRender(true);
-  if (!bolla.errore && typeof aiLogHistory === 'function') aiLogHistory('[Auto-pianifica w' + week + '] ' + testo, bolla.testo);
-}
-
-function _apcEsitoBreve(nome, r) {
-  if (!r) return '';
-  if (nome === 'calcola_bozza' && r.riepilogo) {
-    const x = r.riepilogo;
-    return x.assegnati + ' assegnati · ' + x.parziali + ' parziali · ' + x.non_assegnati + ' non assegnati';
-  }
-  if (nome === 'aggiungi_cantieri') return (r.aggiunti.length ? r.aggiunti.length + ' aggiunti' : 'nessuno aggiunto') + (r.scartati.length ? ' · ' + r.scartati.length + ' scartati' : '');
-  if (nome === 'modifica_cantiere') return (r.modifiche || []).join(' · ');
-  if (nome === 'importa_settimana_precedente') return r.aggiunti.length ? r.aggiunti.length + ' cantieri' : (r.nota || '');
-  if (nome === 'leggi_operatori') return r.totale + ' operatori';
-  if (nome === 'leggi_bozza') return (r.cantieri || []).length + ' cantieri' + (r.bozza ? ' · bozza calcolata' : '');
-  if (nome === 'spiega_cantiere' && r.esito) return r.esito.stato + ' ' + r.esito.giorni + ' gg';
-  if (nome === 'imposta_precedenza') return r.precedenza || '';
-  if (nome === 'imposta_opzioni') return (r.modifiche || []).join(', ');
-  return '';
-}
-
-function apcFerma() { if (_apc.busy) { _apc.stop = true; apcRender(); } }
-
-async function apcNuova() {
-  if (_apc.busy) return;
-  if (_apc.msgs.length) {
-    const ok = await showConfirmAsync('Iniziare una nuova conversazione? La lista e la bozza restano come sono; si perde solo la cronologia della chat (e la possibilità di annullare le risposte).', 'Nuova conversazione');
-    if (!ok) return;
-  }
-  _apc.msgs = [];
-  _apc.trascr = [];
-  _apc.undo = [];
-  _ap.toccate = new Set();
-  if (_ap.bozza) _ap.bozza.nuove = null;
-  _apcSalva();
-  apRender();
-  apcRender();
-}
-
-/* "✦ Perché?" dall'elenco della bozza */
-function apcPerche(el) {
-  const id = el && el.dataset.apPerche;
-  const b = _ap.bozza;
-  const r = b && b.righeSolver.find(x => x.id === id);
-  if (!r) return;
-  const e = b.risultato.esiti[id];
-  const cosa = e.stato === 'non_assegnato' ? 'non è assegnato' : (e.stato === 'parziale' ? 'è solo parziale' : 'finisce oltre la scadenza');
-  if (!_apc.aperta) apcToggle(true);
-  apcInvia('Perché ' + r.cantiere + ' ' + cosa + '? Cosa posso fare?');
-}
-
-function apcVediBozza() {
-  const el = document.getElementById('ap-bozza-box');
-  if (!el) return;
-  el.scrollIntoView({ behavior: 'smooth', block: 'start' });
-  el.classList.remove('apc-flash');
-  void el.offsetWidth;
-  el.classList.add('apc-flash');
-}
-
-/* ================= RENDER ================= */
-
-/* Suggerimenti di partenza, costruiti sullo stato reale della bozza */
-function _apcSuggerimenti() {
-  const out = [];
-  const b = _ap.bozza;
-  if (!_ap.righe.length) {
-    out.push('Riporta i cantieri della settimana precedente');
-    const c = pwGetCommesseValide()[0];
-    if (c) out.push('Aggiungi Ivrea per ' + c + ': 12 km di WO fognatura, P1 entro giovedì');
-    out.push('Chi è libero tutta la settimana?');
-    return out;
-  }
-  if (!b) {
-    out.push('Calcola la bozza e dimmi cosa non torna');
-    if (_ap.righe.some(r => r.scadenza)) out.push('Metti in P1 i cantieri con scadenza in questa settimana');
-    out.push('Chi è libero tutta la settimana?');
-    return out;
-  }
-  const es = b.righeSolver.map(r => ({ r, e: b.risultato.esiti[r.id] }));
-  const ko = es.find(x => x.e.stato === 'non_assegnato') || es.find(x => x.e.stato === 'parziale');
-  if (ko) out.push('Perché ' + ko.r.cantiere + ' ' + (ko.e.stato === 'non_assegnato' ? 'non è assegnato' : 'è parziale') + '?');
-  if (es.some(x => x.r.priorita === 1 && x.e.stato !== 'assegnato')) out.push('Come faccio entrare tutti i P1?');
-  if (b.risultato.suggerimenti.length) out.push('Conviene applicare i suggerimenti? Spiegami il costo');
-  out.push('Riepiloga la bozza per squadra');
-  if (!_ap.opzioni.sabato) out.push('Cosa cambia se lavoriamo anche sabato?');
-  return out.slice(0, 4);
-}
-
-function _apcTempo(ts) {
-  if (!ts) return '';
-  return new Date(ts).toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' });
-}
-
-function _apcPassiHtml(m, inCorso) {
-  const passi = m.passi || [];
-  if (!passi.length) return '';
-  const nOk = passi.filter(p => !p.nota).length;
-  const righe = passi.map(p => {
-    if (p.nota) return '<div class="apc-nota">' + aiFormatMarkdown(p.nota) + '</div>';
-    const ic = p.stato === 'corso' ? '<span class="apc-spin"></span>' : (p.stato === 'ok' ? '<span class="apc-ok">✓</span>' : '<span class="apc-ko">!</span>');
-    return '<div class="apc-passo apc-passo-' + p.stato + '" data-apc-passo="' + _apE(p.id) + '">' + ic +
-      '<div class="min-w-0"><div class="apc-passo-t"><span class="apc-passo-i">' + _apE(APC_ICONA[p.nome] || '•') + '</span>' + _apE(p.etichetta) + '</div>' +
-      '<div class="apc-passo-det">' + _apE(p.dettaglio || '') + '</div></div></div>';
-  }).join('');
-  /* Durante il turno i passi sono aperti (si vede il lavoro); a fine turno si chiudono
-     in una riga, riapribile. */
-  return '<details class="apc-passi"' + (inCorso ? ' open' : '') + '><summary>' +
-    (inCorso ? 'Sto lavorando…' : nOk + (nOk === 1 ? ' passaggio' : ' passaggi')) + '</summary>' + righe + '</details>';
-}
-
-function _apcDiffHtml(m, i) {
-  const d = m.diff;
-  if (!d) return '';
-  const top = _apc.undo[_apc.undo.length - 1];
-  const puoAnnullare = m.undo && top && top.id === m.undo && !_apc.busy;
-  const TIPO = { add: ['＋', 'add'], mod: ['Δ', 'mod'], del: ['−', 'del'], opz: ['⚙︎', 'mod'], prec: ['⇅', 'mod'] };
-  let html = '<div class="apc-diff' + (m.annullato ? ' annullato' : '') + '">' +
-    '<div class="apc-diff-h"><span>' + (m.annullato ? '↶ Modifiche annullate' : 'Modifiche alla bozza') + '</span></div>';
-  if (d.lista.length) {
-    html += '<div class="apc-diff-list">' + d.lista.map(x => {
-      const t = TIPO[x.tipo] || ['•', 'mod'];
-      return '<div class="apc-diff-row"><span class="apc-diff-ic ' + t[1] + '">' + t[0] + '</span><span>' + _apE(x.testo) + '</span></div>';
-    }).join('') + '</div>';
-  }
-  if (d.kpi) {
-    const LBL = { assegnati: 'assegnati', parziali: 'parziali', non_assegnati: 'non assegnati' };
-    const BUONO = { assegnati: 1, parziali: -1, non_assegnati: -1 };
-    html += '<div class="apc-kpi">' + d.kpi.map(k => {
-      let delta = '';
-      if (k.delta) delta = '<span class="apc-delta ' + (k.delta * BUONO[k.key] > 0 ? 'su' : 'giu') + '">' + (k.delta > 0 ? '+' : '−') + Math.abs(k.delta) + '</span>';
-      return '<div class="apc-kpi-c apc-kpi-' + k.key + '"><b>' + k.v + '</b>' + delta + '<small>' + LBL[k.key] + '</small></div>';
-    }).join('') + '</div>';
-  }
-  if (d.bozza && d.bozza.righe && d.bozza.righe.length && d.bozza.confronto) {
-    html += '<div class="apc-diff-list">' + d.bozza.righe.slice(0, 8).map(x =>
-      '<div class="apc-diff-row"><span class="apc-diff-ic ' + (x.verso === 'su' ? 'add' : (x.verso === 'giu' ? 'del' : 'mod')) + '">' + (x.verso === 'su' ? '▲' : (x.verso === 'giu' ? '▼' : '•')) + '</span><span>' + _apE(x.testo) + '</span></div>').join('') +
-      (d.bozza.righe.length > 8 ? '<div class="apc-diff-more">e altri ' + (d.bozza.righe.length - 8) + '</div>' : '') + '</div>';
-  }
-  if (d.bozza && d.bozza.confronto && (d.bozza.piu || d.bozza.meno)) {
-    html += '<div class="apc-diff-celle">Celle in bozza: <b class="su">+' + d.bozza.piu + '</b> <b class="giu">−' + d.bozza.meno + '</b> · evidenziate nell\'anteprima</div>';
-  }
-  if (d.bozza && d.bozza.daRicalcolare) html += '<div class="apc-diff-celle">La bozza va ricalcolata per vedere l\'effetto.</div>';
-  const b = _ap.bozza;
-  const ultima = i === _apc.msgs.length - 1;
-  html += '<div class="apc-diff-az">' +
-    (puoAnnullare ? '<button type="button" data-apc="annulla" data-i="' + i + '" class="apc-btn">↶ Annulla</button>' : '') +
-    (b && ultima && !m.annullato ? '<button type="button" data-apc="vedi" class="apc-btn">Vedi nella bozza</button>' : '') +
-    (b && ultima && !m.annullato && b.risultato.assegnazioni.length ? '<button type="button" data-apc="applica" class="apc-btn primario" title="Scrive la bozza in Griglia (chiede conferma, annullabile)">✓ Applica alla Griglia</button>' : '') +
-    '</div></div>';
-  return html;
-}
-
-function _apcMsgHtml(m, i) {
-  if (m.tipo === 'utente') {
-    return '<div class="apc-row apc-row-u"><div class="apc-u">' + _apE(m.testo).replace(/\n/g, '<br>') + '</div></div>';
-  }
-  const inCorso = _apc.busy && i === _apc.msgs.length - 1;
-  let corpo = _apcPassiHtml(m, inCorso);
-  if (inCorso && !(m.passi || []).length) corpo += '<div class="apc-pensa"><span class="ai-typing-dots"><span></span><span></span><span></span></span> Ci penso…</div>';
-  if (m.testo) corpo += '<div class="apc-testo">' + aiFormatMarkdown(m.testo) + '</div>';
-  if (m.errore) corpo += '<div class="apc-err"><b>Non sono riuscito a completare.</b> ' + _apE(m.errore) + '</div>';
-  corpo += _apcDiffHtml(m, i);
-  return '<div class="apc-row apc-row-a"><div class="apc-av" aria-hidden="true">✦</div><div class="apc-a">' + corpo +
-    (m.ts && !inCorso ? '<div class="apc-ora">' + _apcTempo(m.ts) + '</div>' : '') + '</div></div>';
-}
-
-function _apcVuotoHtml() {
-  return '<div class="apc-vuoto">' +
-    '<div class="apc-vuoto-ic">✦</div>' +
-    '<div class="apc-vuoto-t">Pianifichiamo la settimana ' + _apE(_ap.week) + '</div>' +
-    '<div class="apc-vuoto-s">Dimmi cosa vuoi ottenere: aggiungo o modifico cantieri, cambio priorità e vincoli, ricalcolo e ti spiego il risultato.</div>' +
-    '<ul class="apc-vuoto-l">' +
-      '<li><b>«Brescia mai di venerdì»</b>: vincoli su giorni e date</li>' +
-      '<li><b>«Rossi su Bergamo, non Verdi»</b>: operatori preferiti ed esclusi</li>' +
-      '<li><b>«Perché Ivrea resta scoperto?»</b>: diagnosi con le cause</li>' +
-    '</ul>' +
-    '<div class="apc-vuoto-n">🔒 Lavoro solo sulla bozza: la Griglia cambia quando premi <b>Applica</b>.</div>' +
-  '</div>';
-}
-
-let _apcInit = false;
-
-function _apcCostruisci() {
-  const panel = document.getElementById('apc-panel');
-  if (!panel || _apcInit) return;
-  _apcInit = true;
-  panel.innerHTML =
-    '<div class="apc-head">' +
-      '<div class="apc-head-ic">✦</div>' +
-      '<div class="min-w-0 flex-1"><div class="apc-head-t">Assistente pianificazione</div><div id="apc-sub" class="apc-head-s"></div></div>' +
-      '<button type="button" data-apc="nuova" class="apc-ibtn" title="Nuova conversazione">⟲</button>' +
-      '<button type="button" data-apc="chiudi" class="apc-ibtn" title="Chiudi">✕</button>' +
-    '</div>' +
-    '<div id="apc-msgs" class="apc-msgs" aria-live="polite"></div>' +
-    '<div id="apc-chips" class="apc-chips"></div>' +
-    '<div class="apc-comp">' +
-      '<div id="apc-banner" class="apc-banner" style="display:none;"></div>' +
-      '<div id="apc-box" class="apc-box">' +
-        '<textarea id="apc-input" rows="1" placeholder="Chiedi o dai un\'istruzione…" aria-label="Messaggio all\'assistente"></textarea>' +
-        '<button type="button" id="apc-send" data-apc="invia" class="apc-send" title="Invia (Invio)">↑</button>' +
-      '</div>' +
-      '<div class="apc-hint">Invio per mandare · Maiusc+Invio per andare a capo</div>' +
-    '</div>';
-  panel.addEventListener('click', _apcClick);
-  const ta = document.getElementById('apc-input');
-  ta.addEventListener('input', () => _apcAutoAltezza(ta));
-  ta.addEventListener('keydown', e => {
-    if (e.key === 'Enter' && !e.shiftKey && !e.isComposing) { e.preventDefault(); apcInvia(); }
-  });
-  document.addEventListener('keydown', e => {
-    if (e.key === 'Escape' && _apc.aperta && _apc.busy) apcFerma();
-  });
-}
-
-function _apcAutoAltezza(ta) {
-  ta.style.height = 'auto';
-  ta.style.height = Math.min(ta.scrollHeight, 140) + 'px';
-}
-
-function _apcClick(e) {
-  const chip = e.target.closest('[data-apc-chip]');
-  if (chip) { apcInvia(chip.dataset.apcChip); return; }
-  const btn = e.target.closest('[data-apc]');
-  if (!btn) return;
-  const az = btn.dataset.apc;
-  if (az === 'invia') { if (_apc.busy) apcFerma(); else apcInvia(); }
-  else if (az === 'chiudi') apcToggle(false);
-  else if (az === 'nuova') apcNuova();
-  else if (az === 'annulla') apcAnnulla(parseInt(btn.dataset.i, 10));
-  else if (az === 'vedi') apcVediBozza();
-  else if (az === 'applica') apApplica().then(() => apcRender());
-  else if (az === 'riprova') apcControllaStato(true);
-}
-
-function _apcRenderComposer() {
-  const banner = document.getElementById('apc-banner');
-  const box = document.getElementById('apc-box');
-  const send = document.getElementById('apc-send');
-  const ta = document.getElementById('apc-input');
-  const sub = document.getElementById('apc-sub');
-  if (!banner || !box) return;
-  const st = _apc.stato;
-  let msg = '';
-  if (!st) msg = '';
-  else if (st.errore) msg = _apE(st.errore) + ' <button type="button" data-apc="riprova" class="apc-link">Riprova</button>';
-  else if (!st.enabled) msg = 'L\'assistente AI è disattivato. ' + (sbIsAdmin() ? 'Attivalo in <b>Gestione Assistente AI</b> (menu admin).' : 'Chiedi a un amministratore di attivarlo.');
-  else if (st.has_key === false) msg = 'Manca la API key per il provider scelto (' + _apE(st.provider || '') + '). ' + (sbIsAdmin() ? 'Inseriscila in <b>Gestione Assistente AI</b>.' : 'Chiedi a un amministratore.');
-  banner.innerHTML = msg;
-  banner.style.display = msg ? 'block' : 'none';
-  const pronto = !!(st && st.enabled && !st.errore && st.has_key !== false);
-  box.classList.toggle('disabled', !pronto);
-  if (ta) ta.disabled = !pronto;
-  if (send) {
-    send.classList.toggle('stop', _apc.busy);
-    send.textContent = _apc.busy ? '■' : '↑';
-    send.title = _apc.busy ? 'Ferma (Esc)' : 'Invia (Invio)';
-    send.disabled = !pronto;
-  }
-  if (sub) {
-    const PROV = { gemini: 'Gemini', groq: 'Groq', openrouter: 'OpenRouter', anthropic: 'Anthropic' };
-    sub.textContent = 'Settimana ' + (_ap.week || '') + ' · ' + (_ap.anno || '') +
-      (st && st.model ? ' · ' + (PROV[st.provider] ? PROV[st.provider] + ' ' : '') + st.model : '');
-    sub.title = sub.textContent;
-  }
-}
-
-function apcRender(scorri) {
-  if (!_apc.aperta) return;
-  _apcCostruisci();
-  const box = document.getElementById('apc-msgs');
-  if (!box) return;
-  /* Si resta incollati in fondo solo se l'utente era già in fondo (non gli si strappa la
-     lettura di un messaggio precedente) */
-  const inFondo = box.scrollHeight - box.scrollTop - box.clientHeight < 60;
-  box.innerHTML = _apc.msgs.length ? _apc.msgs.map(_apcMsgHtml).join('') : _apcVuotoHtml();
-  if (scorri || inFondo) box.scrollTop = box.scrollHeight;
-  const chips = document.getElementById('apc-chips');
-  if (chips) {
-    const pronto = _apc.stato && _apc.stato.enabled && !_apc.stato.errore && _apc.stato.has_key !== false;
-    chips.innerHTML = !_apc.busy && pronto ? _apcSuggerimenti().map(t =>
-      '<button type="button" class="apc-chip" data-apc-chip="' + _apE(t) + '">' + _apE(t) + '</button>').join('') : '';
-  }
-  _apcRenderComposer();
-}
-
-document.addEventListener('DOMContentLoaded', _apcSyncLayout);
 /* ==================== METEO CANTIERI (Open-Meteo, gratuito senza API key) ====================
    Badge meteo per squadra/giorno nella Griglia settimanale, basato sui cantieri pianificati
    quel giorno. Riusa il geocoder Nominatim + _geoCache già presenti in weekly-mappa.js: un
@@ -28337,28 +27032,8 @@ function aiWidgetBackToChat() {
 const AI_PROVIDER_DEFAULT_MODEL = {
   gemini: 'gemini-2.5-flash',
   groq: 'llama-3.3-70b-versatile',
-  openrouter: 'openrouter/free',
   anthropic: 'claude-haiku-4-5-20251001',
 };
-const AI_PROVIDER_NOME = { gemini: 'Gemini', groq: 'Groq', openrouter: 'OpenRouter', anthropic: 'Anthropic' };
-
-/* Suggerimenti nel campo Modello (datalist): si può sempre scrivere un altro nome.
-   Per OpenRouter l'elenco vero arriva dal vivo dal selettore sotto il campo. */
-const AI_PROVIDER_MODELLI = {
-  gemini: ['gemini-2.5-flash', 'gemini-2.5-flash-lite', 'gemini-2.5-pro'],
-  groq: ['llama-3.3-70b-versatile', 'openai/gpt-oss-120b', 'qwen/qwen3-32b'],
-  openrouter: ['openrouter/free'],
-  anthropic: ['claude-haiku-4-5-20251001', 'claude-sonnet-5', 'claude-opus-5-5'],
-};
-
-const AI_PROVIDER_NOTA = {
-  gemini: 'Chiave su <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener">Google AI Studio</a>. Con il piano gratuito Google può usare i dati inviati per migliorare i suoi prodotti; con la fatturazione attiva no.',
-  groq: 'Chiave su <a href="https://console.groq.com/keys" target="_blank" rel="noopener">console.groq.com</a>. Piano gratuito con limiti di token al minuto: con l\'Auto-pianifica si raggiungono facilmente.',
-  openrouter: 'Chiave su <a href="https://openrouter.ai/keys" target="_blank" rel="noopener">openrouter.ai/keys</a>. Modelli <b>:free</b>: 20 richieste/min e 50/giorno senza crediti, 1.000/giorno dopo aver caricato almeno 10 $ una volta. Chi fornisce i modelli gratuiti può usare i dati inviati (impostazioni privacy di OpenRouter).',
-  anthropic: 'Chiave su <a href="https://console.anthropic.com/settings/keys" target="_blank" rel="noopener">console.anthropic.com</a>. A pagamento; i dati inviati via API non sono usati per l\'addestramento.',
-};
-
-let _aiCfg = { providers_with_key: [], provider_models: {}, provider: 'gemini' };
 
 async function aiConfigCall(action, extra) {
   const { data, error } = await _sbClient.functions.invoke('ai-assistant-config', { body: { action, ...extra } });
@@ -28374,57 +27049,21 @@ function aiConfigMsg(errText, okText) {
   if (okText) { okEl.textContent = okText; okEl.style.display = 'block'; } else { okEl.style.display = 'none'; }
 }
 
-/* Stato chiavi (una per provider) accanto al menu, e il suffisso "✓ chiave" nelle voci */
-function aiConfigRenderChiavi() {
-  const sel = document.getElementById('ai-config-provider');
-  const provider = sel.value;
-  const conChiave = new Set(_aiCfg.providers_with_key || []);
-  Array.from(sel.options).forEach(o => {
-    if (!o.dataset.base) o.dataset.base = o.textContent;
-    o.textContent = o.dataset.base + (conChiave.has(o.value) ? '  ·  ✓ chiave' : '');
-  });
-  document.getElementById('ai-config-keys').innerHTML = Object.keys(AI_PROVIDER_NOME).map(k =>
-    '<span class="aic-key' + (conChiave.has(k) ? ' ok' : '') + (k === provider ? ' sel' : '') + '">' +
-    esc(AI_PROVIDER_NOME[k]) + ' ' + (conChiave.has(k) ? '✓' : '—') + '</span>').join('');
-  document.getElementById('ai-config-provider-note').innerHTML = AI_PROVIDER_NOTA[provider] || '';
-  document.getElementById('ai-config-apikey-status').textContent = conChiave.has(provider)
-    ? '✓ Chiave ' + AI_PROVIDER_NOME[provider] + ' configurata (lascia vuoto per non modificarla)'
-    : 'Nessuna chiave per ' + AI_PROVIDER_NOME[provider] + ': inseriscila per usare questo provider';
-  document.getElementById('ai-config-apikey').placeholder = conChiave.has(provider) ? 'Lascia vuoto per non modificare' : 'Incolla la chiave ' + AI_PROVIDER_NOME[provider];
-}
-
-function aiConfigRenderSuggerimenti(provider) {
-  const dl = document.getElementById('ai-config-model-list');
-  const voci = new Set(AI_PROVIDER_MODELLI[provider] || []);
-  if (_aiCfg.provider_models[provider]) voci.add(_aiCfg.provider_models[provider]);
-  dl.innerHTML = Array.from(voci).map(m => '<option value="' + esc(m) + '"></option>').join('');
-  const or = document.getElementById('ai-config-or');
-  or.style.display = provider === 'openrouter' ? 'block' : 'none';
-  if (provider === 'openrouter') aiConfigOrCarica(false);
-}
-
-/* Cambio provider: il modello torna all'ultimo scelto per quel provider (o al default) */
 function aiConfigProviderChanged() {
   const provider = document.getElementById('ai-config-provider').value;
-  document.getElementById('ai-config-model').value = _aiCfg.provider_models[provider] || AI_PROVIDER_DEFAULT_MODEL[provider] || '';
-  document.getElementById('ai-config-apikey').value = '';
-  aiConfigRenderChiavi();
-  aiConfigRenderSuggerimenti(provider);
+  const modelInput = document.getElementById('ai-config-model');
+  if (modelInput && !modelInput.value.trim()) modelInput.value = AI_PROVIDER_DEFAULT_MODEL[provider] || '';
 }
 
 async function aiConfigPopulate() {
   const data = await aiConfigCall('get');
-  _aiCfg = {
-    providers_with_key: data.providers_with_key || (data.has_api_key ? [data.provider] : []),
-    provider_models: data.provider_models || {},
-    provider: data.provider || 'gemini'
-  };
   document.getElementById('ai-config-enabled').checked = !!data.enabled;
-  document.getElementById('ai-config-provider').value = _aiCfg.provider;
-  document.getElementById('ai-config-model').value = data.model || AI_PROVIDER_DEFAULT_MODEL[_aiCfg.provider] || '';
+  document.getElementById('ai-config-provider').value = data.provider || 'gemini';
+  document.getElementById('ai-config-model').value = data.model || AI_PROVIDER_DEFAULT_MODEL[data.provider] || '';
   document.getElementById('ai-config-instructions').value = data.custom_instructions || '';
-  aiConfigRenderChiavi();
-  aiConfigRenderSuggerimenti(_aiCfg.provider);
+  document.getElementById('ai-config-apikey-status').textContent = data.has_api_key
+    ? '✓ Chiave configurata (lascia vuoto per non modificarla)'
+    : 'Nessuna chiave configurata';
 }
 
 async function aiConfigOpen() {
@@ -28450,10 +27089,6 @@ async function aiConfigSave() {
   const customInstructions = document.getElementById('ai-config-instructions').value.trim();
   const apiKey = document.getElementById('ai-config-apikey').value;
   if (!model) { aiConfigMsg('Il modello non può essere vuoto.', null); return; }
-  if (enabled && !apiKey.trim() && !(_aiCfg.providers_with_key || []).includes(provider)) {
-    const ok = await showConfirmAsync('Non c\'è una chiave per ' + AI_PROVIDER_NOME[provider] + ': l\'assistente resterà attivo ma non potrà rispondere finché non la inserisci. Salvare comunque?', 'Salva comunque');
-    if (!ok) return;
-  }
   btn.disabled = true; btn.textContent = 'Salvataggio…';
   try {
     const body = { enabled, provider, model, custom_instructions: customInstructions };
@@ -28461,8 +27096,7 @@ async function aiConfigSave() {
     await aiConfigCall('set', body);
     document.getElementById('ai-config-apikey').value = '';
     await aiConfigPopulate();
-    if (typeof _apc !== 'undefined') _apc.stato = null; // la chat dell'Auto-pianifica rilegge lo stato
-    aiConfigMsg(null, '✓ Configurazione salvata: ' + AI_PROVIDER_NOME[provider] + ' · ' + model);
+    aiConfigMsg(null, '✓ Configurazione salvata.');
   } catch (e) {
     aiConfigMsg('Errore salvataggio: ' + e.message, null);
   } finally {
@@ -28471,87 +27105,19 @@ async function aiConfigSave() {
 }
 
 async function aiConfigRevokeKey() {
-  const provider = document.getElementById('ai-config-provider').value;
-  if (!(_aiCfg.providers_with_key || []).includes(provider)) { aiConfigMsg('Non c\'è una chiave ' + AI_PROVIDER_NOME[provider] + ' da revocare.', null); return; }
-  const attivo = provider === _aiCfg.provider;
-  const conferma = await showConfirmAsync('Revocare la API key di ' + AI_PROVIDER_NOME[provider] + '?' +
-    (attivo ? ' È il provider in uso: l\'assistente smetterà di funzionare finché non ne verrà impostata una nuova o non si sceglierà un altro provider.' : ''), 'Revoca chiave');
+  const conferma = await showConfirmAsync('Revocare la API key configurata? L\'assistente smetterà di funzionare finché non ne verrà impostata una nuova.', 'Revoca chiave');
   if (!conferma) return;
   try {
     const enabled = document.getElementById('ai-config-enabled').checked;
-    const model = document.getElementById('ai-config-model').value.trim() || AI_PROVIDER_DEFAULT_MODEL[provider];
+    const provider = document.getElementById('ai-config-provider').value;
+    const model = document.getElementById('ai-config-model').value.trim();
     const customInstructions = document.getElementById('ai-config-instructions').value.trim();
     await aiConfigCall('set', { enabled, provider, model, custom_instructions: customInstructions, revoke_api_key: true });
     await aiConfigPopulate();
-    aiConfigMsg(null, '✓ Chiave ' + AI_PROVIDER_NOME[provider] + ' revocata.');
+    aiConfigMsg(null, '✓ Chiave revocata.');
   } catch (e) {
     aiConfigMsg('Errore revoca chiave: ' + e.message, null);
   }
-}
-
-/* ----- Selettore modelli OpenRouter -----
-   Il catalogo è pubblico (https://openrouter.ai/api/v1/models, CORS aperto, senza chiave)
-   e cambia spesso, soprattutto i gratuiti: si legge dal vivo invece di tenerne una copia.
-   Solo modelli che supportano gli strumenti, perché entrambi gli assistenti li usano. */
-let _aiOrModelli = null;
-let _aiOrCaricamento = null;
-
-async function aiConfigOrCarica(forza) {
-  const lista = document.getElementById('ai-config-or-lista');
-  if (_aiOrModelli && !forza) { aiConfigOrRender(); return; }
-  if (_aiOrCaricamento) return _aiOrCaricamento;
-  lista.innerHTML = '<div class="aic-or-vuoto">Carico il catalogo di OpenRouter…</div>';
-  _aiOrCaricamento = (async () => {
-    try {
-      const res = await fetch('https://openrouter.ai/api/v1/models', { signal: AbortSignal.timeout(15000) });
-      if (!res.ok) throw new Error('HTTP ' + res.status);
-      const data = await res.json();
-      _aiOrModelli = (data.data || [])
-        .filter(m => (m.supported_parameters || []).includes('tools'))
-        .map(m => {
-          const pin = Number((m.pricing || {}).prompt) || 0;
-          const pout = Number((m.pricing || {}).completion) || 0;
-          return { id: m.id, nome: m.name || m.id, ctx: m.context_length || 0, gratis: pin === 0 && pout === 0, pin, pout };
-        })
-        .sort((a, b) => (a.id === 'openrouter/free' ? -1 : b.id === 'openrouter/free' ? 1 : 0) ||
-          (b.gratis - a.gratis) || a.nome.localeCompare(b.nome));
-      aiConfigOrRender();
-    } catch (e) {
-      lista.innerHTML = '<div class="aic-or-vuoto">Catalogo non raggiungibile (' + esc(e.message || e) + '): scrivi il nome del modello a mano.</div>';
-    } finally {
-      _aiOrCaricamento = null;
-    }
-  })();
-  return _aiOrCaricamento;
-}
-
-function _aiOrPrezzo(m) {
-  if (m.gratis) return 'gratis';
-  const perM = v => (v * 1e6).toFixed(v * 1e6 < 1 ? 2 : 1).replace('.', ',');
-  return perM(m.pin) + ' / ' + perM(m.pout) + ' $';
-}
-
-function aiConfigOrRender() {
-  const lista = document.getElementById('ai-config-or-lista');
-  if (!lista || !_aiOrModelli) return;
-  const q = (document.getElementById('ai-config-or-cerca').value || '').trim().toLowerCase();
-  const pagamento = document.getElementById('ai-config-or-pagamento').checked;
-  const attuale = document.getElementById('ai-config-model').value.trim();
-  const voci = _aiOrModelli.filter(m => (pagamento || m.gratis) && (!q || m.id.toLowerCase().includes(q) || m.nome.toLowerCase().includes(q)));
-  if (!voci.length) { lista.innerHTML = '<div class="aic-or-vuoto">Nessun modello' + (pagamento ? '' : ' gratuito') + ' con strumenti corrisponde alla ricerca.</div>'; return; }
-  lista.innerHTML = voci.slice(0, 150).map(m =>
-    '<button type="button" class="aic-or-item' + (m.id === attuale ? ' sel' : '') + '" data-model="' + esc(m.id) + '" onclick="aiConfigOrScegli(this)" title="' + esc(m.id) + '">' +
-      '<span class="n"><b>' + esc(m.id === 'openrouter/free' ? 'Scelta automatica fra i gratuiti' : m.nome) + '</b><small>' + esc(m.id) + (m.ctx ? ' · ' + Math.round(m.ctx / 1000) + 'k token' : '') + '</small></span>' +
-      '<span class="aic-tag ' + (m.gratis ? 'free' : 'paid') + '" title="' + (m.gratis ? 'Nessun costo per token' : 'Costo per milione di token: ingresso / uscita') + '">' + esc(_aiOrPrezzo(m)) + '</span>' +
-    '</button>').join('') +
-    (voci.length > 150 ? '<div class="aic-or-vuoto">… e altri ' + (voci.length - 150) + ': restringi la ricerca</div>' : '');
-}
-
-function aiConfigOrScegli(el) {
-  const id = el && el.dataset.model;
-  if (!id) return;
-  document.getElementById('ai-config-model').value = id;
-  aiConfigOrRender();
 }
 
 /* ----- Modal admin "Storico Assistente AI" ----- */
