@@ -34,7 +34,7 @@ function sbGuardWrite() {
 }
 
 // Chiavi pagina della Pianificazione Settimanale, stesso ordine/id dei tab in src/head.html
-const PW_TAB_KEYS = ['griglia', 'ferie', 'mappa', 'spostamenti', 'ricerca-squadre', 'controllo', 'meteo-storico', 'doppia'];
+const PW_TAB_KEYS = ['griglia', 'ferie', 'mappa', 'spostamenti', 'ricerca-squadre', 'autoplan', 'controllo', 'meteo-storico', 'doppia'];
 
 // Mostra/nasconde nav Dashboard/Pianificazione e le singole tab in base alle pagine
 // visibili per il ruolo corrente (rilevante solo per il ruolo 'guest'); se lo schermo/tab
@@ -361,6 +361,7 @@ const SB_PAGE_LABELS = {
   'weekly:mappa': 'Mappa',
   'weekly:spostamenti': 'Spostamenti',
   'weekly:ricerca-squadre': 'Ricerca Squadre',
+  'weekly:autoplan': 'Auto-pianifica',
   'weekly:controllo': 'Controllo Produzione',
   'weekly:meteo-storico': 'Storico meteo',
   'weekly:doppia': 'Doppia Week',

@@ -53,6 +53,8 @@ JS_FILES = [
     'weekly-mappa.js',
     'weekly-spostamenti.js',
     'weekly-ricerca-squadre.js',
+    'autoplan-solver.js',
+    'weekly-autoplan.js',
     'weekly-meteo.js',
     'meteo-storico.js',
     'mappa-live.js',

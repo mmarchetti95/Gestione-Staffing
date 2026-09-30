@@ -750,6 +750,24 @@ function pwIsDwStart(anno, week, nome) {
   return !!(pwDoppiaWeek[anno] && pwDoppiaWeek[anno][week] && pwDoppiaWeek[anno][week][nome] === true);
 }
 
+// True se l'operatore ha almeno una cella con cantiere nella Griglia di (anno, week)
+function pwOperatoreImpiegato(anno, week, nome) {
+  const wk = (pwData[anno] && pwData[anno][week]) || [];
+  const n = (nome || '').trim();
+  if (!n) return false;
+  return wk.some(bc => (bc.squadre || []).some(sq => (sq.operatori || []).some(op =>
+    (op.nome || '').trim() === n && [0, 1, 2, 3, 4, 5].some(d => pwCellCantieri((op.giorni || {})[d]).length))));
+}
+
+// Doppia week EFFETTIVA: il flag da solo spesso è la disponibilità data dall'operatore a
+// una trasferta lunga, messa prima di sapere dove andrà. È fuori sede davvero solo se in
+// quella settimana (di inizio) è già impiegato in Griglia. Chi ha solo il flag resta
+// pianificabile, sabato compreso (la doppia week lo comprende). Usata da Ricerca Squadre
+// e Auto-pianifica per la disponibilità; la tab Doppia Week e le mail leggono il flag puro.
+function pwIsDwEffettiva(anno, week, nome) {
+  return pwIsDwStart(anno, week, nome) && pwOperatoreImpiegato(anno, week, nome);
+}
+
 function pwSetDwStart(anno, week, nome, val) {
   if (val) {
     if (!pwDoppiaWeek[anno]) pwDoppiaWeek[anno] = {};

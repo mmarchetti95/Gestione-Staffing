@@ -1503,11 +1503,10 @@
   .ml-legend i { display: inline-block; width: 9px; height: 9px; border-radius: 50%; margin-right: 4px; }
 
   /* Auto-pianifica: tabella cantieri a larghezza fissa, un cantiere per riga.
-     min-width:0 lascia stringere input/date nella colonna; sotto i 940px di riquadro
-     si ripiega sullo scroll orizzontale invece di schiacciare tutto (sotto i 1280px il
-     pannello fonti va sopra la tabella, vedi weekly-autoplan.js, quindi succede di rado). */
+     min-width:0 lascia stringere input/date nella colonna; sotto i 1000px di riquadro
+     si ripiega sullo scroll orizzontale invece di schiacciare tutto. */
   .ap-tabella-wrap { overflow-x: auto; }
-  .ap-tabella { min-width: 940px; }
+  .ap-tabella { min-width: 1000px; }
   .ap-tabella .ap-cell { min-width: 0; height: 24px; box-sizing: border-box; }
   .ap-tabella input[type=date].ap-cell { padding-right: 0; }
   .ap-tabella input[type=date]::-webkit-calendar-picker-indicator { margin: 0; padding: 0; width: 12px; }
@@ -1534,7 +1533,7 @@
     <div class="flex items-center gap-2">
       <button id="btn-presentation" class="px-3 py-1.5 text-sm rounded hover:bg-white/10" style="border:1px solid var(--dark-border-strong);color:var(--dark-text);visibility:visible;">📊 Modalità presentazione</button>
       <div class="text-xs pl-2" style="border-left:1px solid var(--dark-border-strong);color:var(--dark-text-muted);">
-        <span id="app-version" class="font-medium" style="color:var(--accent);">v18.185.0</span> · Michele Marchetti
+        <span id="app-version" class="font-medium" style="color:var(--accent);">v18.184.0</span> · Michele Marchetti
         <span id="sb-role-badge" style="margin-left:8px;padding:1px 8px;border-radius:9999px;background:rgba(255,255,255,.1);color:var(--dark-text);font-weight:600;"></span>
       </div>
     </div>
@@ -12385,24 +12384,6 @@ function pwIsDwStart(anno, week, nome) {
   return !!(pwDoppiaWeek[anno] && pwDoppiaWeek[anno][week] && pwDoppiaWeek[anno][week][nome] === true);
 }
 
-// True se l'operatore ha almeno una cella con cantiere nella Griglia di (anno, week)
-function pwOperatoreImpiegato(anno, week, nome) {
-  const wk = (pwData[anno] && pwData[anno][week]) || [];
-  const n = (nome || '').trim();
-  if (!n) return false;
-  return wk.some(bc => (bc.squadre || []).some(sq => (sq.operatori || []).some(op =>
-    (op.nome || '').trim() === n && [0, 1, 2, 3, 4, 5].some(d => pwCellCantieri((op.giorni || {})[d]).length))));
-}
-
-// Doppia week EFFETTIVA: il flag da solo spesso è la disponibilità data dall'operatore a
-// una trasferta lunga, messa prima di sapere dove andrà. È fuori sede davvero solo se in
-// quella settimana (di inizio) è già impiegato in Griglia. Chi ha solo il flag resta
-// pianificabile, sabato compreso (la doppia week lo comprende). Usata da Ricerca Squadre
-// e Auto-pianifica per la disponibilità; la tab Doppia Week e le mail leggono il flag puro.
-function pwIsDwEffettiva(anno, week, nome) {
-  return pwIsDwStart(anno, week, nome) && pwOperatoreImpiegato(anno, week, nome);
-}
-
 function pwSetDwStart(anno, week, nome, val) {
   if (val) {
     if (!pwDoppiaWeek[anno]) pwDoppiaWeek[anno] = {};
@@ -20014,8 +19995,8 @@ function _rsInDoppiaWeek(sq) {
 }
 
 /* Giorni da considerare per una squadra: il sabato è un giorno lavorativo solo in
-   doppia week (trasferta lunga), sia effettiva sia solo come disponibilità data. Per
-   le altre squadre mostrarlo come "libero" sarebbe fuorviante — non ci si va comunque. Resta però visibile se in Griglia c'è davvero
+   doppia week (trasferta lunga). Per le altre squadre mostrarlo come "libero" sarebbe
+   fuorviante — non ci si va comunque. Resta però visibile se in Griglia c'è davvero
    del lavoro programmato di sabato, per non nascondere dati reali. */
 function _rsNumGiorni(sq) {
   if ((sq.cantieriByDay[5] || []).length) return 6;
@@ -20023,9 +20004,7 @@ function _rsNumGiorni(sq) {
 }
 
 /* Stato giorno per giorno. La doppia week copre la settimana di inizio (fuori tutta
-   la settimana) e la successiva (rientro giovedì): vedi pwSetDwStart/pwIsDwStart.
-   Conta però solo quella EFFETTIVA (pwIsDwEffettiva: flag + già impiegato in Griglia in
-   quella settimana): chi ha dato solo la disponibilità resta libero, sabato compreso. */
+   la settimana) e la successiva (rientro giovedì): vedi pwSetDwStart/pwIsDwStart. */
 function _rsDisponibilita(sq) {
   const prev = pwWeekAdd(pwAnno, pwWeek, -1);
   const ferieWk = (pwFerie[pwAnno] && pwFerie[pwAnno][pwWeek]) || {};
@@ -20035,8 +20014,8 @@ function _rsDisponibilita(sq) {
     let away = false;
     let inFerie = 0;
     sq.operatori.forEach(n => {
-      if (pwIsDwEffettiva(pwAnno, pwWeek, n)) away = true;
-      else if (pwIsDwEffettiva(prev.anno, prev.week, n) && d <= 2) away = true;
+      if (pwIsDwStart(pwAnno, pwWeek, n)) away = true;
+      else if (pwIsDwStart(prev.anno, prev.week, n) && d <= 2) away = true;
       const wk = ferieWk[n];
       if (wk && pwFerieTipo(wk[d])) inFerie++;
     });
@@ -21031,11 +21010,10 @@ function apFmtNum(n) {
   return (Math.round(n * 10) / 10).toString().replace('.', ',');
 }
 
-
 /* ---------- solver ---------- */
 
 const AP_PESI_DEFAULT = {
-  kmCosto: 1,            // punti persi per km di spostamento
+  kmCosto: 1,            // punti persi per km di spostamento stimato
   esperienza: 25,        // bonus se l'operatore ha già fatto quella famiglia (saturato)
   coppia: 30,            // bonus coppia abituale (saturato)
   stessaCommessa: 40,    // bonus se già in Griglia su quella commessa questa settimana
@@ -21043,44 +21021,10 @@ const AP_PESI_DEFAULT = {
   continuita: 60,        // bonus se ieri era sullo stesso cantiere
   ritardoGiorno: 400,    // penalità per giorno oltre la scadenza (x peso priorità)
   attesaGiorno: 8,       // penalità per giorno di attesa prima di iniziare (x peso priorità)
-  giornoFatto: 1000,     // valore di un giorno-squadra assegnato (x peso priorità): domina il resto
   maxKmTrasferta: 250    // oltre: operatore scartato per quel giorno
 };
 const AP_PESO_PRIORITA = { 1: 3, 2: 2, 3: 1 };
-const AP_FATTORE_STRADA = 1.3; // linea d'aria -> strada, stima prudente quando manca OSRM
-const AP_MAX_RICALCOLI = 80;   // tetto del miglioramento locale (ogni prova = un greedy completo)
-const AP_MAX_MS = 2500;
-
-/* Ordine di partenza: priorità (P1 prima), scadenza più vicina, impegno più lungo */
-function apOrdineBase(righe) {
-  return righe.slice().sort((a, b) => {
-    if ((a.priorita || 3) !== (b.priorita || 3)) return (a.priorita || 3) - (b.priorita || 3);
-    const sa = a.scadenzaGiorno == null ? 99 : a.scadenzaGiorno;
-    const sb = b.scadenzaGiorno == null ? 99 : b.scadenzaGiorno;
-    if (sa !== sb) return sa - sb;
-    if ((b.giorni || 0) !== (a.giorni || 0)) return (b.giorni || 0) - (a.giorni || 0);
-    return String(a.id) < String(b.id) ? -1 : 1;
-  });
-}
-
-/* Precedenze decise dall'utente ([primaId, dopoId]): la prima riga va messa davanti */
-function apApplicaPrecedenze(ordine, precedenze) {
-  const out = ordine.slice();
-  (precedenze || []).forEach(([prima, dopo]) => {
-    const ip = out.findIndex(r => r.id === prima);
-    const id = out.findIndex(r => r.id === dopo);
-    if (ip < 0 || id < 0 || ip < id) return;
-    const [r] = out.splice(ip, 1);
-    out.splice(id, 0, r);
-  });
-  return out;
-}
-
-function _apViolaPrecedenze(ordine, precedenze) {
-  const idx = {};
-  ordine.forEach((r, i) => { idx[r.id] = i; });
-  return (precedenze || []).some(([prima, dopo]) => idx[prima] != null && idx[dopo] != null && idx[prima] > idx[dopo]);
-}
+const AP_FATTORE_STRADA = 1.3; // linea d'aria -> strada, stima prudente
 
 /* Input del solver:
    ctx = {
@@ -21089,113 +21033,14 @@ function _apViolaPrecedenze(ordine, precedenze) {
                    base: {lat,lng}|null, commessaSettimana: string|null, staffing:Set(commesse) }],
      disp: { nome: { d: 'libero'|'ferie'|'dw'|'occupato' } },
      posizione: { nome: { d: {lat,lng,label} } },   // dove è già (celle esistenti)
-     distanzaKm(a, b) -> km stradali | null,        // facoltativa: senza, linea d'aria x 1,3
-     meteo: { rigaId: { d: { pen, blocco, motivo } } },   // facoltativo
-     precedenze: [[primaId, dopoId]],                // facoltativo
      modello, pesi
    }
-   righe = [{ id, cantiere, commessa, attivita, famiglia, geo:{lat,lng}|null, giorni, nOp,
-              priorita, scadenzaGiorno (indice o null), dalGiorno, skills:[], attestati:[],
+   righe = [{ id, cantiere, commessa, attivita, geo:{lat,lng}|null, giorni, nOp, priorita,
+              scadenzaGiorno (indice o null), dalGiorno, skills:[], attestati:[],
               preferiti:[], esclusi:[] }]
-   Output: { assegnazioni: [{rigaId, giorno, operatori:[], quota}], esiti: {rigaId: {...}},
-             miglioramenti: [...], suggerimenti: [...], distanze: {stradali, stimate}, ... } */
+   Output: { assegnazioni: [{rigaId, giorno, operatori:[], quota}], esiti: {rigaId: {...}} } */
 function apRisolvi(ctx, righe) {
   const pesi = Object.assign({}, AP_PESI_DEFAULT, ctx.pesi || {});
-  const t0 = Date.now();
-  let ricalcoli = 0;
-  const greedy = ordine => { ricalcoli++; return _apGreedy(ctx, pesi, ordine); };
-
-  let ordine = apApplicaPrecedenze(apOrdineBase(righe), ctx.precedenze);
-  let best = greedy(ordine);
-  const miglioramenti = [];
-
-  /* Miglioramento locale. Il greedy assegna in ordine e non torna indietro: un cantiere in
-     fondo alla fila può restare scoperto anche quando anticiparlo darebbe un piano migliore
-     nel complesso (es. un P2 con scadenza che il P3 lungo gli ha tolto i giorni). Si prova
-     ad anticipare ogni cantiere "insoddisfatto" davanti a chi lo precede e si tiene la mossa
-     solo se il valore totale sale: più giorni assegnati (pesati per priorità), meno ritardi,
-     meno km. Le precedenze impostate a mano non vengono mai violate. */
-  let migliorato = true;
-  while (migliorato && ricalcoli < AP_MAX_RICALCOLI && Date.now() - t0 < AP_MAX_MS) {
-    migliorato = false;
-    for (const r of _apInsoddisfatte(best, ordine)) {
-      const pos = ordine.findIndex(x => x.id === r.id);
-      for (let j = 0; j < pos && !migliorato; j++) {
-        if (ricalcoli >= AP_MAX_RICALCOLI || Date.now() - t0 >= AP_MAX_MS) break;
-        const cand = ordine.slice();
-        cand.splice(pos, 1);
-        cand.splice(j, 0, r);
-        if (_apViolaPrecedenze(cand, ctx.precedenze)) continue;
-        const res = greedy(cand);
-        if (res.valore > best.valore + 1) {
-          miglioramenti.push({ rigaId: r.id, primaDi: ordine[j].id, effetti: _apEffetti(best, res, righe) });
-          ordine = cand;
-          best = res;
-          migliorato = true;
-        }
-      }
-      if (migliorato) break;
-    }
-  }
-
-  /* Suggerimenti: per i cantieri ancora scoperti, le mosse che li farebbero entrare ma
-     peggiorano il totale (tipicamente a scapito di un cantiere di pari priorità). Non si
-     applicano da sole: le decide l'utente, che conosce cose che il calcolo non sa. */
-  const suggerimenti = [];
-  for (const r of _apInsoddisfatte(best, ordine)) {
-    const e0 = best.esiti[r.id];
-    if (e0.stato === 'assegnato') continue; // solo in ritardo: nessun suggerimento, basta l'avviso
-    const pos = ordine.findIndex(x => x.id === r.id);
-    let migliore = null;
-    for (let j = pos - 1; j >= 0; j--) {
-      if (ricalcoli >= AP_MAX_RICALCOLI * 2 || Date.now() - t0 >= AP_MAX_MS * 2) break;
-      const cand = ordine.slice();
-      cand.splice(pos, 1);
-      cand.splice(j, 0, r);
-      const res = greedy(cand);
-      const guadagno = res.esiti[r.id].giorniAssegnati - e0.giorniAssegnati;
-      if (guadagno <= 1e-6) continue;
-      const costo = best.valore - res.valore;
-      if (!migliore || costo < migliore.costo) {
-        migliore = { rigaId: r.id, primaDi: ordine[j].id, costo, guadagno, effetti: _apEffetti(best, res, righe) };
-      }
-    }
-    if (migliore) suggerimenti.push(migliore);
-  }
-
-  best.miglioramenti = miglioramenti;
-  best.suggerimenti = suggerimenti;
-  best.ordine = ordine.map(r => r.id);
-  best.ricalcoli = ricalcoli;
-  return best;
-}
-
-/* Righe non soddisfatte, nell'ordine corrente: non assegnate, parziali o oltre scadenza */
-function _apInsoddisfatte(res, ordine) {
-  return ordine.filter(r => {
-    const e = res.esiti[r.id];
-    return e && (e.stato !== 'assegnato' || e.oltreScadenza);
-  });
-}
-
-/* Cosa cambia fra due soluzioni, riga per riga: giorni assegnati prima -> dopo */
-function _apEffetti(prima, dopo, righe) {
-  const out = [];
-  righe.forEach(r => {
-    const a = prima.esiti[r.id], b = dopo.esiti[r.id];
-    if (!a || !b) return;
-    const d = b.giorniAssegnati - a.giorniAssegnati;
-    const ritardo = !!b.oltreScadenza !== !!a.oltreScadenza;
-    if (Math.abs(d) > 1e-6 || ritardo) {
-      out.push({ rigaId: r.id, prima: a.giorniAssegnati, dopo: b.giorniAssegnati,
-        oltreScadenzaPrima: !!a.oltreScadenza, oltreScadenzaDopo: !!b.oltreScadenza });
-    }
-  });
-  return out;
-}
-
-/* Un passaggio greedy completo con un ordine dato. Non modifica ctx. */
-function _apGreedy(ctx, pesi, ordinate) {
   const cap = {};           // nome -> d -> capacità residua (0..1)
   const pos = {};           // nome -> d -> {lat,lng,label} ultima posizione nota del giorno
   const commessaDi = {};    // nome -> Set commesse toccate in bozza (per avviso doppia riga)
@@ -21212,11 +21057,17 @@ function _apGreedy(ctx, pesi, ordinate) {
   });
   const opByNome = {};
   ctx.operatori.forEach(o => { opByNome[o.nome] = o; });
-  const distanze = { stradali: 0, stimate: 0 };
+
+  const ordinate = righe.slice().sort((a, b) => {
+    if ((a.priorita || 3) !== (b.priorita || 3)) return (a.priorita || 3) - (b.priorita || 3);
+    const sa = a.scadenzaGiorno == null ? 99 : a.scadenzaGiorno;
+    const sb = b.scadenzaGiorno == null ? 99 : b.scadenzaGiorno;
+    if (sa !== sb) return sa - sb;
+    return (b.giorni || 0) - (a.giorni || 0);
+  });
 
   const assegnazioni = [];
   const esiti = {};
-  let valore = 0;
 
   /* Punto di partenza di un operatore il giorno d: l'ultimo luogo noto dal giorno d-1 in
      giù (celle esistenti o bozza), altrimenti la residenza. */
@@ -21227,13 +21078,7 @@ function _apGreedy(ctx, pesi, ordinate) {
     for (let x = d - 1; x >= 0; x--) if (pos[nome][x]) return pos[nome][x];
     return opByNome[nome].base || null;
   };
-  const kmTra = (a, b) => {
-    if (!a || !b) return null;
-    const km = ctx.distanzaKm ? ctx.distanzaKm(a, b) : null;
-    if (km != null) { distanze.stradali++; return km; }
-    distanze.stimate++;
-    return haversineKm(a.lat, a.lng, b.lat, b.lng) * AP_FATTORE_STRADA;
-  };
+  const kmTra = (a, b) => (a && b) ? haversineKm(a.lat, a.lng, b.lat, b.lng) * AP_FATTORE_STRADA : null;
 
   /* Motivi di esclusione di un operatore da una riga (indipendenti dal giorno) */
   const escluso = (o, r) => {
@@ -21304,14 +21149,13 @@ function _apGreedy(ctx, pesi, ordinate) {
     if (scelti.length < r.nOp) return null;
     const skillMancanti = skillReq.filter(sk => !coperte.has(sk));
     const punti = scelti.reduce((a, v) => a + v.s, 0);
-    return { scelti, skillMancanti, punti };
+    return { scelti, skillMancanti, punti, kmMedi: apMediaKm(scelti) };
   };
 
   ordinate.forEach(r => {
     const esito = { stato: 'non_assegnato', motivi: [], giorniAssegnati: 0, richiesti: r.giorni,
-      giorniUsati: [], kmMedi: null, avvisi: [], meteo: [], oltreScadenza: false };
+      giorniUsati: [], kmMedi: null, avvisi: [] };
     esiti[r.id] = esito;
-    const peso = AP_PESO_PRIORITA[r.priorita] || 1;
     if (!r.geo) esito.avvisi.push('cantiere non localizzato: distanze non valutate');
 
     const esclusioni = {};
@@ -21323,19 +21167,12 @@ function _apGreedy(ctx, pesi, ordinate) {
     if (candidati.length < r.nOp) {
       esito.motivi.push('servono ' + r.nOp + ' operatori idonei, ne risultano ' + candidati.length +
         apMotiviEsclusione(esclusioni));
-      valore -= r.giorni * pesi.ritardoGiorno * peso;
       return;
     }
 
     const primoGiorno = Math.max(ctx.giorni[0], r.dalGiorno || 0);
     const giorniUtili = ctx.giorni.filter(d => d >= primoGiorno);
-    if (!giorniUtili.length) {
-      esito.motivi.push('nessun giorno utile dopo il "non prima di"');
-      valore -= r.giorni * pesi.ritardoGiorno * peso;
-      return;
-    }
-    const meteoRiga = (ctx.meteo || {})[r.id] || {};
-    const bloccati = giorniUtili.filter(d => meteoRiga[d] && meteoRiga[d].blocco);
+    if (!giorniUtili.length) { esito.motivi.push('nessun giorno utile dopo il "non prima di"'); return; }
 
     /* Prova ogni giorno di inizio e simula il riempimento; tiene il piano migliore.
        La simulazione non tocca cap/pos: si applica solo il vincitore. */
@@ -21349,18 +21186,17 @@ function _apGreedy(ctx, pesi, ordinate) {
       const capOf = (n, d) => (capSim[n + '|' + d] != null ? capSim[n + '|' + d] : cap[n][d]);
       for (const d of giorniUtili) {
         if (d < start || residuo <= 1e-6) continue;
-        const mt = meteoRiga[d];
-        if (mt && mt.blocco) { ieri = null; continue; } // allerta: quel giorno non si va
         const quota = Math.min(1, residuo);
         const sq = scegliSquadra(r, d, candidati, ieri, quota, capOf);
         if (!sq) { ieri = null; continue; }
         sq.scelti.forEach(v => { capSim[v.o.nome + '|' + d] = capOf(v.o.nome, d) - quota; });
         piano.push({ giorno: d, quota, sq });
-        punti += sq.punti - (mt ? mt.pen * quota : 0);
+        punti += sq.punti;
         residuo -= quota;
         ieri = new Set(sq.scelti.map(v => v.o.nome));
       }
       if (!piano.length) return;
+      const peso = AP_PESO_PRIORITA[r.priorita] || 1;
       const ultimo = piano[piano.length - 1].giorno;
       if (r.scadenzaGiorno != null && ultimo > r.scadenzaGiorno) punti -= (ultimo - r.scadenzaGiorno) * pesi.ritardoGiorno * peso;
       if (residuo > 1e-6) punti -= residuo * pesi.ritardoGiorno * peso; // non finito in settimana
@@ -21375,9 +21211,7 @@ function _apGreedy(ctx, pesi, ordinate) {
 
     if (!migliore) {
       esito.motivi.push('nessun gruppo di ' + r.nOp + ' operatori idonei libero nei giorni utili' +
-        (r.geo ? ' entro ' + pesi.maxKmTrasferta + ' km' : '') +
-        (bloccati.length ? ' (esclusi per allerta meteo: ' + bloccati.map(d => AP_GIORNI[d]).join(', ') + ')' : ''));
-      valore -= r.giorni * pesi.ritardoGiorno * peso;
+        (r.geo ? ' entro ' + pesi.maxKmTrasferta + ' km' : ''));
       return;
     }
 
@@ -21394,33 +21228,24 @@ function _apGreedy(ctx, pesi, ordinate) {
       p.sq.skillMancanti.forEach(s => skillMancanti.add(s));
       assegnazioni.push({ rigaId: r.id, giorno: p.giorno, operatori: nomi, quota: p.quota });
       esito.giorniUsati.push(p.giorno);
-      const mt = meteoRiga[p.giorno];
-      if (mt && mt.pen > 0) esito.meteo.push(AP_GIORNI[p.giorno] + ': ' + mt.motivo);
     });
     esito.giorniAssegnati = migliore.fatto;
     esito.kmMedi = kmTot.length ? kmTot.reduce((a, b) => a + b, 0) / kmTot.length : null;
     esito.stato = migliore.residuo > 1e-6 ? 'parziale' : 'assegnato';
     if (migliore.residuo > 1e-6) esito.motivi.push('restano ' + apFmtNum(migliore.residuo) + ' gg-squadra per la settimana successiva');
-    const primo = migliore.piano[0].giorno;
     const ultimo = migliore.piano[migliore.piano.length - 1].giorno;
-    if (r.scadenzaGiorno != null && ultimo > r.scadenzaGiorno) {
-      esito.oltreScadenza = true;
-      esito.avvisi.push('finisce oltre la scadenza');
-    }
+    if (r.scadenzaGiorno != null && ultimo > r.scadenzaGiorno) esito.avvisi.push('finisce oltre la scadenza');
     if (skillMancanti.size) esito.avvisi.push('skill non coperte: ' + Array.from(skillMancanti).join(', '));
-    /* Giorni saltati per allerta dentro l'arco del cantiere (o prima dell'inizio): va detto,
-       altrimenti un buco nel piano sembra un errore del calcolo. */
-    const evitati = bloccati.filter(d => d <= ultimo || d < primo);
-    if (evitati.length) esito.avvisi.push('evitati per allerta meteo: ' + evitati.map(d => AP_GIORNI[d] + ' (' + meteoRiga[d].motivo + ')').join(', '));
-    if (esito.meteo.length) esito.avvisi.push('meteo sfavorevole: ' + esito.meteo.join(', '));
-    valore += migliore.fatto * pesi.giornoFatto * peso + migliore.punti;
   });
 
   const doppie = Object.keys(commessaDi).filter(n => commessaDi[n].size > 1);
-  return { assegnazioni, esiti, operatoriSuPiuCommesse: doppie, capacitaResidua: cap, valore, distanze };
+  return { assegnazioni, esiti, operatoriSuPiuCommesse: doppie, capacitaResidua: cap };
 }
 
-const AP_GIORNI = ['Lun', 'Mar', 'Mer', 'Gio', 'Ven', 'Sab'];
+function apMediaKm(scelti) {
+  const v = scelti.map(x => x.km).filter(k => k != null);
+  return v.length ? v.reduce((a, b) => a + b, 0) / v.length : null;
+}
 
 function apMotiviEsclusione(esclusioni) {
   const k = Object.keys(esclusioni);
@@ -21447,8 +21272,7 @@ let _ap = {
   bozza: null,          // { anno, week, risultato, righeSolver, creata }
   modello: null,
   modelloInfo: '',
-  opzioni: { sabato: false, maxKm: 250, meteo: true },
-  precedenze: [],       // [[primaId, dopoId]] scelte dall'utente dai suggerimenti
+  opzioni: { sabato: false, maxKm: 250 },
   stato: { msg: '', err: false }
 };
 let _apSeq = 0;
@@ -21480,7 +21304,7 @@ function _apSalvaLocale() {
   try {
     const raw = localStorage.getItem(AP_STORAGE_KEY);
     const all = raw ? JSON.parse(raw) : {};
-    all[_apWkKey(_ap.anno, _ap.week)] = { righe: _ap.righe, opzioni: _ap.opzioni, precedenze: _ap.precedenze, ts: Date.now() };
+    all[_apWkKey(_ap.anno, _ap.week)] = { righe: _ap.righe, opzioni: _ap.opzioni, ts: Date.now() };
     // Tiene solo le 8 settimane toccate più di recente
     const keys = Object.keys(all).sort((a, b) => (all[b].ts || 0) - (all[a].ts || 0));
     keys.slice(8).forEach(k => delete all[k]);
@@ -21490,15 +21314,13 @@ function _apSalvaLocale() {
 
 function _apCaricaLocale() {
   _ap.righe = [];
-  _ap.precedenze = [];
   try {
     const raw = localStorage.getItem(AP_STORAGE_KEY);
     const all = raw ? JSON.parse(raw) : {};
     const s = all[_apWkKey(_ap.anno, _ap.week)];
     if (s) {
       _ap.righe = Array.isArray(s.righe) ? s.righe : [];
-      if (s.opzioni) _ap.opzioni = Object.assign({ sabato: false, maxKm: 250, meteo: true }, s.opzioni);
-      if (Array.isArray(s.precedenze)) _ap.precedenze = s.precedenze;
+      if (s.opzioni) _ap.opzioni = Object.assign({ sabato: false, maxKm: 250 }, s.opzioni);
     }
   } catch (_) {}
   _ap.righe.forEach(r => { const n = parseInt(String(r.id).replace('r', ''), 10); if (n > _apSeq) _apSeq = n; });
@@ -21819,33 +21641,14 @@ function _apAttestatiValidi(op) {
 
 function apBuildContesto() {
   const primo = _apPrimoGiorno();
-  const data = pwGetWeekData();
-  const prev = pwWeekAdd(pwAnno, pwWeek, -1);
-
-  /* Doppia week: il flag in tab Doppia Week spesso è solo la DISPONIBILITÀ data
-     dall'operatore a una trasferta lunga, messa prima di sapere dove andrà. Finché non
-     è impiegato in Griglia è quindi pianificabile come gli altri, e in più anche il
-     sabato (la doppia week lo comprende). Diventa indisponibile solo quando la doppia
-     week è reale, cioè quando l'operatore ha già celle in Griglia: nella settimana di
-     inizio (via tutta la settimana) o nella precedente (rientro giovedì, via Lun-Mer). */
-  const dwStato = nome => {
-    const viaTutta = pwIsDwEffettiva(pwAnno, pwWeek, nome);
-    return {
-      viaTutta,
-      viaInizio: pwIsDwEffettiva(prev.anno, prev.week, nome),
-      disponibile: pwIsDwStart(pwAnno, pwWeek, nome) && !viaTutta
-    };
-  };
-  const conDwDisponibile = getOperatoriAttivi().some(op => dwStato(op.nome_esteso || op.nome_breve).disponibile);
-
-  /* Il sabato entra nei giorni se richiesto, oppure se c'è qualcuno in doppia week
-     disponibile (solo lui potrà lavorarci, vedi disp più sotto). */
-  const ultimo = (_ap.opzioni.sabato || conDwDisponibile) ? 5 : 4;
+  const ultimo = _ap.opzioni.sabato ? 5 : 4;
   const giorni = [];
   for (let d = Math.max(0, primo); d <= ultimo; d++) giorni.push(d);
   const giorniISO = {};
   giorni.forEach(d => { giorniISO[d] = _apGiornoISO(d); });
 
+  const data = pwGetWeekData();
+  const prev = pwWeekAdd(pwAnno, pwWeek, -1);
   const ferieWk = (pwFerie[pwAnno] && pwFerie[pwAnno][pwWeek]) || {};
   const mese = isoWeekToMonday(pwAnno, pwWeek).getUTCMonth();
 
@@ -21895,18 +21698,16 @@ function apBuildContesto() {
       fineRapporto: op.contratto_tipo === 'determinato' ? (op.data_fine_rapporto || null) : null,
       base,
       commessaSettimana: commessaSettimana[nome] || null,
-      staffing: staffing[nome] || new Set(),
-      dwDisponibile: false
+      staffing: staffing[nome] || new Set()
     });
-    const dw = dwStato(nome);
-    operatori[operatori.length - 1].dwDisponibile = dw.disponibile;
+    const dwOra = pwIsDwStart(pwAnno, pwWeek, nome);
+    const dwPrima = pwIsDwStart(prev.anno, prev.week, nome);
     disp[nome] = {};
     for (let d = 0; d < 6; d++) {
       let st = 'libero';
-      if (dw.viaTutta || (dw.viaInizio && d <= 2)) st = 'dw';
+      if (dwOra || (dwPrima && d <= 2)) st = 'dw';
       else if (ferieWk[nome] && pwFerieTipo(ferieWk[nome][d])) st = 'ferie';
       else if (occupato[nome] && occupato[nome][d]) st = 'occupato';
-      else if (d === 5 && !_ap.opzioni.sabato && !dw.disponibile) st = 'sabato'; // sabato solo per la doppia week
       disp[nome][d] = st;
     }
   });
@@ -21916,148 +21717,6 @@ function apBuildContesto() {
     modello: _ap.modello,
     pesi: { maxKmTrasferta: _ap.opzioni.maxKm || 250 }
   };
-}
-
-/* ================= DISTANZE STRADALI (OSRM) ================= */
-
-/* Km stradali fra coppie di punti ("lat,lng>lat,lng" a 4 decimali), null = nessun percorso.
-   In memoria per la sessione: ricalcolare dopo una modifica non rifà le chiamate. */
-const _apDistCache = {};
-const AP_OSRM_MAX_PUNTI = 90;  // il server pubblico rifiuta tabelle troppo grandi
-
-function _apPuntoKey(p) { return p.lat.toFixed(4) + ',' + p.lng.toFixed(4); }
-
-function _apUnici(punti) {
-  const out = {};
-  punti.forEach(p => { if (p && p.lat != null && p.lng != null) out[_apPuntoKey(p)] = p; });
-  return Object.values(out);
-}
-
-/* Una chiamata OSRM /table per blocco di origini, tutte le destinazioni in colonna. Se il
-   servizio non risponde si prosegue: le coppie mancanti ricadono sulla linea d'aria x 1,3
-   dentro il solver, e la bozza dice che quelle distanze sono stimate. */
-async function _apCaricaDistanze(origini, destinazioni) {
-  const dest = _apUnici(destinazioni);
-  const orig = _apUnici(origini).filter(o => dest.some(d => !((_apPuntoKey(o) + '>' + _apPuntoKey(d)) in _apDistCache)));
-  if (!dest.length) return { info: 'nessun cantiere localizzato: distanze non valutate' };
-  if (dest.length > AP_OSRM_MAX_PUNTI - 10) return { info: 'troppi cantieri per il calcolo stradale: distanze stimate in linea d\'aria' };
-  const passo = AP_OSRM_MAX_PUNTI - dest.length;
-  let falliti = 0;
-  for (let i = 0; i < orig.length; i += passo) {
-    const blocco = orig.slice(i, i + passo);
-    const punti = blocco.concat(dest);
-    const url = 'https://router.project-osrm.org/table/v1/driving/' +
-      punti.map(p => p.lng.toFixed(5) + ',' + p.lat.toFixed(5)).join(';') +
-      '?annotations=distance' +
-      '&sources=' + blocco.map((_, k) => k).join(';') +
-      '&destinations=' + dest.map((_, k) => blocco.length + k).join(';');
-    try {
-      const res = await fetch(url, { signal: AbortSignal.timeout(15000) });
-      if (!res.ok) throw new Error('HTTP ' + res.status);
-      const data = await res.json();
-      if (!data || data.code !== 'Ok' || !Array.isArray(data.distances)) throw new Error('risposta non valida');
-      data.distances.forEach((row, a) => row.forEach((v, b) => {
-        _apDistCache[_apPuntoKey(blocco[a]) + '>' + _apPuntoKey(dest[b])] = v == null ? null : v / 1000;
-      }));
-    } catch (e) {
-      console.warn('OSRM non disponibile per un blocco di distanze:', e);
-      falliti++;
-    }
-    if (i + passo < orig.length) await new Promise(res => setTimeout(res, 250));
-  }
-  if (falliti) return { info: 'servizio stradale non raggiungibile per parte dei punti: quelle distanze sono stimate in linea d\'aria' };
-  return { info: 'distanze stradali (OSRM)' };
-}
-
-/* ================= METEO ================= */
-
-/* Penalità/blocchi per cantiere e giorno, dal meteo già usato in Griglia:
-   - allerta arancione/rossa del bollettino Protezione Civile -> giorno escluso (il
-     bollettino copre solo oggi e domani);
-   - previsione Open-Meteo di severità "alta" (pioggia intensa, temporali) -> forte
-     penalità: il cantiere si sposta se c'è un altro giorno, altrimenti resta con avviso;
-   - severità "media" o allerta gialla -> penalità lieve.
-   Oltre l'orizzonte delle previsioni (15 giorni) non si considera nulla, e lo si dice. */
-const AP_METEO_PEN_ALTA = 250;
-const AP_METEO_PEN_MEDIA = 80;
-
-async function _apPreparaMeteo(righeSolver, ctx) {
-  if (!_ap.opzioni.meteo) return { meteo: {}, info: 'meteo non considerato' };
-  const oggi = meteoTodayISO();
-  const max = new Date(); max.setUTCDate(max.getUTCDate() + METEO_MAX_FORECAST_DAYS);
-  const maxISO = max.toISOString().slice(0, 10);
-  const giorni = ctx.giorni.filter(d => ctx.giorniISO[d] >= oggi && ctx.giorniISO[d] <= maxISO);
-  if (!giorni.length) return { meteo: {}, info: 'settimana oltre l\'orizzonte delle previsioni: meteo non considerato' };
-  const startISO = ctx.giorniISO[giorni[0]];
-  const endISO = ctx.giorniISO[giorni[giorni.length - 1]];
-
-  const viste = new Set();
-  for (const r of righeSolver) {
-    const geo = meteoGeoFor(r.cantiere);
-    if (!geo) continue;
-    const pk = meteoPosKey(geo);
-    if (viste.has(pk)) continue;
-    viste.add(pk);
-    const c = _meteoCache[pk + '|' + startISO];
-    if (c && Date.now() - c.fetchedAt < METEO_TTL_MS && _meteoCache[pk + '|' + endISO]) continue;
-    await pwFetchMeteoRange(geo.lat, geo.lng, startISO, endISO);
-  }
-  try { await pcRefreshBollettino(); } catch (_) { /* bollettino facoltativo */ }
-
-  const meteo = {};
-  let conPrevisione = 0, allerte = 0, sfavorevoli = 0;
-  righeSolver.forEach(r => {
-    const perGiorno = {};
-    let haDati = false;
-    giorni.forEach(d => {
-      const iso = ctx.giorniISO[d];
-      const info = pwMeteoInfoFor(r.cantiere, iso);
-      if (info) haDati = true;
-      const sev = pwMeteoSeverityFor(info);
-      const pc = pcColorePeggiore(pcInfoFor(r.cantiere, iso));
-      const pioggia = info && info.pop != null ? ' ' + Math.round(info.pop) + '%' : '';
-      if (pc === 'arancione' || pc === 'rossa') {
-        perGiorno[d] = { blocco: true, pen: 0, motivo: 'allerta ' + pc + ' Protezione Civile' };
-        allerte++;
-      } else if (sev === 'alta') {
-        perGiorno[d] = { pen: AP_METEO_PEN_ALTA, motivo: 'maltempo forte' + pioggia };
-        sfavorevoli++;
-      } else if (sev === 'media' || pc === 'gialla') {
-        perGiorno[d] = { pen: AP_METEO_PEN_MEDIA, motivo: pc === 'gialla' ? 'allerta gialla' : 'pioggia probabile' + pioggia };
-        sfavorevoli++;
-      }
-    });
-    if (haDati) conPrevisione++;
-    if (Object.keys(perGiorno).length) meteo[r.id] = perGiorno;
-  });
-  const info = 'meteo: previsioni per ' + conPrevisione + '/' + righeSolver.length + ' cantieri' +
-    (allerte ? ', ' + allerte + ' giorni esclusi per allerta' : '') +
-    (sfavorevoli ? ', ' + sfavorevoli + ' giorni sfavorevoli' : '') +
-    (giorni.length < ctx.giorni.length ? ' (previsioni disponibili solo fino al ' + endISO.slice(8, 10) + '/' + endISO.slice(5, 7) + ')' : '');
-  return { meteo, info };
-}
-
-/* ================= PRECEDENZE (dai suggerimenti) ================= */
-
-function apApplicaSuggerimento(el) {
-  const b = _ap.bozza;
-  const i = parseInt(el.dataset.sugg, 10);
-  const sg = b && b.risultato.suggerimenti[i];
-  if (!sg) return;
-  /* Una precedenza opposta fra le stesse due righe viene sostituita */
-  _ap.precedenze = _ap.precedenze.filter(([a, c]) => !(a === sg.primaDi && c === sg.rigaId) && !(a === sg.rigaId && c === sg.primaDi));
-  _ap.precedenze.push([sg.rigaId, sg.primaDi]);
-  _apSalvaLocale();
-  apCalcola();
-}
-
-function apRimuoviPrecedenza(el) {
-  const i = parseInt(el.dataset.prec, 10);
-  if (isNaN(i)) return;
-  _ap.precedenze.splice(i, 1);
-  _apInvalidaBozza();
-  _apSalvaLocale();
-  apRender();
 }
 
 /* ================= CALCOLO BOZZA ================= */
@@ -22083,6 +21742,7 @@ async function apCalcola() {
       await geocodifica(daLocalizzare[i]);
       await new Promise(res => setTimeout(res, 300));
     }
+    _apStatus('Calcolo la bozza…');
     const ctx = apBuildContesto();
     const righeSolver = righe.map(r => {
       const stima = apStimaImpegno(r, _ap.modello);
@@ -22111,33 +21771,8 @@ async function apCalcola() {
         esclusi: r.esclusi || []
       };
     });
-
-    /* Distanze stradali: origini = residenze, posizioni già in Griglia e gli stessi cantieri
-       (dopo un cantiere l'operatore riparte da lì); destinazioni = i cantieri da pianificare. */
-    const destinazioni = righeSolver.map(r => r.geo).filter(Boolean);
-    const origini = destinazioni.slice();
-    ctx.operatori.forEach(o => { if (o.base) origini.push(o.base); });
-    Object.values(ctx.posizione).forEach(pp => Object.values(pp).forEach(p => origini.push(p)));
-    _apStatus('Calcolo le distanze stradali…');
-    const dist = await _apCaricaDistanze(origini, destinazioni);
-    ctx.distanzaKm = (a, b) => {
-      const v = _apDistCache[_apPuntoKey(a) + '>' + _apPuntoKey(b)];
-      return v == null ? null : v;
-    };
-
-    _apStatus('Controllo il meteo…');
-    const met = await _apPreparaMeteo(righeSolver, ctx);
-    ctx.meteo = met.meteo;
-
-    const ids = new Set(righeSolver.map(r => r.id));
-    ctx.precedenze = _ap.precedenze.filter(([a, b]) => ids.has(a) && ids.has(b));
-
-    _apStatus('Calcolo la bozza…');
-    await new Promise(res => setTimeout(res, 0)); // lascia disegnare lo stato prima del calcolo
     const risultato = apRisolvi(ctx, righeSolver);
-    _ap.bozza = { anno: _ap.anno, week: _ap.week, risultato, righeSolver, ctxGiorni: ctx.giorni, creata: Date.now(),
-      infoDistanze: dist.info, infoMeteo: met.info,
-      dwDisponibili: ctx.operatori.filter(o => o.dwDisponibile).map(o => o.nome) };
+    _ap.bozza = { anno: _ap.anno, week: _ap.week, risultato, righeSolver, ctxGiorni: ctx.giorni, creata: Date.now() };
     const es = Object.values(risultato.esiti);
     apRender();
     _apStatus('Bozza pronta: ' + es.filter(e => e.stato === 'assegnato').length + ' assegnati, ' +
@@ -22295,7 +21930,6 @@ function apRimuoviRiga(el) {
   const r = _apRigaDaEl(el);
   if (!r) return;
   _ap.righe = _ap.righe.filter(x => x !== r);
-  _ap.precedenze = _ap.precedenze.filter(([x, y]) => x !== r.id && y !== r.id);
   _apInvalidaBozza();
   _apSalvaLocale();
   apRender();
@@ -22335,7 +21969,6 @@ function apRender() {
   if (_apDd) {
     const el = document.getElementById('ap-dd');
     if (el) { el.style.display = 'none'; el.innerHTML = ''; }
-    root.style.paddingBottom = '';
     if (_apDd.modificato) { _ap.bozza = null; _apSalvaLocale(); }
     _apDd = null;
   }
@@ -22345,15 +21978,14 @@ function apRender() {
   const puoAnnullare = undo && undo.anno === pwAnno && undo.week === pwWeek;
 
   root.innerHTML =
-    '<div class="grid grid-cols-1 xl:grid-cols-5 gap-4 items-start">' +
+    '<div class="grid grid-cols-1 lg:grid-cols-5 gap-4 items-start">' +
       _apPannelloFontiHtml() +
-      '<div class="xl:col-span-4 space-y-4" style="min-width:0;">' +
+      '<div class="lg:col-span-4 space-y-4" style="min-width:0;">' +
         '<div class="bg-white border border-slate-200 rounded-lg p-3 shadow-sm">' +
           '<div class="flex flex-wrap items-center gap-2 mb-2">' +
             '<div class="text-xs font-semibold text-slate-700 uppercase tracking-wide">📋 Cantieri da pianificare · ' + _apE(giorniLabel) + '</div>' +
             '<div class="flex-1"></div>' +
             '<label class="text-xs text-slate-600 flex items-center gap-1"><input type="checkbox" data-opz="sabato" onchange="apSetOpzione(this)"' + (_ap.opzioni.sabato ? ' checked' : '') + '> anche sabato</label>' +
-            '<label class="text-xs text-slate-600 flex items-center gap-1" title="Evita i giorni con allerta Protezione Civile e sposta, se possibile, quelli con maltempo previsto"><input type="checkbox" data-opz="meteo" onchange="apSetOpzione(this)"' + (_ap.opzioni.meteo ? ' checked' : '') + '> considera meteo</label>' +
             '<label class="text-xs text-slate-600 flex items-center gap-1">max km trasferta <input type="number" min="20" step="10" data-opz="maxKm" onchange="apSetOpzione(this)" value="' + _apE(_ap.opzioni.maxKm) + '" class="w-16 border border-slate-300 rounded px-1 py-0.5 text-xs"></label>' +
             '<button type="button" onclick="apSvuota()" class="text-xs px-2 py-1 border border-slate-300 rounded hover:bg-slate-50">Svuota</button>' +
             '<button type="button" id="ap-calcola-btn" onclick="apCalcola()" class="text-xs px-3 py-1.5 rounded font-semibold text-white" style="background:var(--accent,#0d9488);">🤖 Calcola bozza</button>' +
@@ -22361,7 +21993,6 @@ function apRender() {
           '<div class="text-[11px] text-slate-500 mb-2">' + _apE(_ap.modelloInfo) +
             ' <button type="button" onclick="apCaricaStorico(true)" class="underline">aggiorna</button></div>' +
           _apTabellaRigheHtml() +
-          _apPrecedenzeHtml() +
           '<div id="ap-status" class="text-xs mt-2" style="color:' + (_ap.stato.err ? '#e11d48' : '#64748b') + ';">' + _apE(_ap.stato.msg) + '</div>' +
         '</div>' +
         _apBozzaHtml(puoAnnullare) +
@@ -22370,27 +22001,21 @@ function apRender() {
 }
 
 function _apPannelloFontiHtml() {
-  /* Colonna a sinistra da 1280px in su; sotto, sta sopra la tabella e si dispone su due
-     colonne (incolla | altre fonti) per non occupare mezza pagina in altezza. */
-  return '<div class="xl:col-span-1 bg-white border border-slate-200 rounded-lg p-3 shadow-sm no-print">' +
-    '<div class="text-xs font-semibold text-slate-700 uppercase tracking-wide mb-1">🤖 Auto-pianifica</div>' +
-    '<div class="text-[11px] text-slate-500 leading-snug mb-3">Carica i cantieri da una o più fonti, controlla stima e priorità, poi calcola una bozza: la Griglia cambia solo quando premi <b>Applica</b>.</div>' +
-    '<div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-1 gap-3">' +
-      '<div>' +
-        '<label class="block text-xs font-semibold text-slate-600 mb-1">Incolla da Excel / CSV</label>' +
-        '<textarea id="ap-incolla" rows="4" placeholder="Cantiere&#9;Commessa&#9;Attività&#9;Km&#9;…&#9;Priorità" class="w-full px-2 py-1.5 text-xs border border-slate-300 rounded font-mono"></textarea>' +
-        '<button type="button" onclick="apImportaTesto()" class="mt-1 w-full text-xs px-2 py-1.5 border border-slate-300 rounded hover:bg-slate-50">⬇ Importa righe incollate</button>' +
-      '</div>' +
-      '<div>' +
-        '<div class="grid grid-cols-1 gap-1">' +
-          '<button type="button" onclick="document.getElementById(\'ap-file\').click()" class="text-xs px-2 py-1.5 border border-slate-300 rounded hover:bg-slate-50 text-left">📂 Da file .xlsx / .csv</button>' +
-          '<button type="button" onclick="apDaSettimanaPrecedente()" class="text-xs px-2 py-1.5 border border-slate-300 rounded hover:bg-slate-50 text-left">↩ Cantieri della settimana precedente</button>' +
-          '<button type="button" onclick="apAggiungiRiga()" class="text-xs px-2 py-1.5 border border-slate-300 rounded hover:bg-slate-50 text-left">＋ Riga manuale</button>' +
-          '<button type="button" onclick="apScaricaModello()" class="text-xs px-2 py-1.5 text-slate-500 hover:text-slate-800 text-left underline">Scarica il modello Excel</button>' +
-        '</div>' +
-        '<div class="text-[10px] text-slate-400 leading-snug mt-2">Colonne riconosciute: Cantiere, Commessa, Attività, Km, Giorni, Operatori, Priorità (P1/P2/P3), Scadenza, Dal, Skill, Preferiti, Esclusi, Note. Giorni vuoto = stima dallo storico di produzione.</div>' +
-      '</div>' +
+  return '<div class="lg:col-span-1 bg-white border border-slate-200 rounded-lg p-3 shadow-sm space-y-3 no-print">' +
+    '<div class="text-xs font-semibold text-slate-700 uppercase tracking-wide">🤖 Auto-pianifica</div>' +
+    '<div class="text-[11px] text-slate-500 leading-snug">Carica i cantieri da una o più fonti, controlla stima e priorità, poi calcola una bozza: la Griglia cambia solo quando premi <b>Applica</b>.</div>' +
+    '<div>' +
+      '<label class="block text-xs font-semibold text-slate-600 mb-1">Incolla da Excel / CSV</label>' +
+      '<textarea id="ap-incolla" rows="5" placeholder="Cantiere&#9;Commessa&#9;Attività&#9;Km&#9;…&#9;Priorità" class="w-full px-2 py-1.5 text-xs border border-slate-300 rounded font-mono"></textarea>' +
+      '<button type="button" onclick="apImportaTesto()" class="mt-1 w-full text-xs px-2 py-1.5 border border-slate-300 rounded hover:bg-slate-50">⬇ Importa righe incollate</button>' +
     '</div>' +
+    '<div class="grid grid-cols-1 gap-1">' +
+      '<button type="button" onclick="document.getElementById(\'ap-file\').click()" class="text-xs px-2 py-1.5 border border-slate-300 rounded hover:bg-slate-50 text-left">📂 Da file .xlsx / .csv</button>' +
+      '<button type="button" onclick="apDaSettimanaPrecedente()" class="text-xs px-2 py-1.5 border border-slate-300 rounded hover:bg-slate-50 text-left">↩ Cantieri della settimana precedente</button>' +
+      '<button type="button" onclick="apAggiungiRiga()" class="text-xs px-2 py-1.5 border border-slate-300 rounded hover:bg-slate-50 text-left">＋ Riga manuale</button>' +
+      '<button type="button" onclick="apScaricaModello()" class="text-xs px-2 py-1.5 text-slate-500 hover:text-slate-800 text-left underline">Scarica il modello Excel</button>' +
+    '</div>' +
+    '<div class="text-[10px] text-slate-400 leading-snug">Colonne riconosciute: Cantiere, Commessa, Attività, Km, Giorni, Operatori, Priorità (P1/P2/P3), Scadenza, Dal, Skill, Preferiti, Esclusi, Note. Giorni vuoto = stima dallo storico di produzione.</div>' +
   '</div>';
 }
 
@@ -22528,43 +22153,16 @@ function apDdApri(btn) {
   if (cerca) cerca.focus();
 }
 
-/* Il menu si apre SEMPRE sotto il suo campo, come ci si aspetta da una tendina. Se sotto
-   non c'è abbastanza spazio, prima si fa scorrere la pagina (una volta per apertura) e
-   poi si accorcia la lista, che scorre al suo interno. Le misure usano l'area visibile
-   (clientWidth/Height), non innerWidth, che include la barra di scorrimento: altrimenti il
-   menu del campo più a destra finisce in parte fuori schermo. */
-const AP_DD_LISTA_MIN = 100;
-const AP_DD_LISTA_MAX = 260;
-
 function _apDdPosiziona() {
   const el = document.getElementById('ap-dd');
   if (!el || !_apDd || !_apDd.btn || !_apDd.btn.isConnected) return;
-  const vw = document.documentElement.clientWidth;
-  const vh = document.documentElement.clientHeight;
-  const lista = document.getElementById('ap-dd-lista');
-  const cornice = lista ? el.offsetHeight - lista.offsetHeight : 0; // ricerca + note + pulsanti
-  let b = _apDd.btn.getBoundingClientRect();
-  const serve = cornice + Math.min(AP_DD_LISTA_MAX, lista ? lista.scrollHeight : AP_DD_LISTA_MAX) + 12;
-  if (!_apDd.scrollato && vh - b.bottom < serve) {
-    _apDd.scrollato = true;
-    const manca = Math.min(serve - (vh - b.bottom), Math.max(0, b.top - 80));
-    /* Pagina troppo corta per scorrere (es. una sola riga e niente sotto): spazio
-       temporaneo in fondo alla tab, tolto alla chiusura del menu. */
-    const se = document.scrollingElement || document.documentElement;
-    const scorribile = se.scrollHeight - vh - se.scrollTop;
-    const root = document.getElementById('ap-root');
-    if (root && scorribile < manca) root.style.paddingBottom = Math.ceil(manca - scorribile + 8) + 'px';
-    window.scrollBy(0, manca);
-    b = _apDd.btn.getBoundingClientRect();
-  }
-  const w = Math.min(Math.max(b.width, 240), vw - 16);
+  const b = _apDd.btn.getBoundingClientRect();
+  const w = Math.min(Math.max(b.width, 240), window.innerWidth - 16);
   el.style.width = w + 'px';
-  el.style.left = Math.max(8, Math.min(b.left, vw - w - 8)) + 'px';
-  el.style.top = (b.bottom + 4) + 'px';
-  if (lista) {
-    const spazio = vh - b.bottom - 4 - cornice - 8;
-    lista.style.maxHeight = Math.max(AP_DD_LISTA_MIN, Math.min(AP_DD_LISTA_MAX, spazio)) + 'px';
-  }
+  el.style.left = Math.max(8, Math.min(b.left, window.innerWidth - w - 8)) + 'px';
+  /* Sotto il bottone se c'è spazio, altrimenti sopra */
+  const h = el.offsetHeight;
+  el.style.top = (b.bottom + 4 + h > window.innerHeight && b.top - 4 - h > 0 ? b.top - 4 - h : b.bottom + 4) + 'px';
 }
 
 function _apDdFiltra(q) {
@@ -22634,8 +22232,6 @@ function _apDdAggiornaBottone(r, campo) {
 function apDdChiudi() {
   const el = document.getElementById('ap-dd');
   if (el) { el.style.display = 'none'; el.innerHTML = ''; }
-  const root = document.getElementById('ap-root');
-  if (root) root.style.paddingBottom = '';
   const d = _apDd;
   _apDd = null;
   if (d && d.modificato) {
@@ -22739,57 +22335,6 @@ function _apTabellaRigheHtml() {
   return html;
 }
 
-/* Nome breve di una riga della bozza, per i messaggi: "P1 Ivrea" */
-function _apNomeRiga(b, id) {
-  const r = (b ? b.righeSolver : []).find(x => x.id === id) || _ap.righe.find(x => x.id === id);
-  return r ? 'P' + (r.priorita || 3) + ' ' + r.cantiere : '?';
-}
-
-/* "Ivrea 0 → 3 gg, Chivasso 5 → 3 gg (oltre la scadenza)" */
-function _apEffettiTesto(b, effetti) {
-  return effetti.map(e => {
-    let t = _apNomeRiga(b, e.rigaId).replace(/^P\d /, '') + ' ' + apFmtNum(e.prima) + ' → ' + apFmtNum(e.dopo) + ' gg';
-    if (e.oltreScadenzaDopo && !e.oltreScadenzaPrima) t += ' (oltre la scadenza)';
-    if (!e.oltreScadenzaDopo && e.oltreScadenzaPrima) t += ' (ora entro la scadenza)';
-    return t;
-  }).join(', ');
-}
-
-function _apMiglioramentiHtml(b) {
-  const res = b.risultato;
-  let html = '';
-  if (res.miglioramenti.length) {
-    html += '<div class="mb-3 rounded border border-teal-200 bg-teal-50 px-2 py-1.5 text-[11px] text-teal-900">' +
-      '<div class="font-semibold mb-0.5">🔧 Migliorie trovate dal calcolo</div>' +
-      res.miglioramenti.map(m => '<div>' + _apE(_apNomeRiga(b, m.rigaId)) + ' pianificato prima di ' + _apE(_apNomeRiga(b, m.primaDi)) +
-        ': ' + _apE(_apEffettiTesto(b, m.effetti)) + '</div>').join('') +
-      '</div>';
-  }
-  if (res.suggerimenti.length) {
-    html += '<div class="mb-3 rounded border border-amber-200 bg-amber-50 px-2 py-1.5 text-[11px] text-amber-900">' +
-      '<div class="font-semibold mb-0.5">💡 Si può fare spazio, a un costo</div>' +
-      res.suggerimenti.map((sg, i) => '<div class="flex items-center gap-2 py-0.5">' +
-        '<div class="flex-1">' + _apE(_apNomeRiga(b, sg.rigaId)) + ' entra (+' + apFmtNum(sg.guadagno) + ' gg) se passa davanti a ' + _apE(_apNomeRiga(b, sg.primaDi)) +
-        ': ' + _apE(_apEffettiTesto(b, sg.effetti)) + '</div>' +
-        '<button type="button" data-sugg="' + i + '" onclick="apApplicaSuggerimento(this)" class="px-2 py-0.5 rounded border border-amber-400 bg-white hover:bg-amber-100 font-semibold whitespace-nowrap">Applica e ricalcola</button>' +
-        '</div>').join('') +
-      '</div>';
-  }
-  return html;
-}
-
-/* Precedenze scelte dai suggerimenti: restano (per settimana) finché non si tolgono */
-function _apPrecedenzeHtml() {
-  const ids = new Set(_ap.righe.map(r => r.id));
-  const valide = _ap.precedenze.map((p, i) => ({ p, i })).filter(x => ids.has(x.p[0]) && ids.has(x.p[1]));
-  if (!valide.length) return '';
-  return '<div class="mt-2 flex flex-wrap items-center gap-1 text-[11px]"><span class="text-slate-500">Precedenze scelte:</span>' +
-    valide.map(x => '<span class="inline-flex items-center gap-1 rounded-full bg-slate-100 border border-slate-200 px-2 py-0.5">' +
-      _apE(_apNomeRiga(null, x.p[0])) + ' prima di ' + _apE(_apNomeRiga(null, x.p[1])) +
-      '<button type="button" data-prec="' + x.i + '" onclick="apRimuoviPrecedenza(this)" title="Togli" class="text-slate-400 hover:text-rose-600">✕</button></span>').join('') +
-    '</div>';
-}
-
 function _apBozzaHtml(puoAnnullare) {
   const annullaBtn = puoAnnullare
     ? '<button type="button" onclick="apAnnulla()" class="text-xs px-2 py-1 border border-slate-300 rounded hover:bg-slate-50">↶ Annulla ultima applicazione</button>'
@@ -22832,8 +22377,7 @@ function _apBozzaHtml(puoAnnullare) {
     giorni.map(d => '<th class="px-2 py-1 text-left whitespace-nowrap">' + _apE(giornoLbl(d)) + '</th>').join('') + '</tr></thead><tbody>';
   nomi.forEach(n => {
     tab += '<tr class="border-t border-slate-100"><td class="px-2 py-1 font-semibold whitespace-nowrap">' + _apE(n) +
-      (res.operatoriSuPiuCommesse.includes(n) ? ' <span title="In Griglia comparirà su più commesse">⚠️</span>' : '') +
-      ((b.dwDisponibili || []).includes(n) ? ' <span title="Doppia week: disponibilità data ma non ancora impiegato in Griglia, pianificabile anche il sabato" style="background:#f3e8ff;color:#7e22ce;font-size:9px;font-weight:700;padding:0 4px;border-radius:3px;">DW</span>' : '') + '</td>';
+      (res.operatoriSuPiuCommesse.includes(n) ? ' <span title="In Griglia comparirà su più commesse">⚠️</span>' : '') + '</td>';
     giorni.forEach(d => {
       const ex = (esistenti[n] || {})[d] || [];
       const pr = (perOp[n] || {})[d] || [];
@@ -22875,8 +22419,6 @@ function _apBozzaHtml(puoAnnullare) {
       '<button type="button" onclick="apApplica()" class="text-xs px-3 py-1.5 rounded font-semibold text-white" style="background:#15803d;"' + (nCelle ? '' : ' disabled') + '>✓ Applica alla Griglia</button>' +
     '</div>' +
     '<div class="text-[11px] text-slate-500 mb-2">Grigio = già in Griglia (non viene toccato) · tratteggiato = proposta. Togli la spunta a una riga della lista per escluderla dall\'applicazione.</div>' +
-    '<div class="text-[11px] text-slate-500 mb-3">📏 ' + _apE(b.infoDistanze || '') + ' · 🌦️ ' + _apE(b.infoMeteo || '') + '</div>' +
-    _apMiglioramentiHtml(b) +
     tab +
     '<div class="text-xs font-semibold text-slate-700 uppercase tracking-wide mt-4 mb-2">Per cantiere</div>' +
     lista +

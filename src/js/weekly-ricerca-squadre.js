@@ -154,8 +154,8 @@ function _rsInDoppiaWeek(sq) {
 }
 
 /* Giorni da considerare per una squadra: il sabato è un giorno lavorativo solo in
-   doppia week (trasferta lunga). Per le altre squadre mostrarlo come "libero" sarebbe
-   fuorviante — non ci si va comunque. Resta però visibile se in Griglia c'è davvero
+   doppia week (trasferta lunga), sia effettiva sia solo come disponibilità data. Per
+   le altre squadre mostrarlo come "libero" sarebbe fuorviante — non ci si va comunque. Resta però visibile se in Griglia c'è davvero
    del lavoro programmato di sabato, per non nascondere dati reali. */
 function _rsNumGiorni(sq) {
   if ((sq.cantieriByDay[5] || []).length) return 6;
@@ -163,7 +163,9 @@ function _rsNumGiorni(sq) {
 }
 
 /* Stato giorno per giorno. La doppia week copre la settimana di inizio (fuori tutta
-   la settimana) e la successiva (rientro giovedì): vedi pwSetDwStart/pwIsDwStart. */
+   la settimana) e la successiva (rientro giovedì): vedi pwSetDwStart/pwIsDwStart.
+   Conta però solo quella EFFETTIVA (pwIsDwEffettiva: flag + già impiegato in Griglia in
+   quella settimana): chi ha dato solo la disponibilità resta libero, sabato compreso. */
 function _rsDisponibilita(sq) {
   const prev = pwWeekAdd(pwAnno, pwWeek, -1);
   const ferieWk = (pwFerie[pwAnno] && pwFerie[pwAnno][pwWeek]) || {};
@@ -173,8 +175,8 @@ function _rsDisponibilita(sq) {
     let away = false;
     let inFerie = 0;
     sq.operatori.forEach(n => {
-      if (pwIsDwStart(pwAnno, pwWeek, n)) away = true;
-      else if (pwIsDwStart(prev.anno, prev.week, n) && d <= 2) away = true;
+      if (pwIsDwEffettiva(pwAnno, pwWeek, n)) away = true;
+      else if (pwIsDwEffettiva(prev.anno, prev.week, n) && d <= 2) away = true;
       const wk = ferieWk[n];
       if (wk && pwFerieTipo(wk[d])) inFerie++;
     });

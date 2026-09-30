@@ -226,6 +226,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   document.getElementById('pw-tab-mappa').onclick   = () => pwSwitchTab('mappa');
   document.getElementById('pw-tab-spostamenti').onclick = () => pwSwitchTab('spostamenti');
   document.getElementById('pw-tab-ricerca-squadre').onclick = () => pwSwitchTab('ricerca-squadre');
+  document.getElementById('pw-tab-autoplan').onclick = () => pwSwitchTab('autoplan');
   const _spostCalc  = document.getElementById('pw-spost-calcola');
   const _spostClear = document.getElementById('pw-spost-clear');
   if (_spostCalc)  _spostCalc.onclick  = () => pwSpostCalcola();
