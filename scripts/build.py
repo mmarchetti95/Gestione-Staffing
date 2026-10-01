@@ -52,6 +52,7 @@ JS_FILES = [
     'produzione-report.js',
     'produzione-anomalie-core.js',
     'produzione-anomalie.js',
+    'produzione-anomalie-solleciti.js',
     'weekly-mappa.js',
     'weekly-spostamenti.js',
     'weekly-ricerca-squadre.js',

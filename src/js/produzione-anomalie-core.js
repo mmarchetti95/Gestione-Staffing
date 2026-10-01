@@ -31,6 +31,7 @@
 
 const CPA_TIPI = {
   pianificato_senza_worklog:     { icona: '⏱', etichetta: 'Pianificati senza worklog' },
+  worklog_parziale:              { icona: '◔', etichetta: 'Worklog parziali' },
   worklog_senza_pianificazione:  { icona: '👻', etichetta: 'Worklog senza pianificazione' },
   epic_diverso:                  { icona: '🟣', etichetta: 'Epic diverso dalla Griglia' },
   km_duplicati:                  { icona: '👯', etichetta: 'Km duplicati in squadra' },
@@ -42,6 +43,9 @@ const CPA_SOGLIE_DEFAULT = {
   kmBasso: 0.25,      // ... o <= 1/4
   minCampioni: 3,     // giornate di storico minime perché la mediana conti
   oreMinime: 0.25,    // sotto questa soglia un giorno vale "senza worklog"
+  // sotto queste un giorno vale "parziale" (Lun..Sab): stesse soglie del verde
+  // nella colonna "Ore Jira" (cpOreJiraStyle), Lun/Ven sono giornate di viaggio
+  oreAttese: [5, 7, 7, 7, 5, 7],
 };
 
 const CPA_GRAVITA_ORD = { alta: 0, media: 1, bassa: 2 };
@@ -93,28 +97,43 @@ function _cpaControllaWorklog(input, out, nonVerificabili) {
   const wl = (op, g) => (input.worklog[op] || {})[g] || null;
   const ore = (op, g) => { const d = wl(op, g); return d ? (_cpaNum(d.hours) || 0) : 0; };
 
-  // 1) Pianificati senza worklog (per operatore/giorno, solo giorni conclusi)
+  // 1) Pianificati senza worklog o con worklog parziale (per operatore/giorno, solo giorni conclusi)
   Object.keys(perOpGiorno).forEach(k => {
     const celle = perOpGiorno[k].filter(c => !c.ferie);
     if (!celle.length) return;
     const op = celle[0].operatore, g = celle[0].giorno;
     if (!verificati.has(op) || !valutabili.has(g)) return;
-    if (ore(op, g) >= S.oreMinime) return;
+    const h = ore(op, g);
+    const attese = S.oreAttese[g];
+    const parziale = h >= S.oreMinime;
+    if (parziale && !(attese > 0 && h < attese)) return;
     const cantieri = [...new Set(celle.flatMap(_cpaCantieriCella))];
+    const commesse = celle.map(c => c.commessa).filter((x, i, a) => a.indexOf(x) === i);
     const sottotask = celle.flatMap(c => (c.voci || []).map(v => v.subtask).filter(Boolean));
+    const ticket = ((wl(op, g) || {}).tickets || []);
     const dove = sottotask.length
       ? 'sul sottotask ' + sottotask.map(s => s.key).join(' / ')
       : 'sul ticket del cantiere ' + cantieri.join(', ');
+    const tipo = parziale ? 'worklog_parziale' : 'pianificato_senza_worklog';
     out.push({
-      id: _cpaId('pianificato_senza_worklog', input, [op, g]),
-      tipo: 'pianificato_senza_worklog', gravita: 'media',
+      id: _cpaId(tipo, input, [op, g]),
+      tipo, gravita: parziale ? 'bassa' : 'media',
       commessa: celle[0].commessa, squadra: celle[0].squadra, operatore: op, giorno: g,
       cpKey: celle[0].cpKey, cantiere: cantieri.join(', '),
-      titolo: op + ' è in Griglia ma non ha ore su Jira',
-      dettaglio: 'Pianificato su ' + cantieri.join(', ') + ' (' + celle.map(c => c.commessa).filter((x, i, a) => a.indexOf(x) === i).join(', ') + '), worklog del giorno: ' + _cpaFmt(ore(op, g)) + ' h.',
-      correzione: 'Chiedere a ' + op + ' di registrare le ore di ' + input.giorniLabel[g] + ' ' + dove +
-        '. Se invece quel giorno era assente, segnarlo in Ferie (la cella esce dal controllo).',
+      titolo: parziale
+        ? op + ' ha registrato ' + _cpaFmt(h) + ' h su ' + _cpaFmt(attese) + ' attese'
+        : op + ' è in Griglia ma non ha ore su Jira',
+      dettaglio: 'Pianificato su ' + cantieri.join(', ') + ' (' + commesse.join(', ') + '), worklog del giorno: ' + _cpaFmt(h) + ' h' +
+        (ticket.length ? ' su ' + ticket.map(t => t.key).join(', ') : '') + '.',
+      correzione: parziale
+        ? 'Chiedere a ' + op + ' di completare le ore di ' + input.giorniLabel[g] + ' (ne mancano circa ' + _cpaFmt(Math.round((attese - h) * 10) / 10) + ') ' + dove +
+          '. Se ha lavorato davvero meno (mezza giornata, permesso), nessuna correzione.'
+        : 'Chiedere a ' + op + ' di registrare le ore di ' + input.giorniLabel[g] + ' ' + dove +
+          '. Se invece quel giorno era assente, segnarlo in Ferie (la cella esce dal controllo).',
       azione: null,
+      // dati per il sollecito (vedi cpaRaggruppaSolleciti)
+      sollecito: { operatore: op, giorno: g, commesse, cantieri, oreRegistrate: Math.round(h * 100) / 100, oreAttese: attese,
+        sottotask: sottotask.map(s => s.key), ticket: ticket.map(t => t.key) },
       link: sottotask.map(s => ({ label: s.key, url: s.url })),
     });
   });
@@ -327,6 +346,59 @@ function cpaRileva(input) {
   Object.keys(CPA_TIPI).forEach(t => { perTipo[t] = 0; });
   out.forEach(a => { perTipo[a.tipo]++; });
   return { anomalie: out, perTipo, nonVerificabili };
+}
+
+/* ---------- Solleciti per worklog mancanti / parziali ---------- */
+
+/* Un gruppo per operatore con le sue giornate da sistemare, in ordine di giorno. */
+function cpaRaggruppaSolleciti(anomalie) {
+  const per = {};
+  (anomalie || []).forEach(a => {
+    if (!a.sollecito) return;
+    const s = a.sollecito;
+    (per[s.operatore] = per[s.operatore] || { operatore: s.operatore, voci: [] }).voci.push(Object.assign({ tipo: a.tipo, id: a.id }, s));
+  });
+  return Object.values(per)
+    .map(g => { g.voci.sort((x, y) => x.giorno - y.giorno); return g; })
+    .sort((x, y) => x.operatore.localeCompare(y.operatore));
+}
+
+/* Le stesse giornate nel formato dell'azione 'solleciti' di ai-autoplan. Si passano
+   solo le ore registrate, non quelle attese: il messaggio non deve citare il target. */
+function cpaSollecitiPayload(gruppi, giorniLabel) {
+  return gruppi.map(g => ({
+    nome: g.operatore,
+    voci: g.voci.map(v => ({
+      giorno: giorniLabel[v.giorno] || String(v.giorno),
+      commessa: v.commesse.join(', '),
+      cantieri: v.cantieri.join(', '),
+      ore_registrate: v.oreRegistrate,
+      sottotask: v.sottotask,
+      ticket: v.ticket,
+    })),
+  }));
+}
+
+/* Testo di base, senza AI: sempre disponibile, e punto di partenza da ritoccare. */
+function cpaSollecitoBase(gruppo, giorniLabel, opt) {
+  const o = opt || {};
+  const righe = gruppo.voci.map(v => {
+    const dove = v.cantieri.join(', ') + ' (' + v.commesse.join(', ') + ')';
+    const su = v.sottotask.length ? ' — sottotask ' + v.sottotask.join(' / ') : '';
+    // solo le ore registrate, mai "su Y": le ore attese sono una soglia di controllo, non l'orario dovuto
+    const stato = v.oreRegistrate > 0 ? 'registrate ' + _cpaFmt(v.oreRegistrate) + ' h' : 'nessuna ora registrata';
+    return '- ' + (giorniLabel[v.giorno] || '') + ': ' + dove + ', ' + stato + su;
+  });
+  const tutteZero = gruppo.voci.every(v => !(v.oreRegistrate > 0));
+  const nome = String(gruppo.operatore || '').trim();
+  return {
+    oggetto: 'Ore Jira da ' + (tutteZero ? 'registrare' : 'completare') + ' — settimana ' + o.week + '/' + o.anno,
+    testo: 'Ciao ' + nome + ',\n\n' +
+      'dal controllo della settimana ' + o.week + ' risultano ore Jira ' + (tutteZero ? 'mancanti' : 'mancanti o incomplete') + ' per queste giornate:\n\n' +
+      righe.join('\n') + '\n\n' +
+      'Potresti mandarmi ' + (o.entro ? 'entro ' + o.entro + ' ' : '') + 'gli orari di lavoro effettivo, così da poter registrare correttamente l\'intervento? Se qualche giornata non è corretta (assenza, cantiere diverso) fammelo sapere, così sistemiamo la pianificazione.\n\n' +
+      'Grazie' + (o.firma ? ',\n' + o.firma : ''),
+  };
 }
 
 /* Testo semplice dell'elenco (per copiarlo in una mail o in chat). */

@@ -114,6 +114,16 @@ Limite noto: il progetto Supabase è sul piano **Free**, che non include backup 
 
 ## Changelog
 
+## v18.191.0
+- feat: **Controllo anomalie: solleciti per le ore Jira non caricate o caricate in parte.**
+  - Nuovo tipo di anomalia **◔ Worklog parziali**: operatore in Griglia con ore su Jira sotto quelle attese per il giorno (Lun/Ven 5 h, altri giorni 7 h, le stesse soglie del verde nella colonna "Ore Jira").
+  - Nuovo bottone **✉️ Prepara solleciti** nel pannello: una bozza per operatore con le giornate a zero ore o incomplete (giorno, cantiere, commessa, ore registrate su Jira senza indicare un target, sottotask di riferimento) che chiede all'operatore di **mandare gli orari di lavoro effettivo**, così da poter registrare correttamente l'intervento. Testo base subito pronto; opzioni **Entro** e **Firma** (la firma resta salvata nel browser).
+  - **✨ Scrivi con l'assistente AI** riscrive le bozze con il tono scelto (cordiale / formale / diretto) usando il provider configurato in Gestione Assistente AI. L'assistente scrive solo testo: non legge né modifica dati.
+  - Ogni bozza è modificabile. **✉️ Apri mail** apre il programma di posta con destinatario (email in anagrafica), oggetto e testo da rivedere; **💬 Apri in Teams** apre la chat Teams con l'operatore (stessa email di lavoro) e il messaggio già scritto nella casella, da inviare con Invio; **📋 Copia** / **📋 Copia tutti** per altri canali. **Nessun messaggio parte da solo.**
+  - Spunta **Sollecito inviato** per operatore: condivisa con i colleghi (salvata con la pianificazione della settimana), con data e autore. Le schede già inviate si compattano in fondo; se dopo l'invio compare una nuova giornata da sollecitare, l'operatore torna fra quelli da inviare con la giornata nuova evidenziata. Nella lista anomalie le voci coperte mostrano «✉️ sollecitato il …».
+  - **📒 Registro solleciti** (nel pannello anomalie e nella vista solleciti): chi è stato sollecitato, per quali giornate, quando, da chi, con quale canale (mail / Teams) e il testo inviato; con un controllo della stessa settimana mostra anche se le ore risultano ora sistemate. Legge i dati salvati, quindi si vede senza rilanciare il controllo e resta dopo aver chiuso la dashboard; opzione *tutte le settimane*. Ogni nuovo invio allo stesso operatore si aggiunge alla cronologia, non la sovrascrive.
+  - Supabase: Edge Function `ai-autoplan` aggiornata (nuova azione `solleciti`, senza strumenti). Nessuna modifica allo schema.
+
 ## v18.190.0
 - fix: **Auto-pianifica: trasferte da casa.** Il limite di km escludeva per tutta la settimana chi parte da lontano (es. Perugia → Piemonte, oltre 500 km). Ora il limite (**max km fra cantieri**, default 250) vale solo per gli spostamenti da un cantiere all'altro durante la settimana; il **viaggio da casa** a inizio trasferta non ha limite, costa i suoi km (a parità vince chi è più vicino) e, oltre 200 km, quel giorno vale **mezza giornata produttiva** (🚐 in bozza e in riparazione, avviso sul cantiere). Ogni settimana riparte dal domicilio (rientro il venerdì), salvo doppia week.
   - Corretto anche il calcolo dei giorni successivi sullo stesso cantiere, che venivano valutati come nuovi viaggi da casa.

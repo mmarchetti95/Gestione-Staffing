@@ -29,6 +29,8 @@ let _cpa = {
   mostraIgnorate: false,
   tuttoIlPool: false,         // legge i worklog anche di chi non è in Griglia questa settimana
   risolte: new Set(),         // id corretti con un bottone in questa sessione
+  soll: null,                 // vista solleciti aperta (produzione-anomalie-solleciti.js)
+  registro: null,             // vista registro solleciti aperta ({ tutte, aperti })
 };
 
 function _cpaIgnorate() {
@@ -47,7 +49,7 @@ function cpaToggle() {
 /* Chiamata a fine pwControlloRender: il risultato vale per una sola settimana. */
 function cpaOnControlloRender() {
   if (_cpa.risultato && (_cpa.anno !== pwAnno || _cpa.week !== pwWeek)) {
-    _cpa.risultato = null; _cpa.msg = ''; _cpa.risolte = new Set();
+    _cpa.risultato = null; _cpa.msg = ''; _cpa.risolte = new Set(); _cpa.soll = null;
   }
   cpaRender();
 }
@@ -166,7 +168,7 @@ async function cpaAvvia() {
   if (!_sbClient || !_sbUser) { _cpa.msg = 'Controllo non disponibile offline: servono Jira e lo storico.'; cpaRender(); return; }
   _cpa.inCorso = true;
   _cpa.anno = pwAnno; _cpa.week = pwWeek;
-  _cpa.risultato = null; _cpa.risolte = new Set();
+  _cpa.risultato = null; _cpa.risolte = new Set(); _cpa.soll = null;
   const avvisi = [];
   try {
     const date = _cpaDateSettimana();
@@ -377,13 +379,22 @@ function _cpaVoceHtml(a, r, ignorata) {
     '<div class="flex items-start gap-2">' +
       '<span class="text-base leading-5" title="' + esc(T.etichetta) + '">' + T.icona + '</span>' +
       '<div class="flex-1 min-w-0">' +
-        '<div class="text-[11px] text-slate-500">' + dove + (a.gravita === 'alta' ? ' <span class="font-bold" style="color:#b91c1c;">· priorità alta</span>' : '') + '</div>' +
+        '<div class="text-[11px] text-slate-500">' + dove + (a.gravita === 'alta' ? ' <span class="font-bold" style="color:#b91c1c;">· priorità alta</span>' : '') + _cpaTagSollecito(a) + '</div>' +
         '<div class="text-sm font-semibold text-slate-800">' + esc(a.titolo) + '</div>' +
         '<div class="text-xs text-slate-600 mt-0.5">' + esc(a.dettaglio) + '</div>' +
         '<div class="text-xs mt-1" style="color:#0f766e;">💡 ' + esc(a.correzione) + '</div>' +
         '<div class="flex flex-wrap items-center gap-1.5 mt-1.5">' + bottoni + '</div>' +
       '</div>' +
     '</div></div>';
+}
+
+/* Etichetta sulle anomalie già coperte da un sollecito inviato (vedi produzione-anomalie-solleciti.js) */
+function _cpaTagSollecito(a) {
+  if (!a.sollecito) return '';
+  const rec = _cpaSollInviati(_cpa.anno, _cpa.week)[a.operatore];
+  if (!rec || !(rec.giorni || []).includes(a.giorno)) return '';
+  const q = new Date(rec.ts).toLocaleDateString('it-IT', { day: '2-digit', month: '2-digit' });
+  return ' <span class="font-semibold" style="color:#15803d;">· ✉️ sollecitato il ' + q + '</span>';
 }
 
 function cpaRender() {
@@ -397,6 +408,8 @@ function cpaRender() {
   const nAperte = attive.filter(a => !ign[a.id]).length;
   if (btn) btn.innerHTML = '🔍 Controllo anomalie' + (r && nAperte ? ' <span style="background:#fff;color:#b45309;border-radius:9px;padding:0 6px;font-weight:700;">' + nAperte + '</span>' : '');
   if (!_cpa.aperto) return;
+  if (_cpa.registro) { root.innerHTML = _cpaRegistroHtml(); return; }
+  if (_cpa.soll && r && !_cpa.inCorso) { root.innerHTML = _cpaSollHtml(r); return; }
 
   const intest = '<div class="flex flex-wrap items-center gap-2">' +
     '<span class="text-xs font-semibold text-slate-700 uppercase tracking-wide">🔍 Controllo anomalie · settimana ' + pwWeek + '</span>' +
@@ -404,6 +417,7 @@ function cpaRender() {
     '<div class="flex-1"></div>' +
     '<label class="text-xs text-slate-600 flex items-center gap-1" title="Legge i worklog anche degli operatori del pool che non compaiono in Griglia questa settimana (più lento)">' +
       '<input type="checkbox" onchange="cpaTogglePool(this)"' + (_cpa.tuttoIlPool ? ' checked' : '') + '> anche chi non è in Griglia</label>' +
+    '<button type="button" onclick="cpaRegistroApri()" class="text-xs px-2 py-1 border border-emerald-300 rounded bg-white hover:bg-emerald-50" style="color:#047857;" title="Chi è già stato sollecitato: resta salvato anche dopo aver chiuso la dashboard">📒 Registro solleciti' + (_cpaRegistroConta() ? ' (' + _cpaRegistroConta() + ')' : '') + '</button>' +
     '<button type="button" onclick="cpaAvvia()" class="text-xs px-3 py-1.5 rounded font-semibold text-white" style="background:#b45309;"' + (_cpa.inCorso ? ' disabled' : '') + '>' + (r ? '↻ Ricontrolla' : '▶ Avvia controllo') + '</button>' +
     '<button type="button" onclick="cpaToggle()" class="text-xs px-2 py-1 text-slate-500 hover:text-slate-800" title="Chiudi">✕</button>' +
     '</div>';
@@ -435,6 +449,7 @@ function cpaRender() {
       '<div class="flex-1"></div>' +
       (nIgn ? '<button type="button" onclick="cpaToggleIgnorate()" class="text-xs text-slate-500 hover:text-slate-800">' + (_cpa.mostraIgnorate ? 'Nascondi' : 'Mostra') + ' ignorate (' + nIgn + ')</button>' : '') +
       ((conta.km_duplicati || 0) > 1 ? '<button type="button" onclick="cpaTieniTuttiPrimo()" class="pw-write-action text-xs px-2 py-0.5 rounded font-semibold text-white" style="background:#0f766e;" title="Per ogni duplicato tiene i km su un operatore (quello che li ha già su Jira, se c\'è) e mette 0 sugli altri">👯 Correggi tutti i duplicati</button>' : '') +
+      (attive.some(a => a.sollecito && !ign[a.id]) ? '<button type="button" onclick="cpaSollApri()" class="text-xs px-2 py-0.5 rounded font-semibold text-white" style="background:#4f46e5;" title="Bozze di messaggio per chi non ha caricato, o ha caricato solo in parte, le ore su Jira">✉️ Prepara solleciti' + (_cpaSollDaInviare().length ? ' (' + _cpaSollDaInviare().length + ' da inviare)' : ' · tutti inviati') + '</button>' : '') +
       (nAperte ? '<button type="button" onclick="cpaCopia()" class="text-xs px-2 py-0.5 border border-slate-300 rounded bg-white hover:bg-slate-50">📋 Copia elenco correzioni</button>' : '') +
       '</div>';
     corpo += '<div class="text-[11px] text-slate-500 mt-1">' + note.map(esc).join('<br>') + '</div>';
