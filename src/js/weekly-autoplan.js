@@ -1251,7 +1251,7 @@ function _apRiparazioneHtml() {
   const tolteK = new Set(rim.map(c => c.operatore + '|' + c.giorno + '|' + _apNorm(c.cantiere) + '|' + _apNorm(c.attivita)));
   const nuove = {};
   res.assegnazioni.forEach(a => a.operatori.forEach(n => {
-    ((nuove[n] = nuove[n] || {})[a.giorno] = nuove[n][a.giorno] || []).push({ r: righeById[a.rigaId], quota: a.quota });
+    ((nuove[n] = nuove[n] || {})[a.giorno] = nuove[n][a.giorno] || []).push({ r: righeById[a.rigaId], quota: a.quota, viaggio: (a.viaggio || []).includes(n) });
   }));
   const nomi = Array.from(new Set(rim.map(c => c.operatore).concat(Object.keys(nuove)))).sort();
   const giorni = Array.from(new Set(rip.ctxGiorni.concat(rim.map(c => c.giorno)))).sort((a, b) => a - b);
@@ -1273,7 +1273,7 @@ function _apRiparazioneHtml() {
             'border-radius:3px;padding:1px 4px;margin-bottom:2px;" title="' + _apE(c.commessa + (c.attivita ? ' · ' + c.attivita : '') + (via ? ' · si toglie' : '')) + '">' + _apE(c.cantiere) + '</div>';
         }).join('') +
         ((nuove[n] || {})[d] || []).map(p => '<div title="' + _apE(p.r.commessa + (p.r.attivita ? ' · ' + p.r.attivita : '') + (p.r.tipo === 'sostituto' ? ' · al posto di ' + p.r.sostituisce.join(', ') : ' · recupero')) + '" style="border:1.5px dashed #0d9488;background:#f0fdfa;color:#0f766e;border-radius:3px;padding:1px 4px;margin-bottom:2px;font-weight:600;">' +
-          _apE(p.r.cantiere) + (p.quota < 1 ? ' <span style="font-weight:400;">(½)</span>' : '') + '</div>').join('') +
+          _apE(p.r.cantiere) + (p.quota < 1 ? ' <span style="font-weight:400;">(½)</span>' : '') + (p.viaggio ? ' <span title="Viaggio da casa: mezza giornata produttiva">🚐</span>' : '') + '</div>').join('') +
         '</td>';
     });
     tab += '</tr>';
@@ -1435,7 +1435,7 @@ function apRender() {
             '<div class="flex-1"></div>' +
             '<label class="text-xs text-slate-600 flex items-center gap-1"><input type="checkbox" data-opz="sabato" onchange="apSetOpzione(this)"' + (_ap.opzioni.sabato ? ' checked' : '') + '> anche sabato</label>' +
             '<label class="text-xs text-slate-600 flex items-center gap-1" title="Evita i giorni con allerta Protezione Civile e sposta, se possibile, quelli con maltempo previsto"><input type="checkbox" data-opz="meteo" onchange="apSetOpzione(this)"' + (_ap.opzioni.meteo ? ' checked' : '') + '> considera meteo</label>' +
-            '<label class="text-xs text-slate-600 flex items-center gap-1">max km trasferta <input type="number" min="20" step="10" data-opz="maxKm" onchange="apSetOpzione(this)" value="' + _apE(_ap.opzioni.maxKm) + '" class="w-16 border border-slate-300 rounded px-1 py-0.5 text-xs"></label>' +
+            '<label class="text-xs text-slate-600 flex items-center gap-1" title="Spostamento massimo da un cantiere all&#39;altro durante la settimana. Il viaggio da casa a inizio trasferta non ha limite: costa i suoi km e, oltre 200 km, vale mezza giornata produttiva.">max km fra cantieri <input type="number" min="20" step="10" data-opz="maxKm" onchange="apSetOpzione(this)" value="' + _apE(_ap.opzioni.maxKm) + '" class="w-16 border border-slate-300 rounded px-1 py-0.5 text-xs"></label>' +
             '<button type="button" onclick="apSvuota()" class="text-xs px-2 py-1 border border-slate-300 rounded hover:bg-slate-50">Svuota</button>' +
             '<button type="button" id="ap-calcola-btn" onclick="apCalcola()" class="text-xs px-3 py-1.5 rounded font-semibold text-white" style="background:var(--accent,#0d9488);">🤖 Calcola bozza</button>' +
             (typeof apcToggle === 'function' ? '<button type="button" onclick="apcToggle()" class="apc-toggle' + (chat ? ' on' : '') + '" title="Chiedi all\'assistente di modificare la bozza in linguaggio naturale"><span class="apc-spark">✦</span> Assistente</button>' : '') +
@@ -1907,7 +1907,7 @@ function _apBozzaHtml(puoAnnullare) {
     a.operatori.forEach(n => {
       if (!perOp[n]) perOp[n] = {};
       if (!perOp[n][a.giorno]) perOp[n][a.giorno] = [];
-      perOp[n][a.giorno].push({ r, quota: a.quota, compagni: a.operatori.filter(x => x !== n),
+      perOp[n][a.giorno].push({ r, quota: a.quota, viaggio: (a.viaggio || []).includes(n), compagni: a.operatori.filter(x => x !== n),
         nuova: !!(b.nuove && b.nuove.has(n + '|' + a.giorno + '|' + a.rigaId)) });
     });
   });
@@ -1937,7 +1937,7 @@ function _apBozzaHtml(puoAnnullare) {
       tab += '<td class="px-1 py-1 align-top">' +
         ex.map(c => '<div style="background:#f1f5f9;color:#64748b;border-radius:3px;padding:1px 4px;margin-bottom:2px;">' + _apE(c) + '</div>').join('') +
         pr.map(p => '<div' + (p.nuova ? ' class="ap-cella-nuova"' : '') + ' title="' + _apE(p.r.commessa + ' · ' + (p.r.attivita || '') + (p.compagni.length ? ' · con ' + p.compagni.join(', ') : '') + (p.nuova ? ' · cambiata dall\'assistente' : '')) + '" style="border:1.5px dashed #0d9488;background:#f0fdfa;color:#0f766e;border-radius:3px;padding:1px 4px;margin-bottom:2px;font-weight:600;">' +
-          _apE(p.r.cantiere) + (p.quota < 1 ? ' <span style="font-weight:400;">(½)</span>' : '') + ' <span style="font-weight:400;color:#64748b;">P' + p.r.priorita + '</span></div>').join('') +
+          _apE(p.r.cantiere) + (p.quota < 1 ? ' <span style="font-weight:400;">(½)</span>' : '') + (p.viaggio ? ' <span title="Viaggio da casa: mezza giornata produttiva">🚐</span>' : '') + ' <span style="font-weight:400;color:#64748b;">P' + p.r.priorita + '</span></div>').join('') +
         '</td>';
     });
     tab += '</tr>';
@@ -1952,7 +1952,7 @@ function _apBozzaHtml(puoAnnullare) {
     const e = es[r.id];
     const st = AP_STATO_STILE[e.stato];
     const ass = res.assegnazioni.filter(a => a.rigaId === r.id);
-    const quando = ass.map(a => PW_MAP_DAY_SHORT[a.giorno] + (a.quota < 1 ? '½' : '') + ': ' + a.operatori.join(' + ')).join(' · ');
+    const quando = ass.map(a => PW_MAP_DAY_SHORT[a.giorno] + (a.quota < 1 ? '½' : '') + (a.viaggio ? ' 🚐' : '') + ': ' + a.operatori.join(' + ')).join(' · ');
     lista += '<div class="text-[11px] border-l-4 pl-2 py-0.5" style="border-color:' + st.fg + ';' + (incluse.has(r.id) ? '' : 'opacity:.5;') + '">' +
       '<b>P' + r.priorita + ' · ' + _apE(r.cantiere) + '</b> <span class="text-slate-500">' + _apE(r.commessa) + (r.attivita ? ' · ' + _apE(r.attivita) : '') + '</span> ' +
       '<span style="color:' + st.fg + ';font-weight:700;">' + st.t + '</span>' +
@@ -1973,7 +1973,7 @@ function _apBozzaHtml(puoAnnullare) {
       '<div class="flex-1"></div>' + annullaBtn +
       '<button type="button" onclick="apApplica()" class="text-xs px-3 py-1.5 rounded font-semibold text-white" style="background:#15803d;"' + (nCelle ? '' : ' disabled') + '>✓ Applica alla Griglia</button>' +
     '</div>' +
-    '<div class="text-[11px] text-slate-500 mb-2">Grigio = già in Griglia (non viene toccato) · tratteggiato = proposta. Togli la spunta a una riga della lista per escluderla dall\'applicazione.</div>' +
+    '<div class="text-[11px] text-slate-500 mb-2">Grigio = già in Griglia (non viene toccato) · tratteggiato = proposta · 🚐 = viaggio da casa, mezza giornata produttiva. Togli la spunta a una riga della lista per escluderla dall\'applicazione.</div>' +
     '<div class="text-[11px] text-slate-500 mb-3">📏 ' + _apE(b.infoDistanze || '') + ' · 🌦️ ' + _apE(b.infoMeteo || '') + '</div>' +
     _apMiglioramentiHtml(b) +
     tab +

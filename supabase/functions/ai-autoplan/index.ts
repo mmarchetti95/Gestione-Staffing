@@ -136,13 +136,13 @@ const TOOLS = [
   },
   {
     name: "imposta_opzioni",
-    description: "Opzioni della settimana: lavoro anche il sabato, considerare il meteo, raggio massimo di trasferta in km.",
+    description: "Opzioni della settimana: lavoro anche il sabato, considerare il meteo, km massimi di spostamento fra cantieri in settimana.",
     parameters: {
       type: "object",
       properties: {
         sabato: { type: "boolean" },
         meteo: { type: "boolean" },
-        max_km: { type: "integer", description: "raggio massimo di trasferta, da 20 a 1000 km" },
+        max_km: { type: "integer", description: "spostamento massimo fra un cantiere e l'altro durante la settimana, da 20 a 1000 km (il viaggio da casa a inizio trasferta non ha limite)" },
       },
       required: [],
     },
@@ -189,6 +189,7 @@ function systemPrompt(anno: number, settimana: number, oggi: string): string {
     "Sei l'assistente di pianificazione della tab Auto-pianifica della Dashboard Staffing di Eagleprojects (reparto rilievi).",
     `L'utente sta preparando la BOZZA della settimana ISO ${settimana} del ${anno}. Oggi è ${oggi}.`,
     "Due modalità: (a) BOZZA da una lista di cantieri; (b) RIPARAZIONE per imprevisti sulla Griglia già compilata.",
+    "Trasferte: gli operatori partono da casa (spesso Perugia) il lunedì e rientrano il venerdì (salvo doppia week). Il viaggio da casa non ha limite di km ma costa km e, se oltre 200 km, quel giorno vale mezza giornata produttiva (🚐/'viaggio da casa' negli esiti). Il limite max_km vale solo per gli spostamenti fra cantieri in settimana.",
     "Come funziona la bozza: c'è una lista di cantieri da pianificare (cantiere, commessa, attività, km, priorità P1-P3, scadenza, vincoli). Un solver deterministico assegna singoli operatori ai giorni: le squadre si ricompongono. I giorni-squadra si stimano dallo storico di produzione (km / km al giorno della famiglia di attività) se non sono fissati a mano.",
     "Regole:",
     "1. Lavori SOLO con gli strumenti. Non inventare nomi, id, numeri o esiti: leggili con leggi_bozza, leggi_operatori, spiega_cantiere.",

@@ -844,6 +844,8 @@
   }
 
   /* ===== RICERCA OPERATORE/CANTIERE IN CONTROLLO PRODUZIONE ===== */
+  @keyframes cpaFlash { 0%,100% { background: transparent; } 30% { background: #fde68a; } }
+  .cp-table tr.cpa-flash td { animation: cpaFlash 1.8s ease-in-out 2; }
   .cp-table tr.cp-search-match td {
     background: #fefce8 !important;
   }
@@ -1731,7 +1733,7 @@
     <div class="flex items-center gap-2">
       <button id="btn-presentation" class="px-3 py-1.5 text-sm rounded hover:bg-white/10" style="border:1px solid var(--dark-border-strong);color:var(--dark-text);visibility:visible;">📊 Modalità presentazione</button>
       <div class="text-xs pl-2" style="border-left:1px solid var(--dark-border-strong);color:var(--dark-text-muted);">
-        <span id="app-version" class="font-medium" style="color:var(--accent);">v18.188.0</span> · Michele Marchetti
+        <span id="app-version" class="font-medium" style="color:var(--accent);">v18.190.0</span> · Michele Marchetti
         <span id="sb-role-badge" style="margin-left:8px;padding:1px 8px;border-radius:9999px;background:rgba(255,255,255,.1);color:var(--dark-text);font-weight:600;"></span>
       </div>
     </div>
@@ -2773,6 +2775,7 @@
       <div id="cp-search-op-info" class="text-xs text-slate-400 hidden"></div>
       <div class="flex items-center gap-2">
         <button id="cp-collapse-all" class="px-3 py-1.5 text-sm border border-slate-300 rounded hover:bg-slate-50 no-print" onclick="cpCollapseAllToggle()">≡ Collassa</button>
+        <button id="cpa-toggle" onclick="cpaToggle()" class="px-3 py-1.5 text-sm font-medium text-white rounded-lg flex items-center gap-1.5 no-print" style="background:#b45309;" title="Confronta Griglia, ore Jira e km e propone correzioni (non scrive su Jira)">🔍 Controllo anomalie</button>
         <button id="cp-sync-jira" data-help-key="cp-sync-jira" onclick="pwControlloSyncJira()" class="px-3 py-1.5 text-sm font-medium bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 flex items-center gap-1.5 no-print pw-write-action" title="Click destro per la guida">
           🔄 Sincronizza da Jira
         </button>
@@ -2784,6 +2787,7 @@
         </button>
       </div>
     </div>
+    <div id="cpa-root" class="mb-3 no-print" style="display:none;"></div>
     <div class="bg-white border border-slate-200 rounded-lg overflow-auto shadow-sm">
       <div id="cp-table-container" style="max-height:600px;overflow-y:auto;">
         <div class="text-center text-slate-400 py-10 text-sm">Seleziona la tab per caricare i dati.</div>

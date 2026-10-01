@@ -194,6 +194,7 @@ function pwControlloRender() {
 
   if (blocks.length === 0) {
     container.innerHTML = '<div class="text-center text-slate-400 py-10 text-sm">Nessun operatore pianificato questa settimana.</div>';
+    cpaOnControlloRender();
     return;
   }
 
@@ -275,7 +276,7 @@ function pwControlloRender() {
           const ci = jsesc(bl.commessa), si = jsesc(sq.nome), oi = jsesc(op.nome);
           const ca = jsesc(op.cantiere), at = jsesc(op.attivita), dt = jsesc(dates[g]);
 
-          html += `<tr data-comm-idx="${blIdx}" data-sq-idx="${sqKey}" data-operatore="${esc(op.nome)}" data-cantiere="${esc(op.cantiere)}">
+          html += `<tr data-comm-idx="${blIdx}" data-sq-idx="${sqKey}" data-operatore="${esc(op.nome)}" data-cantiere="${esc(op.cantiere)}" data-cpk="${esc(k)}">
       <td class="cp-wrap" title="${esc(bl.commessa)}">${esc(bl.commessa)}</td>
       <td class="cp-wrap" title="${esc(sq.nome)}">${esc(sq.nome)}</td>
       <td class="cp-wrap" title="${esc(op.nome)}"><strong>${esc(op.nome)}</strong>${isOperatoreLicenziato(op.nome) ? '<span class="op-ex-tag">ex</span>' : ''}</td>
@@ -308,6 +309,7 @@ function pwControlloRender() {
   cpApplyCollapse();
   // Re-applica ricerca operatore/cantiere se attiva (il DOM è appena stato ricreato)
   if (_cpSearchTerm) cpSearchOp(_cpSearchTerm);
+  cpaOnControlloRender();
 }
 
 function cpDelta(ri) {

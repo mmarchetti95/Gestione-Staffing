@@ -241,7 +241,8 @@ const AP_PESI_DEFAULT = {
   ritardoGiorno: 400,    // penalità per giorno oltre la scadenza (x peso priorità)
   attesaGiorno: 8,       // penalità per giorno di attesa prima di iniziare (x peso priorità)
   giornoFatto: 1000,     // valore di un giorno-squadra assegnato (x peso priorità): domina il resto
-  maxKmTrasferta: 250    // oltre: operatore scartato per quel giorno
+  maxKmTrasferta: 250,   // spostamento massimo fra cantieri in settimana: oltre, operatore scartato per quel giorno
+  kmViaggioMezzaGiornata: 200 // viaggio da casa più lungo: quel giorno vale mezza giornata produttiva
 };
 const AP_PESO_PRIORITA = { 1: 3, 2: 2, 3: 1 };
 const AP_FATTORE_STRADA = 1.3; // linea d'aria -> strada, stima prudente quando manca OSRM
@@ -416,13 +417,17 @@ function _apGreedy(ctx, pesi, ordinate) {
   let valore = 0;
 
   /* Punto di partenza di un operatore il giorno d: l'ultimo luogo noto dal giorno d-1 in
-     giù (celle esistenti o bozza), altrimenti la residenza. */
-  const partenza = (nome, d) => {
+     giù (celle esistenti o bozza), altrimenti la residenza (casa = true). Si parte da casa
+     a inizio trasferta: il venerdì si rientra, quindi ogni settimana riparte dal domicilio. */
+  /* sim: posizioni della simulazione in corso ("nome|giorno" -> luogo), che contano come
+     quelle già fissate: il secondo giorno sullo stesso cantiere non è un nuovo viaggio. */
+  const partenza = (nome, d, sim) => {
+    const at = x => (sim && sim[nome + '|' + x]) || pos[nome][x];
     /* Con solo una parte della giornata libera (mezza giornata già in bozza) si parte dal
        cantiere di quel giorno stesso, non da quello di ieri. */
-    if (cap[nome][d] < 1 - 1e-6 && pos[nome][d]) return pos[nome][d];
-    for (let x = d - 1; x >= 0; x--) if (pos[nome][x]) return pos[nome][x];
-    return opByNome[nome].base || null;
+    if (cap[nome][d] < 1 - 1e-6 && at(d)) return { p: at(d), casa: false };
+    for (let x = d - 1; x >= 0; x--) if (at(x)) return { p: at(x), casa: false };
+    return { p: opByNome[nome].base || null, casa: true };
   };
   const kmTra = (a, b) => {
     if (!a || !b) return null;
@@ -441,14 +446,20 @@ function _apGreedy(ctx, pesi, ordinate) {
   };
 
   /* Punteggio individuale di un operatore per la riga r nel giorno d (null = non usabile) */
-  const punteggio = (o, r, d, ieriSuCantiere) => {
+  const punteggio = (o, r, d, ieriSuCantiere, sim) => {
     const iso = ctx.giorniISO[d];
     if (o.fineRapporto && iso && o.fineRapporto < iso) return null;
     if ((r.attestati || []).some(a => !o.attestatiValidi(a, iso))) return null;
     let s = 0;
-    const km = kmTra(partenza(o.nome, d), r.geo);
+    const pt = partenza(o.nome, d, sim);
+    const km = kmTra(pt.p, r.geo);
+    let viaggio = false;
     if (km != null) {
-      if (km > pesi.maxKmTrasferta) return null;
+      /* Il limite vale per gli spostamenti fra cantieri in settimana. Il viaggio da casa
+         a inizio trasferta (es. Perugia -> Piemonte) è il caso normale: nessun limite, ma
+         costa i suoi km (a parità, vince chi è più vicino) e, se lungo, mezza giornata. */
+      if (!pt.casa && km > pesi.maxKmTrasferta) return null;
+      viaggio = pt.casa && km > pesi.kmViaggioMezzaGiornata;
       s -= km * pesi.kmCosto;
     } else {
       s -= 60; // posizione ignota: né premiato né scartato, ma dietro a chi è vicino
@@ -461,7 +472,7 @@ function _apGreedy(ctx, pesi, ordinate) {
     if (o.staffing && o.staffing.has(r.commessa)) s += pesi.staffing;
     if (ieriSuCantiere && ieriSuCantiere.has(o.nome)) s += pesi.continuita;
     if (r.preferiti && r.preferiti.includes(o.nome)) s += 200;
-    return { s, km };
+    return { s, km, viaggio };
   };
 
   const affinita = (a, b) => {
@@ -473,12 +484,12 @@ function _apGreedy(ctx, pesi, ordinate) {
   /* Sceglie N operatori per la riga r nel giorno d: il migliore da solo, poi via via chi
      aggiunge più punteggio (individuale + affinità con i già scelti), completando se
      possibile le skill richieste. Restituisce null se non si arriva a N. */
-  const scegliSquadra = (r, d, candidati, ieriSuCantiere, quota, capOf) => {
+  const scegliSquadra = (r, d, candidati, ieriSuCantiere, quota, capOf, sim) => {
     const valutati = [];
     candidati.forEach(o => {
       if (capOf(o.nome, d) + 1e-6 < quota) return;
-      const p = punteggio(o, r, d, ieriSuCantiere);
-      if (p) valutati.push({ o, s: p.s, km: p.km });
+      const p = punteggio(o, r, d, ieriSuCantiere, sim);
+      if (p) valutati.push({ o, s: p.s, km: p.km, viaggio: p.viaggio });
     });
     if (valutati.length < r.nOp) return null;
     const scelti = [];
@@ -501,7 +512,7 @@ function _apGreedy(ctx, pesi, ordinate) {
     if (scelti.length < r.nOp) return null;
     const skillMancanti = skillReq.filter(sk => !coperte.has(sk));
     const punti = scelti.reduce((a, v) => a + v.s, 0);
-    return { scelti, skillMancanti, punti };
+    return { scelti, skillMancanti, punti, viaggio: scelti.some(v => v.viaggio) };
   };
 
   ordinate.forEach(r => {
@@ -546,18 +557,23 @@ function _apGreedy(ctx, pesi, ordinate) {
       let ieri = null;
       let punti = 0;
       const capSim = {};
+      const posSim = {};
       const capOf = (n, d) => (capSim[n + '|' + d] != null ? capSim[n + '|' + d] : cap[n][d]);
       for (const d of giorniUtili) {
         if (d < start || residuo <= 1e-6) continue;
         const mt = meteoRiga[d];
         if (mt && mt.blocco) { ieri = null; continue; } // allerta: quel giorno non si va
         const quota = Math.min(1, residuo);
-        const sq = scegliSquadra(r, d, candidati, ieri, quota, capOf);
+        const sq = scegliSquadra(r, d, candidati, ieri, quota, capOf, posSim);
         if (!sq) { ieri = null; continue; }
-        sq.scelti.forEach(v => { capSim[v.o.nome + '|' + d] = capOf(v.o.nome, d) - quota; });
-        piano.push({ giorno: d, quota, sq });
+        /* Giorno di viaggio da casa: la squadra rende mezza giornata e chi viaggia ha la
+           giornata intera occupata (non può fare altro quel giorno) */
+        const prod = sq.viaggio ? Math.min(quota, 0.5) : quota;
+        sq.scelti.forEach(v => { capSim[v.o.nome + '|' + d] = Math.max(0, capOf(v.o.nome, d) - (v.viaggio ? 1 : quota)); });
+        if (r.geo) sq.scelti.forEach(v => { posSim[v.o.nome + '|' + d] = { lat: r.geo.lat, lng: r.geo.lng, label: r.cantiere }; });
+        piano.push({ giorno: d, quota, prod, sq });
         punti += sq.punti - (mt ? mt.pen * quota : 0);
-        residuo -= quota;
+        residuo -= prod;
         ieri = new Set(sq.scelti.map(v => v.o.nome));
       }
       if (!piano.length) return;
@@ -575,7 +591,7 @@ function _apGreedy(ctx, pesi, ordinate) {
 
     if (!migliore) {
       esito.motivi.push('nessun gruppo di ' + r.nOp + ' operatori idonei libero nei giorni utili' +
-        (r.geo ? ' entro ' + pesi.maxKmTrasferta + ' km' : '') +
+        (r.geo ? ' (spostamenti fra cantieri entro ' + pesi.maxKmTrasferta + ' km)' : '') +
         (bloccati.length ? ' (esclusi per allerta meteo: ' + bloccati.map(d => AP_GIORNI[d]).join(', ') + ')' : ''));
       valore -= r.giorni * pesi.ritardoGiorno * peso;
       return;
@@ -583,16 +599,21 @@ function _apGreedy(ctx, pesi, ordinate) {
 
     const skillMancanti = new Set();
     const kmTot = [];
+    const viaggi = [];
     migliore.piano.forEach(p => {
       const nomi = p.sq.scelti.map(v => v.o.nome);
-      nomi.forEach(n => {
-        cap[n][p.giorno] = Math.max(0, cap[n][p.giorno] - p.quota);
+      p.sq.scelti.forEach(v => {
+        const n = v.o.nome;
+        cap[n][p.giorno] = Math.max(0, cap[n][p.giorno] - (v.viaggio ? 1 : p.quota));
         if (r.geo) pos[n][p.giorno] = { lat: r.geo.lat, lng: r.geo.lng, label: r.cantiere };
         commessaDi[n].add(r.commessa);
+        if (v.viaggio) viaggi.push(AP_GIORNI[p.giorno] + ' ' + n + (v.km != null ? ' (' + Math.round(v.km) + ' km da casa)' : ''));
       });
       p.sq.scelti.forEach(v => { if (v.km != null) kmTot.push(v.km); });
       p.sq.skillMancanti.forEach(s => skillMancanti.add(s));
-      assegnazioni.push({ rigaId: r.id, giorno: p.giorno, operatori: nomi, quota: p.quota });
+      const a = { rigaId: r.id, giorno: p.giorno, operatori: nomi, quota: p.quota };
+      if (p.sq.viaggio) { a.viaggio = p.sq.scelti.filter(v => v.viaggio).map(v => v.o.nome); a.produttivo = p.prod; }
+      assegnazioni.push(a);
       esito.giorniUsati.push(p.giorno);
       const mt = meteoRiga[p.giorno];
       if (mt && mt.pen > 0) esito.meteo.push(AP_GIORNI[p.giorno] + ': ' + mt.motivo);
@@ -608,6 +629,7 @@ function _apGreedy(ctx, pesi, ordinate) {
       esito.avvisi.push('finisce oltre la scadenza');
     }
     if (skillMancanti.size) esito.avvisi.push('skill non coperte: ' + Array.from(skillMancanti).join(', '));
+    if (viaggi.length) esito.avvisi.push('viaggio da casa, mezza giornata produttiva: ' + viaggi.join(', '));
     /* Giorni saltati per allerta dentro l'arco del cantiere (o prima dell'inizio): va detto,
        altrimenti un buco nel piano sembra un errore del calcolo. */
     const evitati = bloccati.filter(d => d <= ultimo || d < primo);
@@ -665,7 +687,8 @@ function apDiagnostica(ctx, righe, risultato, rigaId) {
       let p = null;
       for (let x = d - 1; x >= 0 && !p; x--) p = ((ctx.posizione || {})[o.nome] || {})[x] || null;
       const dist = km(p || o.base, r.geo);
-      if (dist != null && dist > pesi.maxKmTrasferta) { out.fuoriRaggio++; return; }
+      /* Il limite vale solo partendo da un cantiere: da casa (inizio trasferta) no */
+      if (p && dist != null && dist > pesi.maxKmTrasferta) { out.fuoriRaggio++; return; }
       const usi = presoDa[o.nome + '|' + d] || [];
       if (usi.includes(r.id)) { out.usatiQui++; return; }
       const voce = { nome: o.nome, km: dist == null ? null : Math.round(dist) };

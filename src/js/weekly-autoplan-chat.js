@@ -197,7 +197,7 @@ function _apcEsitoPerAgente(b, id) {
   const r = b.righeSolver.find(x => x.id === id);
   if (!e || !r) return null;
   const quando = b.risultato.assegnazioni.filter(a => a.rigaId === id)
-    .map(a => AP_GIORNI[a.giorno] + (a.quota < 1 ? '½' : '') + ': ' + a.operatori.join(' + ')).join(' · ');
+    .map(a => AP_GIORNI[a.giorno] + (a.quota < 1 ? '½' : '') + (a.viaggio ? ' (viaggio da casa, ½ produttiva)' : '') + ': ' + a.operatori.join(' + ')).join(' · ');
   const o = { id, cantiere: r.cantiere, stato: e.stato.replace('_', ' '), giorni: apFmtNum(e.giorniAssegnati) + '/' + apFmtNum(e.richiesti) };
   if (quando) o.piano = quando;
   if (e.oltreScadenza) o.oltre_scadenza = true;
@@ -337,7 +337,7 @@ const APC_TOOLS = {
       esito: _apcEsitoPerAgente(b, r.id),
       stima: apFmtNum(rs.giorni) + ' gg × ' + rs.nOp + ' operatori — ' + rs.stimaFonte,
       localizzato: !!rs.geo,
-      raggio_max_km: d.maxKm,
+      max_km_fra_cantieri: d.maxKm,
       attestati_richiesti: rs.attestati,
       per_giorno: d.giorni.map(g => {
         const o = { giorno: AP_GIORNI[g.giorno] };
@@ -347,7 +347,7 @@ const APC_TOOLS = {
         const nd = Object.keys(g.stati).map(k => g.stati[k] + ' ' + (ST[k] || k));
         if (nd.length) o.non_disponibili = nd.join(', ');
         const scart = [];
-        if (g.fuoriRaggio) scart.push(g.fuoriRaggio + ' oltre ' + d.maxKm + ' km');
+        if (g.fuoriRaggio) scart.push(g.fuoriRaggio + ' oltre ' + d.maxKm + ' km dal cantiere precedente');
         if (g.attestati) scart.push(g.attestati + ' senza attestati');
         if (g.esclusiMano) scart.push(g.esclusiMano + ' esclusi a mano');
         if (scart.length) o.scartati = scart.join(', ');
@@ -455,7 +455,7 @@ const APC_TOOLS = {
     if (typeof args.sabato === 'boolean' && args.sabato !== !!_ap.opzioni.sabato) { _ap.opzioni.sabato = args.sabato; cambi.push('sabato ' + (args.sabato ? 'sì' : 'no')); }
     if (typeof args.meteo === 'boolean' && args.meteo !== !!_ap.opzioni.meteo) { _ap.opzioni.meteo = args.meteo; cambi.push('meteo ' + (args.meteo ? 'considerato' : 'ignorato')); }
     const mk = parseInt(args.max_km, 10);
-    if (mk >= 20 && mk <= 1000 && mk !== _ap.opzioni.maxKm) { _ap.opzioni.maxKm = mk; cambi.push('raggio ' + mk + ' km'); }
+    if (mk >= 20 && mk <= 1000 && mk !== _ap.opzioni.maxKm) { _ap.opzioni.maxKm = mk; cambi.push('max ' + mk + ' km fra cantieri'); }
     if (cambi.length) _apcAggiorna([]);
     return { modifiche: cambi.length ? cambi : ['nessuna'] };
   },
@@ -593,7 +593,7 @@ function _apcDiffTurno(snap) {
   const op = [];
   if (!!snap.opzioni.sabato !== !!_ap.opzioni.sabato) op.push(_ap.opzioni.sabato ? 'anche sabato' : 'niente sabato');
   if (!!snap.opzioni.meteo !== !!_ap.opzioni.meteo) op.push(_ap.opzioni.meteo ? 'meteo considerato' : 'meteo ignorato');
-  if (snap.opzioni.maxKm !== _ap.opzioni.maxKm) op.push('raggio ' + _ap.opzioni.maxKm + ' km');
+  if (snap.opzioni.maxKm !== _ap.opzioni.maxKm) op.push('max ' + _ap.opzioni.maxKm + ' km fra cantieri');
   if (op.length) d.lista.push({ tipo: 'opz', testo: op.join(', ') });
   const k = p => p[0] + '>' + p[1];
   const pp = new Set(snap.precedenze.map(k)), po = new Set(_ap.precedenze.map(k));

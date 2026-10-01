@@ -114,6 +114,18 @@ Limite noto: il progetto Supabase è sul piano **Free**, che non include backup 
 
 ## Changelog
 
+## v18.190.0
+- fix: **Auto-pianifica: trasferte da casa.** Il limite di km escludeva per tutta la settimana chi parte da lontano (es. Perugia → Piemonte, oltre 500 km). Ora il limite (**max km fra cantieri**, default 250) vale solo per gli spostamenti da un cantiere all'altro durante la settimana; il **viaggio da casa** a inizio trasferta non ha limite, costa i suoi km (a parità vince chi è più vicino) e, oltre 200 km, quel giorno vale **mezza giornata produttiva** (🚐 in bozza e in riparazione, avviso sul cantiere). Ogni settimana riparte dal domicilio (rientro il venerdì), salvo doppia week.
+  - Corretto anche il calcolo dei giorni successivi sullo stesso cantiere, che venivano valutati come nuovi viaggi da casa.
+  - Supabase: Edge Function `ai-autoplan` aggiornata (descrizione delle trasferte nel prompt). Nessuna modifica allo schema.
+
+## v18.189.0
+- feat: **Controllo Produzione: controllo anomalie.** Nuovo bottone **🔍 Controllo anomalie** nella toolbar del tab: confronta Griglia, ore Jira e km della settimana mostrata e propone una lista di correzioni. **Non scrive mai su Jira.**
+  - Segnala: **operatori pianificati senza worklog** (solo giorni già conclusi); **worklog senza pianificazione** (ore su Jira in un giorno senza cantiere in Griglia, priorità alta se il giorno è in Ferie); **Epic diverso dalla Griglia** (ore registrate su un ticket di un Epic diverso da quello del sottotask pianificato: il legame cantiere→Epic passa solo dal sottotask Jira, i cantieri senza sottotask non vengono confrontati); **km duplicati** sugli operatori della stessa squadra (contati più volte nel Task padre); **km fuori scala** rispetto alla mediana della famiglia di attività dallo storico (≥3× o ≤¼, con proposta di correzione di virgola/unità negli scarti estremi).
+  - I worklog vengono riletti da Jira al momento (sola lettura) per tutti gli operatori presenti in Griglia nella settimana; opzione *anche chi non è in Griglia* per il resto del pool.
+  - Ogni voce ha la correzione proposta, i link ai ticket, **↘ Vai alla riga** e **Ignora** (per browser). Correzioni con un click, sempre confermate e locali: **Tieni su …** / **👯 Correggi tutti i duplicati** (0 sugli altri operatori), **Imposta km** proposto, **＋ Aggiungi in Griglia** quando il ticket è il sottotask dell'operatore. I km corretti arrivano su Jira solo con **🔄 Sincronizza da Jira**, che chiede conferma come sempre. **📋 Copia elenco correzioni** per inoltrarle.
+  - Nessuna modifica a schema Supabase o Edge Function.
+
 ## v18.188.0
 - feat: **Auto-pianifica: riparazione per imprevisti.** Nuovo riquadro **⚡ Imprevisti** in cima alla tab: per quando la settimana è già pianificata in Griglia e qualcosa cambia. Si segnala un'**assenza** (operatore + giorni, con la scelta di registrarla in Ferie come *Ferie* / *Non disponibile*) o un **cantiere fermo** (cantiere in Griglia + giorni), poi **🔧 Calcola riparazione**.
   - Si tolgono **solo le celle colpite** e si recupera il lavoro perso con chi è rimasto libero: per un assente un **sostituto** sullo stesso cantiere e nello stesso giorno (nella squadra di chi sostituisce); per un cantiere fermo i giorni persi **spostati su altri giorni**, favorendo la stessa squadra. Il resto della Griglia non cambia. Stessi criteri della bozza: distanze stradali, attestati, meteo (per i recuperi), doppia week. I giorni già passati non si toccano.

@@ -50,6 +50,8 @@ JS_FILES = [
     'weekly-collapse-cp.js',
     'produzione-core.js',
     'produzione-report.js',
+    'produzione-anomalie-core.js',
+    'produzione-anomalie.js',
     'weekly-mappa.js',
     'weekly-spostamenti.js',
     'weekly-ricerca-squadre.js',
