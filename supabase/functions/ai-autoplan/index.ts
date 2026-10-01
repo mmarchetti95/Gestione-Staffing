@@ -148,6 +148,36 @@ const TOOLS = [
     },
   },
   {
+    name: "segnala_imprevisto",
+    description: "Segnala un imprevisto nella settimana GIÀ pianificata in Griglia: un operatore assente (malattia, permesso, ferie improvvise) o un cantiere fermo (chiuso, inaccessibile). Non cambia niente da solo: prepara la riparazione. Restituisce le celle di Griglia colpite. Se lo stesso operatore/cantiere è già segnalato, i giorni si uniscono.",
+    parameters: {
+      type: "object",
+      properties: {
+        tipo: { type: "string", enum: ["assenza", "cantiere_fermo"] },
+        operatore: { type: "string", description: "per tipo=assenza: nome dell'operatore (va ricondotto al pool)" },
+        cantiere: { type: "string", description: "per tipo=cantiere_fermo: cantiere presente in Griglia questa settimana" },
+        giorni: { ...GIORNI, description: "giorni dell'imprevisto: 0=Lun … 5=Sab (i giorni già passati vengono ignorati)" },
+        registra_in_ferie: { type: "string", enum: ["ferie", "non_disponibile", "nessuno"], description: "per tipo=assenza: come registrare l'assenza nella tab Ferie all'applicazione (malattia/permesso → non_disponibile; ferie → ferie). Se l'utente non lo dice, nessuno." },
+        motivo: { type: "string" },
+      },
+      required: ["tipo", "giorni"],
+    },
+  },
+  {
+    name: "rimuovi_imprevisto",
+    description: "Toglie un imprevisto segnalato (per id, da leggi_bozza) o tutti.",
+    parameters: {
+      type: "object",
+      properties: { id: { type: "string" }, tutti: { type: "boolean" } },
+      required: [],
+    },
+  },
+  {
+    name: "calcola_riparazione",
+    description: "Calcola la riparazione degli imprevisti segnalati: toglie solo le celle colpite, cerca un sostituto per ogni cantiere-giorno di un assente e sposta su altri giorni il lavoro di un cantiere fermo (favorendo la stessa squadra). Il resto della Griglia non cambia. Restituisce sostituti, recuperi, cosa resta scoperto e chi resta libero.",
+    parameters: { type: "object", properties: {}, required: [] },
+  },
+  {
     name: "calcola_bozza",
     description: "Ricalcola la bozza con il solver (localizza i cantieri, distanze stradali, meteo, poi assegna). Va chiamato dopo ogni gruppo di modifiche prima di riferire i risultati. Restituisce il riepilogo e le differenze rispetto alla bozza precedente.",
     parameters: { type: "object", properties: {}, required: [] },
@@ -158,7 +188,8 @@ function systemPrompt(anno: number, settimana: number, oggi: string): string {
   return [
     "Sei l'assistente di pianificazione della tab Auto-pianifica della Dashboard Staffing di Eagleprojects (reparto rilievi).",
     `L'utente sta preparando la BOZZA della settimana ISO ${settimana} del ${anno}. Oggi è ${oggi}.`,
-    "Come funziona: c'è una lista di cantieri da pianificare (cantiere, commessa, attività, km, priorità P1-P3, scadenza, vincoli). Un solver deterministico assegna singoli operatori ai giorni: le squadre si ricompongono. I giorni-squadra si stimano dallo storico di produzione (km / km al giorno della famiglia di attività) se non sono fissati a mano.",
+    "Due modalità: (a) BOZZA da una lista di cantieri; (b) RIPARAZIONE per imprevisti sulla Griglia già compilata.",
+    "Come funziona la bozza: c'è una lista di cantieri da pianificare (cantiere, commessa, attività, km, priorità P1-P3, scadenza, vincoli). Un solver deterministico assegna singoli operatori ai giorni: le squadre si ricompongono. I giorni-squadra si stimano dallo storico di produzione (km / km al giorno della famiglia di attività) se non sono fissati a mano.",
     "Regole:",
     "1. Lavori SOLO con gli strumenti. Non inventare nomi, id, numeri o esiti: leggili con leggi_bozza, leggi_operatori, spiega_cantiere.",
     "2. Prima di modificare, leggi lo stato (leggi_bozza). Dopo un gruppo di modifiche chiama calcola_bozza UNA volta e riferisci l'esito reale.",
@@ -166,6 +197,7 @@ function systemPrompt(anno: number, settimana: number, oggi: string): string {
     "4. Se una richiesta è ambigua (due cantieri con nomi simili, operatore non riconosciuto, data non chiara) chiedi prima di modificare.",
     "5. Il solver non fissa un operatore a un giorno preciso: per 'mettere X su Y' usa preferiti (favorisce) ed esclusi (vieta); per i giorni usa dal, scadenza e giorni_esclusi. Se qualcosa non si può esprimere, dillo e proponi l'alternativa più vicina.",
     "6. Per i 'perché' usa spiega_cantiere e cita la causa concreta (es. 'i 3 operatori vicini sono già su Ivrea, P1').",
+    "7. Imprevisti a settimana già pianificata ('X è malato mercoledì', 'il cantiere Y è chiuso giovedì'): NON usare la lista cantieri. Usa segnala_imprevisto (uno per operatore o cantiere), poi calcola_riparazione una volta, e riferisci chi sostituisce chi, cosa si recupera e cosa resta scoperto. Si applica solo con «Applica riparazione», premuto dall'utente. Se non è chiaro come registrare l'assenza in Ferie, chiedilo o lascia 'nessuno'.",
     "Stile: italiano, breve, concreto. Chiama i cantieri per nome (mai per id). Usa elenchi puntati corti e **grassetto** solo per i nomi chiave. Chiudi, quando utile, con una proposta di passo successivo in una riga.",
   ].join("\n");
 }

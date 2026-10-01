@@ -114,6 +114,14 @@ Limite noto: il progetto Supabase è sul piano **Free**, che non include backup 
 
 ## Changelog
 
+## v18.188.0
+- feat: **Auto-pianifica: riparazione per imprevisti.** Nuovo riquadro **⚡ Imprevisti** in cima alla tab: per quando la settimana è già pianificata in Griglia e qualcosa cambia. Si segnala un'**assenza** (operatore + giorni, con la scelta di registrarla in Ferie come *Ferie* / *Non disponibile*) o un **cantiere fermo** (cantiere in Griglia + giorni), poi **🔧 Calcola riparazione**.
+  - Si tolgono **solo le celle colpite** e si recupera il lavoro perso con chi è rimasto libero: per un assente un **sostituto** sullo stesso cantiere e nello stesso giorno (nella squadra di chi sostituisce); per un cantiere fermo i giorni persi **spostati su altri giorni**, favorendo la stessa squadra. Il resto della Griglia non cambia. Stessi criteri della bozza: distanze stradali, attestati, meteo (per i recuperi), doppia week. I giorni già passati non si toccano.
+  - Anteprima per operatore e giorno (barrato = si toglie, tratteggiato = nuovo), esito per voce ("al posto di Rossi: Bianchi", "nessun sostituto: resta Verdi", "restano 1 gg per la settimana successiva") e chi resta libero dopo la riparazione.
+  - **✓ Applica riparazione** chiede conferma, toglie le celle, registra le assenze in Ferie e scrive sostituti e recuperi. **↶ Annulla ultima applicazione** riporta indietro anche le Ferie. **✕ Scarta** chiude la proposta senza toccare la Griglia e toglie gli imprevisti segnalati.
+  - L'**assistente** in chat lo fa a parole ("Rossi è in malattia mer-ven", "Ivrea è chiuso giovedì"), con i nuovi strumenti `segnala_imprevisto`, `rimuovi_imprevisto`, `calcola_riparazione`. Come per la bozza, non applica mai da solo.
+  - Supabase: Edge Function `ai-autoplan` aggiornata (nuovi strumenti e regola nel prompt). Nessuna modifica allo schema.
+
 ## v18.187.0
 - feat: **Assistente AI: provider OpenRouter e una chiave per ogni provider.** In **Gestione Assistente AI** (menu admin) il provider si sceglie fra Gemini, Groq, **OpenRouter** e Anthropic; vale sia per il widget di domande e risposte sia per l'assistente dell'Auto-pianifica.
   - **Una API key per provider**, salvata in Vault: si passa da un provider all'altro dal menu senza reinserire la chiave. Accanto al menu, lo stato delle chiavi (Gemini ✓, Groq —…); **Revoca chiave** agisce sul provider selezionato. Cambiando provider torna l'ultimo modello usato con quello.

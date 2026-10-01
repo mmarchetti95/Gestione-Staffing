@@ -122,7 +122,8 @@ async function apcControllaStato(forza) {
 /* ================= STRUMENTI (eseguiti sulla bozza locale) ================= */
 
 const APC_MODIFICANO = new Set(['aggiungi_cantieri', 'modifica_cantiere', 'rimuovi_cantiere',
-  'importa_settimana_precedente', 'imposta_precedenza', 'imposta_opzioni', 'calcola_bozza']);
+  'importa_settimana_precedente', 'imposta_precedenza', 'imposta_opzioni', 'calcola_bozza',
+  'segnala_imprevisto', 'rimuovi_imprevisto', 'calcola_riparazione']);
 
 /* Riferimento a una riga: id ("r12") oppure nome del cantiere, se univoco */
 function _apcRiga(rif) {
@@ -215,6 +216,42 @@ function _apcRiepilogo(b) {
   };
 }
 
+/* Riparazione per imprevisti, in forma compatta per il modello */
+function _apcRiparazionePerAgente(rip) {
+  const res = rip.risultato;
+  const voci = rip.righeSolver.map(r => {
+    const e = res.esiti[r.id] || { stato: 'non_assegnato', motivi: [], avvisi: [] };
+    const ass = res.assegnazioni.filter(a => a.rigaId === r.id);
+    const note = [].concat(e.motivi || [], e.avvisi || []);
+    if (r.tipo === 'sostituto') {
+      const o = { tipo: 'sostituto', giorno: AP_GIORNI[r.giorno], cantiere: r.cantiere, commessa: r.commessa, al_posto_di: r.sostituisce };
+      if (ass.length) o.sostituto = ass.map(a => a.operatori.join(' + ')).join(', ');
+      else o.esito = 'nessun sostituto: ' + (r.compagni.length ? 'restano ' + r.compagni.join(', ') : 'cantiere scoperto quel giorno');
+      if (note.length && !ass.length) o.note = note;
+      return o;
+    }
+    const o = { tipo: 'recupero', cantiere: r.cantiere, commessa: r.commessa, fermo: r.giorniPersi.map(d => AP_GIORNI[d]).join(', '),
+      da_recuperare: apFmtNum(r.giorni) + ' gg × ' + r.nOp + ' op', squadra_originale: r.squadra,
+      stato: e.stato.replace('_', ' ') };
+    if (ass.length) o.piano = ass.map(a => AP_GIORNI[a.giorno] + (a.quota < 1 ? '½' : '') + ': ' + a.operatori.join(' + ')).join(' · ');
+    if (note.length) o.note = note;
+    return o;
+  });
+  const out = {
+    celle_tolte: rip.impatto.rimozioni.length,
+    celle_nuove: res.assegnazioni.reduce((n, a) => n + a.operatori.length, 0),
+    voci,
+    nota: 'la riparazione arriva in Griglia solo quando l\'utente preme «Applica riparazione»'
+  };
+  if (rip.impatto.ignorati.length) out.senza_effetto = rip.impatto.ignorati.map(x => {
+    const imp = _ap.imprevisti.find(i => i.id === x.imprevistoId);
+    return (imp ? _apImprevistoTesto(imp) : x.imprevistoId) + ': ' + x.motivo;
+  });
+  const liberi = _apRiparazioneLiberi(rip);
+  if (liberi.length) out.restano_liberi = liberi.map(l => AP_GIORNI[l.giorno] + ' ' + l.operatore);
+  return out;
+}
+
 const APC_TOOLS = {
   leggi_bozza() {
     const b = _ap.bozza;
@@ -227,7 +264,10 @@ const APC_TOOLS = {
       storico: _ap.modelloInfo || '',
       commesse_attive: pwGetCommesseValide(),
       cantieri: _ap.righe.map(_apcRigaPerAgente),
-      precedenze: _ap.precedenze.map(([a, c]) => _apNomeRiga(null, a) + ' prima di ' + _apNomeRiga(null, c))
+      precedenze: _ap.precedenze.map(([a, c]) => _apNomeRiga(null, a) + ' prima di ' + _apNomeRiga(null, c)),
+      imprevisti: _ap.imprevisti.map(x => ({ id: x.id, imprevisto: _apImprevistoTesto(x), motivo: x.motivo || undefined })),
+      riparazione: _ap.riparazione ? _apcRiparazionePerAgente(_ap.riparazione)
+        : (_ap.imprevisti.length ? 'non calcolata: chiama calcola_riparazione' : null)
     };
     if (!b) {
       out.bozza = null;
@@ -420,6 +460,45 @@ const APC_TOOLS = {
     return { modifiche: cambi.length ? cambi : ['nessuna'] };
   },
 
+  segnala_imprevisto(args) {
+    const reg = args.registra_in_ferie;
+    const imp = apNormImprevisto({
+      tipo: args.tipo, operatore: args.operatore, cantiere: args.cantiere, giorni: args.giorni, motivo: args.motivo,
+      registra: reg === 'ferie' || reg === 'non_disponibile' ? reg : ''
+    });
+    const x = _apImprevistoAggiungiNorm(imp);
+    apRender();
+    const colpite = apRiparaImpatto(_apCelleSettimana(pwGetWeekData()), [x], _apGiorniModificabili()).rimozioni;
+    const out = {
+      id: x.id, imprevisto: _apImprevistoTesto(x),
+      celle_colpite: colpite.length ? colpite.map(c => AP_GIORNI[c.giorno] + ' ' + c.operatore + ' su ' + c.cantiere + ' (' + c.commessa + ')')
+        : 'nessuna cella in Griglia nei giorni indicati',
+      nota: 'segnala tutti gli imprevisti, poi chiama calcola_riparazione una volta'
+    };
+    if (imp.giorniPassati) out.avviso = 'giorni già passati ignorati: ' + _apcNomeGiorni(imp.giorniPassati);
+    return out;
+  },
+
+  rimuovi_imprevisto(args) {
+    const prima = _ap.imprevisti.length;
+    if (args.tutti) _ap.imprevisti = [];
+    else {
+      const id = String(args.id || '').trim();
+      if (!_ap.imprevisti.some(x => x.id === id)) return { error: 'imprevisto "' + id + '" non trovato. Presenti: ' + (_ap.imprevisti.map(x => x.id + ' ' + _apImprevistoTesto(x)).join('; ') || 'nessuno') };
+      _ap.imprevisti = _ap.imprevisti.filter(x => x.id !== id);
+    }
+    _ap.riparazione = null;
+    _apSalvaLocale();
+    apRender();
+    return { tolti: prima - _ap.imprevisti.length, restano: _ap.imprevisti.map(_apImprevistoTesto) };
+  },
+
+  async calcola_riparazione() {
+    const res = await apCalcolaRiparazione({ silenzioso: true });
+    if (!res || !res.ok) return { error: (res && res.errore) || 'calcolo non riuscito' };
+    return _apcRiparazionePerAgente(_ap.riparazione);
+  },
+
   async calcola_bozza() {
     const prima = _ap.bozza || _ap.ultimaBozza;
     const res = await apCalcola({ silenzioso: true });
@@ -443,12 +522,15 @@ function _apcSnapshot() {
     righe: JSON.parse(JSON.stringify(_ap.righe)),
     opzioni: Object.assign({}, _ap.opzioni),
     precedenze: JSON.parse(JSON.stringify(_ap.precedenze)),
-    bozza: _ap.bozza
+    bozza: _ap.bozza,
+    imprevisti: JSON.parse(JSON.stringify(_ap.imprevisti)),
+    riparazione: _ap.riparazione
   };
 }
 
 function _apcFirma() {
-  return JSON.stringify([_ap.righe, _ap.opzioni, _ap.precedenze, _ap.bozza ? _ap.bozza.creata : 0]);
+  return JSON.stringify([_ap.righe, _ap.opzioni, _ap.precedenze, _ap.bozza ? _ap.bozza.creata : 0,
+    _ap.imprevisti, _ap.riparazione ? _ap.riparazione.creata : 0]);
 }
 
 function _apcCelle(b) {
@@ -518,6 +600,21 @@ function _apcDiffTurno(snap) {
   _ap.precedenze.forEach(p => { if (!pp.has(k(p))) d.lista.push({ tipo: 'prec', testo: _apNomeRiga(null, p[0]) + ' prima di ' + _apNomeRiga(null, p[1]) }); });
   snap.precedenze.forEach(p => { if (!po.has(k(p))) d.lista.push({ tipo: 'del', testo: 'precedenza ' + _apNomeRiga(null, p[0]) + ' → ' + _apNomeRiga(null, p[1]) }); });
 
+  const impPrima = {};
+  (snap.imprevisti || []).forEach(x => { impPrima[x.id] = x; });
+  const impOra = new Set(_ap.imprevisti.map(x => x.id));
+  _ap.imprevisti.forEach(x => {
+    const p = impPrima[x.id];
+    if (!p) d.lista.push({ tipo: 'add', testo: 'imprevisto: ' + _apImprevistoTesto(x) });
+    else if (_apImprevistoTesto(p) !== _apImprevistoTesto(x)) d.lista.push({ tipo: 'mod', testo: 'imprevisto: ' + _apImprevistoTesto(x) });
+  });
+  (snap.imprevisti || []).forEach(x => { if (!impOra.has(x.id)) d.lista.push({ tipo: 'del', testo: 'imprevisto: ' + _apImprevistoTesto(x) }); });
+  const rip = _ap.riparazione;
+  if (rip && rip !== snap.riparazione) {
+    const n = rip.risultato.assegnazioni.reduce((t, a) => t + a.operatori.length, 0);
+    d.lista.push({ tipo: 'opz', testo: 'riparazione calcolata: −' + rip.impatto.rimozioni.length + ' / +' + n + ' celle' });
+  }
+
   const b = _ap.bozza;
   if (b && b !== snap.bozza) {
     const db = _apcDiffBozze(snap.bozza, b);
@@ -546,6 +643,8 @@ async function apcAnnulla(i) {
   _ap.precedenze = s.precedenze;
   _ap.bozza = s.bozza;
   if (_ap.bozza) _ap.bozza.nuove = null;
+  _ap.imprevisti = s.imprevisti || [];
+  _ap.riparazione = s.riparazione || null;
   _ap.toccate = new Set();
   _apc.undo.pop();
   m.annullato = true;
@@ -572,13 +671,18 @@ function _apcEtichetta(nome, args) {
     case 'imposta_precedenza': return (args && args.attiva === false ? 'Tolgo la precedenza ' : 'Metto ') + nr(args && args.prima) + ' prima di ' + nr(args && args.dopo);
     case 'imposta_opzioni': return 'Aggiorno le opzioni';
     case 'calcola_bozza': return 'Ricalcolo la bozza';
+    case 'segnala_imprevisto': return 'Segno ' + (args && args.tipo === 'cantiere_fermo' ? (args.cantiere || 'il cantiere') + ' fermo' : (args && args.operatore ? args.operatore : 'l\'operatore') + ' assente') +
+      (args && args.giorni && args.giorni.length ? ' ' + _apcNomeGiorni(_apGiorniLista(args.giorni)) : '');
+    case 'rimuovi_imprevisto': return args && args.tutti ? 'Tolgo tutti gli imprevisti' : 'Tolgo un imprevisto';
+    case 'calcola_riparazione': return 'Cerco sostituti e recuperi';
     default: return nome;
   }
 }
 
 const APC_ICONA = {
   leggi_bozza: '📋', leggi_operatori: '👷', spiega_cantiere: '🔎', aggiungi_cantieri: '＋', modifica_cantiere: 'Δ',
-  rimuovi_cantiere: '−', importa_settimana_precedente: '↩', imposta_precedenza: '⇅', imposta_opzioni: '⚙︎', calcola_bozza: '⟳'
+  rimuovi_cantiere: '−', importa_settimana_precedente: '↩', imposta_precedenza: '⇅', imposta_opzioni: '⚙︎', calcola_bozza: '⟳',
+  segnala_imprevisto: '⚡', rimuovi_imprevisto: '−', calcola_riparazione: '🔧'
 };
 
 /* Avanzamento del calcolo (da _apStatus): mostrato sotto il passo in corso */
@@ -701,6 +805,9 @@ function _apcEsitoBreve(nome, r) {
   if (nome === 'spiega_cantiere' && r.esito) return r.esito.stato + ' ' + r.esito.giorni + ' gg';
   if (nome === 'imposta_precedenza') return r.precedenza || '';
   if (nome === 'imposta_opzioni') return (r.modifiche || []).join(', ');
+  if (nome === 'segnala_imprevisto') return Array.isArray(r.celle_colpite) ? r.celle_colpite.length + ' celle colpite' : (r.celle_colpite || '');
+  if (nome === 'rimuovi_imprevisto') return r.tolti + ' tolti';
+  if (nome === 'calcola_riparazione') return '−' + r.celle_tolte + ' / +' + r.celle_nuove + ' celle';
   return '';
 }
 
@@ -734,8 +841,8 @@ function apcPerche(el) {
   apcInvia('Perché ' + r.cantiere + ' ' + cosa + '? Cosa posso fare?');
 }
 
-function apcVediBozza() {
-  const el = document.getElementById('ap-bozza-box');
+function apcVediBozza(id) {
+  const el = document.getElementById(id || 'ap-bozza-box');
   if (!el) return;
   el.scrollIntoView({ behavior: 'smooth', block: 'start' });
   el.classList.remove('apc-flash');
@@ -749,18 +856,25 @@ function apcVediBozza() {
 function _apcSuggerimenti() {
   const out = [];
   const b = _ap.bozza;
+  if (_ap.imprevisti.length && !_ap.riparazione) out.push('Calcola la riparazione e dimmi chi manca');
+  else if (_ap.riparazione) out.push('Riepiloga la riparazione: chi sostituisce chi?');
+  else {
+    const mod = _apGiorniModificabili();
+    const c = _apCelleSettimana(pwGetWeekData()).find(x => mod.includes(x.giorno));
+    if (c) out.push(c.operatore + ' è in malattia ' + AP_GIORNI[c.giorno] + ': trova un sostituto');
+  }
   if (!_ap.righe.length) {
     out.push('Riporta i cantieri della settimana precedente');
     const c = pwGetCommesseValide()[0];
     if (c) out.push('Aggiungi Ivrea per ' + c + ': 12 km di WO fognatura, P1 entro giovedì');
     out.push('Chi è libero tutta la settimana?');
-    return out;
+    return out.slice(0, 4);
   }
   if (!b) {
     out.push('Calcola la bozza e dimmi cosa non torna');
     if (_ap.righe.some(r => r.scadenza)) out.push('Metti in P1 i cantieri con scadenza in questa settimana');
     out.push('Chi è libero tutta la settimana?');
-    return out;
+    return out.slice(0, 4);
   }
   const es = b.righeSolver.map(r => ({ r, e: b.risultato.esiti[r.id] }));
   const ko = es.find(x => x.e.stato === 'non_assegnato') || es.find(x => x.e.stato === 'parziale');
@@ -832,6 +946,8 @@ function _apcDiffHtml(m, i) {
     (puoAnnullare ? '<button type="button" data-apc="annulla" data-i="' + i + '" class="apc-btn">↶ Annulla</button>' : '') +
     (b && ultima && !m.annullato ? '<button type="button" data-apc="vedi" class="apc-btn">Vedi nella bozza</button>' : '') +
     (b && ultima && !m.annullato && b.risultato.assegnazioni.length ? '<button type="button" data-apc="applica" class="apc-btn primario" title="Scrive la bozza in Griglia (chiede conferma, annullabile)">✓ Applica alla Griglia</button>' : '') +
+    (_ap.riparazione && ultima && !m.annullato ? '<button type="button" data-apc="vedi-rip" class="apc-btn">Vedi riparazione</button>' +
+      '<button type="button" data-apc="applica-rip" class="apc-btn primario" title="Toglie le celle colpite e scrive sostituti e recuperi (chiede conferma, annullabile)">✓ Applica riparazione</button>' : '') +
     '</div></div>';
   return html;
 }
@@ -915,6 +1031,8 @@ function _apcClick(e) {
   else if (az === 'annulla') apcAnnulla(parseInt(btn.dataset.i, 10));
   else if (az === 'vedi') apcVediBozza();
   else if (az === 'applica') apApplica().then(() => apcRender());
+  else if (az === 'vedi-rip') apcVediBozza('ap-riparazione-box');
+  else if (az === 'applica-rip') apApplicaRiparazione().then(() => apcRender());
   else if (az === 'riprova') apcControllaStato(true);
 }
 

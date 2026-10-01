@@ -679,3 +679,144 @@ function apDiagnostica(ctx, righe, risultato, rigaId) {
   });
   return { riga: r, esito: e, giorni, maxKm: pesi.maxKmTrasferta };
 }
+
+/* ---------- riparazione per imprevisti ----------
+   La settimana è già pianificata e succede qualcosa: un operatore si assenta, un cantiere
+   si ferma. Invece di rifare la settimana si tocca il meno possibile: si tolgono SOLO le
+   celle colpite e si chiede ad apRisolvi di recuperare il lavoro perso con la capacità
+   rimasta libera. Poiché il solver non sovrascrive mai celle esistenti, tutto il resto
+   della Griglia resta com'è per costruzione.
+
+   Input:
+     celle: la Griglia della settimana appiattita, una voce per operatore+giorno+cantiere+attività:
+       [{ operatore, giorno, cantiere, attivita, commessa, quota }]  (quota = 1 / voci della cella)
+     imprevisti: [{ id, tipo: 'assenza', operatore, giorni: [d] }
+                | { id, tipo: 'cantiere_fermo', cantiere, giorni: [d] }]
+     modificabili: indici dei giorni che si possono ancora cambiare (i passati no)
+     opts: { prioritaSostituto (1), prioritaRecupero (2) }
+   Output:
+     rimozioni: [cella + { imprevistoId }]  celle da togliere
+     assenti:   { operatore: [d] }           giorni in cui non va assegnato
+     righe:     righe (parziali: senza geo/famiglia/attestati, li aggiunge il chiamante) per
+                apRisolvi, con in più tipo 'sostituto' | 'recupero', imprevistoId, compagni,
+                sostituisce (sostituto) o squadra (recupero)
+     liberati:  [{ operatore, giorno, quota }] capacità liberata dalle rimozioni (solo chi
+                non è assente), per dire a chi resta a disposizione
+     ignorati:  [{ imprevistoId, motivo }]   imprevisti senza effetto sulla Griglia */
+function _apK(s) { return String(s || '').toLowerCase().trim().replace(/\s+/g, ' '); }
+
+function apRiparaImpatto(celle, imprevisti, modificabili, opts) {
+  const o = opts || {};
+  const pSost = o.prioritaSostituto || 1;
+  const pRec = o.prioritaRecupero || 2;
+  const mod = new Set(modificabili || []);
+  const tolte = new Set();   // indici in celle
+  const rimozioni = [];
+  const assenti = {};
+  const ignorati = [];
+  const righe = [];
+  let seq = 0;
+  const togli = (i, imp) => {
+    if (tolte.has(i)) return false;
+    tolte.add(i);
+    rimozioni.push(Object.assign({}, celle[i], { imprevistoId: imp.id }));
+    return true;
+  };
+  const tuttiTranne = giorni => [0, 1, 2, 3, 4, 5].filter(d => !giorni.includes(d));
+
+  /* 1. Cantieri fermi prima: le loro celle se ne vanno per tutti, e un'assenza sullo
+        stesso cantiere-giorno non deve chiedere un sostituto per un cantiere chiuso. */
+  imprevisti.filter(x => x.tipo === 'cantiere_fermo').forEach(imp => {
+    const giorni = (imp.giorni || []).filter(d => mod.has(d));
+    const k = _apK(imp.cantiere);
+    const gruppi = {};  // cantiere|commessa|attivita -> { giorno -> [celle] }
+    celle.forEach((c, i) => {
+      if (_apK(c.cantiere) !== k || !giorni.includes(c.giorno)) return;
+      if (!togli(i, imp)) return;
+      const g = _apK(c.cantiere) + '|' + _apK(c.commessa) + '|' + _apK(c.attivita);
+      if (!gruppi[g]) gruppi[g] = { c, perGiorno: {} };
+      (gruppi[g].perGiorno[c.giorno] = gruppi[g].perGiorno[c.giorno] || []).push(c);
+    });
+    const chiavi = Object.keys(gruppi);
+    if (!chiavi.length) {
+      ignorati.push({ imprevistoId: imp.id, motivo: giorni.length ? 'nessuna cella in Griglia su quel cantiere nei giorni indicati' : 'giorni già passati' });
+      return;
+    }
+    chiavi.forEach(g => {
+      const { c, perGiorno } = gruppi[g];
+      let persi = 0, nOp = 0;
+      const squadra = new Set();
+      Object.keys(perGiorno).forEach(d => {
+        const cs = perGiorno[d];
+        persi += Math.max.apply(null, cs.map(x => x.quota || 1));
+        const nomi = new Set(cs.map(x => x.operatore));
+        nOp = Math.max(nOp, nomi.size);
+        nomi.forEach(n => squadra.add(n));
+      });
+      righe.push({
+        id: 'x' + (++seq), tipo: 'recupero', imprevistoId: imp.id,
+        cantiere: c.cantiere, commessa: c.commessa, attivita: c.attivita,
+        giorni: persi, nOp, priorita: pRec,
+        scadenzaGiorno: null, dalGiorno: Math.min.apply(null, Array.from(mod).concat([99])),
+        giorniEsclusi: giorni.slice(),
+        giorniPersi: Object.keys(perGiorno).map(Number).sort((a, b) => a - b),
+        squadra: Array.from(squadra).sort(),
+        preferiti: Array.from(squadra).sort(), esclusi: [], skills: []
+      });
+    });
+  });
+
+  /* 2. Assenze: via le celle dell'assente nei giorni indicati; per ogni cantiere-giorno
+        colpito serve un sostituto (stesso cantiere, stesso giorno), perché il resto della
+        squadra è ancora lì. Più assenti sullo stesso cantiere-giorno = una riga con nOp > 1. */
+  const sostituti = {};  // cantiere|commessa|attivita|giorno -> riga
+  imprevisti.filter(x => x.tipo === 'assenza').forEach(imp => {
+    const giorni = (imp.giorni || []).filter(d => mod.has(d));
+    if (!giorni.length) { ignorati.push({ imprevistoId: imp.id, motivo: 'giorni già passati' }); return; }
+    const nome = imp.operatore;
+    assenti[nome] = Array.from(new Set((assenti[nome] || []).concat(giorni))).sort((a, b) => a - b);
+    let colpite = 0;
+    celle.forEach((c, i) => {
+      if (c.operatore !== nome || !giorni.includes(c.giorno)) return;
+      if (!togli(i, imp)) return;
+      colpite++;
+      const g = _apK(c.cantiere) + '|' + _apK(c.commessa) + '|' + _apK(c.attivita) + '|' + c.giorno;
+      let r = sostituti[g];
+      if (!r) {
+        r = sostituti[g] = {
+          id: 'x' + (++seq), tipo: 'sostituto', imprevistoId: imp.id,
+          cantiere: c.cantiere, commessa: c.commessa, attivita: c.attivita,
+          giorni: 0, nOp: 0, priorita: pSost,
+          scadenzaGiorno: c.giorno, dalGiorno: c.giorno, giorniEsclusi: tuttiTranne([c.giorno]),
+          giorno: c.giorno, sostituisce: [], compagni: [],
+          preferiti: [], esclusi: [], skills: []
+        };
+        righe.push(r);
+      }
+      r.giorni = Math.max(r.giorni, c.quota || 1);
+      r.nOp++;
+      r.sostituisce.push(nome);
+    });
+    if (!colpite) ignorati.push({ imprevistoId: imp.id, motivo: 'nessuna cella in Griglia nei giorni indicati: resta solo l\'assenza' });
+  });
+
+  /* Compagni rimasti sul cantiere quel giorno (per dire "Bianchi resta da solo") */
+  righe.filter(r => r.tipo === 'sostituto').forEach(r => {
+    const k = _apK(r.cantiere);
+    const nomi = new Set();
+    celle.forEach((c, i) => {
+      if (!tolte.has(i) && c.giorno === r.giorno && _apK(c.cantiere) === k) nomi.add(c.operatore);
+    });
+    r.compagni = Array.from(nomi).sort();
+    r.esclusi = r.sostituisce.slice();
+  });
+
+  /* Capacità liberata: chi perde una cella ma non è assente quel giorno */
+  const lib = {};
+  rimozioni.forEach(c => {
+    if ((assenti[c.operatore] || []).includes(c.giorno)) return;
+    const k = c.operatore + '|' + c.giorno;
+    lib[k] = { operatore: c.operatore, giorno: c.giorno, quota: Math.min(1, ((lib[k] && lib[k].quota) || 0) + (c.quota || 1)) };
+  });
+  return { rimozioni, assenti, righe, liberati: Object.values(lib), ignorati };
+}

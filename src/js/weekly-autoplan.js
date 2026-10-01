@@ -24,8 +24,12 @@ let _ap = {
   precedenze: [],       // [[primaId, dopoId]] scelte dall'utente dai suggerimenti
   stato: { msg: '', err: false },
   toccate: new Set(),   // righe modificate dall'assistente nell'ultima risposta (evidenziate)
-  fontiAperte: false    // con la chat aperta le fonti stanno in un pannello richiudibile
+  fontiAperte: false,   // con la chat aperta le fonti stanno in un pannello richiudibile
+  imprevisti: [],       // assenze / cantieri fermi della settimana già pianificata (vedi IMPREVISTI)
+  riparazione: null,    // { anno, week, impatto, risultato, righeSolver, ctx, ... } in memoria
+  impForm: { tipo: 'assenza', chi: '', giorni: [], registra: 'ferie', motivo: '' }
 };
+let _apImpSeq = 0;
 let _apSeq = 0;
 const AP_STORAGE_KEY = 'ap_righe_v1';
 const AP_UNDO_KEY = 'ap_undo_v1';
@@ -59,7 +63,7 @@ function _apSalvaLocale() {
   try {
     const raw = localStorage.getItem(AP_STORAGE_KEY);
     const all = raw ? JSON.parse(raw) : {};
-    all[_apWkKey(_ap.anno, _ap.week)] = { righe: _ap.righe, opzioni: _ap.opzioni, precedenze: _ap.precedenze, ts: Date.now() };
+    all[_apWkKey(_ap.anno, _ap.week)] = { righe: _ap.righe, opzioni: _ap.opzioni, precedenze: _ap.precedenze, imprevisti: _ap.imprevisti, ts: Date.now() };
     // Tiene solo le 8 settimane toccate più di recente
     const keys = Object.keys(all).sort((a, b) => (all[b].ts || 0) - (all[a].ts || 0));
     keys.slice(8).forEach(k => delete all[k]);
@@ -70,6 +74,7 @@ function _apSalvaLocale() {
 function _apCaricaLocale() {
   _ap.righe = [];
   _ap.precedenze = [];
+  _ap.imprevisti = [];
   try {
     const raw = localStorage.getItem(AP_STORAGE_KEY);
     const all = raw ? JSON.parse(raw) : {};
@@ -78,9 +83,11 @@ function _apCaricaLocale() {
       _ap.righe = Array.isArray(s.righe) ? s.righe : [];
       if (s.opzioni) _ap.opzioni = Object.assign({ sabato: false, maxKm: 250, meteo: true }, s.opzioni);
       if (Array.isArray(s.precedenze)) _ap.precedenze = s.precedenze;
+      if (Array.isArray(s.imprevisti)) _ap.imprevisti = s.imprevisti;
     }
   } catch (_) {}
   _ap.righe.forEach(r => { const n = parseInt(String(r.id).replace('r', ''), 10); if (n > _apSeq) _apSeq = n; });
+  _ap.imprevisti.forEach(x => { const n = parseInt(String(x.id).replace('i', ''), 10); if (n > _apImpSeq) _apImpSeq = n; });
 }
 
 /* ---------- ingresso nella tab ---------- */
@@ -90,6 +97,7 @@ function apInit() {
     _ap.week = pwWeek;
     _ap.bozza = null;
     _ap.ultimaBozza = null;
+    _ap.riparazione = null;
     _ap.toccate = new Set();
     _apCaricaLocale();
     if (typeof apcOnSettimana === 'function') apcOnSettimana();
@@ -412,9 +420,12 @@ function _apAttestatiValidi(op) {
   };
 }
 
-function apBuildContesto() {
+/* opts (riparazione per imprevisti): data = Griglia "virtuale" senza le celle colpite,
+   assenti = { nome: [d] } giorni da trattare come assenza, sabato = includi il sabato */
+function apBuildContesto(opts) {
+  const o = opts || {};
   const primo = _apPrimoGiorno();
-  const data = pwGetWeekData();
+  const data = o.data || pwGetWeekData();
   const prev = pwWeekAdd(pwAnno, pwWeek, -1);
 
   /* Doppia week: il flag in tab Doppia Week spesso è solo la DISPONIBILITÀ data
@@ -435,7 +446,8 @@ function apBuildContesto() {
 
   /* Il sabato entra nei giorni se richiesto, oppure se c'è qualcuno in doppia week
      disponibile (solo lui potrà lavorarci, vedi disp più sotto). */
-  const ultimo = (_ap.opzioni.sabato || conDwDisponibile) ? 5 : 4;
+  const sabato = !!(_ap.opzioni.sabato || o.sabato);
+  const ultimo = (sabato || conDwDisponibile) ? 5 : 4;
   const giorni = [];
   for (let d = Math.max(0, primo); d <= ultimo; d++) giorni.push(d);
   const giorniISO = {};
@@ -500,8 +512,9 @@ function apBuildContesto() {
       let st = 'libero';
       if (dw.viaTutta || (dw.viaInizio && d <= 2)) st = 'dw';
       else if (ferieWk[nome] && pwFerieTipo(ferieWk[nome][d])) st = 'ferie';
+      else if (o.assenti && (o.assenti[nome] || []).includes(d)) st = 'ferie';
       else if (occupato[nome] && occupato[nome][d]) st = 'occupato';
-      else if (d === 5 && !_ap.opzioni.sabato && !dw.disponibile) st = 'sabato'; // sabato solo per la doppia week
+      else if (d === 5 && !sabato && !dw.disponibile) st = 'sabato'; // sabato solo per la doppia week
       disp[nome][d] = st;
     }
   });
@@ -657,6 +670,35 @@ function apRimuoviPrecedenza(el) {
 
 /* ================= CALCOLO BOZZA ================= */
 
+async function _apLocalizza(cantieri) {
+  const daLocalizzare = Array.from(new Set(cantieri)).filter(c => c && !(_apNorm(c) in _geoCache));
+  for (let i = 0; i < daLocalizzare.length; i++) {
+    _apStatus('Localizzo cantieri… (' + (i + 1) + '/' + daLocalizzare.length + ') ' + daLocalizzare[i]);
+    await geocodifica(daLocalizzare[i]);
+    await new Promise(res => setTimeout(res, 300));
+  }
+}
+
+/* Distanze stradali: origini = residenze, posizioni già in Griglia e gli stessi cantieri
+   (dopo un cantiere l'operatore riparte da lì); destinazioni = i cantieri da pianificare.
+   Poi il meteo. Entrambi finiscono in ctx (distanzaKm, meteo). */
+async function _apDistanzeEMeteo(ctx, righeSolver) {
+  const destinazioni = righeSolver.map(r => r.geo).filter(Boolean);
+  const origini = destinazioni.slice();
+  ctx.operatori.forEach(o => { if (o.base) origini.push(o.base); });
+  Object.values(ctx.posizione).forEach(pp => Object.values(pp).forEach(p => origini.push(p)));
+  _apStatus('Calcolo le distanze stradali…');
+  const dist = await _apCaricaDistanze(origini, destinazioni);
+  ctx.distanzaKm = (a, b) => {
+    const v = _apDistCache[_apPuntoKey(a) + '>' + _apPuntoKey(b)];
+    return v == null ? null : v;
+  };
+  _apStatus('Controllo il meteo…');
+  const met = await _apPreparaMeteo(righeSolver, ctx);
+  ctx.meteo = met.meteo;
+  return { dist, met };
+}
+
 function _apRigaCompleta(r) {
   return r.cantiere && r.commessa;
 }
@@ -674,13 +716,7 @@ async function apCalcola(opts) {
   const btn = document.getElementById('ap-calcola-btn');
   if (btn) btn.disabled = true;
   try {
-    const daLocalizzare = Array.from(new Set(righe.map(r => r.cantiere)))
-      .filter(c => !(_apNorm(c) in _geoCache));
-    for (let i = 0; i < daLocalizzare.length; i++) {
-      _apStatus('Localizzo cantieri… (' + (i + 1) + '/' + daLocalizzare.length + ') ' + daLocalizzare[i]);
-      await geocodifica(daLocalizzare[i]);
-      await new Promise(res => setTimeout(res, 300));
-    }
+    await _apLocalizza(righe.map(r => r.cantiere));
     const ctx = apBuildContesto();
     const righeSolver = righe.map(r => {
       const stima = apStimaImpegno(r, _ap.modello);
@@ -711,22 +747,7 @@ async function apCalcola(opts) {
       };
     });
 
-    /* Distanze stradali: origini = residenze, posizioni già in Griglia e gli stessi cantieri
-       (dopo un cantiere l'operatore riparte da lì); destinazioni = i cantieri da pianificare. */
-    const destinazioni = righeSolver.map(r => r.geo).filter(Boolean);
-    const origini = destinazioni.slice();
-    ctx.operatori.forEach(o => { if (o.base) origini.push(o.base); });
-    Object.values(ctx.posizione).forEach(pp => Object.values(pp).forEach(p => origini.push(p)));
-    _apStatus('Calcolo le distanze stradali…');
-    const dist = await _apCaricaDistanze(origini, destinazioni);
-    ctx.distanzaKm = (a, b) => {
-      const v = _apDistCache[_apPuntoKey(a) + '>' + _apPuntoKey(b)];
-      return v == null ? null : v;
-    };
-
-    _apStatus('Controllo il meteo…');
-    const met = await _apPreparaMeteo(righeSolver, ctx);
-    ctx.meteo = met.meteo;
+    const { dist, met } = await _apDistanzeEMeteo(ctx, righeSolver);
 
     const ids = new Set(righeSolver.map(r => r.id));
     ctx.precedenze = _ap.precedenze.filter(([a, b]) => ids.has(a) && ids.has(b));
@@ -817,8 +838,24 @@ async function apApplica() {
 
   const data = pwGetWeekData();
   const snapshot = JSON.stringify(data);
+  const { scritte, saltate } = _apScriviAssegnazioni(data, ass, b.righeSolver);
+
+  try {
+    localStorage.setItem(AP_UNDO_KEY, JSON.stringify({ anno: pwAnno, week: pwWeek, snapshot, ts: Date.now(), celle: scritte }));
+  } catch (_) {}
+  await pwSave();
+  sbLogActivity('Auto-pianifica: bozza applicata', { anno: pwAnno, week: pwWeek, celle: scritte, cantieri: new Set(ass.map(a => a.rigaId)).size, saltate: saltate.length });
+  _ap.bozza = null;
+  apRender();
+  showAlertModal('Scritte ' + scritte + ' celle in Griglia.' +
+    (saltate.length ? '\n\nSaltate perché nel frattempo occupate o in ferie:\n' + saltate.join('\n') : ''));
+}
+
+/* Scrive in data (la Griglia della settimana) le assegnazioni del solver, saltando chi nel
+   frattempo risulta occupato o in ferie. Usata da Applica bozza e Applica riparazione. */
+function _apScriviAssegnazioni(data, ass, righeSolver) {
   const righeById = {};
-  b.righeSolver.forEach(r => { righeById[r.id] = r; });
+  righeSolver.forEach(r => { righeById[r.id] = r; });
   const giorniOccupatiDaBozza = new Set();
   let scritte = 0;
   const saltate = [];
@@ -835,21 +872,13 @@ async function apApplica() {
         saltate.push(nome + ' ' + PW_MAP_DAY_SHORT[a.giorno] + ' (' + r.cantiere + ')');
         return;
       }
-      const op = _apRigaOperatore(bc, nome, a.operatori);
+      /* Un sostituto va nella squadra di chi sostituisce / di chi resta sul cantiere */
+      const op = _apRigaOperatore(bc, nome, a.operatori.concat(r.sostituisce || [], r.compagni || []));
       if (_apScriviCella(op, a.giorno, r.cantiere, r.attivita)) { scritte++; giorniOccupatiDaBozza.add(kGiorno); toccate.add(bc); }
     });
   });
   data.forEach((bc, i) => { if (toccate.has(bc)) pwRinumeraSquadreDefault(i); });
-
-  try {
-    localStorage.setItem(AP_UNDO_KEY, JSON.stringify({ anno: pwAnno, week: pwWeek, snapshot, ts: Date.now(), celle: scritte }));
-  } catch (_) {}
-  await pwSave();
-  sbLogActivity('Auto-pianifica: bozza applicata', { anno: pwAnno, week: pwWeek, celle: scritte, cantieri: new Set(ass.map(a => a.rigaId)).size, saltate: saltate.length });
-  _ap.bozza = null;
-  apRender();
-  showAlertModal('Scritte ' + scritte + ' celle in Griglia.' +
-    (saltate.length ? '\n\nSaltate perché nel frattempo occupate o in ferie:\n' + saltate.join('\n') : ''));
+  return { scritte, saltate };
 }
 
 async function apAnnulla() {
@@ -858,15 +887,448 @@ async function apAnnulla() {
   try { u = JSON.parse(localStorage.getItem(AP_UNDO_KEY) || 'null'); } catch (_) {}
   if (!u || u.anno !== pwAnno || u.week !== pwWeek) { showAlertModal('Nessuna applicazione da annullare per questa settimana (su questo browser).'); return; }
   const quando = new Date(u.ts).toLocaleString('it-IT', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
-  const ok = await showConfirmAsync('Riportare la Griglia della settimana ' + pwWeek + ' a com\'era prima dell\'applicazione del ' + quando + '? Anche le modifiche fatte a mano DOPO quel momento su questa settimana andranno perse.', 'Annulla applicazione');
+  const conFerie = Object.prototype.hasOwnProperty.call(u, 'ferie');
+  const ok = await showConfirmAsync('Riportare la Griglia' + (conFerie ? ' e le ferie' : '') + ' della settimana ' + pwWeek + ' a com\'era prima dell\'applicazione del ' + quando + '? Anche le modifiche fatte a mano DOPO quel momento su questa settimana andranno perse.', 'Annulla applicazione');
   if (!ok) return;
   if (!pwData[pwAnno]) pwData[pwAnno] = {};
   pwData[pwAnno][pwWeek] = JSON.parse(u.snapshot);
   try { localStorage.removeItem(AP_UNDO_KEY); } catch (_) {}
   await pwSave();
+  /* La riparazione per imprevisti registra anche le assenze in Ferie: tornano com'erano */
+  if (conFerie) {
+    if (!pwFerie[pwAnno]) pwFerie[pwAnno] = {};
+    if (u.ferie == null) delete pwFerie[pwAnno][pwWeek];
+    else pwFerie[pwAnno][pwWeek] = JSON.parse(u.ferie);
+    await pwFerieSave();
+  }
   sbLogActivity('Auto-pianifica: applicazione annullata', { anno: pwAnno, week: pwWeek, celle: u.celle });
   apRender();
   _apStatus('Applicazione annullata.');
+}
+
+/* ================= IMPREVISTI (riparazione della settimana già in Griglia) ================= */
+/* Un operatore si assenta o un cantiere si ferma a settimana già pianificata. Non si rifà
+   la settimana: si tolgono SOLO le celle colpite e il solver recupera il lavoro perso con
+   la capacità rimasta libera (apRiparaImpatto + apRisolvi nel solver):
+   - assenza -> un sostituto sullo stesso cantiere e nello stesso giorno;
+   - cantiere fermo -> i giorni persi spostati su altri giorni, favorendo la stessa squadra.
+   Il resto della Griglia non si tocca per costruzione (il solver non sovrascrive celle).
+   L'applicazione toglie le celle colpite, registra (se richiesto) l'assenza in Ferie e
+   scrive le celle nuove; l'annulla è lo stesso di Applica bozza, con in più le ferie. */
+
+const AP_IMP_REGISTRA = { ferie: 'Ferie', non_disponibile: 'Non disponibile', '': 'non registrare' };
+
+function _apGiorniModificabili() {
+  const primo = _apPrimoGiorno();
+  return [0, 1, 2, 3, 4, 5].filter(d => d >= primo);
+}
+
+/* Griglia della settimana appiattita: una voce per operatore + giorno + cantiere + attività */
+function _apCelleSettimana(data) {
+  const out = [];
+  data.forEach(bc => (bc.squadre || []).forEach(sq => (sq.operatori || []).forEach(op => {
+    const n = (op.nome || '').trim();
+    if (!n) return;
+    for (let d = 0; d < 6; d++) {
+      const voci = pwCellVoci((op.giorni || {})[d]);
+      voci.forEach(v => out.push({ operatore: n, giorno: d, cantiere: v.cantiere, attivita: v.attivita || '',
+        commessa: bc.commessa || '', quota: 1 / voci.length }));
+    }
+  })));
+  return out;
+}
+
+function _apCantieriSettimana() {
+  return Array.from(new Set(_apCelleSettimana(pwGetWeekData()).map(c => c.cantiere))).sort((a, b) => a.localeCompare(b));
+}
+
+/* Toglie da data una voce (operatore, giorno, cantiere, attività, commessa). La cella resta
+   con gli altri suoi campi, solo senza quel cantiere. false = non c'è più. */
+function _apTogliVoce(data, c) {
+  for (const bc of data) {
+    if (_apNorm(bc.commessa) !== _apNorm(c.commessa)) continue;
+    for (const sq of (bc.squadre || [])) for (const op of (sq.operatori || [])) {
+      if ((op.nome || '').trim() !== c.operatore) continue;
+      const g = (op.giorni || {})[c.giorno];
+      const voci = pwCellVoci(g);
+      const i = voci.findIndex(v => _apNorm(v.cantiere) === _apNorm(c.cantiere) && _apNorm(v.attivita) === _apNorm(c.attivita));
+      if (i < 0) continue;
+      voci.splice(i, 1);
+      g.cantieri = voci.map(v => v.cantiere);
+      g.attivitaCantieri = voci.map(v => v.attivita);
+      delete g.cantiere;
+      pwCellSyncAttivita(g);
+      return true;
+    }
+  }
+  return false;
+}
+
+/* Forma unica di un imprevisto (dal form o dall'assistente). Lancia un errore leggibile. */
+function apNormImprevisto(o) {
+  const tipo = o && o.tipo === 'cantiere_fermo' ? 'cantiere_fermo' : (o && o.tipo === 'assenza' ? 'assenza' : null);
+  if (!tipo) throw new Error('tipo di imprevisto non valido (assenza o cantiere_fermo)');
+  const mod = _apGiorniModificabili();
+  const richiesti = _apGiorniLista(o.giorni);
+  if (!richiesti.length) throw new Error('indica almeno un giorno');
+  const giorni = richiesti.filter(d => mod.includes(d));
+  if (!giorni.length) throw new Error('i giorni indicati (' + richiesti.map(d => AP_GIORNI[d]).join(', ') + ') sono già passati: si possono cambiare solo da ' + (mod.length ? AP_GIORNI[mod[0]] : 'nessun giorno'));
+  const out = { id: 'i' + (++_apImpSeq), tipo, giorni, motivo: String(o.motivo || '').trim() };
+  if (tipo === 'assenza') {
+    const pool = _apOperatoriCatalogo();
+    const nome = _apOperatoriCanonici([o.operatore])[0];
+    if (!nome || !pool.includes(nome)) throw new Error('operatore "' + (o.operatore || '') + '" non trovato fra gli attivi');
+    out.operatore = nome;
+    out.registra = Object.prototype.hasOwnProperty.call(AP_IMP_REGISTRA, o.registra || '') ? (o.registra || '') : 'ferie';
+  } else {
+    const elenco = _apCantieriSettimana();
+    const n = _apNorm(o.cantiere);
+    if (!n) throw new Error('indica il cantiere');
+    let c = elenco.find(x => _apNorm(x) === n);
+    if (!c) {
+      const simili = elenco.filter(x => _apNorm(x).includes(n) || n.includes(_apNorm(x)));
+      if (simili.length === 1) c = simili[0];
+      else throw new Error('cantiere "' + o.cantiere + '" ' + (simili.length ? 'ambiguo (' + simili.join(', ') + ')' : 'non presente in Griglia questa settimana') +
+        (elenco.length ? '. In Griglia: ' + elenco.slice(0, 40).join(', ') : ''));
+    }
+    out.cantiere = c;
+  }
+  if (richiesti.length > giorni.length) out.giorniPassati = richiesti.filter(d => !giorni.includes(d));
+  return out;
+}
+
+/* Aggiunge un imprevisto; se c'è già lo stesso (stessa persona o stesso cantiere) unisce i giorni */
+function _apImprevistoAggiungiNorm(imp) {
+  const stesso = _ap.imprevisti.find(x => x.tipo === imp.tipo &&
+    (imp.tipo === 'assenza' ? x.operatore === imp.operatore : _apNorm(x.cantiere) === _apNorm(imp.cantiere)));
+  if (stesso) {
+    stesso.giorni = _apGiorniLista(stesso.giorni.concat(imp.giorni));
+    if (imp.registra != null) stesso.registra = imp.registra;
+    if (imp.motivo) stesso.motivo = imp.motivo;
+  } else {
+    _ap.imprevisti.push(imp);
+  }
+  _ap.riparazione = null;
+  _ap.impAperto = true;
+  _apSalvaLocale();
+  return stesso || imp;
+}
+
+function apImpForm(el) {
+  const f = el.dataset.f;
+  const F = _ap.impForm;
+  if (f === 'tipo') { F.tipo = el.value; F.chi = ''; apRender(); return; }
+  if (f === 'giorno') {
+    const d = parseInt(el.dataset.g, 10);
+    F.giorni = el.checked ? _apGiorniLista(F.giorni.concat([d])) : F.giorni.filter(x => x !== d);
+    return;
+  }
+  F[f] = el.value;
+}
+
+function apImpToggle(el) { _ap.impAperto = !!el.open; }
+
+function apImprevistoAggiungi() {
+  const F = _ap.impForm;
+  try {
+    const imp = apNormImprevisto({ tipo: F.tipo, operatore: F.chi, cantiere: F.chi, giorni: F.giorni, registra: F.registra, motivo: F.motivo });
+    _apImprevistoAggiungiNorm(imp);
+    _ap.impForm = { tipo: F.tipo, chi: '', giorni: [], registra: F.registra, motivo: '' };
+    apRender();
+  } catch (e) {
+    showAlertModal(e.message || String(e));
+  }
+}
+
+function apImprevistoRimuovi(el) {
+  const id = el && el.dataset.imp;
+  _ap.imprevisti = _ap.imprevisti.filter(x => x.id !== id);
+  _ap.riparazione = null;
+  _apSalvaLocale();
+  apRender();
+}
+
+function _apImprevistoTesto(x) {
+  const g = _apGiorniLista(x.giorni).map(d => AP_GIORNI[d]).join(', ');
+  if (x.tipo === 'assenza') return x.operatore + ' assente ' + g + (x.registra ? ' (in Ferie come ' + AP_IMP_REGISTRA[x.registra] + ')' : '');
+  return x.cantiere + ' fermo ' + g;
+}
+
+/* opts.silenzioso (assistente): niente modali, esito come valore { ok, errore } */
+async function apCalcolaRiparazione(opts) {
+  const silenzioso = !!(opts && opts.silenzioso);
+  const fallisci = msg => { if (!silenzioso) showAlertModal(msg); return { ok: false, errore: msg }; };
+  if (!_ap.imprevisti.length) return fallisci('Aggiungi almeno un imprevisto (assenza o cantiere fermo).');
+  const modificabili = _apGiorniModificabili();
+  if (!modificabili.length) return fallisci('Questa settimana è già passata: non c\'è più niente da ripianificare.');
+  const btn = document.getElementById('ap-ripara-btn');
+  if (btn) btn.disabled = true;
+  try {
+    const data = pwGetWeekData();
+    const impatto = apRiparaImpatto(_apCelleSettimana(data), _ap.imprevisti, modificabili);
+    /* La settimana come sarebbe dopo aver tolto le celle colpite: da lì si ricavano
+       disponibilità e posizioni (chi perde una cella torna libero quel giorno). */
+    const virtuale = JSON.parse(JSON.stringify(data));
+    impatto.rimozioni.forEach(c => _apTogliVoce(virtuale, c));
+    await _apLocalizza(impatto.righe.map(r => r.cantiere));
+    const ctx = apBuildContesto({ data: virtuale, assenti: impatto.assenti, sabato: impatto.rimozioni.some(c => c.giorno === 5) });
+    const righeSolver = impatto.righe.map(r => {
+      const meta = (state.commesse_attive_meta || {})[r.commessa] || {};
+      const geo = meteoGeoFor(r.cantiere);
+      return Object.assign({}, r, {
+        famiglia: apTrovaFamiglia(_ap.modello, r.attivita),
+        geo: geo ? { lat: geo.lat, lng: geo.lng } : null,
+        skills: meta.skills || [],
+        attestati: meta.attestati_richiesti || [],
+        stimaFonte: r.tipo === 'sostituto' ? 'giornata già pianificata' : 'giorni persi per il fermo'
+      });
+    });
+    let dist = { info: '' }, met = { info: '' };
+    if (righeSolver.length) {
+      ({ dist, met } = await _apDistanzeEMeteo(ctx, righeSolver));
+      /* Il sostituto raggiunge una squadra che quel giorno lavora comunque: il meteo non
+         è un motivo per non mandarlo (si decide sul cantiere, non sul sostituto). */
+      righeSolver.forEach(r => { if (r.tipo === 'sostituto') delete ctx.meteo[r.id]; });
+    }
+    _apStatus('Calcolo la riparazione…');
+    await new Promise(res => setTimeout(res, 0));
+    const risultato = righeSolver.length ? apRisolvi(ctx, righeSolver)
+      : { assegnazioni: [], esiti: {}, capacitaResidua: {}, operatoriSuPiuCommesse: [], miglioramenti: [], suggerimenti: [] };
+    _ap.riparazione = { anno: _ap.anno, week: _ap.week, impatto, risultato, righeSolver, ctx, ctxGiorni: ctx.giorni,
+      creata: Date.now(), infoDistanze: dist.info, infoMeteo: met.info };
+    const es = Object.values(risultato.esiti);
+    apRender();
+    _apStatus('Riparazione pronta: −' + impatto.rimozioni.length + ' celle, +' +
+      risultato.assegnazioni.reduce((n, a) => n + a.operatori.length, 0) + ' celle' +
+      (es.length ? ' · ' + es.filter(e => e.stato === 'assegnato').length + '/' + es.length + ' recuperi riusciti' : '') + '.');
+    return { ok: true };
+  } catch (e) {
+    console.error('apCalcolaRiparazione', e);
+    _apStatus('Errore nel calcolo della riparazione: ' + (e.message || e), true);
+    return { ok: false, errore: 'errore nel calcolo: ' + (e.message || e) };
+  } finally {
+    if (btn) btn.disabled = false;
+  }
+}
+
+/* Chi resta libero nei giorni liberati dalle rimozioni (non riusato dalla riparazione) */
+function _apRiparazioneLiberi(rip) {
+  const cap = rip.risultato.capacitaResidua || {};
+  return rip.impatto.liberati.filter(l => {
+    const c = (cap[l.operatore] || {})[l.giorno];
+    return c == null ? true : c > 1e-6;
+  });
+}
+
+async function apApplicaRiparazione() {
+  if (!sbGuardWrite()) return;
+  const rip = _ap.riparazione;
+  if (!rip) { showAlertModal('Calcola prima la riparazione.'); return; }
+  if (rip.anno !== pwAnno || rip.week !== pwWeek) { showAlertModal('La riparazione è di un\'altra settimana: ricalcola.'); return; }
+  const nTolte = rip.impatto.rimozioni.length;
+  const nNuove = rip.risultato.assegnazioni.reduce((n, a) => n + a.operatori.length, 0);
+  const daRegistrare = _ap.imprevisti.filter(x => x.tipo === 'assenza' && x.registra);
+  if (!nTolte && !nNuove && !daRegistrare.length) { showAlertModal('La riparazione non cambia niente in Griglia.'); return; }
+  const ok = await showConfirmAsync('Applicare la riparazione alla settimana ' + pwWeek + '?\n\n' +
+    '− ' + nTolte + ' celle tolte (quelle colpite dagli imprevisti)\n' +
+    '+ ' + nNuove + ' celle nuove (sostituti e recuperi)' +
+    (daRegistrare.length ? '\n' + daRegistrare.map(x => '• ' + x.operatore + ' in Ferie come ' + AP_IMP_REGISTRA[x.registra]).join('\n') : '') +
+    '\n\nIl resto della Griglia non viene toccato. L\'operazione si può annullare.', 'Applica riparazione');
+  if (!ok) return;
+
+  const data = pwGetWeekData();
+  const snapshot = JSON.stringify(data);
+  const ferieSnap = pwFerie[pwAnno] && pwFerie[pwAnno][pwWeek] ? JSON.stringify(pwFerie[pwAnno][pwWeek]) : null;
+  /* 1. via le celle colpite (se nel frattempo qualcuno le ha già tolte, pazienza) */
+  let tolte = 0;
+  const giaTolte = [];
+  rip.impatto.rimozioni.forEach(c => {
+    if (_apTogliVoce(data, c)) tolte++;
+    else giaTolte.push(c.operatore + ' ' + PW_MAP_DAY_SHORT[c.giorno] + ' (' + c.cantiere + ')');
+  });
+  /* 2. assenze in Ferie, senza toccare giorni già segnati */
+  let ferieCambiate = false;
+  daRegistrare.forEach(x => {
+    const giorni = (rip.impatto.assenti[x.operatore] || []).filter(d => x.giorni.includes(d));
+    if (!giorni.length) return;
+    const fw = pwGetFerieWeek();
+    if (!fw[x.operatore]) fw[x.operatore] = {};
+    giorni.forEach(d => { if (!pwFerieTipo(fw[x.operatore][d])) { fw[x.operatore][d] = x.registra; ferieCambiate = true; } });
+  });
+  /* 3. sostituti e recuperi */
+  const { scritte, saltate } = _apScriviAssegnazioni(data, rip.risultato.assegnazioni, rip.righeSolver);
+
+  try {
+    const undo = { anno: pwAnno, week: pwWeek, snapshot, ts: Date.now(), celle: scritte, tipo: 'riparazione' };
+    if (ferieCambiate) undo.ferie = ferieSnap;
+    localStorage.setItem(AP_UNDO_KEY, JSON.stringify(undo));
+  } catch (_) {}
+  await pwSave();
+  if (ferieCambiate) await pwFerieSave();
+  sbLogActivity('Auto-pianifica: riparazione imprevisti applicata', { anno: pwAnno, week: pwWeek,
+    imprevisti: _ap.imprevisti.map(_apImprevistoTesto), tolte, scritte, saltate: saltate.length });
+  _ap.imprevisti = [];
+  _ap.riparazione = null;
+  _ap.bozza = null;  // la Griglia è cambiata: una bozza calcolata prima non è più affidabile
+  _apSalvaLocale();
+  apRender();
+  showAlertModal('Riparazione applicata: tolte ' + tolte + ' celle, scritte ' + scritte + '.' +
+    (ferieCambiate ? ' Assenze registrate in Ferie.' : '') +
+    (giaTolte.length ? '\n\nGià assenti dalla Griglia:\n' + giaTolte.join('\n') : '') +
+    (saltate.length ? '\n\nSaltate perché nel frattempo occupate o in ferie:\n' + saltate.join('\n') : ''));
+}
+
+/* Scarta la proposta: via la riparazione e gli imprevisti che l'hanno generata, riquadro
+   richiuso. La Griglia non è mai stata toccata, quindi non c'è niente da annullare. */
+function apScartaRiparazione() {
+  _ap.riparazione = null;
+  _ap.imprevisti = [];
+  _ap.impAperto = false;
+  _apSalvaLocale();
+  apRender();
+  _apStatus('Proposta di riparazione scartata: la Griglia non è stata toccata.');
+}
+
+/* ---------- render ---------- */
+
+function _apImprevistiHtml() {
+  const mod = _apGiorniModificabili();
+  const F = _ap.impForm;
+  const aperto = _ap.impAperto || _ap.imprevisti.length || _ap.riparazione;
+  const titolo = '<summary class="cursor-pointer select-none text-xs font-semibold text-slate-700 uppercase tracking-wide">⚡ Imprevisti · ripara la settimana già in Griglia' +
+    (_ap.imprevisti.length ? ' <span class="ml-1 normal-case font-bold" style="background:#fef3c7;color:#b45309;padding:0 6px;border-radius:9px;">' + _ap.imprevisti.length + '</span>' : '') + '</summary>';
+  if (!mod.length) {
+    return '<details class="bg-white border border-slate-200 rounded-lg p-3 shadow-sm"' + (aperto ? ' open' : '') + ' ontoggle="apImpToggle(this)">' + titolo +
+      '<div class="text-xs text-slate-500 mt-2">Settimana passata: non c\'è più niente da ripianificare.</div></details>';
+  }
+  const sel = 'border border-slate-300 rounded px-1.5 py-1 text-xs';
+  const opzioni = F.tipo === 'assenza' ? _apOperatoriCatalogo() : _apCantieriSettimana();
+  const chi = '<select data-f="chi" onchange="apImpForm(this)" class="' + sel + '" style="max-width:220px;">' +
+    '<option value="">' + (F.tipo === 'assenza' ? '— operatore —' : (opzioni.length ? '— cantiere in Griglia —' : 'nessun cantiere in Griglia')) + '</option>' +
+    opzioni.map(n => '<option value="' + _apE(n) + '"' + (n === F.chi ? ' selected' : '') + '>' + _apE(n) + '</option>').join('') + '</select>';
+  const giorni = '<span class="inline-flex items-center gap-1">' + [0, 1, 2, 3, 4, 5].map(d => {
+    const ok = mod.includes(d);
+    return '<label class="text-xs flex items-center gap-0.5' + (ok ? ' text-slate-700' : ' text-slate-300') + '" title="' + (ok ? '' : 'giorno già passato') + '">' +
+      '<input type="checkbox" data-f="giorno" data-g="' + d + '" onchange="apImpForm(this)"' + (F.giorni.includes(d) ? ' checked' : '') + (ok ? '' : ' disabled') + '>' + AP_GIORNI[d] + '</label>';
+  }).join('') + '</span>';
+  const registra = F.tipo === 'assenza'
+    ? '<label class="text-xs text-slate-600 flex items-center gap-1">in Ferie come <select data-f="registra" onchange="apImpForm(this)" class="' + sel + '">' +
+      Object.keys(AP_IMP_REGISTRA).map(k => '<option value="' + k + '"' + ((F.registra || '') === k ? ' selected' : '') + '>' + AP_IMP_REGISTRA[k] + '</option>').join('') + '</select></label>'
+    : '';
+  const form = '<div class="flex flex-wrap items-center gap-2 mt-2">' +
+    '<select data-f="tipo" onchange="apImpForm(this)" class="' + sel + '">' +
+      '<option value="assenza"' + (F.tipo === 'assenza' ? ' selected' : '') + '>🤒 Assenza operatore</option>' +
+      '<option value="cantiere_fermo"' + (F.tipo === 'cantiere_fermo' ? ' selected' : '') + '>🚧 Cantiere fermo</option>' +
+    '</select>' + chi + giorni + registra +
+    '<input type="text" data-f="motivo" oninput="apImpForm(this)" value="' + _apE(F.motivo) + '" placeholder="motivo (facoltativo)" class="' + sel + '" style="width:150px;">' +
+    '<button type="button" onclick="apImprevistoAggiungi()" class="text-xs px-2 py-1 border border-slate-300 rounded hover:bg-slate-50 font-semibold">＋ Aggiungi</button>' +
+    '</div>';
+  const lista = _ap.imprevisti.length
+    ? '<div class="flex flex-wrap items-center gap-1 mt-2">' + _ap.imprevisti.map(x =>
+        '<span class="inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[11px]" style="background:#fffbeb;border-color:#fcd34d;color:#92400e;">' +
+        (x.tipo === 'assenza' ? '🤒 ' : '🚧 ') + _apE(_apImprevistoTesto(x)) + (x.motivo ? ' <span class="text-slate-500">· ' + _apE(x.motivo) + '</span>' : '') +
+        '<button type="button" data-imp="' + _apE(x.id) + '" onclick="apImprevistoRimuovi(this)" title="Togli" class="text-slate-400 hover:text-rose-600">✕</button></span>').join('') +
+      '<div class="flex-1"></div>' +
+      '<button type="button" id="ap-ripara-btn" onclick="apCalcolaRiparazione()" class="text-xs px-3 py-1.5 rounded font-semibold text-white" style="background:#b45309;">🔧 Calcola riparazione</button>' +
+      '</div>'
+    : '';
+  return '<details class="bg-white border border-amber-200 rounded-lg p-3 shadow-sm"' + (aperto ? ' open' : '') + ' ontoggle="apImpToggle(this)">' + titolo +
+    '<div class="text-[11px] text-slate-500 mt-1">Per assenze o cantieri fermi a settimana già pianificata: si tolgono solo le celle colpite e si cercano sostituti (stesso cantiere e giorno) o altri giorni per il lavoro perso. Il resto della Griglia non cambia.</div>' +
+    form + lista + '</details>';
+}
+
+function _apRiparazioneHtml() {
+  const rip = _ap.riparazione;
+  if (!rip || rip.anno !== _ap.anno || rip.week !== _ap.week) return '';
+  const res = rip.risultato;
+  const rim = rip.impatto.rimozioni;
+  const nNuove = res.assegnazioni.reduce((n, a) => n + a.operatori.length, 0);
+  const righeById = {};
+  rip.righeSolver.forEach(r => { righeById[r.id] = r; });
+
+  /* Anteprima: operatori coinvolti × giorni. Grigio = resta, barrato rosso = si toglie,
+     tratteggiato = nuovo. */
+  const tolteK = new Set(rim.map(c => c.operatore + '|' + c.giorno + '|' + _apNorm(c.cantiere) + '|' + _apNorm(c.attivita)));
+  const nuove = {};
+  res.assegnazioni.forEach(a => a.operatori.forEach(n => {
+    ((nuove[n] = nuove[n] || {})[a.giorno] = nuove[n][a.giorno] || []).push({ r: righeById[a.rigaId], quota: a.quota });
+  }));
+  const nomi = Array.from(new Set(rim.map(c => c.operatore).concat(Object.keys(nuove)))).sort();
+  const giorni = Array.from(new Set(rip.ctxGiorni.concat(rim.map(c => c.giorno)))).sort((a, b) => a - b);
+  const celle = _apCelleSettimana(pwGetWeekData());
+  const mon = isoWeekToMonday(rip.anno, rip.week);
+  const giornoLbl = d => { const x = new Date(mon); x.setUTCDate(mon.getUTCDate() + d); return PW_MAP_DAY_SHORT[d] + ' ' + formatDate(x); };
+  const assenteIl = (n, d) => (rip.impatto.assenti[n] || []).includes(d);
+  let tab = '<div style="overflow-x:auto;"><table class="w-full text-[11px]"><thead class="bg-slate-50"><tr><th class="px-2 py-1 text-left">Operatore</th>' +
+    giorni.map(d => '<th class="px-2 py-1 text-left whitespace-nowrap">' + _apE(giornoLbl(d)) + '</th>').join('') + '</tr></thead><tbody>';
+  nomi.forEach(n => {
+    tab += '<tr class="border-t border-slate-100"><td class="px-2 py-1 font-semibold whitespace-nowrap">' + _apE(n) + '</td>';
+    giorni.forEach(d => {
+      const ex = celle.filter(c => c.operatore === n && c.giorno === d);
+      tab += '<td class="px-1 py-1 align-top">' +
+        (assenteIl(n, d) ? '<div style="background:#fef3c7;color:#b45309;border-radius:3px;padding:1px 4px;margin-bottom:2px;font-weight:600;">assente</div>' : '') +
+        ex.map(c => {
+          const via = tolteK.has(c.operatore + '|' + c.giorno + '|' + _apNorm(c.cantiere) + '|' + _apNorm(c.attivita));
+          return '<div style="' + (via ? 'background:#fee2e2;color:#b91c1c;text-decoration:line-through;' : 'background:#f1f5f9;color:#64748b;') +
+            'border-radius:3px;padding:1px 4px;margin-bottom:2px;" title="' + _apE(c.commessa + (c.attivita ? ' · ' + c.attivita : '') + (via ? ' · si toglie' : '')) + '">' + _apE(c.cantiere) + '</div>';
+        }).join('') +
+        ((nuove[n] || {})[d] || []).map(p => '<div title="' + _apE(p.r.commessa + (p.r.attivita ? ' · ' + p.r.attivita : '') + (p.r.tipo === 'sostituto' ? ' · al posto di ' + p.r.sostituisce.join(', ') : ' · recupero')) + '" style="border:1.5px dashed #0d9488;background:#f0fdfa;color:#0f766e;border-radius:3px;padding:1px 4px;margin-bottom:2px;font-weight:600;">' +
+          _apE(p.r.cantiere) + (p.quota < 1 ? ' <span style="font-weight:400;">(½)</span>' : '') + '</div>').join('') +
+        '</td>';
+    });
+    tab += '</tr>';
+  });
+  tab += '</tbody></table></div>';
+
+  /* Esito per voce: sostituti e recuperi */
+  let lista = '<div class="space-y-1">';
+  rip.righeSolver.forEach(r => {
+    const e = res.esiti[r.id] || { stato: 'non_assegnato', motivi: [], avvisi: [] };
+    const st = AP_STATO_STILE[e.stato];
+    const ass = res.assegnazioni.filter(a => a.rigaId === r.id);
+    let testo;
+    if (r.tipo === 'sostituto') {
+      testo = '<b>' + _apE(PW_MAP_DAY_SHORT[r.giorno] + ' · ' + r.cantiere) + '</b> <span class="text-slate-500">' + _apE(r.commessa) + '</span> — al posto di ' + _apE(r.sostituisce.join(', ')) + ': ' +
+        (ass.length ? '<b style="color:#15803d;">' + _apE(ass.map(a => a.operatori.join(' + ')).join(', ')) + '</b>'
+          : '<b style="color:#b91c1c;">nessun sostituto</b> <span class="text-slate-600">— ' + _apE(r.compagni.length ? 'restano ' + r.compagni.join(', ') : 'il cantiere resta scoperto quel giorno') + '</span>');
+    } else {
+      testo = '<b>' + _apE(r.cantiere) + '</b> <span class="text-slate-500">' + _apE(r.commessa) + '</span> — fermo ' + _apE(r.giorniPersi.map(d => AP_GIORNI[d]).join(', ')) +
+        ', ' + apFmtNum(r.giorni) + ' gg × ' + r.nOp + ' op da recuperare: ' +
+        (ass.length ? '<b style="color:' + st.fg + ';">' + _apE(ass.map(a => PW_MAP_DAY_SHORT[a.giorno] + (a.quota < 1 ? '½' : '') + ' ' + a.operatori.join(' + ')).join(' · ')) + '</b>'
+          : '<b style="color:#b91c1c;">nessun giorno libero in settimana</b>');
+    }
+    const note = [].concat(e.motivi || [], e.avvisi || []).filter(t => r.tipo !== 'sostituto' || !/restano .* settimana successiva/.test(t));
+    lista += '<div class="text-[11px] border-l-4 pl-2 py-0.5" style="border-color:' + st.fg + ';">' + testo +
+      (note.length ? '<div class="text-amber-700">' + _apE(note.join(' · ')) + '</div>' : '') + '</div>';
+  });
+  (rip.impatto.ignorati || []).forEach(x => {
+    const imp = _ap.imprevisti.find(i => i.id === x.imprevistoId);
+    lista += '<div class="text-[11px] border-l-4 pl-2 py-0.5 text-slate-500" style="border-color:#cbd5e1;">' + _apE((imp ? _apImprevistoTesto(imp) : x.imprevistoId) + ': ' + x.motivo) + '</div>';
+  });
+  lista += '</div>';
+
+  const liberi = _apRiparazioneLiberi(rip);
+  const perGiorno = {};
+  liberi.forEach(l => { (perGiorno[l.giorno] = perGiorno[l.giorno] || []).push(l.operatore); });
+  const liberiHtml = liberi.length
+    ? '<div class="mt-3 rounded border border-sky-200 bg-sky-50 px-2 py-1.5 text-[11px] text-sky-900"><b>Restano liberi</b> (celle tolte e non riusate): ' +
+      _apE(Object.keys(perGiorno).sort().map(d => AP_GIORNI[d] + ' ' + perGiorno[d].join(', ')).join(' · ')) +
+      ' — si possono usare per un cantiere della lista qui sotto.</div>'
+    : '';
+
+  return '<div id="ap-riparazione-box" class="bg-white border-2 rounded-lg p-3 shadow-sm" style="border-color:#fcd34d;">' +
+    '<div class="flex flex-wrap items-center gap-2 mb-2">' +
+      '<div class="text-xs font-semibold text-slate-700 uppercase tracking-wide">🔧 Riparazione · −' + rim.length + ' / +' + nNuove + ' celle</div>' +
+      '<div class="flex-1"></div>' +
+      '<button type="button" onclick="apScartaRiparazione()" class="text-xs px-2 py-1.5 border border-slate-300 rounded hover:bg-slate-50" title="Chiude la proposta e toglie gli imprevisti segnalati: la Griglia non viene toccata">✕ Scarta</button>' +
+      '<button type="button" onclick="apApplicaRiparazione()" class="text-xs px-3 py-1.5 rounded font-semibold text-white" style="background:#15803d;">✓ Applica riparazione</button>' +
+    '</div>' +
+    '<div class="text-[11px] text-slate-500 mb-2">Grigio = resta com\'è · barrato = si toglie · tratteggiato = nuovo.' +
+      (rip.infoDistanze ? ' 📏 ' + _apE(rip.infoDistanze) : '') + (rip.infoMeteo ? ' · 🌦️ ' + _apE(rip.infoMeteo) : '') + '</div>' +
+    (nomi.length ? tab : '<div class="text-xs text-slate-500">Nessuna cella in Griglia da cambiare.</div>') +
+    '<div class="text-xs font-semibold text-slate-700 uppercase tracking-wide mt-4 mb-2">Cosa si recupera</div>' +
+    lista + liberiHtml +
+  '</div>';
 }
 
 /* ================= MODIFICA RIGHE ================= */
@@ -965,6 +1427,8 @@ function apRender() {
     '<div class="grid grid-cols-1 ' + (chat ? '' : 'xl:grid-cols-5 ') + 'gap-4 items-start">' +
       (chat ? _apFontiRichiudibiliHtml() : _apPannelloFontiHtml()) +
       '<div class="' + (chat ? '' : 'xl:col-span-4 ') + 'space-y-4" style="min-width:0;">' +
+        _apImprevistiHtml() +
+        _apRiparazioneHtml() +
         '<div class="bg-white border border-slate-200 rounded-lg p-3 shadow-sm">' +
           '<div class="flex flex-wrap items-center gap-2 mb-2">' +
             '<div class="text-xs font-semibold text-slate-700 uppercase tracking-wide">📋 Cantieri da pianificare · ' + _apE(giorniLabel) + '</div>' +
