@@ -1,16 +1,16 @@
-# Graph Report - Gestione-Staffing  (2026-10-01)
+# Graph Report - Gestione-Staffing  (2026-09-30)
 
 ## Corpus Check
-- 63 files · ~377,066 words
+- 63 files · ~365,856 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
-- 1468 nodes · 2737 edges · 103 communities (65 shown, 38 thin omitted)
-- Extraction: 98% EXTRACTED · 2% INFERRED · 0% AMBIGUOUS · INFERRED: 50 edges (avg confidence: 0.74)
+- 1444 nodes · 2658 edges · 103 communities (65 shown, 38 thin omitted)
+- Extraction: 98% EXTRACTED · 2% INFERRED · 0% AMBIGUOUS · INFERRED: 49 edges (avg confidence: 0.74)
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `3835932b`
+- Built from commit: `525a507d`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -118,16 +118,16 @@
 - ai-assistant-config/index.ts
 
 ## God Nodes (most connected - your core abstractions)
-1. `apRender()` - 31 edges
-2. `mlRender()` - 31 edges
-3. `_apSalvaLocale()` - 17 edges
-4. `pwJiraSubtaskOpenComuniModal()` - 17 edges
-5. `Dashboard Staffing Eagleprojects` - 17 edges
-6. `_apNorm()` - 16 edges
-7. `pwGeneraMail()` - 15 edges
-8. `esc()` - 15 edges
-9. `apcRender()` - 14 edges
-10. `pwMapRenderCantieri()` - 14 edges
+1. `mlRender()` - 31 edges
+2. `apRender()` - 23 edges
+3. `pwJiraSubtaskOpenComuniModal()` - 17 edges
+4. `Dashboard Staffing Eagleprojects` - 17 edges
+5. `pwGeneraMail()` - 15 edges
+6. `esc()` - 15 edges
+7. `apcRender()` - 14 edges
+8. `pwMapRenderCantieri()` - 14 edges
+9. `new-project` - 14 edges
+10. `apcInvia()` - 13 edges
 
 ## Surprising Connections (you probably didn't know these)
 - `Creative North Star: The Site Foreman's Whiteboard` --semantically_similar_to--> `Principle: information density over whitespace`  [INFERRED] [semantically similar]
@@ -377,8 +377,8 @@ Cohesion: 0.53
 Nodes (5): _confrontoMeseSel, getNomiCommesseAttive(), renderCommessaPipelineCard(), renderCommesse(), renderCommesseAttive()
 
 ### Community 55 - "weekly-autoplan.js"
-Cohesion: 0.05
-Nodes (102): _ap, AP_COLONNE, AP_DD_MULTI, AP_IMP_REGISTRA, AP_STATO_STILE, apAggiungiRiga(), _apAggiungiRighe(), _apAncoraLibero() (+94 more)
+Cohesion: 0.06
+Nodes (82): _ap, AP_COLONNE, AP_DD_MULTI, AP_STATO_STILE, apAggiungiRiga(), _apAggiungiRighe(), _apAncoraLibero(), apAnnulla() (+74 more)
 
 ### Community 56 - "Supabase backend (Postgres, Auth, Realtime, Edge Functions)"
 Cohesion: 0.40
@@ -393,8 +393,8 @@ Cohesion: 0.67
 Nodes (3): build_bytes(), main(), Ritorna il contenuto di index.html così come lo produrrebbe la build, senza…
 
 ### Community 98 - "autoplan-solver.js"
-Cohesion: 0.12
-Nodes (26): AP_GIORNI, AP_NON_PRODUTTIVE, AP_PESI_DEFAULT, AP_PESO_PRIORITA, AP_SINONIMI, AP_STOPWORDS, apApplicaPrecedenze(), apAttivitaTokens() (+18 more)
+Cohesion: 0.14
+Nodes (24): AP_GIORNI, AP_NON_PRODUTTIVE, AP_PESI_DEFAULT, AP_PESO_PRIORITA, AP_SINONIMI, AP_STOPWORDS, apApplicaPrecedenze(), apAttivitaTokens() (+16 more)
 
 ### Community 99 - "weekly-autoplan-chat.js"
 Cohesion: 0.09
@@ -413,7 +413,7 @@ Nodes (9): CORS_HEADERS, json(), makeToolExecutor(), OPENAI_COMPAT, providerErro
   README.md · relation: conceptually_related_to
 
 ## Knowledge Gaps
-- **257 isolated node(s):** `AP_STOPWORDS`, `AP_NON_PRODUTTIVE`, `AP_SINONIMI`, `AP_PESI_DEFAULT`, `AP_PESO_PRIORITA` (+252 more)
+- **256 isolated node(s):** `_aiHistory`, `_aiMyHistoryRows`, `AI_PROVIDER_DEFAULT_MODEL`, `AI_PROVIDER_NOME`, `AI_PROVIDER_MODELLI` (+251 more)
   These have ≤1 connection - possible missing edges or undocumented components.
 - **38 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
 
@@ -423,13 +423,13 @@ _Questions this graph is uniquely positioned to answer:_
 - **What is the exact relationship between `Stack tecnico (Tailwind, Chart.js, Leaflet.js, Supabase, GitHub Pages)` and `v18.58.0 removed unused sortablejs/chart.js CDN references`?**
   _Edge tagged AMBIGUOUS (relation: conceptually_related_to) - confidence is low._
 - **Why does `esc()` connect `Helper modali e CRUD` to `meteo-storico.js`, `weekly-jira-subtask.js`?**
-  _High betweenness centrality (0.012) - this node is a cross-community bridge._
+  _High betweenness centrality (0.011) - this node is a cross-community bridge._
 - **Why does `msOperatoriHtml()` connect `meteo-storico.js` to `Helper modali e CRUD`?**
-  _High betweenness centrality (0.009) - this node is a cross-community bridge._
+  _High betweenness centrality (0.007) - this node is a cross-community bridge._
 - **Why does `pwJiraSubtaskRenderPreview()` connect `weekly-jira-subtask.js` to `Helper modali e CRUD`?**
-  _High betweenness centrality (0.004) - this node is a cross-community bridge._
-- **What connects `AP_STOPWORDS`, `AP_NON_PRODUTTIVE`, `AP_SINONIMI` to the rest of the system?**
-  _257 weakly-connected nodes found - possible documentation gaps or missing edges._
+  _High betweenness centrality (0.005) - this node is a cross-community bridge._
+- **What connects `_aiHistory`, `_aiMyHistoryRows`, `AI_PROVIDER_DEFAULT_MODEL` to the rest of the system?**
+  _256 weakly-connected nodes found - possible documentation gaps or missing edges._
 - **Should `meteo-storico.js` be split into smaller, more focused modules?**
   _Cohesion score 0.0645045045045045 - nodes in this community are weakly interconnected._
 - **Should `sb-admin.js` be split into smaller, more focused modules?**

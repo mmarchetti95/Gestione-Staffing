@@ -97,9 +97,5 @@
   "95": "v18.69.0 /impeccable-guided restyling (unified accent teal, Inter font actually loaded)",
   "96": "v18.99.0 'new version available' notification banner",
   "97": "src/tail.html",
-  "98": "autoplan-solver.js",
-  "99": "weekly-autoplan-chat.js",
-  "100": "ai-autoplan/index.ts",
-  "101": "ai-assistant/index.ts",
-  "102": "ai-assistant-config/index.ts"
+  "98": "autoplan-solver.js"
 }
