@@ -114,6 +114,9 @@ Limite noto: il progetto Supabase è sul piano **Free**, che non include backup 
 
 ## Changelog
 
+## v18.192.0
+- feat: **Genera mail settimanale: un cantiere per riga con le sue attività.** Nella mail della Griglia la riga unica "🏗 Cantieri: …" e quella separata "📌 Attività: …" sono sostituite da un elenco puntato (`• Cantiere — attività`), così si legge quale attività va su quale cantiere. Restano l'assenza di vincolo di giorno e la deduplica sulla settimana; un cantiere senza attività compare col solo nome.
+
 ## v18.191.0
 - feat: **Controllo anomalie: solleciti per le ore Jira non caricate o caricate in parte.**
   - Nuovo tipo di anomalia **◔ Worklog parziali**: operatore in Griglia con ore su Jira sotto quelle attese per il giorno (Lun/Ven 5 h, altri giorni 7 h, le stesse soglie del verde nella colonna "Ore Jira").

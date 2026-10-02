@@ -301,24 +301,32 @@ function pwGeneraMail() {
         // Cantieri/attività della squadra per l'intera settimana, deduplicati e senza
         // vincolo di giorno: si vuole lasciare alla squadra la libertà di organizzarsi
         // su quale cantiere andare quale giorno, non imporre un programma rigido "lunedì
-        // qui, martedì lì".
-        const cantieriSett = new Set();
+        // qui, martedì lì". Una riga per cantiere con le sue attività (pwCellVoci), così
+        // si legge quale attività va su quale cantiere.
+        const cantieriSett = new Map(); // cantiere -> Set(attività)
         const attivitaSett = new Set();
         for (let di = 0; di < 6; di++) {
           operatori.forEach(op => {
             const g = (op.giorni || {})[di] || {};
-            pwCellCantieri(g).forEach(c => cantieriSett.add(c));
+            pwCellVoci(g).forEach(v => {
+              if (!cantieriSett.has(v.cantiere)) cantieriSett.set(v.cantiere, new Set());
+              // le celle legacy riportano il riepilogo "A, B" su ogni cantiere
+              v.attivita.split(',').map(a => a.trim()).filter(Boolean)
+                .forEach(a => cantieriSett.get(v.cantiere).add(a));
+            });
             pwCellAttivitaElenco(g).forEach(a => attivitaSett.add(a));
           });
         }
 
         if (cantieriSett.size > 0) {
-          testo += `🏗 Cantieri: ${[...cantieriSett].join(', ')}\n`;
+          testo += `🏗 Cantieri:\n`;
+          cantieriSett.forEach((att, cantiere) => {
+            testo += `   • ${cantiere}${att.size ? ' — ' + [...att].join(', ') : ''}\n`;
+          });
         } else {
           testo += `  (nessun cantiere pianificato)\n`;
-        }
-        if (attivitaSett.size > 0) {
-          testo += `📌 Attività: ${[...attivitaSett].join(', ')}\n`;
+          // attività segnate senza cantiere: non vanno perse
+          if (attivitaSett.size > 0) testo += `📌 Attività: ${[...attivitaSett].join(', ')}\n`;
         }
 
         if (noteSq) {

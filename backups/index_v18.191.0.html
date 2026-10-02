@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="it">
 <head>
 <meta charset="UTF-8">
@@ -1733,7 +1733,7 @@
     <div class="flex items-center gap-2">
       <button id="btn-presentation" class="px-3 py-1.5 text-sm rounded hover:bg-white/10" style="border:1px solid var(--dark-border-strong);color:var(--dark-text);visibility:visible;">📊 Modalità presentazione</button>
       <div class="text-xs pl-2" style="border-left:1px solid var(--dark-border-strong);color:var(--dark-text-muted);">
-        <span id="app-version" class="font-medium" style="color:var(--accent);">v18.192.0</span> · Michele Marchetti
+        <span id="app-version" class="font-medium" style="color:var(--accent);">v18.191.0</span> · Michele Marchetti
         <span id="sb-role-badge" style="margin-left:8px;padding:1px 8px;border-radius:9999px;background:rgba(255,255,255,.1);color:var(--dark-text);font-weight:600;"></span>
       </div>
     </div>
@@ -12154,32 +12154,24 @@ function pwGeneraMail() {
         // Cantieri/attività della squadra per l'intera settimana, deduplicati e senza
         // vincolo di giorno: si vuole lasciare alla squadra la libertà di organizzarsi
         // su quale cantiere andare quale giorno, non imporre un programma rigido "lunedì
-        // qui, martedì lì". Una riga per cantiere con le sue attività (pwCellVoci), così
-        // si legge quale attività va su quale cantiere.
-        const cantieriSett = new Map(); // cantiere -> Set(attività)
+        // qui, martedì lì".
+        const cantieriSett = new Set();
         const attivitaSett = new Set();
         for (let di = 0; di < 6; di++) {
           operatori.forEach(op => {
             const g = (op.giorni || {})[di] || {};
-            pwCellVoci(g).forEach(v => {
-              if (!cantieriSett.has(v.cantiere)) cantieriSett.set(v.cantiere, new Set());
-              // le celle legacy riportano il riepilogo "A, B" su ogni cantiere
-              v.attivita.split(',').map(a => a.trim()).filter(Boolean)
-                .forEach(a => cantieriSett.get(v.cantiere).add(a));
-            });
+            pwCellCantieri(g).forEach(c => cantieriSett.add(c));
             pwCellAttivitaElenco(g).forEach(a => attivitaSett.add(a));
           });
         }
 
         if (cantieriSett.size > 0) {
-          testo += `🏗 Cantieri:\n`;
-          cantieriSett.forEach((att, cantiere) => {
-            testo += `   • ${cantiere}${att.size ? ' — ' + [...att].join(', ') : ''}\n`;
-          });
+          testo += `🏗 Cantieri: ${[...cantieriSett].join(', ')}\n`;
         } else {
           testo += `  (nessun cantiere pianificato)\n`;
-          // attività segnate senza cantiere: non vanno perse
-          if (attivitaSett.size > 0) testo += `📌 Attività: ${[...attivitaSett].join(', ')}\n`;
+        }
+        if (attivitaSett.size > 0) {
+          testo += `📌 Attività: ${[...attivitaSett].join(', ')}\n`;
         }
 
         if (noteSq) {
