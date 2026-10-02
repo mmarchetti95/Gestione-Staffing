@@ -75,6 +75,14 @@ function pwGeneraMail() {
         const cognomiHtml = cognomiSq.length
           ? `<span class="text-slate-400 mx-1">·</span><span class="text-slate-500 font-normal">${esc(cognomiSq.join(', '))}</span>`
           : '';
+        // Cantieri della squadra nella settimana (unione dei giorni, in ordine di comparsa)
+        const cantieriSq = [];
+        if (sq) for (let d = 0; d < 6; d++) {
+          pwSquadraCantieriGiorno(sq, d).forEach(c => { if (!cantieriSq.includes(c)) cantieriSq.push(c); });
+        }
+        const cantieriHtml = cantieriSq.length
+          ? `<div class="text-[11px] font-normal text-slate-500" style="margin-top:2px; padding-left:14px;">🏗 ${esc(cantieriSq.join(', '))}</div>`
+          : '';
         return `
         <div class="mb-3 p-3 bg-slate-50 rounded-lg border border-slate-200">
           <details open>
@@ -83,6 +91,7 @@ function pwGeneraMail() {
               <span class="text-slate-400 mx-1">/</span>
               <span class="text-amber-700">${esc(s.squadraNome)}</span>
               ${cognomiHtml}
+              ${cantieriHtml}
             </summary>
             <div style="display:grid; grid-template-columns:1fr 1fr; column-gap:8px; row-gap:4px; margin-top:8px;">
               <label class="block text-[10px] text-slate-500 font-medium">📝 Note squadra <span class="text-slate-400 font-normal">(facoltativo)</span></label>

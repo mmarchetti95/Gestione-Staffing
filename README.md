@@ -114,6 +114,9 @@ Limite noto: il progetto Supabase è sul piano **Free**, che non include backup 
 
 ## Changelog
 
+## v18.195.0
+- feat: **Genera mail: cantieri nella sezione note e strumenti.** Nel riquadro di ogni squadra, sotto commessa / squadra / cognomi, compare l'elenco dei cantieri della squadra nella settimana (🏗, unione di tutti i giorni), così si sa a quali cantieri si riferiscono note e strumenti.
+
 ## v18.194.0
 - fix: **Griglia: ferie parziali in arancione.** Nella scelta operatore e nella cella della Griglia il rosso "FERIE" resta solo per chi è in ferie tutti i giorni da lunedì a venerdì; chi è in ferie solo alcuni giorni è arancione, con i giorni nel tag (es. "FERIE LUN, MAR") e nel tooltip, e nella lista compare prima di chi è in ferie tutta la settimana. Invariato il viola "Non disponibile".
 

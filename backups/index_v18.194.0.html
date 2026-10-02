@@ -1742,7 +1742,7 @@
     <div class="flex items-center gap-2">
       <button id="btn-presentation" class="px-3 py-1.5 text-sm rounded hover:bg-white/10" style="border:1px solid var(--dark-border-strong);color:var(--dark-text);visibility:visible;">📊 Modalità presentazione</button>
       <div class="text-xs pl-2" style="border-left:1px solid var(--dark-border-strong);color:var(--dark-text-muted);">
-        <span id="app-version" class="font-medium" style="color:var(--accent);">v18.195.0</span> · Michele Marchetti
+        <span id="app-version" class="font-medium" style="color:var(--accent);">v18.194.0</span> · Michele Marchetti
         <span id="sb-role-badge" style="margin-left:8px;padding:1px 8px;border-radius:9999px;background:rgba(255,255,255,.1);color:var(--dark-text);font-weight:600;"></span>
       </div>
     </div>
@@ -11937,14 +11937,6 @@ function pwGeneraMail() {
         const cognomiHtml = cognomiSq.length
           ? `<span class="text-slate-400 mx-1">·</span><span class="text-slate-500 font-normal">${esc(cognomiSq.join(', '))}</span>`
           : '';
-        // Cantieri della squadra nella settimana (unione dei giorni, in ordine di comparsa)
-        const cantieriSq = [];
-        if (sq) for (let d = 0; d < 6; d++) {
-          pwSquadraCantieriGiorno(sq, d).forEach(c => { if (!cantieriSq.includes(c)) cantieriSq.push(c); });
-        }
-        const cantieriHtml = cantieriSq.length
-          ? `<div class="text-[11px] font-normal text-slate-500" style="margin-top:2px; padding-left:14px;">🏗 ${esc(cantieriSq.join(', '))}</div>`
-          : '';
         return `
         <div class="mb-3 p-3 bg-slate-50 rounded-lg border border-slate-200">
           <details open>
@@ -11953,7 +11945,6 @@ function pwGeneraMail() {
               <span class="text-slate-400 mx-1">/</span>
               <span class="text-amber-700">${esc(s.squadraNome)}</span>
               ${cognomiHtml}
-              ${cantieriHtml}
             </summary>
             <div style="display:grid; grid-template-columns:1fr 1fr; column-gap:8px; row-gap:4px; margin-top:8px;">
               <label class="block text-[10px] text-slate-500 font-medium">📝 Note squadra <span class="text-slate-400 font-normal">(facoltativo)</span></label>
