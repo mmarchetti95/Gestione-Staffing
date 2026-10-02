@@ -168,22 +168,22 @@ function pwControlloRender() {
 
   // Struttura raggruppata: commessa → squadra → giorno → operatori
   const blocks = [];
-  data.forEach(bc => {
+  data.forEach((bc, cIdx) => {
     if (!bc.commessa) return;
     const sqList = [];
-    (bc.squadre || []).forEach(sq => {
+    (bc.squadre || []).forEach((sq, sIdx) => {
       const sqNome = sq.nome || 'Squadra';
       const giorni = [];
       for (let g = 0; g < 6; g++) {
         const ops = [];
-        (sq.operatori || []).forEach(op => {
+        (sq.operatori || []).forEach((op, oIdx) => {
           if (!op.nome || !op.nome.trim()) return;
           const opG = op.giorni && op.giorni[g] ? op.giorni[g] : {};
           const cantieri = pwCellCantieri(opG);
           if (cantieri.length === 0) return;
           const fw = pwGetFerieWeek();
           if (fw[op.nome] && pwFerieTipo(fw[op.nome][g])) return;
-          ops.push({ nome: op.nome, cantiere: cantieri.join(', '), attivita: opG.attivita || '' });
+          ops.push({ nome: op.nome, cantiere: cantieri.join(', '), attivita: opG.attivita || '', cIdx, sIdx, oIdx });
         });
         if (ops.length > 0) giorni.push({ giornoIdx: g, ops });
       }
@@ -279,7 +279,7 @@ function pwControlloRender() {
           html += `<tr data-comm-idx="${blIdx}" data-sq-idx="${sqKey}" data-operatore="${esc(op.nome)}" data-cantiere="${esc(op.cantiere)}" data-cpk="${esc(k)}">
       <td class="cp-wrap" title="${esc(bl.commessa)}">${esc(bl.commessa)}</td>
       <td class="cp-wrap" title="${esc(sq.nome)}">${esc(sq.nome)}</td>
-      <td class="cp-wrap" title="${esc(op.nome)}"><strong>${esc(op.nome)}</strong>${isOperatoreLicenziato(op.nome) ? '<span class="op-ex-tag">ex</span>' : ''}</td>
+      <td class="cp-wrap" title="${esc(op.nome)}"><button type="button" class="no-print cp-griglia-btn" title="Apri questo intervento nella Griglia settimanale" onclick="cpApriInGriglia(${op.cIdx},${op.sIdx},${op.oIdx},${g})">🗓️</button><strong>${esc(op.nome)}</strong>${isOperatoreLicenziato(op.nome) ? '<span class="op-ex-tag">ex</span>' : ''}</td>
       <td style="text-align:center"><input type="checkbox" class="pw-write-action" ${verificato ? 'checked' : ''} title="Verificato" style="width:16px;height:16px;cursor:pointer;" onchange="pwControlloSaveCell('${ci}','${si}','${oi}',${g},'${dt}','${ca}','${at}','verificato',this.checked)"></td>
       <td>${DAY_NAMES[g]}</td>
       <td>${dates[g]}</td>
@@ -310,6 +310,25 @@ function pwControlloRender() {
   // Re-applica ricerca operatore/cantiere se attiva (il DOM è appena stato ricreato)
   if (_cpSearchTerm) cpSearchOp(_cpSearchTerm);
   cpaOnControlloRender();
+}
+
+/* Apre l'intervento (operatore + giorno) nella Griglia della stessa settimana, per un
+   controllo rapido. Mostra un pulsante flottante per tornare al Controllo Produzione,
+   che ripristina da solo la posizione di scroll (pwSwitchTab). */
+function cpApriInGriglia(cIdx, sIdx, oIdx, g) {
+  pwSwitchTab('griglia');
+  if (_pwActiveTab !== 'griglia') return;
+  pwGoToSearchCell(cIdx, sIdx, oIdx, g);
+  let btn = document.getElementById('cp-torna-btn');
+  if (!btn) {
+    btn = document.createElement('button');
+    btn.id = 'cp-torna-btn';
+    btn.type = 'button';
+    btn.className = 'no-print';
+    btn.textContent = '⬅ Torna al Controllo Produzione';
+    btn.onclick = () => { btn.remove(); pwSwitchTab('controllo'); };
+    document.body.appendChild(btn);
+  }
 }
 
 function cpDelta(ri) {

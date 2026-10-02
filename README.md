@@ -114,6 +114,9 @@ Limite noto: il progetto Supabase è sul piano **Free**, che non include backup 
 
 ## Changelog
 
+## v18.193.0
+- feat: **Controllo Produzione: apri l'intervento in Griglia.** Accanto al nome dell'operatore di ogni riga c'è il pulsante 🗓️: passa al tab Griglia della stessa settimana, riapre commessa/squadra se chiuse, porta in vista la cella di quell'operatore in quel giorno e la evidenzia. Un pulsante flottante "⬅ Torna al Controllo Produzione" riporta alla tabella nella posizione di scroll di prima; sparisce quando si cambia tab o schermata.
+
 ## v18.192.0
 - feat: **Genera mail settimanale: un cantiere per riga con le sue attività.** Nella mail della Griglia la riga unica "🏗 Cantieri: …" e quella separata "📌 Attività: …" sono sostituite da un elenco puntato (`• Cantiere — attività`), così si legge quale attività va su quale cantiere. Restano l'assenza di vincolo di giorno e la deduplica sulla settimana; un cantiere senza attività compare col solo nome.
 

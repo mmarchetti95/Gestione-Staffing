@@ -52,6 +52,8 @@ function switchScreen(screen) {
   if (screen === 'dashboard' && !sbCanSeePage('dashboard')) return;
   if (screen === 'weekly' && !PW_TAB_KEYS.some(k => sbCanSeePage('weekly:' + k))) return;
   if (screen === 'mappa' && !sbCanSeePage('mappa')) return;
+  const _cpTorna = document.getElementById('cp-torna-btn');
+  if (_cpTorna) _cpTorna.remove();
   const mainEl   = document.querySelector('main');
   const weeklyEl = document.getElementById('screen-weekly');
   const mappaEl  = document.getElementById('screen-mappa');
@@ -103,6 +105,8 @@ function pwSwitchTab(tab) {
     if (allowed && allowed !== tab) { pwSwitchTab(allowed); }
     return;
   }
+  // Il "Torna al Controllo Produzione" (cpApriInGriglia) vale solo finché si resta in Griglia
+  if (tab !== 'griglia') { const _cpTorna = document.getElementById('cp-torna-btn'); if (_cpTorna) _cpTorna.remove(); }
   // Salva la posizione di scroll del tab che si stava lasciando, per ripristinarla al ritorno
   const _leavingTab = _pwActiveTab;
   _pwScrollY[_leavingTab] = window.scrollY;

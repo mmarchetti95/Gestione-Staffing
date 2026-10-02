@@ -846,10 +846,6 @@
   /* ===== RICERCA OPERATORE/CANTIERE IN CONTROLLO PRODUZIONE ===== */
   @keyframes cpaFlash { 0%,100% { background: transparent; } 30% { background: #fde68a; } }
   .cp-table tr.cpa-flash td { animation: cpaFlash 1.8s ease-in-out 2; }
-  .cp-griglia-btn { border:none; background:transparent; cursor:pointer; font-size:12px; line-height:1; padding:0 3px 0 0; opacity:.55; }
-  .cp-griglia-btn:hover { opacity:1; }
-  #cp-torna-btn { position:fixed; left:20px; bottom:20px; z-index:4400; background:#4f46e5; color:#fff; border:none; border-radius:8px; padding:8px 14px; font-size:13px; font-weight:600; cursor:pointer; box-shadow:0 4px 14px rgba(0,0,0,.25); }
-  #cp-torna-btn:hover { background:#4338ca; }
   .cp-table tr.cp-search-match td {
     background: #fefce8 !important;
   }
@@ -1737,7 +1733,7 @@
     <div class="flex items-center gap-2">
       <button id="btn-presentation" class="px-3 py-1.5 text-sm rounded hover:bg-white/10" style="border:1px solid var(--dark-border-strong);color:var(--dark-text);visibility:visible;">📊 Modalità presentazione</button>
       <div class="text-xs pl-2" style="border-left:1px solid var(--dark-border-strong);color:var(--dark-text-muted);">
-        <span id="app-version" class="font-medium" style="color:var(--accent);">v18.193.0</span> · Michele Marchetti
+        <span id="app-version" class="font-medium" style="color:var(--accent);">v18.192.0</span> · Michele Marchetti
         <span id="sb-role-badge" style="margin-left:8px;padding:1px 8px;border-radius:9999px;background:rgba(255,255,255,.1);color:var(--dark-text);font-weight:600;"></span>
       </div>
     </div>
@@ -16419,8 +16415,6 @@ function switchScreen(screen) {
   if (screen === 'dashboard' && !sbCanSeePage('dashboard')) return;
   if (screen === 'weekly' && !PW_TAB_KEYS.some(k => sbCanSeePage('weekly:' + k))) return;
   if (screen === 'mappa' && !sbCanSeePage('mappa')) return;
-  const _cpTorna = document.getElementById('cp-torna-btn');
-  if (_cpTorna) _cpTorna.remove();
   const mainEl   = document.querySelector('main');
   const weeklyEl = document.getElementById('screen-weekly');
   const mappaEl  = document.getElementById('screen-mappa');
@@ -16472,8 +16466,6 @@ function pwSwitchTab(tab) {
     if (allowed && allowed !== tab) { pwSwitchTab(allowed); }
     return;
   }
-  // Il "Torna al Controllo Produzione" (cpApriInGriglia) vale solo finché si resta in Griglia
-  if (tab !== 'griglia') { const _cpTorna = document.getElementById('cp-torna-btn'); if (_cpTorna) _cpTorna.remove(); }
   // Salva la posizione di scroll del tab che si stava lasciando, per ripristinarla al ritorno
   const _leavingTab = _pwActiveTab;
   _pwScrollY[_leavingTab] = window.scrollY;
@@ -17170,22 +17162,22 @@ function pwControlloRender() {
 
   // Struttura raggruppata: commessa → squadra → giorno → operatori
   const blocks = [];
-  data.forEach((bc, cIdx) => {
+  data.forEach(bc => {
     if (!bc.commessa) return;
     const sqList = [];
-    (bc.squadre || []).forEach((sq, sIdx) => {
+    (bc.squadre || []).forEach(sq => {
       const sqNome = sq.nome || 'Squadra';
       const giorni = [];
       for (let g = 0; g < 6; g++) {
         const ops = [];
-        (sq.operatori || []).forEach((op, oIdx) => {
+        (sq.operatori || []).forEach(op => {
           if (!op.nome || !op.nome.trim()) return;
           const opG = op.giorni && op.giorni[g] ? op.giorni[g] : {};
           const cantieri = pwCellCantieri(opG);
           if (cantieri.length === 0) return;
           const fw = pwGetFerieWeek();
           if (fw[op.nome] && pwFerieTipo(fw[op.nome][g])) return;
-          ops.push({ nome: op.nome, cantiere: cantieri.join(', '), attivita: opG.attivita || '', cIdx, sIdx, oIdx });
+          ops.push({ nome: op.nome, cantiere: cantieri.join(', '), attivita: opG.attivita || '' });
         });
         if (ops.length > 0) giorni.push({ giornoIdx: g, ops });
       }
@@ -17281,7 +17273,7 @@ function pwControlloRender() {
           html += `<tr data-comm-idx="${blIdx}" data-sq-idx="${sqKey}" data-operatore="${esc(op.nome)}" data-cantiere="${esc(op.cantiere)}" data-cpk="${esc(k)}">
       <td class="cp-wrap" title="${esc(bl.commessa)}">${esc(bl.commessa)}</td>
       <td class="cp-wrap" title="${esc(sq.nome)}">${esc(sq.nome)}</td>
-      <td class="cp-wrap" title="${esc(op.nome)}"><button type="button" class="no-print cp-griglia-btn" title="Apri questo intervento nella Griglia settimanale" onclick="cpApriInGriglia(${op.cIdx},${op.sIdx},${op.oIdx},${g})">🗓️</button><strong>${esc(op.nome)}</strong>${isOperatoreLicenziato(op.nome) ? '<span class="op-ex-tag">ex</span>' : ''}</td>
+      <td class="cp-wrap" title="${esc(op.nome)}"><strong>${esc(op.nome)}</strong>${isOperatoreLicenziato(op.nome) ? '<span class="op-ex-tag">ex</span>' : ''}</td>
       <td style="text-align:center"><input type="checkbox" class="pw-write-action" ${verificato ? 'checked' : ''} title="Verificato" style="width:16px;height:16px;cursor:pointer;" onchange="pwControlloSaveCell('${ci}','${si}','${oi}',${g},'${dt}','${ca}','${at}','verificato',this.checked)"></td>
       <td>${DAY_NAMES[g]}</td>
       <td>${dates[g]}</td>
@@ -17312,25 +17304,6 @@ function pwControlloRender() {
   // Re-applica ricerca operatore/cantiere se attiva (il DOM è appena stato ricreato)
   if (_cpSearchTerm) cpSearchOp(_cpSearchTerm);
   cpaOnControlloRender();
-}
-
-/* Apre l'intervento (operatore + giorno) nella Griglia della stessa settimana, per un
-   controllo rapido. Mostra un pulsante flottante per tornare al Controllo Produzione,
-   che ripristina da solo la posizione di scroll (pwSwitchTab). */
-function cpApriInGriglia(cIdx, sIdx, oIdx, g) {
-  pwSwitchTab('griglia');
-  if (_pwActiveTab !== 'griglia') return;
-  pwGoToSearchCell(cIdx, sIdx, oIdx, g);
-  let btn = document.getElementById('cp-torna-btn');
-  if (!btn) {
-    btn = document.createElement('button');
-    btn.id = 'cp-torna-btn';
-    btn.type = 'button';
-    btn.className = 'no-print';
-    btn.textContent = '⬅ Torna al Controllo Produzione';
-    btn.onclick = () => { btn.remove(); pwSwitchTab('controllo'); };
-    document.body.appendChild(btn);
-  }
 }
 
 function cpDelta(ri) {
