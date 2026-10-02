@@ -215,8 +215,9 @@ function pwOpenOpModal(cidx, sidx, oidx) {
       const stato = pwStatoOperatore(nome, cidx, sidx, oidx);
       if (stato === 'libero') return fromStaffing.has(nome) ? 0 : 1;
       if (stato === 'assegnato') return 2;
-      if (stato === 'ferie') return 3;
-      return 4; // non_disponibile
+      if (stato === 'ferie_parziale') return 3;
+      if (stato === 'ferie') return 4;
+      return 5; // non_disponibile
     };
     const ordinati = [...filtrati].sort((a, b) => {
       const dRango = rangoDi(a) - rangoDi(b);
@@ -233,6 +234,7 @@ function pwOpenOpModal(cidx, sidx, oidx) {
     ordinati.forEach(nome => {
       const stato     = pwStatoOperatore(nome, cidx, sidx, oidx);
       const tagLabel  = stato === 'ferie' ? 'FERIE'
+        : stato === 'ferie_parziale' ? 'FERIE ' + pwFerieGiorniLabel(nome).toUpperCase()
         : stato === 'non_disponibile' ? 'NON DISP.'
         : stato === 'assegnato' ? 'ASSEGNATO' : 'LIBERO';
       const inCommessa = fromStaffing.has(nome);
@@ -264,7 +266,8 @@ function pwOpenOpModal(cidx, sidx, oidx) {
   legend.innerHTML = `
     <div class="op-modal-legend-item"><div class="op-modal-dot stato-libero"></div> Libero</div>
     <div class="op-modal-legend-item"><div class="op-modal-dot stato-assegnato"></div> Assegnato altrove</div>
-    <div class="op-modal-legend-item"><div class="op-modal-dot stato-ferie"></div> In ferie</div>
+    <div class="op-modal-legend-item"><div class="op-modal-dot stato-ferie_parziale"></div> Ferie alcuni giorni</div>
+    <div class="op-modal-legend-item"><div class="op-modal-dot stato-ferie"></div> In ferie tutta la week</div>
     <div class="op-modal-legend-item"><div class="op-modal-dot stato-non_disponibile"></div> Non disponibile</div>`;
   modal.appendChild(legend);
 
@@ -356,7 +359,8 @@ function pwRenderOpDropdown(cidx, sidx, oidx, nomeCorrente, fornitoreNome) {
     ? `<span class="op-ex-tag" style="background:#e0e7ff;color:#4338ca;" title="Dipendente fornitore esterno">🏢 ${esc(fornitoreNome)}</span>`
     : '';
   const geoLabel   = nomeCorrente ? pwOperatoreGeoLabel(nomeCorrente) : '';
-  return `<button class="op-trigger-btn pw-write-action ${statoClass}"
+  const titleAttr  = stato === 'ferie_parziale' ? ` title="In ferie: ${esc(pwFerieGiorniLabel(nomeCorrente))}"` : '';
+  return `<button class="op-trigger-btn pw-write-action ${statoClass}"${titleAttr}
     onclick="pwOpenOpModal(${cidx}, ${sidx}, ${oidx})">
     <span class="op-trigger-label">${label}${exBadge}${fornBadge}</span>
     ${geoLabel ? `<span class="op-trigger-geo">📍 ${esc(geoLabel)}</span>` : ''}
@@ -495,6 +499,7 @@ function pwRender() {
         // Stato operatore corrente (con esclusione della sola cella corrente)
         const statoAttuale = op.nome ? pwStatoOperatore(op.nome, cIdx, sIdx, oIdx) : '';
         const badgeLabel = statoAttuale === 'ferie' ? 'FERIE'
+          : statoAttuale === 'ferie_parziale' ? 'FERIE ' + pwFerieGiorniLabel(op.nome).toUpperCase()
           : statoAttuale === 'non_disponibile' ? 'NON DISPONIBILE'
           : statoAttuale === 'assegnato' ? 'ASSEGNATO'
           : op.nome ? 'LIBERO' : '';
@@ -611,7 +616,8 @@ function pwRender() {
       <div class="pw-op-legenda no-print">
         <div class="pw-op-legenda-item"><span class="op-stato-badge libero">LIBERO</span> disponibile</div>
         <div class="pw-op-legenda-item"><span class="op-stato-badge assegnato">ASSEGNATO</span> già in un'altra squadra questa settimana</div>
-        <div class="pw-op-legenda-item"><span class="op-stato-badge ferie">FERIE</span> in ferie/permesso questa settimana</div>
+        <div class="pw-op-legenda-item"><span class="op-stato-badge ferie">FERIE</span> in ferie/permesso tutta la settimana</div>
+        <div class="pw-op-legenda-item"><span class="op-stato-badge ferie_parziale">FERIE LUN</span> in ferie/permesso solo alcuni giorni</div>
         <div class="pw-op-legenda-item"><span style="display:inline-block;width:10px;height:10px;border-radius:3px;background:#dcfce7;border:1px solid #86efac;vertical-align:middle;margin-right:3px;"></span>✓ verificato in Controllo Produzione</div>
       </div>
     </div>`;

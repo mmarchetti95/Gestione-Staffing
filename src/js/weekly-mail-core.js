@@ -893,10 +893,21 @@ function pwFerieTipoWeek(nomeOp) {
     if (t === 'non_disponibile') return 'non_disponibile';
     if (t === 'ferie') hasFerie = true;
   }
-  return hasFerie ? 'ferie' : null;
+  if (!hasFerie) return null;
+  // Ferie su tutti i giorni lavorativi (lun-ven) = 'ferie'; solo alcuni giorni =
+  // 'ferie_parziale', colore diverso in Griglia per non sembrare indisponibile tutta la week.
+  for (let d = 0; d < 5; d++) if (pwFerieTipo(days[d]) !== 'ferie') return 'ferie_parziale';
+  return 'ferie';
 }
 
-/* Calcola stato operatore: 'ferie' | 'non_disponibile' | 'assegnato' | 'libero'
+// Etichetta giorni di ferie della settimana corrente, es. "Lun, Mar"
+function pwFerieGiorniLabel(nomeOp) {
+  const days = pwGetFerieWeek()[nomeOp] || {};
+  const NOMI = ['Lun', 'Mar', 'Mer', 'Gio', 'Ven', 'Sab'];
+  return NOMI.filter((_, d) => pwFerieTipo(days[d]) === 'ferie').join(', ');
+}
+
+/* Calcola stato operatore: 'ferie' | 'ferie_parziale' | 'non_disponibile' | 'assegnato' | 'libero'
    excludeCidx/excludeSidx/excludeOidx = cella corrente, esclusa dal check assegnato */
 function pwStatoOperatore(nomeOp, excludeCidx, excludeSidx, excludeOidx) {
   if (!nomeOp || !nomeOp.trim()) return 'libero';

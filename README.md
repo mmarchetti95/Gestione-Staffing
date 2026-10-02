@@ -114,6 +114,9 @@ Limite noto: il progetto Supabase è sul piano **Free**, che non include backup 
 
 ## Changelog
 
+## v18.194.0
+- fix: **Griglia: ferie parziali in arancione.** Nella scelta operatore e nella cella della Griglia il rosso "FERIE" resta solo per chi è in ferie tutti i giorni da lunedì a venerdì; chi è in ferie solo alcuni giorni è arancione, con i giorni nel tag (es. "FERIE LUN, MAR") e nel tooltip, e nella lista compare prima di chi è in ferie tutta la settimana. Invariato il viola "Non disponibile".
+
 ## v18.193.0
 - feat: **Controllo Produzione: apri l'intervento in Griglia.** Accanto al nome dell'operatore di ogni riga c'è il pulsante 🗓️: passa al tab Griglia della stessa settimana, riapre commessa/squadra se chiuse, porta in vista la cella di quell'operatore in quel giorno e la evidenzia. Un pulsante flottante "⬅ Torna al Controllo Produzione" riporta alla tabella nella posizione di scroll di prima; sparisce quando si cambia tab o schermata.
 

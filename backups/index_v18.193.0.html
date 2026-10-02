@@ -688,7 +688,6 @@
     letter-spacing: .3px;
   }
   .op-stato-badge.ferie    { background: #fee2e2; color: #991b1b; border: 1px solid #fca5a5; }
-  .op-stato-badge.ferie_parziale { background: #ffedd5; color: #9a3412; border: 1px solid #fdba74; }
   .op-stato-badge.non_disponibile { background: #ede9fe; color: #5b21b6; border: 1px solid #c4b5fd; }
   .op-stato-badge.assegnato{ background: #fef9c3; color: #854d0e; border: 1px solid #fde047; }
   .op-stato-badge.libero   { background: #dcfce7; color: #166534; border: 1px solid #86efac; }
@@ -784,7 +783,6 @@
   .op-modal-item.stato-libero    { background: #f0fdf4; color: #166534; }
   .op-modal-item.stato-assegnato { background: #fefce8; color: #854d0e; }
   .op-modal-item.stato-ferie     { background: #fff1f2; color: #991b1b; }
-  .op-modal-item.stato-ferie_parziale { background: #fff7ed; color: #9a3412; }
   .op-modal-item.stato-non_disponibile { background: #f5f3ff; color: #5b21b6; }
   .op-modal-item.stato-nessuno   { background: #f8fafc; color: #64748b; font-style: italic; }
   .op-modal-dot {
@@ -793,7 +791,6 @@
   .op-modal-dot.stato-libero    { background: #22c55e; }
   .op-modal-dot.stato-assegnato { background: #eab308; }
   .op-modal-dot.stato-ferie     { background: #ef4444; }
-  .op-modal-dot.stato-ferie_parziale { background: #f97316; }
   .op-modal-dot.stato-non_disponibile { background: #7c3aed; }
   .op-modal-dot.stato-nessuno   { background: #cbd5e1; }
   .op-modal-tag {
@@ -804,10 +801,9 @@
   .op-modal-tag.stato-libero    { background: #dcfce7; color: #166534; }
   .op-modal-tag.stato-assegnato { background: #fef9c3; color: #854d0e; }
   .op-modal-tag.stato-ferie     { background: #fee2e2; color: #991b1b; }
-  .op-modal-tag.stato-ferie_parziale { background: #ffedd5; color: #9a3412; }
   .op-modal-tag.stato-non_disponibile { background: #ede9fe; color: #5b21b6; }
   .op-modal-legend {
-    display: flex; flex-wrap: wrap; gap: 4px 12px; padding: 8px 14px;
+    display: flex; gap: 12px; padding: 8px 14px;
     border-top: 1px solid #e2e8f0;
     background: #f8fafc; font-size: 9px; color: #64748b;
   }
@@ -827,7 +823,6 @@
   .op-trigger-btn.stato-libero    { background: #dcfce7; color: #166534; border-color: #86efac; }
   .op-trigger-btn.stato-assegnato { background: #fef9c3; color: #854d0e; border-color: #fde047; }
   .op-trigger-btn.stato-ferie     { background: #fee2e2; color: #991b1b; border-color: #fca5a5; }
-  .op-trigger-btn.stato-ferie_parziale { background: #ffedd5; color: #9a3412; border-color: #fdba74; }
   .op-trigger-btn.stato-non_disponibile { background: #ede9fe; color: #5b21b6; border-color: #c4b5fd; }
   .op-trigger-label { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .op-trigger-geo { font-size: 9px; opacity: .6; margin-left: 4px; white-space: nowrap; flex-shrink: 0; }
@@ -1742,7 +1737,7 @@
     <div class="flex items-center gap-2">
       <button id="btn-presentation" class="px-3 py-1.5 text-sm rounded hover:bg-white/10" style="border:1px solid var(--dark-border-strong);color:var(--dark-text);visibility:visible;">📊 Modalità presentazione</button>
       <div class="text-xs pl-2" style="border-left:1px solid var(--dark-border-strong);color:var(--dark-text-muted);">
-        <span id="app-version" class="font-medium" style="color:var(--accent);">v18.194.0</span> · Michele Marchetti
+        <span id="app-version" class="font-medium" style="color:var(--accent);">v18.193.0</span> · Michele Marchetti
         <span id="sb-role-badge" style="margin-left:8px;padding:1px 8px;border-radius:9999px;background:rgba(255,255,255,.1);color:var(--dark-text);font-weight:600;"></span>
       </div>
     </div>
@@ -12755,21 +12750,10 @@ function pwFerieTipoWeek(nomeOp) {
     if (t === 'non_disponibile') return 'non_disponibile';
     if (t === 'ferie') hasFerie = true;
   }
-  if (!hasFerie) return null;
-  // Ferie su tutti i giorni lavorativi (lun-ven) = 'ferie'; solo alcuni giorni =
-  // 'ferie_parziale', colore diverso in Griglia per non sembrare indisponibile tutta la week.
-  for (let d = 0; d < 5; d++) if (pwFerieTipo(days[d]) !== 'ferie') return 'ferie_parziale';
-  return 'ferie';
+  return hasFerie ? 'ferie' : null;
 }
 
-// Etichetta giorni di ferie della settimana corrente, es. "Lun, Mar"
-function pwFerieGiorniLabel(nomeOp) {
-  const days = pwGetFerieWeek()[nomeOp] || {};
-  const NOMI = ['Lun', 'Mar', 'Mer', 'Gio', 'Ven', 'Sab'];
-  return NOMI.filter((_, d) => pwFerieTipo(days[d]) === 'ferie').join(', ');
-}
-
-/* Calcola stato operatore: 'ferie' | 'ferie_parziale' | 'non_disponibile' | 'assegnato' | 'libero'
+/* Calcola stato operatore: 'ferie' | 'non_disponibile' | 'assegnato' | 'libero'
    excludeCidx/excludeSidx/excludeOidx = cella corrente, esclusa dal check assegnato */
 function pwStatoOperatore(nomeOp, excludeCidx, excludeSidx, excludeOidx) {
   if (!nomeOp || !nomeOp.trim()) return 'libero';
@@ -13620,9 +13604,8 @@ function pwOpenOpModal(cidx, sidx, oidx) {
       const stato = pwStatoOperatore(nome, cidx, sidx, oidx);
       if (stato === 'libero') return fromStaffing.has(nome) ? 0 : 1;
       if (stato === 'assegnato') return 2;
-      if (stato === 'ferie_parziale') return 3;
-      if (stato === 'ferie') return 4;
-      return 5; // non_disponibile
+      if (stato === 'ferie') return 3;
+      return 4; // non_disponibile
     };
     const ordinati = [...filtrati].sort((a, b) => {
       const dRango = rangoDi(a) - rangoDi(b);
@@ -13639,7 +13622,6 @@ function pwOpenOpModal(cidx, sidx, oidx) {
     ordinati.forEach(nome => {
       const stato     = pwStatoOperatore(nome, cidx, sidx, oidx);
       const tagLabel  = stato === 'ferie' ? 'FERIE'
-        : stato === 'ferie_parziale' ? 'FERIE ' + pwFerieGiorniLabel(nome).toUpperCase()
         : stato === 'non_disponibile' ? 'NON DISP.'
         : stato === 'assegnato' ? 'ASSEGNATO' : 'LIBERO';
       const inCommessa = fromStaffing.has(nome);
@@ -13671,8 +13653,7 @@ function pwOpenOpModal(cidx, sidx, oidx) {
   legend.innerHTML = `
     <div class="op-modal-legend-item"><div class="op-modal-dot stato-libero"></div> Libero</div>
     <div class="op-modal-legend-item"><div class="op-modal-dot stato-assegnato"></div> Assegnato altrove</div>
-    <div class="op-modal-legend-item"><div class="op-modal-dot stato-ferie_parziale"></div> Ferie alcuni giorni</div>
-    <div class="op-modal-legend-item"><div class="op-modal-dot stato-ferie"></div> In ferie tutta la week</div>
+    <div class="op-modal-legend-item"><div class="op-modal-dot stato-ferie"></div> In ferie</div>
     <div class="op-modal-legend-item"><div class="op-modal-dot stato-non_disponibile"></div> Non disponibile</div>`;
   modal.appendChild(legend);
 
@@ -13764,8 +13745,7 @@ function pwRenderOpDropdown(cidx, sidx, oidx, nomeCorrente, fornitoreNome) {
     ? `<span class="op-ex-tag" style="background:#e0e7ff;color:#4338ca;" title="Dipendente fornitore esterno">🏢 ${esc(fornitoreNome)}</span>`
     : '';
   const geoLabel   = nomeCorrente ? pwOperatoreGeoLabel(nomeCorrente) : '';
-  const titleAttr  = stato === 'ferie_parziale' ? ` title="In ferie: ${esc(pwFerieGiorniLabel(nomeCorrente))}"` : '';
-  return `<button class="op-trigger-btn pw-write-action ${statoClass}"${titleAttr}
+  return `<button class="op-trigger-btn pw-write-action ${statoClass}"
     onclick="pwOpenOpModal(${cidx}, ${sidx}, ${oidx})">
     <span class="op-trigger-label">${label}${exBadge}${fornBadge}</span>
     ${geoLabel ? `<span class="op-trigger-geo">📍 ${esc(geoLabel)}</span>` : ''}
@@ -13904,7 +13884,6 @@ function pwRender() {
         // Stato operatore corrente (con esclusione della sola cella corrente)
         const statoAttuale = op.nome ? pwStatoOperatore(op.nome, cIdx, sIdx, oIdx) : '';
         const badgeLabel = statoAttuale === 'ferie' ? 'FERIE'
-          : statoAttuale === 'ferie_parziale' ? 'FERIE ' + pwFerieGiorniLabel(op.nome).toUpperCase()
           : statoAttuale === 'non_disponibile' ? 'NON DISPONIBILE'
           : statoAttuale === 'assegnato' ? 'ASSEGNATO'
           : op.nome ? 'LIBERO' : '';
@@ -14021,8 +14000,7 @@ function pwRender() {
       <div class="pw-op-legenda no-print">
         <div class="pw-op-legenda-item"><span class="op-stato-badge libero">LIBERO</span> disponibile</div>
         <div class="pw-op-legenda-item"><span class="op-stato-badge assegnato">ASSEGNATO</span> già in un'altra squadra questa settimana</div>
-        <div class="pw-op-legenda-item"><span class="op-stato-badge ferie">FERIE</span> in ferie/permesso tutta la settimana</div>
-        <div class="pw-op-legenda-item"><span class="op-stato-badge ferie_parziale">FERIE LUN</span> in ferie/permesso solo alcuni giorni</div>
+        <div class="pw-op-legenda-item"><span class="op-stato-badge ferie">FERIE</span> in ferie/permesso questa settimana</div>
         <div class="pw-op-legenda-item"><span style="display:inline-block;width:10px;height:10px;border-radius:3px;background:#dcfce7;border:1px solid #86efac;vertical-align:middle;margin-right:3px;"></span>✓ verificato in Controllo Produzione</div>
       </div>
     </div>`;
