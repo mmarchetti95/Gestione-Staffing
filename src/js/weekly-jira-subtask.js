@@ -169,7 +169,17 @@ async function pwJiraCreateSubtasks(items, dryRun, extraFields) {
   // pwJiraBuildSubtaskItem) — l'intero batch viene sempre aperto da una
   // singola cella/week della Griglia, quindi e' un valore di richiesta, non
   // per-item.
-  const { data, error } = await _sbClient.functions.invoke('jira-create-subtask', { body: { items, dryRun: !!dryRun, extraFields: extraFields || {}, week: pwWeek } });
+  // Production Weight: in UI resta in percentuale (50 = 50%), ma il campo Jira
+  // e' normalizzato a 1 (0.5 = 50%) — inviare 50 mostrava 5000%. Conversione
+  // solo qui, su copie, perche' gli stessi item servono ad anteprima e creazione.
+  const payloadItems = items.map(item => {
+    const w = item.productionWeight;
+    if (w === undefined || w === null || w === '') return item;
+    const pct = parseFloat(String(w).replace(',', '.'));
+    if (!isFinite(pct)) return item;
+    return Object.assign({}, item, { productionWeight: Math.round(pct * 100) / 10000 });
+  });
+  const { data, error } = await _sbClient.functions.invoke('jira-create-subtask', { body: { items: payloadItems, dryRun: !!dryRun, extraFields: extraFields || {}, week: pwWeek } });
   if (error) throw new Error(await _cpEdgeErr(error, 'jira-create-subtask'));
   if (data && data.error) throw new Error(data.error);
   return Array.isArray(data && data.results) ? data.results : [];

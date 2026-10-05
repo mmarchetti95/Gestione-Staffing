@@ -114,6 +114,9 @@ Limite noto: il progetto Supabase è sul piano **Free**, che non include backup 
 
 ## Changelog
 
+## v18.196.0
+- fix: **Sottotask Jira: Production Weight normalizzato a 1.** In Griglia il peso resta in percentuale (es. 50), ma a Jira viene inviato come frazione (0,5): prima un sottotask al 50% risultava al 5000%. Nessuna modifica a Edge Function.
+
 ## v18.195.0
 - feat: **Genera mail: cantieri nella sezione note e strumenti.** Nel riquadro di ogni squadra, sotto commessa / squadra / cognomi, compare l'elenco dei cantieri della squadra nella settimana (🏗, unione di tutti i giorni), così si sa a quali cantieri si riferiscono note e strumenti.
 

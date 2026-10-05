@@ -28,7 +28,7 @@
 //         "operatorEmail": "mrossi@eagleprojects.it",
 //         "summary": "Rilievo GPS - Ivrea - Rossi - Week 37",
 //         "targetProduction": 12,     // opzionale, ereditato dal Task padre lato client
-//         "productionWeight": 50,     // opzionale, per-Task (100 / operatori sotto lo stesso Task), lato client
+//         "productionWeight": 0.5,    // opzionale, per-Task, normalizzato a 1 (0.5 = 50%); il client converte dalla % mostrata in UI
 //         "activityType": "14500" },  // opzionale, per attivita' della Griglia (v18.182.0), prevale su extraFields.activityType
 //       ...
 //     ],
