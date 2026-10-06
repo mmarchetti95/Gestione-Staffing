@@ -48,6 +48,10 @@ function _pwSpostDur(sec) {
   return Math.floor(m / 60) + 'h ' + String(m % 60).padStart(2, '0') + 'm';
 }
 
+function _pwSpostTappeLabel(n) {
+  return n + (n === 1 ? ' tappa' : ' tappe');
+}
+
 function _pwSpostSave() {
   try {
     localStorage.setItem(PW_SPOST_LS_KEY, JSON.stringify(_pwSpost));
@@ -158,9 +162,10 @@ function _pwSpost2opt(order, D, chiuso, pinFirst) {
 /* Costruisce l'ordine secondo la strategia scelta:
    - 'lontano' : prima tappa = la più distante dalla partenza, poi ci si avvicina
    - 'vicino'  : prima tappa = la più vicina alla partenza, poi ci si allontana
-   - 'ottimale': nessun vincolo di verso, minimizza i km totali */
+   - 'ottimale': nessun vincolo di verso, minimizza i km totali
+   - 'inserito': nessuna ottimizzazione, tappe nell'ordine scritto (come Maps) */
 function _pwSpostBuildOrder(D, n, strategia, chiuso) {
-  if (n <= 2) {
+  if (n <= 2 || strategia === 'inserito') {
     const o = [];
     for (let i = 1; i < n; i++) o.push(i);
     return o;
@@ -185,16 +190,20 @@ async function pwSpostCalcola() {
   const cEl = document.getElementById('pw-spost-chiuso');
   if (!pEl || !tEl) return;
 
-  const partenzaNome = (pEl.value || '').trim();
   const righe = (tEl.value || '').split('\n').map(s => s.trim()).filter(s => s);
   const visti = {}, tappeNomi = [];
   righe.forEach(r => {
     const k = r.toLowerCase().replace(/\s+/g, ' ');
     if (!visti[k]) { visti[k] = 1; tappeNomi.push(r); }
   });
+  // Partenza facoltativa: se vuota, si parte dalla prima riga (percorso rapido A → B)
+  let partenzaNome = (pEl.value || '').trim();
+  if (!partenzaNome && tappeNomi.length) partenzaNome = tappeNomi.shift();
 
-  if (!partenzaNome) { showAlertModal('Indica il comune di partenza.'); return; }
-  if (tappeNomi.length < 2) { showAlertModal('Servono almeno 2 tappe da ordinare.'); return; }
+  if (!partenzaNome || !tappeNomi.length) {
+    showAlertModal('Servono almeno 2 punti: una partenza e una destinazione.');
+    return;
+  }
   if (tappeNomi.length > PW_SPOST_MAX) {
     showAlertModal('Massimo ' + PW_SPOST_MAX + ' tappe per calcolo (limite del servizio di routing).');
     return;
@@ -224,9 +233,9 @@ async function pwSpostCalcola() {
       await new Promise(r => setTimeout(r, 300)); // rate limit Nominatim
     }
 
-    if (punti.length < 3) {
-      _pwSpostStatus('Tappe geocodificate insufficienti (servono almeno 2 tappe valide).', true);
-      showAlertModal('Non sono state trovate abbastanza tappe valide. Controlla i nomi dei comuni.');
+    if (punti.length < 2) {
+      _pwSpostStatus('Nessuna destinazione trovata: ' + nonTrovati.join(', '), true);
+      showAlertModal('Nessuna destinazione trovata. Controlla i nomi dei comuni.');
       return;
     }
 
@@ -249,7 +258,7 @@ async function pwSpostCalcola() {
 
     _pwSpostStatus(nonTrovati.length
       ? 'Percorso calcolato. Non trovati: ' + nonTrovati.join(', ')
-      : 'Percorso calcolato su ' + _pwSpost.tappe.length + ' tappe.', nonTrovati.length > 0);
+      : 'Percorso calcolato su ' + _pwSpostTappeLabel(_pwSpost.tappe.length) + '.', nonTrovati.length > 0);
 
     pwSpostRenderResult();
     pwSpostDrawMap();
@@ -291,7 +300,7 @@ function pwSpostRenderResult() {
   const totEl = document.getElementById('pw-spost-totali');
   if (!s.partenza || !s.dist || !s.order || !s.order.length) {
     box.innerHTML = '<div class="bg-white border border-slate-200 rounded-lg p-6 text-center text-sm text-slate-400">' +
-      'Inserisci il comune di partenza e l&#39;elenco delle tappe, poi premi <b>Calcola percorso</b>.</div>';
+      'Inserisci almeno due punti (es. partenza e destinazione), poi premi <b>Calcola percorso</b>.</div>';
     if (totEl) totEl.innerHTML = '';
     return;
   }
@@ -304,6 +313,7 @@ function pwSpostRenderResult() {
     lontano:  'Più lontano → rientro',
     vicino:   'Più vicino → allontanamento',
     ottimale: 'Percorso più breve',
+    inserito: 'Ordine inserito',
     manuale:  'Ordine modificato a mano'
   };
 
@@ -314,7 +324,7 @@ function pwSpostRenderResult() {
       '<span class="px-2 py-1 rounded bg-indigo-50 text-indigo-800 border border-indigo-200 font-semibold">' +
         'Guida ' + _pwSpostDur(totS) + '</span>' +
       '<span class="px-2 py-1 rounded bg-slate-50 text-slate-600 border border-slate-200">' +
-        s.order.length + ' tappe · ' + esc(STRAT_LABEL[s.strategia] || s.strategia) +
+        _pwSpostTappeLabel(s.order.length) + ' · ' + esc(STRAT_LABEL[s.strategia] || s.strategia) +
         (s.chiuso ? ' · giro chiuso' : '') + '</span>';
   }
 

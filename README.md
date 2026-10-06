@@ -114,6 +114,9 @@ Limite noto: il progetto Supabase è sul piano **Free**, che non include backup 
 
 ## Changelog
 
+## v18.197.0
+- feat: **Pianifica spostamenti: percorso rapido A → B.** Basta una sola destinazione (prima servivano partenza + almeno 2 tappe); il comune di partenza è facoltativo (se vuoto si parte dalla prima riga delle tappe). Nuovo ordinamento "Nell'ordine inserito (come Maps)" che segue le tappe così come scritte, senza ottimizzare. Nessuna modifica Supabase.
+
 ## v18.196.0
 - fix: **Sottotask Jira: Production Weight normalizzato a 1.** In Griglia il peso resta in percentuale (es. 50), ma a Jira viene inviato come frazione (0,5): prima un sottotask al 50% risultava al 5000%. Nessuna modifica a Edge Function.
 
