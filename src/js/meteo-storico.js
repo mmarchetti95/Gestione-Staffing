@@ -409,6 +409,7 @@ function msOnStoricoChanged() {
   const weeklyEl = document.getElementById('screen-weekly');
   if (!weeklyEl || weeklyEl.classList.contains('hidden')) return;
   if (_pwActiveTab === 'griglia') pwApplyMeteoBadgesToDom();
+  else if (_pwActiveTab === 'controllo') cpApplyMeteoToDom();
   else if (_pwActiveTab === 'meteo-storico') msScheduleRender();
 }
 

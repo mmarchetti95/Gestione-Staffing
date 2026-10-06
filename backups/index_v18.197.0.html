@@ -1742,7 +1742,7 @@
     <div class="flex items-center gap-2">
       <button id="btn-presentation" class="px-3 py-1.5 text-sm rounded hover:bg-white/10" style="border:1px solid var(--dark-border-strong);color:var(--dark-text);visibility:visible;">📊 Modalità presentazione</button>
       <div class="text-xs pl-2" style="border-left:1px solid var(--dark-border-strong);color:var(--dark-text-muted);">
-        <span id="app-version" class="font-medium" style="color:var(--accent);">v18.198.0</span> · Michele Marchetti
+        <span id="app-version" class="font-medium" style="color:var(--accent);">v18.197.0</span> · Michele Marchetti
         <span id="sb-role-badge" style="margin-left:8px;padding:1px 8px;border-radius:9999px;background:rgba(255,255,255,.1);color:var(--dark-text);font-weight:600;"></span>
       </div>
     </div>
@@ -17204,12 +17204,11 @@ function pwControlloRender() {
   const monday  = isoWeekToMonday(pwAnno, pwWeek);
   const DAY_NAMES = ['Lun','Mar','Mer','Gio','Ven','Sab'];
 
-  const dates = [], dateISOs = [];
+  const dates = [];
   for (let i = 0; i < 6; i++) {
     const d = new Date(monday);
     d.setUTCDate(monday.getUTCDate() + i);
     dates.push(`${String(d.getUTCDate()).padStart(2,'0')}/${String(d.getUTCMonth()+1).padStart(2,'0')}`);
-    dateISOs.push(d.toISOString().slice(0, 10));
   }
 
   // Struttura raggruppata: commessa → squadra → giorno → operatori
@@ -17229,7 +17228,7 @@ function pwControlloRender() {
           if (cantieri.length === 0) return;
           const fw = pwGetFerieWeek();
           if (fw[op.nome] && pwFerieTipo(fw[op.nome][g])) return;
-          ops.push({ nome: op.nome, cantiere: cantieri.join(', '), cantieri, attivita: opG.attivita || '', cIdx, sIdx, oIdx });
+          ops.push({ nome: op.nome, cantiere: cantieri.join(', '), attivita: opG.attivita || '', cIdx, sIdx, oIdx });
         });
         if (ops.length > 0) giorni.push({ giornoIdx: g, ops });
       }
@@ -17252,7 +17251,6 @@ function pwControlloRender() {
       <th style="max-width:80px">Commessa</th><th style="max-width:70px">Squadra</th><th style="max-width:90px">Operatore</th>
       <th style="text-align:center;min-width:44px;max-width:44px">Verificato</th>
       <th>Giorno</th><th>Data</th><th style="max-width:80px">Cantiere</th><th style="max-width:80px">Attività</th>
-      <th style="text-align:center;min-width:44px;max-width:56px" title="Meteo osservato nel giorno sul cantiere (passa il mouse per il dettaglio)">Meteo</th>
       <th style="text-align:center;max-width:50px">Ore Jira</th><th style="min-width:66px;max-width:66px">Ticket</th><th style="min-width:80px;max-width:80px">Epic</th><th style="max-width:60px">Ore Report Prod.</th>
       <th style="min-width:40px;text-align:center">Δ Ore</th>
       <th style="max-width:60px">Km / Cad</th><th style="text-align:center;min-width:60px">Su Jira</th><th style="max-width:90px">Note</th>
@@ -17261,14 +17259,14 @@ function pwControlloRender() {
   let ri = 0;
 
   blocks.forEach((bl, blIdx) => {
-    html += `<tr class="cp-tr-commessa" data-comm-idx="${blIdx}"><td colspan="17"><span class="cp-carr" style="cursor:pointer;user-select:none;margin-right:5px;font-size:11px;display:inline-block;width:10px;text-align:center;" onclick="cpToggleComm(${blIdx})">▼</span>📁 ${esc(bl.commessa)}</td></tr>`;
+    html += `<tr class="cp-tr-commessa" data-comm-idx="${blIdx}"><td colspan="16"><span class="cp-carr" style="cursor:pointer;user-select:none;margin-right:5px;font-size:11px;display:inline-block;width:10px;text-align:center;" onclick="cpToggleComm(${blIdx})">▼</span>📁 ${esc(bl.commessa)}</td></tr>`;
     bl.squadre.forEach((sq, sqIdx) => {
       const sqKey = blIdx + '-' + sqIdx;
-      html += `<tr class="cp-tr-squadra" data-comm-idx="${blIdx}" data-sq-idx="${sqKey}"><td colspan="17">&nbsp;&nbsp;&nbsp;<span class="cp-sarr" style="cursor:pointer;user-select:none;margin-right:5px;font-size:11px;display:inline-block;width:10px;text-align:center;" onclick="cpToggleSq('${jsAttr(sqKey)}')">▼</span>👥 ${esc(sq.nome)}<button class="no-print pw-write-action" style="margin-left:10px;font-size:11px;font-weight:600;background:#4f46e5;color:#fff;border:none;border-radius:5px;padding:2px 8px;cursor:pointer;" onclick="event.stopPropagation();pwControlloSyncJira('${jsesc(bl.commessa)}','${jsesc(sq.nome)}',this)">🔄 Sincronizza squadra</button><button class="no-print pw-write-action" style="margin-left:6px;font-size:11px;font-weight:600;background:#0ea5e9;color:#fff;border:none;border-radius:5px;padding:2px 8px;cursor:pointer;" data-help-key="cp-carica-report" title="Click destro per la guida" onclick="event.stopPropagation();cpCaricaReportSquadra('${jsesc(bl.commessa)}','${jsesc(sq.nome)}')">📄 Carica Report</button></td></tr>`;
+      html += `<tr class="cp-tr-squadra" data-comm-idx="${blIdx}" data-sq-idx="${sqKey}"><td colspan="16">&nbsp;&nbsp;&nbsp;<span class="cp-sarr" style="cursor:pointer;user-select:none;margin-right:5px;font-size:11px;display:inline-block;width:10px;text-align:center;" onclick="cpToggleSq('${jsAttr(sqKey)}')">▼</span>👥 ${esc(sq.nome)}<button class="no-print pw-write-action" style="margin-left:10px;font-size:11px;font-weight:600;background:#4f46e5;color:#fff;border:none;border-radius:5px;padding:2px 8px;cursor:pointer;" onclick="event.stopPropagation();pwControlloSyncJira('${jsesc(bl.commessa)}','${jsesc(sq.nome)}',this)">🔄 Sincronizza squadra</button><button class="no-print pw-write-action" style="margin-left:6px;font-size:11px;font-weight:600;background:#0ea5e9;color:#fff;border:none;border-radius:5px;padding:2px 8px;cursor:pointer;" data-help-key="cp-carica-report" title="Click destro per la guida" onclick="event.stopPropagation();cpCaricaReportSquadra('${jsesc(bl.commessa)}','${jsesc(sq.nome)}')">📄 Carica Report</button></td></tr>`;
       sq.giorni.forEach((gBlock, gIdx) => {
         const g   = gBlock.giornoIdx;
         const sep = gIdx > 0 ? ' cp-day-sep' : '';
-        html += `<tr class="cp-tr-day${sep}" data-comm-idx="${blIdx}" data-sq-idx="${sqKey}"><td colspan="17">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;📅 ${DAY_NAMES[g]} ${dates[g]}</td></tr>`;
+        html += `<tr class="cp-tr-day${sep}" data-comm-idx="${blIdx}" data-sq-idx="${sqKey}"><td colspan="16">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;📅 ${DAY_NAMES[g]} ${dates[g]}</td></tr>`;
 
         gBlock.ops.forEach(op => {
           const k     = `${bl.commessa}|||${sq.nome}|||${op.nome}|||${g}`;
@@ -17332,7 +17330,6 @@ function pwControlloRender() {
       <td>${dates[g]}</td>
       <td class="cp-wrap" style="color:#64748b" title="${esc(op.cantiere)}">${esc(op.cantiere)}</td>
       <td class="cp-wrap" style="color:#64748b" title="${esc(op.attivita)}">${esc(op.attivita)}</td>
-      <td class="cp-meteo" data-cantieri="${esc(JSON.stringify(op.cantieri))}" data-date="${dateISOs[g]}" style="text-align:center">${cpMeteoCellHtml(op.cantieri, dateISOs[g])}</td>
       <td style="${cpOreJiraStyle(jVal, g)}"><span id="cp-j-${ri}" data-jval="${esc(String(jVal))}">${jDisplay}</span></td>
       <td style="vertical-align:top;padding-top:4px;">${ticketHtml}</td>
       <td style="vertical-align:top;padding-top:4px;">${epicHtml}</td>
@@ -17358,65 +17355,6 @@ function pwControlloRender() {
   // Re-applica ricerca operatore/cantiere se attiva (il DOM è appena stato ricreato)
   if (_cpSearchTerm) cpSearchOp(_cpSearchTerm);
   cpaOnControlloRender();
-  cpMeteoRefresh(blocks, dateISOs);
-}
-
-/* ----- Colonna "Meteo": meteo OSSERVATO del giorno sul cantiere (storico, meteo-storico.js) -----
-   Solo giorni già trascorsi: per oggi/futuro non esiste ancora un osservato, e la previsione
-   resta in Griglia. Con più cantieri nella riga mostra il più piovoso; il dettaglio di ognuno
-   è nel tooltip. */
-function cpMeteoCellHtml(cantieri, dateISO) {
-  const vuoto = (ttl, txt) => '<span style="color:#cbd5e1" title="' + esc(ttl) + '">' + (txt || '—') + '</span>';
-  if (!cantieri || !cantieri.length) return vuoto('Nessun cantiere');
-  if (!dateISO || dateISO >= meteoTodayISO()) return vuoto('Il meteo osservato è disponibile dal giorno successivo');
-  const infos = cantieri.map(c => ({ c, info: pwMeteoInfoFor(c, dateISO) }));
-  const ok = infos.filter(x => x.info);
-  if (!ok.length) return vuoto(cantieri.map(c => c + ': ' + pwMeteoMissingReason(c, dateISO)).join('\n'), '…');
-  const main = ok.reduce((a, b) => ((b.info.precip || 0) > (a.info.precip || 0) ? b : a));
-  const mm = main.info.precip || 0;
-  const ttl = infos.map(x => x.c + ': ' + (x.info
-    ? msMeteoDescr(x.info.code) + ', ' + Math.round(x.info.tmin) + '°/' + Math.round(x.info.tmax) + '°' +
-      (pwMeteoRainLabel(x.info) ? ', ' + pwMeteoRainLabel(x.info).replace('💧', '') + ' di pioggia' : '')
-    : pwMeteoMissingReason(x.c, dateISO))).join('\n');
-  const mmHtml = mm >= 1
-    ? '<span style="font-size:10px;color:' + (mm >= 10 ? '#1d4ed8;font-weight:700' : '#2563eb') + ';margin-left:2px">' + Math.round(mm) + 'mm</span>'
-    : '';
-  return '<span title="' + esc('Meteo osservato\n' + ttl) + '" style="cursor:default;white-space:nowrap">' +
-    pwMeteoIconFor(main.info.code) + mmHtml + '</span>';
-}
-
-/* Ridisegna solo le celle meteo, senza un render completo (non fa perdere il focus agli input). */
-function cpApplyMeteoToDom() {
-  document.querySelectorAll('.cp-table td.cp-meteo').forEach(td => {
-    let cantieri = [];
-    try { cantieri = JSON.parse(td.dataset.cantieri || '[]'); } catch (_) {}
-    td.innerHTML = cpMeteoCellHtml(cantieri, td.dataset.date);
-  });
-}
-
-/* Legge (e se manca recupera) lo storico dei giorni passati della settimana mostrata. Una
-   volta per settimana per sessione: i render successivi (salvataggi, sync) leggono la memoria. */
-const _cpMeteoCaricate = new Set();
-async function cpMeteoRefresh(blocks, dateISOs) {
-  const wk = pwAnno + '-' + pwWeek;
-  if (_cpMeteoCaricate.has(wk) || typeof msEnsurePast !== 'function' || !msCanSync()) return;
-  const oggi = meteoTodayISO();
-  const pairs = [];
-  blocks.forEach(bl => bl.squadre.forEach(sq => sq.giorni.forEach(gb => {
-    if (dateISOs[gb.giornoIdx] >= oggi) return;
-    gb.ops.forEach(op => op.cantieri.forEach(c => pairs.push({ cantiere: c, dateISO: dateISOs[gb.giornoIdx] })));
-  })));
-  if (!pairs.length) return;
-  _cpMeteoCaricate.add(wk);
-  try {
-    if (typeof _geoCacheLoading !== 'undefined' && _geoCacheLoading) { try { await _geoCacheLoading; } catch (_) {} }
-    await msLoadRange(dateISOs[0], dateISOs[5], { hourly: false });
-    cpApplyMeteoToDom();
-    if (await msRun(() => msEnsurePast(msPairsOf(pairs)))) cpApplyMeteoToDom();
-  } catch (e) {
-    _cpMeteoCaricate.delete(wk);
-    console.warn('[controllo produzione] meteo osservato non disponibile', e);
-  }
 }
 
 /* Apre l'intervento (operatore + giorno) nella Griglia della stessa settimana, per un
@@ -27543,7 +27481,6 @@ function msOnStoricoChanged() {
   const weeklyEl = document.getElementById('screen-weekly');
   if (!weeklyEl || weeklyEl.classList.contains('hidden')) return;
   if (_pwActiveTab === 'griglia') pwApplyMeteoBadgesToDom();
-  else if (_pwActiveTab === 'controllo') cpApplyMeteoToDom();
   else if (_pwActiveTab === 'meteo-storico') msScheduleRender();
 }
 

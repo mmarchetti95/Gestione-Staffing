@@ -114,6 +114,9 @@ Limite noto: il progetto Supabase è sul piano **Free**, che non include backup 
 
 ## Changelog
 
+## v18.198.0
+- feat: **Controllo Produzione: colonna "Meteo".** Piccola colonna dopo Attività con il meteo **osservato** del giorno sul cantiere (icona + mm di pioggia se ≥ 1 mm, in grassetto da 10 mm); passando il mouse si vede il dettaglio per ogni cantiere (condizione, min/max, pioggia). Con più cantieri nella stessa riga mostra il più piovoso. Solo giorni già trascorsi (oggi/futuro: "—"). Riusa lo storico meteo esistente (`meteo_storico`), recuperandolo se manca. Non entra negli export Excel/PDF. Nessuna modifica Supabase.
+
 ## v18.197.0
 - feat: **Pianifica spostamenti: percorso rapido A → B.** Basta una sola destinazione (prima servivano partenza + almeno 2 tappe); il comune di partenza è facoltativo (se vuoto si parte dalla prima riga delle tappe). Nuovo ordinamento "Nell'ordine inserito (come Maps)" che segue le tappe così come scritte, senza ottimizzare. Nessuna modifica Supabase.
 
