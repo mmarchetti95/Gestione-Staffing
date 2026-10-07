@@ -33,6 +33,7 @@
 //       ...
 //     ],
 //     "dryRun": false,
+//     "recalcWeights": true,  // opzionale, vedi "Ricalcolo Production Weight" sotto
 //     "week": 37,   // usata SOLO per il controllo anti-duplicati (vedi sotto)
 //     "extraFields": { "duedate": "2026-09-02", "originalEstimate": "8h",
 //                       "activityType": "14500",
@@ -49,7 +50,20 @@
 //       { "taskKey", "operatorEmail", "status": "created"|"already_exists"|"would_create"|"error",
 //         "key"?, "url"?, "message"? },
 //       ...
-//     ] }
+//     ],
+//     "weights"?: { "<taskKey>": { ... } } }   // solo con recalcWeights
+//
+// Ricalcolo Production Weight (recalcWeights:true, v18.199.0): il peso e'
+// normalizzato a 1 (0.5 = 50%) e va diviso su TUTTI i sottotask del Task, non
+// solo su quelli del batch — altrimenti aggiungendo un sottotask a un Task che
+// ne ha gia' due il totale superava il 100%.
+//   - dryRun: weights[taskKey] = { esistenti, nuovi, totale, peso } con
+//     esistenti = sottotask gia' sotto il Task, nuovi = item "would_create".
+//   - creazione: per ogni Task con almeno un sottotask creato, peso = 1/totale
+//     scritto su TUTTI i suoi sottotask (anche quelli gia' esistenti):
+//     weights[taskKey] = { totale, peso, aggiornati, errori: [{ key, message }] }.
+// I sottotask del Task si leggono dal campo "subtasks" del Task (non dalla
+// ricerca JQL, il cui indice puo' non vedere ancora un sottotask appena creato).
 //
 // Contratto richiesta — scoperta campi extra:
 //   { "mode": "fields", "projectKey": "W07R" }
@@ -112,6 +126,18 @@ async function jiraGet(path: string): Promise<Response> {
 async function jiraPost(path: string, body: unknown): Promise<Response> {
   return fetch(`${JIRA_BASE_URL}${path}`, {
     method: "POST",
+    headers: {
+      Authorization: jiraAuthHeader(),
+      Accept: "application/json",
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(body),
+  });
+}
+
+async function jiraPut(path: string, body: unknown): Promise<Response> {
+  return fetch(`${JIRA_BASE_URL}${path}`, {
+    method: "PUT",
     headers: {
       Authorization: jiraAuthHeader(),
       Accept: "application/json",
@@ -279,16 +305,50 @@ function buildItemTargetProductionField(item: any): Record<string, unknown> {
   return { customfield_11280: Number(v) };
 }
 
-// Production Weight (%) e' per-item, non condiviso da tutto il batch: un
-// batch puo' includere piu' Task diversi, ciascuno con un numero diverso di
-// operatori assegnati, quindi il peso corretto e' 100 / operatori sotto QUEL
-// Task, non sul totale del batch — calcolato lato client raggruppando per
-// taskKey (vedi pwJiraSubtaskOpenExtraFieldsModal) e inviato qui gia' pronto
-// per item.
+// Production Weight e' per-item, normalizzato a 1 (0.5 = 50%), inviato dal
+// client gia' pronto per item. Con recalcWeights viene poi riscritto su tutti
+// i sottotask del Task (vedi recalcTaskWeights).
 function buildItemProductionWeightField(item: any): Record<string, unknown> {
   const v = item?.productionWeight;
   if (v === undefined || v === null || v === "") return {};
   return { customfield_13027: Number(v) };
+}
+
+const PRODUCTION_WEIGHT_FIELD = "customfield_13027";
+
+// Chiavi di tutti i sottotask di un Task, dal suo campo "subtasks" (letto
+// direttamente dall'issue, quindi include anche quelli creati un istante prima,
+// a differenza della ricerca JQL). null se il Task non e' leggibile.
+async function fetchTaskSubtaskKeys(taskKey: string): Promise<string[] | null> {
+  const res = await jiraGet(`/rest/api/3/issue/${encodeURIComponent(taskKey)}?fields=subtasks`);
+  if (!res.ok) return null;
+  const data = await res.json();
+  const subtasks = Array.isArray(data?.fields?.subtasks) ? data.fields.subtasks : [];
+  return subtasks.map((st: any) => String(st?.key || "")).filter(Boolean);
+}
+
+// Peso normalizzato a 1, 4 decimali (1/3 -> 0.3333, cioe' 33,33% su Jira).
+function weightFor(totale: number): number {
+  return totale > 0 ? Math.round(10000 / totale) / 10000 : 1;
+}
+
+// Scrive lo stesso peso (1/totale) su tutti i sottotask del Task. createdKeys
+// si uniscono per sicurezza a quelli letti dal Task.
+async function recalcTaskWeights(taskKey: string, createdKeys: string[]): Promise<any> {
+  const keys = await fetchTaskSubtaskKeys(taskKey);
+  if (!keys) return { errore: `Task ${taskKey} non leggibile: Production Weight non ricalcolato` };
+  const all = [...new Set([...keys, ...createdKeys])];
+  const peso = weightFor(all.length);
+  let aggiornati = 0;
+  const errori: { key: string; message: string }[] = [];
+  for (const key of all) {
+    const res = await jiraPut(`/rest/api/3/issue/${encodeURIComponent(key)}`, { fields: { [PRODUCTION_WEIGHT_FIELD]: peso } });
+    if (res.ok) { aggiornati++; continue; }
+    let detail = `PUT issue HTTP ${res.status}`;
+    try { const b = await res.json(); if (b) detail += " " + JSON.stringify(b); } catch { /* ignore */ }
+    errori.push({ key, message: detail });
+  }
+  return { totale: all.length, peso, aggiornati, errori };
 }
 
 // Activity Type per-item: in Griglia ogni cantiere ha la sua attivita', e lo
@@ -328,6 +388,7 @@ Deno.serve(async (req: Request) => {
 
   const items: any[] = Array.isArray(payload?.items) ? payload.items : [];
   const dryRun = !!payload?.dryRun;
+  const recalcWeights = !!payload?.recalcWeights;
   const week = payload?.week !== undefined && payload?.week !== null ? String(payload.week).trim() : "";
   const extraFieldsPayload = buildExtraFieldsPayload(payload?.extraFields);
   if (items.length === 0) return json({ error: "Nessun item fornito" }, 400);
@@ -398,5 +459,27 @@ Deno.serve(async (req: Request) => {
     }
   }
 
-  return json({ results });
+  if (!recalcWeights) return json({ results });
+
+  const taskKeys = [...new Set(results.map((r) => r.taskKey).filter(Boolean))];
+  const weights: Record<string, unknown> = {};
+  for (const taskKey of taskKeys) {
+    const mine = results.filter((r) => r.taskKey === taskKey);
+    try {
+      if (dryRun) {
+        const keys = await fetchTaskSubtaskKeys(taskKey);
+        if (!keys) { weights[taskKey] = { errore: `Task ${taskKey} non leggibile` }; continue; }
+        const nuovi = mine.filter((r) => r.status === "would_create").length;
+        const totale = keys.length + nuovi;
+        weights[taskKey] = { esistenti: keys.length, nuovi, totale, peso: weightFor(totale) };
+      } else {
+        const createdKeys = mine.filter((r) => r.status === "created" && r.key).map((r) => r.key);
+        if (createdKeys.length === 0) continue;
+        weights[taskKey] = await recalcTaskWeights(taskKey, createdKeys);
+      }
+    } catch (e) {
+      weights[taskKey] = { errore: String((e as Error)?.message || e) };
+    }
+  }
+  return json({ results, weights });
 });

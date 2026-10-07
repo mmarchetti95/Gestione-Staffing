@@ -163,6 +163,13 @@ async function pwJiraFetchTasks(epicKey, search) {
   return Array.isArray(data && data.tasks) ? data.tasks : [];
 }
 
+// Production Weight ricalcolato su tutti i sottotask del Task (v18.199.0):
+// scelta dello Step 1.5, e conteggi/esito per Task restituiti dall'ultima
+// chiamata a jira-create-subtask (vedi "Ricalcolo Production Weight" lato
+// Edge Function).
+let _pwJiraWeightRecalc = false;
+let _pwJiraWeightInfo = null;
+
 async function pwJiraCreateSubtasks(items, dryRun, extraFields) {
   if (!_sbClient || !_sbUser) throw new Error('Non connesso a Supabase.');
   // week: usata lato server solo per il controllo anti-duplicati (vedi
@@ -179,9 +186,11 @@ async function pwJiraCreateSubtasks(items, dryRun, extraFields) {
     if (!isFinite(pct)) return item;
     return Object.assign({}, item, { productionWeight: Math.round(pct * 100) / 10000 });
   });
-  const { data, error } = await _sbClient.functions.invoke('jira-create-subtask', { body: { items: payloadItems, dryRun: !!dryRun, extraFields: extraFields || {}, week: pwWeek } });
+  _pwJiraWeightInfo = null;
+  const { data, error } = await _sbClient.functions.invoke('jira-create-subtask', { body: { items: payloadItems, dryRun: !!dryRun, recalcWeights: _pwJiraWeightRecalc, extraFields: extraFields || {}, week: pwWeek } });
   if (error) throw new Error(await _cpEdgeErr(error, 'jira-create-subtask'));
   if (data && data.error) throw new Error(data.error);
+  _pwJiraWeightInfo = (data && data.weights) || null;
   return Array.isArray(data && data.results) ? data.results : [];
 }
 
@@ -1012,6 +1021,7 @@ async function pwJiraSubtaskOpenExtraFieldsModal(cIdx, commessaNome, meta, items
   // QUEL taskKey), non 100 / items.length come prima (bug: un batch con piu'
   // Task diversi veniva diviso sul totale invece che per singolo Task).
   const hasProductionWeight = fields.some(f => f.extraKey === 'productionWeight');
+  _pwJiraWeightRecalc = false;
   if (hasProductionWeight) {
     const countByTask = {};
     items.forEach(item => { countByTask[item.taskKey] = (countByTask[item.taskKey] || 0) + 1; });
@@ -1086,11 +1096,16 @@ async function pwJiraSubtaskOpenExtraFieldsModal(cIdx, commessaNome, meta, items
         <span class="text-slate-700">${esc(pwJiraGruppoLabel(item._comune || '', item._attivita))} — ${esc(item._operatore || '')}</span>
         <span class="text-[11px] text-slate-400"> (${esc(item.taskKey || '')})</span>
       </div>
-      <input type="number" data-pw-weight-idx="${i}" value="${esc(item.productionWeight)}" onwheel="this.blur()" class="w-20 shrink-0 border border-slate-300 rounded px-2 py-1 text-sm text-right">
+      <input type="number" data-pw-weight-idx="${i}" value="${esc(item.productionWeight)}" onwheel="this.blur()" disabled class="w-20 shrink-0 border border-slate-300 rounded px-2 py-1 text-sm text-right disabled:bg-slate-100 disabled:text-slate-400">
     </div>`).join('') : '';
   const productionWeightSectionHtml = hasProductionWeight ? `<div class="mb-3">
-      <label class="block text-[11px] text-slate-500 mb-1">Production Weight (%) — precompilato per Task (100% diviso gli operatori sotto lo stesso Task), modificabile riga per riga</label>
+      <label class="block text-[11px] text-slate-500 mb-1">Production Weight (%)</label>
+      <label class="flex items-start gap-2 text-xs text-slate-700 mb-1.5 cursor-pointer">
+        <input type="checkbox" id="pw-jira-weight-recalc" checked class="mt-0.5">
+        <span>Ricalcola su <b>tutti</b> i sottotask del Task (100% diviso il totale, aggiorna anche quelli già su Jira). Il conteggio reale compare nell'anteprima.</span>
+      </label>
       <div class="border border-slate-200 rounded px-2">${productionWeightRowsHtml}</div>
+      <div class="text-[11px] text-slate-400 mt-1">Togli la spunta per inserire i valori a mano, riga per riga (solo sui sottotask nuovi).</div>
     </div>` : '';
 
   // Una tendina Activity Type per ciascuna attività presente nel batch.
@@ -1128,6 +1143,15 @@ async function pwJiraSubtaskOpenExtraFieldsModal(cIdx, commessaNome, meta, items
     </div>
   </div></div>`;
 
+  // Con il ricalcolo attivo i pesi per riga non si toccano: li decide la Edge
+  // Function sul totale reale dei sottotask del Task.
+  const weightRecalcBox = root.querySelector('#pw-jira-weight-recalc');
+  if (weightRecalcBox) {
+    weightRecalcBox.addEventListener('change', () => {
+      root.querySelectorAll('[data-pw-weight-idx]').forEach(el => { el.disabled = weightRecalcBox.checked; });
+    });
+  }
+
   // Ricalcolo live della Stima originale quando l'utente cambia una delle due
   // date da cui e' derivata — il valore iniziale precompilato sopra resta
   // altrimenti disallineato non appena si corregge Data scadenza o Start
@@ -1158,6 +1182,7 @@ async function pwJiraSubtaskOpenExtraFieldsModal(cIdx, commessaNome, meta, items
       const item = items[parseInt(el.dataset.pwWeightIdx)];
       if (item) item.productionWeight = el.value !== '' ? el.value : undefined;
     });
+    _pwJiraWeightRecalc = !!(weightRecalcBox && weightRecalcBox.checked);
     // Activity Type per attività -> per item (inviato per-item alla Edge
     // Function, vedi buildItemActivityTypeField lato server).
     const memoryActivity = {};
@@ -1219,6 +1244,44 @@ function pwJiraSubtaskExtraFieldsRecapHtml(extraFields, fields) {
   return `<div class="border border-slate-200 rounded p-2 mb-3 text-[11px] space-y-0.5">${rows}</div>`;
 }
 
+// Peso normalizzato a 1 -> etichetta % italiana (0.3333 -> "33,33%").
+function pwJiraWeightPctLabel(peso) {
+  return (Math.round(peso * 10000) / 100).toString().replace('.', ',') + '%';
+}
+
+// Riepilogo per Task nell'anteprima: quanti sottotask ci sono già, quanti se
+// ne aggiungono e il peso che avranno tutti dopo il ricalcolo.
+function pwJiraWeightPreviewHtml(weights) {
+  const taskKeys = Object.keys(weights || {});
+  if (!taskKeys.length) return '';
+  const rows = taskKeys.map(taskKey => {
+    const w = weights[taskKey] || {};
+    if (w.errore || typeof w.peso !== 'number') {
+      return '<div class="text-amber-700">' + esc(taskKey) + ': ' + esc(w.errore || 'conteggio non disponibile') + '</div>';
+    }
+    const dettaglio = w.esistenti + ' già su Jira + ' + w.nuovi + ' nuov' + (w.nuovi === 1 ? 'o' : 'i') + ' = ' + w.totale;
+    const aggiorna = (w.esistenti > 0 && w.nuovi > 0) ? ' <span class="text-slate-400">(aggiorna anche i ' + w.esistenti + ' esistenti)</span>' : '';
+    return '<div class="flex items-baseline justify-between gap-2"><span class="text-slate-600">' + esc(taskKey) + ' · ' + esc(dettaglio) + aggiorna + '</span>'
+      + '<span class="font-medium text-slate-800 whitespace-nowrap">' + esc(pwJiraWeightPctLabel(w.peso)) + ' ciascuno</span></div>';
+  }).join('');
+  return '<div class="border border-teal-200 bg-teal-50/40 rounded p-2 mb-3 text-[11px] space-y-0.5">'
+    + '<div class="font-medium text-teal-800 mb-0.5">Production Weight ricalcolato su tutto il Task</div>' + rows + '</div>';
+}
+
+// Esito del ricalcolo per il messaggio finale (Step 3).
+function pwJiraWeightResultText(weights) {
+  const taskKeys = Object.keys(weights || {});
+  if (!taskKeys.length) return '';
+  let out = '\n\nProduction Weight ricalcolato:';
+  taskKeys.forEach(taskKey => {
+    const w = weights[taskKey] || {};
+    if (w.errore) { out += '\n• ' + taskKey + ': ' + w.errore; return; }
+    out += '\n• ' + taskKey + ': ' + w.totale + ' sottotask al ' + pwJiraWeightPctLabel(w.peso) + ' (' + w.aggiornati + ' aggiornati)';
+    (w.errori || []).forEach(e => { out += '\n   ⚠ ' + e.key + ' non aggiornato: ' + e.message; });
+  });
+  return out;
+}
+
 /* ----- Step 2: anteprima (dryRun) ----- */
 async function pwJiraSubtaskPreview(cIdx, commessaNome, allItems, skippedComuni, extraFields, fields) {
   const root = document.getElementById('modal-root');
@@ -1247,6 +1310,14 @@ async function pwJiraSubtaskPreview(cIdx, commessaNome, allItems, skippedComuni,
   }
 
   pwJiraSubtaskApplyResultsToBadges(cIdx, items, results, false);
+  // Peso dei sottotask nuovi = quello che la Edge Function scriverà su tutto il
+  // Task (1 / totale reale), mostrato in % come nel form.
+  if (_pwJiraWeightRecalc && _pwJiraWeightInfo) {
+    items.forEach(item => {
+      const w = _pwJiraWeightInfo[item.taskKey];
+      if (w && typeof w.peso === 'number') item.productionWeight = String(Math.round(w.peso * 10000) / 100);
+    });
+  }
   pwJiraSubtaskRenderPreview(cIdx, commessaNome, items, results, skippedComuni, extraFields, fields);
 }
 
@@ -1254,6 +1325,7 @@ function pwJiraSubtaskRenderPreview(cIdx, commessaNome, items, results, skippedC
   const root = document.getElementById('modal-root');
   const wouldCreate = results.filter(r => r.status === 'would_create').length;
   const extraFieldsRecapHtml = pwJiraSubtaskExtraFieldsRecapHtml(extraFields, fields);
+  const weightRecapHtml = pwJiraWeightPreviewHtml(_pwJiraWeightRecalc ? _pwJiraWeightInfo : null);
 
   const rows = results.map((r, i) => {
     const item = items[i] || {};
@@ -1288,6 +1360,7 @@ function pwJiraSubtaskRenderPreview(cIdx, commessaNome, items, results, skippedC
     <h3 class="font-semibold text-slate-900 mb-1">Crea sottotask Jira — ${esc(commessaNome)}</h3>
     <p class="text-xs text-slate-500 mb-3">${wouldCreate} da creare su ${results.length} totali.</p>
     ${extraFieldsRecapHtml}
+    ${weightRecapHtml}
     <div>${rows}</div>
     ${skippedHtml}
     ${wouldCreate === 0 ? '<div class="text-[11px] text-slate-500 mt-2">Nessun sottotask da creare: torna indietro per modificare la selezione o i campi.</div>' : ''}
@@ -1353,6 +1426,7 @@ async function pwJiraSubtaskConfirmCreate(cIdx, commessaNome, items, extraFields
 
   let msg = `Sottotask creati: ${created.length}`;
   if (already.length) msg += `\nGià esistenti (non ricreati): ${already.length}`;
+  if (_pwJiraWeightRecalc) msg += pwJiraWeightResultText(_pwJiraWeightInfo);
   if (!errors.length) { showAlertModal(msg); return; }
 
   // Con errori il flusso resta aperto: "← Indietro" torna ai dati da
