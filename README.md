@@ -114,6 +114,9 @@ Limite noto: il progetto Supabase è sul piano **Free**, che non include backup 
 
 ## Changelog
 
+## v18.199.1
+- style: **Pianificazione settimanale: tab colorati.** Ogni strumento (Griglia, Ferie, Mappa squadre, Pianifica spostamenti, Ricerca Squadre, Auto-pianifica, Controllo produzione, Storico meteo, Doppia Week) ha uno sfondo pastello neutro proprio per riconoscerlo a colpo d'occhio; il tab attivo usa la tinta più scura e il bordo inferiore nello stesso colore. Solo CSS, nessuna modifica a dati o Supabase.
+
 ## v18.199.0
 - feat: **Sottotask Jira: Production Weight ricalcolato su tutto il Task.** Nel form dei campi extra la nuova opzione "Ricalcola su tutti i sottotask del Task" (attiva di default) divide il 100% sul numero **totale** di sottotask del Task su Jira, non solo su quelli creati adesso, e dopo la creazione riscrive lo stesso peso anche sui sottotask già esistenti (es. 2 esistenti + 1 nuovo → tutti e 3 al 33,33%). L'anteprima mostra per ogni Task quanti sottotask ci sono già, quanti se ne aggiungono e il peso risultante; il messaggio finale riporta quanti sottotask sono stati aggiornati ed eventuali errori. Togliendo la spunta si torna ai valori manuali per riga. Richiede la nuova versione della Edge Function `jira-create-subtask` (parametro `recalcWeights`, retrocompatibile).
 - fix: **Controllo Produzione → Jira: la sincronizzazione non sovrascrive più il Production Weight.** "Sincronizza da Jira", quando aggiornava l'Actual Production di un sottotask con Target Production sul Task padre, scriveva l'avanzamento anche in "Production Weight (%)" (perdendo il peso del sottotask) e in scala 0-100 (20% mostrato come 2000%). Ora scrive solo "Actual Production progress (%)", normalizzato a 1 come il peso (0,2 = 20%). Edge Function `jira-update-production` ora versionata nel repo e rideployata (v4); nessuna modifica al client.

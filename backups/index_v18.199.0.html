@@ -289,27 +289,6 @@
   .tab-btn:hover { color: #334155; background: rgba(15,23,42,.03); cursor: pointer !important; }
   .tab-btn.active { color: var(--accent); border-color: var(--accent); font-weight: 700; }
   .tab-btn.active:hover { color: var(--accent); background: none; cursor: pointer !important; }
-  /* Tab Pianificazione settimanale: ogni strumento ha una tinta neutra propria (--pwt-bg sfondo,
-     --pwt-ink testo/bordo attivo) per riconoscerlo a colpo d'occhio. */
-  .pw-tabbar { gap: 4px; padding-top: 6px; padding-bottom: 0; }
-  .pw-tabbar .tab-btn {
-    background: var(--pwt-bg); color: #475569; border-radius: 8px 8px 0 0;
-    border-bottom-color: transparent; flex: 1 1 0; min-width: 0;
-  }
-  .pw-tabbar .tab-btn:hover { background: var(--pwt-bg-hover); color: var(--pwt-ink); }
-  .pw-tabbar .tab-btn.active,
-  .pw-tabbar .tab-btn.active:hover {
-    background: var(--pwt-bg-hover); color: var(--pwt-ink); border-bottom-color: var(--pwt-ink);
-  }
-  #pw-tab-griglia          { --pwt-bg: #eef2f7; --pwt-bg-hover: #dde5ef; --pwt-ink: #3b5577; }
-  #pw-tab-ferie            { --pwt-bg: #f5f0e6; --pwt-bg-hover: #ebe2cf; --pwt-ink: #7a6234; }
-  #pw-tab-mappa            { --pwt-bg: #edf3ee; --pwt-bg-hover: #dbe8de; --pwt-ink: #3f6b4a; }
-  #pw-tab-spostamenti      { --pwt-bg: #f4eeea; --pwt-bg-hover: #e9ddd5; --pwt-ink: #7a5444; }
-  #pw-tab-ricerca-squadre  { --pwt-bg: #eff0f6; --pwt-bg-hover: #dfe0ed; --pwt-ink: #4b5180; }
-  #pw-tab-autoplan         { --pwt-bg: #f3eef5; --pwt-bg-hover: #e6dceb; --pwt-ink: #6a4a7a; }
-  #pw-tab-controllo        { --pwt-bg: #ecf3f3; --pwt-bg-hover: #d8e8e8; --pwt-ink: #33696b; }
-  #pw-tab-meteo-storico    { --pwt-bg: #edf2f6; --pwt-bg-hover: #dae5ee; --pwt-ink: #3d6380; }
-  #pw-tab-doppia           { --pwt-bg: #f5eff0; --pwt-bg-hover: #eadcdf; --pwt-ink: #7a4852; }
   .commessa-card summary { outline: none; }
   .commessa-card summary::-webkit-details-marker { display: none; }
   .commessa-card summary::marker { display: none; content: ''; }
@@ -1763,7 +1742,7 @@
     <div class="flex items-center gap-2">
       <button id="btn-presentation" class="px-3 py-1.5 text-sm rounded hover:bg-white/10" style="border:1px solid var(--dark-border-strong);color:var(--dark-text);visibility:visible;">📊 Modalità presentazione</button>
       <div class="text-xs pl-2" style="border-left:1px solid var(--dark-border-strong);color:var(--dark-text-muted);">
-        <span id="app-version" class="font-medium" style="color:var(--accent);">v18.199.1</span> · Michele Marchetti
+        <span id="app-version" class="font-medium" style="color:var(--accent);">v18.199.0</span> · Michele Marchetti
         <span id="sb-role-badge" style="margin-left:8px;padding:1px 8px;border-radius:9999px;background:rgba(255,255,255,.1);color:var(--dark-text);font-weight:600;"></span>
       </div>
     </div>
@@ -2424,7 +2403,7 @@
   <div id="pw-stats-banner" class="grid grid-cols-4 gap-3 mb-4 no-print"></div>
 
   <!-- Tab Griglia / Ferie / Mappa -->
-  <div class="pw-tabbar flex border-b border-slate-200 mb-4 no-print bg-white rounded-t-lg px-2">
+  <div class="flex border-b border-slate-200 mb-4 no-print bg-white rounded-t-lg px-2">
     <button id="pw-tab-griglia" class="tab-btn active text-sm py-3">📋 Griglia settimanale</button>
     <button id="pw-tab-ferie" class="tab-btn text-sm py-3">🏖 Ferie / Permessi</button>
     <button id="pw-tab-mappa" class="tab-btn text-sm py-3">🗺 Mappa squadre</button>
