@@ -1763,7 +1763,7 @@
     <div class="flex items-center gap-2">
       <button id="btn-presentation" class="px-3 py-1.5 text-sm rounded hover:bg-white/10" style="border:1px solid var(--dark-border-strong);color:var(--dark-text);visibility:visible;">📊 Modalità presentazione</button>
       <div class="text-xs pl-2" style="border-left:1px solid var(--dark-border-strong);color:var(--dark-text-muted);">
-        <span id="app-version" class="font-medium" style="color:var(--accent);">v18.199.1</span> · Michele Marchetti
+        <span id="app-version" class="font-medium" style="color:var(--accent);">v18.199.2</span> · Michele Marchetti
         <span id="sb-role-badge" style="margin-left:8px;padding:1px 8px;border-radius:9999px;background:rgba(255,255,255,.1);color:var(--dark-text);font-weight:600;"></span>
       </div>
     </div>
@@ -13462,10 +13462,13 @@ function pwOpenOpModal(cidx, sidx, oidx) {
   const monday = isoWeekToMonday(pwAnno, pwWeek);
   const mese   = monday.getUTCMonth();
 
-  // Unione: operatori da staffing commessa + tutti gli operatori registrati
+  // Unione: operatori da staffing commessa + tutti gli operatori registrati.
+  // Lo staffing puo' tenere giorni allocati anche dopo la fine del rapporto (contratto
+  // a termine scaduto non ancora segnato come ex collega): senza il filtro l'ex collega
+  // verrebbe riproposto, e per giunta in cima come "della commessa".
   const fromStaffing = new Set();
   state.staffing.filter(r => r.commessa === commessa && (Number(r.mesi[mese]) || 0) > 0)
-    .forEach(r => fromStaffing.add(r.risorsa));
+    .forEach(r => { if (r.risorsa && !isOperatoreLicenziato(r.risorsa)) fromStaffing.add(r.risorsa); });
 
   // Tutti gli operatori attivi nel sistema (nome_esteso o nome)
   const fromOperatori = getOperatoriAttivi().map(o => o.nome_esteso || o.nome).filter(Boolean);

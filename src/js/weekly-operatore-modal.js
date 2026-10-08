@@ -25,10 +25,13 @@ function pwOpenOpModal(cidx, sidx, oidx) {
   const monday = isoWeekToMonday(pwAnno, pwWeek);
   const mese   = monday.getUTCMonth();
 
-  // Unione: operatori da staffing commessa + tutti gli operatori registrati
+  // Unione: operatori da staffing commessa + tutti gli operatori registrati.
+  // Lo staffing puo' tenere giorni allocati anche dopo la fine del rapporto (contratto
+  // a termine scaduto non ancora segnato come ex collega): senza il filtro l'ex collega
+  // verrebbe riproposto, e per giunta in cima come "della commessa".
   const fromStaffing = new Set();
   state.staffing.filter(r => r.commessa === commessa && (Number(r.mesi[mese]) || 0) > 0)
-    .forEach(r => fromStaffing.add(r.risorsa));
+    .forEach(r => { if (r.risorsa && !isOperatoreLicenziato(r.risorsa)) fromStaffing.add(r.risorsa); });
 
   // Tutti gli operatori attivi nel sistema (nome_esteso o nome)
   const fromOperatori = getOperatoriAttivi().map(o => o.nome_esteso || o.nome).filter(Boolean);

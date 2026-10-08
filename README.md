@@ -114,6 +114,9 @@ Limite noto: il progetto Supabase è sul piano **Free**, che non include backup 
 
 ## Changelog
 
+## v18.199.2
+- fix: **Griglia: gli ex colleghi non vengono più proposti in "Seleziona operatore".** Chi aveva ancora giorni allocati nello staffing della commessa (es. contratto a termine scaduto ma allocazioni fino a fine anno) compariva nella lista, e per giunta in cima tra quelli "della commessa". Ora i nomi presi dallo staffing passano dallo stesso filtro ex collega (segnato a mano o contratto scaduto) del pool operatori. Nessuna modifica Supabase.
+
 ## v18.199.1
 - style: **Pianificazione settimanale: tab colorati.** Ogni strumento (Griglia, Ferie, Mappa squadre, Pianifica spostamenti, Ricerca Squadre, Auto-pianifica, Controllo produzione, Storico meteo, Doppia Week) ha uno sfondo pastello neutro proprio per riconoscerlo a colpo d'occhio; il tab attivo usa la tinta più scura e il bordo inferiore nello stesso colore. Solo CSS, nessuna modifica a dati o Supabase.
 
