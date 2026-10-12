@@ -20,7 +20,8 @@
 //   JIRA_BASE_URL, JIRA_EMAIL, JIRA_API_TOKEN
 //
 // Contratto richiesta (POST, JSON):
-//   { "subtaskKeys": ["W07R-451", "W07R-452", ...] }   // max 500
+//   { "subtaskKeys": ["W07R-451", "W07R-452", ...],    // max 500
+//     "soloSottotask": true }                          // opzionale: salta i Task padre
 //
 // Contratto risposta (JSON):
 //   {
@@ -35,8 +36,14 @@
 //         "epicKey": "W07R-12", "epicName": "..."
 //       }, ...
 //     },
+//     "subtasks": {                                     // stato del sottotask stesso
+//       "W07R-451": { "key": "W07R-451", "summary": "...", "status": "Done",
+//                     "statusCategory": "done", "url": "https://.../browse/W07R-451" }
+//     },
 //     "count": 1
 //   }
+// "subtasks" e' usato dalla colonna "Stato" di Controllo Produzione
+// (src/js/produzione-core.js); la Mappa legge solo bySubtask/tasks.
 // statusCategory e' una delle tre categorie Jira ("new" | "indeterminate" |
 // "done"): il frontend colora su quella, non sul nome dello stato, che varia
 // da workflow a workflow.
@@ -133,22 +140,37 @@ Deno.serve(async (req: Request) => {
     rawKeys.map((k: unknown) => String(k || "").trim()).filter((k: string) => k),
   )] as string[];
 
-  if (!subtaskKeys.length) return json({ bySubtask: {}, tasks: {}, count: 0 });
+  if (!subtaskKeys.length) return json({ bySubtask: {}, tasks: {}, subtasks: {}, count: 0 });
   if (subtaskKeys.length > MAX_SUBTASKS) {
     return json({ error: `Troppi sottotask richiesti (${subtaskKeys.length}, massimo ${MAX_SUBTASKS})` }, 400);
   }
 
   try {
-    // Passo 1: sottotask -> chiave del Task padre.
-    const subIssues = await jiraSearch(subtaskKeys, ["parent"]);
+    // Passo 1: sottotask -> chiave del Task padre, piu' lo stato del sottotask stesso.
+    const subIssues = await jiraSearch(subtaskKeys, ["parent", "status", "summary"]);
     const bySubtask: Record<string, string> = {};
+    const subtasks: Record<string, unknown> = {};
     subIssues.forEach((iss: any) => {
-      const parentKey = iss?.fields?.parent?.key;
-      if (iss.key && parentKey) bySubtask[iss.key] = parentKey;
+      if (!iss.key) return;
+      const f = iss.fields || {};
+      if (f.parent?.key) bySubtask[iss.key] = f.parent.key;
+      subtasks[iss.key] = {
+        key: iss.key,
+        summary: f.summary || iss.key,
+        status: f.status?.name || "",
+        statusCategory: f.status?.statusCategory?.key || "",
+        url: `${JIRA_BASE_URL}/browse/${iss.key}`,
+      };
     });
 
+    // Il polling di Controllo Produzione (ogni 30s) vuole solo lo stato dei
+    // sottotask: niente seconda search sui Task padre.
+    if (payload?.soloSottotask === true) {
+      return json({ bySubtask, tasks: {}, subtasks, count: 0 });
+    }
+
     const taskKeys = [...new Set(Object.values(bySubtask))];
-    if (!taskKeys.length) return json({ bySubtask, tasks: {}, count: 0 });
+    if (!taskKeys.length) return json({ bySubtask, tasks: {}, subtasks, count: 0 });
 
     // Passo 2: dati dei Task padre. "parent" e' richiesto anche qui perche' il
     // padre del Task e' l'Epic (stessa gerarchia via campo parent usata da
@@ -177,7 +199,7 @@ Deno.serve(async (req: Request) => {
       };
     });
 
-    return json({ bySubtask, tasks, count: Object.keys(tasks).length });
+    return json({ bySubtask, tasks, subtasks, count: Object.keys(tasks).length });
   } catch (e) {
     return json({ error: String((e as Error)?.message || e) }, 500);
   }

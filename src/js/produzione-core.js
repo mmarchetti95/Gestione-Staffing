@@ -207,6 +207,7 @@ function pwControlloRender() {
       <th style="max-width:80px">Commessa</th><th style="max-width:70px">Squadra</th><th style="max-width:90px">Operatore</th>
       <th style="text-align:center;min-width:44px;max-width:44px">Verificato</th>
       <th>Giorno</th><th>Data</th><th style="max-width:80px">Cantiere</th><th style="max-width:80px">Attività</th>
+      <th style="text-align:center;min-width:70px;max-width:96px" title="Stato Jira dei sottotask della riga, nello stesso ordine della colonna Ticket (aggiornato ogni 30 secondi e a ogni Sincronizza da Jira)">Stato</th>
       <th style="text-align:center;min-width:44px;max-width:56px" title="Meteo osservato nel giorno sul cantiere (passa il mouse per il dettaglio)">Meteo</th>
       <th style="text-align:center;max-width:50px">Ore Jira</th><th style="min-width:66px;max-width:66px">Ticket</th><th style="min-width:80px;max-width:80px">Epic</th><th style="max-width:60px">Ore Report Prod.</th>
       <th style="min-width:40px;text-align:center">Δ Ore</th>
@@ -216,14 +217,14 @@ function pwControlloRender() {
   let ri = 0;
 
   blocks.forEach((bl, blIdx) => {
-    html += `<tr class="cp-tr-commessa" data-comm-idx="${blIdx}"><td colspan="17"><span class="cp-carr" style="cursor:pointer;user-select:none;margin-right:5px;font-size:11px;display:inline-block;width:10px;text-align:center;" onclick="cpToggleComm(${blIdx})">▼</span>📁 ${esc(bl.commessa)}</td></tr>`;
+    html += `<tr class="cp-tr-commessa" data-comm-idx="${blIdx}"><td colspan="18"><span class="cp-carr" style="cursor:pointer;user-select:none;margin-right:5px;font-size:11px;display:inline-block;width:10px;text-align:center;" onclick="cpToggleComm(${blIdx})">▼</span>📁 ${esc(bl.commessa)}</td></tr>`;
     bl.squadre.forEach((sq, sqIdx) => {
       const sqKey = blIdx + '-' + sqIdx;
-      html += `<tr class="cp-tr-squadra" data-comm-idx="${blIdx}" data-sq-idx="${sqKey}"><td colspan="17">&nbsp;&nbsp;&nbsp;<span class="cp-sarr" style="cursor:pointer;user-select:none;margin-right:5px;font-size:11px;display:inline-block;width:10px;text-align:center;" onclick="cpToggleSq('${jsAttr(sqKey)}')">▼</span>👥 ${esc(sq.nome)}<button class="no-print pw-write-action" style="margin-left:10px;font-size:11px;font-weight:600;background:#4f46e5;color:#fff;border:none;border-radius:5px;padding:2px 8px;cursor:pointer;" onclick="event.stopPropagation();pwControlloSyncJira('${jsesc(bl.commessa)}','${jsesc(sq.nome)}',this)">🔄 Sincronizza squadra</button><button class="no-print pw-write-action" style="margin-left:6px;font-size:11px;font-weight:600;background:#0ea5e9;color:#fff;border:none;border-radius:5px;padding:2px 8px;cursor:pointer;" data-help-key="cp-carica-report" title="Click destro per la guida" onclick="event.stopPropagation();cpCaricaReportSquadra('${jsesc(bl.commessa)}','${jsesc(sq.nome)}')">📄 Carica Report</button></td></tr>`;
+      html += `<tr class="cp-tr-squadra" data-comm-idx="${blIdx}" data-sq-idx="${sqKey}"><td colspan="18">&nbsp;&nbsp;&nbsp;<span class="cp-sarr" style="cursor:pointer;user-select:none;margin-right:5px;font-size:11px;display:inline-block;width:10px;text-align:center;" onclick="cpToggleSq('${jsAttr(sqKey)}')">▼</span>👥 ${esc(sq.nome)}<button class="no-print pw-write-action" style="margin-left:10px;font-size:11px;font-weight:600;background:#4f46e5;color:#fff;border:none;border-radius:5px;padding:2px 8px;cursor:pointer;" onclick="event.stopPropagation();pwControlloSyncJira('${jsesc(bl.commessa)}','${jsesc(sq.nome)}',this)">🔄 Sincronizza squadra</button><button class="no-print pw-write-action" style="margin-left:6px;font-size:11px;font-weight:600;background:#0ea5e9;color:#fff;border:none;border-radius:5px;padding:2px 8px;cursor:pointer;" data-help-key="cp-carica-report" title="Click destro per la guida" onclick="event.stopPropagation();cpCaricaReportSquadra('${jsesc(bl.commessa)}','${jsesc(sq.nome)}')">📄 Carica Report</button></td></tr>`;
       sq.giorni.forEach((gBlock, gIdx) => {
         const g   = gBlock.giornoIdx;
         const sep = gIdx > 0 ? ' cp-day-sep' : '';
-        html += `<tr class="cp-tr-day${sep}" data-comm-idx="${blIdx}" data-sq-idx="${sqKey}"><td colspan="17">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;📅 ${DAY_NAMES[g]} ${dates[g]}</td></tr>`;
+        html += `<tr class="cp-tr-day${sep}" data-comm-idx="${blIdx}" data-sq-idx="${sqKey}"><td colspan="18">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;📅 ${DAY_NAMES[g]} ${dates[g]}</td></tr>`;
 
         gBlock.ops.forEach(op => {
           const k     = `${bl.commessa}|||${sq.nome}|||${op.nome}|||${g}`;
@@ -275,6 +276,7 @@ function pwControlloRender() {
             deltaHtml = `<span style="color:#cbd5e1">—</span>`;
           }
 
+          const statoKeys = cpStatoKeysRiga(data[op.cIdx], op, tickets);
           const ci = jsesc(bl.commessa), si = jsesc(sq.nome), oi = jsesc(op.nome);
           const ca = jsesc(op.cantiere), at = jsesc(op.attivita), dt = jsesc(dates[g]);
 
@@ -287,6 +289,7 @@ function pwControlloRender() {
       <td>${dates[g]}</td>
       <td class="cp-wrap" style="color:#64748b" title="${esc(op.cantiere)}">${esc(op.cantiere)}</td>
       <td class="cp-wrap" style="color:#64748b" title="${esc(op.attivita)}">${esc(op.attivita)}</td>
+      <td class="cp-stato" data-keys="${esc(JSON.stringify(statoKeys))}" style="vertical-align:top;padding-top:4px;text-align:center">${cpStatoCellHtml(statoKeys)}</td>
       <td class="cp-meteo" data-cantieri="${esc(JSON.stringify(op.cantieri))}" data-date="${dateISOs[g]}" style="text-align:center">${cpMeteoCellHtml(op.cantieri, dateISOs[g])}</td>
       <td style="${cpOreJiraStyle(jVal, g)}"><span id="cp-j-${ri}" data-jval="${esc(String(jVal))}">${jDisplay}</span></td>
       <td style="vertical-align:top;padding-top:4px;">${ticketHtml}</td>
@@ -314,6 +317,8 @@ function pwControlloRender() {
   if (_cpSearchTerm) cpSearchOp(_cpSearchTerm);
   cpaOnControlloRender();
   cpMeteoRefresh(blocks, dateISOs);
+  cpStatoRefresh(false);
+  cpStatoStartTimer();
 }
 
 /* ----- Colonna "Meteo": meteo OSSERVATO del giorno sul cantiere (storico, meteo-storico.js) -----
@@ -372,6 +377,101 @@ async function cpMeteoRefresh(blocks, dateISOs) {
     _cpMeteoCaricate.delete(wk);
     console.warn('[controllo produzione] meteo osservato non disponibile', e);
   }
+}
+
+/* ----- Colonna "Stato": stato Jira dei sottotask della riga (Edge Function jira-task-status,
+   campo "subtasks") -----
+   Le chiavi sono quelle della colonna Ticket (worklog), nello stesso ordine così le righe si
+   allineano; dopo, i sottotask creati dalla Griglia per quell'operatore e quei cantieri che non
+   hanno ancora worklog (bc.jiraSubtask: è l'unico legame certo cantiere→sottotask). Si aggiorna
+   da solo ogni CP_STATO_POLL_MS mentre il tab è aperto e visibile, e a ogni "Sincronizza". */
+const CP_STATO_POLL_MS = 30000;
+const CP_STATO_CHUNK = 400;                 // la Edge Function accetta al massimo 500 chiavi
+const _cpStatoTicket = {};                  // chiave → { key, summary, status, statusCategory, url } | null (non trovato)
+let _cpStatoBusy = false, _cpStatoPending = false, _cpStatoTimer = null;
+
+function cpStatoKeysRiga(bc, op, tickets) {
+  const keys = [];
+  const add = (k, fonte) => { if (k && !keys.some(x => x.key === k)) keys.push({ key: k, fonte }); };
+  (tickets || []).forEach(t => add(t.key, 'ticket'));
+  const map = (bc && bc.jiraSubtask) || {};
+  (op.cantieri || []).forEach(c => pwJiraSubtaskEntriesFor(map, c, op.nome).forEach(e => add(e && e.key, 'griglia')));
+  return keys;
+}
+
+function cpStatoCellHtml(keys) {
+  if (!keys || !keys.length) return '<span style="color:#cbd5e1" title="Nessun ticket né sottotask Jira">—</span>';
+  return keys.map(x => {
+    const fonte = x.fonte === 'griglia' ? 'Sottotask creato dalla Griglia (ancora senza worklog)' : 'Ticket del worklog';
+    const t = _cpStatoTicket[x.key];
+    let lbl, bg, ttl;
+    if (t === undefined) {
+      lbl = '…'; bg = '#cbd5e1'; ttl = x.key + '\nStato in caricamento';
+    } else if (t === null) {
+      lbl = 'n/d'; bg = '#cbd5e1'; ttl = x.key + '\nNon trovato su Jira (o non visibile)';
+    } else {
+      lbl = t.status || ML_STATUS_LABELS[t.statusCategory] || 'n/d';
+      bg = ML_STATUS_COLORS[t.statusCategory] || '#94a3b8';
+      ttl = x.key + (t.summary && t.summary !== x.key ? ' — ' + t.summary : '') + '\nStato: ' + lbl;
+    }
+    const prefisso = x.fonte === 'griglia' ? '<span style="color:#64748b;font-size:10px;margin-right:3px">' + esc(x.key) + '</span>' : '';
+    return '<div style="height:24px;display:flex;align-items:center;justify-content:center;white-space:nowrap" title="' + esc(ttl + '\n' + fonte) + '">' + prefisso +
+      '<span style="display:inline-block;max-width:90px;overflow:hidden;text-overflow:ellipsis;background:' + bg + ';color:#fff;border-radius:9px;padding:1px 7px;font-size:10px;font-weight:600;line-height:16px">' + esc(lbl) + '</span></div>';
+  }).join('');
+}
+
+/* Ridisegna solo le celle Stato, senza un render completo (non fa perdere il focus agli input). */
+function cpApplyStatoToDom() {
+  document.querySelectorAll('.cp-table td.cp-stato').forEach(td => {
+    let keys = [];
+    try { keys = JSON.parse(td.dataset.keys || '[]'); } catch (_) {}
+    td.innerHTML = cpStatoCellHtml(keys);
+  });
+}
+
+/* force=false: chiede solo le chiavi mai lette (render); force=true: rilegge tutte quelle a
+   schermo (timer, Sincronizza). Una richiesta alla volta: quella che arriva durante un'altra
+   viene accodata (una sola) invece che persa. */
+async function cpStatoRefresh(force) {
+  if (!_sbClient || !_sbUser) return;
+  if (_cpStatoBusy) { if (force) _cpStatoPending = true; return; }
+  const keys = new Set();
+  document.querySelectorAll('.cp-table td.cp-stato').forEach(td => {
+    try { JSON.parse(td.dataset.keys || '[]').forEach(x => { if (force || !(x.key in _cpStatoTicket)) keys.add(x.key); }); } catch (_) {}
+  });
+  if (!keys.size) return;
+  _cpStatoBusy = true;
+  try {
+    const all = [...keys];
+    for (let i = 0; i < all.length; i += CP_STATO_CHUNK) {
+      const c = all.slice(i, i + CP_STATO_CHUNK);
+      const { data, error } = await _sbClient.functions.invoke('jira-task-status', { body: { subtaskKeys: c, soloSottotask: true } });
+      if (error) throw new Error(await _cpEdgeErr(error, 'jira-task-status'));
+      if (data && data.error) throw new Error(data.error);
+      const sub = (data && data.subtasks) || {};
+      c.forEach(k => { _cpStatoTicket[k] = sub[k] || null; });
+    }
+    cpApplyStatoToDom();
+  } catch (e) {
+    console.warn('[controllo produzione] stato Jira non disponibile', e);
+  } finally {
+    _cpStatoBusy = false;
+    if (_cpStatoPending) { _cpStatoPending = false; cpStatoRefresh(true); }
+  }
+}
+
+/* Polling: gira solo con il tab Controllo Produzione aperto; con la scheda del browser in
+   background salta il giro. Uscendo dal tab il timer si ferma da solo al giro successivo. */
+function cpStatoStartTimer() {
+  if (_cpStatoTimer) return;
+  _cpStatoTimer = setInterval(() => {
+    const weeklyEl = document.getElementById('screen-weekly');
+    if (_pwActiveTab !== 'controllo' || !weeklyEl || weeklyEl.classList.contains('hidden')) {
+      clearInterval(_cpStatoTimer); _cpStatoTimer = null; return;
+    }
+    if (document.hidden) return;
+    cpStatoRefresh(true);
+  }, CP_STATO_POLL_MS);
 }
 
 /* Apre l'intervento (operatore + giorno) nella Griglia della stessa settimana, per un
@@ -455,6 +555,7 @@ HELP_TEXTS['cp-sync-jira'] = 'Aggiorna le colonne "Ore Jira" e "Ticket/Epic" di 
 // a quella squadra invece che a tutta la settimana. btnEl: bottone da disabilitare durante
 // la sync (default il bottone globale in header, per compatibilità con la chiamata senza argomenti).
 async function pwControlloSyncJira(scopeCommessa, scopeSquadra, btnEl) {
+  cpStatoRefresh(true);
   if (!sbGuardWrite()) return;
   if (!_sbClient || !_sbUser) { showAlertModal('Sincronizzazione non disponibile in modalità offline.'); return; }
 

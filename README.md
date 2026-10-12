@@ -114,6 +114,9 @@ Limite noto: il progetto Supabase è sul piano **Free**, che non include backup 
 
 ## Changelog
 
+## v18.200.0
+- feat: **Controllo Produzione - colonna "Stato".** Prima del Meteo, lo stato Jira di ogni sottotask della riga (badge grigio = da fare, arancio = in corso, verde = completato; nome dello stato e chiave nel tooltip), nello stesso ordine della colonna Ticket. Se un operatore non ha ancora worklog, mostra lo stato dei sottotask creati dalla Griglia per quei cantieri. Si aggiorna da solo ogni 30 secondi mentre il tab è aperto e visibile, e a ogni click su "Sincronizza da Jira" / "Sincronizza squadra". Richiede la nuova versione della Edge Function `jira-task-status` (restituisce anche `subtasks`, retrocompatibile).
+
 ## v18.199.2
 - fix: **Griglia: gli ex colleghi non vengono più proposti in "Seleziona operatore".** Chi aveva ancora giorni allocati nello staffing della commessa (es. contratto a termine scaduto ma allocazioni fino a fine anno) compariva nella lista, e per giunta in cima tra quelli "della commessa". Ora i nomi presi dallo staffing passano dallo stesso filtro ex collega (segnato a mano o contratto scaduto) del pool operatori. Nessuna modifica Supabase.
 
