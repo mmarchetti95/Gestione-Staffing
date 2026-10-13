@@ -554,6 +554,27 @@
   }
   .pw-weather-cell-flash { animation: pwWeatherCellFlash 2s ease-in-out; position: relative; z-index: 1; }
   .pw-meteo-modal-missing { color: #94a3b8; font-style: italic; }
+  /* Lavagna Note/Variazioni (src/js/weekly-note-variazioni.js) */
+  .pw-nv-tipo { padding: 4px 12px; font-size: 12px; font-weight: 600; border: 1px solid #e2e8f0; background: white; color: #64748b; cursor: pointer; }
+  .pw-nv-tipo:first-child { border-radius: 6px 0 0 6px; }
+  .pw-nv-tipo:last-child { border-radius: 0 6px 6px 0; border-left: none; }
+  .pw-nv-tipo.pw-nv-tipo-on[data-nv-tipo="variazione"] { background: #fffbeb; border-color: #f59e0b; color: #92400e; }
+  .pw-nv-tipo.pw-nv-tipo-on[data-nv-tipo="nota"] { background: #eef2ff; border-color: #818cf8; color: #3730a3; }
+  .pw-nv-filtro { padding: 3px 10px; font-size: 12px; border-radius: 999px; border: 1px solid transparent; color: #64748b; background: none; cursor: pointer; }
+  .pw-nv-filtro:hover { background: #f1f5f9; }
+  .pw-nv-filtro.pw-nv-filtro-on { background: #0f172a; color: white; }
+  .pw-nv-cnt { opacity: .7; margin-left: 3px; font-variant-numeric: tabular-nums; }
+  .pw-nv-card { background: white; border: 1px solid #e2e8f0; border-left-width: 4px; border-radius: 8px; padding: 10px 12px; margin-bottom: 10px; box-shadow: 0 1px 2px rgba(15,23,42,.05); }
+  .pw-nv-card-var { border-left-color: #f59e0b; }
+  .pw-nv-card-nota { border-left-color: #818cf8; }
+  .pw-nv-chip { display: inline-flex; align-items: center; gap: 3px; font-size: 11px; font-weight: 600; padding: 1px 8px; border-radius: 999px; }
+  .pw-nv-chip-var { background: #fef3c7; color: #92400e; }
+  .pw-nv-chip-nota { background: #e0e7ff; color: #3730a3; }
+  .pw-nv-chip-giorno { background: #f1f5f9; color: #475569; font-weight: 500; }
+  .pw-nv-testo { font-size: 13.5px; color: #1e293b; white-space: pre-wrap; overflow-wrap: anywhere; line-height: 1.45; }
+  .pw-nv-meta { font-size: 11.5px; color: #94a3b8; margin-top: 6px; }
+  .pw-nv-del { font-size: 13px; padding: 0 4px; border-radius: 4px; opacity: .45; background: none; border: none; cursor: pointer; }
+  .pw-nv-del:hover { opacity: 1; background: #fee2e2; }
   .pw-meteo-fasce {
     display: flex;
     gap: 6px;
@@ -1763,7 +1784,7 @@
     <div class="flex items-center gap-2">
       <button id="btn-presentation" class="px-3 py-1.5 text-sm rounded hover:bg-white/10" style="border:1px solid var(--dark-border-strong);color:var(--dark-text);visibility:visible;">📊 Modalità presentazione</button>
       <div class="text-xs pl-2" style="border-left:1px solid var(--dark-border-strong);color:var(--dark-text-muted);">
-        <span id="app-version" class="font-medium" style="color:var(--accent);">v18.200.0</span> · Michele Marchetti
+        <span id="app-version" class="font-medium" style="color:var(--accent);">v18.201.0</span> · Michele Marchetti
         <span id="sb-role-badge" style="margin-left:8px;padding:1px 8px;border-radius:9999px;background:rgba(255,255,255,.1);color:var(--dark-text);font-weight:600;"></span>
       </div>
     </div>
@@ -1907,6 +1928,48 @@
         </tbody>
       </table>
     </div>
+  </div>
+</div>
+
+<!-- Lavagna Note/Variazioni della Griglia (src/js/weekly-note-variazioni.js). z-index sotto
+     .modal-backdrop (100050): la conferma di eliminazione deve comparire sopra. -->
+<div id="pw-nv-modal" style="display:none;position:fixed;inset:0;z-index:99999;background:var(--backdrop);align-items:center;justify-content:center;" onclick="if (event.target === this) pwCloseNoteVariazioni()">
+  <div style="background:#f8fafc;border-radius:var(--radius-lg);width:680px;max-width:96vw;max-height:90vh;box-shadow:var(--shadow-lg);display:flex;flex-direction:column;overflow:hidden;">
+    <div style="background:white;padding:18px 22px 14px;border-bottom:1px solid #e2e8f0;">
+      <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;">
+        <div>
+          <div style="font-weight:700;font-size:16px;color:#0f172a;font-family:var(--font-display);">📝 Note / Variazioni</div>
+          <div id="pw-nv-sub" style="font-size:12px;color:#64748b;margin-top:2px;"></div>
+        </div>
+        <button onclick="pwCloseNoteVariazioni()" style="padding:5px 12px;font-size:12px;border:1px solid #e2e8f0;border-radius:6px;background:white;cursor:pointer;color:#475569;">Chiudi</button>
+      </div>
+      <div id="pw-nv-composer" style="margin-top:14px;">
+        <div class="flex items-center gap-3 flex-wrap mb-2">
+          <div class="flex" role="group" aria-label="Tipo di messaggio">
+            <button type="button" class="pw-nv-tipo" data-nv-tipo="variazione" onclick="pwNvSetTipo('variazione')">🔀 Variazione</button>
+            <button type="button" class="pw-nv-tipo" data-nv-tipo="nota" onclick="pwNvSetTipo('nota')">📝 Nota</button>
+          </div>
+          <label class="text-xs text-slate-500 flex items-center gap-1.5">Riferita a
+            <select id="pw-nv-giorno" class="text-sm border border-slate-200 rounded px-2 py-1 bg-white"></select>
+          </label>
+        </div>
+        <textarea id="pw-nv-testo" rows="3" maxlength="2000" class="w-full text-sm border border-slate-200 rounded-lg px-3 py-2 focus:outline-none focus:border-teal-400 bg-white" style="resize:vertical;"></textarea>
+        <div class="flex items-center justify-between gap-3 mt-1.5">
+          <span id="pw-nv-err" class="text-xs text-red-600"></span>
+          <div class="flex items-center gap-3">
+            <span class="text-xs text-slate-400">Ctrl+Invio per pubblicare</span>
+            <button id="pw-nv-pubblica" onclick="pwNvPubblica()" class="px-4 py-1.5 text-sm bg-teal-600 text-white rounded hover:bg-teal-700 disabled:opacity-50">Pubblica</button>
+          </div>
+        </div>
+      </div>
+      <div id="pw-nv-readonly" style="display:none;margin-top:10px;" class="text-xs text-slate-500">Il tuo ruolo è di sola lettura: puoi consultare la lavagna ma non scrivere.</div>
+    </div>
+    <div id="pw-nv-filtri" class="flex items-center gap-1" style="padding:10px 22px 0;">
+      <button class="pw-nv-filtro" data-nv-filtro="tutte" onclick="pwNvSetFiltro('tutte')">Tutte<span class="pw-nv-cnt"></span></button>
+      <button class="pw-nv-filtro" data-nv-filtro="variazione" onclick="pwNvSetFiltro('variazione')">Variazioni<span class="pw-nv-cnt"></span></button>
+      <button class="pw-nv-filtro" data-nv-filtro="nota" onclick="pwNvSetFiltro('nota')">Note<span class="pw-nv-cnt"></span></button>
+    </div>
+    <div id="pw-nv-lista" style="overflow-y:auto;flex:1;padding:10px 22px 14px;"></div>
   </div>
 </div>
 
@@ -2452,6 +2515,7 @@
       <button id="pw-strumenti-refresh" data-help-key="pw-strumenti-refresh" class="px-3 py-1.5 text-sm border border-amber-300 bg-amber-50 text-amber-800 rounded hover:bg-amber-100 no-print whitespace-nowrap" title="Carica/aggiorna l'elenco strumenti dal progetto Jira GAR — Click destro per la guida">🔧 Aggiorna strumenti</button>
       <span id="pw-strumenti-status" class="text-xs text-slate-500 no-print"></span>
       <button id="pw-weather-week-btn" class="px-3 py-1.5 text-sm border border-slate-200 bg-slate-50 text-slate-400 rounded no-print whitespace-nowrap" title="Criticità meteo nei cantieri pianificati questa settimana" onclick="pwOpenWeatherWeekModal()">⛈️ Meteo settimana…</button>
+      <button id="pw-nv-btn" class="px-3 py-1.5 text-sm border border-slate-200 bg-slate-50 text-slate-500 rounded no-print whitespace-nowrap hover:bg-slate-100" title="Lavagna di note e variazioni rispetto alla programmazione della settimana" onclick="pwOpenNoteVariazioni()">📝 Note/Variazioni</button>
       <button id="pw-add-commessa" class="ml-auto px-3 py-1.5 text-sm bg-teal-600 text-white rounded hover:bg-teal-700 no-print pw-write-action whitespace-nowrap">+ Aggiungi commessa</button>
       <button id="pw-gen-mail" class="px-3 py-1.5 text-sm bg-indigo-600 text-white rounded hover:bg-indigo-700 no-print whitespace-nowrap">📧 Genera mail</button>
       <button id="pw-collapse-all" class="px-3 py-1.5 text-sm border border-slate-300 rounded hover:bg-slate-50 no-print whitespace-nowrap" title="Collassa / Espandi tutto" onclick="pwCollapseAllToggle()">≡ Collassa</button>

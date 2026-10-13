@@ -114,6 +114,9 @@ Limite noto: il progetto Supabase è sul piano **Free**, che non include backup 
 
 ## Changelog
 
+## v18.201.0
+- feat: **Griglia: lavagna "📝 Note/Variazioni".** Nuovo bottone accanto al meteo nella barra della Griglia: apre una lavagna della settimana mostrata dove scrivere note e variazioni rispetto alla programmazione iniziale. Ogni messaggio è etichettato come Variazione o Nota, può riferirsi a un giorno (Lun–Sab) o a tutta la settimana e riporta autore, data e ora (impostate dal server). Messaggi più recenti in alto, filtri Tutte/Variazioni/Note, Ctrl+Invio per pubblicare. Il bottone mostra quanti messaggi ci sono nella settimana; lavagna e contatore si aggiornano in tempo reale quando scrive un collega. Scrivono admin e responsabili, gli altri ruoli consultano; i messaggi non si modificano, si eliminano (i propri, l'admin tutti). Richiede la nuova tabella Supabase `pw_note_variazioni` con RLS e Realtime (`supabase/migrations/20261013_pw_note_variazioni.sql`, già applicata).
+
 ## v18.200.0
 - feat: **Controllo Produzione - colonna "Stato".** Prima del Meteo, lo stato Jira di ogni sottotask della riga (badge grigio = da fare, arancio = in corso, verde = completato; nome dello stato e chiave nel tooltip), nello stesso ordine della colonna Ticket. Se un operatore non ha ancora worklog, mostra lo stato dei sottotask creati dalla Griglia per quei cantieri. Si aggiorna da solo ogni 30 secondi mentre il tab è aperto e visibile, e a ogni click su "Sincronizza da Jira" / "Sincronizza squadra". Richiede la nuova versione della Edge Function `jira-task-status` (restituisce anche `subtasks`, retrocompatibile).
 

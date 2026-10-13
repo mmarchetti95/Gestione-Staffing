@@ -641,6 +641,7 @@ function pwRender() {
   // un secondo pwRender() (perderebbe focus/cursore negli input appena renderizzati).
   pwUpdateWeatherWidget();
   pwRefreshMeteoWeek();
+  pwNvUpdateButton();
 }
 
 /* ----- Statistiche settimana ----- */

@@ -730,6 +730,8 @@ async function sbOnLoggedIn() {
   sbLogActivity('Login', { email: _sbUser.email });
   sbStartHeartbeat();
   sbSubscribeRealtime();
+  pwNvSubscribe();
+  pwNvUpdateButton();
 }
 
 function sbSubscribeRealtime() {
@@ -760,6 +762,7 @@ async function sbLogout() {
     try { _sbClient.removeChannel(_sbRealtimeChannel); } catch(e) {}
     _sbRealtimeChannel = null;
   }
+  pwNvUnsubscribe();
   await sbStopHeartbeat();
   await _sbClient.auth.signOut();
   _sbUser = null;
