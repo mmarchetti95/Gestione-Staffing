@@ -114,6 +114,9 @@ Limite noto: il progetto Supabase è sul piano **Free**, che non include backup 
 
 ## Changelog
 
+## v18.201.1
+- feat: **Controllo Produzione: Stato cliccabile.** Nella colonna Stato il codice del sottotask e il badge di stato sono un link: il clic apre il sottotask su Jira in una nuova scheda del browser.
+
 ## v18.201.0
 - feat: **Griglia: lavagna "📝 Note/Variazioni".** Nuovo bottone accanto al meteo nella barra della Griglia: apre una lavagna della settimana mostrata dove scrivere note e variazioni rispetto alla programmazione iniziale. Ogni messaggio è etichettato come Variazione o Nota, può riferirsi a un giorno (Lun–Sab) o a tutta la settimana e riporta autore, data e ora (impostate dal server). Messaggi più recenti in alto, filtri Tutte/Variazioni/Note, Ctrl+Invio per pubblicare. Il bottone mostra quanti messaggi ci sono nella settimana; lavagna e contatore si aggiornano in tempo reale quando scrive un collega. Scrivono admin e responsabili, gli altri ruoli consultano; i messaggi non si modificano, si eliminano (i propri, l'admin tutti). Richiede la nuova tabella Supabase `pw_note_variazioni` con RLS e Realtime (`supabase/migrations/20261013_pw_note_variazioni.sql`, già applicata).
 

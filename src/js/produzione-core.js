@@ -414,10 +414,23 @@ function cpStatoCellHtml(keys) {
       bg = ML_STATUS_COLORS[t.statusCategory] || '#94a3b8';
       ttl = x.key + (t.summary && t.summary !== x.key ? ' — ' + t.summary : '') + '\nStato: ' + lbl;
     }
-    const prefisso = x.fonte === 'griglia' ? '<span style="color:#64748b;font-size:10px;margin-right:3px">' + esc(x.key) + '</span>' : '';
-    return '<div style="height:24px;display:flex;align-items:center;justify-content:center;white-space:nowrap" title="' + esc(ttl + '\n' + fonte) + '">' + prefisso +
-      '<span style="display:inline-block;max-width:90px;overflow:hidden;text-overflow:ellipsis;background:' + bg + ';color:#fff;border-radius:9px;padding:1px 7px;font-size:10px;font-weight:600;line-height:16px">' + esc(lbl) + '</span></div>';
+    const url = (t && t.url) || cpStatoUrlFor(x.key);
+    const prefisso = x.fonte === 'griglia' ? '<span style="color:' + (url ? '#2563eb' : '#64748b') + ';font-size:10px;margin-right:3px">' + esc(x.key) + '</span>' : '';
+    const stile = 'height:24px;display:flex;align-items:center;justify-content:center;white-space:nowrap;text-decoration:none';
+    const badge = '<span style="display:inline-block;max-width:90px;overflow:hidden;text-overflow:ellipsis;background:' + bg + ';color:#fff;border-radius:9px;padding:1px 7px;font-size:10px;font-weight:600;line-height:16px">' + esc(lbl) + '</span>';
+    if (!url) return '<div style="' + stile + '" title="' + esc(ttl + '\n' + fonte) + '">' + prefisso + badge + '</div>';
+    return '<a href="' + esc(url) + '" target="_blank" rel="noopener" style="' + stile + ';cursor:pointer" title="' + esc(ttl + '\n' + fonte + '\nClic per aprire su Jira') + '">' + prefisso + badge + '</a>';
   }).join('');
+}
+
+/* URL Jira di una chiave non (ancora) letta: la base si ricava da un ticket già in cache. */
+function cpStatoUrlFor(key) {
+  for (const k in _cpStatoTicket) {
+    const u = _cpStatoTicket[k] && _cpStatoTicket[k].url;
+    const i = u ? u.indexOf('/browse/') : -1;
+    if (i > 0) return u.slice(0, i) + '/browse/' + encodeURIComponent(key);
+  }
+  return '';
 }
 
 /* Ridisegna solo le celle Stato, senza un render completo (non fa perdere il focus agli input). */
