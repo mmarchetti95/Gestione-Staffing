@@ -500,6 +500,7 @@ function apBuildContesto(opts) {
       skills: new Set(op.skills || []),
       attestatiValidi: _apAttestatiValidi(op),
       fineRapporto: op.contratto_tipo === 'determinato' ? (op.data_fine_rapporto || null) : null,
+      seniorita: SENIORITA[op.seniorita] ? op.seniorita : '',
       base,
       commessaSettimana: commessaSettimana[nome] || null,
       staffing: staffing[nome] || new Set(),

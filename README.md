@@ -114,6 +114,9 @@ Limite noto: il progetto Supabase è sul piano **Free**, che non include backup 
 
 ## Changelog
 
+## v18.204.0
+- feat: **Seniority operatori (Senior / Junior).** Nella scheda operatore (Pool operatori → ✎) c'è il nuovo campo Seniority: Senior, Junior o non definita (default). Compare come badge 🎖 Senior / 🌱 Junior nella card del Pool e accanto al nome in Griglia. **Auto-pianifica** compone le squadre in modo da avere sempre, quando possibile, un senior con un junior o due senior: una squadra di soli junior viene scelta solo se non c'è un senior libero a distanza ragionevole (penalità equivalente a ~300 km in più), e in quel caso la riga mostra l'avviso "solo junior insieme". Vale anche per i sostituti degli ⚡ Imprevisti: accanto a un junior rimasto sul cantiere si cerca un senior. In **Griglia** l'intestazione della squadra mostra ⚠️ "solo junior" quando, in un giorno, due o più junior sono sullo stesso cantiere senza un senior (il dettaglio dei giorni è nel tooltip). Chi non ha la seniority impostata non conta come junior: nessun vincolo né avviso. Nessuna modifica allo schema Supabase (il campo vive in `state.operatori`, dominio core).
+
 ## v18.203.1
 - fix: **Genera mail: i Non disponibili senza giorni lavorativi non compaiono più.** Chi nella settimana è segnato "Non disponibile" e non ha nessun giorno con cantiere in Griglia non viene più elencato nella sua squadra (né tra i cognomi nell'intestazione) e non finisce in CC. Una squadra rimasta vuota per questo motivo, senza note o strumenti scritti, non viene riportata. Restano invece nella mail i Non disponibili che lavorano almeno un giorno e chi ha anche giorni di Ferie (elencati nella sezione Ferie).
 

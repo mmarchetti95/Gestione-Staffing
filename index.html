@@ -1805,7 +1805,7 @@
     <div class="flex items-center gap-2">
       <button id="btn-presentation" class="px-3 py-1.5 text-sm rounded hover:bg-white/10" style="border:1px solid var(--dark-border-strong);color:var(--dark-text);visibility:visible;">📊 Modalità presentazione</button>
       <div class="text-xs pl-2" style="border-left:1px solid var(--dark-border-strong);color:var(--dark-text-muted);">
-        <span id="app-version" class="font-medium" style="color:var(--accent);">v18.203.1</span> · Michele Marchetti
+        <span id="app-version" class="font-medium" style="color:var(--accent);">v18.204.0</span> · Michele Marchetti
         <span id="sb-role-badge" style="margin-left:8px;padding:1px 8px;border-radius:9999px;background:rgba(255,255,255,.1);color:var(--dark-text);font-weight:600;"></span>
       </div>
     </div>
@@ -5292,6 +5292,7 @@ function renderOperatori() {
             <div class="font-medium text-sm text-slate-900">${esc(op.nome_esteso)}</div>
             ${exBadge}
             ${provBadge}
+            ${senioritaBadgeHtml(op.seniorita)}
             ${contrattoBadge}
             ${!modoEx && isSaturo ? '<span class="text-[9px] bg-red-100 text-red-700 px-1 rounded">SATURO</span>' : ''}
             ${op.orphan ? '<span class="text-[9px] bg-slate-100 text-slate-600 px-1 rounded" title="Non presente nel foglio OPERATORI">no skill matrix</span>' : ''}
@@ -8989,6 +8990,12 @@ function openOperatoreModal(id) {
           <label class="block text-xs"><span class="text-slate-500">Data fine</span><input id="mo-data-fine" type="date" class="mt-0.5 w-full border border-slate-300 rounded px-2 py-1.5 text-sm" value="${op.data_fine_rapporto||''}"></label>
         </div>
       </div>
+      <label class="block text-xs"><span class="text-slate-600">Seniority <span class="text-slate-400 font-normal">(Auto-pianifica evita due junior insieme sullo stesso cantiere)</span></span>
+        <select id="mo-seniorita" class="mt-0.5 w-full border border-slate-300 rounded px-2 py-1.5 text-sm">
+          <option value="">— non definita —</option>
+          ${Object.keys(SENIORITA).map(k => `<option value="${k}" ${op.seniorita===k?'selected':''}>${SENIORITA[k]}</option>`).join('')}
+        </select>
+      </label>
       <div>
         <div class="text-xs text-slate-600 mb-1 font-medium">Skill</div>
         <div class="grid grid-cols-3 gap-1 p-2 bg-slate-50 rounded border border-slate-200">
@@ -9162,8 +9169,9 @@ function openOperatoreModal(id) {
     }
     const dataInizioRapporto = contrattoTipo === 'determinato' ? dataInizio : '';
     const dataFineRapporto = contrattoTipo === 'determinato' ? dataFine : '';
-    if (id) { Object.assign(op, { nome_esteso: nomeEsteso, nome, cognome, email, regione, provincia, comune_residenza: comuneResidenza, contratto_tipo: contrattoTipo, data_inizio_rapporto: dataInizioRapporto, data_fine_rapporto: dataFineRapporto, skills, attestati, attestati_dett: attestatiDett, dpi: letturaDpi.dpi, dpi_dett: letturaDpi.dett, limitazioni_dett: limitazioniDett }); await saveState('Modifica operatore', {operatore: nomeEsteso}, true); }
-    else { state.operatori.push({ ...op, nome_esteso: nomeEsteso, nome_breve: nomeEsteso, nome, cognome, email, regione, provincia, comune_residenza: comuneResidenza, contratto_tipo: contrattoTipo, data_inizio_rapporto: dataInizioRapporto, data_fine_rapporto: dataFineRapporto, skills, attestati, attestati_dett: attestatiDett, dpi: letturaDpi.dpi, dpi_dett: letturaDpi.dett, limitazioni_dett: limitazioniDett }); await saveState('Nuovo operatore', {operatore: nomeEsteso}, true); }
+    const seniorita = document.getElementById('mo-seniorita')?.value || '';
+    if (id) { Object.assign(op, { nome_esteso: nomeEsteso, nome, cognome, email, regione, provincia, comune_residenza: comuneResidenza, seniorita, contratto_tipo: contrattoTipo, data_inizio_rapporto: dataInizioRapporto, data_fine_rapporto: dataFineRapporto, skills, attestati, attestati_dett: attestatiDett, dpi: letturaDpi.dpi, dpi_dett: letturaDpi.dett, limitazioni_dett: limitazioniDett }); await saveState('Modifica operatore', {operatore: nomeEsteso}, true); }
+    else { state.operatori.push({ ...op, nome_esteso: nomeEsteso, nome_breve: nomeEsteso, nome, cognome, email, regione, provincia, comune_residenza: comuneResidenza, seniorita, contratto_tipo: contrattoTipo, data_inizio_rapporto: dataInizioRapporto, data_fine_rapporto: dataFineRapporto, skills, attestati, attestati_dett: attestatiDett, dpi: letturaDpi.dpi, dpi_dett: letturaDpi.dett, limitazioni_dett: limitazioniDett }); await saveState('Nuovo operatore', {operatore: nomeEsteso}, true); }
     renderAll(); closeModal();
   };
 }
@@ -9248,6 +9256,21 @@ function isOperatoreScaduto(op) {
 
 function getOperatoriAttivi() {
   return (state.operatori || []).filter(o => !o.licenziato && !isOperatoreScaduto(o));
+}
+
+/* Seniority dell'operatore ('senior' | 'junior' | '' = non definita). Serve ad affiancare
+   sempre, quando possibile, un senior a un junior: due junior insieme sullo stesso cantiere
+   sono da evitare. Non definita = nessun vincolo (né premiata né penalizzata). */
+const SENIORITA = { senior: 'Senior', junior: 'Junior' };
+function opSeniorita(nome) {
+  if (!nome) return '';
+  const op = (state.operatori || []).find(o => (o.nome_esteso || o.nome_breve) === nome);
+  return op && SENIORITA[op.seniorita] ? op.seniorita : '';
+}
+function senioritaBadgeHtml(seniorita) {
+  if (seniorita === 'senior') return '<span class="text-[9px] bg-indigo-50 text-indigo-700 border border-indigo-200 px-1 rounded" title="Senior">🎖 Senior</span>';
+  if (seniorita === 'junior') return '<span class="text-[9px] bg-lime-50 text-lime-700 border border-lime-200 px-1 rounded" title="Junior: da affiancare a un senior">🌱 Junior</span>';
+  return '';
 }
 
 /* Operatori con contratto a termine scaduto o in scadenza che NON sono stati segnati
@@ -14252,6 +14275,28 @@ function pwSquadraCognomi(squadra) {
   return [...new Set(cognomi)];
 }
 
+// Giorni in cui, dentro la squadra, due o più operatori stanno sullo stesso cantiere e
+// sono tutti junior (nessun senior ad affiancarli). Seniority non definita = non conta
+// come junior, per non segnalare squadre di cui non si sa nulla.
+function pwSquadraSoloJunior(squadra) {
+  const giorniLbl = ['Lun', 'Mar', 'Mer', 'Gio', 'Ven', 'Sab'];
+  const out = [];
+  for (let d = 0; d < 6; d++) {
+    const perCantiere = {};
+    (squadra.operatori || []).forEach(o => {
+      if (!o.nome || o.fornitore) return;
+      const g = (o.giorni || {})[d];
+      if (!g) return;
+      new Set(pwCellCantieri(g).map(c => c.trim().toLowerCase())).forEach(k => {
+        (perCantiere[k] = perCantiere[k] || []).push(o.nome);
+      });
+    });
+    const coppie = Object.values(perCantiere).filter(nomi => nomi.length >= 2 && nomi.every(n => opSeniorita(n) === 'junior'));
+    if (coppie.length) out.push(giorniLbl[d] + ' (' + coppie.map(n => n.join(' + ')).join('; ') + ')');
+  }
+  return out;
+}
+
 // Cerca un nome tra i dipendenti di tutti i fornitori (dipendenti esterni non
 // presenti in state.operatori, vedi dashboard-fornitori.js).
 function fornDipendenteByNome(nome) {
@@ -14451,6 +14496,7 @@ function pwRender() {
             ${pwRenderOpDropdown(cIdx, sIdx, oIdx, op.nome, op.fornitore)}
             ${badgeHtml ? `<div>${badgeHtml}</div>` : ''}
             ${dwBadge ? `<div>${dwBadge}</div>` : ''}
+            ${op.nome && !op.fornitore && opSeniorita(op.nome) ? '<div>' + senioritaBadgeHtml(opSeniorita(op.nome)) + '</div>' : ''}
             <button class="text-[9px] text-red-400 hover:text-red-600 text-left pw-write-action"
               data-cidx="${cIdx}" data-sidx="${sIdx}" data-oidx="${oIdx}"
               onclick="pwRemoveOp(this)">✕ rimuovi</button>
@@ -14463,6 +14509,10 @@ function pwRender() {
       const cognomiHtml = cognomiSquadra.length
         ? `<span class="pw-sq-cognomi" title="Operatori: ${esc(cognomiSquadra.join(', '))}">: ${esc(cognomiSquadra.join(', '))}</span>`
         : '';
+      const soloJunior = pwSquadraSoloJunior(squadra);
+      const soloJuniorHtml = soloJunior.length
+        ? '<span class="text-[10px] bg-red-50 text-red-700 border border-red-200 px-1.5 rounded" title="' + esc('Junior insieme senza un senior sullo stesso cantiere: ' + soloJunior.join(' · ')) + '">⚠️ solo junior</span>'
+        : '';
 
       return `<div class="pw-squadra-block" data-collapse-key="${cIdx}-${sIdx}">
         <div class="pw-squadra-header">
@@ -14473,6 +14523,7 @@ function pwRender() {
             data-cidx="${cIdx}" data-sidx="${sIdx}"
             onchange="pwUpdateSquadraNome(this)">
           ${cognomiHtml}
+          ${soloJuniorHtml}
           <div class="flex items-center gap-2 ml-2" style="margin-left:auto;">
             <button class="text-[10px] bg-amber-200 hover:bg-amber-300 text-amber-900 px-2 py-0.5 rounded pw-write-action"
               data-cidx="${cIdx}" data-sidx="${sIdx}"
@@ -23567,6 +23618,7 @@ const AP_PESI_DEFAULT = {
   stessaCommessa: 40,    // bonus se già in Griglia su quella commessa questa settimana
   staffing: 30,          // bonus se allocato sulla commessa nello staffing del mese
   continuita: 60,        // bonus se ieri era sullo stesso cantiere
+  soloJunior: 300,       // penalità per una squadra (2+ persone) di soli junior, senza un senior
   ritardoGiorno: 400,    // penalità per giorno oltre la scadenza (x peso priorità)
   attesaGiorno: 8,       // penalità per giorno di attesa prima di iniziare (x peso priorità)
   giornoFatto: 1000,     // valore di un giorno-squadra assegnato (x peso priorità): domina il resto
@@ -23613,6 +23665,7 @@ function _apViolaPrecedenze(ordine, precedenze) {
    ctx = {
      giorni: [0..5] indici utili,            giorniISO: {d: 'YYYY-MM-DD'},
      operatori: [{ nome, skills:Set, attestatiValidi(nome, iso)->bool, fineRapporto,
+                   seniorita: 'senior'|'junior'|'' (facoltativa, '' = nessun vincolo),
                    base: {lat,lng}|null, commessaSettimana: string|null, staffing:Set(commesse) }],
      disp: { nome: { d: 'libero'|'ferie'|'dw'|'occupato' } },
      posizione: { nome: { d: {lat,lng,label} } },   // dove è già (celle esistenti)
@@ -23623,7 +23676,8 @@ function _apViolaPrecedenze(ordine, precedenze) {
    }
    righe = [{ id, cantiere, commessa, attivita, famiglia, geo:{lat,lng}|null, giorni, nOp,
               priorita, scadenzaGiorno (indice o null), dalGiorno, giorniEsclusi:[indici],
-              skills:[], attestati:[], preferiti:[], esclusi:[] }]
+              skills:[], attestati:[], preferiti:[], esclusi:[],
+              compagni:[] (facoltativo: chi resta già sul cantiere, righe "sostituto") }]
    Output: { assegnazioni: [{rigaId, giorno, operatori:[], quota}], esiti: {rigaId: {...}},
              miglioramenti: [...], suggerimenti: [...], distanze: {stradali, stimate}, ... } */
 function apRisolvi(ctx, righe) {
@@ -23810,9 +23864,17 @@ function _apGreedy(ctx, pesi, ordinate) {
     return pesi.coppia * Math.min(ctx.modello.coppie[k] || 0, 10) / 10;
   };
 
+  /* Seniority: una squadra di 2+ persone fatta di soli junior va evitata (senior+junior o
+     senior+senior sì). Contano anche i compagni già sul cantiere (righe "sostituto").
+     Seniority non definita = nessun vincolo: la squadra non risulta "di soli junior". */
+  const soloJunior = nomi => nomi.length >= 2 &&
+    nomi.every(n => opByNome[n] && opByNome[n].seniorita === 'junior');
+
   /* Sceglie N operatori per la riga r nel giorno d: il migliore da solo, poi via via chi
      aggiunge più punteggio (individuale + affinità con i già scelti), completando se
-     possibile le skill richieste. Restituisce null se non si arriva a N. */
+     possibile le skill richieste. Il junior che chiuderebbe una squadra di soli junior paga
+     pesi.soloJunior: entra solo se non c'è un senior ragionevole. Restituisce null se non si
+     arriva a N. */
   const scegliSquadra = (r, d, candidati, ieriSuCantiere, quota, capOf, sim) => {
     const valutati = [];
     candidati.forEach(o => {
@@ -23824,7 +23886,10 @@ function _apGreedy(ctx, pesi, ordinate) {
     const scelti = [];
     const skillReq = r.skills || [];
     const coperte = new Set();
+    const compagni = (r.compagni || []).filter(n => !(r.sostituisce || []).includes(n));
     while (scelti.length < r.nOp) {
+      const chiude = scelti.length === r.nOp - 1;
+      const giaScelti = compagni.concat(scelti.map(x => x.o.nome));
       let best = null, bestTot = -Infinity;
       valutati.forEach(v => {
         if (scelti.includes(v)) return;
@@ -23832,6 +23897,7 @@ function _apGreedy(ctx, pesi, ordinate) {
         scelti.forEach(x => { tot += affinita(v.o.nome, x.o.nome); });
         const nuoveSkill = skillReq.filter(sk => !coperte.has(sk) && v.o.skills.has(sk)).length;
         tot += nuoveSkill * 80;
+        if (chiude && soloJunior(giaScelti.concat([v.o.nome]))) tot -= pesi.soloJunior;
         if (tot > bestTot || (tot === bestTot && best && v.o.nome < best.o.nome)) { bestTot = tot; best = v; }
       });
       if (!best) break;
@@ -23840,8 +23906,9 @@ function _apGreedy(ctx, pesi, ordinate) {
     }
     if (scelti.length < r.nOp) return null;
     const skillMancanti = skillReq.filter(sk => !coperte.has(sk));
-    const punti = scelti.reduce((a, v) => a + v.s, 0);
-    return { scelti, skillMancanti, punti, viaggio: scelti.some(v => v.viaggio) };
+    const junior = soloJunior(compagni.concat(scelti.map(v => v.o.nome)));
+    const punti = scelti.reduce((a, v) => a + v.s, 0) - (junior ? pesi.soloJunior : 0);
+    return { scelti, skillMancanti, punti, viaggio: scelti.some(v => v.viaggio), soloJunior: junior };
   };
 
   ordinate.forEach(r => {
@@ -23929,7 +23996,9 @@ function _apGreedy(ctx, pesi, ordinate) {
     const skillMancanti = new Set();
     const kmTot = [];
     const viaggi = [];
+    const giorniSoloJunior = [];
     migliore.piano.forEach(p => {
+      if (p.sq.soloJunior) giorniSoloJunior.push(AP_GIORNI[p.giorno]);
       const nomi = p.sq.scelti.map(v => v.o.nome);
       p.sq.scelti.forEach(v => {
         const n = v.o.nome;
@@ -23958,6 +24027,7 @@ function _apGreedy(ctx, pesi, ordinate) {
       esito.avvisi.push('finisce oltre la scadenza');
     }
     if (skillMancanti.size) esito.avvisi.push('skill non coperte: ' + Array.from(skillMancanti).join(', '));
+    if (giorniSoloJunior.length) esito.avvisi.push('solo junior insieme, nessun senior libero a distanza ragionevole: ' + giorniSoloJunior.join(', '));
     if (viaggi.length) esito.avvisi.push('viaggio da casa, mezza giornata produttiva: ' + viaggi.join(', '));
     /* Giorni saltati per allerta dentro l'arco del cantiere (o prima dell'inizio): va detto,
        altrimenti un buco nel piano sembra un errore del calcolo. */
@@ -24674,6 +24744,7 @@ function apBuildContesto(opts) {
       skills: new Set(op.skills || []),
       attestatiValidi: _apAttestatiValidi(op),
       fineRapporto: op.contratto_tipo === 'determinato' ? (op.data_fine_rapporto || null) : null,
+      seniorita: SENIORITA[op.seniorita] ? op.seniorita : '',
       base,
       commessaSettimana: commessaSettimana[nome] || null,
       staffing: staffing[nome] || new Set(),

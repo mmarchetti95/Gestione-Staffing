@@ -329,6 +329,28 @@ function pwSquadraCognomi(squadra) {
   return [...new Set(cognomi)];
 }
 
+// Giorni in cui, dentro la squadra, due o più operatori stanno sullo stesso cantiere e
+// sono tutti junior (nessun senior ad affiancarli). Seniority non definita = non conta
+// come junior, per non segnalare squadre di cui non si sa nulla.
+function pwSquadraSoloJunior(squadra) {
+  const giorniLbl = ['Lun', 'Mar', 'Mer', 'Gio', 'Ven', 'Sab'];
+  const out = [];
+  for (let d = 0; d < 6; d++) {
+    const perCantiere = {};
+    (squadra.operatori || []).forEach(o => {
+      if (!o.nome || o.fornitore) return;
+      const g = (o.giorni || {})[d];
+      if (!g) return;
+      new Set(pwCellCantieri(g).map(c => c.trim().toLowerCase())).forEach(k => {
+        (perCantiere[k] = perCantiere[k] || []).push(o.nome);
+      });
+    });
+    const coppie = Object.values(perCantiere).filter(nomi => nomi.length >= 2 && nomi.every(n => opSeniorita(n) === 'junior'));
+    if (coppie.length) out.push(giorniLbl[d] + ' (' + coppie.map(n => n.join(' + ')).join('; ') + ')');
+  }
+  return out;
+}
+
 // Cerca un nome tra i dipendenti di tutti i fornitori (dipendenti esterni non
 // presenti in state.operatori, vedi dashboard-fornitori.js).
 function fornDipendenteByNome(nome) {
@@ -528,6 +550,7 @@ function pwRender() {
             ${pwRenderOpDropdown(cIdx, sIdx, oIdx, op.nome, op.fornitore)}
             ${badgeHtml ? `<div>${badgeHtml}</div>` : ''}
             ${dwBadge ? `<div>${dwBadge}</div>` : ''}
+            ${op.nome && !op.fornitore && opSeniorita(op.nome) ? '<div>' + senioritaBadgeHtml(opSeniorita(op.nome)) + '</div>' : ''}
             <button class="text-[9px] text-red-400 hover:text-red-600 text-left pw-write-action"
               data-cidx="${cIdx}" data-sidx="${sIdx}" data-oidx="${oIdx}"
               onclick="pwRemoveOp(this)">✕ rimuovi</button>
@@ -540,6 +563,10 @@ function pwRender() {
       const cognomiHtml = cognomiSquadra.length
         ? `<span class="pw-sq-cognomi" title="Operatori: ${esc(cognomiSquadra.join(', '))}">: ${esc(cognomiSquadra.join(', '))}</span>`
         : '';
+      const soloJunior = pwSquadraSoloJunior(squadra);
+      const soloJuniorHtml = soloJunior.length
+        ? '<span class="text-[10px] bg-red-50 text-red-700 border border-red-200 px-1.5 rounded" title="' + esc('Junior insieme senza un senior sullo stesso cantiere: ' + soloJunior.join(' · ')) + '">⚠️ solo junior</span>'
+        : '';
 
       return `<div class="pw-squadra-block" data-collapse-key="${cIdx}-${sIdx}">
         <div class="pw-squadra-header">
@@ -550,6 +577,7 @@ function pwRender() {
             data-cidx="${cIdx}" data-sidx="${sIdx}"
             onchange="pwUpdateSquadraNome(this)">
           ${cognomiHtml}
+          ${soloJuniorHtml}
           <div class="flex items-center gap-2 ml-2" style="margin-left:auto;">
             <button class="text-[10px] bg-amber-200 hover:bg-amber-300 text-amber-900 px-2 py-0.5 rounded pw-write-action"
               data-cidx="${cIdx}" data-sidx="${sIdx}"

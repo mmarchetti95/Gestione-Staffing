@@ -161,6 +161,7 @@ function renderOperatori() {
             <div class="font-medium text-sm text-slate-900">${esc(op.nome_esteso)}</div>
             ${exBadge}
             ${provBadge}
+            ${senioritaBadgeHtml(op.seniorita)}
             ${contrattoBadge}
             ${!modoEx && isSaturo ? '<span class="text-[9px] bg-red-100 text-red-700 px-1 rounded">SATURO</span>' : ''}
             ${op.orphan ? '<span class="text-[9px] bg-slate-100 text-slate-600 px-1 rounded" title="Non presente nel foglio OPERATORI">no skill matrix</span>' : ''}

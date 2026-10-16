@@ -238,6 +238,7 @@ const AP_PESI_DEFAULT = {
   stessaCommessa: 40,    // bonus se già in Griglia su quella commessa questa settimana
   staffing: 30,          // bonus se allocato sulla commessa nello staffing del mese
   continuita: 60,        // bonus se ieri era sullo stesso cantiere
+  soloJunior: 300,       // penalità per una squadra (2+ persone) di soli junior, senza un senior
   ritardoGiorno: 400,    // penalità per giorno oltre la scadenza (x peso priorità)
   attesaGiorno: 8,       // penalità per giorno di attesa prima di iniziare (x peso priorità)
   giornoFatto: 1000,     // valore di un giorno-squadra assegnato (x peso priorità): domina il resto
@@ -284,6 +285,7 @@ function _apViolaPrecedenze(ordine, precedenze) {
    ctx = {
      giorni: [0..5] indici utili,            giorniISO: {d: 'YYYY-MM-DD'},
      operatori: [{ nome, skills:Set, attestatiValidi(nome, iso)->bool, fineRapporto,
+                   seniorita: 'senior'|'junior'|'' (facoltativa, '' = nessun vincolo),
                    base: {lat,lng}|null, commessaSettimana: string|null, staffing:Set(commesse) }],
      disp: { nome: { d: 'libero'|'ferie'|'dw'|'occupato' } },
      posizione: { nome: { d: {lat,lng,label} } },   // dove è già (celle esistenti)
@@ -294,7 +296,8 @@ function _apViolaPrecedenze(ordine, precedenze) {
    }
    righe = [{ id, cantiere, commessa, attivita, famiglia, geo:{lat,lng}|null, giorni, nOp,
               priorita, scadenzaGiorno (indice o null), dalGiorno, giorniEsclusi:[indici],
-              skills:[], attestati:[], preferiti:[], esclusi:[] }]
+              skills:[], attestati:[], preferiti:[], esclusi:[],
+              compagni:[] (facoltativo: chi resta già sul cantiere, righe "sostituto") }]
    Output: { assegnazioni: [{rigaId, giorno, operatori:[], quota}], esiti: {rigaId: {...}},
              miglioramenti: [...], suggerimenti: [...], distanze: {stradali, stimate}, ... } */
 function apRisolvi(ctx, righe) {
@@ -481,9 +484,17 @@ function _apGreedy(ctx, pesi, ordinate) {
     return pesi.coppia * Math.min(ctx.modello.coppie[k] || 0, 10) / 10;
   };
 
+  /* Seniority: una squadra di 2+ persone fatta di soli junior va evitata (senior+junior o
+     senior+senior sì). Contano anche i compagni già sul cantiere (righe "sostituto").
+     Seniority non definita = nessun vincolo: la squadra non risulta "di soli junior". */
+  const soloJunior = nomi => nomi.length >= 2 &&
+    nomi.every(n => opByNome[n] && opByNome[n].seniorita === 'junior');
+
   /* Sceglie N operatori per la riga r nel giorno d: il migliore da solo, poi via via chi
      aggiunge più punteggio (individuale + affinità con i già scelti), completando se
-     possibile le skill richieste. Restituisce null se non si arriva a N. */
+     possibile le skill richieste. Il junior che chiuderebbe una squadra di soli junior paga
+     pesi.soloJunior: entra solo se non c'è un senior ragionevole. Restituisce null se non si
+     arriva a N. */
   const scegliSquadra = (r, d, candidati, ieriSuCantiere, quota, capOf, sim) => {
     const valutati = [];
     candidati.forEach(o => {
@@ -495,7 +506,10 @@ function _apGreedy(ctx, pesi, ordinate) {
     const scelti = [];
     const skillReq = r.skills || [];
     const coperte = new Set();
+    const compagni = (r.compagni || []).filter(n => !(r.sostituisce || []).includes(n));
     while (scelti.length < r.nOp) {
+      const chiude = scelti.length === r.nOp - 1;
+      const giaScelti = compagni.concat(scelti.map(x => x.o.nome));
       let best = null, bestTot = -Infinity;
       valutati.forEach(v => {
         if (scelti.includes(v)) return;
@@ -503,6 +517,7 @@ function _apGreedy(ctx, pesi, ordinate) {
         scelti.forEach(x => { tot += affinita(v.o.nome, x.o.nome); });
         const nuoveSkill = skillReq.filter(sk => !coperte.has(sk) && v.o.skills.has(sk)).length;
         tot += nuoveSkill * 80;
+        if (chiude && soloJunior(giaScelti.concat([v.o.nome]))) tot -= pesi.soloJunior;
         if (tot > bestTot || (tot === bestTot && best && v.o.nome < best.o.nome)) { bestTot = tot; best = v; }
       });
       if (!best) break;
@@ -511,8 +526,9 @@ function _apGreedy(ctx, pesi, ordinate) {
     }
     if (scelti.length < r.nOp) return null;
     const skillMancanti = skillReq.filter(sk => !coperte.has(sk));
-    const punti = scelti.reduce((a, v) => a + v.s, 0);
-    return { scelti, skillMancanti, punti, viaggio: scelti.some(v => v.viaggio) };
+    const junior = soloJunior(compagni.concat(scelti.map(v => v.o.nome)));
+    const punti = scelti.reduce((a, v) => a + v.s, 0) - (junior ? pesi.soloJunior : 0);
+    return { scelti, skillMancanti, punti, viaggio: scelti.some(v => v.viaggio), soloJunior: junior };
   };
 
   ordinate.forEach(r => {
@@ -600,7 +616,9 @@ function _apGreedy(ctx, pesi, ordinate) {
     const skillMancanti = new Set();
     const kmTot = [];
     const viaggi = [];
+    const giorniSoloJunior = [];
     migliore.piano.forEach(p => {
+      if (p.sq.soloJunior) giorniSoloJunior.push(AP_GIORNI[p.giorno]);
       const nomi = p.sq.scelti.map(v => v.o.nome);
       p.sq.scelti.forEach(v => {
         const n = v.o.nome;
@@ -629,6 +647,7 @@ function _apGreedy(ctx, pesi, ordinate) {
       esito.avvisi.push('finisce oltre la scadenza');
     }
     if (skillMancanti.size) esito.avvisi.push('skill non coperte: ' + Array.from(skillMancanti).join(', '));
+    if (giorniSoloJunior.length) esito.avvisi.push('solo junior insieme, nessun senior libero a distanza ragionevole: ' + giorniSoloJunior.join(', '));
     if (viaggi.length) esito.avvisi.push('viaggio da casa, mezza giornata produttiva: ' + viaggi.join(', '));
     /* Giorni saltati per allerta dentro l'arco del cantiere (o prima dell'inizio): va detto,
        altrimenti un buco nel piano sembra un errore del calcolo. */

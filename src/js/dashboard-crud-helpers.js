@@ -416,6 +416,12 @@ function openOperatoreModal(id) {
           <label class="block text-xs"><span class="text-slate-500">Data fine</span><input id="mo-data-fine" type="date" class="mt-0.5 w-full border border-slate-300 rounded px-2 py-1.5 text-sm" value="${op.data_fine_rapporto||''}"></label>
         </div>
       </div>
+      <label class="block text-xs"><span class="text-slate-600">Seniority <span class="text-slate-400 font-normal">(Auto-pianifica evita due junior insieme sullo stesso cantiere)</span></span>
+        <select id="mo-seniorita" class="mt-0.5 w-full border border-slate-300 rounded px-2 py-1.5 text-sm">
+          <option value="">— non definita —</option>
+          ${Object.keys(SENIORITA).map(k => `<option value="${k}" ${op.seniorita===k?'selected':''}>${SENIORITA[k]}</option>`).join('')}
+        </select>
+      </label>
       <div>
         <div class="text-xs text-slate-600 mb-1 font-medium">Skill</div>
         <div class="grid grid-cols-3 gap-1 p-2 bg-slate-50 rounded border border-slate-200">
@@ -589,8 +595,9 @@ function openOperatoreModal(id) {
     }
     const dataInizioRapporto = contrattoTipo === 'determinato' ? dataInizio : '';
     const dataFineRapporto = contrattoTipo === 'determinato' ? dataFine : '';
-    if (id) { Object.assign(op, { nome_esteso: nomeEsteso, nome, cognome, email, regione, provincia, comune_residenza: comuneResidenza, contratto_tipo: contrattoTipo, data_inizio_rapporto: dataInizioRapporto, data_fine_rapporto: dataFineRapporto, skills, attestati, attestati_dett: attestatiDett, dpi: letturaDpi.dpi, dpi_dett: letturaDpi.dett, limitazioni_dett: limitazioniDett }); await saveState('Modifica operatore', {operatore: nomeEsteso}, true); }
-    else { state.operatori.push({ ...op, nome_esteso: nomeEsteso, nome_breve: nomeEsteso, nome, cognome, email, regione, provincia, comune_residenza: comuneResidenza, contratto_tipo: contrattoTipo, data_inizio_rapporto: dataInizioRapporto, data_fine_rapporto: dataFineRapporto, skills, attestati, attestati_dett: attestatiDett, dpi: letturaDpi.dpi, dpi_dett: letturaDpi.dett, limitazioni_dett: limitazioniDett }); await saveState('Nuovo operatore', {operatore: nomeEsteso}, true); }
+    const seniorita = document.getElementById('mo-seniorita')?.value || '';
+    if (id) { Object.assign(op, { nome_esteso: nomeEsteso, nome, cognome, email, regione, provincia, comune_residenza: comuneResidenza, seniorita, contratto_tipo: contrattoTipo, data_inizio_rapporto: dataInizioRapporto, data_fine_rapporto: dataFineRapporto, skills, attestati, attestati_dett: attestatiDett, dpi: letturaDpi.dpi, dpi_dett: letturaDpi.dett, limitazioni_dett: limitazioniDett }); await saveState('Modifica operatore', {operatore: nomeEsteso}, true); }
+    else { state.operatori.push({ ...op, nome_esteso: nomeEsteso, nome_breve: nomeEsteso, nome, cognome, email, regione, provincia, comune_residenza: comuneResidenza, seniorita, contratto_tipo: contrattoTipo, data_inizio_rapporto: dataInizioRapporto, data_fine_rapporto: dataFineRapporto, skills, attestati, attestati_dett: attestatiDett, dpi: letturaDpi.dpi, dpi_dett: letturaDpi.dett, limitazioni_dett: limitazioniDett }); await saveState('Nuovo operatore', {operatore: nomeEsteso}, true); }
     renderAll(); closeModal();
   };
 }
@@ -675,6 +682,21 @@ function isOperatoreScaduto(op) {
 
 function getOperatoriAttivi() {
   return (state.operatori || []).filter(o => !o.licenziato && !isOperatoreScaduto(o));
+}
+
+/* Seniority dell'operatore ('senior' | 'junior' | '' = non definita). Serve ad affiancare
+   sempre, quando possibile, un senior a un junior: due junior insieme sullo stesso cantiere
+   sono da evitare. Non definita = nessun vincolo (né premiata né penalizzata). */
+const SENIORITA = { senior: 'Senior', junior: 'Junior' };
+function opSeniorita(nome) {
+  if (!nome) return '';
+  const op = (state.operatori || []).find(o => (o.nome_esteso || o.nome_breve) === nome);
+  return op && SENIORITA[op.seniorita] ? op.seniorita : '';
+}
+function senioritaBadgeHtml(seniorita) {
+  if (seniorita === 'senior') return '<span class="text-[9px] bg-indigo-50 text-indigo-700 border border-indigo-200 px-1 rounded" title="Senior">🎖 Senior</span>';
+  if (seniorita === 'junior') return '<span class="text-[9px] bg-lime-50 text-lime-700 border border-lime-200 px-1 rounded" title="Junior: da affiancare a un senior">🌱 Junior</span>';
+  return '';
 }
 
 /* Operatori con contratto a termine scaduto o in scadenza che NON sono stati segnati
