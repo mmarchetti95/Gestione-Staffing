@@ -80,7 +80,7 @@ function pwGeneraMail() {
         const jiraHint = strumentiJiraLbl.length
           ? `<div style="font-size:10px;color:var(--accent-dark);margin-top:1px;">✓ Da griglia: ${esc(strumentiJiraLbl.join(', '))}</div>`
           : '';
-        const cognomiSq = sq ? pwSquadraCognomi(sq) : [];
+        const cognomiSq = sq ? pwSquadraCognomi({ operatori: pwMailOperatoriSquadra(sq) }) : [];
         const cognomiHtml = cognomiSq.length
           ? `<span class="text-slate-400 mx-1">·</span><span class="text-slate-500 font-normal">${esc(cognomiSq.join(', '))}</span>`
           : '';
@@ -294,14 +294,17 @@ function pwGeneraMail() {
 
       (bc.squadre || []).forEach((sq) => {
         const nomeSquadra  = sq.nome || 'Squadra';
-        const operatori    = (sq.operatori || []).filter(o => o.nome && o.nome.trim());
+        const operatori    = pwMailOperatoriSquadra(sq);
         const noteEl       = document.getElementById(`mail-note-sq-${sqInfoIdx}`);
         const strumentiEl  = document.getElementById(`mail-strumenti-sq-${sqInfoIdx}`);
         const noteSq       = noteEl      ? noteEl.value.trim()      : '';
         const strumentiSq  = strumentiEl ? strumentiEl.value.trim() : '';
         sqInfoIdx++;
+        // Squadra rimasta vuota solo per i Non disponibili esclusi: non la si scrive.
+        const haNomi = (sq.operatori || []).some(o => o.nome && o.nome.trim());
+        if (haNomi && !operatori.length && !noteSq && !strumentiSq) return;
 
-        const cognomiSq = pwSquadraCognomi(sq);
+        const cognomiSq = pwSquadraCognomi({ operatori });
         const cognomiSuffix = cognomiSq.length ? `: ${cognomiSq.join(', ')}` : '';
         testo += `\n🟡 ${nomeSquadra}${cognomiSuffix}\n`;
 
@@ -591,12 +594,13 @@ function pwGeneraMail() {
     data.forEach(bc => {
       if (!bc.commessa) return;
       (bc.squadre || []).forEach(sq => (sq.operatori || []).forEach(op => {
-        if (op.nome && op.nome.trim()) nomiSettimana.add(op.nome.trim());
+        if (op.nome && op.nome.trim() && !pwMailEscludiNonDisp(op.nome)) nomiSettimana.add(op.nome.trim());
       }));
     });
-    // Operatori in ferie/permesso/non disponibili questa settimana: inclusi tra i destinatari
+    // Operatori in ferie/permesso questa settimana: inclusi tra i destinatari. I Non
+    // disponibili senza giorni lavorativi no (pwMailEscludiNonDisp).
     Object.entries(pwGetFerieWeek()).forEach(([nome, giorni]) => {
-      if (nome && nome.trim() && Object.values(giorni).some(v => pwFerieTipo(v))) nomiSettimana.add(nome.trim());
+      if (nome && nome.trim() && Object.values(giorni).some(v => pwFerieTipo(v)) && !pwMailEscludiNonDisp(nome)) nomiSettimana.add(nome.trim());
     });
     const senzaEmail = [];
     const nonAttivi = [];
@@ -870,6 +874,22 @@ function pwOperatoreImpiegato(anno, week, nome) {
 // e Auto-pianifica per la disponibilità; la tab Doppia Week e le mail leggono il flag puro.
 function pwIsDwEffettiva(anno, week, nome) {
   return pwIsDwStart(anno, week, nome) && pwOperatoreImpiegato(anno, week, nome);
+}
+
+// Genera mail: chi nella settimana aperta è segnato "Non disponibile" e non ha nessun
+// giorno con cantiere in Griglia non compare nella mail (né nella squadra né in CC).
+// Chi ha anche giorni di Ferie resta: la sezione Ferie lo elenca e va informato.
+function pwMailEscludiNonDisp(nome) {
+  const n = (nome || '').trim();
+  const giorni = (pwFerie[pwAnno] && pwFerie[pwAnno][pwWeek] && pwFerie[pwAnno][pwWeek][n]) || {};
+  const tipi = Object.values(giorni).map(pwFerieTipo);
+  if (!tipi.includes('non_disponibile') || tipi.includes('ferie')) return false;
+  return !pwOperatoreImpiegato(pwAnno, pwWeek, n);
+}
+
+// Operatori (con nome) di una squadra che compaiono nella mail.
+function pwMailOperatoriSquadra(sq) {
+  return ((sq && sq.operatori) || []).filter(o => o.nome && o.nome.trim() && !pwMailEscludiNonDisp(o.nome));
 }
 
 function pwSetDwStart(anno, week, nome, val) {

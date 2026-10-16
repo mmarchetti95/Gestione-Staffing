@@ -114,6 +114,9 @@ Limite noto: il progetto Supabase è sul piano **Free**, che non include backup 
 
 ## Changelog
 
+## v18.203.1
+- fix: **Genera mail: i Non disponibili senza giorni lavorativi non compaiono più.** Chi nella settimana è segnato "Non disponibile" e non ha nessun giorno con cantiere in Griglia non viene più elencato nella sua squadra (né tra i cognomi nell'intestazione) e non finisce in CC. Una squadra rimasta vuota per questo motivo, senza note o strumenti scritti, non viene riportata. Restano invece nella mail i Non disponibili che lavorano almeno un giorno e chi ha anche giorni di Ferie (elencati nella sezione Ferie).
+
 ## v18.203.0
 - feat: **Ferie & Permessi: modifica massiva, ordinamento Cognome Nome e ricerca.** Accanto a ogni nome c'è una casella per selezionare la riga (Maiusc+click seleziona un intervallo, la casella nell'intestazione seleziona tutti). Con almeno una riga selezionata compare una barra azioni: scegli i giorni (Lun…Sab) e applica 🏖 Ferie, 🚫 Non disponibile o ✕ Rimuovi assenza, con conferma che riporta quanti giorni e operatori cambiano. Con "solo giorni già assenti" (attivo di default) Ferie/Non disponibile cambiano solo il tipo delle assenze esistenti, senza aggiungerne di nuove; rimuovendo un'assenza si scarta anche il dettaglio importato da Excel. La selezione si azzera cambiando settimana. Gli operatori sono mostrati e ordinati come "Cognome Nome" (chi in anagrafica è scritto "Nome Cognome" viene girato se il campo Cognome è compilato), con scelta A→Z, Z→A o "Prima chi ha assenze", salvata nel browser. La barra di ricerca porta al primo operatore che corrisponde (anche con parole parziali, in qualsiasi ordine, senza badare agli accenti), Invio passa al successivo, Maiusc+Invio al precedente; "☑ Seleziona risultati" aggiunge i trovati alla selezione.
 
