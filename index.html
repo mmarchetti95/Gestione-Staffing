@@ -1805,7 +1805,7 @@
     <div class="flex items-center gap-2">
       <button id="btn-presentation" class="px-3 py-1.5 text-sm rounded hover:bg-white/10" style="border:1px solid var(--dark-border-strong);color:var(--dark-text);visibility:visible;">📊 Modalità presentazione</button>
       <div class="text-xs pl-2" style="border-left:1px solid var(--dark-border-strong);color:var(--dark-text-muted);">
-        <span id="app-version" class="font-medium" style="color:var(--accent);">v18.204.0</span> · Michele Marchetti
+        <span id="app-version" class="font-medium" style="color:var(--accent);">v18.205.0</span> · Michele Marchetti
         <span id="sb-role-badge" style="margin-left:8px;padding:1px 8px;border-radius:9999px;background:rgba(255,255,255,.1);color:var(--dark-text);font-weight:600;"></span>
       </div>
     </div>
@@ -14057,7 +14057,32 @@ function pwOpenOpModal(cidx, sidx, oidx) {
   selProvincia.onchange = () => { filtroProvincia = selProvincia.value; buildList(search.value); };
   geoRow.appendChild(selRegione);
   geoRow.appendChild(selProvincia);
+
+  // Filtro seniority ('' = tutte, 'nd' = seniority non definita)
+  let filtroSeniorita = '';
+  const selSeniorita = document.createElement('select');
+  selSeniorita.className = 'op-modal-search';
+  selSeniorita.style.cssText = 'flex:1;';
+  selSeniorita.innerHTML = '<option value="">Tutte le seniority</option>' +
+    Object.keys(SENIORITA).map(k => '<option value="' + k + '">' + SENIORITA[k] + '</option>').join('') +
+    '<option value="nd">Non definita</option>';
+  selSeniorita.onchange = () => { filtroSeniorita = selSeniorita.value; buildList(search.value); };
+  geoRow.appendChild(selSeniorita);
   modal.appendChild(geoRow);
+
+  // Seniority: se nella squadra non c'è ancora un senior (primo operatore, o finora solo
+  // junior / seniority non definita) i senior vanno in cima, a parità di disponibilità,
+  // così che nessun junior resti senza un senior accanto. Con un senior già presente la
+  // seconda scelta è indifferente (junior o senior) e l'ordine resta quello normale.
+  const altriSquadra = ((bc.squadre[sidx] || {}).operatori || [])
+    .filter((o, i) => i !== oidx && o.nome && !o.fornitore).map(o => o.nome);
+  const serveSenior = !altriSquadra.some(n => opSeniorita(n) === 'senior');
+  const senioritaHint = document.createElement('div');
+  senioritaHint.style.cssText = 'padding:0 14px 6px;font-size:10px;color:#4338ca;';
+  senioritaHint.textContent = !serveSenior ? ''
+    : altriSquadra.length ? "🎖 In cima i senior: in squadra non c'è ancora un senior (" + altriSquadra.join(', ') + ')'
+    : '🎖 In cima i senior: è il primo operatore della squadra';
+  if (senioritaHint.textContent) modal.appendChild(senioritaHint);
 
   // Filtro skill (chip multi-selezione, AND come nel filtro Pool operatori) e
   // filtro attestati (checkbox in un pannello a comparsa, stessa logica AND) —
@@ -14133,6 +14158,12 @@ function pwOpenOpModal(cidx, sidx, oidx) {
     return true;
   }
 
+  function passaFiltroSeniorita(nome) {
+    if (!filtroSeniorita) return true;
+    const sen = opSeniorita(nome);
+    return filtroSeniorita === 'nd' ? !sen : sen === filtroSeniorita;
+  }
+
   function buildList(filter) {
     list.innerHTML = '';
 
@@ -14143,7 +14174,7 @@ function pwOpenOpModal(cidx, sidx, oidx) {
     noneEl.onclick = () => pwConfirmOpModal(cidx, sidx, oidx, '');
     list.appendChild(noneEl);
 
-    const filtrati = tuttiNomi.filter(n => (!filter || n.toLowerCase().includes(filter.toLowerCase())) && passaFiltroGeo(n) && passaFiltroSkillAttestati(n));
+    const filtrati = tuttiNomi.filter(n => (!filter || n.toLowerCase().includes(filter.toLowerCase())) && passaFiltroGeo(n) && passaFiltroSkillAttestati(n) && passaFiltroSeniorita(n));
 
     if (filtrati.length === 0) {
       const empty = document.createElement('div');
@@ -14153,24 +14184,29 @@ function pwOpenOpModal(cidx, sidx, oidx) {
       return;
     }
 
-    // Ordina per precedenza: prima i liberi e già assegnati alla commessa (staffing del
-    // mese), poi i liberi ma non assegnati alla commessa (per vicinanza alla zona di
-    // lavorazione), poi gli assegnati altrove questa settimana, poi chi e' in ferie,
-    // infine chi e' non disponibile (malattia/indisponibile a trasferta: meno "recuperabile"
-    // di una ferie pianificata, quindi in fondo); in generale, ordine alfabetico come
-    // criterio finale.
+    // Ordina per precedenza: prima i liberi, poi gli assegnati altrove questa settimana,
+    // poi chi e' in ferie, infine chi e' non disponibile (malattia/indisponibile a
+    // trasferta: meno "recuperabile" di una ferie pianificata, quindi in fondo). A parità
+    // di stato: i senior se la squadra non ne ha ancora uno (serveSenior), poi chi è già
+    // assegnato alla commessa (staffing del mese), poi la vicinanza alla zona di
+    // lavorazione; in generale, ordine alfabetico come criterio finale.
     const distanzaDi = nome => distanzaLavorazione(regioneCommessa, provinciaCommessa, opByNome[nome]?.provincia, opByNome[nome]?.regione);
     const rangoDi = nome => {
       const stato = pwStatoOperatore(nome, cidx, sidx, oidx);
-      if (stato === 'libero') return fromStaffing.has(nome) ? 0 : 1;
-      if (stato === 'assegnato') return 2;
-      if (stato === 'ferie_parziale') return 3;
-      if (stato === 'ferie') return 4;
-      return 5; // non_disponibile
+      if (stato === 'libero') return 0;
+      if (stato === 'assegnato') return 1;
+      if (stato === 'ferie_parziale') return 2;
+      if (stato === 'ferie') return 3;
+      return 4; // non_disponibile
     };
+    const senRango = nome => (serveSenior && opSeniorita(nome) === 'senior') ? 0 : 1;
     const ordinati = [...filtrati].sort((a, b) => {
       const dRango = rangoDi(a) - rangoDi(b);
       if (dRango !== 0) return dRango;
+      const dSen = senRango(a) - senRango(b);
+      if (dSen !== 0) return dSen;
+      const dComm = (fromStaffing.has(a) ? 0 : 1) - (fromStaffing.has(b) ? 0 : 1);
+      if (dComm !== 0) return dComm;
       const da = distanzaDi(a), db = distanzaDi(b);
       if (da !== db) {
         if (da === null) return 1;
@@ -14190,6 +14226,7 @@ function pwOpenOpModal(cidx, sidx, oidx) {
       const provInfo = provinciaInfo(opByNome[nome]?.provincia);
       const geoLabel = provInfo ? provInfo.nome : operatoreRegione(opByNome[nome]);
       const fornNome = fornOfNome[nome] || '';
+      const senBadge = fornNome ? '' : senioritaBadgeHtml(opSeniorita(nome));
 
       const item = document.createElement('div');
       item.className = `op-modal-item stato-${stato}${nome === nomeCorrente ? ' is-selected' : ''}`;
@@ -14198,6 +14235,7 @@ function pwOpenOpModal(cidx, sidx, oidx) {
         <span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">
           ${nome}${inCommessa ? '' : ' <span style="font-size:9px;opacity:.6;">(fuori commessa)</span>'}
           ${geoLabel ? ` <span style="font-size:9px;opacity:.6;">📍 ${esc(geoLabel)}</span>` : ''}
+          ${senBadge ? ' ' + senBadge : ''}
           ${fornNome ? ` <span style="font-size:9px;background:#e0e7ff;color:#4338ca;border-radius:3px;padding:0 4px;">🏢 ${esc(fornNome)}</span>` : ''}
         </span>
         <span class="op-modal-tag stato-${stato}">${tagLabel}</span>`;

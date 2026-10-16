@@ -114,6 +114,9 @@ Limite noto: il progetto Supabase è sul piano **Free**, che non include backup 
 
 ## Changelog
 
+## v18.205.0
+- feat: **Griglia: scelta operatore con filtro e ordinamento per seniority.** Nel modal "Seleziona operatore" c'è il nuovo filtro Seniority (Tutte / Senior / Junior / Non definita) accanto a Regione e Provincia, che si combina con gli altri filtri. Se nella squadra non c'è ancora un senior (è il primo operatore, oppure finora ci sono solo junior o persone senza seniority) i senior vengono proposti in cima, a parità di disponibilità: un senior libero viene prima di un junior libero, ma mai prima di chi è libero rispetto a chi è già assegnato o in ferie. Una riga in alto spiega il motivo. Con un senior già in squadra, per il secondo operatore va bene junior o senior e l'ordine resta quello solito (commessa, poi vicinanza). Ogni voce mostra il badge 🎖 Senior / 🌱 Junior.
+
 ## v18.204.0
 - feat: **Seniority operatori (Senior / Junior).** Nella scheda operatore (Pool operatori → ✎) c'è il nuovo campo Seniority: Senior, Junior o non definita (default). Compare come badge 🎖 Senior / 🌱 Junior nella card del Pool e accanto al nome in Griglia. **Auto-pianifica** compone le squadre in modo da avere sempre, quando possibile, un senior con un junior o due senior: una squadra di soli junior viene scelta solo se non c'è un senior libero a distanza ragionevole (penalità equivalente a ~300 km in più), e in quel caso la riga mostra l'avviso "solo junior insieme". Vale anche per i sostituti degli ⚡ Imprevisti: accanto a un junior rimasto sul cantiere si cerca un senior. In **Griglia** l'intestazione della squadra mostra ⚠️ "solo junior" quando, in un giorno, due o più junior sono sullo stesso cantiere senza un senior (il dettaglio dei giorni è nel tooltip). Chi non ha la seniority impostata non conta come junior: nessun vincolo né avviso. Nessuna modifica allo schema Supabase (il campo vive in `state.operatori`, dominio core).
 
