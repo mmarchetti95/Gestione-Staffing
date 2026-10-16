@@ -1784,7 +1784,7 @@
     <div class="flex items-center gap-2">
       <button id="btn-presentation" class="px-3 py-1.5 text-sm rounded hover:bg-white/10" style="border:1px solid var(--dark-border-strong);color:var(--dark-text);visibility:visible;">📊 Modalità presentazione</button>
       <div class="text-xs pl-2" style="border-left:1px solid var(--dark-border-strong);color:var(--dark-text-muted);">
-        <span id="app-version" class="font-medium" style="color:var(--accent);">v18.201.1</span> · Michele Marchetti
+        <span id="app-version" class="font-medium" style="color:var(--accent);">v18.201.2</span> · Michele Marchetti
         <span id="sb-role-badge" style="margin-left:8px;padding:1px 8px;border-radius:9999px;background:rgba(255,255,255,.1);color:var(--dark-text);font-weight:600;"></span>
       </div>
     </div>
@@ -4273,6 +4273,8 @@ async function sbPull() {
     // Lo screen Mappa legge pwData: va ridisegnato anche lui dopo un pull, altrimenti
     // resterebbe fermo alla pianificazione precedente finché non si cambia giorno.
     if (typeof mlOnDataChanged === 'function') mlOnDataChanged();
+    // Il modal Genera mail, se aperto, riporta nel nuovo pwData le note scritte nel frattempo.
+    if (typeof pwMailOnDataChanged === 'function') pwMailOnDataChanged();
 
     const ora = new Date().toLocaleTimeString('it-IT', { hour:'2-digit', minute:'2-digit' });
     sbUpdateUI('ok', 'Sync: aggiornato ✓', 'Ultimo sync: ' + ora);
@@ -11988,8 +11990,17 @@ function pwMailAutoGrowPair(idA, idB) {
   elB.style.height = h + 'px';
 }
 
+// Hook del modal Genera mail aperto ({ onPull }), chiamato da sbPull() dopo aver sostituito
+// pwData: null quando il modal è chiuso.
+let _pwMailModal = null;
+
+function pwMailOnDataChanged() {
+  if (_pwMailModal) _pwMailModal.onPull();
+}
+
 function pwGeneraMail() {
   const data = pwGetWeekData();
+  const mailAnno = pwAnno, mailWeek = pwWeek;
   const monday = isoWeekToMonday(pwAnno, pwWeek);
   const days = [];
   for (let i = 0; i < 6; i++) {
@@ -12007,7 +12018,7 @@ function pwGeneraMail() {
   data.forEach((bc, cIdx) => {
     if (!bc.commessa) return;
     (bc.squadre || []).forEach((sq, sIdx) => {
-      squadreInfo.push({ commessa: bc.commessa, squadraNome: sq.nome || `Squadra ${sIdx+1}`, cIdx, sIdx });
+      squadreInfo.push({ commessa: bc.commessa, squadraNome: sq.nome || `Squadra ${sIdx+1}`, nomeRaw: sq.nome || '', cIdx, sIdx });
     });
   });
 
@@ -12192,8 +12203,8 @@ function pwGeneraMail() {
   document.body.appendChild(wrap);
 
   // Chiudi solo tramite i bottoni chiudi (niente chiusura su click fuori: si perdono facilmente le note inserite)
-  document.getElementById('pw-mail-close-btn').onclick  = () => wrap.remove();
-  document.getElementById('pw-mail-chiudi-btn').onclick = () => wrap.remove();
+  document.getElementById('pw-mail-close-btn').onclick  = () => chiudiMail();
+  document.getElementById('pw-mail-chiudi-btn').onclick = () => chiudiMail();
 
   // Altezza iniziale delle textarea auto-espandibili note/strumenti per squadra, allineate a coppia.
   squadreInfo.forEach((_, i) => pwMailAutoGrowPair(`mail-note-sq-${i}`, `mail-strumenti-sq-${i}`));
@@ -12352,18 +12363,104 @@ function pwGeneraMail() {
     return testo;
   }
 
-  // Salva note e strumenti in pwData ad ogni modifica
-  async function salvaNoteSq() {
-    if (!sbGuardWrite()) return;
-    squadreInfo.forEach((s, i) => {
-      const sq = data[s.cIdx]?.squadre[s.sIdx];
-      if (!sq) return;
-      const noteEl      = document.getElementById(`mail-note-sq-${i}`);
-      const strumentiEl = document.getElementById(`mail-strumenti-sq-${i}`);
-      if (noteEl)      sq.note       = noteEl.value;
-      if (strumentiEl) sq.strumenti  = strumentiEl.value;
+  // Campi persistiti del modal. Ognuno legge/scrive SEMPRE il pwData corrente, mai
+  // riferimenti catturati all'apertura: un sbPull() (Realtime di un altro utente, o
+  // ricarica dopo un conflitto) sostituisce pwData con un oggetto nuovo, e le note scritte
+  // nel vecchio oggetto andavano perse in silenzio alla riapertura.
+  // set(v) ritorna true se ha cambiato pwData; get() ritorna null se il dato non esiste più.
+  function squadraCorrente(s) {
+    const wk = (pwData[mailAnno] && pwData[mailAnno][mailWeek]) || [];
+    const bc = wk[s.cIdx];
+    const sq = (bc && bc.commessa === s.commessa && bc.squadre) ? bc.squadre[s.sIdx] : null;
+    if (sq && (sq.nome || '') === s.nomeRaw) return sq;
+    // La Griglia è cambiata sotto il modal (squadre aggiunte/spostate): cerca per commessa + nome
+    if (!s.nomeRaw) return null;
+    for (const b of wk) {
+      if (!b || b.commessa !== s.commessa) continue;
+      const trovata = (b.squadre || []).find(x => (x.nome || '') === s.nomeRaw);
+      if (trovata) return trovata;
+    }
+    return null;
+  }
+  function campoSquadra(s, prop) {
+    return {
+      get: () => {
+        const sq = squadraCorrente(s);
+        if (!sq) return null;
+        return (typeof sq[prop] === 'string') ? sq[prop] : '';
+      },
+      set: v => {
+        const sq = squadraCorrente(s);
+        if (!sq || sq[prop] === v) return false;
+        sq[prop] = v;
+        return true;
+      }
+    };
+  }
+  function campoGlobale(prop, def) {
+    return {
+      get: () => (pwData[prop] || def),
+      set: v => {
+        if (pwData[prop] === v) return false;
+        pwData[prop] = v;
+        return true;
+      }
+    };
+  }
+  // Aggiorna il conteggio indirizzi mostrato nel titolo (visibile anche a details chiuso)
+  function aggiornaContatoreEmailSempre(count) {
+    const el = document.getElementById('mail-email-sempre-count');
+    if (el) el.textContent = `(${count} indirizzo${count === 1 ? '' : 'i'} — una per riga, ordinate alfabeticamente)`;
+  }
+
+  const campi = [];
+  squadreInfo.forEach((s, i) => {
+    // Note e strumenti squadra: le due colonne restano allineate in altezza
+    const allinea = () => pwMailAutoGrowPair(`mail-note-sq-${i}`, `mail-strumenti-sq-${i}`);
+    campi.push(Object.assign({ id: `mail-note-sq-${i}`, dopo: allinea }, campoSquadra(s, 'note')));
+    campi.push(Object.assign({ id: `mail-strumenti-sq-${i}`, dopo: allinea }, campoSquadra(s, 'strumenti')));
+  });
+  campi.push({
+    id: 'mail-note-generali',
+    get: () => (pwData.noteGenerali && pwData.noteGenerali[mailAnno] && pwData.noteGenerali[mailAnno][mailWeek]) || '',
+    set: v => {
+      if (!pwData.noteGenerali) pwData.noteGenerali = {};
+      if (!pwData.noteGenerali[mailAnno]) pwData.noteGenerali[mailAnno] = {};
+      if (pwData.noteGenerali[mailAnno][mailWeek] === v) return false;
+      pwData.noteGenerali[mailAnno][mailWeek] = v;
+      return true;
+    }
+  });
+  campi.push(Object.assign({ id: 'mail-orario-partenza' }, campoGlobale('mailOrarioPartenza', '08:00')));
+  campi.push(Object.assign({ id: 'mail-orario-lavoro' }, campoGlobale('mailOrarioLavoro', '08:00/08:30 – 16:30/17:00')));
+  // Email sempre incluse: persistita in pwData, non fa parte del testo della mail
+  campi.push({
+    id: 'mail-email-sempre',
+    get: () => pwMailParseEmailList(pwData.emailSempreIncluse || '').join('\n'),
+    set: v => {
+      if (pwData.emailSempreIncluse === v) return false;
+      pwData.emailSempreIncluse = v;
+      return true;
+    },
+    dopo: el => {
+      pwMailAutoGrow(el);
+      aggiornaContatoreEmailSempre(pwMailParseEmailList(el.value).length);
+    }
+  });
+
+  // Campi toccati dall'utente in questa apertura del modal: dopo un pull vengono
+  // riscritti nel nuovo pwData (il testo digitato vince finché il modal è aperto).
+  const modificati = new Set();
+
+  // Riscrive i campi modificati nel pwData corrente; true se qualcosa è cambiato
+  function applicaModifiche() {
+    let cambiato = false;
+    campi.forEach(c => {
+      if (!modificati.has(c.id)) return;
+      const el = document.getElementById(c.id);
+      if (el && c.set(el.value)) cambiato = true;
     });
-    await pwSave();
+    return cambiato;
   }
 
   // Prima generazione
@@ -12373,31 +12470,16 @@ function pwGeneraMail() {
   document.getElementById('mail-rigenera').onclick = () => {
     document.getElementById('mail-testo').value = componiTesto();
   };
-  // Rigenera anche quando cambiano i parametri, persistendoli in pwData
-  document.getElementById('mail-orario-partenza').addEventListener('input', (e) => {
-    if (!sbGuardWrite()) return;
-    pwData.mailOrarioPartenza = e.target.value;
-    pwSave();
-    document.getElementById('mail-testo').value = componiTesto();
-  });
-  document.getElementById('mail-orario-lavoro').addEventListener('input', (e) => {
-    if (!sbGuardWrite()) return;
-    pwData.mailOrarioLavoro = e.target.value;
-    pwSave();
-    document.getElementById('mail-testo').value = componiTesto();
-  });
-  // Aggiorna il conteggio indirizzi mostrato nel titolo (visibile anche a details chiuso)
-  function aggiornaContatoreEmailSempre(count) {
-    const el = document.getElementById('mail-email-sempre-count');
-    if (el) el.textContent = `(${count} indirizzo${count === 1 ? '' : 'i'} — una per riga, ordinate alfabeticamente)`;
-  }
-  // Email sempre incluse: persistita in pwData, non fa parte del testo della mail
-  document.getElementById('mail-email-sempre').addEventListener('input', (e) => {
-    if (!sbGuardWrite()) return;
-    pwData.emailSempreIncluse = e.target.value;
-    pwSave();
-    pwMailAutoGrow(e.target);
-    aggiornaContatoreEmailSempre(pwMailParseEmailList(e.target.value).length);
+  // Ogni modifica: salva in pwData (+ push su Supabase) e rigenera l'anteprima
+  campi.forEach(c => {
+    const el = document.getElementById(c.id);
+    if (!el) return;
+    el.addEventListener('input', () => {
+      modificati.add(c.id);
+      if (sbGuardWrite() && c.set(el.value)) pwSave();
+      if (c.dopo) c.dopo(el);
+      document.getElementById('mail-testo').value = componiTesto();
+    });
   });
   // Al blur: riordina alfabeticamente e deduplica, così la lista resta sempre "in ordine"
   // e si vede subito chi c'è/chi manca senza disturbare la digitazione in corso.
@@ -12405,34 +12487,41 @@ function pwGeneraMail() {
     if (!sbGuardWrite()) return;
     const lista = pwMailParseEmailList(e.target.value);
     e.target.value = lista.join('\n');
-    pwData.emailSempreIncluse = e.target.value;
-    pwSave();
+    modificati.add('mail-email-sempre');
+    if (pwData.emailSempreIncluse !== e.target.value) {
+      pwData.emailSempreIncluse = e.target.value;
+      pwSave();
+    }
     pwMailAutoGrow(e.target);
     aggiornaContatoreEmailSempre(lista.length);
   });
-  // Note e strumenti squadra: salva in storage + rigenera anteprima, mantenendo le due
-  // colonne (note/strumenti) allineate in altezza qualunque sia il contenuto.
-  squadreInfo.forEach((_, i) => {
-    const noteEl = document.getElementById(`mail-note-sq-${i}`);
-    if (noteEl) noteEl.addEventListener('input', () => {
-      salvaNoteSq();
+
+  // Dopo un pull: riporta nel nuovo pwData quanto scritto qui (altrimenti il push
+  // successivo salverebbe la versione remota senza queste note) e mostra le modifiche
+  // degli altri utenti nei campi non toccati qui e non in editing.
+  _pwMailModal = {
+    onPull: () => {
+      if (!document.body.contains(wrap)) { _pwMailModal = null; return; }
+      if (sbCanWrite() && applicaModifiche()) pwSave();
+      campi.forEach(c => {
+        if (modificati.has(c.id)) return;
+        const el = document.getElementById(c.id);
+        if (!el || el === document.activeElement) return;
+        const remoto = c.get();
+        if (remoto === null || remoto === el.value) return;
+        el.value = remoto;
+        if (c.dopo) c.dopo(el);
+      });
       document.getElementById('mail-testo').value = componiTesto();
-      pwMailAutoGrowPair(`mail-note-sq-${i}`, `mail-strumenti-sq-${i}`);
-    });
-    const strumentiEl = document.getElementById(`mail-strumenti-sq-${i}`);
-    if (strumentiEl) strumentiEl.addEventListener('input', () => {
-      salvaNoteSq();
-      document.getElementById('mail-testo').value = componiTesto();
-      pwMailAutoGrowPair(`mail-note-sq-${i}`, `mail-strumenti-sq-${i}`);
-    });
-  });
-  document.getElementById('mail-note-generali').addEventListener('input', (e) => {
-    if (sbGuardWrite()) {
-      pwSetNoteGeneraliWeek(e.target.value);
-      pwSave();
     }
-    document.getElementById('mail-testo').value = componiTesto();
-  });
+  };
+
+  // Chiusura: ultima riscrittura dei campi modificati nel pwData corrente, poi via il modal
+  function chiudiMail() {
+    if (sbCanWrite() && applicaModifiche()) pwSave();
+    if (_pwMailModal) _pwMailModal = null;
+    wrap.remove();
+  }
 
   // Apri Outlook con i destinatari precompilati (email degli operatori pianificati questa
   // settimana). Il testo NON va nel corpo del mailto: (il link ha un limite di lunghezza
@@ -13104,12 +13193,6 @@ function pwGetWeekData() {
 // "planning"), quindi persiste e si sincronizza tra utenti come il resto della Griglia.
 function pwGetNoteGeneraliWeek() {
   return (pwData.noteGenerali && pwData.noteGenerali[pwAnno] && pwData.noteGenerali[pwAnno][pwWeek]) || '';
-}
-
-function pwSetNoteGeneraliWeek(testo) {
-  if (!pwData.noteGenerali) pwData.noteGenerali = {};
-  if (!pwData.noteGenerali[pwAnno]) pwData.noteGenerali[pwAnno] = {};
-  pwData.noteGenerali[pwAnno][pwWeek] = testo;
 }
 
 /* ----- Calcola commesse e operatori validi per la settimana corrente ----- */

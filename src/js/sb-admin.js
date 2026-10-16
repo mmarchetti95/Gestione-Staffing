@@ -896,6 +896,8 @@ async function sbPull() {
     // Lo screen Mappa legge pwData: va ridisegnato anche lui dopo un pull, altrimenti
     // resterebbe fermo alla pianificazione precedente finché non si cambia giorno.
     if (typeof mlOnDataChanged === 'function') mlOnDataChanged();
+    // Il modal Genera mail, se aperto, riporta nel nuovo pwData le note scritte nel frattempo.
+    if (typeof pwMailOnDataChanged === 'function') pwMailOnDataChanged();
 
     const ora = new Date().toLocaleTimeString('it-IT', { hour:'2-digit', minute:'2-digit' });
     sbUpdateUI('ok', 'Sync: aggiornato ✓', 'Ultimo sync: ' + ora);
