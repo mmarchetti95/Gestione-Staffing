@@ -114,6 +114,12 @@ Limite noto: il progetto Supabase è sul piano **Free**, che non include backup 
 
 ## Changelog
 
+## v18.206.1
+- feat: **Griglia: modal "Seleziona operatore" più largo e leggibile.** Largo 640 px (al massimo il 95% dello schermo) e alto quasi quanto la finestra, con la lista che occupa tutto lo spazio libero. Testi, pulsanti delle skill, etichette di stato e legenda più grandi. I filtri Regione / Provincia / Seniority hanno uno stile proprio e vanno a capo invece di essere troncati. Ogni voce mostra il nome su una riga e sotto, senza puntini di sospensione, commessa (in commessa / fuori commessa), provenienza, seniority e fornitore. Gli attestati del filtro sono disposti su più colonne.
+
+## v18.206.0
+- feat: **Doppia Week: conferma prima di togliere una doppia week.** Cliccando su una cella in doppia week (1ª o 2ª settimana) compare ora un avviso di sicurezza con operatore, settimane e date del blocco; la doppia week viene rimossa solo con "Rimuovi doppia week". Se in quelle settimane l'operatore è già impiegato in Griglia, l'avviso lo segnala (la pianificazione non viene toccata). Nessuna modifica allo schema Supabase.
+
 ## v18.205.0
 - feat: **Griglia: scelta operatore con filtro e ordinamento per seniority.** Nel modal "Seleziona operatore" c'è il nuovo filtro Seniority (Tutte / Senior / Junior / Non definita) accanto a Regione e Provincia, che si combina con gli altri filtri. Se nella squadra non c'è ancora un senior (è il primo operatore, oppure finora ci sono solo junior o persone senza seniority) i senior vengono proposti in cima, a parità di disponibilità: un senior libero viene prima di un junior libero, ma mai prima di chi è libero rispetto a chi è già assegnato o in ferie. Una riga in alto spiega il motivo. Con un senior già in squadra, per il secondo operatore va bene junior o senior e l'ordine resta quello solito (commessa, poi vicinanza). Ogni voce mostra il badge 🎖 Senior / 🌱 Junior.
 

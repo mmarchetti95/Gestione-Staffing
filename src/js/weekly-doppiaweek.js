@@ -182,10 +182,17 @@ async function pwDwToggle(nome, anno, week) {
   const isStart  = pwIsDwStart(anno, week, nome);
   const isSecond = pwIsDwStart(prev.anno, prev.week, nome);
 
-  if (isStart) {
-    pwSetDwStart(anno, week, nome, false);           // rimuove il blocco che inizia qui
-  } else if (isSecond) {
-    pwSetDwStart(prev.anno, prev.week, nome, false);  // rimuove il blocco di cui questa è la 2ª settimana
+  if (isStart || isSecond) {
+    // Rimozione del blocco (che inizia qui o di cui questa è la 2ª settimana): chiede conferma
+    const ini = isStart ? { anno, week } : prev;
+    const fin = pwWeekAdd(ini.anno, ini.week, 1);
+    const mon = isoWeekToMonday(ini.anno, ini.week);
+    const sat = isoWeekToMonday(fin.anno, fin.week); sat.setUTCDate(sat.getUTCDate() + 5);
+    const impiegato = pwOperatoreImpiegato(ini.anno, ini.week, nome) || pwOperatoreImpiegato(fin.anno, fin.week, nome);
+    let msg = 'Rimuovere la doppia week di ' + nome + '?\n\nW' + ini.week + ' + W' + fin.week + ' (' + formatDate(mon) + ' – ' + formatDate(sat) + ')';
+    if (impiegato) msg += '\n\n⚠ In queste settimane è già impiegato in Griglia: la pianificazione non viene modificata, verifica rientro e riposo compensativo.';
+    if (!await showConfirmAsync(msg, 'Rimuovi doppia week')) return;
+    pwSetDwStart(ini.anno, ini.week, nome, false);
   } else {
     // Nuovo blocco: valida ferie su entrambe le settimane coperte
     if (pwHasFeriaWeek(anno, week, nome)) { showAlertModal(`${nome} è in ferie in questa settimana (W${week}): non assegnabile.`); return; }
