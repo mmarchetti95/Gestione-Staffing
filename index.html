@@ -14061,15 +14061,15 @@ function pwOpenOpModal(cidx, sidx, oidx) {
   let filtroRegione = '', filtroProvincia = '';
 
   const geoRow = document.createElement('div');
-  geoRow.style.cssText = 'display:flex;gap:6px;padding:0 0 6px;';
+  geoRow.className = 'op-modal-filtri';
   const selRegione = document.createElement('select');
-  selRegione.className = 'op-modal-search';
-  selRegione.style.cssText = 'flex:1;';
+  selRegione.className = 'op-modal-select';
+  selRegione.title = 'Regione di provenienza';
   selRegione.innerHTML = '<option value="">Tutte le regioni</option>' +
     REGIONI_ITALIA.map(r => `<option value="${esc(r)}">${esc(r)}</option>`).join('');
   const selProvincia = document.createElement('select');
-  selProvincia.className = 'op-modal-search';
-  selProvincia.style.cssText = 'flex:1;';
+  selProvincia.className = 'op-modal-select';
+  selProvincia.title = 'Provincia di provenienza';
   function rebuildProvinciaOptions() {
     const province = filtroRegione ? provinceDiRegione(filtroRegione) : PROVINCE_ITALIA.slice().sort((a,b) => a.nome.localeCompare(b.nome));
     selProvincia.innerHTML = '<option value="">Tutte le province</option>' +
@@ -14085,8 +14085,8 @@ function pwOpenOpModal(cidx, sidx, oidx) {
   // Filtro seniority ('' = tutte, 'nd' = seniority non definita)
   let filtroSeniorita = '';
   const selSeniorita = document.createElement('select');
-  selSeniorita.className = 'op-modal-search';
-  selSeniorita.style.cssText = 'flex:1;';
+  selSeniorita.className = 'op-modal-select';
+  selSeniorita.title = 'Seniority';
   selSeniorita.innerHTML = '<option value="">Tutte le seniority</option>' +
     Object.keys(SENIORITA).map(k => '<option value="' + k + '">' + SENIORITA[k] + '</option>').join('') +
     '<option value="nd">Non definita</option>';
@@ -14102,7 +14102,7 @@ function pwOpenOpModal(cidx, sidx, oidx) {
     .filter((o, i) => i !== oidx && o.nome && !o.fornitore).map(o => o.nome);
   const serveSenior = !altriSquadra.some(n => opSeniorita(n) === 'senior');
   const senioritaHint = document.createElement('div');
-  senioritaHint.style.cssText = 'padding:0 14px 6px;font-size:10px;color:#4338ca;';
+  senioritaHint.style.cssText = 'padding:0 16px 8px;font-size:12.5px;color:#4338ca;';
   senioritaHint.textContent = !serveSenior ? ''
     : altriSquadra.length ? "🎖 In cima i senior: in squadra non c'è ancora un senior (" + altriSquadra.join(', ') + ')'
     : '🎖 In cima i senior: è il primo operatore della squadra';
@@ -14116,9 +14116,8 @@ function pwOpenOpModal(cidx, sidx, oidx) {
   const filtroAttestati = new Set();
 
   const skillRow = document.createElement('div');
-  skillRow.style.cssText = 'display:flex;flex-wrap:wrap;gap:3px;padding:0 14px 6px;';
-  skillRow.innerHTML = SKILLS.map(s => `<button type="button" class="op-modal-skill-btn" data-skill="${esc(s)}"
-    style="font-size:9px;padding:2px 6px;border-radius:4px;border:1px solid #cbd5e1;background:#fff;color:#475569;cursor:pointer;">${esc(s)}</button>`).join('');
+  skillRow.style.cssText = 'display:flex;flex-wrap:wrap;gap:5px;padding:0 16px 8px;';
+  skillRow.innerHTML = SKILLS.map(s => '<button type="button" class="op-modal-skill-btn" data-skill="' + esc(s) + '">' + esc(s) + '</button>').join('');
   modal.appendChild(skillRow);
   function paintSkillBtn(btn, on) {
     btn.style.background = on ? '#ccfbf1' : '#fff';
@@ -14137,9 +14136,9 @@ function pwOpenOpModal(cidx, sidx, oidx) {
 
   if (ATTESTATI.length > 0) {
     const attWrap = document.createElement('details');
-    attWrap.style.cssText = 'padding:0 14px 6px;font-size:10px;';
+    attWrap.style.cssText = 'padding:0 16px 10px;font-size:12.5px;';
     attWrap.innerHTML = `<summary style="cursor:pointer;color:#64748b;user-select:none;">🎓 Filtra per attestato <span class="op-modal-att-summary">(tutti)</span></summary>
-      <div style="max-height:110px;overflow-y:auto;margin-top:4px;display:flex;flex-direction:column;gap:3px;padding:2px 2px 2px 4px;">
+      <div style="max-height:140px;overflow-y:auto;margin-top:6px;display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:4px 12px;padding:2px 2px 2px 4px;">
         ${ATTESTATI.map(a => `<label style="display:flex;align-items:center;gap:5px;cursor:pointer;color:#334155;">
           <input type="checkbox" class="op-modal-att-cb" data-att="${esc(a)}"> ${esc(a)}</label>`).join('')}
       </div>`;
@@ -14252,17 +14251,20 @@ function pwOpenOpModal(cidx, sidx, oidx) {
       const fornNome = fornOfNome[nome] || '';
       const senBadge = fornNome ? '' : senioritaBadgeHtml(opSeniorita(nome));
 
+      // Nome su una riga, dettagli (commessa, provenienza, seniority, fornitore) sotto e
+      // a capo se serve: nulla viene troncato con i puntini.
+      const meta = [
+        inCommessa ? '<span>✅ in commessa</span>' : '<span>fuori commessa</span>',
+        geoLabel ? '<span>📍 ' + esc(geoLabel) + '</span>' : '',
+        senBadge,
+        fornNome ? '<span class="op-modal-forn" style="background:#e0e7ff;color:#4338ca;border-radius:3px;padding:0 5px;">🏢 ' + esc(fornNome) + '</span>' : ''
+      ].filter(Boolean).join('');
       const item = document.createElement('div');
-      item.className = `op-modal-item stato-${stato}${nome === nomeCorrente ? ' is-selected' : ''}`;
-      item.innerHTML = `
-        <div class="op-modal-dot stato-${stato}"></div>
-        <span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">
-          ${nome}${inCommessa ? '' : ' <span style="font-size:9px;opacity:.6;">(fuori commessa)</span>'}
-          ${geoLabel ? ` <span style="font-size:9px;opacity:.6;">📍 ${esc(geoLabel)}</span>` : ''}
-          ${senBadge ? ' ' + senBadge : ''}
-          ${fornNome ? ` <span style="font-size:9px;background:#e0e7ff;color:#4338ca;border-radius:3px;padding:0 4px;">🏢 ${esc(fornNome)}</span>` : ''}
-        </span>
-        <span class="op-modal-tag stato-${stato}">${tagLabel}</span>`;
+      item.className = 'op-modal-item stato-' + stato + (nome === nomeCorrente ? ' is-selected' : '');
+      item.innerHTML = '<div class="op-modal-dot stato-' + stato + '"></div>' +
+        '<div class="op-modal-item-body"><div class="op-modal-item-nome">' + esc(nome) + '</div>' +
+        '<div class="op-modal-item-meta">' + meta + '</div></div>' +
+        '<span class="op-modal-tag stato-' + stato + '">' + tagLabel + '</span>';
       item.onclick = () => pwConfirmOpModal(cidx, sidx, oidx, nome, fornNome);
       list.appendChild(item);
     });
