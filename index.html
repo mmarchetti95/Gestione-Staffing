@@ -717,6 +717,27 @@
   .pw-ferie-cell.importata {
     box-shadow: inset 3px 0 0 #0891b2;
   }
+  /* Modifica massiva, ordinamento e ricerca (weekly-ferie-massiva.js) */
+  .pw-ferie-row .pw-ferie-op-cell { cursor: pointer; user-select: none; }
+  .pw-ferie-sel-cb { width: 14px; height: 14px; margin: 0 8px 0 0; flex-shrink: 0; cursor: pointer; accent-color: #e11d48; }
+  .pw-ferie-row.selezionata { background: #fff1f2; }
+  .pw-ferie-row.selezionata .pw-ferie-op-cell { background: #ffe4e6; color: #9f1239; }
+  .pw-ferie-row.search-hit .pw-ferie-op-cell { background: #fef9c3; }
+  .pw-ferie-row.search-current { outline: 2px solid #facc15; outline-offset: -2px; }
+  .pw-ferie-row.search-current .pw-ferie-op-cell { background: #fde047; color: #713f12; }
+  .pw-ferie-day-chip {
+    font-size: 11px; font-weight: 600; padding: 2px 7px; border-radius: 9999px;
+    border: 1px solid #cbd5e1; background: #fff; color: #94a3b8; cursor: pointer;
+  }
+  .pw-ferie-day-chip.on { background: #e11d48; border-color: #e11d48; color: #fff; }
+  .pw-ferie-bulk-btn {
+    font-size: 12px; font-weight: 600; padding: 3px 10px; border-radius: 6px; cursor: pointer;
+    border: 1px solid #fca5a5; background: #fee2e2; color: #991b1b; white-space: nowrap;
+  }
+  .pw-ferie-bulk-btn.nd { border-color: #c4b5fd; background: #ede9fe; color: #5b21b6; }
+  .pw-ferie-bulk-btn.rm { border-color: #cbd5e1; background: #f8fafc; color: #475569; }
+  .pw-ferie-bulk-btn.ghost { border-color: transparent; background: transparent; color: #64748b; font-weight: 500; }
+  .pw-ferie-bulk-btn:hover { filter: brightness(.96); }
 
   /* Badge stato operatore */
   .op-stato-badge {
@@ -1784,7 +1805,7 @@
     <div class="flex items-center gap-2">
       <button id="btn-presentation" class="px-3 py-1.5 text-sm rounded hover:bg-white/10" style="border:1px solid var(--dark-border-strong);color:var(--dark-text);visibility:visible;">📊 Modalità presentazione</button>
       <div class="text-xs pl-2" style="border-left:1px solid var(--dark-border-strong);color:var(--dark-text-muted);">
-        <span id="app-version" class="font-medium" style="color:var(--accent);">v18.202.0</span> · Michele Marchetti
+        <span id="app-version" class="font-medium" style="color:var(--accent);">v18.203.0</span> · Michele Marchetti
         <span id="sb-role-badge" style="margin-left:8px;padding:1px 8px;border-radius:9999px;background:rgba(255,255,255,.1);color:var(--dark-text);font-weight:600;"></span>
       </div>
     </div>
@@ -2543,8 +2564,25 @@
         <span class="flex items-center gap-1.5"><span class="inline-block w-3 h-3 rounded" style="background:#ede9fe;border:1px solid #c4b5fd;"></span>Non disponibile</span>
         <span class="flex items-center gap-1.5"><span class="inline-block w-3 h-3 rounded" style="background:#fff;border:1px solid #e2e8f0;box-shadow:inset 3px 0 0 #0891b2;"></span>Importato da Excel</span>
         <span class="text-slate-400">·</span>
-        <span>Click sul checkbox = Ferie · <b>click destro</b> sulla cella = scegli il tipo o rimuovi l'assenza</span>
+        <span>Click sul checkbox = Ferie · <b>click destro</b> sulla cella = scegli il tipo o rimuovi l'assenza · spunta i nomi per la <b>modifica massiva</b> (Maiusc+click = intervallo)</span>
       </div>
+      <div class="px-4 py-2 bg-white border-b border-rose-100 flex flex-wrap items-center gap-2 no-print">
+        <input id="pw-ferie-search" type="search" autocomplete="off" placeholder="🔍 Cerca operatore…"
+          class="text-sm border border-slate-300 rounded px-2 py-1 w-60 focus:outline-none focus:border-rose-400"
+          title="Porta al primo operatore che corrisponde · Invio = successivo · Maiusc+Invio = precedente · Esc = cancella"
+          oninput="pwFerieSearchInput(this.value)" onkeydown="pwFerieSearchKey(event)">
+        <span id="pw-ferie-search-count" class="text-[11px] text-slate-500"></span>
+        <button id="pw-ferie-search-sel" type="button" class="hidden text-[11px] px-2 py-1 border border-slate-300 rounded hover:bg-slate-50 text-slate-600"
+          onclick="pwFerieSelRisultati()" title="Aggiunge alla selezione tutti gli operatori trovati">☑ Seleziona risultati</button>
+        <label class="ml-auto text-xs text-slate-600 flex items-center gap-1.5">Ordina
+          <select id="pw-ferie-sort" class="text-xs border border-slate-300 rounded px-1.5 py-1" onchange="pwFerieSetSort(this.value)">
+            <option value="az">Cognome Nome (A → Z)</option>
+            <option value="za">Cognome Nome (Z → A)</option>
+            <option value="assenti">Prima chi ha assenze</option>
+          </select>
+        </label>
+      </div>
+      <div id="pw-ferie-bulkbar" class="hidden px-4 py-2 bg-rose-50 border-b border-rose-200 flex flex-wrap items-center gap-2 text-xs text-slate-700 no-print"></div>
       <div class="overflow-x-auto">
         <div id="pw-ferie-grid"></div>
       </div>
@@ -12993,12 +13031,18 @@ function pwFerieRender() {
   const gridEl = document.getElementById('pw-ferie-grid');
   if (!gridEl) return;
 
-  const allOps = getOperatoriAttivi().map(o => o.nome_esteso || o.nome).filter(Boolean).sort();
-  const cols = `150px repeat(6, 1fr) 130px`;
+  // Ordinamento, selezione e ricerca: weekly-ferie-massiva.js
+  pwFerieSelCheckWeek();
+  const ops = pwFerieOperatoriOrdinati(fw);
+  const allOps = ops.map(o => o.nome);
+  const sortEl = document.getElementById('pw-ferie-sort');
+  if (sortEl) sortEl.value = pwFerieSortMode();
+  const cols = `200px repeat(6, 1fr) 130px`;
 
   // Header
   let html = `<div class="pw-ferie-header-row" style="grid-template-columns:${cols};">
-    <div class="pw-ferie-op-cell text-[10px] text-rose-700 uppercase font-bold">Operatore</div>
+    <div class="pw-ferie-op-cell text-[10px] text-rose-700 uppercase font-bold">
+      <input type="checkbox" class="pw-ferie-sel-cb pw-ferie-sel-all no-print" title="Seleziona / deseleziona tutti" onclick="pwFerieSelAll(this.checked)">Cognome Nome</div>
     ${days.map((d, i) => {
       const ds = d.toISOString().slice(0, 10);
       const isSab = i === 5;
@@ -13012,12 +13056,14 @@ function pwFerieRender() {
 
   // Righe operatori
   const dw = pwGetFerieDettagliWeek();
-  allOps.forEach(nome => {
+  ops.forEach(({ nome, label }) => {
     const row = (fw[nome] || {});
     const allSet = [0,1,2,3,4,5].every(i => !!row[i]);
     const dettRow = dw[nome] || {};
-    html += `<div class="pw-ferie-row" style="grid-template-columns:${cols};">
-      <div class="pw-ferie-op-cell">${nome}</div>
+    const sel = _pwFerieSel.has(nome);
+    html += `<div class="pw-ferie-row${sel ? ' selezionata' : ''}" data-op="${esc(nome)}" style="grid-template-columns:${cols};">
+      <label class="pw-ferie-op-cell" title="${esc(nome)} — Maiusc+click per selezionare un intervallo">
+        <input type="checkbox" class="pw-ferie-sel-cb no-print" data-op="${esc(nome)}" ${sel ? 'checked' : ''} onclick="pwFerieSelClick(event, this)">${esc(label)}</label>
       ${days.map((d, i) => {
         const tipo = pwFerieTipo(row[i]);
         const checked = !!tipo;
@@ -13047,6 +13093,8 @@ function pwFerieRender() {
   });
 
   gridEl.innerHTML = html;
+  pwFerieSelSync();
+  pwFerieSearchApply(false);
 
   // Riepilogo disponibili
   pwFerieSummaryRender(allOps, days, DAY_NAMES, today);
@@ -13590,6 +13638,268 @@ function pwFerieDettaglioPopover(nome, day, btnEl) {
       }
     });
   }, 0);
+}
+/* ===== FERIE: MODIFICA MASSIVA, ORDINAMENTO, RICERCA ===== */
+// Strumenti della vista Ferie & Permessi per lavorare su molte righe insieme:
+// - selezione righe (casella accanto al nome, Maiusc+click = intervallo) e barra azioni
+//   che imposta Ferie / Non disponibile o rimuove l'assenza sui giorni scelti;
+// - ordinamento per "Cognome Nome" (A→Z, Z→A, oppure prima chi ha assenze);
+// - ricerca che porta al primo operatore che corrisponde (Invio = risultato successivo).
+// La selezione vale per la settimana aperta: cambiando week si azzera, per non applicare
+// per sbaglio un'azione a righe selezionate in un'altra settimana e non più visibili.
+
+const PW_FERIE_SORT_KEY = 'pw_ferie_sort_v1';
+const PW_FERIE_TIPO_LABEL = { ferie: '🏖 Ferie', non_disponibile: '🚫 Non disponibile' };
+
+let _pwFerieSel = new Set();          // nomi (nome_esteso) selezionati
+let _pwFerieSelWeek = '';             // "anno-week" a cui si riferisce la selezione
+let _pwFerieLastIdx = -1;             // ultima riga cliccata, per Maiusc+click
+let _pwFerieBulkGiorni = [true, true, true, true, true, true];
+let _pwFerieBulkSoloAssenti = true;   // Ferie/Non disp. solo sui giorni che hanno già un'assenza
+let _pwFerieSearch = { q: '', idx: 0 };
+let _pwFerieOrdine = [];              // nomi nell'ordine mostrato (intervalli e ricerca)
+let _pwFerieLabel = {};               // nome -> etichetta "Cognome Nome"
+
+function pwFerieSortMode() {
+  try {
+    const v = localStorage.getItem(PW_FERIE_SORT_KEY);
+    if (v === 'za' || v === 'assenti') return v;
+  } catch (e) {}
+  return 'az';
+}
+
+function pwFerieSetSort(v) {
+  try { localStorage.setItem(PW_FERIE_SORT_KEY, v); } catch (e) {}
+  pwFerieRender();
+}
+
+// Etichetta "Cognome Nome". In anagrafica nome_esteso è quasi sempre già "Cognome Nome",
+// ma alcuni operatori sono scritti "Nome Cognome": se il campo cognome è compilato e il
+// nome esteso finisce con esso, lo si porta davanti. In ogni altro caso (cognome vuoto o
+// che non torna con il nome esteso) si lascia il nome esteso com'è.
+function pwFerieCognomeNome(op) {
+  const esteso = ((op && (op.nome_esteso || op.nome)) || '').trim().replace(/\s+/g, ' ');
+  const cogn = ((op && op.cognome) || '').trim().replace(/\s+/g, ' ');
+  if (!cogn || !esteso) return esteso;
+  const e = esteso.toLowerCase(), c = cogn.toLowerCase();
+  if (e === c || e.startsWith(c + ' ')) return esteso;
+  if (e.endsWith(' ' + c)) return cogn + ' ' + esteso.slice(0, esteso.length - cogn.length).trim();
+  return esteso;
+}
+
+function _pwFerieHaAssenze(fw, nome) {
+  const r = fw[nome] || {};
+  return [0, 1, 2, 3, 4, 5].some(i => !!pwFerieTipo(r[i]));
+}
+
+// Operatori attivi nell'ordine scelto: [{ nome, label }]. Aggiorna anche _pwFerieOrdine e
+// _pwFerieLabel, usati da selezione a intervallo e ricerca.
+function pwFerieOperatoriOrdinati(fw) {
+  const mode = pwFerieSortMode();
+  const ops = getOperatoriAttivi()
+    .map(o => ({ nome: o.nome_esteso || o.nome, label: pwFerieCognomeNome(o) }))
+    .filter(o => o.nome);
+  ops.sort((a, b) => {
+    if (mode === 'assenti') {
+      const d = Number(_pwFerieHaAssenze(fw, b.nome)) - Number(_pwFerieHaAssenze(fw, a.nome));
+      if (d) return d;
+    }
+    const c = a.label.localeCompare(b.label, 'it', { sensitivity: 'base' });
+    return mode === 'za' ? -c : c;
+  });
+  _pwFerieOrdine = ops.map(o => o.nome);
+  _pwFerieLabel = {};
+  ops.forEach(o => { _pwFerieLabel[o.nome] = o.label; });
+  return ops;
+}
+
+// Chiamata all'inizio di pwFerieRender: azzera la selezione se è cambiata la settimana.
+function pwFerieSelCheckWeek() {
+  const k = pwAnno + '-' + pwWeek;
+  if (k === _pwFerieSelWeek) return;
+  _pwFerieSel.clear();
+  _pwFerieSelWeek = k;
+  _pwFerieLastIdx = -1;
+}
+
+/* ----- Selezione righe ----- */
+function pwFerieSelClick(ev, cb) {
+  const nome = cb.dataset.op;
+  const idx = _pwFerieOrdine.indexOf(nome);
+  const val = cb.checked;
+  if (ev && ev.shiftKey && _pwFerieLastIdx >= 0 && idx >= 0) {
+    const a = Math.min(idx, _pwFerieLastIdx), b = Math.max(idx, _pwFerieLastIdx);
+    for (let i = a; i <= b; i++) {
+      if (val) _pwFerieSel.add(_pwFerieOrdine[i]);
+      else _pwFerieSel.delete(_pwFerieOrdine[i]);
+    }
+  } else if (val) {
+    _pwFerieSel.add(nome);
+  } else {
+    _pwFerieSel.delete(nome);
+  }
+  _pwFerieLastIdx = idx;
+  pwFerieSelSync();
+}
+
+function pwFerieSelAll(val) {
+  _pwFerieSel.clear();
+  if (val) _pwFerieOrdine.forEach(n => _pwFerieSel.add(n));
+  _pwFerieLastIdx = -1;
+  pwFerieSelSync();
+}
+
+// Seleziona tutti i risultati della ricerca (aggiungendoli alla selezione esistente).
+function pwFerieSelRisultati() {
+  _pwFerieSearchMatches().forEach(n => _pwFerieSel.add(n));
+  pwFerieSelSync();
+}
+
+// Allinea caselle, evidenziazione righe, casella "tutti" e barra azioni alla selezione,
+// senza ri-renderizzare la griglia.
+function pwFerieSelSync() {
+  const grid = document.getElementById('pw-ferie-grid');
+  if (grid) {
+    grid.querySelectorAll('.pw-ferie-row[data-op]').forEach(row => {
+      const on = _pwFerieSel.has(row.dataset.op);
+      row.classList.toggle('selezionata', on);
+      const cb = row.querySelector('.pw-ferie-sel-cb');
+      if (cb) cb.checked = on;
+    });
+    const all = grid.querySelector('.pw-ferie-sel-all');
+    if (all) {
+      const n = _pwFerieOrdine.filter(x => _pwFerieSel.has(x)).length;
+      all.checked = n > 0 && n === _pwFerieOrdine.length;
+      all.indeterminate = n > 0 && n < _pwFerieOrdine.length;
+    }
+  }
+  pwFerieBulkBarRender();
+}
+
+/* ----- Barra azioni massive ----- */
+function pwFerieBulkBarRender() {
+  const bar = document.getElementById('pw-ferie-bulkbar');
+  if (!bar) return;
+  const n = _pwFerieOrdine.filter(x => _pwFerieSel.has(x)).length;
+  if (!n) { bar.classList.add('hidden'); bar.innerHTML = ''; return; }
+  bar.classList.remove('hidden');
+  const NOMI = ['Lun', 'Mar', 'Mer', 'Gio', 'Ven', 'Sab'];
+  const chips = NOMI.map((g, i) => '<button type="button" class="pw-ferie-day-chip' + (_pwFerieBulkGiorni[i] ? ' on' : '') +
+    '" onclick="pwFerieBulkToggleGiorno(' + i + ')">' + g + '</button>').join('');
+  bar.innerHTML =
+    '<span class="font-semibold text-rose-800">' + n + ' operator' + (n === 1 ? 'e' : 'i') + ' selezionat' + (n === 1 ? 'o' : 'i') + '</span>' +
+    '<span class="text-slate-300">|</span>' +
+    '<span class="flex items-center gap-1">Giorni ' + chips + '</span>' +
+    '<label class="flex items-center gap-1 cursor-pointer" title="Se attivo, Ferie / Non disponibile cambiano solo il tipo dei giorni che hanno già un\'assenza, senza aggiungerne di nuove">' +
+      '<input type="checkbox" ' + (_pwFerieBulkSoloAssenti ? 'checked' : '') + ' onchange="pwFerieBulkSetSoloAssenti(this.checked)">solo giorni già assenti</label>' +
+    '<span class="text-slate-300">|</span>' +
+    '<button type="button" class="pw-ferie-bulk-btn pw-write-action" onclick="pwFerieBulkApply(\'ferie\')">🏖 Ferie</button>' +
+    '<button type="button" class="pw-ferie-bulk-btn nd pw-write-action" onclick="pwFerieBulkApply(\'non_disponibile\')">🚫 Non disponibile</button>' +
+    '<button type="button" class="pw-ferie-bulk-btn rm pw-write-action" onclick="pwFerieBulkApply(null)">✕ Rimuovi assenza</button>' +
+    '<button type="button" class="pw-ferie-bulk-btn ghost ml-auto" onclick="pwFerieSelAll(false)">Deseleziona</button>';
+}
+
+function pwFerieBulkToggleGiorno(i) {
+  _pwFerieBulkGiorni[i] = !_pwFerieBulkGiorni[i];
+  pwFerieBulkBarRender();
+}
+
+function pwFerieBulkSetSoloAssenti(v) {
+  _pwFerieBulkSoloAssenti = !!v;
+}
+
+// tipo: 'ferie' | 'non_disponibile' | null (rimuove l'assenza).
+async function pwFerieBulkApply(tipo) {
+  if (!sbGuardWrite()) return;
+  const nomi = _pwFerieOrdine.filter(n => _pwFerieSel.has(n));
+  const giorni = [0, 1, 2, 3, 4, 5].filter(i => _pwFerieBulkGiorni[i]);
+  if (!nomi.length) return;
+  if (!giorni.length) { showAlertModal('Scegli almeno un giorno su cui applicare la modifica.'); return; }
+  const fw = pwGetFerieWeek();
+  const celle = [];
+  nomi.forEach(n => giorni.forEach(d => {
+    const att = pwFerieTipo((fw[n] || {})[d]);
+    if (tipo ? att === tipo : !att) return;            // già nello stato richiesto
+    if (tipo && _pwFerieBulkSoloAssenti && !att) return; // non aggiunge assenze nuove
+    celle.push({ n, d });
+  }));
+  if (!celle.length) {
+    showAlertModal(tipo
+      ? 'Nessun giorno da modificare: i giorni scelti sono già "' + PW_FERIE_TIPO_LABEL[tipo].slice(2).trim() + '"' +
+        (_pwFerieBulkSoloAssenti ? ' oppure non hanno assenze (togli "solo giorni già assenti" per aggiungerle).' : '.')
+      : 'Nessuna assenza da rimuovere nei giorni scelti.');
+    return;
+  }
+  const nOp = new Set(celle.map(c => c.n)).size;
+  const azione = tipo ? 'Impostare ' + PW_FERIE_TIPO_LABEL[tipo] + ' su' : 'Rimuovere l\'assenza da';
+  const ok = await showConfirmAsync(azione + ' ' + celle.length + ' giorn' + (celle.length === 1 ? 'o' : 'i') +
+    ' di ' + nOp + ' operator' + (nOp === 1 ? 'e' : 'i') + '?', tipo ? 'Applica' : 'Rimuovi');
+  if (!ok) return;
+  const dw = pwGetFerieDettagliWeek();
+  celle.forEach(({ n, d }) => {
+    if (!fw[n]) fw[n] = {};
+    fw[n][d] = tipo || false;
+    // Come pwSetFeriaTipo: togliendo l'assenza si scarta anche il dettaglio importato.
+    if (!tipo && dw[n]) delete dw[n][d];
+  });
+  await pwFerieSave();
+  pwFerieRender();
+}
+
+/* ----- Ricerca ----- */
+function _pwFerieSearchMatches() {
+  const q = pwFerieNormTokens(_pwFerieSearch.q);
+  if (!q.length) return [];
+  return _pwFerieOrdine.filter(n => {
+    const t = pwFerieNormTokens(_pwFerieLabel[n] || n);
+    return q.every(x => t.some(y => y.startsWith(x)));
+  });
+}
+
+function pwFerieSearchInput(v) {
+  _pwFerieSearch = { q: v || '', idx: 0 };
+  pwFerieSearchApply(true);
+}
+
+// Invio = risultato successivo, Maiusc+Invio = precedente, Esc = cancella.
+function pwFerieSearchKey(ev) {
+  if (ev.key === 'Enter') {
+    ev.preventDefault();
+    const n = _pwFerieSearchMatches().length;
+    if (!n) return;
+    _pwFerieSearch.idx = (_pwFerieSearch.idx + (ev.shiftKey ? -1 : 1) + n) % n;
+    pwFerieSearchApply(true);
+  } else if (ev.key === 'Escape') {
+    ev.target.value = '';
+    pwFerieSearchInput('');
+  }
+}
+
+// Evidenzia i risultati e il risultato corrente; con scroll=true porta in vista quello corrente.
+function pwFerieSearchApply(scroll) {
+  const grid = document.getElementById('pw-ferie-grid');
+  const countEl = document.getElementById('pw-ferie-search-count');
+  const selBtn = document.getElementById('pw-ferie-search-sel');
+  const matches = _pwFerieSearchMatches();
+  if (_pwFerieSearch.idx >= matches.length) _pwFerieSearch.idx = 0;
+  const cur = matches[_pwFerieSearch.idx];
+  const set = new Set(matches);
+  let curRow = null;
+  if (grid) {
+    grid.querySelectorAll('.pw-ferie-row[data-op]').forEach(row => {
+      const n = row.dataset.op;
+      row.classList.toggle('search-hit', set.has(n));
+      row.classList.toggle('search-current', n === cur);
+      if (n === cur) curRow = row;
+    });
+  }
+  if (countEl) {
+    if (!_pwFerieSearch.q.trim()) countEl.textContent = '';
+    else if (!matches.length) countEl.innerHTML = '<span class="text-rose-600">nessun risultato</span>';
+    else countEl.textContent = (_pwFerieSearch.idx + 1) + ' di ' + matches.length + (matches.length > 1 ? ' · Invio = successivo' : '');
+  }
+  if (selBtn) selBtn.classList.toggle('hidden', !matches.length);
+  if (scroll && curRow) curRow.scrollIntoView({ block: 'center', behavior: 'smooth' });
 }
 /* ===== MODAL SELEZIONE OPERATORE ===== */
 

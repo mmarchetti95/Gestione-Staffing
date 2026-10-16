@@ -1033,12 +1033,18 @@ function pwFerieRender() {
   const gridEl = document.getElementById('pw-ferie-grid');
   if (!gridEl) return;
 
-  const allOps = getOperatoriAttivi().map(o => o.nome_esteso || o.nome).filter(Boolean).sort();
-  const cols = `150px repeat(6, 1fr) 130px`;
+  // Ordinamento, selezione e ricerca: weekly-ferie-massiva.js
+  pwFerieSelCheckWeek();
+  const ops = pwFerieOperatoriOrdinati(fw);
+  const allOps = ops.map(o => o.nome);
+  const sortEl = document.getElementById('pw-ferie-sort');
+  if (sortEl) sortEl.value = pwFerieSortMode();
+  const cols = `200px repeat(6, 1fr) 130px`;
 
   // Header
   let html = `<div class="pw-ferie-header-row" style="grid-template-columns:${cols};">
-    <div class="pw-ferie-op-cell text-[10px] text-rose-700 uppercase font-bold">Operatore</div>
+    <div class="pw-ferie-op-cell text-[10px] text-rose-700 uppercase font-bold">
+      <input type="checkbox" class="pw-ferie-sel-cb pw-ferie-sel-all no-print" title="Seleziona / deseleziona tutti" onclick="pwFerieSelAll(this.checked)">Cognome Nome</div>
     ${days.map((d, i) => {
       const ds = d.toISOString().slice(0, 10);
       const isSab = i === 5;
@@ -1052,12 +1058,14 @@ function pwFerieRender() {
 
   // Righe operatori
   const dw = pwGetFerieDettagliWeek();
-  allOps.forEach(nome => {
+  ops.forEach(({ nome, label }) => {
     const row = (fw[nome] || {});
     const allSet = [0,1,2,3,4,5].every(i => !!row[i]);
     const dettRow = dw[nome] || {};
-    html += `<div class="pw-ferie-row" style="grid-template-columns:${cols};">
-      <div class="pw-ferie-op-cell">${nome}</div>
+    const sel = _pwFerieSel.has(nome);
+    html += `<div class="pw-ferie-row${sel ? ' selezionata' : ''}" data-op="${esc(nome)}" style="grid-template-columns:${cols};">
+      <label class="pw-ferie-op-cell" title="${esc(nome)} — Maiusc+click per selezionare un intervallo">
+        <input type="checkbox" class="pw-ferie-sel-cb no-print" data-op="${esc(nome)}" ${sel ? 'checked' : ''} onclick="pwFerieSelClick(event, this)">${esc(label)}</label>
       ${days.map((d, i) => {
         const tipo = pwFerieTipo(row[i]);
         const checked = !!tipo;
@@ -1087,6 +1095,8 @@ function pwFerieRender() {
   });
 
   gridEl.innerHTML = html;
+  pwFerieSelSync();
+  pwFerieSearchApply(false);
 
   // Riepilogo disponibili
   pwFerieSummaryRender(allOps, days, DAY_NAMES, today);

@@ -114,6 +114,9 @@ Limite noto: il progetto Supabase è sul piano **Free**, che non include backup 
 
 ## Changelog
 
+## v18.203.0
+- feat: **Ferie & Permessi: modifica massiva, ordinamento Cognome Nome e ricerca.** Accanto a ogni nome c'è una casella per selezionare la riga (Maiusc+click seleziona un intervallo, la casella nell'intestazione seleziona tutti). Con almeno una riga selezionata compare una barra azioni: scegli i giorni (Lun…Sab) e applica 🏖 Ferie, 🚫 Non disponibile o ✕ Rimuovi assenza, con conferma che riporta quanti giorni e operatori cambiano. Con "solo giorni già assenti" (attivo di default) Ferie/Non disponibile cambiano solo il tipo delle assenze esistenti, senza aggiungerne di nuove; rimuovendo un'assenza si scarta anche il dettaglio importato da Excel. La selezione si azzera cambiando settimana. Gli operatori sono mostrati e ordinati come "Cognome Nome" (chi in anagrafica è scritto "Nome Cognome" viene girato se il campo Cognome è compilato), con scelta A→Z, Z→A o "Prima chi ha assenze", salvata nel browser. La barra di ricerca porta al primo operatore che corrisponde (anche con parole parziali, in qualsiasi ordine, senza badare agli accenti), Invio passa al successivo, Maiusc+Invio al precedente; "☑ Seleziona risultati" aggiunge i trovati alla selezione.
+
 ## v18.202.0
 - feat: **Doppia Week: filtro e ordinamento per provenienza.** Nella barra del prospetto mensile: filtro Regione → Provincia a cascata (come in Pool operatori) e ordinamento per nome o per provenienza (regione, provincia, nome; chi non ha provenienza va in fondo). Sotto il nome di ogni operatore compare la provenienza (comune/provincia o la sola regione). L'Esporta PDF usa gli stessi filtro e ordinamento, ha una colonna Provenienza e riporta il filtro attivo nell'intestazione. La scelta resta salvata nel browser.
 

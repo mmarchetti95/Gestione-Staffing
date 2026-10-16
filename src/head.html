@@ -717,6 +717,27 @@
   .pw-ferie-cell.importata {
     box-shadow: inset 3px 0 0 #0891b2;
   }
+  /* Modifica massiva, ordinamento e ricerca (weekly-ferie-massiva.js) */
+  .pw-ferie-row .pw-ferie-op-cell { cursor: pointer; user-select: none; }
+  .pw-ferie-sel-cb { width: 14px; height: 14px; margin: 0 8px 0 0; flex-shrink: 0; cursor: pointer; accent-color: #e11d48; }
+  .pw-ferie-row.selezionata { background: #fff1f2; }
+  .pw-ferie-row.selezionata .pw-ferie-op-cell { background: #ffe4e6; color: #9f1239; }
+  .pw-ferie-row.search-hit .pw-ferie-op-cell { background: #fef9c3; }
+  .pw-ferie-row.search-current { outline: 2px solid #facc15; outline-offset: -2px; }
+  .pw-ferie-row.search-current .pw-ferie-op-cell { background: #fde047; color: #713f12; }
+  .pw-ferie-day-chip {
+    font-size: 11px; font-weight: 600; padding: 2px 7px; border-radius: 9999px;
+    border: 1px solid #cbd5e1; background: #fff; color: #94a3b8; cursor: pointer;
+  }
+  .pw-ferie-day-chip.on { background: #e11d48; border-color: #e11d48; color: #fff; }
+  .pw-ferie-bulk-btn {
+    font-size: 12px; font-weight: 600; padding: 3px 10px; border-radius: 6px; cursor: pointer;
+    border: 1px solid #fca5a5; background: #fee2e2; color: #991b1b; white-space: nowrap;
+  }
+  .pw-ferie-bulk-btn.nd { border-color: #c4b5fd; background: #ede9fe; color: #5b21b6; }
+  .pw-ferie-bulk-btn.rm { border-color: #cbd5e1; background: #f8fafc; color: #475569; }
+  .pw-ferie-bulk-btn.ghost { border-color: transparent; background: transparent; color: #64748b; font-weight: 500; }
+  .pw-ferie-bulk-btn:hover { filter: brightness(.96); }
 
   /* Badge stato operatore */
   .op-stato-badge {
@@ -1784,7 +1805,7 @@
     <div class="flex items-center gap-2">
       <button id="btn-presentation" class="px-3 py-1.5 text-sm rounded hover:bg-white/10" style="border:1px solid var(--dark-border-strong);color:var(--dark-text);visibility:visible;">📊 Modalità presentazione</button>
       <div class="text-xs pl-2" style="border-left:1px solid var(--dark-border-strong);color:var(--dark-text-muted);">
-        <span id="app-version" class="font-medium" style="color:var(--accent);">v18.202.0</span> · Michele Marchetti
+        <span id="app-version" class="font-medium" style="color:var(--accent);">v18.203.0</span> · Michele Marchetti
         <span id="sb-role-badge" style="margin-left:8px;padding:1px 8px;border-radius:9999px;background:rgba(255,255,255,.1);color:var(--dark-text);font-weight:600;"></span>
       </div>
     </div>
@@ -2543,8 +2564,25 @@
         <span class="flex items-center gap-1.5"><span class="inline-block w-3 h-3 rounded" style="background:#ede9fe;border:1px solid #c4b5fd;"></span>Non disponibile</span>
         <span class="flex items-center gap-1.5"><span class="inline-block w-3 h-3 rounded" style="background:#fff;border:1px solid #e2e8f0;box-shadow:inset 3px 0 0 #0891b2;"></span>Importato da Excel</span>
         <span class="text-slate-400">·</span>
-        <span>Click sul checkbox = Ferie · <b>click destro</b> sulla cella = scegli il tipo o rimuovi l'assenza</span>
+        <span>Click sul checkbox = Ferie · <b>click destro</b> sulla cella = scegli il tipo o rimuovi l'assenza · spunta i nomi per la <b>modifica massiva</b> (Maiusc+click = intervallo)</span>
       </div>
+      <div class="px-4 py-2 bg-white border-b border-rose-100 flex flex-wrap items-center gap-2 no-print">
+        <input id="pw-ferie-search" type="search" autocomplete="off" placeholder="🔍 Cerca operatore…"
+          class="text-sm border border-slate-300 rounded px-2 py-1 w-60 focus:outline-none focus:border-rose-400"
+          title="Porta al primo operatore che corrisponde · Invio = successivo · Maiusc+Invio = precedente · Esc = cancella"
+          oninput="pwFerieSearchInput(this.value)" onkeydown="pwFerieSearchKey(event)">
+        <span id="pw-ferie-search-count" class="text-[11px] text-slate-500"></span>
+        <button id="pw-ferie-search-sel" type="button" class="hidden text-[11px] px-2 py-1 border border-slate-300 rounded hover:bg-slate-50 text-slate-600"
+          onclick="pwFerieSelRisultati()" title="Aggiunge alla selezione tutti gli operatori trovati">☑ Seleziona risultati</button>
+        <label class="ml-auto text-xs text-slate-600 flex items-center gap-1.5">Ordina
+          <select id="pw-ferie-sort" class="text-xs border border-slate-300 rounded px-1.5 py-1" onchange="pwFerieSetSort(this.value)">
+            <option value="az">Cognome Nome (A → Z)</option>
+            <option value="za">Cognome Nome (Z → A)</option>
+            <option value="assenti">Prima chi ha assenze</option>
+          </select>
+        </label>
+      </div>
+      <div id="pw-ferie-bulkbar" class="hidden px-4 py-2 bg-rose-50 border-b border-rose-200 flex flex-wrap items-center gap-2 text-xs text-slate-700 no-print"></div>
       <div class="overflow-x-auto">
         <div id="pw-ferie-grid"></div>
       </div>

@@ -40,6 +40,7 @@ JS_FILES = [
     'dashboard-alerts-render.js',
     'weekly-mail-core.js',
     'weekly-ferie-import.js',
+    'weekly-ferie-massiva.js',
     'weekly-operatore-modal.js',
     'weekly-popover-stats.js',
     'weekly-clipboard-cantiere.js',
