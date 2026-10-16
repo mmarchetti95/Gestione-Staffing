@@ -10,16 +10,100 @@ function pwDwMonthNav(delta) {
   pwDoppiaWeekRender();
 }
 
+/* Filtro (regione → provincia a cascata, come in Pool operatori) e ordinamento
+   per provenienza. Stato per-browser in localStorage: è una comodità di vista,
+   non un dato condiviso. Valgono sia per la griglia sia per l'Esporta PDF. */
+const PW_DW_VISTA_KEY = 'pw_dw_vista_v1';
+let pwDwVista = { regione: '', provincia: '', ordine: 'nome' };
+try { Object.assign(pwDwVista, JSON.parse(localStorage.getItem(PW_DW_VISTA_KEY) || '{}')); } catch (e) { /* vista di default */ }
+
+function pwDwSetFiltro(campo, valore) {
+  pwDwVista[campo] = valore || '';
+  if (campo === 'regione') pwDwVista.provincia = '';
+  if (!pwDwVista.ordine) pwDwVista.ordine = 'nome';
+  try { localStorage.setItem(PW_DW_VISTA_KEY, JSON.stringify(pwDwVista)); } catch (e) { /* non persistito */ }
+  pwDoppiaWeekRender();
+}
+
+function _pwDwSyncControlli() {
+  const selR = document.getElementById('pw-dw-f-regione');
+  const selP = document.getElementById('pw-dw-f-provincia');
+  const selO = document.getElementById('pw-dw-ordine');
+  if (selR) {
+    if (selR.options.length <= 1) {
+      selR.innerHTML = '<option value="">Tutte le regioni</option>' +
+        REGIONI_ITALIA.map(r => '<option value="' + esc(r) + '">' + esc(r) + '</option>').join('');
+    }
+    selR.value = pwDwVista.regione;
+  }
+  if (selP) {
+    const province = pwDwVista.regione ? provinceDiRegione(pwDwVista.regione) : PROVINCE_ITALIA.slice().sort((a, b) => a.nome.localeCompare(b.nome));
+    selP.innerHTML = '<option value="">Tutte le province</option>' +
+      province.map(p => '<option value="' + p.sigla + '">' + esc(p.nome) + ' (' + p.sigla + ')</option>').join('');
+    selP.value = pwDwVista.provincia;
+  }
+  if (selO) selO.value = pwDwVista.ordine;
+}
+
+// Provenienza leggibile: "Comune (PG)", "Perugia (PG)", la sola regione o ''.
+function pwDwProvenienza(op) {
+  const info = provinciaInfo(op && op.provincia);
+  if (info) return (op.comune_residenza || info.nome) + ' (' + info.sigla + ')';
+  return operatoreRegione(op);
+}
+
+// Operatori attivi filtrati/ordinati secondo pwDwVista: [{ nome, op }]
+function pwDwOperatori() {
+  const v = pwDwVista;
+  const out = getOperatoriAttivi()
+    .map(o => ({ nome: o.nome_esteso || o.nome, op: o }))
+    .filter(x => x.nome)
+    .filter(x => {
+      if (v.provincia) return x.op.provincia === v.provincia;
+      if (v.regione) return operatoreRegione(x.op) === v.regione;
+      return true;
+    });
+  const perNome = (a, b) => a.nome.localeCompare(b.nome);
+  if (v.ordine === 'provenienza') {
+    // Regione, poi provincia, poi nome; chi non ha provenienza nota va in fondo
+    const chiave = x => {
+      const info = provinciaInfo(x.op.provincia);
+      return [operatoreRegione(x.op), info ? info.nome : ''];
+    };
+    out.sort((a, b) => {
+      const ka = chiave(a), kb = chiave(b);
+      if (!ka[0] !== !kb[0]) return ka[0] ? -1 : 1;
+      return ka[0].localeCompare(kb[0]) || (!ka[1] !== !kb[1] ? (ka[1] ? -1 : 1) : ka[1].localeCompare(kb[1])) || perNome(a, b);
+    });
+  } else {
+    out.sort(perNome);
+  }
+  return out;
+}
+
+function _pwDwFiltroLabel() {
+  if (pwDwVista.provincia) { const info = provinciaInfo(pwDwVista.provincia); return info ? info.nome + ' (' + info.sigla + ')' : pwDwVista.provincia; }
+  return pwDwVista.regione || '';
+}
+
 function pwDoppiaWeekRender() {
   const jsesc = v => (v || '').replace(/\\/g, '\\\\').replace(/'/g, "\\'");
   const label = document.getElementById('pw-dw-month-label');
   if (label) label.textContent = `${PW_MESI_IT[pwDwMonth]} ${pwDwYear}`;
   const grid = document.getElementById('pw-dw-grid');
   if (!grid) return;
+  _pwDwSyncControlli();
 
   const weeks = pwMonthWeeks(pwDwYear, pwDwMonth);
-  const ops = getOperatoriAttivi().map(o => o.nome_esteso || o.nome).filter(Boolean).sort();
-  if (ops.length === 0) { grid.innerHTML = '<div style="padding:20px;color:#94a3b8;font-size:13px;">Nessun operatore attivo.</div>'; return; }
+  const opsInfo = pwDwOperatori();
+  const ops = opsInfo.map(x => x.nome);
+  const provDi = {};
+  opsInfo.forEach(x => { provDi[x.nome] = pwDwProvenienza(x.op); });
+  if (ops.length === 0) {
+    const filtro = _pwDwFiltroLabel();
+    grid.innerHTML = '<div style="padding:20px;color:#94a3b8;font-size:13px;">' + (filtro ? 'Nessun operatore attivo con provenienza ' + esc(filtro) + '.' : 'Nessun operatore attivo.') + '</div>';
+    return;
+  }
 
   const colW = 84; // larghezza minima colonna settimana
   const cols = `180px repeat(${weeks.length}, minmax(${colW}px, 1fr))`;
@@ -39,8 +123,10 @@ function pwDoppiaWeekRender() {
   ops.forEach(nome => {
     const cnt = pwDwCount(nome, weeks, pwDwYear);
     html += `<div style="display:grid;grid-template-columns:${cols};min-width:${minW}px;">`;
-    html += `<div style="position:sticky;left:0;z-index:1;background:#fff;padding:4px 8px;border-bottom:1px solid #f1f5f9;overflow:hidden;" title="${esc(nome)}">
+    const prov = provDi[nome];
+    html += `<div style="position:sticky;left:0;z-index:1;background:#fff;padding:4px 8px;border-bottom:1px solid #f1f5f9;overflow:hidden;" title="${esc(nome + (prov ? ' · ' + prov : ''))}">
       <div style="font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${esc(nome)}</div>
+      <div style="font-size:9px;color:#94a3b8;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">📍 ${prov ? esc(prov) : 'provenienza n/d'}</div>
       <div style="font-size:9px;color:#6366f1;white-space:nowrap;" title="Doppie week nel mese e nell'anno">🔁 ${cnt.mese} mese · ${cnt.anno} anno</div>
     </div>`;
     weeks.forEach(wk => {
@@ -128,8 +214,10 @@ function pwDoppiaWeekExportPDF() {
   const { jsPDF } = window.jspdf;
 
   const weeks = pwMonthWeeks(pwDwYear, pwDwMonth);
-  const tuttiOps = getOperatoriAttivi().map(o => o.nome_esteso || o.nome).filter(Boolean).sort();
-  if (tuttiOps.length === 0) { showAlertModal('Nessun operatore attivo da esportare.'); return; }
+  // Stessi filtro e ordinamento per provenienza della griglia a schermo
+  const tuttiOps = pwDwOperatori();
+  const filtro = _pwDwFiltroLabel();
+  if (tuttiOps.length === 0) { showAlertModal(filtro ? 'Nessun operatore attivo con provenienza ' + filtro + '.' : 'Nessun operatore attivo da esportare.'); return; }
 
   // Stato per ogni cella
   const statiDi = nome => weeks.map(wk => {
@@ -145,12 +233,12 @@ function pwDoppiaWeekExportPDF() {
   });
   // Nel report solo chi ha almeno una doppia week nel mese (chi ha solo ferie o
   // nessuna assegnazione non è allocato e viene omesso)
-  const ops = [], stateGrid = [];
-  tuttiOps.forEach(nome => {
-    const st = statiDi(nome);
-    if (st.some(s => s === 'start' || s === 'second' || s === 'conflict')) { ops.push(nome); stateGrid.push(st); }
+  const ops = [], provs = [], stateGrid = [];
+  tuttiOps.forEach(x => {
+    const st = statiDi(x.nome);
+    if (st.some(s => s === 'start' || s === 'second' || s === 'conflict')) { ops.push(x.nome); provs.push(pwDwProvenienza(x.op)); stateGrid.push(st); }
   });
-  if (ops.length === 0) { showAlertModal(`Nessun operatore in doppia week a ${PW_MESI_IT[pwDwMonth]} ${pwDwYear}.`); return; }
+  if (ops.length === 0) { showAlertModal(`Nessun operatore in doppia week a ${PW_MESI_IT[pwDwMonth]} ${pwDwYear}` + (filtro ? ' con provenienza ' + filtro : '') + '.'); return; }
 
   const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
   const pageW = doc.internal.pageSize.getWidth();
@@ -159,7 +247,7 @@ function pwDoppiaWeekExportPDF() {
   doc.setFontSize(14); doc.setFont(undefined, 'bold'); doc.setTextColor(55, 48, 163);
   doc.text(`Doppia Week — ${PW_MESI_IT[pwDwMonth]} ${pwDwYear}`, 14, 13);
   doc.setFontSize(8); doc.setFont(undefined, 'normal'); doc.setTextColor(100, 116, 139);
-  doc.text(`Generato il ${new Date().toLocaleDateString('it-IT')}`, 14, 18);
+  doc.text(`Generato il ${new Date().toLocaleDateString('it-IT')}` + (filtro ? ' · Provenienza: ' + filtro : '') + (pwDwVista.ordine === 'provenienza' ? ' · Ordinati per provenienza' : ''), 14, 18);
   doc.setTextColor(0, 0, 0);
 
   // Font ridotto in base al numero di righe, per stare in una sola pagina
@@ -169,17 +257,17 @@ function pwDoppiaWeekExportPDF() {
   const rowH = () => (fs * 0.42) + 2.4;
   while (rowH() * totalRows > availH && fs > 4) fs -= 0.5;
 
-  const head = [['Operatore', ...weeks.map(wk => {
+  const head = [['Operatore', 'Provenienza', ...weeks.map(wk => {
     const mon = isoWeekToMonday(wk.anno, wk.week);
     return `W${wk.week}\n${String(mon.getUTCDate()).padStart(2,'0')}/${String(mon.getUTCMonth()+1).padStart(2,'0')}`;
   })]];
   const LBL = { start: 'DOPPIA 1', second: 'DOPPIA 2\n(rientro gio/ven)', ferie: 'FERIE', conflict: 'DOPPIA+FERIE', empty: '' };
-  const body = ops.map((nome, ri) => [nome, ...weeks.map((wk, ci) => LBL[stateGrid[ri][ci]])]);
+  const body = ops.map((nome, ri) => [nome, provs[ri] || '—', ...weeks.map((wk, ci) => LBL[stateGrid[ri][ci]])]);
 
-  const opColW = 42;
-  const weekColW = (pageW - 28 - opColW) / weeks.length;
-  const colStyles = { 0: { cellWidth: opColW, halign: 'left', fontStyle: 'bold' } };
-  for (let i = 1; i <= weeks.length; i++) colStyles[i] = { cellWidth: weekColW, halign: 'center' };
+  const opColW = 42, provColW = 32;
+  const weekColW = (pageW - 28 - opColW - provColW) / weeks.length;
+  const colStyles = { 0: { cellWidth: opColW, halign: 'left', fontStyle: 'bold' }, 1: { cellWidth: provColW, halign: 'left', textColor: [100, 116, 139] } };
+  for (let i = 2; i < weeks.length + 2; i++) colStyles[i] = { cellWidth: weekColW, halign: 'center' };
 
   const COLORS = {
     start:    { fill: [99, 102, 241],  text: [255, 255, 255] },
@@ -196,8 +284,8 @@ function pwDoppiaWeekExportPDF() {
     columnStyles: colStyles,
     margin: { left: 14, right: 14 },
     didParseCell: function (h) {
-      if (h.section === 'body' && h.column.index >= 1) {
-        const st = stateGrid[h.row.index][h.column.index - 1];
+      if (h.section === 'body' && h.column.index >= 2) {
+        const st = stateGrid[h.row.index][h.column.index - 2];
         const c = COLORS[st];
         if (c) { h.cell.styles.fillColor = c.fill; h.cell.styles.textColor = c.text; h.cell.styles.fontStyle = 'bold'; }
       }

@@ -114,6 +114,9 @@ Limite noto: il progetto Supabase è sul piano **Free**, che non include backup 
 
 ## Changelog
 
+## v18.202.0
+- feat: **Doppia Week: filtro e ordinamento per provenienza.** Nella barra del prospetto mensile: filtro Regione → Provincia a cascata (come in Pool operatori) e ordinamento per nome o per provenienza (regione, provincia, nome; chi non ha provenienza va in fondo). Sotto il nome di ogni operatore compare la provenienza (comune/provincia o la sola regione). L'Esporta PDF usa gli stessi filtro e ordinamento, ha una colonna Provenienza e riporta il filtro attivo nell'intestazione. La scelta resta salvata nel browser.
+
 ## v18.201.3
 - feat: **Doppia Week: Esporta PDF solo con chi è allocato.** Il report riporta solo gli operatori con almeno una doppia week nel mese (anche se in conflitto con ferie); chi non ha doppie week, o ha solo ferie, non compare più. Se nel mese non c'è nessuno in doppia week, avviso invece di un PDF vuoto. La griglia a schermo resta invariata.
 
