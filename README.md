@@ -114,6 +114,9 @@ Limite noto: il progetto Supabase è sul piano **Free**, che non include backup 
 
 ## Changelog
 
+## v18.201.3
+- feat: **Doppia Week: Esporta PDF solo con chi è allocato.** Il report riporta solo gli operatori con almeno una doppia week nel mese (anche se in conflitto con ferie); chi non ha doppie week, o ha solo ferie, non compare più. Se nel mese non c'è nessuno in doppia week, avviso invece di un PDF vuoto. La griglia a schermo resta invariata.
+
 ## v18.201.2
 - fix: **Genera mail: note e strumenti non più persi.** Se mentre il modal era aperto arrivava un aggiornamento da un altro utente (o una ricarica per conflitto di sync), quanto scritto in Note squadra / Strumenti finiva in una copia ormai scollegata dei dati e alla riapertura spariva. Ora ogni modifica viene scritta sempre sui dati correnti, viene riapplicata dopo ogni aggiornamento ricevuto e alla chiusura del modal, e si sincronizza con gli altri utenti; i campi non toccati si aggiornano in tempo reale con le modifiche dei colleghi. Stessa protezione per note generali, orari ed email sempre in CC.
 

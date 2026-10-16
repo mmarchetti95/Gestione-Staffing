@@ -128,11 +128,11 @@ function pwDoppiaWeekExportPDF() {
   const { jsPDF } = window.jspdf;
 
   const weeks = pwMonthWeeks(pwDwYear, pwDwMonth);
-  const ops = getOperatoriAttivi().map(o => o.nome_esteso || o.nome).filter(Boolean).sort();
-  if (ops.length === 0) { showAlertModal('Nessun operatore attivo da esportare.'); return; }
+  const tuttiOps = getOperatoriAttivi().map(o => o.nome_esteso || o.nome).filter(Boolean).sort();
+  if (tuttiOps.length === 0) { showAlertModal('Nessun operatore attivo da esportare.'); return; }
 
   // Stato per ogni cella
-  const stateGrid = ops.map(nome => weeks.map(wk => {
+  const statiDi = nome => weeks.map(wk => {
     const ferie    = pwHasFeriaWeek(wk.anno, wk.week, nome);
     const isStart  = pwIsDwStart(wk.anno, wk.week, nome);
     const prev     = pwWeekAdd(wk.anno, wk.week, -1);
@@ -142,7 +142,15 @@ function pwDoppiaWeekExportPDF() {
     if (isStart) return 'start';
     if (isSecond) return 'second';
     return 'empty';
-  }));
+  });
+  // Nel report solo chi ha almeno una doppia week nel mese (chi ha solo ferie o
+  // nessuna assegnazione non è allocato e viene omesso)
+  const ops = [], stateGrid = [];
+  tuttiOps.forEach(nome => {
+    const st = statiDi(nome);
+    if (st.some(s => s === 'start' || s === 'second' || s === 'conflict')) { ops.push(nome); stateGrid.push(st); }
+  });
+  if (ops.length === 0) { showAlertModal(`Nessun operatore in doppia week a ${PW_MESI_IT[pwDwMonth]} ${pwDwYear}.`); return; }
 
   const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
   const pageW = doc.internal.pageSize.getWidth();
