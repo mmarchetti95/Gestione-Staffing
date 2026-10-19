@@ -114,6 +114,9 @@ Limite noto: il progetto Supabase è sul piano **Free**, che non include backup 
 
 ## Changelog
 
+## v18.207.0
+- feat: **Griglia: controllo sottotask Jira di tutta la settimana.** Nuovo bottone "🎫 Sottotask" nella barra della Griglia, accanto a "📝 Note/Variazioni": controlla in un colpo tutte le celle di tutte le commesse della settimana mostrata e dice se ogni operatore + cantiere + attività ha il suo sottotask Jira. Il bottone stesso mostra l'esito e si aggiorna da solo: verde "✅ Sottotask ok", rosso/ambra con il numero di anomalie. Cliccandolo si apre il riepilogo per commessa: assegnazioni senza sottotask (con avviso se all'operatore manca l'email in anagrafica), creazioni fallite, sottotask che nessuna cella usa più (cantiere/attività cambiati: link a Jira e "togli indicatore"), commesse senza codice progetto Jira. Un click sulla riga, o sul giorno, porta alla cella; le celle anomale vengono evidenziate in Griglia (disattivabile). Scorciatoia "🎫 Crea sottotask" per commessa. Il controllo è locale e immediato, non interroga Jira; i fornitori esterni sono esclusi. Nessuna modifica allo schema Supabase.
+
 ## v18.206.1
 - feat: **Griglia: modal "Seleziona operatore" più largo e leggibile.** Largo 640 px (al massimo il 95% dello schermo) e alto quasi quanto la finestra, con la lista che occupa tutto lo spazio libero. Testi, pulsanti delle skill, etichette di stato e legenda più grandi. I filtri Regione / Provincia / Seniority hanno uno stile proprio e vanno a capo invece di essere troncati. Ogni voce mostra il nome su una riga e sotto, senza puntini di sospensione, commessa (in commessa / fuori commessa), provenienza, seniority e fornitore. Gli attestati del filtro sono disposti su più colonne.
 

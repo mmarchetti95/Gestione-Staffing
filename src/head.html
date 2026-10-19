@@ -554,6 +554,35 @@
   }
   .pw-weather-cell-flash { animation: pwWeatherCellFlash 2s ease-in-out; position: relative; z-index: 1; }
   .pw-meteo-modal-missing { color: #94a3b8; font-style: italic; }
+  /* Controllo sottotask Jira della Griglia (src/js/weekly-jira-check.js) */
+  .pw-cantiere-input.pw-jchk-ko { outline: 2px solid #f87171; outline-offset: -1px; background: #fef2f2; }
+  .pw-cantiere-input.pw-jchk-warn { outline: 2px solid #fbbf24; outline-offset: -1px; background: #fffbeb; }
+  .pw-jchk-esito { border-radius: 8px; padding: 10px 14px; font-size: 13px; border: 1px solid; }
+  .pw-jchk-esito-big { font-size: 18px; font-weight: 700; margin-bottom: 2px; }
+  .pw-jchk-esito-ok { background: #ecfdf5; border-color: #6ee7b7; color: #065f46; }
+  .pw-jchk-esito-ko { background: #fef2f2; border-color: #fca5a5; color: #991b1b; }
+  .pw-jchk-esito-warn { background: #fffbeb; border-color: #fcd34d; color: #92400e; }
+  .pw-jchk-esito-vuoto { background: #f8fafc; border-color: #e2e8f0; color: #64748b; }
+  .pw-jchk-chip { font-size: 11px; font-weight: 600; padding: 1px 8px; border-radius: 999px; background: white; border: 1px solid; }
+  .pw-jchk-chip-ko { border-color: #fca5a5; color: #b91c1c; }
+  .pw-jchk-chip-warn { border-color: #fcd34d; color: #b45309; }
+  .pw-jchk-blocco { border: 1px solid #e2e8f0; border-radius: 8px; margin-bottom: 8px; overflow: hidden; }
+  .pw-jchk-blocco-head { display: flex; align-items: center; gap: 4px; padding: 6px 10px; background: #f0fdfa; color: #115e59; font-weight: 600; font-size: 13px; border-bottom: 1px solid #e2e8f0; }
+  .pw-jchk-crea { margin-left: auto; font-size: 11px; font-weight: 600; background: #f59e0b; color: white; border-radius: 4px; padding: 2px 8px; white-space: nowrap; }
+  .pw-jchk-crea:hover { background: #fbbf24; }
+  .pw-jchk-row { display: flex; align-items: center; gap: 8px; padding: 6px 10px; font-size: 12.5px; color: #334155; cursor: pointer; border-left: 3px solid transparent; }
+  .pw-jchk-row + .pw-jchk-row { border-top: 1px solid #f1f5f9; }
+  .pw-jchk-row:hover { background: #f8fafc; }
+  .pw-jchk-row-ko { border-left-color: #f87171; }
+  .pw-jchk-row-warn { border-left-color: #fbbf24; }
+  .pw-jchk-ico { flex-shrink: 0; width: 18px; text-align: center; }
+  .pw-jchk-sq { color: #94a3b8; font-size: 11px; }
+  .pw-jchk-det { font-size: 11px; color: #64748b; }
+  .pw-jchk-giorni { display: flex; gap: 3px; flex-shrink: 0; }
+  .pw-jchk-giorno { font-size: 10px; font-weight: 600; padding: 1px 6px; border-radius: 4px; border: 1px solid #cbd5e1; background: white; color: #475569; }
+  .pw-jchk-giorno:hover { border-color: #0d9488; color: #0f766e; background: #f0fdfa; }
+  .pw-jchk-azione { flex-shrink: 0; font-size: 11px; color: #b91c1c; white-space: nowrap; }
+  .pw-jchk-azione:hover { text-decoration: underline; }
   /* Lavagna Note/Variazioni (src/js/weekly-note-variazioni.js) */
   .pw-nv-tipo { padding: 4px 12px; font-size: 12px; font-weight: 600; border: 1px solid #e2e8f0; background: white; color: #64748b; cursor: pointer; }
   .pw-nv-tipo:first-child { border-radius: 6px 0 0 6px; }
@@ -1829,7 +1858,7 @@
     <div class="flex items-center gap-2">
       <button id="btn-presentation" class="px-3 py-1.5 text-sm rounded hover:bg-white/10" style="border:1px solid var(--dark-border-strong);color:var(--dark-text);visibility:visible;">📊 Modalità presentazione</button>
       <div class="text-xs pl-2" style="border-left:1px solid var(--dark-border-strong);color:var(--dark-text-muted);">
-        <span id="app-version" class="font-medium" style="color:var(--accent);">v18.206.1</span> · Michele Marchetti
+        <span id="app-version" class="font-medium" style="color:var(--accent);">v18.207.0</span> · Michele Marchetti
         <span id="sb-role-badge" style="margin-left:8px;padding:1px 8px;border-radius:9999px;background:rgba(255,255,255,.1);color:var(--dark-text);font-weight:600;"></span>
       </div>
     </div>
@@ -2561,6 +2590,7 @@
       <span id="pw-strumenti-status" class="text-xs text-slate-500 no-print"></span>
       <button id="pw-weather-week-btn" class="px-3 py-1.5 text-sm border border-slate-200 bg-slate-50 text-slate-400 rounded no-print whitespace-nowrap" title="Criticità meteo nei cantieri pianificati questa settimana" onclick="pwOpenWeatherWeekModal()">⛈️ Meteo settimana…</button>
       <button id="pw-nv-btn" class="px-3 py-1.5 text-sm border border-slate-200 bg-slate-50 text-slate-500 rounded no-print whitespace-nowrap hover:bg-slate-100" title="Lavagna di note e variazioni rispetto alla programmazione della settimana" onclick="pwOpenNoteVariazioni()">📝 Note/Variazioni</button>
+      <button id="pw-jchk-btn" data-help-key="pw-jchk" class="px-3 py-1.5 text-sm border border-slate-200 bg-slate-50 text-slate-400 rounded no-print whitespace-nowrap hover:bg-slate-100" title="Controlla che ogni cella della settimana abbia il suo sottotask Jira — Click destro per la guida" onclick="pwOpenJiraCheck()">🎫 Sottotask</button>
       <button id="pw-add-commessa" class="ml-auto px-3 py-1.5 text-sm bg-teal-600 text-white rounded hover:bg-teal-700 no-print pw-write-action whitespace-nowrap">+ Aggiungi commessa</button>
       <button id="pw-gen-mail" class="px-3 py-1.5 text-sm bg-indigo-600 text-white rounded hover:bg-indigo-700 no-print whitespace-nowrap">📧 Genera mail</button>
       <button id="pw-collapse-all" class="px-3 py-1.5 text-sm border border-slate-300 rounded hover:bg-slate-50 no-print whitespace-nowrap" title="Collassa / Espandi tutto" onclick="pwCollapseAllToggle()">≡ Collassa</button>

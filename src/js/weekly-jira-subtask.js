@@ -425,6 +425,8 @@ function pwJiraSubtaskApplyBadgesToDom() {
     const cantieri = pwCellCantieriRaw(g);
     slot.innerHTML = pwJiraSubtaskBadgeInnerHtml(cIdx, bc, op.nome, cantieri[ci] || '', pwCellAttivitaAt(g, ci));
   });
+  // Bottone/evidenziazione del controllo sottotask (weekly-jira-check.js).
+  pwJchkRefresh();
 }
 
 /* ----- Entry point dal bottone in Griglia -----

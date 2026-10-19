@@ -495,6 +495,7 @@ function pwRender() {
     // sui valori dell'ultima settimana con commesse pianificate)
     pwRenderStats();
     if (_pwActiveTab === 'ferie') pwFerieRender();
+    pwJchkRefresh();
     return;
   }
 
@@ -710,6 +711,7 @@ function pwRender() {
   pwUpdateWeatherWidget();
   pwRefreshMeteoWeek();
   pwNvUpdateButton();
+  pwJchkRefresh();
 }
 
 /* ----- Statistiche settimana ----- */
