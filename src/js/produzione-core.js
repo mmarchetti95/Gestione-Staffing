@@ -46,10 +46,15 @@ async function pwSyncCpDataForGrid() {
   }
   pwApplyProduzioneColors();
 }
-let _pwCollapsedComm = new Set(); // indici commessa collassati nella griglia
-let _pwCollapsedSq   = new Set(); // chiavi "cidx-sidx" squadre collassate nella griglia
-let _cpCollapsedComm = new Set(); // blIdx commesse collassate nel controllo produzione
-let _cpCollapsedSq   = new Set(); // chiavi "blIdx-sqIdx" squadre collassate nel controllo produzione
+/* Commesse/squadre collassate, separate per settimana. Le chiavi sono posizioni (indice del
+   blocco commessa, "cidx-sidx" / "blIdx-sqIdx"), che in un'altra week indicano un'altra
+   commessa: con un solo Set per tutte le week, chiudere la 5ª commessa di una week chiudeva
+   la 5ª di tutte. area: 'pw' (Griglia) | 'cp' (Controllo produzione). */
+const _collapseByWeek = {};
+function _collapseSets(area) {
+  const k = area + '|' + pwAnno + '-' + pwWeek;
+  return _collapseByWeek[k] || (_collapseByWeek[k] = { comm: new Set(), sq: new Set() });
+}
 let _cpLoading = false;
 
 // Somma i valori di una mappa {ticket: km}. Ritorna null se vuota.

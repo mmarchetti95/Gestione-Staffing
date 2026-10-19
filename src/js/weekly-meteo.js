@@ -658,8 +658,8 @@ function pwGoToWeatherCell(cIdx, sIdx, dayIdx) {
   const commKey = String(cIdx);
   const sqKey = cIdx + '-' + sIdx;
   let changed = false;
-  if (_pwCollapsedComm.has(commKey)) { _pwCollapsedComm.delete(commKey); changed = true; }
-  if (_pwCollapsedSq.has(sqKey)) { _pwCollapsedSq.delete(sqKey); changed = true; }
+  if (_collapseSets('pw').comm.has(commKey)) { _collapseSets('pw').comm.delete(commKey); changed = true; }
+  if (_collapseSets('pw').sq.has(sqKey)) { _collapseSets('pw').sq.delete(sqKey); changed = true; }
   if (changed) pwApplyCollapseState();
   setTimeout(() => {
     const cell = document.querySelector('.pw-day-cell[data-cidx="' + cIdx + '"][data-sidx="' + sIdx + '"][data-day="' + dayIdx + '"]');

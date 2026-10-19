@@ -200,7 +200,7 @@ function pwSwitchTab(tab) {
   } else if (tab === 'controllo') {
     tc.classList.add('active');
     vc.classList.remove('hidden');
-    // Nota: NON azzerare _cpCollapsedComm/_cpCollapsedSq qui — devono restare
+    // Nota: NON azzerare _collapseSets('cp') qui — commesse/squadre collassate devono restare
     // come l'utente le ha lasciate finché non fa il refresh della pagina.
     pwControlloLoad().then(() => {
       const _cpc = document.getElementById('cp-table-container');
@@ -221,7 +221,7 @@ function pwSwitchTab(tab) {
   } else {
     tg.classList.add('active');
     vg.classList.remove('hidden');
-    // Nota: NON azzerare _pwCollapsedComm/_pwCollapsedSq qui — devono restare
+    // Nota: NON azzerare _collapseSets('pw') qui — commesse/squadre collassate devono restare
     // come l'utente le ha lasciate finché non fa il refresh della pagina.
     pwRender();
     window.scrollTo(0, _pwScrollY.griglia || 0);

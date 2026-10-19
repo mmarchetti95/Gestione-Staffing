@@ -390,7 +390,7 @@ function pwJchkVai(i, k) {
 
 function pwJchkVaiBlocco(cIdx) {
   closeModal();
-  if (_pwCollapsedComm.delete(String(cIdx))) pwApplyCollapseState();
+  if (_collapseSets('pw').comm.delete(String(cIdx))) pwApplyCollapseState();
   setTimeout(() => {
     const head = document.querySelector('.pw-commessa-block[data-cidx="' + cIdx + '"] .pw-commessa-header');
     if (!head) return;

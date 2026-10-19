@@ -1862,7 +1862,7 @@
     <div class="flex items-center gap-2">
       <button id="btn-presentation" class="px-3 py-1.5 text-sm rounded hover:bg-white/10" style="border:1px solid var(--dark-border-strong);color:var(--dark-text);visibility:visible;">📊 Modalità presentazione</button>
       <div class="text-xs pl-2" style="border-left:1px solid var(--dark-border-strong);color:var(--dark-text-muted);">
-        <span id="app-version" class="font-medium" style="color:var(--accent);">v18.207.2</span> · Michele Marchetti
+        <span id="app-version" class="font-medium" style="color:var(--accent);">v18.207.3</span> · Michele Marchetti
         <span id="sb-role-badge" style="margin-left:8px;padding:1px 8px;border-radius:9999px;background:rgba(255,255,255,.1);color:var(--dark-text);font-weight:600;"></span>
       </div>
     </div>
@@ -15032,8 +15032,8 @@ function pwGoToSearchCell(cIdx, sIdx, oIdx, dayIdx) {
   const commKey = String(cIdx);
   const sqKey = cIdx + '-' + sIdx;
   let changed = false;
-  if (_pwCollapsedComm.has(commKey)) { _pwCollapsedComm.delete(commKey); changed = true; }
-  if (_pwCollapsedSq.has(sqKey)) { _pwCollapsedSq.delete(sqKey); changed = true; }
+  if (_collapseSets('pw').comm.has(commKey)) { _collapseSets('pw').comm.delete(commKey); changed = true; }
+  if (_collapseSets('pw').sq.has(sqKey)) { _collapseSets('pw').sq.delete(sqKey); changed = true; }
   if (changed) pwApplyCollapseState();
   setTimeout(() => {
     const anchorDay = dayIdx !== null ? dayIdx : 0;
@@ -17348,7 +17348,7 @@ function pwSwitchTab(tab) {
   } else if (tab === 'controllo') {
     tc.classList.add('active');
     vc.classList.remove('hidden');
-    // Nota: NON azzerare _cpCollapsedComm/_cpCollapsedSq qui — devono restare
+    // Nota: NON azzerare _collapseSets('cp') qui — commesse/squadre collassate devono restare
     // come l'utente le ha lasciate finché non fa il refresh della pagina.
     pwControlloLoad().then(() => {
       const _cpc = document.getElementById('cp-table-container');
@@ -17369,7 +17369,7 @@ function pwSwitchTab(tab) {
   } else {
     tg.classList.add('active');
     vg.classList.remove('hidden');
-    // Nota: NON azzerare _pwCollapsedComm/_pwCollapsedSq qui — devono restare
+    // Nota: NON azzerare _collapseSets('pw') qui — commesse/squadre collassate devono restare
     // come l'utente le ha lasciate finché non fa il refresh della pagina.
     pwRender();
     window.scrollTo(0, _pwScrollY.griglia || 0);
@@ -17697,27 +17697,27 @@ function pwDoppiaWeekExportPDF() {
 /* ----- Griglia settimanale ----- */
 function pwToggleComm(cidx) {
   const key = String(cidx);
-  if (_pwCollapsedComm.has(key)) _pwCollapsedComm.delete(key);
-  else _pwCollapsedComm.add(key);
+  if (_collapseSets('pw').comm.has(key)) _collapseSets('pw').comm.delete(key);
+  else _collapseSets('pw').comm.add(key);
   pwApplyCollapseState();
 }
 function pwToggleSq(cidx, sidx) {
   const key = cidx + '-' + sidx;
-  if (_pwCollapsedSq.has(key)) _pwCollapsedSq.delete(key);
-  else _pwCollapsedSq.add(key);
+  if (_collapseSets('pw').sq.has(key)) _collapseSets('pw').sq.delete(key);
+  else _collapseSets('pw').sq.add(key);
   pwApplyCollapseState();
 }
 function pwApplyCollapseState() {
   document.querySelectorAll('.pw-commessa-block').forEach(bl => {
     const key = String(bl.dataset.cidx);
     const btn = bl.querySelector('.pw-collapse-toggle');
-    if (_pwCollapsedComm.has(key)) { bl.classList.add('pw-collapsed'); if (btn) btn.textContent = '▶'; }
+    if (_collapseSets('pw').comm.has(key)) { bl.classList.add('pw-collapsed'); if (btn) btn.textContent = '▶'; }
     else { bl.classList.remove('pw-collapsed'); if (btn) btn.textContent = '▼'; }
   });
   document.querySelectorAll('.pw-squadra-block').forEach(bl => {
     const key = bl.dataset.collapseKey;
     const btn = bl.querySelector('.pw-sq-collapse-toggle');
-    if (key && _pwCollapsedSq.has(key)) { bl.classList.add('pw-sq-collapsed'); if (btn) btn.textContent = '▶'; }
+    if (key && _collapseSets('pw').sq.has(key)) { bl.classList.add('pw-sq-collapsed'); if (btn) btn.textContent = '▶'; }
     else { bl.classList.remove('pw-sq-collapsed'); if (btn) btn.textContent = '▼'; }
   });
   const collBtn = document.getElementById('pw-collapse-all');
@@ -17731,10 +17731,10 @@ function pwCollapseAllToggle() {
   const allBlocks = [...document.querySelectorAll('.pw-commessa-block')];
   const allColl = allBlocks.length > 0 && allBlocks.every(b => b.classList.contains('pw-collapsed'));
   if (allColl) {
-    _pwCollapsedComm.clear(); _pwCollapsedSq.clear();
+    _collapseSets('pw').comm.clear(); _collapseSets('pw').sq.clear();
   } else {
-    allBlocks.forEach(b => _pwCollapsedComm.add(String(b.dataset.cidx)));
-    document.querySelectorAll('.pw-squadra-block[data-collapse-key]').forEach(b => _pwCollapsedSq.add(b.dataset.collapseKey));
+    allBlocks.forEach(b => _collapseSets('pw').comm.add(String(b.dataset.cidx)));
+    document.querySelectorAll('.pw-squadra-block[data-collapse-key]').forEach(b => _collapseSets('pw').sq.add(b.dataset.collapseKey));
   }
   pwApplyCollapseState();
 }
@@ -17742,13 +17742,13 @@ function pwCollapseAllToggle() {
 /* ----- Controllo Produzione ----- */
 function cpToggleComm(idx) {
   const key = String(idx);
-  if (_cpCollapsedComm.has(key)) _cpCollapsedComm.delete(key);
-  else _cpCollapsedComm.add(key);
+  if (_collapseSets('cp').comm.has(key)) _collapseSets('cp').comm.delete(key);
+  else _collapseSets('cp').comm.add(key);
   cpApplyCollapse();
 }
 function cpToggleSq(key) {
-  if (_cpCollapsedSq.has(key)) _cpCollapsedSq.delete(key);
-  else _cpCollapsedSq.add(key);
+  if (_collapseSets('cp').sq.has(key)) _collapseSets('cp').sq.delete(key);
+  else _collapseSets('cp').sq.add(key);
   cpApplyCollapse();
 }
 function cpApplyCollapse() {
@@ -17761,22 +17761,22 @@ function cpApplyCollapse() {
     if (tr.classList.contains('cp-tr-commessa')) {
       tr.style.display = '';
       const arr = tr.querySelector('.cp-carr');
-      if (arr) arr.textContent = _cpCollapsedComm.has(ci) ? '▶' : '▼';
+      if (arr) arr.textContent = _collapseSets('cp').comm.has(ci) ? '▶' : '▼';
       return;
     }
-    if (_cpCollapsedComm.has(ci)) { tr.style.display = 'none'; return; }
+    if (_collapseSets('cp').comm.has(ci)) { tr.style.display = 'none'; return; }
     if (tr.classList.contains('cp-tr-squadra')) {
       tr.style.display = '';
       const arr = tr.querySelector('.cp-sarr');
-      if (arr) arr.textContent = _cpCollapsedSq.has(si) ? '▶' : '▼';
+      if (arr) arr.textContent = _collapseSets('cp').sq.has(si) ? '▶' : '▼';
       return;
     }
-    tr.style.display = (si && _cpCollapsedSq.has(si)) ? 'none' : '';
+    tr.style.display = (si && _collapseSets('cp').sq.has(si)) ? 'none' : '';
   });
   const btn = document.getElementById('cp-collapse-all');
   if (btn) {
     const commRows = [...tbody.querySelectorAll('.cp-tr-commessa[data-comm-idx]')];
-    const allColl = commRows.length > 0 && commRows.every(tr => _cpCollapsedComm.has(tr.dataset.commIdx));
+    const allColl = commRows.length > 0 && commRows.every(tr => _collapseSets('cp').comm.has(tr.dataset.commIdx));
     btn.textContent = allColl ? '≡ Espandi' : '≡ Collassa';
   }
 }
@@ -17785,9 +17785,9 @@ function cpCollapseAllToggle() {
   if (!tbody) return;
   const commRows = [...tbody.querySelectorAll('.cp-tr-commessa[data-comm-idx]')];
   const sqRows   = [...tbody.querySelectorAll('.cp-tr-squadra[data-sq-idx]')];
-  const allColl  = commRows.length > 0 && commRows.every(tr => _cpCollapsedComm.has(tr.dataset.commIdx));
-  if (allColl) { _cpCollapsedComm.clear(); _cpCollapsedSq.clear(); }
-  else { commRows.forEach(tr => _cpCollapsedComm.add(tr.dataset.commIdx)); sqRows.forEach(tr => _cpCollapsedSq.add(tr.dataset.sqIdx)); }
+  const allColl  = commRows.length > 0 && commRows.every(tr => _collapseSets('cp').comm.has(tr.dataset.commIdx));
+  if (allColl) { _collapseSets('cp').comm.clear(); _collapseSets('cp').sq.clear(); }
+  else { commRows.forEach(tr => _collapseSets('cp').comm.add(tr.dataset.commIdx)); sqRows.forEach(tr => _collapseSets('cp').sq.add(tr.dataset.sqIdx)); }
   cpApplyCollapse();
 }
 
@@ -17932,10 +17932,15 @@ async function pwSyncCpDataForGrid() {
   }
   pwApplyProduzioneColors();
 }
-let _pwCollapsedComm = new Set(); // indici commessa collassati nella griglia
-let _pwCollapsedSq   = new Set(); // chiavi "cidx-sidx" squadre collassate nella griglia
-let _cpCollapsedComm = new Set(); // blIdx commesse collassate nel controllo produzione
-let _cpCollapsedSq   = new Set(); // chiavi "blIdx-sqIdx" squadre collassate nel controllo produzione
+/* Commesse/squadre collassate, separate per settimana. Le chiavi sono posizioni (indice del
+   blocco commessa, "cidx-sidx" / "blIdx-sqIdx"), che in un'altra week indicano un'altra
+   commessa: con un solo Set per tutte le week, chiudere la 5ª commessa di una week chiudeva
+   la 5ª di tutte. area: 'pw' (Griglia) | 'cp' (Controllo produzione). */
+const _collapseByWeek = {};
+function _collapseSets(area) {
+  const k = area + '|' + pwAnno + '-' + pwWeek;
+  return _collapseByWeek[k] || (_collapseByWeek[k] = { comm: new Set(), sq: new Set() });
+}
 let _cpLoading = false;
 
 // Somma i valori di una mappa {ticket: km}. Ritorna null se vuota.
@@ -20241,7 +20246,7 @@ function cpaVaiAllaRiga(el) {
   const tr = [...document.querySelectorAll('.cp-table tbody tr[data-cpk]')].find(x => x.dataset.cpk === a.cpKey);
   if (!tr) { showAlertModal('Riga non trovata nella tabella (la cella potrebbe essere stata modificata in Griglia).'); return; }
   const ci = tr.dataset.commIdx, si = tr.dataset.sqIdx;
-  _cpCollapsedComm.delete(ci); _cpCollapsedComm.delete(Number(ci)); _cpCollapsedSq.delete(si);
+  _collapseSets('cp').comm.delete(ci); _collapseSets('cp').comm.delete(Number(ci)); _collapseSets('cp').sq.delete(si);
   cpApplyCollapse();
   tr.scrollIntoView({ behavior: 'smooth', block: 'center' });
   tr.classList.remove('cpa-flash'); void tr.offsetWidth; tr.classList.add('cpa-flash');
@@ -28092,8 +28097,8 @@ function pwGoToWeatherCell(cIdx, sIdx, dayIdx) {
   const commKey = String(cIdx);
   const sqKey = cIdx + '-' + sIdx;
   let changed = false;
-  if (_pwCollapsedComm.has(commKey)) { _pwCollapsedComm.delete(commKey); changed = true; }
-  if (_pwCollapsedSq.has(sqKey)) { _pwCollapsedSq.delete(sqKey); changed = true; }
+  if (_collapseSets('pw').comm.has(commKey)) { _collapseSets('pw').comm.delete(commKey); changed = true; }
+  if (_collapseSets('pw').sq.has(sqKey)) { _collapseSets('pw').sq.delete(sqKey); changed = true; }
   if (changed) pwApplyCollapseState();
   setTimeout(() => {
     const cell = document.querySelector('.pw-day-cell[data-cidx="' + cIdx + '"][data-sidx="' + sIdx + '"][data-day="' + dayIdx + '"]');
@@ -28792,7 +28797,7 @@ function pwJchkVai(i, k) {
 
 function pwJchkVaiBlocco(cIdx) {
   closeModal();
-  if (_pwCollapsedComm.delete(String(cIdx))) pwApplyCollapseState();
+  if (_collapseSets('pw').comm.delete(String(cIdx))) pwApplyCollapseState();
   setTimeout(() => {
     const head = document.querySelector('.pw-commessa-block[data-cidx="' + cIdx + '"] .pw-commessa-header');
     if (!head) return;

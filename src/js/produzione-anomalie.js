@@ -246,7 +246,7 @@ function cpaVaiAllaRiga(el) {
   const tr = [...document.querySelectorAll('.cp-table tbody tr[data-cpk]')].find(x => x.dataset.cpk === a.cpKey);
   if (!tr) { showAlertModal('Riga non trovata nella tabella (la cella potrebbe essere stata modificata in Griglia).'); return; }
   const ci = tr.dataset.commIdx, si = tr.dataset.sqIdx;
-  _cpCollapsedComm.delete(ci); _cpCollapsedComm.delete(Number(ci)); _cpCollapsedSq.delete(si);
+  _collapseSets('cp').comm.delete(ci); _collapseSets('cp').comm.delete(Number(ci)); _collapseSets('cp').sq.delete(si);
   cpApplyCollapse();
   tr.scrollIntoView({ behavior: 'smooth', block: 'center' });
   tr.classList.remove('cpa-flash'); void tr.offsetWidth; tr.classList.add('cpa-flash');

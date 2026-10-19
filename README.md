@@ -114,6 +114,9 @@ Limite noto: il progetto Supabase è sul piano **Free**, che non include backup 
 
 ## Changelog
 
+## v18.207.3
+- fix: **Collassa/espandi commesse separato per settimana** (Controllo produzione e Griglia). Lo stato era salvato per posizione del blocco (1ª, 2ª, … commessa) e valeva per tutte le settimane: chiudere la 5ª commessa della week 43 chiudeva anche la 5ª della week 42, che è un'altra commessa. Ora ogni settimana ricorda le sue commesse/squadre chiuse (fino al ricaricamento della pagina, come prima). Nessuna modifica allo schema Supabase né alle Edge Function.
+
 ## v18.207.2
 - fix: **Controllo produzione: la colonna "Stato" mostra solo i sottotask del giorno.** Oltre ai ticket dei worklog della riga, la colonna aggiungeva *tutti* i sottotask creati dalla Griglia per quell'operatore su quei cantieri nella settimana, qualunque attività e qualunque giorno: un operatore con più attività sullo stesso cantiere si ritrovava una pila di badge (es. il sottotask "Rilievo Wo Ip" di lunedì ripetuto anche martedì, giorno di "Fognatura"). Ora oltre ai worklog compare solo il sottotask della coppia cantiere + attività pianificata in quel giorno, se non ha worklog. Nessuna modifica allo schema Supabase né alle Edge Function.
 
