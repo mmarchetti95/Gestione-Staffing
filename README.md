@@ -114,6 +114,12 @@ Limite noto: il progetto Supabase è sul piano **Free**, che non include backup 
 
 ## Changelog
 
+## v18.207.4
+- fix: **Dashboard, "🎯 Dettaglio skill" non chiude più la commessa.** Il pulsante chiudeva il modal della commessa per aprire il dettaglio: tutto quello che era stato compilato andava perso e, su una commessa nuova (non ancora salvata), il dettaglio non si apriva nemmeno. Ora il dettaglio skill si apre sopra il modal della commessa (pipeline e attiva), «Applica fabbisogno» aggiorna «Risorse necessarie» e il riepilogo, e tutto viene salvato insieme col «Salva» della commessa (con «Annulla» non si salva nulla, fabbisogno compreso). I candidati suggeriti usano date, attestati e zona compilati nel form, anche se non ancora salvati.
+- fix: nel dettaglio skill il campo «N°» perdeva il focus dopo la prima cifra (non si poteva scrivere 12).
+- fix: **«Salva» su una commessa attiva cancellava i riferimenti ai documenti caricati** e il fabbisogno per skill: i metadati venivano sostituiti invece che aggiornati.
+- fix: **«Promuovi» da pipeline ad attiva** ora porta con sé email referente, regione/provincia, DPI e dettaglio skill (prima andavano reinseriti a mano). Nessuna modifica allo schema Supabase né alle Edge Function.
+
 ## v18.207.3
 - fix: **Collassa/espandi commesse separato per settimana** (Controllo produzione e Griglia). Lo stato era salvato per posizione del blocco (1ª, 2ª, … commessa) e valeva per tutte le settimane: chiudere la 5ª commessa della week 43 chiudeva anche la 5ª della week 42, che è un'altra commessa. Ora ogni settimana ricorda le sue commesse/squadre chiuse (fino al ricaricamento della pagina, come prima). Nessuna modifica allo schema Supabase né alle Edge Function.
 

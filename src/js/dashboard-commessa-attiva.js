@@ -24,6 +24,7 @@ function getCommessaAttivaMeta(nome) {
     risorse_necessarie: stored.risorse_necessarie !== undefined ? stored.risorse_necessarie : null,
     jira_project_code: stored.jira_project_code||'',
     documenti: stored.documenti || [],
+    fabbisogno_dettagliato: stored.fabbisogno_dettagliato || [],
     _risorseAttuali: risorseAttuali,
     _dedotto: !state.commesse_attive_meta[nome],
   };
@@ -33,6 +34,8 @@ function openCommessaAttivaModal(nome) {
   const m = getCommessaAttivaMeta(nome);
   const regioneIniziale = m.regione || (m.provincia && provinciaInfo(m.provincia)?.regione) || '';
   const nRis = new Set(state.staffing.filter(r=>r.commessa===nome).map(r=>r.risorsa)).size;
+  // Bozza del fabbisogno per skill: si persiste col "Salva" di questo modal (vedi openFabbisognoModal)
+  let fabbDraft = fabbisognoClona(m.fabbisogno_dettagliato);
   const root = document.getElementById('modal-root');
   root.innerHTML = `<div class="modal-backdrop"><div class="bg-white rounded-lg shadow-xl w-full max-w-2xl mx-4 my-8 p-5 max-h-[90vh] overflow-y-auto">
     <h3 class="font-semibold text-slate-900 mb-1">Modifica commessa attiva</h3>
@@ -94,7 +97,7 @@ function openCommessaAttivaModal(nome) {
               Lascia vuoto per usare la stima automatica dai gg-uomo dello staffing.
               Se imposti un numero, il box fabbisogno lo usa come riferimento diretto.
             </div>
-            ${(m.fabbisogno_dettagliato||[]).length > 0 ? `<div class="mt-1 text-[10px] text-teal-700 bg-teal-50 rounded px-2 py-1 border border-teal-100">Fabbisogno dettagliato: ${(m.fabbisogno_dettagliato||[]).map(r => r.quantita+'× '+(r.skills.length?r.skills.join('+'):'qualsiasi')).join(', ')}</div>` : ''}
+            <div id="ma-fabb-summary">${fabbisognoSummaryHtml(fabbDraft, false)}</div>
           </div>
         </div>
       </div>
@@ -175,10 +178,22 @@ function openCommessaAttivaModal(nome) {
   };
   document.getElementById('ma-docs-file').onchange = (e) => cmUploadDocumenti(nome, e.target);
   cmDocsBindListHandlers(nome);
+  // Aperto sopra questo modal, non al suo posto: le modifiche non salvate restano.
   document.getElementById('ma-btn-fabbisogno').onclick = () => {
-    const n = nome;
-    closeModal();
-    setTimeout(() => openFabbisognoModal(null, n), 50);
+    openFabbisognoModal({
+      nomeDisplay: nome,
+      inizio: document.getElementById('ma-ini').value,
+      fine: document.getElementById('ma-fin').value,
+      attestatiRichiesti: [...document.querySelectorAll('.ma-at:checked')].map(x => x.value),
+      regione: document.getElementById('ma-regione').value,
+      provincia: document.getElementById('ma-provincia').value,
+      righe: fabbDraft,
+      onSave: (righe, tot) => {
+        fabbDraft = righe;
+        document.getElementById('ma-ris').value = tot;
+        document.getElementById('ma-fabb-summary').innerHTML = fabbisognoSummaryHtml(fabbDraft, true);
+      },
+    });
   };
   document.getElementById('ma-reset').onclick = async () => {
     if (!sbGuardWrite()) return;
@@ -200,7 +215,10 @@ function openCommessaAttivaModal(nome) {
     }
     const emailRefList = parseEmailList(document.getElementById('ma-email-ref').value);
     if (!emailRefList) { showAlertModal('Email referente tecnico obbligatoria: inserisci una o più email valide separate da virgola.'); return; }
+    // Merge sui metadati correnti, non sostituzione: campi gestiti altrove (documenti,
+    // caricati/eliminati con il modal aperto) andavano persi a ogni "Salva".
     state.commesse_attive_meta[nome] = {
+      ...(state.commesse_attive_meta[nome] || {}),
       cliente: document.getElementById('ma-cli').value.trim(),
       codice_commessa: document.getElementById('ma-cod').value.trim(),
       jira_project_code: document.getElementById('ma-jira-project').value.trim(),
@@ -215,6 +233,7 @@ function openCommessaAttivaModal(nome) {
       attestati_richiesti: [...document.querySelectorAll('.ma-at:checked')].map(x=>x.value),
       dpi_richiesti: [...document.querySelectorAll('.ma-dpi:checked')].map(x=>x.value),
       risorse_necessarie: risDichiarate,
+      fabbisogno_dettagliato: fabbDraft,
     };
     await saveState('Modifica commessa attiva', {commessa: nome}, true); renderAll(); closeModal();
   };

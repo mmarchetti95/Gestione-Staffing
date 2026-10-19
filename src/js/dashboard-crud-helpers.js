@@ -10,6 +10,10 @@ function openCommessaModal(id) {
   const regioneIniziale = c.regione || (c.provincia && provinciaInfo(c.provincia)?.regione) || '';
   const cAttReq = c.attestati_richiesti || [];
   const cDpiReq = c.dpi_richiesti || [];
+  const cSkills = c.skills || [];
+  // Bozza del fabbisogno per skill: vive solo in questo modal e si salva con "Salva"
+  // insieme al resto, cosi' funziona anche su una commessa nuova (non ancora in state).
+  let fabbDraft = fabbisognoClona(c.fabbisogno_dettagliato);
   const root = document.getElementById('modal-root');
   root.innerHTML = `<div class="modal-backdrop"><div class="bg-white rounded-lg shadow-xl w-full max-w-2xl mx-4 my-8 p-5 max-h-[90vh] overflow-y-auto">
     <h3 class="font-semibold text-slate-900 mb-3">${id?'Modifica':'Nuova'} commessa pipeline</h3>
@@ -42,12 +46,12 @@ function openCommessaModal(id) {
           <input id="m-risorse" type="number" min="1" class="flex-1 border border-slate-300 rounded px-2 py-1.5 text-sm" value="${c.risorse_necessarie||1}">
           <button type="button" id="m-btn-fabbisogno" class="px-2 py-1.5 text-xs bg-teal-50 text-teal-700 border border-teal-200 rounded hover:bg-teal-100 whitespace-nowrap" title="Definisci quanti operatori per skill">🎯 Dettaglio skill</button>
         </div>
-        ${(c.fabbisogno_dettagliato||[]).length > 0 ? `<div class="mt-1 text-[10px] text-teal-700 bg-teal-50 rounded px-2 py-1 border border-teal-100">Fabbisogno dettagliato: ${(c.fabbisogno_dettagliato||[]).map(r => `${r.quantita}× ${r.skills.length?r.skills.join('+'):'qualsiasi'}`).join(', ')}</div>` : ''}
+        <div id="m-fabb-summary">${fabbisognoSummaryHtml(fabbDraft, false)}</div>
       </label>
       <div>
         <div class="text-xs text-slate-600 mb-1 font-medium">Skill richieste</div>
         <div class="grid grid-cols-3 gap-1 p-2 bg-slate-50 rounded border border-slate-200">
-          ${SKILLS.map(s => `<label class="flex items-center gap-1 text-xs hover:bg-white rounded px-1 cursor-pointer"><input type="checkbox" class="m-skill" value="${s}" ${c.skills.includes(s)?'checked':''}>${s}</label>`).join('')}
+          ${SKILLS.map(s => `<label class="flex items-center gap-1 text-xs hover:bg-white rounded px-1 cursor-pointer"><input type="checkbox" class="m-skill" value="${s}" ${cSkills.includes(s)?'checked':''}>${s}</label>`).join('')}
         </div>
       </div>
       <div>
@@ -102,13 +106,26 @@ function openCommessaModal(id) {
   document.getElementById('m-att-none').onclick = () => document.querySelectorAll('.m-att').forEach(x => x.checked = false);
   document.getElementById('m-dpi-all').onclick = () => document.querySelectorAll('.m-dpi').forEach(x => x.checked = true);
   document.getElementById('m-dpi-none').onclick = () => document.querySelectorAll('.m-dpi').forEach(x => x.checked = false);
+  // Il dettaglio skill si apre SOPRA questo modal (non al suo posto): i campi gia'
+  // compilati restano nel DOM. Chiuderlo e riaprirlo perdeva tutto, e su una commessa
+  // nuova non riapriva nulla perche' la commessa non e' ancora in state.pipeline.
   document.getElementById('m-btn-fabbisogno').onclick = () => {
-    // Salva in bozza i dati correnti prima di aprire il sub-modal
-    const tempC = state.pipeline.find(p => p.id === c.id);
-    const cid = c.id;
-    closeModal();
-    // Riapre dopo chiusura
-    setTimeout(() => openFabbisognoModal(cid, null), 50);
+    const cliente = document.getElementById('m-cliente').value.trim();
+    const progetto = document.getElementById('m-progetto').value.trim();
+    openFabbisognoModal({
+      nomeDisplay: [cliente, progetto].filter(Boolean).join(' — ') || 'Nuova commessa',
+      inizio: document.getElementById('m-inizio').value,
+      fine: document.getElementById('m-fine').value,
+      attestatiRichiesti: [...document.querySelectorAll('.m-att:checked')].map(x => x.value),
+      regione: document.getElementById('m-regione').value,
+      provincia: document.getElementById('m-provincia').value,
+      righe: fabbDraft,
+      onSave: (righe, tot) => {
+        fabbDraft = righe;
+        document.getElementById('m-risorse').value = tot;
+        document.getElementById('m-fabb-summary').innerHTML = fabbisognoSummaryHtml(fabbDraft, true);
+      },
+    });
   };
 
   document.getElementById('m-save').onclick = async () => {
@@ -129,6 +146,7 @@ function openCommessaModal(id) {
       skills: [...document.querySelectorAll('.m-skill:checked')].map(x => x.value),
       attestati_richiesti: [...document.querySelectorAll('.m-att:checked')].map(x => x.value),
       dpi_richiesti: [...document.querySelectorAll('.m-dpi:checked')].map(x => x.value),
+      fabbisogno_dettagliato: fabbDraft,
     };
     if (!newC.progetto || !newC.cliente) { showAlertModal('Cliente e Progetto sono obbligatori.'); return; }
     if (id) { Object.assign(state.pipeline.find(p => p.id === id), newC); await saveState('Modifica commessa pipeline', {commessa: newC.progetto, cliente: newC.cliente}); }
@@ -138,36 +156,33 @@ function openCommessaModal(id) {
 }
 
 /* ===================== FABBISOGNO DETTAGLIATO PER SKILL =====================
-   Funzione condivisa tra commesse pipeline e commesse attive.
-   - commessaId: id della commessa pipeline (stringa) OPPURE null se attiva
-   - commessaNome: nome della commessa attiva (stringa) OPPURE null se pipeline
+   Sotto-modal condiviso tra commesse pipeline e commesse attive. Si apre come layer
+   aggiuntivo in #modal-root SOPRA il modal della commessa, senza sostituirlo: i campi
+   non ancora salvati restano intatti. Non scrive state: "Applica" passa le righe a
+   opts.onSave, e la commessa le persiste col proprio "Salva".
+   opts: { nomeDisplay, inizio, fine, attestatiRichiesti, regione, provincia, righe, onSave(righe, tot) }
+   Il contesto (date, attestati, zona) e' quello attualmente nel form, non quello salvato.
 */
-function openFabbisognoModal(commessaId, commessaNome) {
-  // Recupera oggetto commessa e fabbisogno corrente
-  let tipoCommessa, nomeDisplay, fabbisognoCorrente, inizio, fine, attestatiRichiesti, provinciaCommessa, regioneCommessa;
-  if (commessaId) {
-    tipoCommessa = 'pipeline';
-    const c = state.pipeline.find(p => p.id === commessaId);
-    if (!c) return;
-    nomeDisplay = `${c.cliente} — ${c.progetto}`;
-    fabbisognoCorrente = c.fabbisogno_dettagliato || [];
-    inizio = c.inizio; fine = c.fine;
-    attestatiRichiesti = c.attestati_richiesti || [];
-    provinciaCommessa = c.provincia || '';
-    regioneCommessa = c.regione || '';
-  } else {
-    tipoCommessa = 'attiva';
-    const m = state.commesse_attive_meta[commessaNome] || {};
-    nomeDisplay = commessaNome;
-    fabbisognoCorrente = m.fabbisogno_dettagliato || [];
-    inizio = m.inizio; fine = m.fine;
-    attestatiRichiesti = m.attestati_richiesti || [];
-    provinciaCommessa = m.provincia || '';
-    regioneCommessa = m.regione || '';
-  }
+function fabbisognoClona(righe) {
+  return (righe || []).map(r => ({ quantita: parseInt(r.quantita) || 1, skills: [...(r.skills || [])] }));
+}
+
+function fabbisognoSummaryHtml(righe, daSalvare) {
+  if (!(righe || []).length) return '';
+  return '<div class="mt-1 text-[10px] text-teal-700 bg-teal-50 rounded px-2 py-1 border border-teal-100">Fabbisogno dettagliato: ' +
+    esc(righe.map(r => r.quantita + '× ' + ((r.skills || []).length ? r.skills.join('+') : 'qualsiasi')).join(', ')) +
+    (daSalvare ? ' <span class="text-amber-700 font-medium">· premi «Salva» per confermarlo</span>' : '') + '</div>';
+}
+
+function openFabbisognoModal(opts) {
+  const nomeDisplay = opts.nomeDisplay || '';
+  const inizio = opts.inizio, fine = opts.fine;
+  const attestatiRichiesti = opts.attestatiRichiesti || [];
+  const provinciaCommessa = opts.provincia || '';
+  const regioneCommessa = opts.regione || '';
 
   // Clona fabbisogno in locale per editing
-  let righe = fabbisognoCorrente.map(r => ({...r}));
+  let righe = fabbisognoClona(opts.righe);
   if (righe.length === 0) righe.push({ quantita: 1, skills: [] });
 
   function totaleRighe() { return righe.reduce((s, r) => s + (parseInt(r.quantita)||0), 0); }
@@ -202,8 +217,13 @@ function openFabbisognoModal(commessaId, commessaNome) {
     .slice(0, 6);
   }
 
+  const root = document.getElementById('modal-root');
+  const layer = document.createElement('div');
+  layer.className = 'modal-backdrop';
+  const chiudi = () => layer.remove();
+
   function renderRighe() {
-    const wrap = document.getElementById('fb-righe');
+    const wrap = layer.querySelector('#fb-righe');
     if (!wrap) return;
     const tot = totaleRighe();
     wrap.innerHTML = righe.map((riga, idx) => {
@@ -266,12 +286,17 @@ function openFabbisognoModal(commessaId, commessaNome) {
     }).join('');
 
     // Totale
-    const totEl = document.getElementById('fb-totale');
+    const totEl = layer.querySelector('#fb-totale');
     if (totEl) totEl.textContent = `Totale: ${tot} operatori`;
 
     // Re-bind eventi
+    // La quantita' non cambia i candidati: aggiorna solo il totale, senza ri-renderizzare
+    // (rigenerare l'HTML a ogni tasto faceva perdere il focus al campo dopo la prima cifra).
     wrap.querySelectorAll('.fb-qty').forEach(inp => {
-      inp.oninput = () => { righe[parseInt(inp.dataset.idx)].quantita = parseInt(inp.value)||1; renderRighe(); };
+      inp.oninput = () => {
+        righe[parseInt(inp.dataset.idx)].quantita = Math.max(1, parseInt(inp.value) || 1);
+        if (totEl) totEl.textContent = `Totale: ${totaleRighe()} operatori`;
+      };
     });
     wrap.querySelectorAll('.fb-skill').forEach(cb => {
       cb.onchange = () => {
@@ -287,14 +312,13 @@ function openFabbisognoModal(commessaId, commessaNome) {
     });
   }
 
-  const root = document.getElementById('modal-root');
-  root.innerHTML = `<div class="modal-backdrop"><div class="bg-white rounded-lg shadow-xl w-full max-w-2xl mx-4 my-8 p-5 max-h-[90vh] overflow-y-auto">
+  layer.innerHTML = `<div class="bg-white rounded-lg shadow-xl w-full max-w-2xl mx-4 my-8 p-5 max-h-[90vh] overflow-y-auto">
     <div class="flex items-center justify-between mb-1">
       <div>
         <h3 class="font-semibold text-slate-900">Fabbisogno dettagliato per skill</h3>
-        <p class="text-xs text-slate-500">${nomeDisplay}</p>
+        <p class="text-xs text-slate-500">${esc(nomeDisplay)}</p>
       </div>
-      <button onclick="closeModal()" class="text-slate-400 hover:text-slate-700 text-xl">×</button>
+      <button type="button" id="fb-close" class="text-slate-400 hover:text-slate-700 text-xl">×</button>
     </div>
     <p class="text-[11px] text-blue-800 mb-3 bg-blue-50 border border-blue-100 rounded px-2 py-1.5">
       Definisci quanti operatori ti servono per ogni combinazione di skill. Per ogni riga vedrai i candidati interni ordinati per saturazione.
@@ -305,33 +329,23 @@ function openFabbisognoModal(commessaId, commessaNome) {
       <span id="fb-totale" class="text-sm font-semibold text-slate-700"></span>
     </div>
     <div class="flex justify-end gap-2 mt-4 pt-3 border-t border-slate-200">
-      <button onclick="closeModal()" class="px-3 py-1.5 text-sm border border-slate-300 rounded">Annulla</button>
-      <button id="fb-save" class="px-3 py-1.5 text-sm bg-teal-600 text-white rounded hover:bg-teal-700">Salva fabbisogno</button>
+      <button type="button" id="fb-cancel" class="px-3 py-1.5 text-sm border border-slate-300 rounded">Annulla</button>
+      <button type="button" id="fb-save" class="px-3 py-1.5 text-sm bg-teal-600 text-white rounded hover:bg-teal-700">Applica fabbisogno</button>
     </div>
-  </div></div>`;
+  </div>`;
+  root.appendChild(layer);
 
   renderRighe();
 
-  document.getElementById('fb-add-riga').onclick = () => {
+  layer.querySelector('#fb-close').onclick = chiudi;
+  layer.querySelector('#fb-cancel').onclick = chiudi;
+  layer.querySelector('#fb-add-riga').onclick = () => {
     righe.push({ quantita: 1, skills: [] });
     renderRighe();
   };
-
-  document.getElementById('fb-save').onclick = async () => {
-    if (!sbGuardWrite()) return;
-    const tot = totaleRighe();
-    if (commessaId) {
-      const c = state.pipeline.find(p => p.id === commessaId);
-      if (c) {
-        c.fabbisogno_dettagliato = righe;
-        c.risorse_necessarie = tot; // aggiorna automaticamente il totale
-      }
-    } else {
-      if (!state.commesse_attive_meta[commessaNome]) state.commesse_attive_meta[commessaNome] = {};
-      state.commesse_attive_meta[commessaNome].fabbisogno_dettagliato = righe;
-      state.commesse_attive_meta[commessaNome].risorse_necessarie = tot;
-    }
-    await saveState(); renderAll(); closeModal();
+  layer.querySelector('#fb-save').onclick = () => {
+    if (typeof opts.onSave === 'function') opts.onSave(righe, totaleRighe());
+    chiudi();
   };
 }
 
@@ -353,16 +367,26 @@ async function promuoviCommessa(id) {
   const nuovaAttiva = { id: 'ca_'+Date.now(), progetto: c.progetto, cliente: c.cliente };
   state.commesse_attive.push(nuovaAttiva);
 
-  // Salva anche nei meta così pwGetCommesseValide() la trova subito
+  // Salva anche nei meta così pwGetCommesseValide() la trova subito. Porta con sé tutto
+  // ciò che la commessa attiva sa usare (email referente obbligatoria, zona, DPI, dettaglio
+  // skill), altrimenti andava reinserito a mano. risorse_necessarie solo col dettaglio skill:
+  // da sola nelle attive "sovrascrive la stima automatica", in pipeline vale sempre almeno 1.
   if (!state.commesse_attive_meta[c.progetto]) {
+    const fabb = fabbisognoClona(c.fabbisogno_dettagliato);
     state.commesse_attive_meta[c.progetto] = {
       cliente: c.cliente || '',
       industry: c.industry || '',
       inizio: c.inizio || '',
       fine: c.fine || '',
       note: '',
+      email_referente: c.email_referente || '',
+      regione: c.regione || '',
+      provincia: c.provincia || '',
       skills: c.skills || [],
-      attestati_richiesti: c.attestati_richiesti || []
+      attestati_richiesti: c.attestati_richiesti || [],
+      dpi_richiesti: c.dpi_richiesti || [],
+      fabbisogno_dettagliato: fabb,
+      ...(fabb.length ? { risorse_necessarie: fabb.reduce((t, r) => t + r.quantita, 0) } : {}),
     };
   }
 
