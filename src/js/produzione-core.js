@@ -184,7 +184,7 @@ function pwControlloRender() {
           if (cantieri.length === 0) return;
           const fw = pwGetFerieWeek();
           if (fw[op.nome] && pwFerieTipo(fw[op.nome][g])) return;
-          ops.push({ nome: op.nome, cantiere: cantieri.join(', '), cantieri, attivita: opG.attivita || '', cIdx, sIdx, oIdx });
+          ops.push({ nome: op.nome, cantiere: cantieri.join(', '), cantieri, voci: pwCellVoci(opG), attivita: opG.attivita || '', cIdx, sIdx, oIdx });
         });
         if (ops.length > 0) giorni.push({ giornoIdx: g, ops });
       }
@@ -382,8 +382,10 @@ async function cpMeteoRefresh(blocks, dateISOs) {
 /* ----- Colonna "Stato": stato Jira dei sottotask della riga (Edge Function jira-task-status,
    campo "subtasks") -----
    Le chiavi sono quelle della colonna Ticket (worklog), nello stesso ordine così le righe si
-   allineano; dopo, i sottotask creati dalla Griglia per quell'operatore e quei cantieri che non
-   hanno ancora worklog (bc.jiraSubtask: è l'unico legame certo cantiere→sottotask). Si aggiorna
+   allineano; dopo, i sottotask creati dalla Griglia per le coppie cantiere+attività di QUEL
+   giorno che non compaiono fra i worklog della riga (bc.jiraSubtask: è l'unico legame certo
+   cantiere→sottotask). Solo l'attività del giorno: gli altri sottotask dello stesso operatore sullo
+   stesso cantiere (altre attività, altri giorni della week) qui non c'entrano. Si aggiorna
    da solo ogni CP_STATO_POLL_MS mentre il tab è aperto e visibile, e a ogni "Sincronizza". */
 const CP_STATO_POLL_MS = 30000;
 const CP_STATO_CHUNK = 400;                 // la Edge Function accetta al massimo 500 chiavi
@@ -394,15 +396,20 @@ function cpStatoKeysRiga(bc, op, tickets) {
   const keys = [];
   const add = (k, fonte) => { if (k && !keys.some(x => x.key === k)) keys.push({ key: k, fonte }); };
   (tickets || []).forEach(t => add(t.key, 'ticket'));
-  const map = (bc && bc.jiraSubtask) || {};
-  (op.cantieri || []).forEach(c => pwJiraSubtaskEntriesFor(map, c, op.nome).forEach(e => add(e && e.key, 'griglia')));
+  (op.voci || []).forEach(v => {
+    // Come in pwJiraSubtaskInit: un giorno senza attività è coperto dal sottotask
+    // dell'attività che l'operatore ha su quel cantiere nel resto della week.
+    const att = v.attivita || pwJiraSubtaskAttivitaDiOperatore(bc, v.cantiere, op.nome).find(Boolean) || '';
+    const e = pwJiraSubtaskEntry(bc, v.cantiere, op.nome, att);
+    add(e && e.key, 'griglia');
+  });
   return keys;
 }
 
 function cpStatoCellHtml(keys) {
   if (!keys || !keys.length) return '<span style="color:#cbd5e1" title="Nessun ticket né sottotask Jira">—</span>';
   return keys.map(x => {
-    const fonte = x.fonte === 'griglia' ? 'Sottotask creato dalla Griglia (ancora senza worklog)' : 'Ticket del worklog';
+    const fonte = x.fonte === 'griglia' ? 'Sottotask creato dalla Griglia per questo cantiere/attività (nessun worklog in questo giorno)' : 'Ticket del worklog';
     const t = _cpStatoTicket[x.key];
     let lbl, bg, ttl;
     if (t === undefined) {

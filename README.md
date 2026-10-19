@@ -114,6 +114,9 @@ Limite noto: il progetto Supabase è sul piano **Free**, che non include backup 
 
 ## Changelog
 
+## v18.207.2
+- fix: **Controllo produzione: la colonna "Stato" mostra solo i sottotask del giorno.** Oltre ai ticket dei worklog della riga, la colonna aggiungeva *tutti* i sottotask creati dalla Griglia per quell'operatore su quei cantieri nella settimana, qualunque attività e qualunque giorno: un operatore con più attività sullo stesso cantiere si ritrovava una pila di badge (es. il sottotask "Rilievo Wo Ip" di lunedì ripetuto anche martedì, giorno di "Fognatura"). Ora oltre ai worklog compare solo il sottotask della coppia cantiere + attività pianificata in quel giorno, se non ha worklog. Nessuna modifica allo schema Supabase né alle Edge Function.
+
 ## v18.207.1
 - fix: **Controllo sottotask: ora si accorge dei sottotask cancellati su Jira.** Prima il controllo leggeva solo gli indicatori 🎫 della Griglia, quindi un ticket cancellato su Jira restava segnalato come presente (o come "non più in Griglia"). Ora all'apertura, a ogni "Ricontrolla" e la prima volta che si mostra una settimana, l'app chiede a Jira quali sottotask della settimana esistono ancora (una sola chiamata, Edge Function `jira-task-status` già esistente). I sottotask cancellati non contano più: le celle ancora pianificate tornano "senza sottotask", quelli non più in Griglia spariscono dalla lista. Il riepilogo mostra l'esito della verifica (ora, numero di sottotask, quanti cancellati), e il pulsante "🧹 Togli indicatori di sottotask cancellati" ripulisce la Griglia in un colpo (solo su conferma). Nessuna modifica allo schema Supabase né alle Edge Function.
 
