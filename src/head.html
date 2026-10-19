@@ -1024,6 +1024,9 @@
   .cp-table th { background:var(--accent-dark); color:#fff; font-weight:700; padding:5px 6px; text-align:left; white-space:normal; line-height:1.25; position:sticky; top:0; z-index:2; }
   .cp-table td { padding:4px 6px; border-bottom:1px solid #f1f5f9; vertical-align:middle; white-space:nowrap; }
   .cp-table tr:nth-child(even) td:not(.cp-td-edit) { background:#f8fafc; }
+  .cp-mysond-btn { border:none; background:transparent; cursor:pointer; font-weight:600; color:#047857; text-decoration:underline dotted; padding:0 4px; border-radius:4px; }
+  .cp-mysond-btn:hover { background:#ecfdf5; }
+  .cp-mysond-btn.cp-mysond-diff { color:#b45309; background:#fef3c7; }
   .cp-tr-commessa td { background:#e2e8f0 !important; font-weight:700; color:#334155; font-size:11px; text-transform:uppercase; letter-spacing:.04em; }
   .cp-tr-squadra  td { background:#f1f5f9 !important; font-weight:600; color:#475569; font-size:11px; }
   .cp-tr-day      td { background:#f8fafc !important; color:#64748b; font-size:11px; font-style:italic; }
@@ -1862,7 +1865,7 @@
     <div class="flex items-center gap-2">
       <button id="btn-presentation" class="px-3 py-1.5 text-sm rounded hover:bg-white/10" style="border:1px solid var(--dark-border-strong);color:var(--dark-text);visibility:visible;">📊 Modalità presentazione</button>
       <div class="text-xs pl-2" style="border-left:1px solid var(--dark-border-strong);color:var(--dark-text-muted);">
-        <span id="app-version" class="font-medium" style="color:var(--accent);">v18.207.4</span> · Michele Marchetti
+        <span id="app-version" class="font-medium" style="color:var(--accent);">v18.208.0</span> · Michele Marchetti
         <span id="sb-role-badge" style="margin-left:8px;padding:1px 8px;border-radius:9999px;background:rgba(255,255,255,.1);color:var(--dark-text);font-weight:600;"></span>
       </div>
     </div>
@@ -2977,6 +2980,10 @@
         <button id="cp-sync-jira" data-help-key="cp-sync-jira" onclick="pwControlloSyncJira()" class="px-3 py-1.5 text-sm font-medium bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 flex items-center gap-1.5 no-print pw-write-action" title="Click destro per la guida">
           🔄 Sincronizza da Jira
         </button>
+        <button id="cp-mysond-btn" data-help-key="cp-mysond" onclick="document.getElementById('cp-mysond-file').click()" class="px-3 py-1.5 text-sm font-medium bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 flex items-center gap-1.5 no-print pw-write-action" title="Carica l'export Excel delle ore MySond (click destro per la guida)">
+          📥 Carica MySond
+        </button>
+        <input type="file" id="cp-mysond-file" accept=".xlsx,.xls" class="hidden" onchange="cpMysondPick(this)">
         <button onclick="pwControlloExport()" class="px-3 py-1.5 text-sm font-medium bg-teal-600 text-white rounded-lg hover:bg-teal-700 flex items-center gap-1.5 no-print">
           ⬇ Esporta Excel
         </button>

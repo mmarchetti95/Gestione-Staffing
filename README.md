@@ -114,6 +114,12 @@ Limite noto: il progetto Supabase è sul piano **Free**, che non include backup 
 
 ## Changelog
 
+## v18.208.0
+- feat: **Controllo produzione, "📥 Carica MySond".** Nuovo bottone accanto a "Sincronizza da Jira": si carica l'export Excel delle ore MySond (stesso formato dell'export ferie: Dipendente, commessa, voce, attività, descrizione, dataintervento, Somma di durata). I dipendenti vengono abbinati agli operatori del Pool (anche con Nome/Cognome invertiti) e per ognuno viene salvato il totale ore di ogni giorno. Prima del caricamento un riepilogo mostra periodo, operatori riconosciuti e gli operatori pianificati nella settimana che nel file non hanno ore.
+- Nuova colonna **"MySond"** accanto a "Ore Jira": totale del giorno dell'operatore su tutte le commesse, in ambra se diverso dalle Ore Jira. Il click apre il dettaglio (commessa, voce, attività, descrizione, ore), con in verde le voci sul cantiere pianificato e in arancio le ore non lavorate.
+- I dati sono condivisi fra gli utenti; un nuovo caricamento sostituisce i giorni coperti dal file e lascia invariati gli altri. Carica solo admin/responsabile. Non scrive nulla su Jira né in Controllo produzione.
+- Supabase: nuova tabella `mysond_ore` (migrazione `mysond_ore`, `supabase/migrations/20261019_mysond_ore.sql`, già applicata). Nessuna modifica alle Edge Function.
+
 ## v18.207.4
 - fix: **Dashboard, "🎯 Dettaglio skill" non chiude più la commessa.** Il pulsante chiudeva il modal della commessa per aprire il dettaglio: tutto quello che era stato compilato andava perso e, su una commessa nuova (non ancora salvata), il dettaglio non si apriva nemmeno. Ora il dettaglio skill si apre sopra il modal della commessa (pipeline e attiva), «Applica fabbisogno» aggiorna «Risorse necessarie» e il riepilogo, e tutto viene salvato insieme col «Salva» della commessa (con «Annulla» non si salva nulla, fabbisogno compreso). I candidati suggeriti usano date, attestati e zona compilati nel form, anche se non ancora salvati.
 - fix: nel dettaglio skill il campo «N°» perdeva il focus dopo la prima cifra (non si poteva scrivere 12).

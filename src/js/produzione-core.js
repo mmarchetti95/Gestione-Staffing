@@ -143,9 +143,11 @@ async function pwControlloLoad() {
         const k = `${r.commessa}|||${r.squadra}|||${r.operatore}|||${r.giorno}`;
         _cpData[k] = cpRowToCell(r);
       });
+      await cpMysondLoad();
       if (status) status.textContent = `${(data||[]).length} record caricati`;
     } else {
       _cpData = {};
+      _cpMysond = {};
       if (status) status.textContent = 'Modalità offline — i dati non verranno salvati';
     }
   } catch(e) {
@@ -214,7 +216,7 @@ function pwControlloRender() {
       <th>Giorno</th><th>Data</th><th style="max-width:80px">Cantiere</th><th style="max-width:80px">Attività</th>
       <th style="text-align:center;min-width:70px;max-width:96px" title="Stato Jira dei sottotask della riga, nello stesso ordine della colonna Ticket (aggiornato ogni 30 secondi e a ogni Sincronizza da Jira)">Stato</th>
       <th style="text-align:center;min-width:44px;max-width:56px" title="Meteo osservato nel giorno sul cantiere (passa il mouse per il dettaglio)">Meteo</th>
-      <th style="text-align:center;max-width:50px">Ore Jira</th><th style="min-width:66px;max-width:66px">Ticket</th><th style="min-width:80px;max-width:80px">Epic</th><th style="max-width:60px">Ore Report Prod.</th>
+      <th style="text-align:center;max-width:50px">Ore Jira</th><th style="text-align:center;max-width:56px" title="Totale ore inserite in MySond dall'operatore nel giorno (📥 Carica MySond). In ambra se diverso dalle Ore Jira; clicca per il dettaglio">MySond</th><th style="min-width:66px;max-width:66px">Ticket</th><th style="min-width:80px;max-width:80px">Epic</th><th style="max-width:60px">Ore Report Prod.</th>
       <th style="min-width:40px;text-align:center">Δ Ore</th>
       <th style="max-width:60px">Km / Cad</th><th style="text-align:center;min-width:60px">Su Jira</th><th style="max-width:90px">Note</th>
     </tr></thead><tbody>`;
@@ -222,14 +224,14 @@ function pwControlloRender() {
   let ri = 0;
 
   blocks.forEach((bl, blIdx) => {
-    html += `<tr class="cp-tr-commessa" data-comm-idx="${blIdx}"><td colspan="18"><span class="cp-carr" style="cursor:pointer;user-select:none;margin-right:5px;font-size:11px;display:inline-block;width:10px;text-align:center;" onclick="cpToggleComm(${blIdx})">▼</span>📁 ${esc(bl.commessa)}</td></tr>`;
+    html += `<tr class="cp-tr-commessa" data-comm-idx="${blIdx}"><td colspan="19"><span class="cp-carr" style="cursor:pointer;user-select:none;margin-right:5px;font-size:11px;display:inline-block;width:10px;text-align:center;" onclick="cpToggleComm(${blIdx})">▼</span>📁 ${esc(bl.commessa)}</td></tr>`;
     bl.squadre.forEach((sq, sqIdx) => {
       const sqKey = blIdx + '-' + sqIdx;
-      html += `<tr class="cp-tr-squadra" data-comm-idx="${blIdx}" data-sq-idx="${sqKey}"><td colspan="18">&nbsp;&nbsp;&nbsp;<span class="cp-sarr" style="cursor:pointer;user-select:none;margin-right:5px;font-size:11px;display:inline-block;width:10px;text-align:center;" onclick="cpToggleSq('${jsAttr(sqKey)}')">▼</span>👥 ${esc(sq.nome)}<button class="no-print pw-write-action" style="margin-left:10px;font-size:11px;font-weight:600;background:#4f46e5;color:#fff;border:none;border-radius:5px;padding:2px 8px;cursor:pointer;" onclick="event.stopPropagation();pwControlloSyncJira('${jsesc(bl.commessa)}','${jsesc(sq.nome)}',this)">🔄 Sincronizza squadra</button><button class="no-print pw-write-action" style="margin-left:6px;font-size:11px;font-weight:600;background:#0ea5e9;color:#fff;border:none;border-radius:5px;padding:2px 8px;cursor:pointer;" data-help-key="cp-carica-report" title="Click destro per la guida" onclick="event.stopPropagation();cpCaricaReportSquadra('${jsesc(bl.commessa)}','${jsesc(sq.nome)}')">📄 Carica Report</button></td></tr>`;
+      html += `<tr class="cp-tr-squadra" data-comm-idx="${blIdx}" data-sq-idx="${sqKey}"><td colspan="19">&nbsp;&nbsp;&nbsp;<span class="cp-sarr" style="cursor:pointer;user-select:none;margin-right:5px;font-size:11px;display:inline-block;width:10px;text-align:center;" onclick="cpToggleSq('${jsAttr(sqKey)}')">▼</span>👥 ${esc(sq.nome)}<button class="no-print pw-write-action" style="margin-left:10px;font-size:11px;font-weight:600;background:#4f46e5;color:#fff;border:none;border-radius:5px;padding:2px 8px;cursor:pointer;" onclick="event.stopPropagation();pwControlloSyncJira('${jsesc(bl.commessa)}','${jsesc(sq.nome)}',this)">🔄 Sincronizza squadra</button><button class="no-print pw-write-action" style="margin-left:6px;font-size:11px;font-weight:600;background:#0ea5e9;color:#fff;border:none;border-radius:5px;padding:2px 8px;cursor:pointer;" data-help-key="cp-carica-report" title="Click destro per la guida" onclick="event.stopPropagation();cpCaricaReportSquadra('${jsesc(bl.commessa)}','${jsesc(sq.nome)}')">📄 Carica Report</button></td></tr>`;
       sq.giorni.forEach((gBlock, gIdx) => {
         const g   = gBlock.giornoIdx;
         const sep = gIdx > 0 ? ' cp-day-sep' : '';
-        html += `<tr class="cp-tr-day${sep}" data-comm-idx="${blIdx}" data-sq-idx="${sqKey}"><td colspan="18">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;📅 ${DAY_NAMES[g]} ${dates[g]}</td></tr>`;
+        html += `<tr class="cp-tr-day${sep}" data-comm-idx="${blIdx}" data-sq-idx="${sqKey}"><td colspan="19">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;📅 ${DAY_NAMES[g]} ${dates[g]}</td></tr>`;
 
         gBlock.ops.forEach(op => {
           const k     = `${bl.commessa}|||${sq.nome}|||${op.nome}|||${g}`;
@@ -297,6 +299,7 @@ function pwControlloRender() {
       <td class="cp-stato" data-keys="${esc(JSON.stringify(statoKeys))}" style="vertical-align:top;padding-top:4px;text-align:center">${cpStatoCellHtml(statoKeys)}</td>
       <td class="cp-meteo" data-cantieri="${esc(JSON.stringify(op.cantieri))}" data-date="${dateISOs[g]}" style="text-align:center">${cpMeteoCellHtml(op.cantieri, dateISOs[g])}</td>
       <td style="${cpOreJiraStyle(jVal, g)}"><span id="cp-j-${ri}" data-jval="${esc(String(jVal))}">${jDisplay}</span></td>
+      <td class="cp-mysond" style="text-align:center">${cpMysondCellHtml(op.nome, g, jVal, op.cantieri)}</td>
       <td style="vertical-align:top;padding-top:4px;">${ticketHtml}</td>
       <td style="vertical-align:top;padding-top:4px;">${epicHtml}</td>
       <td class="cp-td-edit"><input id="cp-r-${ri}" class="cp-input pw-write-action" type="number" step="0.5" min="0" max="24"
