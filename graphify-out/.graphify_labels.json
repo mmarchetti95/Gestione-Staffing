@@ -6,7 +6,7 @@
   "4": "weekly-jira-subtask.js",
   "5": "weekly-ricerca-squadre.js",
   "6": "weekly-mappa.js",
-  "7": "Helper modali e CRUD",
+  "7": "dashboard-crud-helpers.js",
   "8": "weekly-meteo.js",
   "9": "dashboard-attestati.js",
   "10": "ai-assistant.js",
@@ -101,5 +101,12 @@
   "99": "weekly-autoplan-chat.js",
   "100": "ai-autoplan/index.ts",
   "101": "ai-assistant/index.ts",
-  "102": "ai-assistant-config/index.ts"
+  "102": "ai-assistant-config/index.ts",
+  "103": "produzione-anomalie-solleciti.js",
+  "104": "produzione-anomalie-core.js",
+  "105": "jira-update-production/index.ts",
+  "106": "produzione-anomalie.js",
+  "107": "weekly-note-variazioni.js",
+  "108": "weekly-ferie-massiva.js",
+  "109": "weekly-jira-check.js"
 }
