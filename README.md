@@ -114,6 +114,11 @@ Limite noto: il progetto Supabase è sul piano **Free**, che non include backup 
 
 ## Changelog
 
+## v18.210.0
+- feat: **Controllo produzione — orari degli interventi su "Ore Jira".** Passando il mouse sulla cella "Ore Jira" si apre un'infografica del giorno dell'operatore: barra oraria con un colore per ticket e, per ogni worklog, orario di inizio e fine, durata, ticket con titolo e commento. Mostra anche le pause (da 15 minuti in su) e segnala gli interventi che si sovrappongono. Orari in ora italiana.
+- Gli orari arrivano con "Sincronizza da Jira" / "🔄 Sincronizza squadra": le righe sincronizzate prima di questa versione mostrano solo le ore per ticket finché non si risincronizza.
+- Edge Function `jira-sync-worklogs` (sorgente ora versionato in `supabase/functions/jira-sync-worklogs/index.ts`): ogni ticket restituisce anche `summary` e `worklogs` (`started`, `seconds`, `comment`). Modifica retrocompatibile, salvata in `controllo_produzione.jira_tickets` senza cambi di schema.
+
 ## v18.209.0
 - feat: **Funzioni nascoste ai non-admin.** Nuovo pulsante admin **"🧩 Funzioni"** nell'header: elenco di schermate (Dashboard, Mappa), tab della Pianificazione settimanale, pulsanti principali (Griglia, Ferie, Controllo produzione, Auto-pianifica, Assistente AI) e sezioni della Dashboard, ognuno con un interruttore. Togliendo la spunta la funzione sparisce per tutti gli utenti non admin (le pagine escono anche dalla navigazione); l'admin continua a vederla, bordata in arancione. La modifica arriva subito agli utenti collegati.
 - Casella **"Anteprima"** nel pannello: l'admin vede l'app come un non-admin, solo per sé, fino al ricaricamento.

@@ -298,7 +298,7 @@ function pwControlloRender() {
       <td class="cp-wrap" style="color:#64748b" title="${esc(op.attivita)}">${esc(op.attivita)}</td>
       <td class="cp-stato" data-keys="${esc(JSON.stringify(statoKeys))}" style="vertical-align:top;padding-top:4px;text-align:center">${cpStatoCellHtml(statoKeys)}</td>
       <td class="cp-meteo" data-cantieri="${esc(JSON.stringify(op.cantieri))}" data-date="${dateISOs[g]}" style="text-align:center">${cpMeteoCellHtml(op.cantieri, dateISOs[g])}</td>
-      <td style="${cpOreJiraStyle(jVal, g)}"><span id="cp-j-${ri}" data-jval="${esc(String(jVal))}">${jDisplay}</span></td>
+      <td class="cp-oj-cell" style="${cpOreJiraStyle(jVal, g)}" data-date="${dateISOs[g]}" data-giorno="${esc(DAY_NAMES[g] + ' ' + dates[g])}" onmouseenter="cpOreJiraShow(this)" onmouseleave="cpOreJiraHide()"><span id="cp-j-${ri}" data-jval="${esc(String(jVal))}">${jDisplay}</span></td>
       <td class="cp-mysond" style="text-align:center">${cpMysondCellHtml(op.nome, g, jVal, op.cantieri)}</td>
       <td style="vertical-align:top;padding-top:4px;">${ticketHtml}</td>
       <td style="vertical-align:top;padding-top:4px;">${epicHtml}</td>
@@ -319,6 +319,7 @@ function pwControlloRender() {
   });
 
   html += '</tbody></table>';
+  cpOreJiraHide();
   container.innerHTML = html;
   cpApplyCollapse();
   // Re-applica ricerca operatore/cantiere se attiva (il DOM è appena stato ricreato)

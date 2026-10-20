@@ -51,6 +51,7 @@ JS_FILES = [
     'weekly-doppiaweek.js',
     'weekly-collapse-cp.js',
     'produzione-core.js',
+    'produzione-orari-jira.js',
     'produzione-report.js',
     'produzione-mysond.js',
     'produzione-anomalie-core.js',
