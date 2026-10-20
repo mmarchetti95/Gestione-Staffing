@@ -1199,7 +1199,7 @@ function _apImprevistiHtml() {
   const titolo = '<summary class="cursor-pointer select-none text-xs font-semibold text-slate-700 uppercase tracking-wide">⚡ Imprevisti · ripara la settimana già in Griglia' +
     (_ap.imprevisti.length ? ' <span class="ml-1 normal-case font-bold" style="background:#fef3c7;color:#b45309;padding:0 6px;border-radius:9px;">' + _ap.imprevisti.length + '</span>' : '') + '</summary>';
   if (!mod.length) {
-    return '<details class="bg-white border border-slate-200 rounded-lg p-3 shadow-sm"' + (aperto ? ' open' : '') + ' ontoggle="apImpToggle(this)">' + titolo +
+    return '<details class="ap-imprevisti-box bg-white border border-slate-200 rounded-lg p-3 shadow-sm"' + (aperto ? ' open' : '') + ' ontoggle="apImpToggle(this)">' + titolo +
       '<div class="text-xs text-slate-500 mt-2">Settimana passata: non c\'è più niente da ripianificare.</div></details>';
   }
   const sel = 'border border-slate-300 rounded px-1.5 py-1 text-xs';
@@ -1233,7 +1233,7 @@ function _apImprevistiHtml() {
       '<button type="button" id="ap-ripara-btn" onclick="apCalcolaRiparazione()" class="text-xs px-3 py-1.5 rounded font-semibold text-white" style="background:#b45309;">🔧 Calcola riparazione</button>' +
       '</div>'
     : '';
-  return '<details class="bg-white border border-amber-200 rounded-lg p-3 shadow-sm"' + (aperto ? ' open' : '') + ' ontoggle="apImpToggle(this)">' + titolo +
+  return '<details class="ap-imprevisti-box bg-white border border-amber-200 rounded-lg p-3 shadow-sm"' + (aperto ? ' open' : '') + ' ontoggle="apImpToggle(this)">' + titolo +
     '<div class="text-[11px] text-slate-500 mt-1">Per assenze o cantieri fermi a settimana già pianificata: si tolgono solo le celle colpite e si cercano sostituti (stesso cantiere e giorno) o altri giorni per il lavoro perso. Il resto della Griglia non cambia.</div>' +
     form + lista + '</details>';
 }

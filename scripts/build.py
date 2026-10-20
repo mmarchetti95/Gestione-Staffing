@@ -20,6 +20,7 @@ JS_DIR = os.path.join(SRC, 'js')
 JS_FILES = [
     'config.js',
     'sb-admin.js',
+    'sb-funzioni.js',
     'storage-utils.js',
     'dashboard-kpi.js',
     'dashboard-operatori.js',

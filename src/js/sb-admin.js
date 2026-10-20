@@ -17,6 +17,8 @@ function sbGuestPages() {
   return Array.isArray(_sbUser?.user_metadata?.guest_pages) ? _sbUser.user_metadata.guest_pages : [];
 }
 function sbCanSeePage(pageKey) {
+  // Pagine nascoste dall'admin nel pannello "🧩 Funzioni" (src/js/sb-funzioni.js)
+  if (typeof sbFnPaginaVisibile === 'function' && !sbFnPaginaVisibile(pageKey)) return false;
   return sbRole() !== 'guest' || sbGuestPages().includes(pageKey);
 }
 // Guard da chiamare in cima alle azioni di modifica: blocca l'azione se il ruolo
@@ -704,6 +706,7 @@ async function sbOnLoggedIn() {
   const btnUsers = document.getElementById('sb-btn-users');
   const btnAiConfig = document.getElementById('sb-btn-ai-config');
   const btnAiHistory = document.getElementById('sb-btn-ai-history');
+  const btnFunzioni = document.getElementById('sb-btn-funzioni');
   const secRecon = document.getElementById('section-riconciliazione');
   if (sbIsAdmin()) {
     if (btnLog) btnLog.style.visibility = 'visible';
@@ -712,6 +715,7 @@ async function sbOnLoggedIn() {
     if (btnUsers) btnUsers.style.visibility = 'visible';
     if (btnAiConfig) btnAiConfig.style.visibility = 'visible';
     if (btnAiHistory) btnAiHistory.style.visibility = 'visible';
+    if (btnFunzioni) btnFunzioni.style.visibility = 'visible';
     if (secRecon) secRecon.style.display = '';
   } else {
     if (btnLog) btnLog.style.visibility = 'hidden';
@@ -720,10 +724,13 @@ async function sbOnLoggedIn() {
     if (btnUsers) btnUsers.style.visibility = 'hidden';
     if (btnAiConfig) btnAiConfig.style.visibility = 'hidden';
     if (btnAiHistory) btnAiHistory.style.visibility = 'hidden';
+    if (btnFunzioni) btnFunzioni.style.visibility = 'hidden';
     if (secRecon) secRecon.style.display = 'none';
   }
   if (typeof aiApplyWidgetVisibility === 'function') aiApplyWidgetVisibility();
-  sbApplyPageVisibility();
+  await sbFnLoad();
+  sbFnApply(); // chiama anche sbApplyPageVisibility()
+  sbFnSubscribe();
   sbApplyReadOnlyBanner();
   sbUpdateUI('syncing', 'Sync: caricamento dati…');
   await sbPull();
@@ -763,6 +770,7 @@ async function sbLogout() {
     _sbRealtimeChannel = null;
   }
   pwNvUnsubscribe();
+  sbFnUnsubscribe();
   await sbStopHeartbeat();
   await _sbClient.auth.signOut();
   _sbUser = null;

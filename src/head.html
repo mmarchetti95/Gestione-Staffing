@@ -1865,7 +1865,7 @@
     <div class="flex items-center gap-2">
       <button id="btn-presentation" class="px-3 py-1.5 text-sm rounded hover:bg-white/10" style="border:1px solid var(--dark-border-strong);color:var(--dark-text);visibility:visible;">📊 Modalità presentazione</button>
       <div class="text-xs pl-2" style="border-left:1px solid var(--dark-border-strong);color:var(--dark-text-muted);">
-        <span id="app-version" class="font-medium" style="color:var(--accent);">v18.208.0</span> · Michele Marchetti
+        <span id="app-version" class="font-medium" style="color:var(--accent);">v18.209.0</span> · Michele Marchetti
         <span id="sb-role-badge" style="margin-left:8px;padding:1px 8px;border-radius:9999px;background:rgba(255,255,255,.1);color:var(--dark-text);font-weight:600;"></span>
       </div>
     </div>
@@ -1937,6 +1937,9 @@
     </button>
     <button id="sb-btn-ai-history" onclick="aiHistoryShow()" class="dark-link-btn text-xs px-2 py-1" style="visibility:hidden;">
       🗨️ Storico Assistente AI
+    </button>
+    <button id="sb-btn-funzioni" onclick="sbFnShow()" class="dark-link-btn text-xs px-2 py-1" style="visibility:hidden;" title="Nascondi pagine e pulsanti agli utenti non admin">
+      🧩 Funzioni
     </button>
     <button onclick="sbShowChangePwd()" class="dark-link-btn text-xs px-2 py-1">
       🔑 Cambia password
@@ -2149,6 +2152,24 @@
 </div>
 
 <!-- Modal Gestione utenti (solo admin) -->
+<!-- Funzioni nascoste ai non-admin (src/js/sb-funzioni.js) -->
+<div id="sb-fn-modal" style="display:none;position:fixed;inset:0;z-index:99999;background:var(--backdrop);align-items:center;justify-content:center;">
+  <div style="background:white;border-radius:var(--radius-lg);padding:28px 32px;width:640px;max-width:96vw;max-height:88vh;box-shadow:var(--shadow-lg);display:flex;flex-direction:column;">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">
+      <div>
+        <div style="font-weight:700;font-size:16px;color:#0f172a;font-family:var(--font-display);">🧩 Funzioni visibili</div>
+        <div style="font-size:11px;color:#94a3b8;margin-top:2px;">Togli la spunta per nascondere una funzione a tutti gli utenti non admin. Tu continui a vederla, bordata in arancione.</div>
+      </div>
+      <button onclick="sbFnClose()" style="padding:5px 12px;font-size:12px;border:1px solid #e2e8f0;border-radius:6px;background:white;cursor:pointer;color:#475569;">Chiudi</button>
+    </div>
+    <label style="display:flex;align-items:center;gap:8px;font-size:12px;color:#475569;background:#f8fafc;border:1px solid #e2e8f0;border-radius:6px;padding:8px 10px;margin-top:10px;cursor:pointer;">
+      <input type="checkbox" id="sb-fn-anteprima" onchange="sbFnSetAnteprima(this.checked)">
+      Anteprima: vedi l'app come un utente non admin (solo per te, fino al ricaricamento della pagina)
+    </label>
+    <div id="sb-fn-list" style="overflow-y:auto;margin-top:4px;padding-right:4px;"></div>
+  </div>
+</div>
+
 <div id="sb-users-modal" style="display:none;position:fixed;inset:0;z-index:99999;background:var(--backdrop);align-items:center;justify-content:center;">
   <div style="background:white;border-radius:var(--radius-lg);padding:28px 32px;width:820px;max-width:96vw;max-height:88vh;box-shadow:var(--shadow-lg);display:flex;flex-direction:column;">
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">
@@ -2246,14 +2267,14 @@
   </section>
 
   <!-- 1. KPI -->
-  <section>
+  <section id="section-kpi">
     <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-3" id="kpi-grid"></div>
   </section>
 
   <div id="alert-box"></div>
 
   <!-- Vista mensile commesse -->
-  <section class="bg-white rounded-lg border border-slate-200 p-5">
+  <section id="section-gantt" class="bg-white rounded-lg border border-slate-200 p-5">
     <div class="flex items-center justify-between mb-3 flex-wrap gap-2">
       <div>
         <h2 class="font-semibold text-slate-900">Vista mensile commesse</h2>
@@ -2354,7 +2375,7 @@
 
   <!-- 3a. Fornitori: dipendenti e strumenti esterni disponibili "di volta in volta"
        per la Griglia settimanale, separati dal pool operatori interno. -->
-  <section class="bg-white rounded-lg border border-slate-200 p-4 no-present">
+  <section id="section-fornitori" class="bg-white rounded-lg border border-slate-200 p-4 no-present">
     <div class="flex items-center justify-between mb-2 flex-wrap gap-2">
       <h2 class="font-semibold text-slate-900">🏢 Fornitori <span id="fornitori-count" class="text-slate-400 text-xs font-normal"></span></h2>
       <div class="flex items-center gap-2">
@@ -2512,7 +2533,7 @@
   </section>
 
   <!-- 4. Suggerimenti & Gap -->
-  <section class="bg-white rounded-lg border border-slate-200 p-5">
+  <section id="section-gap" class="bg-white rounded-lg border border-slate-200 p-5">
     <h2 class="font-semibold text-slate-900 mb-1">Gap risorse &amp; raccomandazioni assunzione</h2>
     <p class="text-xs text-slate-500 mb-4">Analisi automatica: per ogni commessa in pipeline confronta fabbisogno vs operatori interni disponibili. Le raccomandazioni di assunzione sono aggregate per skill mancante.</p>
     <div id="gap-detail" class="space-y-2 mb-6"></div>

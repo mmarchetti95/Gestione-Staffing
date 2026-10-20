@@ -114,6 +114,12 @@ Limite noto: il progetto Supabase è sul piano **Free**, che non include backup 
 
 ## Changelog
 
+## v18.209.0
+- feat: **Funzioni nascoste ai non-admin.** Nuovo pulsante admin **"🧩 Funzioni"** nell'header: elenco di schermate (Dashboard, Mappa), tab della Pianificazione settimanale, pulsanti principali (Griglia, Ferie, Controllo produzione, Auto-pianifica, Assistente AI) e sezioni della Dashboard, ognuno con un interruttore. Togliendo la spunta la funzione sparisce per tutti gli utenti non admin (le pagine escono anche dalla navigazione); l'admin continua a vederla, bordata in arancione. La modifica arriva subito agli utenti collegati.
+- Casella **"Anteprima"** nel pannello: l'admin vede l'app come un non-admin, solo per sé, fino al ricaricamento.
+- È un nascondimento di interfaccia, non un permesso: le scritture restano regolate da ruoli e RLS.
+- Supabase: nuova tabella `app_funzioni_nascoste` (migrazione `app_funzioni_nascoste`, `supabase/migrations/20261020_app_funzioni_nascoste.sql`, già applicata), in Realtime. Nessuna modifica alle Edge Function.
+
 ## v18.208.0
 - feat: **Controllo produzione, "📥 Carica MySond".** Nuovo bottone accanto a "Sincronizza da Jira": si carica l'export Excel delle ore MySond (stesso formato dell'export ferie: Dipendente, commessa, voce, attività, descrizione, dataintervento, Somma di durata). I dipendenti vengono abbinati agli operatori del Pool (anche con Nome/Cognome invertiti) e per ognuno viene salvato il totale ore di ogni giorno. Prima del caricamento un riepilogo mostra periodo, operatori riconosciuti e gli operatori pianificati nella settimana che nel file non hanno ore.
 - Nuova colonna **"MySond"** accanto a "Ore Jira": totale del giorno dell'operatore su tutte le commesse, in ambra se diverso dalle Ore Jira. Il click apre il dettaglio (commessa, voce, attività, descrizione, ore), con in verde le voci sul cantiere pianificato e in arancio le ore non lavorate.

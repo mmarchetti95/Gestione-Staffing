@@ -1865,7 +1865,7 @@
     <div class="flex items-center gap-2">
       <button id="btn-presentation" class="px-3 py-1.5 text-sm rounded hover:bg-white/10" style="border:1px solid var(--dark-border-strong);color:var(--dark-text);visibility:visible;">📊 Modalità presentazione</button>
       <div class="text-xs pl-2" style="border-left:1px solid var(--dark-border-strong);color:var(--dark-text-muted);">
-        <span id="app-version" class="font-medium" style="color:var(--accent);">v18.208.0</span> · Michele Marchetti
+        <span id="app-version" class="font-medium" style="color:var(--accent);">v18.209.0</span> · Michele Marchetti
         <span id="sb-role-badge" style="margin-left:8px;padding:1px 8px;border-radius:9999px;background:rgba(255,255,255,.1);color:var(--dark-text);font-weight:600;"></span>
       </div>
     </div>
@@ -1937,6 +1937,9 @@
     </button>
     <button id="sb-btn-ai-history" onclick="aiHistoryShow()" class="dark-link-btn text-xs px-2 py-1" style="visibility:hidden;">
       🗨️ Storico Assistente AI
+    </button>
+    <button id="sb-btn-funzioni" onclick="sbFnShow()" class="dark-link-btn text-xs px-2 py-1" style="visibility:hidden;" title="Nascondi pagine e pulsanti agli utenti non admin">
+      🧩 Funzioni
     </button>
     <button onclick="sbShowChangePwd()" class="dark-link-btn text-xs px-2 py-1">
       🔑 Cambia password
@@ -2149,6 +2152,24 @@
 </div>
 
 <!-- Modal Gestione utenti (solo admin) -->
+<!-- Funzioni nascoste ai non-admin (src/js/sb-funzioni.js) -->
+<div id="sb-fn-modal" style="display:none;position:fixed;inset:0;z-index:99999;background:var(--backdrop);align-items:center;justify-content:center;">
+  <div style="background:white;border-radius:var(--radius-lg);padding:28px 32px;width:640px;max-width:96vw;max-height:88vh;box-shadow:var(--shadow-lg);display:flex;flex-direction:column;">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">
+      <div>
+        <div style="font-weight:700;font-size:16px;color:#0f172a;font-family:var(--font-display);">🧩 Funzioni visibili</div>
+        <div style="font-size:11px;color:#94a3b8;margin-top:2px;">Togli la spunta per nascondere una funzione a tutti gli utenti non admin. Tu continui a vederla, bordata in arancione.</div>
+      </div>
+      <button onclick="sbFnClose()" style="padding:5px 12px;font-size:12px;border:1px solid #e2e8f0;border-radius:6px;background:white;cursor:pointer;color:#475569;">Chiudi</button>
+    </div>
+    <label style="display:flex;align-items:center;gap:8px;font-size:12px;color:#475569;background:#f8fafc;border:1px solid #e2e8f0;border-radius:6px;padding:8px 10px;margin-top:10px;cursor:pointer;">
+      <input type="checkbox" id="sb-fn-anteprima" onchange="sbFnSetAnteprima(this.checked)">
+      Anteprima: vedi l'app come un utente non admin (solo per te, fino al ricaricamento della pagina)
+    </label>
+    <div id="sb-fn-list" style="overflow-y:auto;margin-top:4px;padding-right:4px;"></div>
+  </div>
+</div>
+
 <div id="sb-users-modal" style="display:none;position:fixed;inset:0;z-index:99999;background:var(--backdrop);align-items:center;justify-content:center;">
   <div style="background:white;border-radius:var(--radius-lg);padding:28px 32px;width:820px;max-width:96vw;max-height:88vh;box-shadow:var(--shadow-lg);display:flex;flex-direction:column;">
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">
@@ -2246,14 +2267,14 @@
   </section>
 
   <!-- 1. KPI -->
-  <section>
+  <section id="section-kpi">
     <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-3" id="kpi-grid"></div>
   </section>
 
   <div id="alert-box"></div>
 
   <!-- Vista mensile commesse -->
-  <section class="bg-white rounded-lg border border-slate-200 p-5">
+  <section id="section-gantt" class="bg-white rounded-lg border border-slate-200 p-5">
     <div class="flex items-center justify-between mb-3 flex-wrap gap-2">
       <div>
         <h2 class="font-semibold text-slate-900">Vista mensile commesse</h2>
@@ -2354,7 +2375,7 @@
 
   <!-- 3a. Fornitori: dipendenti e strumenti esterni disponibili "di volta in volta"
        per la Griglia settimanale, separati dal pool operatori interno. -->
-  <section class="bg-white rounded-lg border border-slate-200 p-4 no-present">
+  <section id="section-fornitori" class="bg-white rounded-lg border border-slate-200 p-4 no-present">
     <div class="flex items-center justify-between mb-2 flex-wrap gap-2">
       <h2 class="font-semibold text-slate-900">🏢 Fornitori <span id="fornitori-count" class="text-slate-400 text-xs font-normal"></span></h2>
       <div class="flex items-center gap-2">
@@ -2512,7 +2533,7 @@
   </section>
 
   <!-- 4. Suggerimenti & Gap -->
-  <section class="bg-white rounded-lg border border-slate-200 p-5">
+  <section id="section-gap" class="bg-white rounded-lg border border-slate-200 p-5">
     <h2 class="font-semibold text-slate-900 mb-1">Gap risorse &amp; raccomandazioni assunzione</h2>
     <p class="text-xs text-slate-500 mb-4">Analisi automatica: per ogni commessa in pipeline confronta fabbisogno vs operatori interni disponibili. Le raccomandazioni di assunzione sono aggregate per skill mancante.</p>
     <div id="gap-detail" class="space-y-2 mb-6"></div>
@@ -3503,6 +3524,8 @@ function sbGuestPages() {
   return Array.isArray(_sbUser?.user_metadata?.guest_pages) ? _sbUser.user_metadata.guest_pages : [];
 }
 function sbCanSeePage(pageKey) {
+  // Pagine nascoste dall'admin nel pannello "🧩 Funzioni" (src/js/sb-funzioni.js)
+  if (typeof sbFnPaginaVisibile === 'function' && !sbFnPaginaVisibile(pageKey)) return false;
   return sbRole() !== 'guest' || sbGuestPages().includes(pageKey);
 }
 // Guard da chiamare in cima alle azioni di modifica: blocca l'azione se il ruolo
@@ -4190,6 +4213,7 @@ async function sbOnLoggedIn() {
   const btnUsers = document.getElementById('sb-btn-users');
   const btnAiConfig = document.getElementById('sb-btn-ai-config');
   const btnAiHistory = document.getElementById('sb-btn-ai-history');
+  const btnFunzioni = document.getElementById('sb-btn-funzioni');
   const secRecon = document.getElementById('section-riconciliazione');
   if (sbIsAdmin()) {
     if (btnLog) btnLog.style.visibility = 'visible';
@@ -4198,6 +4222,7 @@ async function sbOnLoggedIn() {
     if (btnUsers) btnUsers.style.visibility = 'visible';
     if (btnAiConfig) btnAiConfig.style.visibility = 'visible';
     if (btnAiHistory) btnAiHistory.style.visibility = 'visible';
+    if (btnFunzioni) btnFunzioni.style.visibility = 'visible';
     if (secRecon) secRecon.style.display = '';
   } else {
     if (btnLog) btnLog.style.visibility = 'hidden';
@@ -4206,10 +4231,13 @@ async function sbOnLoggedIn() {
     if (btnUsers) btnUsers.style.visibility = 'hidden';
     if (btnAiConfig) btnAiConfig.style.visibility = 'hidden';
     if (btnAiHistory) btnAiHistory.style.visibility = 'hidden';
+    if (btnFunzioni) btnFunzioni.style.visibility = 'hidden';
     if (secRecon) secRecon.style.display = 'none';
   }
   if (typeof aiApplyWidgetVisibility === 'function') aiApplyWidgetVisibility();
-  sbApplyPageVisibility();
+  await sbFnLoad();
+  sbFnApply(); // chiama anche sbApplyPageVisibility()
+  sbFnSubscribe();
   sbApplyReadOnlyBanner();
   sbUpdateUI('syncing', 'Sync: caricamento dati…');
   await sbPull();
@@ -4249,6 +4277,7 @@ async function sbLogout() {
     _sbRealtimeChannel = null;
   }
   pwNvUnsubscribe();
+  sbFnUnsubscribe();
   await sbStopHeartbeat();
   await _sbClient.auth.signOut();
   _sbUser = null;
@@ -4570,6 +4599,187 @@ async function sbInitAndCheck() {
   }
 }
 
+/* ===================== FUNZIONI NASCOSTE (admin) ===================== */
+// L'admin può nascondere pagine e pulsanti ai non-admin dal pannello "🧩 Funzioni".
+// Stato condiviso nella tabella Supabase app_funzioni_nascoste (riga presente =
+// funzione nascosta; RLS: tutti leggono, solo admin inserisce/cancella), con canale
+// Realtime proprio. È un nascondimento di interfaccia, non un controllo di sicurezza:
+// i permessi veri restano quelli dei ruoli/RLS.
+// Le pagine usano le stesse chiavi di sbCanSeePage()/PW_TAB_KEYS, che le esclude
+// anche dalla navigazione; i pulsanti sono nascosti con un foglio di stile generato
+// (#sb-fn-style), così vale anche per gli elementi ricreati dai render.
+const SB_FN_TABLE = 'app_funzioni_nascoste';
+
+const SB_FN_FUNZIONI = [
+  { gruppo: 'Schermate', chiave: 'dashboard', label: '📊 Dashboard', sel: '#nav-dashboard' },
+  { gruppo: 'Schermate', chiave: 'mappa', label: '🗺 Mappa (vista live)', sel: '#nav-mappa' },
+  { gruppo: 'Pianificazione settimanale', chiave: 'weekly:griglia', label: '📋 Griglia settimanale', sel: '#pw-tab-griglia' },
+  { gruppo: 'Pianificazione settimanale', chiave: 'weekly:ferie', label: '🏖 Ferie / Permessi', sel: '#pw-tab-ferie' },
+  { gruppo: 'Pianificazione settimanale', chiave: 'weekly:mappa', label: '🗺 Mappa squadre', sel: '#pw-tab-mappa' },
+  { gruppo: 'Pianificazione settimanale', chiave: 'weekly:spostamenti', label: '🧭 Pianifica spostamenti', sel: '#pw-tab-spostamenti' },
+  { gruppo: 'Pianificazione settimanale', chiave: 'weekly:ricerca-squadre', label: '🔍 Ricerca Squadre', sel: '#pw-tab-ricerca-squadre' },
+  { gruppo: 'Pianificazione settimanale', chiave: 'weekly:autoplan', label: '🤖 Auto-pianifica', sel: '#pw-tab-autoplan' },
+  { gruppo: 'Pianificazione settimanale', chiave: 'weekly:controllo', label: '📊 Controllo produzione', sel: '#pw-tab-controllo' },
+  { gruppo: 'Pianificazione settimanale', chiave: 'weekly:meteo-storico', label: '🌦️ Storico meteo', sel: '#pw-tab-meteo-storico' },
+  { gruppo: 'Pianificazione settimanale', chiave: 'weekly:doppia', label: '🔁 Doppia Week', sel: '#pw-tab-doppia' },
+  { gruppo: 'Griglia', chiave: 'griglia:strumenti', label: '🔧 Aggiorna strumenti Jira', sel: '#pw-strumenti-refresh, #pw-strumenti-status' },
+  { gruppo: 'Griglia', chiave: 'griglia:meteo-settimana', label: '⛈️ Meteo settimana', sel: '#pw-weather-week-btn' },
+  { gruppo: 'Griglia', chiave: 'griglia:note-variazioni', label: '📝 Note/Variazioni', sel: '#pw-nv-btn' },
+  { gruppo: 'Griglia', chiave: 'griglia:controllo-sottotask', label: '🎫 Controllo sottotask', sel: '#pw-jchk-btn' },
+  { gruppo: 'Griglia', chiave: 'griglia:sottotask-jira', label: '🎫 Crea sottotask Jira (per commessa)', sel: '[data-help-key="pw-sottotask-jira"]' },
+  { gruppo: 'Griglia', chiave: 'griglia:genera-mail', label: '📧 Genera mail', sel: '#pw-gen-mail' },
+  { gruppo: 'Ferie', chiave: 'ferie:import', label: '📥 Importa Excel ferie', sel: '#pw-ferie-import-btn' },
+  { gruppo: 'Controllo produzione', chiave: 'controllo:anomalie', label: '🔍 Controllo anomalie', sel: '#cpa-toggle, #cpa-root' },
+  { gruppo: 'Controllo produzione', chiave: 'controllo:sync-jira', label: '🔄 Sincronizza da Jira', sel: '#cp-sync-jira' },
+  { gruppo: 'Controllo produzione', chiave: 'controllo:mysond', label: '📥 Carica MySond', sel: '#cp-mysond-btn' },
+  { gruppo: 'Auto-pianifica', chiave: 'autoplan:assistente', label: '✦ Assistente pianificazione', sel: '.apc-toggle, #apc-panel' },
+  { gruppo: 'Auto-pianifica', chiave: 'autoplan:imprevisti', label: '⚡ Imprevisti', sel: '.ap-imprevisti-box' },
+  { gruppo: 'Dashboard', chiave: 'dashboard:kpi', label: 'KPI', sel: '#section-kpi' },
+  { gruppo: 'Dashboard', chiave: 'dashboard:gantt', label: 'Vista mensile commesse', sel: '#section-gantt' },
+  { gruppo: 'Dashboard', chiave: 'dashboard:fornitori', label: '🏢 Fornitori', sel: '#section-fornitori' },
+  { gruppo: 'Dashboard', chiave: 'dashboard:attestati', label: 'Attestati', sel: '#section-attestati' },
+  { gruppo: 'Dashboard', chiave: 'dashboard:limitazioni', label: 'Limitazioni', sel: '#section-limitazioni' },
+  { gruppo: 'Dashboard', chiave: 'dashboard:dpi', label: 'DPI', sel: '#section-dpi' },
+  { gruppo: 'Dashboard', chiave: 'dashboard:gap', label: 'Gap risorse & raccomandazioni', sel: '#section-gap' },
+  { gruppo: 'Generale', chiave: 'generale:assistente-ai', label: '🤖 Assistente AI (pulsante flottante)', sel: '#ai-assistant-btn, #ai-assistant-panel' },
+];
+
+const _sbFn = { nascoste: {}, channel: null, anteprima: false };
+
+function sbFnNascosta(chiave) {
+  return !!_sbFn.nascoste[chiave];
+}
+
+// True se le funzioni nascoste vanno davvero tolte all'utente corrente: sempre per i
+// non-admin, per l'admin solo in modalità "anteprima come non-admin".
+function sbFnApplicaNascoste() {
+  return !sbIsAdmin() || _sbFn.anteprima;
+}
+
+// Usata da sbCanSeePage(): una pagina nascosta sparisce dalla navigazione.
+function sbFnPaginaVisibile(chiave) {
+  return !(sbFnApplicaNascoste() && sbFnNascosta(chiave));
+}
+
+async function sbFnLoad() {
+  if (!_sbClient) return;
+  try {
+    const { data, error } = await _sbClient.from(SB_FN_TABLE).select('chiave, nascosta_da, nascosta_il');
+    if (error) throw error;
+    const m = {};
+    (data || []).forEach(r => { m[r.chiave] = { da: r.nascosta_da, il: r.nascosta_il }; });
+    _sbFn.nascoste = m;
+  } catch (e) {
+    // Tabella assente o errore di rete: nessuna funzione nascosta (l'app resta usabile).
+    console.warn('Funzioni nascoste: caricamento fallito', e);
+  }
+}
+
+function sbFnApply() {
+  let st = document.getElementById('sb-fn-style');
+  if (!st) {
+    st = document.createElement('style');
+    st.id = 'sb-fn-style';
+    document.head.appendChild(st);
+  }
+  const sel = SB_FN_FUNZIONI.filter(f => sbFnNascosta(f.chiave)).map(f => f.sel).join(', ');
+  if (!sel) st.textContent = '';
+  else if (sbFnApplicaNascoste()) st.textContent = sel + ' { display: none !important; }';
+  else st.textContent = sel + ' { outline: 2px dashed #f59e0b !important; outline-offset: 2px; }';
+  const btn = document.getElementById('sb-btn-funzioni');
+  if (btn) btn.textContent = _sbFn.anteprima ? '🧩 Funzioni (anteprima)' : '🧩 Funzioni';
+  if (typeof sbApplyPageVisibility === 'function') sbApplyPageVisibility();
+}
+
+function sbFnSubscribe() {
+  if (_sbFn.channel || !_sbClient) return;
+  try {
+    _sbFn.channel = _sbClient.channel('app-funzioni-nascoste')
+      .on('postgres_changes', { event: '*', schema: 'public', table: SB_FN_TABLE }, async () => {
+        await sbFnLoad();
+        sbFnApply();
+        if (document.getElementById('sb-fn-modal')?.style.display === 'flex') sbFnRender();
+      })
+      .subscribe();
+  } catch (e) { console.warn('Realtime funzioni nascoste:', e); }
+}
+
+function sbFnUnsubscribe() {
+  if (!_sbFn.channel) return;
+  try { _sbClient.removeChannel(_sbFn.channel); } catch (e) {}
+  _sbFn.channel = null;
+  _sbFn.nascoste = {};
+  _sbFn.anteprima = false;
+  sbFnApply();
+}
+
+async function sbFnShow() {
+  if (!sbIsAdmin()) return;
+  document.getElementById('sb-fn-modal').style.display = 'flex';
+  sbFnRender();
+  await sbFnLoad();
+  sbFnRender();
+}
+
+function sbFnClose() {
+  document.getElementById('sb-fn-modal').style.display = 'none';
+}
+
+function sbFnRender() {
+  const box = document.getElementById('sb-fn-list');
+  if (!box) return;
+  const ant = document.getElementById('sb-fn-anteprima');
+  if (ant) ant.checked = _sbFn.anteprima;
+  const fmt = ts => { try { return new Date(ts).toLocaleString('it-IT', { dateStyle: 'short', timeStyle: 'short' }); } catch (e) { return ''; } };
+  let html = '';
+  let gruppo = null;
+  SB_FN_FUNZIONI.forEach(f => {
+    if (f.gruppo !== gruppo) {
+      if (gruppo !== null) html += '</div>';
+      gruppo = f.gruppo;
+      html += '<div style="font-size:11px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:.04em;margin:14px 0 6px;">' + esc(gruppo) + '</div><div>';
+    }
+    const n = _sbFn.nascoste[f.chiave];
+    html += '<label style="display:flex;align-items:center;gap:10px;padding:6px 8px;border-radius:6px;cursor:pointer;' + (n ? 'background:#fffbeb;' : '') + '">' +
+      '<input type="checkbox" data-chiave="' + esc(f.chiave) + '" onchange="sbFnToggle(this)"' + (n ? '' : ' checked') + ' style="width:16px;height:16px;">' +
+      '<span style="font-size:13px;color:#0f172a;flex:1;">' + esc(f.label) + '</span>' +
+      (n ? '<span style="font-size:11px;color:#b45309;">nascosta' + (n.da ? ' da ' + esc(n.da) : '') + (n.il ? ' · ' + esc(fmt(n.il)) : '') + '</span>'
+         : '<span style="font-size:11px;color:#94a3b8;">visibile a tutti</span>') +
+      '</label>';
+  });
+  if (gruppo !== null) html += '</div>';
+  box.innerHTML = html;
+}
+
+async function sbFnToggle(input) {
+  if (!sbIsAdmin()) return;
+  const chiave = input.dataset.chiave;
+  const nascondi = !input.checked;
+  const f = SB_FN_FUNZIONI.find(x => x.chiave === chiave);
+  input.disabled = true;
+  try {
+    const q = nascondi
+      ? _sbClient.from(SB_FN_TABLE).upsert({ chiave }, { onConflict: 'chiave', ignoreDuplicates: true })
+      : _sbClient.from(SB_FN_TABLE).delete().eq('chiave', chiave);
+    const { error } = await q;
+    if (error) throw error;
+    if (nascondi) _sbFn.nascoste[chiave] = { da: _sbUser?.email, il: new Date().toISOString() };
+    else delete _sbFn.nascoste[chiave];
+    sbLogActivity(nascondi ? 'Funzione nascosta' : 'Funzione resa visibile', { funzione: f ? f.label : chiave });
+  } catch (e) {
+    input.checked = !nascondi;
+    showAlertModal('Impossibile salvare: ' + (e.message || e));
+  }
+  input.disabled = false;
+  sbFnApply();
+  sbFnRender();
+}
+
+function sbFnSetAnteprima(on) {
+  if (!sbIsAdmin()) return;
+  _sbFn.anteprima = !!on;
+  sbFnApply();
+}
 /* ===================== STORAGE (window.storage con fallback) ===================== */
 const hasStorage = typeof window.storage !== 'undefined';
 async function sset(k, v) {
@@ -25921,7 +26131,7 @@ function _apImprevistiHtml() {
   const titolo = '<summary class="cursor-pointer select-none text-xs font-semibold text-slate-700 uppercase tracking-wide">⚡ Imprevisti · ripara la settimana già in Griglia' +
     (_ap.imprevisti.length ? ' <span class="ml-1 normal-case font-bold" style="background:#fef3c7;color:#b45309;padding:0 6px;border-radius:9px;">' + _ap.imprevisti.length + '</span>' : '') + '</summary>';
   if (!mod.length) {
-    return '<details class="bg-white border border-slate-200 rounded-lg p-3 shadow-sm"' + (aperto ? ' open' : '') + ' ontoggle="apImpToggle(this)">' + titolo +
+    return '<details class="ap-imprevisti-box bg-white border border-slate-200 rounded-lg p-3 shadow-sm"' + (aperto ? ' open' : '') + ' ontoggle="apImpToggle(this)">' + titolo +
       '<div class="text-xs text-slate-500 mt-2">Settimana passata: non c\'è più niente da ripianificare.</div></details>';
   }
   const sel = 'border border-slate-300 rounded px-1.5 py-1 text-xs';
@@ -25955,7 +26165,7 @@ function _apImprevistiHtml() {
       '<button type="button" id="ap-ripara-btn" onclick="apCalcolaRiparazione()" class="text-xs px-3 py-1.5 rounded font-semibold text-white" style="background:#b45309;">🔧 Calcola riparazione</button>' +
       '</div>'
     : '';
-  return '<details class="bg-white border border-amber-200 rounded-lg p-3 shadow-sm"' + (aperto ? ' open' : '') + ' ontoggle="apImpToggle(this)">' + titolo +
+  return '<details class="ap-imprevisti-box bg-white border border-amber-200 rounded-lg p-3 shadow-sm"' + (aperto ? ' open' : '') + ' ontoggle="apImpToggle(this)">' + titolo +
     '<div class="text-[11px] text-slate-500 mt-1">Per assenze o cantieri fermi a settimana già pianificata: si tolgono solo le celle colpite e si cercano sostituti (stesso cantiere e giorno) o altri giorni per il lavoro perso. Il resto della Griglia non cambia.</div>' +
     form + lista + '</details>';
 }
