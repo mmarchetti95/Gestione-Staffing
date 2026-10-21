@@ -1,6 +1,6 @@
 /* ==================== CONTROLLO ANOMALIE · SOLLECITI WORKLOG ====================
-   Bozze di messaggio per chi non ha caricato, o ha caricato solo in parte, le ore su
-   Jira (anomalie con `sollecito`: pianificato_senza_worklog / worklog_parziale).
+   Bozze di messaggio per chi non ha caricato le ore su Jira, o ne ha meno dei colleghi
+   di squadra (anomalie con `solleciti`: pianificato_senza_worklog / ore_squadra).
    Il testo base è deterministico (cpaSollecitoBase, nel motore puro); "✨ Scrivi con
    l'assistente AI" lo fa riscrivere dall'azione 'solleciti' di ai-autoplan (una
    chiamata senza strumenti: il modello scrive testo e basta, non legge né modifica
@@ -290,7 +290,7 @@ function _cpaSollSchedaHtml(g, r, email, inp) {
     (v.oreRegistrate > 0 ? 'background:#fef3c7;color:#92400e;' : 'background:#fee2e2;color:#991b1b;') +
     (st && nuovi.has(v.giorno) ? 'outline:2px solid #4f46e5;' : '') + '"' +
     (st && nuovi.has(v.giorno) ? ' title="Giornata nuova, non compresa nel sollecito già inviato"' : '') + '>' +
-    esc(r.giorniLabel[v.giorno]) + ' · ' + (v.oreRegistrate > 0 ? esc(String(v.oreRegistrate).replace('.', ',')) + '/' + v.oreAttese + ' h' : '0 h') + '</span>').join('');
+    esc(r.giorniLabel[v.giorno]) + ' · ' + (v.oreRegistrate > 0 ? esc(_cpaFmt(v.oreRegistrate)) + (v.oreAttese != null ? '/' + esc(_cpaFmt(v.oreAttese)) : '') + ' h' : '0 h') + '</span>').join('');
   const quando = st ? new Date(st.rec.ts).toLocaleString('it-IT', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }) : '';
   const spunta = '<label class="pw-write-action text-xs flex items-center gap-1 font-semibold" style="color:' + (st && st.completo ? '#15803d' : '#334155') + ';">' +
     '<input type="checkbox" data-soll-op="' + op + '" onchange="cpaSollSegnaInviato(this)"' + (st && st.completo ? ' checked' : '') + '> Sollecito inviato</label>' +

@@ -1,15 +1,13 @@
 /* ==================== CONTROLLO ANOMALIE PRODUZIONE · MOTORE ====================
    Modulo PURO: niente DOM, niente globali, niente chiamate di rete. Riceve tutto in
-   `input` (Griglia della settimana già appiattita in celle, worklog Jira, righe di
-   controllo_produzione, Epic dei sottotask, modello di produttività) e restituisce
-   l'elenco delle anomalie con la correzione proposta. Stessa regola del solver di
-   Auto-pianifica: tenerlo puro, così può diventare uno strumento di un agente LLM o
-   girare in una Edge Function programmata.
+   `input` (Griglia della settimana già appiattita in celle, worklog Jira, Epic dei
+   sottotask, indice dei sottotask della Griglia) e restituisce l'elenco delle anomalie
+   con la correzione proposta. Stessa regola del solver di Auto-pianifica: tenerlo
+   puro, così può diventare uno strumento di un agente LLM o girare in una Edge
+   Function programmata.
 
    Le correzioni sono SOLO proposte. `azione` descrive cosa farebbe un click
-   dell'utente (sempre locale: Km/Cad in controllo_produzione o una cella di
-   Griglia); su Jira non si scrive mai da qui. I Km corretti arrivano su Jira solo
-   con "🔄 Sincronizza da Jira", che chiede conferma come sempre.
+   dell'utente (sempre locale: una cella di Griglia); su Jira non si scrive mai da qui.
 
    input = {
      anno, week,
@@ -18,34 +16,30 @@
      celle: [{ commessa, squadra, operatore, giorno, cpKey,
                voci: [{ cantiere, attivita, subtask: {key, url} | null }],
                ferie: 'ferie' | 'non_disponibile' | null }],
-     worklog: { operatore: { giorno: { hours, tickets: [{key, url, hours, epic: {key,name,url}|null}] } } } | null,
+     worklog: { operatore: { giorno: { hours, tickets: [{key, url, hours, summary, epic: {key,name,url}|null}] } } } | null,
      verificati: [operatore],                    operatori di cui si sono letti i worklog
-     cp: { cpKey: { km_by_ticket, km_last_by_ticket, km_cad, jira_tickets } },
      epicDiSottotask: { subtaskKey: { epicKey, epicName, taskKey, taskSummary } },
-     sottotaskIndex: { subtaskKey: { commessa, cantiere, operatore, attivita } },
-     modello,                                    apBuildModello() (può mancare)
-     famigliaDi: attivita -> famiglia | null,    tipicamente apTrovaFamiglia(modello, ·)
+     sottotaskIndex: { subtaskKey: { commessa, cantiere, operatore, attivita, anno, week } },
+                                                 sottotask di TUTTA la Griglia (non solo la settimana)
      soglie: { ... }                             vedi CPA_SOGLIE_DEFAULT
    }
 */
 
 const CPA_TIPI = {
-  pianificato_senza_worklog:     { icona: '⏱', etichetta: 'Pianificati senza worklog' },
-  worklog_parziale:              { icona: '◔', etichetta: 'Worklog parziali' },
-  worklog_senza_pianificazione:  { icona: '👻', etichetta: 'Worklog senza pianificazione' },
-  epic_diverso:                  { icona: '🟣', etichetta: 'Epic diverso dalla Griglia' },
-  km_duplicati:                  { icona: '👯', etichetta: 'Km duplicati in squadra' },
-  km_fuori_scala:                { icona: '📏', etichetta: 'Km fuori scala' },
+  pianificato_senza_worklog:    { icona: '⏱', etichetta: 'Pianificati senza worklog',
+    descrizione: 'In Griglia per un giorno già passato, ma senza ore su Jira.' },
+  worklog_senza_pianificazione: { icona: '👻', etichetta: 'Worklog senza pianificazione',
+    descrizione: 'Ore su Jira in un giorno senza cantiere in Griglia (o in ferie). Propone la cella da aggiungere.' },
+  epic_diverso:                 { icona: '🟣', etichetta: 'Epic diverso dalla Griglia',
+    descrizione: 'Ore su un ticket di un Epic diverso da quello dei cantieri pianificati quel giorno.' },
+  ore_squadra:                  { icona: '⚖️', etichetta: 'Ore diverse in squadra',
+    descrizione: 'Operatori della stessa squadra, nello stesso giorno, con ore Jira diverse.' },
 };
 
 const CPA_SOGLIE_DEFAULT = {
-  kmAlto: 3,          // km giornata-squadra >= 3x la mediana della famiglia
-  kmBasso: 0.25,      // ... o <= 1/4
-  minCampioni: 3,     // giornate di storico minime perché la mediana conti
-  oreMinime: 0.25,    // sotto questa soglia un giorno vale "senza worklog"
-  // sotto queste un giorno vale "parziale" (Lun..Sab): stesse soglie del verde
-  // nella colonna "Ore Jira" (cpOreJiraStyle), Lun/Ven sono giornate di viaggio
-  oreAttese: [5, 7, 7, 7, 5, 7],
+  oreMinime: 0.25,      // sotto questa soglia un giorno vale "senza worklog"
+  diffOreSquadra: 1,    // scarto (h) fra il massimo della squadra e un operatore oltre cui segnalare
+  diffOreAlta: 3,       // scarto da cui la gravità passa a "media"
 };
 
 const CPA_GRAVITA_ORD = { alta: 0, media: 1, bassa: 2 };
@@ -57,18 +51,8 @@ function _cpaNum(v) {
 
 function _cpaFmt(n) {
   if (n == null) return '—';
-  const r = Math.abs(n) >= 10 ? Math.round(n * 10) / 10 : Math.round(n * 1000) / 1000;
+  const r = Math.abs(n) >= 10 ? Math.round(n * 10) / 10 : Math.round(n * 100) / 100;
   return String(r).replace('.', ',');
-}
-
-function _cpaUguali(a, b) { return Math.abs(a - b) < 1e-6; }
-
-/* Km di una giornata-squadra come li conta il modello di stima (apBuildModello):
-   valori tutti uguali su più operatori = un solo valore ripetuto, altrimenti somma. */
-function _cpaKmSquadra(valori) {
-  if (!valori.length) return null;
-  if (valori.length > 1 && valori.every(v => _cpaUguali(v, valori[0]))) return valori[0];
-  return valori.reduce((a, b) => a + b, 0);
 }
 
 function _cpaId(tipo, input, parti) {
@@ -79,34 +63,69 @@ function _cpaCantieriCella(c) {
   return [...new Set((c.voci || []).map(v => v.cantiere))];
 }
 
-/* ---------- Worklog vs Griglia ---------- */
+function _cpaNormTxt(s) { return String(s || '').toLowerCase().trim().replace(/\s+/g, ' '); }
 
-function _cpaControllaWorklog(input, out, nonVerificabili) {
-  if (!input.worklog) return;
+/* Dove sta un ticket in Griglia: sottotask creato dalla Griglia (di qualunque settimana),
+   oppure Task padre di un sottotask della settimana. null = non riconducibile. */
+function _cpaDoveTicket(input, t) {
+  const s = input.sottotaskIndex[t.key];
+  if (s) return { commessa: s.commessa, cantiere: s.cantiere, attivita: s.attivita || '', operatore: s.operatore,
+    fonte: 'sottotask', anno: s.anno, week: s.week };
+  const sub = Object.keys(input.epicDiSottotask).find(k => input.epicDiSottotask[k].taskKey === t.key && input.sottotaskIndex[k]);
+  if (sub) {
+    const x = input.sottotaskIndex[sub];
+    return { commessa: x.commessa, cantiere: x.cantiere, attivita: x.attivita || '', operatore: x.operatore, fonte: 'task' };
+  }
+  return null;
+}
+
+/* Ticket del giorno con la loro posizione in Griglia, per il confronto "Griglia | Jira" */
+function _cpaTicketJira(input, tickets) {
+  return (tickets || []).map(t => ({
+    key: t.key, url: t.url || '', summary: t.summary || '', hours: _cpaNum(t.hours) || 0,
+    epic: t.epic || null, dove: _cpaDoveTicket(input, t),
+  }));
+}
+
+/* Pianificazione della settimana di un operatore, giorno per giorno (per il confronto) */
+function _cpaSettimanaOperatore(input, op) {
+  const out = [];
+  for (let g = 0; g < 6; g++) {
+    const celle = (input.celle || []).filter(c => c.operatore === op && c.giorno === g);
+    const ferie = (celle.find(c => c.ferie) || {}).ferie || input.ferieDi(op, g);
+    const voci = cc => cc.flatMap(c => (c.voci || []).map(v => ({ commessa: c.commessa, squadra: c.squadra, cantiere: v.cantiere, attivita: v.attivita || '' })));
+    out.push({
+      giorno: g, ferie: ferie || null,
+      voci: voci(celle.filter(c => !c.ferie)),
+      vociInFerie: voci(celle.filter(c => c.ferie)),   // cella compilata ma giorno segnato assente
+    });
+  }
+  return out;
+}
+
+function _cpaDedupVoci(voci) {
+  const visti = new Set();
+  return voci.filter(v => {
+    const k = _cpaNormTxt(v.commessa) + '|' + _cpaNormTxt(v.cantiere) + '|' + _cpaNormTxt(v.attivita);
+    if (visti.has(k)) return false;
+    visti.add(k);
+    return true;
+  });
+}
+
+/* ---------- 1) Pianificato senza worklog ---------- */
+
+function _cpaControllaSenzaWorklog(input, out, perOpGiorno, wl, ore) {
   const S = input.soglie;
   const verificati = new Set(input.verificati || []);
   const valutabili = new Set(input.giorniValutabili || []);
-
-  // operatore|||giorno -> celle (tutte le commesse)
-  const perOpGiorno = {};
-  (input.celle || []).forEach(c => {
-    const k = c.operatore + '|||' + c.giorno;
-    (perOpGiorno[k] = perOpGiorno[k] || []).push(c);
-  });
-
-  const wl = (op, g) => (input.worklog[op] || {})[g] || null;
-  const ore = (op, g) => { const d = wl(op, g); return d ? (_cpaNum(d.hours) || 0) : 0; };
-
-  // 1) Pianificati senza worklog o con worklog parziale (per operatore/giorno, solo giorni conclusi)
   Object.keys(perOpGiorno).forEach(k => {
     const celle = perOpGiorno[k].filter(c => !c.ferie);
     if (!celle.length) return;
     const op = celle[0].operatore, g = celle[0].giorno;
     if (!verificati.has(op) || !valutabili.has(g)) return;
     const h = ore(op, g);
-    const attese = S.oreAttese[g];
-    const parziale = h >= S.oreMinime;
-    if (parziale && !(attese > 0 && h < attese)) return;
+    if (h >= S.oreMinime) return;
     const cantieri = [...new Set(celle.flatMap(_cpaCantieriCella))];
     const commesse = celle.map(c => c.commessa).filter((x, i, a) => a.indexOf(x) === i);
     const sottotask = celle.flatMap(c => (c.voci || []).map(v => v.subtask).filter(Boolean));
@@ -114,74 +133,105 @@ function _cpaControllaWorklog(input, out, nonVerificabili) {
     const dove = sottotask.length
       ? 'sul sottotask ' + sottotask.map(s => s.key).join(' / ')
       : 'sul ticket del cantiere ' + cantieri.join(', ');
-    const tipo = parziale ? 'worklog_parziale' : 'pianificato_senza_worklog';
     out.push({
-      id: _cpaId(tipo, input, [op, g]),
-      tipo, gravita: parziale ? 'bassa' : 'media',
+      id: _cpaId('pianificato_senza_worklog', input, [op, g]),
+      tipo: 'pianificato_senza_worklog', gravita: 'media',
       commessa: celle[0].commessa, squadra: celle[0].squadra, operatore: op, giorno: g,
       cpKey: celle[0].cpKey, cantiere: cantieri.join(', '),
-      titolo: parziale
-        ? op + ' ha registrato ' + _cpaFmt(h) + ' h su ' + _cpaFmt(attese) + ' attese'
-        : op + ' è in Griglia ma non ha ore su Jira',
-      dettaglio: 'Pianificato su ' + cantieri.join(', ') + ' (' + commesse.join(', ') + '), worklog del giorno: ' + _cpaFmt(h) + ' h' +
-        (ticket.length ? ' su ' + ticket.map(t => t.key).join(', ') : '') + '.',
-      correzione: parziale
-        ? 'Chiedere a ' + op + ' di completare le ore di ' + input.giorniLabel[g] + ' (ne mancano circa ' + _cpaFmt(Math.round((attese - h) * 10) / 10) + ') ' + dove +
-          '. Se ha lavorato davvero meno (mezza giornata, permesso), nessuna correzione.'
-        : 'Chiedere a ' + op + ' di registrare le ore di ' + input.giorniLabel[g] + ' ' + dove +
-          '. Se invece quel giorno era assente, segnarlo in Ferie (la cella esce dal controllo).',
+      titolo: op + ' è in Griglia ma non ha ore su Jira',
+      dettaglio: 'Pianificato su ' + cantieri.join(', ') + ' (' + commesse.join(', ') + '), worklog del giorno: ' + _cpaFmt(h) + ' h.',
+      correzione: 'Chiedere a ' + op + ' di registrare le ore di ' + input.giorniLabel[g] + ' ' + dove +
+        '. Se invece quel giorno era assente, segnarlo in Ferie (la cella esce dal controllo).',
+      confronto: {
+        griglia: celle.flatMap(c => (c.voci || []).map(v => ({ commessa: c.commessa, squadra: c.squadra, cantiere: v.cantiere, attivita: v.attivita || '', subtask: v.subtask }))),
+        jira: _cpaTicketJira(input, ticket),
+        oreJira: h,
+      },
       azione: null,
-      // dati per il sollecito (vedi cpaRaggruppaSolleciti)
-      sollecito: { operatore: op, giorno: g, commesse, cantieri, oreRegistrate: Math.round(h * 100) / 100, oreAttese: attese,
-        sottotask: sottotask.map(s => s.key), ticket: ticket.map(t => t.key) },
+      solleciti: [{ operatore: op, giorno: g, commesse, cantieri, oreRegistrate: Math.round(h * 100) / 100, oreAttese: null,
+        sottotask: sottotask.map(s => s.key), ticket: ticket.map(t => t.key) }],
       link: sottotask.map(s => ({ label: s.key, url: s.url })),
     });
   });
+}
 
-  // 2) Worklog senza pianificazione (anche giorni futuri: ore registrate in anticipo sono comunque strane)
-  verificati.forEach(op => {
+/* ---------- 2) Worklog senza pianificazione ---------- */
+
+/* Cella da proporre: i cantieri dei ticket riconosciuti; altrimenti il cantiere della
+   settimana con lo stesso Epic del ticket; altrimenti quello del giorno pianificato più
+   vicino. `certezza` dice all'utente quanto fidarsi della proposta. */
+function _cpaProposta(input, op, g, jira, settimana) {
+  const daTicket = _cpaDedupVoci(jira.filter(t => t.dove).map(t => ({ commessa: t.dove.commessa, cantiere: t.dove.cantiere, attivita: t.dove.attivita })));
+  if (daTicket.length) return { voci: daTicket, certezza: 'alta', fonte: 'Cantiere del sottotask su cui ha registrato le ore.' };
+
+  const epicTk = new Set(jira.map(t => t.epic && t.epic.key).filter(Boolean));
+  if (epicTk.size) {
+    const stessoEpic = [];
+    (input.celle || []).forEach(c => {
+      if (c.operatore !== op || c.ferie) return;
+      (c.voci || []).forEach(v => {
+        const e = v.subtask && input.epicDiSottotask[v.subtask.key];
+        if (e && e.epicKey && epicTk.has(e.epicKey)) stessoEpic.push({ commessa: c.commessa, cantiere: v.cantiere, attivita: v.attivita || '' });
+      });
+    });
+    if (stessoEpic.length) return { voci: _cpaDedupVoci(stessoEpic), certezza: 'media', fonte: 'Cantiere della settimana con lo stesso Epic del ticket.' };
+  }
+
+  const inFerie = (settimana[g] || {}).vociInFerie || [];
+  if (inFerie.length) return { voci: _cpaDedupVoci(inFerie.map(v => ({ commessa: v.commessa, cantiere: v.cantiere, attivita: v.attivita }))),
+    certezza: 'media', fonte: 'Cantiere già in Griglia quel giorno, ma il giorno è segnato assente.' };
+
+  for (let d = 1; d < 6; d++) {
+    for (const gg of [g - d, g + d]) {
+      const s = settimana[gg];
+      if (s && s.voci.length) return { voci: _cpaDedupVoci(s.voci.map(v => ({ commessa: v.commessa, cantiere: v.cantiere, attivita: v.attivita }))),
+        certezza: 'bassa', fonte: 'Cantiere di ' + input.giorniLabel[gg] + ' (giorno pianificato più vicino): verificare.' };
+    }
+  }
+  return { voci: [], certezza: 'nessuna', fonte: 'Ticket non collegato a un cantiere della Griglia: indicare commessa e cantiere.' };
+}
+
+function _cpaControllaSenzaPianificazione(input, out, perOpGiorno, wl) {
+  const S = input.soglie;
+  (input.verificati || []).forEach(op => {
+    let settimana = null;
     for (let g = 0; g < 6; g++) {
       const d = wl(op, g);
       const h = d ? (_cpaNum(d.hours) || 0) : 0;
       if (h < S.oreMinime) continue;
       const celle = perOpGiorno[op + '|||' + g] || [];
-      const attive = celle.filter(c => !c.ferie);
-      if (attive.length) continue;
-      const inFerie = celle.find(c => c.ferie);
-      const tickets = (d.tickets || []);
-      // Il ticket è un sottotask creato dalla Griglia di questa settimana? allora si sa dove andrebbe
-      const noto = tickets.map(t => ({ t, s: input.sottotaskIndex[t.key] })).find(x => x.s && x.s.operatore === op);
-      const elencoTk = tickets.map(t => t.key + ' (' + _cpaFmt(_cpaNum(t.hours)) + ' h' + (t.epic ? ', Epic ' + (t.epic.name || t.epic.key) : '') + ')').join('; ');
-      let correzione, azione = null;
-      if (inFerie) {
-        correzione = 'Il giorno risulta ' + (inFerie.ferie === 'ferie' ? 'in ferie' : 'non disponibile') +
-          ': o le ore sono sul giorno sbagliato (correggere la data del worklog su Jira), o l\'assenza in Ferie è da togliere e la cella da pianificare.';
-      } else if (noto) {
-        correzione = 'Il ticket ' + noto.t.key + ' è il sottotask di ' + op + ' su ' + noto.s.cantiere +
-          (noto.s.attivita ? ' (' + noto.s.attivita + ')' : '') + ', commessa ' + noto.s.commessa +
-          ': probabilmente manca la cella in Griglia. In alternativa il worklog è sul giorno sbagliato.';
-        azione = { tipo: 'aggiungi_griglia', etichetta: '＋ Aggiungi in Griglia', commessa: noto.s.commessa,
-          operatore: op, giorno: g, cantiere: noto.s.cantiere, attivita: noto.s.attivita || '' };
-      } else {
-        correzione = 'Verificare su Jira i ticket ' + tickets.map(t => t.key).join(', ') +
-          ': manca la pianificazione in Griglia oppure il worklog è sul giorno sbagliato.';
-      }
+      if (celle.some(c => !c.ferie)) continue;
+      settimana = settimana || _cpaSettimanaOperatore(input, op);
+      const assenza = settimana[g].ferie;
+      const jira = _cpaTicketJira(input, d.tickets);
+      const prop = _cpaProposta(input, op, g, jira, settimana);
+      const assTxt = assenza === 'non_disponibile' ? 'non disponibile' : 'in ferie';
+      const doveJira = jira.map(t => t.dove ? t.dove.cantiere + ' (' + t.dove.commessa + ')' : t.key).filter((x, i, a) => a.indexOf(x) === i).join(', ');
       out.push({
         id: _cpaId('worklog_senza_pianificazione', input, [op, g]),
-        tipo: 'worklog_senza_pianificazione', gravita: inFerie ? 'alta' : 'media',
-        commessa: noto ? noto.s.commessa : '', squadra: '', operatore: op, giorno: g,
-        cpKey: null, cantiere: noto ? noto.s.cantiere : '',
-        titolo: inFerie
-          ? op + ' ha ' + _cpaFmt(h) + ' h su Jira in un giorno di assenza'
+        tipo: 'worklog_senza_pianificazione', gravita: assenza ? 'alta' : 'media',
+        commessa: prop.voci.length ? prop.voci[0].commessa : '', squadra: '', operatore: op, giorno: g,
+        cpKey: null, cantiere: prop.voci.map(v => v.cantiere).join(', '),
+        titolo: assenza
+          ? op + ' ha ' + _cpaFmt(h) + ' h su Jira ma in Griglia risulta ' + assTxt
           : op + ' ha ' + _cpaFmt(h) + ' h su Jira ma nessun cantiere in Griglia',
-        dettaglio: 'Ticket: ' + (elencoTk || '—') + '.',
-        correzione, azione,
-        link: tickets.map(t => ({ label: t.key, url: t.url })),
+        dettaglio: 'In Griglia: ' + (assenza ? assTxt : 'nessun cantiere') + '. Su Jira: ' + (doveJira || '—') + '.',
+        correzione: assenza
+          ? 'Se ha lavorato davvero, togliere l\'assenza e aggiungere la cella in Griglia (proposta sotto); altrimenti il worklog è sul giorno sbagliato e va spostato su Jira.'
+          : 'Aggiungere la cella in Griglia (proposta sotto); se invece il worklog è sul giorno sbagliato, correggerne la data su Jira.',
+        confronto: { settimana, giorno: g, assenza: assenza || null, jira, oreJira: h },
+        azione: { tipo: 'aggiungi_griglia', operatore: op, giorno: g, togliAssenza: !!assenza,
+          voci: prop.voci, certezza: prop.certezza, fonte: prop.fonte },
+        link: jira.map(t => ({ label: t.key, url: t.url })),
       });
     }
   });
+}
 
-  // 3) Epic dei worklog diverso dall'Epic dei cantieri pianificati
+/* ---------- 3) Epic diverso ---------- */
+
+function _cpaControllaEpic(input, out, perOpGiorno, wl, nonVerificabili) {
+  const verificati = new Set(input.verificati || []);
   Object.keys(perOpGiorno).forEach(k => {
     const celle = perOpGiorno[k].filter(c => !c.ferie);
     if (!celle.length) return;
@@ -190,20 +240,21 @@ function _cpaControllaWorklog(input, out, nonVerificabili) {
     const d = wl(op, g);
     const tickets = (d && d.tickets) || [];
     if (!tickets.length) return;
-    const pianificati = {};   // epicKey -> { name, voci: [cantiere (sottotask)] }
+    const pianificati = {};   // epicKey -> nome
+    const griglia = [];
     celle.forEach(c => (c.voci || []).forEach(v => {
       const e = v.subtask && input.epicDiSottotask[v.subtask.key];
-      if (!e || !e.epicKey) return;
-      (pianificati[e.epicKey] = pianificati[e.epicKey] || { name: e.epicName || e.epicKey, voci: [] })
-        .voci.push(v.cantiere + ' (' + v.subtask.key + ')');
+      griglia.push({ commessa: c.commessa, squadra: c.squadra, cantiere: v.cantiere, attivita: v.attivita || '', subtask: v.subtask,
+        epic: e && e.epicKey ? { key: e.epicKey, name: e.epicName || e.epicKey } : null });
+      if (e && e.epicKey) pianificati[e.epicKey] = e.epicName || e.epicKey;
     }));
     const epicKeys = Object.keys(pianificati);
     if (!epicKeys.length) { nonVerificabili.epicSenzaSottotask++; return; }
     const fuori = tickets.filter(t => t.epic && t.epic.key && !pianificati[t.epic.key]);
     if (!fuori.length) return;
-    const atteso = epicKeys.map(ek => pianificati[ek].name + ' → ' + pianificati[ek].voci.join(', ')).join('; ');
     const sottotaskAttesi = celle.flatMap(c => (c.voci || []).map(v => v.subtask).filter(Boolean));
     const oreFuori = fuori.reduce((a, t) => a + (_cpaNum(t.hours) || 0), 0);
+    const jira = _cpaTicketJira(input, tickets).map(t => Object.assign(t, { fuori: fuori.some(f => f.key === t.key) }));
     out.push({
       id: _cpaId('epic_diverso', input, [op, g, fuori.map(t => t.key).sort().join(',')]),
       tipo: 'epic_diverso', gravita: 'alta',
@@ -211,118 +262,67 @@ function _cpaControllaWorklog(input, out, nonVerificabili) {
       cpKey: celle[0].cpKey, cantiere: [...new Set(celle.flatMap(_cpaCantieriCella))].join(', '),
       titolo: _cpaFmt(oreFuori) + ' h di ' + op + ' su un Epic diverso da quello in Griglia',
       dettaglio: 'Worklog: ' + fuori.map(t => t.key + ' → Epic ' + (t.epic.name || t.epic.key) + ' (' + _cpaFmt(_cpaNum(t.hours)) + ' h)').join('; ') +
-        '. In Griglia: Epic ' + atteso + '.',
+        '. In Griglia: Epic ' + epicKeys.map(ek => pianificati[ek]).join(', ') + '.',
       correzione: 'Spostare su Jira il worklog da ' + fuori.map(t => t.key).join(', ') + ' al sottotask ' +
         sottotaskAttesi.map(s => s.key).join(' / ') + ', oppure, se il lavoro era davvero su quell\'Epic, correggere il cantiere in Griglia.',
+      confronto: { griglia, jira, oreJira: _cpaNum(d.hours) || 0 },
       azione: null,
-      link: fuori.map(t => ({ label: t.key, url: t.url }))
-        .concat(fuori.filter(t => t.epic.url).map(t => ({ label: 'Epic ' + (t.epic.name || t.epic.key), url: t.epic.url })))
-        .concat(sottotaskAttesi.map(s => ({ label: s.key + ' (Griglia)', url: s.url }))),
+      link: fuori.filter(t => t.epic.url).map(t => ({ label: 'Epic ' + (t.epic.name || t.epic.key), url: t.epic.url })),
     });
   });
 }
 
-/* ---------- Km ---------- */
+/* ---------- 4) Ore diverse fra operatori della stessa squadra ---------- */
 
-function _cpaKmCella(input, c) {
-  const r = input.cp[c.cpKey];
-  if (!r) return null;
-  const by = (r.km_by_ticket && typeof r.km_by_ticket === 'object') ? r.km_by_ticket : {};
-  const vals = Object.keys(by).map(t => ({ ticket: t, km: _cpaNum(by[t]) })).filter(x => x.km != null && x.km > 0);
-  const tot = vals.length ? vals.reduce((a, x) => a + x.km, 0) : (_cpaNum(r.km_cad) || 0);
-  if (!(tot > 0)) return null;
-  const last = (r.km_last_by_ticket && typeof r.km_last_by_ticket === 'object') ? r.km_last_by_ticket : {};
-  return { tot: Math.round(tot * 1000) / 1000, perTicket: vals, suJira: vals.some(x => last[x.ticket] != null) };
-}
-
-function _cpaControllaKm(input, out, nonVerificabili) {
+/* Stessa commessa + squadra + giorno: le ore Jira del giorno (totale, come la colonna "Ore
+   Jira") dovrebbero essere simili. Si escludono dal confronto gli operatori a zero ore (già
+   in "Pianificati senza worklog") e chi quel giorno è su più squadre (il totale del giorno
+   non è confrontabile). */
+function _cpaControllaOreSquadra(input, out, wl, ore) {
   const S = input.soglie;
-  const gruppi = {};   // commessa|||squadra|||giorno -> celle con km
+  const verificati = new Set(input.verificati || []);
+  const valutabili = new Set(input.giorniValutabili || []);
+  const squadreDi = {};   // operatore|||giorno -> Set(commessa|||squadra)
+  const gruppi = {};
   (input.celle || []).forEach(c => {
     if (c.ferie) return;
-    const km = _cpaKmCella(input, c);
+    const kOp = c.operatore + '|||' + c.giorno;
+    (squadreDi[kOp] = squadreDi[kOp] || new Set()).add(c.commessa + '|||' + c.squadra);
+    if (!valutabili.has(c.giorno)) return;
     const k = c.commessa + '|||' + c.squadra + '|||' + c.giorno;
     const G = gruppi[k] = gruppi[k] || { commessa: c.commessa, squadra: c.squadra, giorno: c.giorno, celle: [] };
-    G.celle.push({ c, km });
+    if (!G.celle.some(x => x.operatore === c.operatore)) G.celle.push(c);
   });
-
   Object.keys(gruppi).forEach(k => {
     const G = gruppi[k];
-    const conKm = G.celle.filter(x => x.km);
-    if (!conKm.length) return;
-
-    // 4) Duplicati: stesso valore su più operatori che condividono un cantiere
-    const duplicati = new Set();
-    const visti = new Set();
-    conKm.forEach((a, i) => {
-      if (visti.has(i)) return;
-      const cantA = new Set(_cpaCantieriCella(a.c));
-      const gruppo = [a];
-      conKm.forEach((b, j) => {
-        if (j <= i || visti.has(j)) return;
-        if (!_cpaUguali(a.km.tot, b.km.tot)) return;
-        if (!_cpaCantieriCella(b.c).some(x => cantA.has(x))) return;
-        gruppo.push(b); visti.add(j);
-      });
-      if (gruppo.length < 2) return;
-      gruppo.forEach(x => duplicati.add(x.c.cpKey));
-      const ops = gruppo.map(x => x.c.operatore);
-      const giaSuJira = gruppo.filter(x => x.km.suJira).map(x => x.c.operatore);
-      out.push({
-        id: _cpaId('km_duplicati', input, [G.commessa, G.squadra, G.giorno, ops.slice().sort().join(',')]),
-        tipo: 'km_duplicati', gravita: giaSuJira.length > 1 ? 'alta' : 'media',
-        commessa: G.commessa, squadra: G.squadra, operatore: ops.join(' + '), giorno: G.giorno,
-        cpKey: gruppo[0].c.cpKey, cantiere: _cpaCantieriCella(a.c).join(', '),
-        titolo: _cpaFmt(a.km.tot) + ' km ripetuti su ' + ops.length + ' operatori della stessa squadra',
-        dettaglio: 'La produzione è della squadra: ripetuta su ' + ops.join(', ') + ' viene contata ' + ops.length +
-          ' volte nel Task padre su Jira.' + (giaSuJira.length ? ' Già scritta su Jira per: ' + giaSuJira.join(', ') + '.' : ''),
-        correzione: 'Tenere i km su un solo operatore e mettere 0 sugli altri. ' +
-          (giaSuJira.length ? 'Alla prossima "Sincronizza da Jira" verrà tolta la quota in eccesso (con conferma).' : 'Nessun valore è ancora su Jira.'),
-        azione: { tipo: 'tieni_km', scelte: gruppo.map(x => ({
-          tieni: x.c.operatore,
-          azzera: gruppo.filter(y => y !== x).map(y => ({ cpKey: y.c.cpKey, operatore: y.c.operatore, tickets: y.km.perTicket.map(t => t.ticket) })),
-        })) },
-        link: [],
-      });
-    });
-
-    // 5) Fuori scala rispetto alla mediana della famiglia di attività
-    if (!input.modello || typeof input.famigliaDi !== 'function') return;
-    const attivita = [...new Set(G.celle.flatMap(x => (x.c.voci || []).map(v => v.attivita)).filter(Boolean))];
-    const famiglie = [...new Set(attivita.map(a => input.famigliaDi(a)).filter(Boolean))];
-    if (famiglie.length !== 1) { nonVerificabili.kmSenzaFamiglia++; return; }
-    const F = input.modello.famiglie[famiglie[0]];
-    if (!F || !(F.kmGiorno > 0) || F.campioni < S.minCampioni) { nonVerificabili.kmSenzaFamiglia++; return; }
-    const km = _cpaKmSquadra(conKm.map(x => x.km.tot));
-    const ratio = km / F.kmGiorno;
-    if (ratio < S.kmAlto && ratio > S.kmBasso) return;
-    const alto = ratio >= S.kmAlto;
-    // Errore tipico: virgola/unità spostata di 10, 100 o 1000
-    // (solo per scarti estremi: a 3-5 volte la mediana un "x10" sarebbe un tiro a caso)
-    let proposto = null;
-    if (ratio >= 8 || ratio <= 1 / 8) [10, 100, 1000].some(f => {
-      const v = alto ? km / f : km * f;
-      if (v / F.kmGiorno <= 2 && v / F.kmGiorno >= 0.5) { proposto = Math.round(v * 1000) / 1000; return true; }
-      return false;
-    });
-    // Correzione applicabile con un click solo se il valore sta in una sola cella e un solo ticket
-    const singola = conKm.length === 1 && conKm[0].km.perTicket.length === 1 && !duplicati.has(conKm[0].c.cpKey) ? conKm[0] : null;
-    const att = attivita.join(', ');
+    const membri = G.celle.filter(c => verificati.has(c.operatore)).map(c => ({
+      operatore: c.operatore, cpKey: c.cpKey, ore: Math.round(ore(c.operatore, G.giorno) * 100) / 100,
+      piuSquadre: squadreDi[c.operatore + '|||' + G.giorno].size > 1,
+      cantieri: _cpaCantieriCella(c),
+      ticket: (((wl(c.operatore, G.giorno) || {}).tickets) || []).map(t => t.key),
+    }));
+    const conf = membri.filter(m => !m.piuSquadre && m.ore >= S.oreMinime);
+    if (conf.length < 2) return;
+    const max = Math.max.apply(null, conf.map(m => m.ore));
+    const min = Math.min.apply(null, conf.map(m => m.ore));
+    if (max - min < S.diffOreSquadra - 1e-9) return;
+    const bassi = conf.filter(m => max - m.ore >= S.diffOreSquadra - 1e-9);
+    membri.forEach(m => { m.basso = bassi.includes(m); m.escluso = !conf.includes(m); });
+    membri.sort((a, b) => b.ore - a.ore);
+    const cantieri = [...new Set(G.celle.flatMap(_cpaCantieriCella))];
     out.push({
-      id: _cpaId('km_fuori_scala', input, [G.commessa, G.squadra, G.giorno]),
-      tipo: 'km_fuori_scala', gravita: (ratio >= S.kmAlto * 3 || ratio <= S.kmBasso / 3) ? 'alta' : 'media',
-      commessa: G.commessa, squadra: G.squadra, operatore: conKm.map(x => x.c.operatore).join(' + '), giorno: G.giorno,
-      cpKey: conKm[0].c.cpKey, cantiere: [...new Set(conKm.flatMap(x => _cpaCantieriCella(x.c)))].join(', '),
-      titolo: _cpaFmt(km) + ' km in giornata: ' + (alto ? _cpaFmt(Math.round(ratio * 10) / 10) + ' volte ' : (ratio < 0.01 ? 'meno dell\'1% del' : 'solo il ' + Math.round(ratio * 100) + '% del')) +
-        'la mediana di "' + famiglie[0] + '"',
-      dettaglio: 'Attività: ' + att + '. Mediana della famiglia: ' + _cpaFmt(F.kmGiorno) + ' km per giornata-squadra (' + F.campioni + ' giornate di storico).',
-      correzione: proposto != null
-        ? 'Probabile errore di virgola o unità: ' + _cpaFmt(proposto) + ' invece di ' + _cpaFmt(km) + '. Verificare con il report di produzione.'
-        : 'Verificare il valore con il report di produzione' + (alto ? ' (giornata eccezionale o somma di più giorni?)' : ' (giornata parziale o km mancanti?)') + '.',
-      azione: (proposto != null && singola)
-        ? { tipo: 'imposta_km', etichetta: 'Imposta ' + _cpaFmt(proposto), cpKey: singola.c.cpKey, operatore: singola.c.operatore,
-            ticket: singola.km.perTicket[0].ticket, valore: proposto }
-        : null,
+      id: _cpaId('ore_squadra', input, [G.commessa, G.squadra, G.giorno]),
+      tipo: 'ore_squadra', gravita: (max - min >= S.diffOreAlta - 1e-9) ? 'media' : 'bassa',
+      commessa: G.commessa, squadra: G.squadra, operatore: bassi.map(m => m.operatore).join(' + '), giorno: G.giorno,
+      cpKey: bassi[0].cpKey, cantiere: cantieri.join(', '),
+      titolo: G.squadra + ': ore da ' + _cpaFmt(min) + ' a ' + _cpaFmt(max) + ' h (scarto ' + _cpaFmt(Math.round((max - min) * 100) / 100) + ' h)',
+      dettaglio: membri.map(m => m.operatore + ' ' + (m.escluso ? (m.piuSquadre ? '(su più squadre)' : '0 h') : _cpaFmt(m.ore) + ' h')).join(' · ') + '.',
+      correzione: 'Chiedere a ' + bassi.map(m => m.operatore).join(', ') + ' se mancano ore di ' + input.giorniLabel[G.giorno] +
+        ' (il collega più alto ne ha ' + _cpaFmt(max) + '). Se hanno davvero lavorato meno (permesso, rientro anticipato), nessuna correzione.',
+      confronto: { membri, max, min },
+      azione: null,
+      solleciti: bassi.map(m => ({ operatore: m.operatore, giorno: G.giorno, commesse: [G.commessa], cantieri: m.cantieri,
+        oreRegistrate: m.ore, oreAttese: max, sottotask: [], ticket: m.ticket })),
       link: [],
     });
   });
@@ -331,33 +331,47 @@ function _cpaControllaKm(input, out, nonVerificabili) {
 /* ---------- Ingresso ---------- */
 
 function cpaRileva(input) {
-  const inp = Object.assign({ celle: [], cp: {}, epicDiSottotask: {}, sottotaskIndex: {}, giorniLabel: [], giorniValutabili: [] }, input || {});
+  const inp = Object.assign({ celle: [], epicDiSottotask: {}, sottotaskIndex: {}, giorniLabel: [], giorniValutabili: [] }, input || {});
   inp.soglie = Object.assign({}, CPA_SOGLIE_DEFAULT, (input && input.soglie) || {});
+  if (typeof inp.ferieDi !== 'function') inp.ferieDi = () => null;
   const out = [];
-  const nonVerificabili = { epicSenzaSottotask: 0, kmSenzaFamiglia: 0 };
-  _cpaControllaWorklog(inp, out, nonVerificabili);
-  _cpaControllaKm(inp, out, nonVerificabili);
+  const nonVerificabili = { epicSenzaSottotask: 0 };
+  if (inp.worklog) {
+    const perOpGiorno = {};   // operatore|||giorno -> celle (tutte le commesse)
+    inp.celle.forEach(c => {
+      const k = c.operatore + '|||' + c.giorno;
+      (perOpGiorno[k] = perOpGiorno[k] || []).push(c);
+    });
+    const wl = (op, g) => (inp.worklog[op] || {})[g] || null;
+    const ore = (op, g) => { const d = wl(op, g); return d ? (_cpaNum(d.hours) || 0) : 0; };
+    _cpaControllaSenzaWorklog(inp, out, perOpGiorno, wl, ore);
+    _cpaControllaSenzaPianificazione(inp, out, perOpGiorno, wl);
+    _cpaControllaEpic(inp, out, perOpGiorno, wl, nonVerificabili);
+    _cpaControllaOreSquadra(inp, out, wl, ore);
+  }
+  const ordTipo = Object.keys(CPA_TIPI);
   out.sort((a, b) =>
-    (CPA_GRAVITA_ORD[a.gravita] - CPA_GRAVITA_ORD[b.gravita]) ||
     (a.giorno - b.giorno) ||
+    (ordTipo.indexOf(a.tipo) - ordTipo.indexOf(b.tipo)) ||
+    (CPA_GRAVITA_ORD[a.gravita] - CPA_GRAVITA_ORD[b.gravita]) ||
     String(a.commessa).localeCompare(String(b.commessa)) ||
     String(a.operatore).localeCompare(String(b.operatore)));
   const perTipo = {};
-  Object.keys(CPA_TIPI).forEach(t => { perTipo[t] = 0; });
+  ordTipo.forEach(t => { perTipo[t] = 0; });
   out.forEach(a => { perTipo[a.tipo]++; });
   return { anomalie: out, perTipo, nonVerificabili };
 }
 
-/* ---------- Solleciti per worklog mancanti / parziali ---------- */
+/* ---------- Solleciti per worklog mancanti / ore inferiori alla squadra ---------- */
 
-/* Un gruppo per operatore con le sue giornate da sistemare, in ordine di giorno. */
+/* Un gruppo per operatore con le sue giornate da sistemare, in ordine di giorno
+   (una giornata sola per giorno, anche se più anomalie la toccano). */
 function cpaRaggruppaSolleciti(anomalie) {
   const per = {};
-  (anomalie || []).forEach(a => {
-    if (!a.sollecito) return;
-    const s = a.sollecito;
-    (per[s.operatore] = per[s.operatore] || { operatore: s.operatore, voci: [] }).voci.push(Object.assign({ tipo: a.tipo, id: a.id }, s));
-  });
+  (anomalie || []).forEach(a => (a.solleciti || []).forEach(s => {
+    const G = per[s.operatore] = per[s.operatore] || { operatore: s.operatore, voci: [] };
+    if (!G.voci.some(v => v.giorno === s.giorno)) G.voci.push(Object.assign({ tipo: a.tipo, id: a.id }, s));
+  }));
   return Object.values(per)
     .map(g => { g.voci.sort((x, y) => x.giorno - y.giorno); return g; })
     .sort((x, y) => x.operatore.localeCompare(y.operatore));
@@ -385,7 +399,7 @@ function cpaSollecitoBase(gruppo, giorniLabel, opt) {
   const righe = gruppo.voci.map(v => {
     const dove = v.cantieri.join(', ') + ' (' + v.commesse.join(', ') + ')';
     const su = v.sottotask.length ? ' — sottotask ' + v.sottotask.join(' / ') : '';
-    // solo le ore registrate, mai "su Y": le ore attese sono una soglia di controllo, non l'orario dovuto
+    // solo le ore registrate, mai "su Y": le ore dei colleghi sono una soglia di controllo, non l'orario dovuto
     const stato = v.oreRegistrate > 0 ? 'registrate ' + _cpaFmt(v.oreRegistrate) + ' h' : 'nessuna ora registrata';
     return '- ' + (giorniLabel[v.giorno] || '') + ': ' + dove + ', ' + stato + su;
   });
@@ -410,6 +424,7 @@ function cpaTestoCorrezioni(anomalie, giorniLabel, intestazione) {
     righe.push('', CPA_TIPI[tipo].icona + ' ' + CPA_TIPI[tipo].etichetta + ' (' + lista.length + ')');
     lista.forEach(a => {
       righe.push('- ' + (giorniLabel[a.giorno] || '') + ' · ' + [a.commessa, a.squadra].filter(Boolean).join(' / ') + ' · ' + a.titolo);
+      righe.push('  ' + a.dettaglio);
       righe.push('  ' + a.correzione);
     });
   });

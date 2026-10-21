@@ -1,34 +1,43 @@
 /* ==================== CONTROLLO ANOMALIE PRODUZIONE · UI E RACCOLTA DATI ====================
-   Pannello "🔍 Controllo anomalie" del tab Controllo Produzione. Raccoglie i dati
-   della settimana mostrata e li passa al motore puro (produzione-anomalie-core.js):
+   Modal "🔍 Controllo anomalie" del tab Controllo Produzione (#cpa-modal, z-index sotto
+   .modal-backdrop: conferme e avvisi devono comparire sopra). Raccoglie i dati della
+   settimana mostrata e li passa al motore puro (produzione-anomalie-core.js):
    - Griglia (pwData) + Ferie della settimana, appiattite in celle operatore/giorno;
    - worklog Jira LETTI ora (jira-sync-worklogs, sola lettura): non si usa la colonna
      "Ore Jira" salvata perché copre solo le celle pianificate e può essere vecchia, e
      per i "worklog senza pianificazione" servono proprio i giorni non pianificati;
-   - Km/Cad di controllo_produzione (_cpData, già caricato dal tab);
    - Epic dei sottotask della Griglia, via jira-task-status (stesse cache della Mappa:
      il sottotask è l'unico legame certo cantiere -> Task -> Epic, vedi
      supabase/functions/jira-task-status/index.ts);
-   - mediane km per famiglia di attività dallo storico (stesso modello di Auto-pianifica).
+   - indice dei sottotask di TUTTA la Griglia, per dire su quale cantiere sta un ticket.
 
-   Non scrive MAI su Jira. Le azioni dei bottoni sono locali e sempre confermate:
-   Km/Cad in controllo_produzione (arrivano su Jira solo con "🔄 Sincronizza da Jira",
-   che chiede a sua volta conferma) oppure una cella di Griglia. */
+   Le letture da Jira si fanno una volta per "Avvia/Ricontrolla"; dopo una correzione o un
+   cambio di soglia il motore si rilancia in locale sulla Griglia attuale (_cpaRicalcola).
+
+   Non scrive MAI su Jira. L'unica azione è locale e sempre confermata: aggiungere in
+   Griglia la cella proposta per un worklog senza pianificazione (togliendo l'assenza da
+   Ferie, se quel giorno risultava assente). */
 
 const CPA_IGNORATE_KEY = 'cpa_ignorate_v1';
+const CPA_PREF_KEY = 'cpa_pref_v1';  // soglia ore in squadra, per browser
 const CPA_EMAIL_CHUNK = 8;           // email per chiamata a jira-sync-worklogs (evita timeout della funzione)
 const CPA_GIORNI = ['Lun', 'Mar', 'Mer', 'Gio', 'Ven', 'Sab'];
+const CPA_GIORNI_LUNGHI = ['Lunedì', 'Martedì', 'Mercoledì', 'Giovedì', 'Venerdì', 'Sabato'];
+const CPA_SOGLIE_ORE = [0.5, 1, 2, 3];
 
 let _cpa = {
   aperto: false,
   anno: null, week: null,     // settimana dell'ultimo controllo
   inCorso: false,
   msg: '',
+  base: null,                 // dati letti da Jira all'ultimo controllo (worklog, Epic, ...)
   risultato: null,            // output di cpaRileva + contesto (giorniLabel, avvisi)
   filtro: '',                 // tipo mostrato ('' = tutti)
   mostraIgnorate: false,
   tuttoIlPool: false,         // legge i worklog anche di chi non è in Griglia questa settimana
   risolte: new Set(),         // id corretti con un bottone in questa sessione
+  proposte: {},               // id -> voci della cella proposta, modificabili dall'utente
+  propMod: new Set(),         // id delle proposte modificate a mano
   soll: null,                 // vista solleciti aperta (produzione-anomalie-solleciti.js)
   registro: null,             // vista registro solleciti aperta ({ tutte, aperti })
 };
@@ -40,16 +49,38 @@ function _cpaSalvaIgnorate(m) {
   try { localStorage.setItem(CPA_IGNORATE_KEY, JSON.stringify(m)); } catch (_) {}
 }
 
-function cpaToggle() {
-  _cpa.aperto = !_cpa.aperto;
-  cpaRender();
-  if (_cpa.aperto && !_cpa.risultato && !_cpa.inCorso) cpaAvvia();
+function _cpaPref() {
+  try { return Object.assign({ diffOreSquadra: CPA_SOGLIE_DEFAULT.diffOreSquadra }, JSON.parse(localStorage.getItem(CPA_PREF_KEY) || '{}')); }
+  catch (_) { return { diffOreSquadra: CPA_SOGLIE_DEFAULT.diffOreSquadra }; }
 }
+
+function cpaToggle() {
+  if (_cpa.aperto) cpaChiudi(); else cpaApri();
+}
+
+function cpaApri() {
+  _cpa.aperto = true;
+  cpaRender();
+  const r = _cpa.risultato;
+  if ((!r || _cpa.anno !== pwAnno || _cpa.week !== pwWeek) && !_cpa.inCorso) cpaAvvia();
+}
+
+function cpaChiudi() {
+  _cpa.aperto = false;
+  cpaRender();
+}
+
+document.addEventListener('keydown', e => {
+  if (e.key !== 'Escape' || !_cpa.aperto) return;
+  const mr = document.getElementById('modal-root');
+  if (mr && mr.children.length) return;   // c'è una conferma/avviso aperto sopra
+  cpaChiudi();
+});
 
 /* Chiamata a fine pwControlloRender: il risultato vale per una sola settimana. */
 function cpaOnControlloRender() {
   if (_cpa.risultato && (_cpa.anno !== pwAnno || _cpa.week !== pwWeek)) {
-    _cpa.risultato = null; _cpa.msg = ''; _cpa.risolte = new Set(); _cpa.soll = null;
+    _cpa.risultato = null; _cpa.base = null; _cpa.msg = ''; _cpa.risolte = new Set(); _cpa.proposte = {}; _cpa.propMod = new Set(); _cpa.soll = null;
   }
   cpaRender();
 }
@@ -73,20 +104,13 @@ function _cpaOggiISO() {
   return t.getFullYear() + '-' + String(t.getMonth() + 1).padStart(2, '0') + '-' + String(t.getDate()).padStart(2, '0');
 }
 
-/* Griglia della settimana -> celle operatore/giorno per il motore, più l'indice
-   inverso sottotask -> cantiere/operatore (per capire dove andrebbe un worklog). */
+/* Griglia della settimana -> celle operatore/giorno per il motore */
 function _cpaCelleSettimana() {
   const data = pwGetWeekData();
   const fw = pwGetFerieWeek();
-  const celle = [], sottotaskIndex = {}, operatori = new Set();
+  const celle = [], operatori = new Set();
   data.forEach(bc => {
     if (!bc.commessa) return;
-    Object.keys(bc.jiraSubtask || {}).forEach(mk => {
-      const e = bc.jiraSubtask[mk];
-      if (!pwJiraSubtaskIsResolved(e) || !e.key) return;
-      const p = mk.split('|||');
-      sottotaskIndex[e.key] = { commessa: bc.commessa, cantiere: p[0], operatore: p[1], attivita: p[2] || '' };
-    });
     (bc.squadre || []).forEach(sq => {
       const sqNome = sq.nome || 'Squadra';
       (sq.operatori || []).forEach(op => {
@@ -110,7 +134,34 @@ function _cpaCelleSettimana() {
       });
     });
   });
-  return { celle, sottotaskIndex, operatori };
+  return { celle, operatori };
+}
+
+/* Sottotask di tutta la Griglia -> cantiere/operatore. Vince la settimana mostrata, poi la
+   più recente: lo stesso sottotask può restare in più settimane (copie di settimana). */
+function _cpaIndiceSottotask() {
+  const out = {}, rank = {};
+  Object.keys(pwData || {}).forEach(anno => {
+    if (!/^\d+$/.test(anno)) return;
+    Object.keys(pwData[anno] || {}).forEach(week => {
+      const data = pwData[anno][week];
+      if (!Array.isArray(data)) return;
+      const corr = Number(anno) === pwAnno && Number(week) === pwWeek;
+      const rk = corr ? Infinity : Number(anno) * 100 + Number(week);
+      data.forEach(bc => {
+        if (!bc || !bc.commessa) return;
+        Object.keys(bc.jiraSubtask || {}).forEach(mk => {
+          const e = bc.jiraSubtask[mk];
+          if (!pwJiraSubtaskIsResolved(e) || !e.key) return;
+          if (rank[e.key] != null && rank[e.key] >= rk) return;
+          const p = mk.split('|||');
+          rank[e.key] = rk;
+          out[e.key] = { commessa: bc.commessa, cantiere: p[0], operatore: p[1], attivita: p[2] || '', anno: Number(anno), week: Number(week) };
+        });
+      });
+    });
+  });
+  return out;
 }
 
 async function _cpaLeggiWorklog(nomi, date, avvisi) {
@@ -165,16 +216,16 @@ async function _cpaEpicDeiSottotask(celle, avvisi) {
 
 async function cpaAvvia() {
   if (_cpa.inCorso) return;
-  if (!_sbClient || !_sbUser) { _cpa.msg = 'Controllo non disponibile offline: servono Jira e lo storico.'; cpaRender(); return; }
+  if (!_sbClient || !_sbUser) { _cpa.msg = 'Controllo non disponibile offline: servono le ore Jira.'; cpaRender(); return; }
   _cpa.inCorso = true;
   _cpa.anno = pwAnno; _cpa.week = pwWeek;
-  _cpa.risultato = null; _cpa.risolte = new Set(); _cpa.soll = null;
+  _cpa.risultato = null; _cpa.base = null; _cpa.risolte = new Set(); _cpa.proposte = {}; _cpa.propMod = new Set(); _cpa.soll = null;
   const avvisi = [];
   try {
     const date = _cpaDateSettimana();
     const oggi = _cpaOggiISO();
     const giorniValutabili = [0, 1, 2, 3, 4, 5].filter(g => date.iso[g] < oggi);
-    const { celle, sottotaskIndex, operatori } = _cpaCelleSettimana();
+    const { celle, operatori } = _cpaCelleSettimana();
 
     let nomi = [...operatori];
     if (_cpa.tuttoIlPool) {
@@ -191,26 +242,10 @@ async function cpaAvvia() {
     try { epicDiSottotask = await _cpaEpicDeiSottotask(celle, avvisi); }
     catch (e) { console.error('cpa epic', e); avvisi.push('Epic dei sottotask non letti (' + (e.message || e) + '): confronto Epic saltato.'); }
 
-    _cpa.msg = '⏳ Carico lo storico di produzione…';
-    cpaRender();
-    await apCaricaStorico(false);
-    const modello = _ap.modello;
-    if (!modello) avvisi.push('Storico di produzione non disponibile: controllo "km fuori scala" saltato.');
-
-    const r = cpaRileva({
-      anno: pwAnno, week: pwWeek, giorniLabel: date.label, giorniValutabili,
-      celle, worklog, verificati, cp: _cpData, epicDiSottotask, sottotaskIndex,
-      modello, famigliaDi: modello ? (a => apTrovaFamiglia(modello, a)) : null,
-    });
-    r.giorniLabel = date.label;
-    r.ddmm = date.ddmm;
-    r.avvisi = avvisi;
-    r.nOperatori = verificati.length;
-    r.giorniValutabili = giorniValutabili;
-    r.quando = new Date();
-    _cpa.risultato = r;
+    _cpa.base = { date, giorniValutabili, worklog, verificati, epicDiSottotask, avvisi, quando: new Date() };
+    _cpaRicalcola();
     _cpa.msg = '';
-    sbLogActivity('Controllo anomalie produzione', { anno: pwAnno, week: pwWeek, anomalie: r.anomalie.length });
+    sbLogActivity('Controllo anomalie produzione', { anno: pwAnno, week: pwWeek, anomalie: _cpa.risultato.anomalie.length });
   } catch (e) {
     console.error('cpaAvvia', e);
     _cpa.msg = '⚠ Controllo non riuscito: ' + (e.message || e);
@@ -220,9 +255,39 @@ async function cpaAvvia() {
   }
 }
 
+/* Rilancia il motore sulla Griglia/Ferie ATTUALI con i dati Jira già letti (niente rete) */
+function _cpaRicalcola() {
+  const B = _cpa.base;
+  if (!B || _cpa.anno !== pwAnno || _cpa.week !== pwWeek) return;
+  const { celle } = _cpaCelleSettimana();
+  const fw = pwGetFerieWeek();
+  const r = cpaRileva({
+    anno: pwAnno, week: pwWeek, giorniLabel: B.date.label, giorniValutabili: B.giorniValutabili,
+    celle, worklog: B.worklog, verificati: B.verificati, epicDiSottotask: B.epicDiSottotask,
+    sottotaskIndex: _cpaIndiceSottotask(),
+    ferieDi: (op, g) => (fw[op] ? pwFerieTipo(fw[op][g]) : null),
+    soglie: { diffOreSquadra: Number(_cpaPref().diffOreSquadra) || CPA_SOGLIE_DEFAULT.diffOreSquadra },
+  });
+  r.giorniLabel = B.date.label;
+  r.ddmm = B.date.ddmm;
+  r.avvisi = B.avvisi;
+  r.nOperatori = B.verificati.length;
+  r.giorniValutabili = B.giorniValutabili;
+  r.quando = B.quando;
+  _cpa.risultato = r;
+}
+
 function cpaFiltro(tipo) { _cpa.filtro = (_cpa.filtro === tipo) ? '' : tipo; cpaRender(); }
 function cpaToggleIgnorate() { _cpa.mostraIgnorate = !_cpa.mostraIgnorate; cpaRender(); }
 function cpaTogglePool(el) { _cpa.tuttoIlPool = !!el.checked; }
+
+function cpaSetSogliaOre(el) {
+  const p = _cpaPref();
+  p.diffOreSquadra = Number(el.value) || CPA_SOGLIE_DEFAULT.diffOreSquadra;
+  try { localStorage.setItem(CPA_PREF_KEY, JSON.stringify(p)); } catch (_) {}
+  _cpaRicalcola();
+  cpaRender();
+}
 
 function _cpaTrova(el) {
   const id = el && el.closest('[data-cpa-id]') && el.closest('[data-cpa-id]').dataset.cpaId;
@@ -239,12 +304,14 @@ function cpaIgnora(el) {
   cpaRender();
 }
 
-/* Porta in vista la riga del Controllo Produzione (riapre commessa/squadra collassate). */
+/* Chiude il modal e porta in vista la riga del Controllo Produzione (riapre commessa/squadra collassate). */
 function cpaVaiAllaRiga(el) {
   const a = _cpaTrova(el);
-  if (!a || !a.cpKey) return;
-  const tr = [...document.querySelectorAll('.cp-table tbody tr[data-cpk]')].find(x => x.dataset.cpk === a.cpKey);
+  const cpKey = (el && el.dataset.cpk) || (a && a.cpKey);
+  if (!cpKey) return;
+  const tr = [...document.querySelectorAll('.cp-table tbody tr[data-cpk]')].find(x => x.dataset.cpk === cpKey);
   if (!tr) { showAlertModal('Riga non trovata nella tabella (la cella potrebbe essere stata modificata in Griglia).'); return; }
+  cpaChiudi();
   const ci = tr.dataset.commIdx, si = tr.dataset.sqIdx;
   _collapseSets('cp').comm.delete(ci); _collapseSets('cp').comm.delete(Number(ci)); _collapseSets('cp').sq.delete(si);
   cpApplyCollapse();
@@ -252,212 +319,429 @@ function cpaVaiAllaRiga(el) {
   tr.classList.remove('cpa-flash'); void tr.offsetWidth; tr.classList.add('cpa-flash');
 }
 
-async function _cpaSalvaKm(cpKey, ticket, valore) {
-  const [commessa, squadra, operatore, gs] = cpKey.split('|||');
-  const g = Number(gs);
-  const cella = _cpaCelleSettimana().celle.find(c => c.cpKey === cpKey);
-  const cantiere = cella ? [...new Set(cella.voci.map(v => v.cantiere))].join(', ') : '';
-  const op = pwGetWeekData().flatMap(bc => bc.commessa === commessa ? (bc.squadre || []) : [])
-    .filter(sq => (sq.nome || 'Squadra') === squadra).flatMap(sq => sq.operatori || [])
-    .find(o => (o.nome || '').trim() === operatore);
-  const attivita = (op && op.giorni && op.giorni[g] && op.giorni[g].attivita) || '';
-  await cpSaveKmTicket(commessa, squadra, operatore, g, _cpa.risultato.ddmm[g], cantiere, attivita, ticket, valore);
+/* ---------- Proposta di cella (worklog senza pianificazione), modificabile ---------- */
+
+function _cpaPropVoci(a) {
+  if (!_cpa.proposte[a.id]) {
+    const v = ((a.azione && a.azione.voci) || []).map(x => ({ commessa: x.commessa || '', cantiere: x.cantiere || '', attivita: x.attivita || '' }));
+    _cpa.proposte[a.id] = v.length ? v : [{ commessa: '', cantiere: '', attivita: '' }];
+  }
+  return _cpa.proposte[a.id];
+}
+
+function cpaPropEdit(el) {
+  const a = _cpaTrova(el);
+  if (!a) return;
+  const v = _cpaPropVoci(a)[Number(el.dataset.i)];
+  if (v) { v[el.dataset.f] = el.value; _cpa.propMod.add(a.id); }
+}
+
+function cpaPropAggiungi(el) {
+  const a = _cpaTrova(el);
+  if (!a) return;
+  _cpaPropVoci(a).push({ commessa: '', cantiere: '', attivita: '' });
+  _cpa.propMod.add(a.id);
+  cpaRender();
+}
+
+function cpaPropTogli(el) {
+  const a = _cpaTrova(el);
+  if (!a) return;
+  const voci = _cpaPropVoci(a);
+  voci.splice(Number(el.dataset.i), 1);
+  if (!voci.length) voci.push({ commessa: '', cantiere: '', attivita: '' });
+  _cpa.propMod.add(a.id);
+  cpaRender();
+}
+
+function cpaPropRipristina(el) {
+  const a = _cpaTrova(el);
+  if (!a) return;
+  delete _cpa.proposte[a.id];
+  _cpa.propMod.delete(a.id);
+  cpaRender();
+}
+
+function _cpaCommesseNote() {
+  let valide = [];
+  try { valide = pwGetCommesseValide(); } catch (_) {}
+  return [...new Set(valide.concat(pwGetWeekData().map(b => b.commessa).filter(Boolean)))];
 }
 
 async function cpaAzione(el) {
   if (!sbGuardWrite()) return;
   const a = _cpaTrova(el);
-  if (!a || !a.azione) return;
+  if (!a || !a.azione || a.azione.tipo !== 'aggiungi_griglia') return;
   const r = _cpa.risultato;
   if (_cpa.anno !== pwAnno || _cpa.week !== pwWeek) { showAlertModal('Il controllo è di un\'altra settimana: rilancialo.'); return; }
-  const giorno = r.giorniLabel[a.giorno];
   const az = a.azione;
+  const giorno = r.giorniLabel[az.giorno];
+  const note = _cpaCommesseNote();
+  const canon = s => note.find(n => _apNorm(n) === _apNorm(s)) || s;
+  const voci = _cpaPropVoci(a)
+    .map(v => ({ commessa: canon(String(v.commessa || '').trim()), cantiere: String(v.cantiere || '').trim(), attivita: String(v.attivita || '').trim() }))
+    .filter(v => v.commessa || v.cantiere || v.attivita);
+  if (!voci.length || voci.some(v => !v.commessa || !v.cantiere)) { showAlertModal('Indica commessa e cantiere per ogni riga della proposta.'); return; }
 
-  if (az.tipo === 'tieni_km') {
-    const scelta = az.scelte[Number(el.dataset.scelta || 0)];
-    if (!scelta) return;
-    const altri = scelta.azzera.map(x => x.operatore).join(', ');
-    const ok = await showConfirmAsync('Tenere i km di ' + giorno + ' su ' + scelta.tieni + ' e mettere 0 su ' + altri + '?\n\n' +
-      'La modifica è locale (Controllo Produzione). Su Jira la quota in eccesso viene tolta solo alla prossima "🔄 Sincronizza da Jira", che chiede conferma.',
-      'Correggi km');
-    if (!ok) return;
-    for (const x of scelta.azzera) for (const t of x.tickets) await _cpaSalvaKm(x.cpKey, t, 0);
-  } else if (az.tipo === 'imposta_km') {
-    const ok = await showConfirmAsync('Impostare Km/Cad di ' + az.operatore + ' (' + giorno + ', ticket ' + az.ticket + ') a ' +
-      String(az.valore).replace('.', ',') + '?\n\nLa modifica è locale; arriva su Jira solo con "🔄 Sincronizza da Jira".', 'Imposta km');
-    if (!ok) return;
-    await _cpaSalvaKm(az.cpKey, az.ticket, az.valore);
-  } else if (az.tipo === 'aggiungi_griglia') {
-    const data = pwGetWeekData();
-    const bc = data.find(b => b.commessa === az.commessa);
-    let op = null;
-    (bc ? bc.squadre || [] : []).some(sq => { op = (sq.operatori || []).find(o => (o.nome || '').trim() === az.operatore) || null; return !!op; });
-    if (!op) { showAlertModal(az.operatore + ' non ha una riga nella commessa "' + az.commessa + '" questa settimana: aggiungilo a mano in Griglia.'); return; }
-    if (!_apAncoraLibero(data, az.operatore, az.giorno)) { showAlertModal('Nel frattempo ' + az.operatore + ' risulta già impegnato o assente ' + giorno + ': nessuna modifica.'); return; }
-    const ok = await showConfirmAsync('Aggiungere in Griglia ' + az.operatore + ' su ' + az.cantiere + (az.attivita ? ' (' + az.attivita + ')' : '') +
-      ' ' + giorno + ', commessa "' + az.commessa + '"?', 'Aggiungi');
-    if (!ok) return;
-    if (!op.giorni) op.giorni = {};
-    _apScriviCella(op, az.giorno, az.cantiere, az.attivita);
-    await pwSave();
-    pwRender();
-  } else {
-    return;
-  }
-  _cpa.risolte.add(a.id);
-  sbLogActivity('Controllo anomalie: correzione applicata', { anno: pwAnno, week: pwWeek, tipo: a.tipo, operatore: a.operatore, giorno: a.giorno });
-  pwControlloRender();
-}
+  const data = pwGetWeekData();
+  const fw = pwGetFerieWeek();
+  const assente = fw[az.operatore] ? pwFerieTipo(fw[az.operatore][az.giorno]) : null;
+  const occupato = data.some(bc => (bc.squadre || []).some(sq => (sq.operatori || []).some(o =>
+    (o.nome || '').trim() === az.operatore && pwCellCantieri((o.giorni || {})[az.giorno]).length)));
+  if (occupato && !assente) { showAlertModal('Nel frattempo ' + az.operatore + ' risulta già pianificato ' + giorno + ': nessuna modifica. Rilancia il controllo.'); return; }
+  const fuoriElenco = voci.filter(v => !note.some(n => _apNorm(n) === _apNorm(v.commessa))).map(v => v.commessa);
 
-/* Tutti i duplicati aperti in un colpo, con una sola conferma (vedi _cpaSceltaPreferita). */
-async function cpaTieniTuttiPrimo() {
-  if (!sbGuardWrite()) return;
-  const r = _cpa.risultato;
-  if (!r || _cpa.anno !== pwAnno || _cpa.week !== pwWeek) return;
-  const ign = _cpaIgnorate();
-  const lista = r.anomalie.filter(a => a.tipo === 'km_duplicati' && !ign[a.id] && !_cpa.risolte.has(a.id));
-  if (!lista.length) return;
-  const ok = await showConfirmAsync('Correggere ' + lista.length + ' duplicati tenendo i km su un solo operatore per squadra e mettendo 0 sugli altri?\n\n' +
-    'Modifica locale (Controllo Produzione). Su Jira la quota in eccesso viene tolta solo alla prossima "🔄 Sincronizza da Jira", che chiede conferma.',
-    'Correggi tutti');
+  const ok = await showConfirmAsync('Aggiungere in Griglia ' + az.operatore + ' — ' + giorno + ':\n\n' +
+    voci.map(v => '• ' + v.cantiere + (v.attivita ? ' (' + v.attivita + ')' : '') + ' — commessa "' + v.commessa + '"').join('\n') +
+    (assente ? '\n\nL\'assenza di quel giorno (' + (assente === 'ferie' ? 'ferie' : 'non disponibile') + ') verrà tolta da Ferie.' : '') +
+    (fuoriElenco.length ? '\n\n⚠ Commessa non presente fra quelle attive né in Griglia: ' + [...new Set(fuoriElenco)].join(', ') + ' (verrà creata nella settimana).' : '') +
+    '\n\nLa modifica riguarda solo la Griglia: su Jira non cambia nulla.', 'Aggiungi in Griglia');
   if (!ok) return;
-  for (const a of lista) {
-    const scelta = _cpaSceltaPreferita(a);
-    for (const x of scelta.azzera) for (const t of x.tickets) await _cpaSalvaKm(x.cpKey, t, 0);
-    _cpa.risolte.add(a.id);
-  }
-  sbLogActivity('Controllo anomalie: duplicati km corretti', { anno: pwAnno, week: pwWeek, n: lista.length });
-  pwControlloRender();
-}
 
-/* Operatore su cui tenere i km: chi li ha già scritti su Jira (meno ticket da
-   correggere), altrimenti il primo del gruppo. */
-function _cpaSceltaPreferita(a) {
-  const suJira = k => Object.keys((_cpData[k] || {}).km_last_by_ticket || {}).length > 0;
-  const sc = a.azione.scelte;
-  const cpKeyDi = s => {
-    const altre = new Set(s.azzera.map(x => x.cpKey));
-    const tutte = sc.flatMap(y => y.azzera.map(x => x.cpKey));
-    return tutte.find(k => !altre.has(k));
-  };
-  return sc.find(s => { const k = cpKeyDi(s); return k && suJira(k); }) || sc[0];
+  const toccate = new Set();
+  voci.forEach(v => {
+    let bc = data.find(x => _apNorm(x.commessa) === _apNorm(v.commessa));
+    if (!bc) { bc = { commessa: v.commessa, squadre: [] }; data.push(bc); }
+    if (!Array.isArray(bc.squadre)) bc.squadre = [];
+    /* Va nella squadra di chi quel giorno è già sullo stesso cantiere */
+    const compagni = bc.squadre.flatMap(sq => sq.operatori || [])
+      .filter(o => pwCellVoci((o.giorni || {})[az.giorno]).some(x => _apNorm(x.cantiere) === _apNorm(v.cantiere)))
+      .map(o => (o.nome || '').trim());
+    const op = _apRigaOperatore(bc, az.operatore, compagni);
+    if (!op.giorni) op.giorni = {};
+    if (_apScriviCella(op, az.giorno, v.cantiere, v.attivita)) toccate.add(bc);
+  });
+  data.forEach((bc, i) => { if (toccate.has(bc)) pwRinumeraSquadreDefault(i); });
+  if (assente) {
+    delete fw[az.operatore][az.giorno];
+    await pwFerieSave();
+  }
+  await pwSave();
+  pwRender();
+  _cpa.risolte.add(a.id);
+  delete _cpa.proposte[a.id];
+  sbLogActivity('Controllo anomalie: cella aggiunta in Griglia', { anno: pwAnno, week: pwWeek, operatore: az.operatore, giorno: az.giorno,
+    cantieri: voci.map(v => v.cantiere), togliAssenza: !!assente });
+  _cpaRicalcola();
+  pwControlloRender();
 }
 
 async function cpaCopia() {
   const r = _cpa.risultato;
   if (!r) return;
   const ign = _cpaIgnorate();
-  const lista = r.anomalie.filter(a => !ign[a.id] && !_cpa.risolte.has(a.id));
+  const lista = r.anomalie.filter(a => !ign[a.id] && !_cpa.risolte.has(a.id) && (!_cpa.filtro || a.tipo === _cpa.filtro));
   const testo = cpaTestoCorrezioni(lista, r.giorniLabel, 'Controllo produzione · settimana ' + _cpa.week + '/' + _cpa.anno + ' · correzioni proposte');
   try { await navigator.clipboard.writeText(testo); showAlertModal('Elenco copiato negli appunti (' + lista.length + ' voci).'); }
   catch (_) { showAlertModal(testo); }
 }
 
-const CPA_GRAVITA_STILE = {
-  alta:  'border-color:#fca5a5;background:#fef2f2;',
-  media: 'border-color:#fcd34d;background:#fffbeb;',
-  bassa: 'border-color:#e2e8f0;background:#f8fafc;',
+/* ==================== RENDER ==================== */
+
+const CPA_GRAVITA = {
+  alta:  { colore: '#dc2626', sfondo: '#fef2f2', testo: 'priorità alta' },
+  media: { colore: '#d97706', sfondo: '#fffbeb', testo: 'da verificare' },
+  bassa: { colore: '#94a3b8', sfondo: '#f8fafc', testo: 'lieve' },
 };
 
-function _cpaVoceHtml(a, r, ignorata) {
-  const T = CPA_TIPI[a.tipo];
-  const dove = [r.giorniLabel[a.giorno], a.commessa, a.squadra, a.cantiere].filter(Boolean).map(esc).join(' · ');
-  let bottoni = '';
-  if (a.azione && !ignorata) {
-    if (a.azione.tipo === 'tieni_km') {
-      bottoni += a.azione.scelte.map((s, i) =>
-        '<button type="button" class="pw-write-action text-xs px-2 py-0.5 rounded font-semibold text-white" style="background:#0f766e;" data-scelta="' + i + '" onclick="cpaAzione(this)">Tieni su ' + esc(s.tieni) + '</button>').join('');
-    } else {
-      bottoni += '<button type="button" class="pw-write-action text-xs px-2 py-0.5 rounded font-semibold text-white" style="background:#0f766e;" onclick="cpaAzione(this)">' + esc(a.azione.etichetta) + '</button>';
-    }
-  }
-  if (a.cpKey) bottoni += '<button type="button" class="text-xs px-2 py-0.5 border border-slate-300 rounded bg-white hover:bg-slate-50" onclick="cpaVaiAllaRiga(this)">↘ Vai alla riga</button>';
-  bottoni += (a.link || []).filter(l => l.url).map(l =>
-    '<a href="' + esc(l.url) + '" target="_blank" rel="noopener" class="text-xs px-2 py-0.5 border border-slate-300 rounded bg-white hover:bg-slate-50" style="color:#2563eb;text-decoration:none;">' + esc(l.label) + ' ↗</a>').join('');
-  bottoni += '<button type="button" class="text-xs px-2 py-0.5 text-slate-500 hover:text-slate-800" onclick="cpaIgnora(this)">' + (ignorata ? '↩ Ripristina' : 'Ignora') + '</button>';
-  return '<div class="border rounded-md px-3 py-2" data-cpa-id="' + esc(a.id) + '" style="' + CPA_GRAVITA_STILE[a.gravita] + (ignorata ? 'opacity:.55;' : '') + '">' +
-    '<div class="flex items-start gap-2">' +
-      '<span class="text-base leading-5" title="' + esc(T.etichetta) + '">' + T.icona + '</span>' +
-      '<div class="flex-1 min-w-0">' +
-        '<div class="text-[11px] text-slate-500">' + dove + (a.gravita === 'alta' ? ' <span class="font-bold" style="color:#b91c1c;">· priorità alta</span>' : '') + _cpaTagSollecito(a) + '</div>' +
-        '<div class="text-sm font-semibold text-slate-800">' + esc(a.titolo) + '</div>' +
-        '<div class="text-xs text-slate-600 mt-0.5">' + esc(a.dettaglio) + '</div>' +
-        '<div class="text-xs mt-1" style="color:#0f766e;">💡 ' + esc(a.correzione) + '</div>' +
-        '<div class="flex flex-wrap items-center gap-1.5 mt-1.5">' + bottoni + '</div>' +
-      '</div>' +
+const CPA_CERTEZZA = {
+  alta:    { colore: '#15803d', testo: 'proposta sicura' },
+  media:   { colore: '#b45309', testo: 'proposta probabile' },
+  bassa:   { colore: '#b91c1c', testo: 'proposta da verificare' },
+  nessuna: { colore: '#64748b', testo: 'da compilare' },
+};
+
+function _cpaS(v) { return esc(v == null ? '' : String(v)); }
+
+function _cpaH(n) { return _cpaS(_cpaFmt(n)) + ' h'; }
+
+function _cpaLink(label, url) {
+  if (!url) return '<span class="font-mono text-[11px] text-slate-600">' + _cpaS(label) + '</span>';
+  return '<a href="' + _cpaS(url) + '" target="_blank" rel="noopener" class="font-mono text-[11px]" style="color:#2563eb;">' + _cpaS(label) + ' ↗</a>';
+}
+
+function _cpaColonna(titolo, colore, contenuto) {
+  return '<div class="rounded-md border p-2 min-w-0" style="border-color:' + colore + '33;background:' + colore + '0a;">' +
+    '<div class="text-[11px] font-bold uppercase tracking-wide mb-1" style="color:' + colore + ';">' + titolo + '</div>' + contenuto + '</div>';
+}
+
+function _cpaConfronto(sx, dx) {
+  return '<div class="grid gap-2 mt-2" style="grid-template-columns:repeat(auto-fit,minmax(260px,1fr));">' +
+    _cpaColonna('📅 In Griglia', '#0f766e', sx) + _cpaColonna('🎫 Su Jira', '#4f46e5', dx) + '</div>';
+}
+
+/* Una voce di Griglia: cantiere in grassetto, poi attività e commessa/squadra */
+function _cpaVoceG(v, extra) {
+  return '<div class="text-xs leading-5"><b class="text-slate-800">' + _cpaS(v.cantiere) + '</b>' +
+    (v.attivita ? ' <span class="text-slate-500">· ' + _cpaS(v.attivita) + '</span>' : '') +
+    '<span class="text-slate-400"> · ' + _cpaS([v.commessa, v.squadra].filter(Boolean).join(' / ')) + '</span>' +
+    (v.subtask ? ' ' + _cpaLink(v.subtask.key, v.subtask.url) : '') + (extra || '') + '</div>';
+}
+
+function _cpaTicketJ(t, evidenzia) {
+  const dove = t.dove
+    ? '<div class="text-[11px]" style="color:#0f766e;">→ in Griglia è il cantiere <b>' + _cpaS(t.dove.cantiere) + '</b>' +
+        (t.dove.attivita ? ' (' + _cpaS(t.dove.attivita) + ')' : '') + ', commessa ' + _cpaS(t.dove.commessa) +
+        (t.dove.fonte === 'task' ? ' <span class="text-slate-400">(Task padre)</span>' : '') +
+        (t.dove.week && (t.dove.week !== _cpa.week || t.dove.anno !== _cpa.anno) ? ' <span class="text-slate-400">(sottotask della sett. ' + _cpaS(t.dove.week) + ')</span>' : '') + '</div>'
+    : '<div class="text-[11px] text-slate-400">non collegato a un cantiere della Griglia</div>';
+  return '<div class="text-xs leading-5 rounded px-1.5 py-1 mb-1" style="' + (evidenzia ? 'background:#fee2e2;' : 'background:#fff;') + '">' +
+    _cpaLink(t.key, t.url) + ' <b>' + _cpaH(t.hours) + '</b>' +
+    (t.summary ? ' <span class="text-slate-600">· ' + _cpaS(t.summary) + '</span>' : '') +
+    (t.epic ? '<div class="text-[11px] ' + (evidenzia ? 'font-semibold' : 'text-slate-500') + '" style="' + (evidenzia ? 'color:#b91c1c;' : '') + '">Epic ' + _cpaS(t.epic.name || t.epic.key) + '</div>' : '') +
+    dove + '</div>';
+}
+
+/* Settimana dell'operatore in una riga di 6 caselle, col giorno dell'anomalia evidenziato */
+function _cpaStriscia(settimana, giorno, r) {
+  return '<div class="grid gap-1 mt-1.5" style="grid-template-columns:repeat(6,minmax(0,1fr));">' + settimana.map(s => {
+    const sel = s.giorno === giorno;
+    const cant = vv => vv.map(v => v.cantiere).filter((x, i, a) => a.indexOf(x) === i).join(', ');
+    const txt = s.ferie ? (s.ferie === 'ferie' ? '🏖 ferie' : '⛔ n.d.') + ((s.vociInFerie || []).length ? ' · ' + cant(s.vociInFerie) : '')
+      : (s.voci.length ? cant(s.voci) : '—');
+    return '<div class="rounded px-1 py-0.5 text-[10px] leading-4 min-w-0" style="' +
+      (sel ? 'outline:2px solid #dc2626;background:#fff;' : 'background:#f1f5f9;') + '" title="' + _cpaS(txt) + '">' +
+      '<div class="font-semibold ' + (sel ? '' : 'text-slate-500') + '" style="' + (sel ? 'color:#dc2626;' : '') + '">' + CPA_GIORNI[s.giorno] + '</div>' +
+      '<div class="truncate ' + (s.voci.length || s.ferie ? 'text-slate-700' : 'text-slate-300') + '">' + _cpaS(txt) + '</div></div>';
+  }).join('') + '</div>';
+}
+
+function _cpaPropostaHtml(a, r) {
+  const az = a.azione;
+  const voci = _cpaPropVoci(a);
+  const C = CPA_CERTEZZA[az.certezza] || CPA_CERTEZZA.nessuna;
+  const inp = 'border border-slate-300 rounded px-1.5 py-1 text-xs bg-white min-w-0';
+  const righe = voci.map((v, i) =>
+    '<div class="grid gap-1 items-center mt-1" style="grid-template-columns:minmax(0,1.2fr) minmax(0,1.2fr) minmax(0,1fr) auto;">' +
+      '<input type="text" list="cpa-dl-commesse" placeholder="Commessa" data-i="' + i + '" data-f="commessa" oninput="cpaPropEdit(this)" value="' + _cpaS(v.commessa) + '" class="' + inp + '">' +
+      '<input type="text" list="cpa-dl-cantieri" placeholder="Cantiere" data-i="' + i + '" data-f="cantiere" oninput="cpaPropEdit(this)" value="' + _cpaS(v.cantiere) + '" class="' + inp + '">' +
+      '<input type="text" list="cpa-dl-attivita" placeholder="Attività" data-i="' + i + '" data-f="attivita" oninput="cpaPropEdit(this)" value="' + _cpaS(v.attivita) + '" class="' + inp + '">' +
+      '<button type="button" data-i="' + i + '" onclick="cpaPropTogli(this)" class="text-xs px-1.5 text-slate-400 hover:text-rose-600" title="Togli questa riga">✕</button>' +
+    '</div>').join('');
+  return '<div class="rounded-md border mt-2 p-2" style="border-color:#99f6e4;background:#f0fdfa;">' +
+    '<div class="flex flex-wrap items-center gap-2">' +
+      '<span class="text-xs font-bold" style="color:#0f766e;">✏️ Modifica proposta in Griglia · ' + _cpaS(r.giorniLabel[az.giorno]) + '</span>' +
+      '<span class="text-[11px] font-semibold rounded-full px-2" style="background:#fff;color:' + C.colore + ';border:1px solid ' + C.colore + '55;">' + C.testo + '</span>' +
+      '<span class="text-[11px] text-slate-500">' + _cpaS(az.fonte) + '</span>' +
+    '</div>' +
+    '<div class="grid gap-1 mt-1.5 text-[10px] font-semibold uppercase text-slate-400" style="grid-template-columns:minmax(0,1.2fr) minmax(0,1.2fr) minmax(0,1fr) auto;"><span>Commessa</span><span>Cantiere</span><span>Attività</span><span style="width:22px;"></span></div>' +
+    righe +
+    '<div class="flex flex-wrap items-center gap-2 mt-2">' +
+      '<button type="button" onclick="cpaAzione(this)" class="pw-write-action text-xs px-3 py-1 rounded font-semibold text-white" style="background:#0f766e;">✓ ' +
+        (az.togliAssenza ? 'Togli assenza e aggiungi in Griglia' : 'Aggiungi in Griglia') + '</button>' +
+      '<button type="button" onclick="cpaPropAggiungi(this)" class="text-xs px-2 py-0.5 border border-slate-300 rounded bg-white hover:bg-slate-50">＋ altro cantiere</button>' +
+      (_cpa.propMod.has(a.id) ? '<button type="button" onclick="cpaPropRipristina(this)" class="text-xs text-slate-500 hover:text-slate-800">↺ proposta iniziale</button>' : '') +
+      '<span class="text-[11px] text-slate-500">' + _cpaS(a.operatore) + ' entra nella squadra di chi è già su quel cantiere, altrimenti nella sua riga della commessa.</span>' +
     '</div></div>';
+}
+
+function _cpaCorpo(a, r) {
+  const C = a.confronto || {};
+  if (a.tipo === 'pianificato_senza_worklog') {
+    return _cpaConfronto(
+      (C.griglia || []).map(v => _cpaVoceG(v)).join(''),
+      '<div class="text-sm font-semibold" style="color:#b91c1c;">' + (C.oreJira > 0 ? _cpaH(C.oreJira) : 'Nessuna ora registrata') + '</div>' +
+        (C.jira || []).map(t => _cpaTicketJ(t, false)).join(''));
+  }
+  if (a.tipo === 'worklog_senza_pianificazione') {
+    const stato = C.assenza
+      ? '<div class="text-sm font-semibold" style="color:#b91c1c;">' + (C.assenza === 'ferie' ? '🏖 In ferie' : '⛔ Non disponibile') + '</div>'
+      : '<div class="text-sm font-semibold" style="color:#b91c1c;">Nessun cantiere pianificato</div>';
+    return _cpaConfronto(
+      stato + '<div class="text-[11px] text-slate-500 mt-1">La sua settimana in Griglia:</div>' + _cpaStriscia(C.settimana || [], C.giorno, r),
+      '<div class="text-sm font-semibold text-slate-800 mb-1">' + _cpaH(C.oreJira) + ' registrate</div>' + (C.jira || []).map(t => _cpaTicketJ(t, false)).join('')) +
+      _cpaPropostaHtml(a, r);
+  }
+  if (a.tipo === 'epic_diverso') {
+    return _cpaConfronto(
+      (C.griglia || []).map(v => _cpaVoceG(v, v.epic ? '<div class="text-[11px] text-slate-500">Epic ' + _cpaS(v.epic.name) + '</div>' : '<div class="text-[11px] text-slate-400">senza sottotask: Epic non noto</div>')).join(''),
+      (C.jira || []).map(t => _cpaTicketJ(t, t.fuori)).join(''));
+  }
+  if (a.tipo === 'ore_squadra') {
+    const max = C.max || 1;
+    return '<div class="rounded-md border border-slate-200 bg-white p-2 mt-2">' + (C.membri || []).map(m => {
+      const w = m.escluso ? 0 : Math.max(2, Math.round(m.ore / max * 100));
+      const col = m.basso ? '#d97706' : '#0f766e';
+      const nota = m.piuSquadre ? 'su più squadre quel giorno: escluso dal confronto'
+        : (m.escluso ? 'nessuna ora: vedi ⏱ Pianificati senza worklog' : (m.basso ? '−' + _cpaFmt(Math.round((C.max - m.ore) * 100) / 100) + ' h rispetto al più alto' : ''));
+      return '<div class="grid items-center gap-2 py-0.5" style="grid-template-columns:minmax(110px,180px) minmax(0,1fr) 56px;">' +
+        '<button type="button" data-cpk="' + _cpaS(m.cpKey) + '" onclick="cpaVaiAllaRiga(this)" class="text-xs text-left truncate hover:underline ' + (m.basso ? 'font-semibold' : 'text-slate-700') + '" style="' + (m.basso ? 'color:#b45309;' : '') + '" title="Vai alla riga in Controllo Produzione">' + _cpaS(m.operatore) + '</button>' +
+        '<div class="min-w-0"><div style="height:10px;border-radius:5px;background:#f1f5f9;overflow:hidden;"><div style="height:10px;width:' + w + '%;background:' + col + ';"></div></div>' +
+          (nota ? '<div class="text-[10px] ' + (m.basso ? '' : 'text-slate-400') + '" style="' + (m.basso ? 'color:#b45309;' : '') + '">' + _cpaS(nota) + '</div>' : '') + '</div>' +
+        '<div class="text-xs text-right font-semibold ' + (m.escluso ? 'text-slate-400' : '') + '" style="' + (m.basso ? 'color:#b45309;' : '') + '">' + (m.escluso && !m.piuSquadre ? '0 h' : _cpaH(m.ore)) + '</div>' +
+      '</div>';
+    }).join('') + '</div>';
+  }
+  return '';
 }
 
 /* Etichetta sulle anomalie già coperte da un sollecito inviato (vedi produzione-anomalie-solleciti.js) */
 function _cpaTagSollecito(a) {
-  if (!a.sollecito) return '';
-  const rec = _cpaSollInviati(_cpa.anno, _cpa.week)[a.operatore];
-  if (!rec || !(rec.giorni || []).includes(a.giorno)) return '';
-  const q = new Date(rec.ts).toLocaleDateString('it-IT', { day: '2-digit', month: '2-digit' });
-  return ' <span class="font-semibold" style="color:#15803d;">· ✉️ sollecitato il ' + q + '</span>';
+  if (!a.solleciti || !a.solleciti.length) return '';
+  const inv = _cpaSollInviati(_cpa.anno, _cpa.week);
+  const fatti = a.solleciti.filter(s => inv[s.operatore] && (inv[s.operatore].giorni || []).includes(s.giorno));
+  if (!fatti.length) return '';
+  return ' <span class="text-[11px] font-semibold" style="color:#15803d;">✉️ sollecitato' + (a.solleciti.length > 1 ? ': ' + _cpaS(fatti.map(s => s.operatore).join(', ')) : '') +
+    ' il ' + new Date(inv[fatti[0].operatore].ts).toLocaleDateString('it-IT', { day: '2-digit', month: '2-digit' }) + '</span>';
+}
+
+function _cpaSchedaHtml(a, r, ignorata) {
+  const T = CPA_TIPI[a.tipo];
+  const G = CPA_GRAVITA[a.gravita] || CPA_GRAVITA.bassa;
+  const dove = a.tipo === 'worklog_senza_pianificazione' ? '' : [a.commessa, a.squadra, a.cantiere].filter(Boolean).map(_cpaS).join(' · ');
+  let bottoni = '';
+  if (a.cpKey && a.tipo !== 'ore_squadra') bottoni += '<button type="button" onclick="cpaVaiAllaRiga(this)" class="text-xs px-2 py-0.5 border border-slate-300 rounded bg-white hover:bg-slate-50">↘ Vai alla riga</button>';
+  bottoni += (a.link || []).filter(l => l.url).map(l =>
+    '<a href="' + _cpaS(l.url) + '" target="_blank" rel="noopener" class="text-xs px-2 py-0.5 border border-slate-300 rounded bg-white hover:bg-slate-50" style="color:#2563eb;text-decoration:none;">' + _cpaS(l.label) + ' ↗</a>').join('');
+  return '<div class="bg-white border border-slate-200 rounded-lg mt-2" data-cpa-id="' + _cpaS(a.id) + '" style="border-left:4px solid ' + G.colore + ';padding:10px 12px;' + (ignorata ? 'opacity:.5;' : '') + '">' +
+    '<div class="flex items-start gap-2">' +
+      '<span class="text-lg leading-6" title="' + _cpaS(T.etichetta) + '">' + T.icona + '</span>' +
+      '<div class="flex-1 min-w-0">' +
+        '<div class="flex flex-wrap items-center gap-x-2 gap-y-0.5">' +
+          '<span class="text-sm font-semibold text-slate-800">' + _cpaS(a.titolo) + '</span>' +
+          '<span class="text-[10px] font-bold uppercase rounded px-1.5" style="color:' + G.colore + ';background:' + G.sfondo + ';">' + G.testo + '</span>' +
+          _cpaTagSollecito(a) +
+          '<div class="flex-1"></div>' +
+          '<button type="button" onclick="cpaIgnora(this)" class="text-xs text-slate-400 hover:text-slate-800" title="' + (ignorata ? 'Rimetti fra le anomalie aperte' : 'Nascondi questa anomalia (solo su questo browser)') + '">' + (ignorata ? '↩ Ripristina' : 'Ignora') + '</button>' +
+        '</div>' +
+        (dove ? '<div class="text-[11px] text-slate-500">' + dove + '</div>' : '') +
+        (ignorata ? '' : _cpaCorpo(a, r)) +
+        '<div class="text-xs mt-2" style="color:#0f766e;">💡 ' + _cpaS(a.correzione) + '</div>' +
+        (bottoni ? '<div class="flex flex-wrap items-center gap-1.5 mt-1.5">' + bottoni + '</div>' : '') +
+      '</div>' +
+    '</div></div>';
+}
+
+function _cpaDatalist(id, valori) {
+  return '<datalist id="' + id + '">' + [...new Set(valori.filter(Boolean))].sort((x, y) => x.localeCompare(y))
+    .map(v => '<option value="' + _cpaS(v) + '"></option>').join('') + '</datalist>';
+}
+
+function _cpaDatalists() {
+  const data = pwGetWeekData();
+  const cantieri = [], attivita = [];
+  data.forEach(bc => (bc.squadre || []).forEach(sq => (sq.operatori || []).forEach(o => {
+    for (let g = 0; g < 6; g++) pwCellVoci((o.giorni || {})[g]).forEach(v => { cantieri.push(v.cantiere); attivita.push(v.attivita); });
+  })));
+  Object.values(_cpa.proposte).forEach(vs => vs.forEach(v => { cantieri.push(v.cantiere); attivita.push(v.attivita); }));
+  return _cpaDatalist('cpa-dl-commesse', _cpaCommesseNote()) + _cpaDatalist('cpa-dl-cantieri', cantieri) + _cpaDatalist('cpa-dl-attivita', attivita);
+}
+
+function _cpaIntestazione(r) {
+  const d = _cpaDateSettimana();
+  const btn = 'text-xs px-2.5 py-1 border border-slate-300 rounded bg-white hover:bg-slate-50';
+  return '<div style="background:white;padding:14px 20px 0;border-bottom:1px solid #e2e8f0;">' +
+    '<div class="flex flex-wrap items-start gap-2">' +
+      '<div class="min-w-0">' +
+        '<div style="font-weight:700;font-size:16px;color:#0f172a;font-family:var(--font-display);">🔍 Controllo anomalie</div>' +
+        '<div class="text-xs text-slate-500 mt-0.5">Settimana ' + pwWeek + ' · ' + d.ddmm[0] + ' – ' + d.ddmm[5] + ' · Griglia confrontata con le ore Jira. Propone correzioni, su Jira non scrive mai.' +
+          (r && r.quando ? ' Letto alle ' + r.quando.toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' }) + '.' : '') + '</div>' +
+      '</div>' +
+      '<div class="flex-1"></div>' +
+      '<label class="text-xs text-slate-600 flex items-center gap-1 mt-1" title="Legge i worklog anche degli operatori del pool che non compaiono in Griglia questa settimana (più lento)">' +
+        '<input type="checkbox" onchange="cpaTogglePool(this)"' + (_cpa.tuttoIlPool ? ' checked' : '') + '> anche chi non è in Griglia</label>' +
+      '<button type="button" onclick="cpaRegistroApri()" class="' + btn + '" style="color:#047857;border-color:#6ee7b7;" title="Chi è già stato sollecitato: resta salvato anche dopo aver chiuso la dashboard">📒 Registro solleciti' + (_cpaRegistroConta() ? ' (' + _cpaRegistroConta() + ')' : '') + '</button>' +
+      '<button type="button" onclick="cpaAvvia()" class="text-xs px-3 py-1 rounded font-semibold text-white" style="background:#b45309;' + (_cpa.inCorso ? 'opacity:.55;' : '') + '"' + (_cpa.inCorso ? ' disabled' : '') + ' title="Rilegge worklog ed Epic da Jira">' + (r ? '↻ Ricontrolla' : '▶ Avvia controllo') + '</button>' +
+      '<button type="button" onclick="cpaChiudi()" class="' + btn + '">Chiudi</button>' +
+    '</div>' +
+    _cpaSchede(r) +
+  '</div>';
+}
+
+/* Linguette: Tutte + una per controllo, col numero di anomalie aperte */
+function _cpaSchede(r) {
+  if (!r || _cpa.inCorso) return '<div style="height:12px;"></div>';
+  const ign = _cpaIgnorate();
+  const conta = {};
+  let tot = 0;
+  r.anomalie.forEach(a => { if (!ign[a.id] && !_cpa.risolte.has(a.id)) { conta[a.tipo] = (conta[a.tipo] || 0) + 1; tot++; } });
+  const tab = (tipo, testo, n) => {
+    const on = _cpa.filtro === tipo;
+    return '<button type="button" data-tipo="' + tipo + '" onclick="cpaFiltro(this.dataset.tipo)" class="text-xs px-3 py-2 whitespace-nowrap" style="border-bottom:3px solid ' + (on ? '#b45309' : 'transparent') + ';' +
+      (on ? 'color:#0f172a;font-weight:700;' : 'color:#475569;') + '">' + testo +
+      ' <span class="rounded-full px-1.5 text-[11px] font-bold" style="' + (n ? 'background:#fef3c7;color:#92400e;' : 'background:#f1f5f9;color:#94a3b8;') + '">' + n + '</span></button>';
+  };
+  return '<div class="flex flex-wrap gap-1 mt-2" style="margin-bottom:-1px;">' + tab('', 'Tutte', tot) +
+    Object.keys(CPA_TIPI).map(t => tab(t, CPA_TIPI[t].icona + ' ' + CPA_TIPI[t].etichetta, conta[t] || 0)).join('') + '</div>';
+}
+
+function _cpaBarra(r, attive, ign) {
+  const nIgn = attive.filter(a => ign[a.id]).length;
+  const nAperte = attive.length - nIgn;
+  const desc = _cpa.filtro ? CPA_TIPI[_cpa.filtro].descrizione : 'Tutti i controlli, giorno per giorno.';
+  const soglia = Number(_cpaPref().diffOreSquadra);
+  const opzSoglia = CPA_SOGLIE_ORE.map(v => '<option value="' + v + '"' + (v === soglia ? ' selected' : '') + '>' + String(v).replace('.', ',') + ' h</option>').join('');
+  return '<div class="flex flex-wrap items-center gap-2" style="padding:8px 20px;background:#f8fafc;border-bottom:1px solid #e2e8f0;">' +
+    '<span class="text-xs text-slate-600">' + _cpaS(desc) + '</span>' +
+    '<div class="flex-1"></div>' +
+    (!_cpa.filtro || _cpa.filtro === 'ore_squadra'
+      ? '<label class="text-xs text-slate-600 flex items-center gap-1" title="Segnala un operatore quando ha almeno queste ore in meno del collega di squadra con più ore">⚖️ scarto minimo <select onchange="cpaSetSogliaOre(this)" class="border border-slate-300 rounded px-1 py-0.5 text-xs bg-white">' + opzSoglia + '</select></label>'
+      : '') +
+    (nIgn ? '<button type="button" onclick="cpaToggleIgnorate()" class="text-xs text-slate-500 hover:text-slate-800">' + (_cpa.mostraIgnorate ? 'Nascondi' : 'Mostra') + ' ignorate (' + nIgn + ')</button>' : '') +
+    (attive.some(a => a.solleciti && a.solleciti.length && !ign[a.id]) ? '<button type="button" onclick="cpaSollApri()" class="text-xs px-2 py-0.5 rounded font-semibold text-white" style="background:#4f46e5;" title="Bozze di messaggio per chi non ha caricato le ore su Jira o ne ha meno dei colleghi di squadra">✉️ Prepara solleciti' + (_cpaSollDaInviare().length ? ' (' + _cpaSollDaInviare().length + ' da inviare)' : ' · tutti inviati') + '</button>' : '') +
+    (nAperte ? '<button type="button" onclick="cpaCopia()" class="text-xs px-2 py-0.5 border border-slate-300 rounded bg-white hover:bg-slate-50">📋 Copia elenco</button>' : '') +
+  '</div>';
+}
+
+function _cpaListaHtml(r, attive, ign) {
+  const nv = r.nonVerificabili;
+  const valutati = r.giorniValutabili.length
+    ? 'ore attese fino a ' + r.giorniLabel[r.giorniValutabili[r.giorniValutabili.length - 1]]
+    : 'settimana non ancora iniziata: nessuna ora attesa';
+  const note = [
+    r.nOperatori + ' operatori controllati su Jira, ' + valutati + '.',
+    nv.epicSenzaSottotask ? nv.epicSenzaSottotask + ' giornate con ore ma senza sottotask in Griglia: Epic non confrontabile.' : '',
+  ].concat(r.avvisi).filter(Boolean);
+  let html = '<div class="text-[11px] text-slate-500">' + note.map(_cpaS).join('<br>') + '</div>';
+  const lista = attive.filter(a => (_cpa.mostraIgnorate || !ign[a.id]) && (!_cpa.filtro || a.tipo === _cpa.filtro));
+  if (!lista.length) {
+    html += '<div class="text-sm mt-6 text-center" style="color:#15803d;">✅ ' + (_cpa.filtro ? 'Nessuna anomalia di questo tipo.' : 'Nessuna anomalia aperta per questa settimana.') + '</div>';
+  }
+  for (let g = 0; g < 6; g++) {
+    const delGiorno = lista.filter(a => a.giorno === g);
+    if (!delGiorno.length) continue;
+    const dd = r.giorniLabel[g].split(' ')[1] || '';
+    html += '<div class="mt-4">' +
+      '<div class="flex items-center gap-2" style="position:sticky;top:0;background:#f8fafc;padding:4px 0;z-index:1;">' +
+        '<span class="text-sm font-bold text-slate-800">📅 ' + CPA_GIORNI_LUNGHI[g] + ' ' + _cpaS(dd) + '</span>' +
+        '<span class="text-xs text-slate-500">' + delGiorno.length + (delGiorno.length === 1 ? ' anomalia' : ' anomalie') + '</span>' +
+        '<div style="flex:1;height:1px;background:#e2e8f0;"></div>' +
+      '</div>' +
+      delGiorno.map(a => _cpaSchedaHtml(a, r, !!ign[a.id])).join('') +
+    '</div>';
+  }
+  if (_cpa.risolte.size) html += '<div class="text-[11px] text-slate-500 mt-3">' + _cpa.risolte.size + ' correzioni applicate in Griglia in questa sessione.</div>';
+  return html;
 }
 
 function cpaRender() {
+  const modal = document.getElementById('cpa-modal');
   const root = document.getElementById('cpa-root');
   const btn = document.getElementById('cpa-toggle');
-  if (!root) return;
-  root.style.display = _cpa.aperto ? '' : 'none';
   const r = (_cpa.risultato && _cpa.anno === pwAnno && _cpa.week === pwWeek) ? _cpa.risultato : null;
   const ign = _cpaIgnorate();
   const attive = r ? r.anomalie.filter(a => !_cpa.risolte.has(a.id)) : [];
   const nAperte = attive.filter(a => !ign[a.id]).length;
   if (btn) btn.innerHTML = '🔍 Controllo anomalie' + (r && nAperte ? ' <span style="background:#fff;color:#b45309;border-radius:9px;padding:0 6px;font-weight:700;">' + nAperte + '</span>' : '');
+  if (!modal || !root) return;
+  modal.style.display = _cpa.aperto ? 'flex' : 'none';
   if (!_cpa.aperto) return;
-  if (_cpa.registro) { root.innerHTML = _cpaRegistroHtml(); return; }
-  if (_cpa.soll && r && !_cpa.inCorso) { root.innerHTML = _cpaSollHtml(r); return; }
 
-  const intest = '<div class="flex flex-wrap items-center gap-2">' +
-    '<span class="text-xs font-semibold text-slate-700 uppercase tracking-wide">🔍 Controllo anomalie · settimana ' + pwWeek + '</span>' +
-    '<span class="text-[11px] text-slate-500">Griglia vs ore Jira vs km. Propone correzioni, non scrive mai su Jira.</span>' +
-    '<div class="flex-1"></div>' +
-    '<label class="text-xs text-slate-600 flex items-center gap-1" title="Legge i worklog anche degli operatori del pool che non compaiono in Griglia questa settimana (più lento)">' +
-      '<input type="checkbox" onchange="cpaTogglePool(this)"' + (_cpa.tuttoIlPool ? ' checked' : '') + '> anche chi non è in Griglia</label>' +
-    '<button type="button" onclick="cpaRegistroApri()" class="text-xs px-2 py-1 border border-emerald-300 rounded bg-white hover:bg-emerald-50" style="color:#047857;" title="Chi è già stato sollecitato: resta salvato anche dopo aver chiuso la dashboard">📒 Registro solleciti' + (_cpaRegistroConta() ? ' (' + _cpaRegistroConta() + ')' : '') + '</button>' +
-    '<button type="button" onclick="cpaAvvia()" class="text-xs px-3 py-1.5 rounded font-semibold text-white" style="background:#b45309;"' + (_cpa.inCorso ? ' disabled' : '') + '>' + (r ? '↻ Ricontrolla' : '▶ Avvia controllo') + '</button>' +
-    '<button type="button" onclick="cpaToggle()" class="text-xs px-2 py-1 text-slate-500 hover:text-slate-800" title="Chiudi">✕</button>' +
-    '</div>';
+  /* Il ridisegno non deve far perdere la posizione di lettura nella stessa vista */
+  const vista = _cpa.registro ? 'registro' : (_cpa.soll && r && !_cpa.inCorso ? 'soll' : 'lista|' + _cpa.filtro);
+  const prima = document.getElementById('cpa-body');
+  const scroll = (prima && _cpa._vista === vista) ? prima.scrollTop : 0;
+  _cpa._vista = vista;
 
-  let corpo = '';
-  if (_cpa.msg) corpo += '<div class="text-xs mt-2 ' + (_cpa.msg.startsWith('⚠') ? 'text-rose-700' : 'text-slate-600') + '">' + esc(_cpa.msg) + '</div>';
-  if (r && !_cpa.inCorso) {
-    const visibili = attive.filter(a => _cpa.mostraIgnorate ? true : !ign[a.id]);
-    const conta = {};
-    attive.filter(a => !ign[a.id]).forEach(a => { conta[a.tipo] = (conta[a.tipo] || 0) + 1; });
-    const chips = Object.keys(CPA_TIPI).map(t => {
-      const n = conta[t] || 0;
-      const on = _cpa.filtro === t;
-      return '<button type="button" data-tipo="' + t + '" onclick="cpaFiltro(this.dataset.tipo)" class="text-xs px-2 py-0.5 rounded-full border" style="' +
-        (on ? 'background:#1e293b;color:#fff;border-color:#1e293b;' : (n ? 'background:#fff;border-color:#cbd5e1;color:#334155;' : 'background:#f8fafc;border-color:#e2e8f0;color:#94a3b8;')) + '">' +
-        CPA_TIPI[t].icona + ' ' + CPA_TIPI[t].etichetta + ' <b>' + n + '</b></button>';
-    }).join('');
-    const nIgn = attive.filter(a => ign[a.id]).length;
-    const valutati = r.giorniValutabili.length
-      ? 'worklog attesi fino a ' + r.giorniLabel[r.giorniValutabili[r.giorniValutabili.length - 1]]
-      : 'settimana non ancora iniziata: nessun worklog atteso';
-    const nv = r.nonVerificabili;
-    const note = [
-      r.nOperatori + ' operatori controllati su Jira, ' + valutati + '.',
-      nv.epicSenzaSottotask ? nv.epicSenzaSottotask + ' giornate con worklog ma senza sottotask in Griglia: Epic non confrontabile.' : '',
-      nv.kmSenzaFamiglia ? nv.kmSenzaFamiglia + ' giornate-squadra con km senza mediana di riferimento (attività miste o con poco storico).' : '',
-    ].concat(r.avvisi).filter(Boolean);
-    corpo += '<div class="flex flex-wrap items-center gap-1.5 mt-2">' + chips +
-      '<div class="flex-1"></div>' +
-      (nIgn ? '<button type="button" onclick="cpaToggleIgnorate()" class="text-xs text-slate-500 hover:text-slate-800">' + (_cpa.mostraIgnorate ? 'Nascondi' : 'Mostra') + ' ignorate (' + nIgn + ')</button>' : '') +
-      ((conta.km_duplicati || 0) > 1 ? '<button type="button" onclick="cpaTieniTuttiPrimo()" class="pw-write-action text-xs px-2 py-0.5 rounded font-semibold text-white" style="background:#0f766e;" title="Per ogni duplicato tiene i km su un operatore (quello che li ha già su Jira, se c\'è) e mette 0 sugli altri">👯 Correggi tutti i duplicati</button>' : '') +
-      (attive.some(a => a.sollecito && !ign[a.id]) ? '<button type="button" onclick="cpaSollApri()" class="text-xs px-2 py-0.5 rounded font-semibold text-white" style="background:#4f46e5;" title="Bozze di messaggio per chi non ha caricato, o ha caricato solo in parte, le ore su Jira">✉️ Prepara solleciti' + (_cpaSollDaInviare().length ? ' (' + _cpaSollDaInviare().length + ' da inviare)' : ' · tutti inviati') + '</button>' : '') +
-      (nAperte ? '<button type="button" onclick="cpaCopia()" class="text-xs px-2 py-0.5 border border-slate-300 rounded bg-white hover:bg-slate-50">📋 Copia elenco correzioni</button>' : '') +
-      '</div>';
-    corpo += '<div class="text-[11px] text-slate-500 mt-1">' + note.map(esc).join('<br>') + '</div>';
-    const lista = visibili.filter(a => !_cpa.filtro || a.tipo === _cpa.filtro);
-    corpo += lista.length
-      ? '<div class="flex flex-col gap-1.5 mt-2" style="max-height:420px;overflow-y:auto;">' + lista.map(a => _cpaVoceHtml(a, r, !!ign[a.id])).join('') + '</div>'
-      : '<div class="text-sm mt-3 mb-1" style="color:#15803d;">✅ ' + (_cpa.filtro ? 'Nessuna anomalia di questo tipo.' : 'Nessuna anomalia aperta per questa settimana.') + '</div>';
-    if (_cpa.risolte.size) corpo += '<div class="text-[11px] text-slate-500 mt-1">' + _cpa.risolte.size + ' correzioni applicate in questa sessione. Per i km, la "🔄 Sincronizza da Jira" le riporterà su Jira (con conferma).</div>';
+  const corpo = h => '<div id="cpa-body" style="flex:1;overflow:auto;padding:12px 20px 20px;">' + h + '</div>';
+  if (vista === 'registro') root.innerHTML = corpo(_cpaRegistroHtml());
+  else if (vista === 'soll') root.innerHTML = corpo(_cpaSollHtml(r));
+  else {
+    let h = '';
+    if (_cpa.msg) h += '<div class="text-sm mt-6 text-center ' + (_cpa.msg.startsWith('⚠') ? 'text-rose-700' : 'text-slate-600') + '">' + _cpaS(_cpa.msg) + '</div>';
+    if (r && !_cpa.inCorso) h += _cpaListaHtml(r, attive, ign);
+    root.innerHTML = _cpaIntestazione(r) + (r && !_cpa.inCorso ? _cpaBarra(r, attive, ign) : '') + corpo(h) + _cpaDatalists();
   }
-  root.innerHTML = '<div class="bg-white border border-amber-200 rounded-lg p-3 shadow-sm">' + intest + corpo + '</div>';
+  const dopo = document.getElementById('cpa-body');
+  if (dopo && scroll) dopo.scrollTop = scroll;
 }

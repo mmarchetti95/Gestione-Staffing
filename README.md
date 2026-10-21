@@ -114,6 +114,15 @@ Limite noto: il progetto Supabase è sul piano **Free**, che non include backup 
 
 ## Changelog
 
+## v18.212.0
+- feat: **Controllo Produzione — controllo anomalie rifatto in un modal.** Il bottone **🔍 Controllo anomalie** apre ora una finestra dedicata con una linguetta per controllo (col numero di anomalie aperte) e le anomalie raggruppate **per giorno**. I controlli sono quattro:
+  - **⏱ Pianificati senza worklog**: in Griglia per un giorno già passato ma senza ore su Jira.
+  - **👻 Worklog senza pianificazione**: ore su Jira in un giorno senza cantiere in Griglia, o segnato in ferie. Mostra affiancati **In Griglia** (stato del giorno e la settimana dell'operatore, col giorno evidenziato) e **Su Jira** (ticket, ore, descrizione, Epic e, se riconosciuto, su quale cantiere/commessa della Griglia sta il ticket, anche da sottotask di altre settimane). Propone la **cella da aggiungere** (commessa, cantiere, attività, modificabili e con più cantieri) indicando quanto è affidabile la proposta; **✓ Aggiungi in Griglia** la scrive dopo conferma, nella squadra di chi è già su quel cantiere, e se il giorno era in ferie toglie anche l'assenza.
+  - **🟣 Epic diverso dalla Griglia**: stesso confronto affiancato, col ticket fuori Epic evidenziato.
+  - **⚖️ Ore diverse in squadra** (nuovo): operatori della stessa squadra nello stesso giorno con ore Jira diverse oltre uno scarto minimo (0,5 / 1 / 2 / 3 h, di default 1 h), con barre per operatore; chi ha meno ore rientra nei solleciti.
+- Tolti i controlli **Km duplicati**, **Km fuori scala** e **Worklog parziali**: niente più correzioni dei km dal controllo. Dopo una correzione l'elenco si ricalcola subito senza rileggere Jira; "↻ Ricontrolla" rilegge worklog ed Epic.
+- Su Jira non si scrive nulla. Nessuna modifica allo schema Supabase né alle Edge Function.
+
 ## v18.211.0
 - feat: **Griglia settimanale — card "Squadre in doppia week".** Nuova card viola 🔁 nel banner statistiche: conta le squadre con almeno un operatore in doppia week nella settimana mostrata (1ª o 2ª settimana del blocco, come i badge 🔁 DOPPIA W1/W2). Cliccandola si apre l'elenco per squadra e commessa, con gli operatori in DW e la fase W1/W2. Un clic su un operatore (o sul nome della squadra) porta alla sua riga nella Griglia: commessa e squadra si espandono se erano chiuse, la riga lampeggia.
 - Nessuna modifica Supabase né alle Edge Function.

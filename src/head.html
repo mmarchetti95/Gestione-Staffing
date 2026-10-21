@@ -1895,7 +1895,7 @@
     <div class="flex items-center gap-2">
       <button id="btn-presentation" class="px-3 py-1.5 text-sm rounded hover:bg-white/10" style="border:1px solid var(--dark-border-strong);color:var(--dark-text);visibility:visible;">📊 Modalità presentazione</button>
       <div class="text-xs pl-2" style="border-left:1px solid var(--dark-border-strong);color:var(--dark-text-muted);">
-        <span id="app-version" class="font-medium" style="color:var(--accent);">v18.211.0</span> · Michele Marchetti
+        <span id="app-version" class="font-medium" style="color:var(--accent);">v18.212.0</span> · Michele Marchetti
         <span id="sb-role-badge" style="margin-left:8px;padding:1px 8px;border-radius:9999px;background:rgba(255,255,255,.1);color:var(--dark-text);font-weight:600;"></span>
       </div>
     </div>
@@ -2043,6 +2043,12 @@
       </table>
     </div>
   </div>
+</div>
+
+<!-- Controllo anomalie di Controllo Produzione (src/js/produzione-anomalie.js). z-index sotto
+     .modal-backdrop (100050): conferme e avvisi lanciati da qui devono comparire sopra. -->
+<div id="cpa-modal" class="no-print" style="display:none;position:fixed;inset:0;z-index:99990;background:var(--backdrop);align-items:center;justify-content:center;" onclick="if (event.target === this) cpaChiudi()">
+  <div id="cpa-root" style="background:#f8fafc;border-radius:var(--radius-lg);width:1100px;max-width:97vw;height:90vh;box-shadow:var(--shadow-lg);display:flex;flex-direction:column;overflow:hidden;"></div>
 </div>
 
 <!-- Lavagna Note/Variazioni della Griglia (src/js/weekly-note-variazioni.js). z-index sotto
@@ -3027,7 +3033,7 @@
       <div id="cp-search-op-info" class="text-xs text-slate-400 hidden"></div>
       <div class="flex items-center gap-2">
         <button id="cp-collapse-all" class="px-3 py-1.5 text-sm border border-slate-300 rounded hover:bg-slate-50 no-print" onclick="cpCollapseAllToggle()">≡ Collassa</button>
-        <button id="cpa-toggle" onclick="cpaToggle()" class="px-3 py-1.5 text-sm font-medium text-white rounded-lg flex items-center gap-1.5 no-print" style="background:#b45309;" title="Confronta Griglia, ore Jira e km e propone correzioni (non scrive su Jira)">🔍 Controllo anomalie</button>
+        <button id="cpa-toggle" onclick="cpaToggle()" class="px-3 py-1.5 text-sm font-medium text-white rounded-lg flex items-center gap-1.5 no-print" style="background:#b45309;" title="Confronta Griglia e ore Jira della settimana e propone correzioni (non scrive su Jira)">🔍 Controllo anomalie</button>
         <button id="cp-sync-jira" data-help-key="cp-sync-jira" onclick="pwControlloSyncJira()" class="px-3 py-1.5 text-sm font-medium bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 flex items-center gap-1.5 no-print pw-write-action" title="Click destro per la guida">
           🔄 Sincronizza da Jira
         </button>
@@ -3043,7 +3049,6 @@
         </button>
       </div>
     </div>
-    <div id="cpa-root" class="mb-3 no-print" style="display:none;"></div>
     <div class="bg-white border border-slate-200 rounded-lg overflow-auto shadow-sm">
       <div id="cp-table-container" style="max-height:600px;overflow-y:auto;">
         <div class="text-center text-slate-400 py-10 text-sm">Seleziona la tab per caricare i dati.</div>
