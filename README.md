@@ -114,6 +114,10 @@ Limite noto: il progetto Supabase è sul piano **Free**, che non include backup 
 
 ## Changelog
 
+## v18.215.0
+- feat: **Griglia — doppia week nel modal di selezione operatore.** Nuovo pulsante **🔁 Doppia week (N)** accanto ai filtri: mostra solo chi è in doppia week nella settimana aperta (1ª settimana del blocco o 2ª, rientro giovedì); si combina con gli altri filtri e con la ricerca. Ogni operatore in doppia week ha il badge **🔁 DOPPIA W1/W2** nella lista; un W1 non ancora impiegato in Griglia è segnato «da collocare» (ha dato solo la disponibilità).
+- Nessuna modifica allo schema Supabase né alle Edge Function.
+
 ## v18.214.0
 - feat: **Controllo anomalie — ogni settimana tiene il suo controllo.** Cambiando settimana il controllo non si azzera più: tornando su una settimana già controllata si ritrovano le anomalie (ricalcolate sulla Griglia attuale), le proposte modificate e le correzioni fatte. Le ore Jira lette restano salvate anche dopo aver chiuso la dashboard (ultime 12 settimane, su questo browser). Da Jira si rilegge solo con **↻ Ricontrolla** (tutto) o con ↻ sulla singola anomalia; la lettura automatica avviene solo la prima volta che si apre il controllo di una settimana. In testa al modal è indicato quando sono state lette le ore, in evidenza se non oggi.
 - Nessuna modifica allo schema Supabase né alle Edge Function.

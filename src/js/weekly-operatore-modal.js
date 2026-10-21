@@ -122,6 +122,32 @@ function pwOpenOpModal(cidx, sidx, oidx) {
     '<option value="nd">Non definita</option>';
   selSeniorita.onchange = () => { filtroSeniorita = selSeniorita.value; buildList(search.value); };
   geoRow.appendChild(selSeniorita);
+
+  // Doppia week della settimana aperta: W1 = il blocco inizia questa settimana, W2 = è
+  // iniziato la precedente (rientro gio). Flag puro come il badge in Griglia; un W1 non
+  // ancora impiegato in Griglia ha dato solo la disponibilità, quindi è "da collocare".
+  const prevW = pwWeekAdd(pwAnno, pwWeek, -1);
+  const dwFaseDi = nome => pwIsDwStart(pwAnno, pwWeek, nome) ? 'W1'
+    : pwIsDwStart(prevW.anno, prevW.week, nome) ? 'W2' : '';
+  const nDw = tuttiNomi.filter(n => dwFaseDi(n)).length;
+  let filtroDw = false;
+  const btnDw = document.createElement('button');
+  btnDw.type = 'button';
+  btnDw.className = 'op-modal-skill-btn';
+  btnDw.style.cssText = 'flex:0 0 auto;font-size:13px;padding:6px 12px;';
+  btnDw.textContent = '🔁 Doppia week (' + nDw + ')';
+  btnDw.title = nDw ? 'Mostra solo chi è in doppia week questa settimana' : 'Nessuno in doppia week questa settimana';
+  btnDw.disabled = !nDw;
+  if (!nDw) btnDw.style.opacity = '.5';
+  btnDw.onclick = () => {
+    filtroDw = !filtroDw;
+    btnDw.style.background = filtroDw ? '#e0e7ff' : '#fff';
+    btnDw.style.borderColor = filtroDw ? '#6366f1' : '#cbd5e1';
+    btnDw.style.color = filtroDw ? '#4338ca' : '#475569';
+    btnDw.style.fontWeight = filtroDw ? '700' : '400';
+    buildList(search.value);
+  };
+  geoRow.appendChild(btnDw);
   modal.appendChild(geoRow);
 
   // Seniority: se nella squadra non c'è ancora un senior (primo operatore, o finora solo
@@ -227,7 +253,7 @@ function pwOpenOpModal(cidx, sidx, oidx) {
     noneEl.onclick = () => pwConfirmOpModal(cidx, sidx, oidx, '');
     list.appendChild(noneEl);
 
-    const filtrati = tuttiNomi.filter(n => (!filter || n.toLowerCase().includes(filter.toLowerCase())) && passaFiltroGeo(n) && passaFiltroSkillAttestati(n) && passaFiltroSeniorita(n));
+    const filtrati = tuttiNomi.filter(n => (!filter || n.toLowerCase().includes(filter.toLowerCase())) && passaFiltroGeo(n) && passaFiltroSkillAttestati(n) && passaFiltroSeniorita(n) && (!filtroDw || dwFaseDi(n)));
 
     if (filtrati.length === 0) {
       const empty = document.createElement('div');
@@ -280,6 +306,11 @@ function pwOpenOpModal(cidx, sidx, oidx) {
       const geoLabel = provInfo ? provInfo.nome : operatoreRegione(opByNome[nome]);
       const fornNome = fornOfNome[nome] || '';
       const senBadge = fornNome ? '' : senioritaBadgeHtml(opSeniorita(nome));
+      const dwFase = dwFaseDi(nome);
+      const dwBadge = !dwFase ? ''
+        : '<span style="background:' + (dwFase === 'W1' ? '#6366f1' : '#818cf8') + ';color:#fff;border-radius:3px;padding:0 5px;" title="' +
+          (dwFase === 'W1' ? 'Doppia week - 1a settimana' : 'Doppia week - 2a settimana (rientro gio, riposo ven)') + '">🔁 DOPPIA ' + dwFase +
+          (dwFase === 'W1' && !pwOperatoreImpiegato(pwAnno, pwWeek, nome) ? ' · da collocare' : '') + '</span>';
 
       // Nome su una riga, dettagli (commessa, provenienza, seniority, fornitore) sotto e
       // a capo se serve: nulla viene troncato con i puntini.
@@ -287,6 +318,7 @@ function pwOpenOpModal(cidx, sidx, oidx) {
         inCommessa ? '<span>✅ in commessa</span>' : '<span>fuori commessa</span>',
         geoLabel ? '<span>📍 ' + esc(geoLabel) + '</span>' : '',
         senBadge,
+        dwBadge,
         fornNome ? '<span class="op-modal-forn" style="background:#e0e7ff;color:#4338ca;border-radius:3px;padding:0 5px;">🏢 ' + esc(fornNome) + '</span>' : ''
       ].filter(Boolean).join('');
       const item = document.createElement('div');
