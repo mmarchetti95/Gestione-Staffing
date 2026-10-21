@@ -114,6 +114,9 @@ Limite noto: il progetto Supabase è sul piano **Free**, che non include backup 
 
 ## Changelog
 
+## v18.215.1
+- fix: **Controllo produzione — "Sincronizza da Jira" resta sulla sua settimana.** La sincronizzazione di tutta la settimana dura anche un minuto: se nel frattempo si cambiava settimana (o i dati venivano ricaricati), la parte finale (recupero/scrittura Km) lavorava sulla settimana appena aperta, poteva aggiungere a quelle righe i Km dei ticket dell'altra settimana e la tabella mostrava i dati precedenti alla sync (orari degli interventi compresi). Ora settimana e celle sono fissate all'avvio; a fine sync la tabella si aggiorna solo se si è ancora su quella settimana. Nessuna modifica a Supabase o alle Edge Function.
+
 ## v18.215.0
 - feat: **Griglia — doppia week nel modal di selezione operatore.** Nuovo pulsante **🔁 Doppia week (N)** accanto ai filtri: mostra solo chi è in doppia week nella settimana aperta (1ª settimana del blocco o 2ª, rientro giovedì); si combina con gli altri filtri e con la ricerca. Ogni operatore in doppia week ha il badge **🔁 DOPPIA W1/W2** nella lista; un W1 non ancora impiegato in Griglia è segnato «da collocare» (ha dato solo la disponibilità).
 - Nessuna modifica allo schema Supabase né alle Edge Function.

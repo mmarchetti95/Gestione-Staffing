@@ -96,13 +96,18 @@ function cpRowToCell(r) {
 // Costruisce il record da upsertare a partire dallo stato corrente di _cpData[k].
 function cpBuildRecord(commessa, squadra, operatore, giorno, dataISO, cantiere, attivita) {
   const k = `${commessa}|||${squadra}|||${operatore}|||${giorno}`;
-  const cell = _cpData[k] || {};
+  return cpBuildRecordDa(_cpData[k] || {}, pwAnno, pwWeek, commessa, squadra, operatore, giorno, dataISO, cantiere, attivita);
+}
+
+// Come cpBuildRecord, ma da una cella e una settimana esplicite: serve a chi lavora in
+// asincrono (Sincronizza da Jira) e non deve seguire l'utente se intanto cambia settimana.
+function cpBuildRecordDa(cell, anno, week, commessa, squadra, operatore, giorno, dataISO, cantiere, attivita) {
   const byTicket = (cell.km_by_ticket && typeof cell.km_by_ticket === 'object') ? cell.km_by_ticket : {};
   const lastByTicket = (cell.km_last_by_ticket && typeof cell.km_last_by_ticket === 'object') ? cell.km_last_by_ticket : {};
   const kmSum = cpSumKm(byTicket);
   const lastSum = cpSumKm(lastByTicket);
   return {
-    anno: pwAnno, week: pwWeek, commessa, squadra, operatore, giorno,
+    anno, week, commessa, squadra, operatore, giorno,
     data_giorno: dataISO || null,
     cantiere: cantiere || null, attivita: attivita || null,
     ore_jira: cell.ore_jira ?? null,
@@ -597,6 +602,11 @@ async function pwControlloSyncJira(scopeCommessa, scopeSquadra, btnEl) {
     'Sincronizza da Jira');
   if (!ok) return;
 
+  // La sync dura anche un minuto: se intanto l'utente cambia settimana, pwAnno/pwWeek e
+  // _cpData passano all'altra week. Settimana e celle si fissano qui (celle = riferimenti
+  // agli oggetti di _cpData presi ora) e da qui in poi si usano solo questi.
+  const anno = pwAnno, week = pwWeek;
+  const celle = {};
   const status = document.getElementById('cp-status');
   const btn = btnEl || document.getElementById('cp-sync-jira');
   if (status) status.textContent = `⏳ Sincronizzazione${scopeLabel} in corso…`;
@@ -604,7 +614,7 @@ async function pwControlloSyncJira(scopeCommessa, scopeSquadra, btnEl) {
 
   try {
     // Date ISO Lun..Sab della settimana corrente
-    const monday = isoWeekToMonday(pwAnno, pwWeek);
+    const monday = isoWeekToMonday(anno, week);
     const isoDates = [];
     for (let i = 0; i < 6; i++) {
       const d = new Date(monday);
@@ -647,6 +657,12 @@ async function pwControlloSyncJira(scopeCommessa, scopeSquadra, btnEl) {
       });
     });
 
+    cells.forEach(c => {
+      c.k = `${c.commessa}|||${c.squadra}|||${c.operatore}|||${c.giorno}`;
+      celle[c.k] = _cpData[c.k] || (_cpData[c.k] = {});
+    });
+    const record = c => cpBuildRecordDa(celle[c.k], anno, week, c.commessa, c.squadra, c.operatore, c.giorno, c.dataISO, c.cantiere, c.attivita);
+
     const emails = [...new Set(cells.map(c => c.email).filter(Boolean))];
     const noEmailOps = [...new Set(cells.filter(c => !c.email).map(c => c.operatore))];
 
@@ -675,12 +691,10 @@ async function pwControlloSyncJira(scopeCommessa, scopeSquadra, btnEl) {
       const hours   = dayData ? dayData.hours   : 0;
       const tickets = dayData ? dayData.tickets : [];
 
-      const k = `${c.commessa}|||${c.squadra}|||${c.operatore}|||${c.giorno}`;
-      if (!_cpData[k]) _cpData[k] = {};
-      _cpData[k].ore_jira     = hours;
-      _cpData[k].jira_tickets = tickets;
+      celle[c.k].ore_jira     = hours;
+      celle[c.k].jira_tickets = tickets;
 
-      records.push(cpBuildRecord(c.commessa, c.squadra, c.operatore, c.giorno, c.dataISO, c.cantiere, c.attivita));
+      records.push(record(c));
       updated++;
     });
 
@@ -700,15 +714,14 @@ async function pwControlloSyncJira(scopeCommessa, scopeSquadra, btnEl) {
     const readCellByKey = [];
     cells.forEach(c => {
       if (!c.email) return;
-      const k = `${c.commessa}|||${c.squadra}|||${c.operatore}|||${c.giorno}`;
-      const cell = _cpData[k] || {};
+      const cell = celle[c.k];
       const tks = Array.isArray(cell.jira_tickets) ? cell.jira_tickets : [];
       const byTicket = (cell.km_by_ticket && typeof cell.km_by_ticket === 'object') ? cell.km_by_ticket : {};
       tks.forEach(t => {
         if (!t.key) return;
         if (byTicket[t.key] != null) return; // già valorizzato localmente
         readSet.add(t.key);
-        readCellByKey.push({ k, issueKey: t.key, commessa: c.commessa, squadra: c.squadra, operatore: c.operatore, giorno: c.giorno, dataISO: c.dataISO, cantiere: c.cantiere, attivita: c.attivita });
+        readCellByKey.push({ c, issueKey: t.key });
       });
     });
 
@@ -729,16 +742,17 @@ async function pwControlloSyncJira(scopeCommessa, scopeSquadra, btnEl) {
           const v = rvalues[u.issueKey];
           if (v == null || !isFinite(Number(v)) || Number(v) <= 0) return;
           const val = Math.round(Number(v) * 1000) / 1000;
-          if (!_cpData[u.k].km_by_ticket || typeof _cpData[u.k].km_by_ticket !== 'object') _cpData[u.k].km_by_ticket = {};
-          if (!_cpData[u.k].km_last_by_ticket || typeof _cpData[u.k].km_last_by_ticket !== 'object') _cpData[u.k].km_last_by_ticket = {};
-          _cpData[u.k].km_by_ticket[u.issueKey] = val;
-          _cpData[u.k].km_last_by_ticket[u.issueKey] = val; // adottato: delta futuro = km - val
-          _cpData[u.k].km_cad = cpSumKm(_cpData[u.k].km_by_ticket);
-          touchedCells.set(u.k, u);
+          const cell = celle[u.c.k];
+          if (!cell.km_by_ticket || typeof cell.km_by_ticket !== 'object') cell.km_by_ticket = {};
+          if (!cell.km_last_by_ticket || typeof cell.km_last_by_ticket !== 'object') cell.km_last_by_ticket = {};
+          cell.km_by_ticket[u.issueKey] = val;
+          cell.km_last_by_ticket[u.issueKey] = val; // adottato: delta futuro = km - val
+          cell.km_cad = cpSumKm(cell.km_by_ticket);
+          touchedCells.set(u.c.k, u.c);
           filled++;
         });
         if (touchedCells.size > 0) {
-          const readRecords = [...touchedCells.values()].map(u => cpBuildRecord(u.commessa, u.squadra, u.operatore, u.giorno, u.dataISO, u.cantiere, u.attivita));
+          const readRecords = [...touchedCells.values()].map(record);
           const { error: rUpErr } = await _sbClient
             .from('controllo_produzione')
             .upsert(readRecords, { onConflict: 'anno,week,commessa,squadra,operatore,giorno' });
@@ -759,8 +773,7 @@ async function pwControlloSyncJira(scopeCommessa, scopeSquadra, btnEl) {
     const kmUpdates = [];
     cells.forEach(c => {
       if (!c.email) return;
-      const k = `${c.commessa}|||${c.squadra}|||${c.operatore}|||${c.giorno}`;
-      const cell = _cpData[k] || {};
+      const cell = celle[c.k];
       const tks = Array.isArray(cell.jira_tickets) ? cell.jira_tickets : [];
       const byTicket = (cell.km_by_ticket && typeof cell.km_by_ticket === 'object') ? cell.km_by_ticket : {};
       const lastByTicket = (cell.km_last_by_ticket && typeof cell.km_last_by_ticket === 'object') ? cell.km_last_by_ticket : {};
@@ -772,11 +785,7 @@ async function pwControlloSyncJira(scopeCommessa, scopeSquadra, btnEl) {
         const last = (lastByTicket[issueKey] == null) ? 0 : Number(lastByTicket[issueKey]);
         const delta = Math.round((km - last) * 1000) / 1000;
         if (delta === 0) return;
-        kmUpdates.push({
-          k, issueKey, add: delta, newLast: km, isFirst: (lastByTicket[issueKey] == null),
-          commessa: c.commessa, squadra: c.squadra, operatore: c.operatore, giorno: c.giorno,
-          dataISO: c.dataISO, cantiere: c.cantiere, attivita: c.attivita,
-        });
+        kmUpdates.push({ c, issueKey, add: delta, newLast: km, isFirst: (lastByTicket[issueKey] == null) });
       });
     });
 
@@ -809,15 +818,16 @@ async function pwControlloSyncJira(scopeCommessa, scopeSquadra, btnEl) {
           kmUpdates.forEach(u => {
             const r = pres[u.issueKey];
             if (r && r.ok) {
-              if (!_cpData[u.k].km_last_by_ticket || typeof _cpData[u.k].km_last_by_ticket !== 'object') _cpData[u.k].km_last_by_ticket = {};
-              _cpData[u.k].km_last_by_ticket[u.issueKey] = u.newLast;
-              touched.set(u.k, u);
+              const cell = celle[u.c.k];
+              if (!cell.km_last_by_ticket || typeof cell.km_last_by_ticket !== 'object') cell.km_last_by_ticket = {};
+              cell.km_last_by_ticket[u.issueKey] = u.newLast;
+              touched.set(u.c.k, u.c);
               uploaded++;
               if (r.parentKey) uploadedParents++;
             }
           });
           if (touched.size > 0) {
-            const flagRecords = [...touched.values()].map(u => cpBuildRecord(u.commessa, u.squadra, u.operatore, u.giorno, u.dataISO, u.cantiere, u.attivita));
+            const flagRecords = [...touched.values()].map(record);
             const { error: fErr } = await _sbClient
               .from('controllo_produzione')
               .upsert(flagRecords, { onConflict: 'anno,week,commessa,squadra,operatore,giorno' });
@@ -846,11 +856,17 @@ async function pwControlloSyncJira(scopeCommessa, scopeSquadra, btnEl) {
       }
     }
 
-    pwControlloRender();
-    pwApplyProduzioneColors();
+    // Ancora sulla stessa week: rimette in _cpData le celle sincronizzate (un ricaricamento
+    // partito durante la sync può averle sostituite con la versione precedente del database).
+    // Su un'altra week non si tocca nulla: quella mostrata ha i suoi dati.
+    if (pwAnno === anno && pwWeek === week) {
+      Object.assign(_cpData, celle);
+      pwControlloRender();
+      pwApplyProduzioneColors();
+    }
 
     // Riepilogo (Decisione B)
-    let msg = `✅ Sincronizzati ${updated} record da Jira${scopeLabel}.`;
+    let msg = `✅ Sincronizzati ${updated} record da Jira${scopeLabel}` + (pwAnno === anno && pwWeek === week ? '.' : ` (settimana ${week}/${anno}).`);
     if (noEmailOps.length) {
       msg += `\n\n⚠ ${noEmailOps.length} operator${noEmailOps.length>1?'i':'e'} senza email (saltati): ${noEmailOps.join(', ')}.`;
     }
