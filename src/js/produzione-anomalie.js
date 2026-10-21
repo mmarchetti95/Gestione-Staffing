@@ -11,6 +11,9 @@
      supabase/functions/jira-task-status/index.ts);
    - indice dei sottotask di TUTTA la Griglia, per dire su quale cantiere sta un ticket.
 
+   Ogni settimana tiene il SUO controllo (_cpaCache, salvato anche in localStorage per le
+   ultime CPA_CACHE_MAX settimane): cambiando settimana e tornando indietro si ritrova
+   l'ultima lettura, ricalcolata sulla Griglia attuale. Da Jira si rilegge solo a richiesta.
    Le letture da Jira si fanno per "Avvia/Ricontrolla" (tutti) o con "↻" su una singola
    anomalia (solo gli operatori coinvolti, cpaRicontrollaVoce). Dopo una correzione, un
    cambio di soglia, la riapertura del modal o un ridisegno del tab il motore si rilancia
@@ -26,11 +29,14 @@ const CPA_EMAIL_CHUNK = 8;           // email per chiamata a jira-sync-worklogs 
 const CPA_GIORNI = ['Lun', 'Mar', 'Mer', 'Gio', 'Ven', 'Sab'];
 const CPA_GIORNI_LUNGHI = ['Lunedì', 'Martedì', 'Mercoledì', 'Giovedì', 'Venerdì', 'Sabato'];
 const CPA_SOGLIE_ORE = [0.5, 1, 2, 3];
+const CPA_CACHE_KEY = 'cpa_cache_v1';  // ultime letture Jira per settimana, per browser
+const CPA_CACHE_MAX = 12;              // settimane tenute in localStorage
 
 let _cpa = {
   aperto: false,
   anno: null, week: null,     // settimana dell'ultimo controllo
   inCorso: false,
+  inCorsoDi: null,            // settimana del controllo completo in corso
   msg: '',
   base: null,                 // dati letti da Jira all'ultimo controllo (worklog, Epic, ...)
   risultato: null,            // output di cpaRileva + contesto (giorniLabel, avvisi)
@@ -58,16 +64,81 @@ function _cpaPref() {
   catch (_) { return { diffOreSquadra: CPA_SOGLIE_DEFAULT.diffOreSquadra }; }
 }
 
+/* Stato del controllo per settimana: 'anno|week' -> { base, risolte, proposte, propMod }.
+   `base` sono i dati letti da Jira (worklog, Epic, ...): il resto si ricalcola. */
+let _cpaCache = null;
+
+function _cpaKey(anno, week) { return anno + '|' + week; }
+
+function _cpaCacheGet() {
+  if (_cpaCache) return _cpaCache;
+  _cpaCache = {};
+  try {
+    const m = JSON.parse(localStorage.getItem(CPA_CACHE_KEY) || '{}') || {};
+    Object.keys(m).forEach(k => {
+      const b = m[k];
+      if (!b || !b.date || !b.worklog) return;
+      b.quando = new Date(b.quando);
+      _cpaCache[k] = { base: b, risolte: new Set(), proposte: {}, propMod: new Set() };
+    });
+  } catch (_) {}
+  return _cpaCache;
+}
+
+/* Salva in localStorage le letture più recenti (quota piena: si tengono meno settimane) */
+function _cpaCacheSalva() {
+  const C = _cpaCacheGet();
+  let chiavi = Object.keys(C).filter(k => C[k].base)
+    .sort((a, b) => C[b].base.quando - C[a].base.quando).slice(0, CPA_CACHE_MAX);
+  while (chiavi.length) {
+    const m = {};
+    chiavi.forEach(k => { m[k] = Object.assign({}, C[k].base, { quando: C[k].base.quando.toISOString() }); });
+    try { localStorage.setItem(CPA_CACHE_KEY, JSON.stringify(m)); return; }
+    catch (_) { chiavi = chiavi.slice(0, chiavi.length - 1); }
+  }
+  try { localStorage.removeItem(CPA_CACHE_KEY); } catch (_) {}
+}
+
+/* Porta in _cpa lo stato della settimana mostrata (pwAnno/pwWeek), mettendo da parte
+   quello della settimana precedente. Il risultato si ricalcola sulla Griglia attuale. */
+function _cpaAllinea() {
+  if (_cpa.anno === pwAnno && _cpa.week === pwWeek) return;
+  const C = _cpaCacheGet();
+  if (_cpa.anno != null && _cpa.base) {
+    C[_cpaKey(_cpa.anno, _cpa.week)] = { base: _cpa.base, risolte: _cpa.risolte, proposte: _cpa.proposte, propMod: _cpa.propMod };
+  }
+  const S = C[_cpaKey(pwAnno, pwWeek)] || { base: null, risolte: new Set(), proposte: {}, propMod: new Set() };
+  _cpa.anno = pwAnno; _cpa.week = pwWeek;
+  _cpa.base = S.base; _cpa.risolte = S.risolte; _cpa.proposte = S.proposte; _cpa.propMod = S.propMod;
+  _cpa.risultato = null; _cpa.esito = null; _cpa.soll = null;
+  if (!_cpa.inCorso) _cpa.msg = '';
+  _cpaRicalcola();
+}
+
+/* Registra la lettura Jira di una settimana (anche se nel frattempo se ne mostra un'altra) */
+function _cpaMemorizza(anno, week, base) {
+  const C = _cpaCacheGet();
+  const k = _cpaKey(anno, week);
+  const S = C[k] = C[k] || { base: null, risolte: new Set(), proposte: {}, propMod: new Set() };
+  S.base = base;
+  if (_cpa.anno === anno && _cpa.week === week) {
+    _cpa.base = base;
+    S.risolte = _cpa.risolte; S.proposte = _cpa.proposte; S.propMod = _cpa.propMod;
+  }
+  _cpaCacheSalva();
+}
+
 function cpaToggle() {
   if (_cpa.aperto) cpaChiudi(); else cpaApri();
 }
 
 function cpaApri() {
   _cpa.aperto = true;
+  _cpaAllinea();
   _cpaRicalcola();   // la Griglia può essere cambiata mentre il modal era chiuso
   cpaRender();
-  const r = _cpa.risultato;
-  if ((!r || _cpa.anno !== pwAnno || _cpa.week !== pwWeek) && !_cpa.inCorso) cpaAvvia();
+  /* Lettura automatica solo la prima volta per la settimana: poi si aggiorna con Ricontrolla */
+  if (!_cpa.base && !_cpa.inCorso) cpaAvvia();
 }
 
 function cpaChiudi() {
@@ -82,13 +153,11 @@ document.addEventListener('keydown', e => {
   cpaChiudi();
 });
 
-/* Chiamata a fine pwControlloRender: il risultato vale per una sola settimana. */
+/* Chiamata a fine pwControlloRender: allinea il controllo alla settimana mostrata e lo
+   ricalcola sulla Griglia attuale (anche a modal chiuso: tiene aggiornato il contatore). */
 function cpaOnControlloRender() {
-  if (_cpa.risultato && (_cpa.anno !== pwAnno || _cpa.week !== pwWeek)) {
-    _cpa.risultato = null; _cpa.base = null; _cpa.msg = ''; _cpa.risolte = new Set(); _cpa.proposte = {}; _cpa.propMod = new Set(); _cpa.soll = null; _cpa.esito = null;
-  } else if (_cpa.aperto && !_cpa.inCorso) {
-    _cpaRicalcola();
-  }
+  if (_cpa.anno !== pwAnno || _cpa.week !== pwWeek) _cpaAllinea();
+  else _cpaRicalcola();
   cpaRender();
 }
 
@@ -201,7 +270,10 @@ async function _cpaLeggiWorklog(nomi, date, avvisi, silenzioso) {
       verificati.push(nome);
       const perData = res[em] || {};
       worklog[nome] = {};
-      date.iso.forEach((d, g) => { if (perData[d]) worklog[nome][g] = perData[d]; });
+      date.iso.forEach((d, g) => {
+        const x = perData[d];
+        if (x) worklog[nome][g] = { hours: x.hours, tickets: (x.tickets || []).map(t => ({ key: t.key, url: t.url, hours: t.hours, summary: t.summary || '', epic: t.epic || null })) };
+      });
     });
   }
   return { worklog, verificati };
@@ -230,9 +302,12 @@ function _cpaEpicDaCache(keys) {
 async function cpaAvvia() {
   if (_cpa.inCorso) return;
   if (!_sbClient || !_sbUser) { _cpa.msg = 'Controllo non disponibile offline: servono le ore Jira.'; cpaRender(); return; }
+  _cpaAllinea();
   _cpa.inCorso = true;
-  _cpa.anno = pwAnno; _cpa.week = pwWeek;
-  _cpa.risultato = null; _cpa.base = null; _cpa.risolte = new Set(); _cpa.proposte = {}; _cpa.propMod = new Set(); _cpa.soll = null; _cpa.esito = null;
+  const anno = pwAnno, week = pwWeek;
+  _cpa.inCorsoDi = week;
+  /* Rilettura completa: le correzioni e le proposte della settimana ripartono da zero */
+  _cpa.esito = null; _cpa.soll = null; _cpa.risolte = new Set(); _cpa.proposte = {}; _cpa.propMod = new Set();
   const avvisi = [];
   try {
     const date = _cpaDateSettimana();
@@ -255,10 +330,10 @@ async function cpaAvvia() {
     try { epicDiSottotask = await _cpaEpicDeiSottotask(celle, avvisi); }
     catch (e) { console.error('cpa epic', e); avvisi.push('Epic dei sottotask non letti (' + (e.message || e) + '): confronto Epic saltato.'); }
 
-    _cpa.base = { date, giorniValutabili, worklog, verificati, epicDiSottotask, avvisi, quando: new Date() };
+    _cpaMemorizza(anno, week, { date, giorniValutabili, worklog, verificati, epicDiSottotask, avvisi, quando: new Date() });
     _cpaRicalcola();
     _cpa.msg = '';
-    sbLogActivity('Controllo anomalie produzione', { anno: pwAnno, week: pwWeek, anomalie: _cpa.risultato.anomalie.length });
+    sbLogActivity('Controllo anomalie produzione', { anno, week, anomalie: _cpa.risultato ? _cpa.risultato.anomalie.length : null });
   } catch (e) {
     console.error('cpaAvvia', e);
     _cpa.msg = '⚠ Controllo non riuscito: ' + (e.message || e);
@@ -314,6 +389,7 @@ async function cpaRicontrollaVoce(el) {
   const prima = new Set(_cpa.risultato.anomalie.map(x => x.id));
   _cpa.ricontrollo = a.id;
   cpaRender();
+  const anno = _cpa.anno, week = _cpa.week;
   const avvisi = [];
   try {
     const { worklog, verificati } = await _cpaLeggiWorklog(nomi, B.date, avvisi, true);
@@ -328,6 +404,8 @@ async function cpaRicontrollaVoce(el) {
       try { await mlFetchTaskStatus(keys); Object.assign(B.epicDiSottotask, _cpaEpicDaCache(keys)); }
       catch (e) { avvisi.push('Epic non riletti (' + (e.message || e) + ').'); }
     }
+    _cpaMemorizza(anno, week, B);
+    if (_cpa.anno !== anno || _cpa.week !== week) return;   // nel frattempo si è cambiata settimana
     _cpa.risolte.delete(a.id);
     _cpaRicalcola();
     const dopo = _cpa.risultato.anomalie;
@@ -713,7 +791,7 @@ function _cpaIntestazione(r) {
       '<div class="min-w-0">' +
         '<div style="font-weight:700;font-size:16px;color:#0f172a;font-family:var(--font-display);">🔍 Controllo anomalie</div>' +
         '<div class="text-xs text-slate-500 mt-0.5">Settimana ' + pwWeek + ' · ' + d.ddmm[0] + ' – ' + d.ddmm[5] + ' · Griglia confrontata con le ore Jira. Propone correzioni, su Jira non scrive mai. Le modifiche in Griglia si vedono subito; dopo una correzione su Jira usa ↻ sulla singola anomalia.' +
-          (r && r.quando ? ' Letto alle ' + r.quando.toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' }) + '.' : '') + '</div>' +
+          '</div>' + _cpaLetturaHtml(r) +
       '</div>' +
       '<div class="flex-1"></div>' +
       '<label class="text-xs text-slate-600 flex items-center gap-1 mt-1" title="Legge i worklog anche degli operatori del pool che non compaiono in Griglia questa settimana (più lento)">' +
@@ -724,6 +802,18 @@ function _cpaIntestazione(r) {
     '</div>' +
     _cpaSchede(r) +
   '</div>';
+}
+
+/* Quando sono stati letti i dati Jira: in evidenza se non oggi (vanno aggiornati con Ricontrolla) */
+function _cpaLetturaHtml(r) {
+  if (_cpa.inCorso && _cpa.inCorsoDi !== pwWeek) return '<div class="text-[11px] mt-0.5" style="color:#b45309;">⏳ È in corso il controllo della settimana ' + _cpaS(_cpa.inCorsoDi) + ': attendi che finisca.</div>';
+  if (!r || !r.quando) return '';
+  const q = r.quando;
+  const oggi = q.toDateString() === new Date().toDateString();
+  const ora = q.toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' });
+  const testo = oggi ? 'Ore Jira lette oggi alle ' + ora
+    : 'Ore Jira lette il ' + q.toLocaleDateString('it-IT', { day: '2-digit', month: '2-digit' }) + ' alle ' + ora + ': premi ↻ Ricontrolla per aggiornarle';
+  return '<div class="text-[11px] mt-0.5 ' + (oggi ? 'text-slate-500' : 'font-semibold') + '" style="' + (oggi ? '' : 'color:#b45309;') + '">🕘 ' + _cpaS(testo) + '.</div>';
 }
 
 /* Linguette: Tutte + una per controllo, col numero di anomalie aperte */
@@ -801,6 +891,7 @@ function _cpaListaHtml(r, attive, ign) {
 }
 
 function cpaRender() {
+  _cpaAllinea();
   const modal = document.getElementById('cpa-modal');
   const root = document.getElementById('cpa-root');
   const btn = document.getElementById('cpa-toggle');
