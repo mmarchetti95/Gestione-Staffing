@@ -11,8 +11,10 @@
      supabase/functions/jira-task-status/index.ts);
    - indice dei sottotask di TUTTA la Griglia, per dire su quale cantiere sta un ticket.
 
-   Le letture da Jira si fanno una volta per "Avvia/Ricontrolla"; dopo una correzione o un
-   cambio di soglia il motore si rilancia in locale sulla Griglia attuale (_cpaRicalcola).
+   Le letture da Jira si fanno per "Avvia/Ricontrolla" (tutti) o con "↻" su una singola
+   anomalia (solo gli operatori coinvolti, cpaRicontrollaVoce). Dopo una correzione, un
+   cambio di soglia, la riapertura del modal o un ridisegno del tab il motore si rilancia
+   in locale sulla Griglia/Ferie attuali (_cpaRicalcola), senza rileggere Jira.
 
    Non scrive MAI su Jira. L'unica azione è locale e sempre confermata: aggiungere in
    Griglia la cella proposta per un worklog senza pianificazione (togliendo l'assenza da
@@ -38,6 +40,8 @@ let _cpa = {
   risolte: new Set(),         // id corretti con un bottone in questa sessione
   proposte: {},               // id -> voci della cella proposta, modificabili dall'utente
   propMod: new Set(),         // id delle proposte modificate a mano
+  ricontrollo: null,          // id dell'anomalia che si sta ricontrollando da sola
+  esito: null,                // { ok, testo } dell'ultimo ricontrollo singolo
   soll: null,                 // vista solleciti aperta (produzione-anomalie-solleciti.js)
   registro: null,             // vista registro solleciti aperta ({ tutte, aperti })
 };
@@ -60,6 +64,7 @@ function cpaToggle() {
 
 function cpaApri() {
   _cpa.aperto = true;
+  _cpaRicalcola();   // la Griglia può essere cambiata mentre il modal era chiuso
   cpaRender();
   const r = _cpa.risultato;
   if ((!r || _cpa.anno !== pwAnno || _cpa.week !== pwWeek) && !_cpa.inCorso) cpaAvvia();
@@ -80,7 +85,9 @@ document.addEventListener('keydown', e => {
 /* Chiamata a fine pwControlloRender: il risultato vale per una sola settimana. */
 function cpaOnControlloRender() {
   if (_cpa.risultato && (_cpa.anno !== pwAnno || _cpa.week !== pwWeek)) {
-    _cpa.risultato = null; _cpa.base = null; _cpa.msg = ''; _cpa.risolte = new Set(); _cpa.proposte = {}; _cpa.propMod = new Set(); _cpa.soll = null;
+    _cpa.risultato = null; _cpa.base = null; _cpa.msg = ''; _cpa.risolte = new Set(); _cpa.proposte = {}; _cpa.propMod = new Set(); _cpa.soll = null; _cpa.esito = null;
+  } else if (_cpa.aperto && !_cpa.inCorso) {
+    _cpaRicalcola();
   }
   cpaRender();
 }
@@ -164,7 +171,7 @@ function _cpaIndiceSottotask() {
   return out;
 }
 
-async function _cpaLeggiWorklog(nomi, date, avvisi) {
+async function _cpaLeggiWorklog(nomi, date, avvisi, silenzioso) {
   const emailByNome = {};
   (state.operatori || []).forEach(o => {
     const n = o.nome_esteso || o.nome_breve || o.nome;
@@ -179,8 +186,10 @@ async function _cpaLeggiWorklog(nomi, date, avvisi) {
   const worklog = {}, verificati = [];
   for (let i = 0; i < emails.length; i += CPA_EMAIL_CHUNK) {
     const blocco = emails.slice(i, i + CPA_EMAIL_CHUNK);
-    _cpa.msg = '⏳ Leggo i worklog Jira (' + Math.min(i + CPA_EMAIL_CHUNK, emails.length) + '/' + emails.length + ' operatori)…';
-    cpaRender();
+    if (!silenzioso) {
+      _cpa.msg = '⏳ Leggo i worklog Jira (' + Math.min(i + CPA_EMAIL_CHUNK, emails.length) + '/' + emails.length + ' operatori)…';
+      cpaRender();
+    }
     const { data: fn, error } = await _sbClient.functions.invoke('jira-sync-worklogs', {
       body: { emails: blocco, startDate: date.iso[0], endDate: date.iso[5] },
     });
@@ -205,6 +214,10 @@ async function _cpaEpicDeiSottotask(celle, avvisi) {
   cpaRender();
   const ok = await mlEnsureTaskStatus(keys);
   if (!ok) avvisi.push('Epic dei sottotask letti solo in parte: alcuni confronti Epic sono stati saltati.');
+  return _cpaEpicDaCache(keys);
+}
+
+function _cpaEpicDaCache(keys) {
   const out = {};
   keys.forEach(k => {
     const tk = _mlTaskBySubtask[k];
@@ -219,7 +232,7 @@ async function cpaAvvia() {
   if (!_sbClient || !_sbUser) { _cpa.msg = 'Controllo non disponibile offline: servono le ore Jira.'; cpaRender(); return; }
   _cpa.inCorso = true;
   _cpa.anno = pwAnno; _cpa.week = pwWeek;
-  _cpa.risultato = null; _cpa.base = null; _cpa.risolte = new Set(); _cpa.proposte = {}; _cpa.propMod = new Set(); _cpa.soll = null;
+  _cpa.risultato = null; _cpa.base = null; _cpa.risolte = new Set(); _cpa.proposte = {}; _cpa.propMod = new Set(); _cpa.soll = null; _cpa.esito = null;
   const avvisi = [];
   try {
     const date = _cpaDateSettimana();
@@ -276,6 +289,67 @@ function _cpaRicalcola() {
   r.quando = B.quando;
   _cpa.risultato = r;
 }
+
+/* Operatori coinvolti in un'anomalia: per le ore in squadra tutta la squadra del giorno */
+function _cpaOperatoriDi(a) {
+  if (a.tipo === 'ore_squadra') return ((a.confronto && a.confronto.membri) || []).map(m => m.operatore);
+  return [a.operatore];
+}
+
+function _cpaEtichetta(a) {
+  const r = _cpa.risultato;
+  return CPA_TIPI[a.tipo].icona + ' ' + (a.tipo === 'ore_squadra' ? a.squadra : a.operatore) + ' · ' + ((r && r.giorniLabel[a.giorno]) || '');
+}
+
+/* Ricontrolla UNA anomalia: rilegge da Jira solo le ore (ed Epic dei sottotask) degli
+   operatori coinvolti, poi ricalcola tutto in locale. Serve dopo una correzione fatta su
+   Jira (ore spostate o caricate) senza rileggere l'intera settimana. */
+async function cpaRicontrollaVoce(el) {
+  const a = _cpaTrova(el);
+  const B = _cpa.base;
+  if (!a || !B || _cpa.inCorso || _cpa.ricontrollo) return;
+  if (_cpa.anno !== pwAnno || _cpa.week !== pwWeek) { showAlertModal('Il controllo è di un\'altra settimana: rilancialo.'); return; }
+  const nomi = _cpaOperatoriDi(a);
+  const etichetta = _cpaEtichetta(a);
+  const prima = new Set(_cpa.risultato.anomalie.map(x => x.id));
+  _cpa.ricontrollo = a.id;
+  cpaRender();
+  const avvisi = [];
+  try {
+    const { worklog, verificati } = await _cpaLeggiWorklog(nomi, B.date, avvisi, true);
+    verificati.forEach(n => {
+      B.worklog[n] = worklog[n] || {};
+      if (!B.verificati.includes(n)) B.verificati.push(n);
+    });
+    /* Epic riletti (non solo cache): il sottotask può essere stato spostato sotto un altro Task */
+    const keys = [...new Set(_cpaCelleSettimana().celle.filter(c => nomi.includes(c.operatore))
+      .flatMap(c => c.voci.map(v => v.subtask && v.subtask.key).filter(Boolean)))];
+    if (keys.length) {
+      try { await mlFetchTaskStatus(keys); Object.assign(B.epicDiSottotask, _cpaEpicDaCache(keys)); }
+      catch (e) { avvisi.push('Epic non riletti (' + (e.message || e) + ').'); }
+    }
+    _cpa.risolte.delete(a.id);
+    _cpaRicalcola();
+    const dopo = _cpa.risultato.anomalie;
+    const ancora = dopo.find(x => x.id === a.id);
+    const nuove = dopo.filter(x => !prima.has(x.id) && _cpaOperatoriDi(x).some(n => nomi.includes(n)));
+    _cpa.esito = {
+      ok: !ancora && !nuove.length,
+      testo: etichetta + (ancora ? ': ancora aperta — ' + ancora.titolo + '.' : ': risolta.') +
+        (nuove.length ? ' Nuove anomalie per ' + nomi.join(', ') + ': ' + nuove.map(_cpaEtichetta).join('; ') + '.' : '') +
+        (avvisi.length ? ' ' + avvisi.join(' ') : ''),
+    };
+    sbLogActivity('Controllo anomalie: ricontrollo singolo', { anno: pwAnno, week: pwWeek, tipo: a.tipo, operatori: nomi, risolta: !ancora });
+  } catch (e) {
+    console.error('cpaRicontrollaVoce', e);
+    _cpa.esito = { ok: false, testo: '⚠ Ricontrollo di ' + etichetta + ' non riuscito: ' + (e.message || e) };
+  } finally {
+    _cpa.ricontrollo = null;
+    cpaRender();
+  }
+}
+
+function cpaChiudiEsito() { _cpa.esito = null; cpaRender(); }
 
 function cpaFiltro(tipo) { _cpa.filtro = (_cpa.filtro === tipo) ? '' : tipo; cpaRender(); }
 function cpaToggleIgnorate() { _cpa.mostraIgnorate = !_cpa.mostraIgnorate; cpaRender(); }
@@ -589,7 +663,11 @@ function _cpaSchedaHtml(a, r, ignorata) {
   const T = CPA_TIPI[a.tipo];
   const G = CPA_GRAVITA[a.gravita] || CPA_GRAVITA.bassa;
   const dove = a.tipo === 'worklog_senza_pianificazione' ? '' : [a.commessa, a.squadra, a.cantiere].filter(Boolean).map(_cpaS).join(' · ');
-  let bottoni = '';
+  const inRic = _cpa.ricontrollo === a.id;
+  let bottoni = ignorata ? '' : '<button type="button" onclick="cpaRicontrollaVoce(this)" class="text-xs px-2 py-0.5 border rounded bg-white hover:bg-amber-50" style="border-color:#fcd34d;color:#b45309;' +
+    (_cpa.ricontrollo && !inRic ? 'opacity:.5;' : '') + '"' + (_cpa.ricontrollo ? ' disabled' : '') +
+    ' title="Rilegge da Jira solo le ore di ' + _cpaS(_cpaOperatoriDi(a).join(', ')) + ' e ricalcola (dopo una correzione fatta su Jira)">' +
+    (inRic ? '⏳ Ricontrollo…' : '↻ Ricontrolla') + '</button>';
   if (a.cpKey && a.tipo !== 'ore_squadra') bottoni += '<button type="button" onclick="cpaVaiAllaRiga(this)" class="text-xs px-2 py-0.5 border border-slate-300 rounded bg-white hover:bg-slate-50">↘ Vai alla riga</button>';
   bottoni += (a.link || []).filter(l => l.url).map(l =>
     '<a href="' + _cpaS(l.url) + '" target="_blank" rel="noopener" class="text-xs px-2 py-0.5 border border-slate-300 rounded bg-white hover:bg-slate-50" style="color:#2563eb;text-decoration:none;">' + _cpaS(l.label) + ' ↗</a>').join('');
@@ -634,7 +712,7 @@ function _cpaIntestazione(r) {
     '<div class="flex flex-wrap items-start gap-2">' +
       '<div class="min-w-0">' +
         '<div style="font-weight:700;font-size:16px;color:#0f172a;font-family:var(--font-display);">🔍 Controllo anomalie</div>' +
-        '<div class="text-xs text-slate-500 mt-0.5">Settimana ' + pwWeek + ' · ' + d.ddmm[0] + ' – ' + d.ddmm[5] + ' · Griglia confrontata con le ore Jira. Propone correzioni, su Jira non scrive mai.' +
+        '<div class="text-xs text-slate-500 mt-0.5">Settimana ' + pwWeek + ' · ' + d.ddmm[0] + ' – ' + d.ddmm[5] + ' · Griglia confrontata con le ore Jira. Propone correzioni, su Jira non scrive mai. Le modifiche in Griglia si vedono subito; dopo una correzione su Jira usa ↻ sulla singola anomalia.' +
           (r && r.quando ? ' Letto alle ' + r.quando.toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' }) + '.' : '') + '</div>' +
       '</div>' +
       '<div class="flex-1"></div>' +
@@ -692,7 +770,15 @@ function _cpaListaHtml(r, attive, ign) {
     r.nOperatori + ' operatori controllati su Jira, ' + valutati + '.',
     nv.epicSenzaSottotask ? nv.epicSenzaSottotask + ' giornate con ore ma senza sottotask in Griglia: Epic non confrontabile.' : '',
   ].concat(r.avvisi).filter(Boolean);
-  let html = '<div class="text-[11px] text-slate-500">' + note.map(_cpaS).join('<br>') + '</div>';
+  let html = '';
+  if (_cpa.esito) {
+    const E = _cpa.esito;
+    html += '<div class="flex items-start gap-2 rounded-md border px-3 py-2 mb-2 text-sm" style="' +
+      (E.ok ? 'background:#f0fdf4;border-color:#86efac;color:#166534;' : 'background:#fffbeb;border-color:#fcd34d;color:#92400e;') + '">' +
+      '<span>' + (E.ok ? '✅' : '↻') + '</span><span class="flex-1">' + _cpaS(E.testo) + '</span>' +
+      '<button type="button" onclick="cpaChiudiEsito()" class="text-xs opacity-70 hover:opacity-100" title="Chiudi">✕</button></div>';
+  }
+  html += '<div class="text-[11px] text-slate-500">' + note.map(_cpaS).join('<br>') + '</div>';
   const lista = attive.filter(a => (_cpa.mostraIgnorate || !ign[a.id]) && (!_cpa.filtro || a.tipo === _cpa.filtro));
   if (!lista.length) {
     html += '<div class="text-sm mt-6 text-center" style="color:#15803d;">✅ ' + (_cpa.filtro ? 'Nessuna anomalia di questo tipo.' : 'Nessuna anomalia aperta per questa settimana.') + '</div>';

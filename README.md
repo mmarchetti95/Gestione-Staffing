@@ -114,6 +114,11 @@ Limite noto: il progetto Supabase è sul piano **Free**, che non include backup 
 
 ## Changelog
 
+## v18.213.0
+- feat: **Controllo anomalie — ricontrollo della singola anomalia.** Ogni anomalia ha un bottone **↻ Ricontrolla** che rilegge da Jira solo le ore (ed Epic dei sottotask) dell'operatore coinvolto — per *Ore diverse in squadra* di tutta la squadra — e ricalcola: in cima all'elenco compare l'esito («risolta» / «ancora aperta», più eventuali anomalie nuove per lo stesso operatore), visibile anche se la scheda sparisce. Serve dopo una correzione fatta su Jira, senza rileggere tutta la settimana.
+- Le modifiche alla Griglia e alle Ferie si riflettono da sole nell'elenco (riapertura del modal, aggiornamento del tab), senza rileggere Jira.
+- Nessuna modifica allo schema Supabase né alle Edge Function.
+
 ## v18.212.0
 - feat: **Controllo Produzione — controllo anomalie rifatto in un modal.** Il bottone **🔍 Controllo anomalie** apre ora una finestra dedicata con una linguetta per controllo (col numero di anomalie aperte) e le anomalie raggruppate **per giorno**. I controlli sono quattro:
   - **⏱ Pianificati senza worklog**: in Griglia per un giorno già passato ma senza ore su Jira.
