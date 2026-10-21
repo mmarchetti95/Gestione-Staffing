@@ -761,12 +761,30 @@ function pwRenderStats() {
   // Liberi = non pianificati e non in ferie
   const liberiList = allOps.filter(n => !pianificati.has(n) && !inFerie.has(n));
 
+  // Squadre con almeno un operatore in doppia week (1ª o 2ª settimana del blocco):
+  // stesso flag puro dei badge 🔁 DOPPIA W1/W2 delle righe operatore.
+  const prevW = pwWeekAdd(pwAnno, pwWeek, -1);
+  const squadreDw = [];
+  data.forEach((bc, cIdx) => {
+    (bc.squadre || []).forEach((sq, sIdx) => {
+      const ops = [];
+      (sq.operatori || []).forEach((op, oIdx) => {
+        if (!op.nome || !op.nome.trim()) return;
+        const fase = pwIsDwStart(pwAnno, pwWeek, op.nome) ? 'W1'
+          : pwIsDwStart(prevW.anno, prevW.week, op.nome) ? 'W2' : '';
+        if (fase) ops.push({ nome: op.nome, oIdx, fase });
+      });
+      if (ops.length) squadreDw.push({ cIdx, sIdx, commessa: bc.commessa || '', squadra: sq.nome || '', operatori: ops });
+    });
+  });
+
   // Salva dati per i popover sul banner
   banner._statsData = {
     pianificati:   [...pianificati].sort().map(nome => ({ nome, commesse: [...(commessaNomiPerOp[nome] || [])] })),
     liberi:        liberiList.sort().map(nome => ({ nome })),
     inFerie:       [...inFerie].sort().map(nome => ({ nome, giorni: ferieGiorni[nome] || [] })),
     suPiuCommesse: suPiuCommesseLista.sort((a,b) => a.nome.localeCompare(b.nome)),
+    doppiaWeek:    squadreDw,
   };
 
   const cards = [
@@ -774,6 +792,7 @@ function pwRenderStats() {
     { icon: '✅', num: liberiList.length,         lbl: 'Liberi / disponibili',         cls: 'verde',  key: 'liberi'        },
     { icon: '🏖', num: inFerie.size,             lbl: 'In ferie o permesso',          cls: 'rosso',  key: 'inFerie'       },
     { icon: '⚠️', num: suPiuCommesseLista.length, lbl: 'Su più commesse',              cls: 'giallo', key: 'suPiuCommesse' },
+    { icon: '🔁', num: squadreDw.length,          lbl: 'Squadre in doppia week',       cls: 'viola',  key: 'doppiaWeek'    },
   ];
 
   banner.innerHTML = cards.map(c => `

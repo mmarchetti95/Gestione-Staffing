@@ -114,6 +114,10 @@ Limite noto: il progetto Supabase è sul piano **Free**, che non include backup 
 
 ## Changelog
 
+## v18.211.0
+- feat: **Griglia settimanale — card "Squadre in doppia week".** Nuova card viola 🔁 nel banner statistiche: conta le squadre con almeno un operatore in doppia week nella settimana mostrata (1ª o 2ª settimana del blocco, come i badge 🔁 DOPPIA W1/W2). Cliccandola si apre l'elenco per squadra e commessa, con gli operatori in DW e la fase W1/W2. Un clic su un operatore (o sul nome della squadra) porta alla sua riga nella Griglia: commessa e squadra si espandono se erano chiuse, la riga lampeggia.
+- Nessuna modifica Supabase né alle Edge Function.
+
 ## v18.210.0
 - feat: **Controllo produzione — orari degli interventi su "Ore Jira".** Passando il mouse sulla cella "Ore Jira" si apre un'infografica del giorno dell'operatore: barra oraria con un colore per ticket e, per ogni worklog, orario di inizio e fine, durata, ticket con titolo e commento. Mostra anche le pause (da 15 minuti in su) e segnala gli interventi che si sovrappongono. Orari in ora italiana.
 - Gli orari arrivano con "Sincronizza da Jira" / "🔄 Sincronizza squadra": le righe sincronizzate prima di questa versione mostrano solo le ore per ticket finché non si risincronizza.

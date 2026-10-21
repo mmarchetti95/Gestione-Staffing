@@ -1007,6 +1007,8 @@
   .pw-stat-card.rosso  .pw-stat-num { color: #dc2626; }
   .pw-stat-card.giallo { border-color: #fde047; background: #fefce8; }
   .pw-stat-card.giallo .pw-stat-num { color: #ca8a04; }
+  .pw-stat-card.viola  { border-color: #c4b5fd; background: #f5f3ff; }
+  .pw-stat-card.viola  .pw-stat-num { color: #6d28d9; }
   .pw-stat-card { cursor: pointer; transition: box-shadow .15s, transform .1s; }
   .pw-stat-card:hover { box-shadow: var(--shadow-md); transform: translateY(-1px); }
   .psp-row { display:flex; align-items:flex-start; gap:8px; padding:6px 14px; font-size:12px; border-bottom:1px solid #f8fafc; }
@@ -1019,6 +1021,13 @@
   .psp-tag.rosso  { background:#fff1f2; color:#dc2626; }
   .psp-tag.giallo { background:#fefce8; color:#ca8a04; }
   .psp-tag.viola  { background:#f5f3ff; color:#7c3aed; }
+  .psp-click { cursor:pointer; }
+  .psp-row.psp-click:hover { background:#f5f3ff; }
+  .psp-group { border-bottom:1px solid #f1f5f9; padding-bottom:2px; }
+  .psp-group:last-child { border-bottom:none; }
+  .psp-group-header { padding:6px 14px 2px; font-size:12px; font-weight:700; color:#4c1d95; }
+  .psp-group-header:hover { text-decoration:underline; }
+  .psp-group-sub { font-weight:400; color:#64748b; }
   /* ---- Controllo Produzione ---- */
   .cp-table { width:100%; border-collapse:collapse; font-size:11px; }
   .cp-table th { background:var(--accent-dark); color:#fff; font-weight:700; padding:5px 6px; text-align:left; white-space:normal; line-height:1.25; position:sticky; top:0; z-index:2; }
@@ -1886,7 +1895,7 @@
     <div class="flex items-center gap-2">
       <button id="btn-presentation" class="px-3 py-1.5 text-sm rounded hover:bg-white/10" style="border:1px solid var(--dark-border-strong);color:var(--dark-text);visibility:visible;">📊 Modalità presentazione</button>
       <div class="text-xs pl-2" style="border-left:1px solid var(--dark-border-strong);color:var(--dark-text-muted);">
-        <span id="app-version" class="font-medium" style="color:var(--accent);">v18.210.0</span> · Michele Marchetti
+        <span id="app-version" class="font-medium" style="color:var(--accent);">v18.211.0</span> · Michele Marchetti
         <span id="sb-role-badge" style="margin-left:8px;padding:1px 8px;border-radius:9999px;background:rgba(255,255,255,.1);color:var(--dark-text);font-weight:600;"></span>
       </div>
     </div>
@@ -2607,7 +2616,7 @@
   </div>
 
   <!-- Banner statistiche settimana -->
-  <div id="pw-stats-banner" class="grid grid-cols-4 gap-3 mb-4 no-print"></div>
+  <div id="pw-stats-banner" class="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-5 gap-3 mb-4 no-print"></div>
 
   <!-- Tab Griglia / Ferie / Mappa -->
   <div class="pw-tabbar flex border-b border-slate-200 mb-4 no-print bg-white rounded-t-lg px-2">

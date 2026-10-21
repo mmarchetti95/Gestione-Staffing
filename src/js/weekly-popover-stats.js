@@ -15,6 +15,7 @@ function pwToggleStatPopover(key, cardEl) {
     liberi:        { title: 'Liberi / disponibili',         cls: 'verde'  },
     inFerie:       { title: 'In ferie o permesso',          cls: 'rosso'  },
     suPiuCommesse: { title: 'Su più commesse',              cls: 'giallo' },
+    doppiaWeek:    { title: 'Squadre in doppia week',       cls: 'viola'  },
   };
   const cfg   = cfgMap[key];
   const items = statsData[key] || [];
@@ -37,6 +38,24 @@ function pwToggleStatPopover(key, cardEl) {
     </div>`;
   }
 
+  // Card "Squadre in doppia week": una sezione per squadra, ogni operatore porta
+  // alla sua riga in Griglia (il titolo squadra al primo operatore in DW).
+  function renderSquadraDw(it) {
+    const go = (oIdx) => 'pwStatGoToCell(' + it.cIdx + ', ' + it.sIdx + ', ' + oIdx + ')';
+    const ops = it.operatori.map(o =>
+      '<div class="psp-row psp-click" onclick="' + go(o.oIdx) + '" title="Vai alla riga nella Griglia">' +
+        '<span class="psp-nome">' + esc(o.nome) + '</span>' +
+        '<span class="psp-tags"><span class="psp-tag viola" title="' +
+          (o.fase === 'W1' ? 'Doppia week - 1a settimana' : 'Doppia week - 2a settimana (rientro gio)') + '">🔁 ' + o.fase + '</span></span>' +
+      '</div>').join('');
+    return '<div class="psp-group">' +
+      '<div class="psp-group-header psp-click" onclick="' + go(it.operatori[0].oIdx) + '" title="Vai alla squadra nella Griglia">' +
+        esc(it.squadra || '(squadra senza nome)') + ' <span class="psp-group-sub">· ' + esc(it.commessa || '(senza commessa)') + '</span>' +
+      '</div>' + ops + '</div>';
+  }
+  const rowRenderer = key === 'doppiaWeek' ? renderSquadraDw : renderRow;
+  const emptyMsg = key === 'doppiaWeek' ? 'Nessuna squadra in doppia week' : 'Nessun operatore';
+
   const rect = cardEl.getBoundingClientRect();
   const pop  = document.createElement('div');
   pop.id = 'pw-stat-popover';
@@ -56,8 +75,8 @@ function pwToggleStatPopover(key, cardEl) {
     </div>
     <div class="pw-popover-body">
       ${items.length === 0
-        ? '<div class="pw-popover-empty">Nessun operatore</div>'
-        : items.map(renderRow).join('')}
+        ? '<div class="pw-popover-empty">' + emptyMsg + '</div>'
+        : items.map(rowRenderer).join('')}
     </div>`;
 
   document.body.appendChild(pop);
@@ -71,6 +90,14 @@ function pwToggleStatPopover(key, cardEl) {
       }
     });
   }, 0);
+}
+
+// Chiude il popover statistiche e porta alla riga operatore in Griglia
+// (espande commessa/squadra se collassate, vedi pwGoToSearchCell).
+function pwStatGoToCell(cIdx, sIdx, oIdx) {
+  const pop = document.getElementById('pw-stat-popover');
+  if (pop) pop.remove();
+  pwGoToSearchCell(cIdx, sIdx, oIdx, null);
 }
 
 /* ----- Ricerca operatore/cantiere nella griglia ----- */
