@@ -57,9 +57,12 @@ async function loadState() {
   if (seedEmailOperatori() && sbCanWrite()) {
     try { await sset('operatori', state.operatori); _sbDirty.core = true; } catch(e) { console.warn('seed email save', e); }
   }
+  // Indietro/Avanti (dashboard-undo.js): dati appena (ri)caricati = nuovo punto di partenza
+  await dbUndoRebase();
 }
 async function saveState(logAction, logDetails, immediate) {
   if (!sbGuardWrite()) return;
+  dbUndoRegistra();
   _sbDirty.core = true;
   await Promise.all([
     sset('commesse_pipeline', state.pipeline),

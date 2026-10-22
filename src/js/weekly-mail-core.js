@@ -939,6 +939,7 @@ async function pwDwLoad() {
 
 async function pwFerieSave() {
   if (!sbGuardWrite()) return;
+  pwUndoRegistra();
   _sbDirty.ferie = true;
   try { await sset('pw_ferie', pwFerie); } catch(e) { console.warn('pwFerieSave error', e); }
   try { await sset('pw_ferie_dettagli', pwFerieDettagli); } catch(e) { console.warn('pwFerieSave dettagli error', e); }
@@ -1239,16 +1240,19 @@ async function pwSetFeriaTipo(nome, day, tipo) {
 }
 
 async function pwLoad() {
+  await pwUndoFlush();  // Indietro/Avanti: registra l'eventuale modifica in attesa prima di rileggere
   try {
     const r = await sget('pw_data');
     if (r) pwData = r;
   } catch(e) { pwData = {}; }
   await pwFerieLoad();
   await pwDwLoad();
+  await pwUndoRebase();
 }
 
 async function pwSave() {
   if (!sbGuardWrite()) return;
+  pwUndoRegistra();
   _sbDirty.planning = true;
   try { await sset('pw_data', pwData); } catch(e) { console.warn('pwSave error', e); }
   // Push immediato su Supabase con debounce breve (500ms) per evitare perdita dati al refresh

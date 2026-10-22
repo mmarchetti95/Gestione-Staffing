@@ -857,6 +857,12 @@ async function sbPull() {
       }
     }
 
+    // Indietro/Avanti (undo-history.js): la modifica locale ancora in attesa diventa un passo
+    // prima che i dati remoti la sostituiscano; dopo, la base si riallinea senza creare passi
+    // (Dashboard: dbUndoRebase() alla fine di loadState; Pianificazione: qui sotto).
+    await dbUndoFlush();
+    await pwUndoFlush();
+
     // Applica core
     if (rows[SB_ROW_CORE] && rows[SB_ROW_CORE].payload) {
       const snap = rows[SB_ROW_CORE].payload;
@@ -891,6 +897,7 @@ async function sbPull() {
       pwDoppiaWeek = rows[SB_ROW_DW].payload.pw_doppia_week;
       sbSetLocal('pw_doppia_week', pwDoppiaWeek);
     }
+    await pwUndoRebase();
 
     // Aggiorna timestamp per dominio
     [SB_ROW_CORE, SB_ROW_PLANNING, SB_ROW_FERIE, SB_ROW_DW].forEach(id => {

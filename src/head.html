@@ -1893,9 +1893,13 @@
       </div>
     </div>
     <div class="flex items-center gap-2">
+      <span id="db-undo-bar" class="flex items-center gap-1">
+        <button id="db-undo-btn" class="px-2.5 py-1.5 text-sm rounded hover:bg-white/10 whitespace-nowrap disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-transparent" style="border:1px solid var(--dark-border-strong);color:var(--dark-text);" title="Niente da annullare" disabled onclick="dbUndo()">↶ Indietro</button>
+        <button id="db-redo-btn" class="px-2.5 py-1.5 text-sm rounded hover:bg-white/10 whitespace-nowrap disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-transparent" style="border:1px solid var(--dark-border-strong);color:var(--dark-text);" title="Niente da ripristinare" disabled onclick="dbRedo()">↷ Avanti</button>
+      </span>
       <button id="btn-presentation" class="px-3 py-1.5 text-sm rounded hover:bg-white/10" style="border:1px solid var(--dark-border-strong);color:var(--dark-text);visibility:visible;">📊 Modalità presentazione</button>
       <div class="text-xs pl-2" style="border-left:1px solid var(--dark-border-strong);color:var(--dark-text-muted);">
-        <span id="app-version" class="font-medium" style="color:var(--accent);">v18.215.1</span> · Michele Marchetti
+        <span id="app-version" class="font-medium" style="color:var(--accent);">v18.216.0</span> · Michele Marchetti
         <span id="sb-role-badge" style="margin-left:8px;padding:1px 8px;border-radius:9999px;background:rgba(255,255,255,.1);color:var(--dark-text);font-weight:600;"></span>
       </div>
     </div>
@@ -2655,7 +2659,9 @@
       <button id="pw-weather-week-btn" class="px-3 py-1.5 text-sm border border-slate-200 bg-slate-50 text-slate-400 rounded no-print whitespace-nowrap" title="Criticità meteo nei cantieri pianificati questa settimana" onclick="pwOpenWeatherWeekModal()">⛈️ Meteo settimana…</button>
       <button id="pw-nv-btn" class="px-3 py-1.5 text-sm border border-slate-200 bg-slate-50 text-slate-500 rounded no-print whitespace-nowrap hover:bg-slate-100" title="Lavagna di note e variazioni rispetto alla programmazione della settimana" onclick="pwOpenNoteVariazioni()">📝 Note/Variazioni</button>
       <button id="pw-jchk-btn" data-help-key="pw-jchk" class="px-3 py-1.5 text-sm border border-slate-200 bg-slate-50 text-slate-400 rounded no-print whitespace-nowrap hover:bg-slate-100" title="Controlla che ogni cella della settimana abbia il suo sottotask Jira — Click destro per la guida" onclick="pwOpenJiraCheck()">🎫 Sottotask</button>
-      <button id="pw-add-commessa" class="ml-auto px-3 py-1.5 text-sm bg-teal-600 text-white rounded hover:bg-teal-700 no-print pw-write-action whitespace-nowrap">+ Aggiungi commessa</button>
+      <button id="pw-undo-btn" class="ml-auto px-2.5 py-1.5 text-sm border border-slate-300 rounded hover:bg-slate-50 no-print pw-write-action whitespace-nowrap disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-transparent" title="Niente da annullare" disabled onclick="pwUndo()">↶ Indietro</button>
+      <button id="pw-redo-btn" class="px-2.5 py-1.5 text-sm border border-slate-300 rounded hover:bg-slate-50 no-print pw-write-action whitespace-nowrap disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-transparent" title="Niente da ripristinare" disabled onclick="pwRedo()">↷ Avanti</button>
+      <button id="pw-add-commessa" class="px-3 py-1.5 text-sm bg-teal-600 text-white rounded hover:bg-teal-700 no-print pw-write-action whitespace-nowrap">+ Aggiungi commessa</button>
       <button id="pw-gen-mail" class="px-3 py-1.5 text-sm bg-indigo-600 text-white rounded hover:bg-indigo-700 no-print whitespace-nowrap">📧 Genera mail</button>
       <button id="pw-collapse-all" class="px-3 py-1.5 text-sm border border-slate-300 rounded hover:bg-slate-50 no-print whitespace-nowrap" title="Collassa / Espandi tutto" onclick="pwCollapseAllToggle()">≡ Collassa</button>
     </div>

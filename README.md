@@ -114,6 +114,12 @@ Limite noto: il progetto Supabase è sul piano **Free**, che non include backup 
 
 ## Changelog
 
+## v18.216.0
+- feat: **Indietro / Avanti in Pianificazione settimanale e Dashboard.** Ogni schermata ha la sua cronologia, separata dall'altra.
+- **Pianificazione settimanale:** nella toolbar della Griglia i pulsanti **↶ Indietro** e **↷ Avanti** (anche **Ctrl+Z** / **Ctrl+Y** o **Ctrl+Shift+Z** ovunque nella Pianificazione, fuori dai campi di testo e con nessun modal aperto) annullano e ripristinano le proprie modifiche a Griglia, Ferie/Permessi e Doppia week, fino a 50 passi. Il tooltip dice cosa si annulla (es. «Griglia · W43/2026» e l'ora); se il passo riguarda un'altra settimana ci si sposta lì. Le modifiche dei colleghi arrivate via sync non vengono annullate; se un collega ha cambiato la stessa settimana dopo il passo, viene chiesta conferma prima di sovrascriverla. La cronologia vale per la sessione (si azzera con il refresh).
+- **Dashboard:** pulsanti **↶ Indietro** / **↷ Avanti** nell'header (visibili solo sulla Dashboard) e Ctrl+Z / Ctrl+Y: annullano le modifiche a operatori, staffing, pipeline, commesse (anche chiusura/ripristino), attestati, DPI, limitazioni e fornitori. Il tooltip dice cosa si annulla (es. «Operatori: Mario Rossi»). Gli operatori e le pipeline sono seguiti uno per uno: annullare la modifica di un operatore non tocca quelli cambiati nel frattempo da un collega. Ogni Indietro/Avanti finisce nel registro attività.
+- Nessuna modifica allo schema Supabase né alle Edge Function.
+
 ## v18.215.1
 - fix: **Controllo produzione — "Sincronizza da Jira" resta sulla sua settimana.** La sincronizzazione di tutta la settimana dura anche un minuto: se nel frattempo si cambiava settimana (o i dati venivano ricaricati), la parte finale (recupero/scrittura Km) lavorava sulla settimana appena aperta, poteva aggiungere a quelle righe i Km dei ticket dell'altra settimana e la tabella mostrava i dati precedenti alla sync (orari degli interventi compresi). Ora settimana e celle sono fissate all'avvio; a fine sync la tabella si aggiorna solo se si è ancora su quella settimana. Nessuna modifica a Supabase o alle Edge Function.
 

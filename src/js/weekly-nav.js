@@ -61,6 +61,8 @@ function switchScreen(screen) {
   const navWk    = document.getElementById('nav-weekly');
   const navMl    = document.getElementById('nav-mappa');
   const btnPres  = document.getElementById('btn-presentation');
+  const dbUndoBar = document.getElementById('db-undo-bar');
+  if (dbUndoBar) dbUndoBar.style.display = screen === 'dashboard' ? '' : 'none';
   try { localStorage.setItem('last_screen', screen); } catch (_) {}
 
   // Stato "spento" comune, poi si riaccende solo lo screen richiesto: con tre

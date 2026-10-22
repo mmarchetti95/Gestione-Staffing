@@ -204,14 +204,20 @@ async function pwDwToggle(nome, anno, week) {
     pwSetDwStart(anno, week, nome, true);
   }
 
+  await pwDwSave();
+  pwDoppiaWeekRender();
+}
+
+async function pwDwSave() {
+  if (!sbGuardWrite()) return;
+  pwUndoRegistra();
   _sbDirty.dw = true;
-  try { await sset('pw_doppia_week', pwDoppiaWeek); } catch(e) { console.warn('pwDwToggle sset error', e); }
+  try { await sset('pw_doppia_week', pwDoppiaWeek); } catch(e) { console.warn('pwDwSave sset error', e); }
   // Push su Supabase con debounce breve (500ms), come per le ferie, per non perdere il dato al refresh
   if (typeof _sbUser !== 'undefined' && _sbUser) {
     clearTimeout(_sbPwPushTimer);
     _sbPwPushTimer = setTimeout(() => sbPush(), 500);
   }
-  pwDoppiaWeekRender();
 }
 
 // Esporta la griglia Doppia Week del mese in un PDF orizzontale, colorato e
