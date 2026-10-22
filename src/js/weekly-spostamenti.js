@@ -4,8 +4,9 @@
    sugli spostamenti in auto.
    - Distanze e tempi REALI su strada dal servizio pubblico OSRM (/table per la
      matrice, /route per la geometria da disegnare sulla mappa).
-   - Geocodifica: riusa geocodifica()/_geoCache della Mappa squadre (Nominatim),
-     quindi i luoghi già cercati altrove non vengono ri-interrogati.
+   - Geocodifica: _pwSpostGeocodifica() sulla rubrica _geoCache condivisa con la
+     Mappa squadre (Nominatim, solo Italia, sigla provincia facoltativa); i luoghi
+     già cercati altrove e validi non vengono ri-interrogati.
    - Persistenza: SOLO localStorage (per-browser, come tab attivo/settimana), più
      export Excel/PDF. Nessun dominio di sync Supabase coinvolto. */
 
@@ -70,6 +71,86 @@ function _pwSpostLoad() {
       if (!Array.isArray(_pwSpost.nonTrovati)) _pwSpost.nonTrovati = [];
     }
   } catch (_) {}
+}
+
+/* ---------- geocodifica ---------- */
+/* Le tappe sono comuni italiani, ma geocodifica() della Mappa interroga Nominatim
+   senza filtro di nazione e con limit=1: omonimi esteri vincevano (Ossasco → Svizzera,
+   Pont Boset → Francia, Cava → Spagna) e restavano in rubrica. In più la riga
+   SENTINELLA "[non trovato]" riletta da Supabase sembra una coordinata valida (0,0)
+   e la tappa finiva nel Golfo di Guinea. Qui: rubrica usata solo se valida e in
+   Italia, altrimenti ricerca limitata all'Italia preferendo i centri abitati, con
+   sigla provincia facoltativa ("Ivrea (TO)"). Un risultato migliore aggiorna la
+   rubrica condivisa, così si corregge anche la Mappa. */
+const PW_SPOST_GEO_COMUNI = ['city', 'town', 'village', 'municipality'];
+const PW_SPOST_GEO_FRAZIONI = ['hamlet', 'suburb', 'quarter', 'neighbourhood', 'isolated_dwelling', 'locality'];
+
+function _pwSpostGeoValida(g) {
+  if (!g || g.label === '[non trovato]' || (!g.lat && !g.lng)) return null;
+  return g;
+}
+
+function _pwSpostInItalia(g) {
+  return g.lat >= 35.4 && g.lat <= 47.2 && g.lng >= 6.5 && g.lng <= 18.7;
+}
+
+async function _pwSpostNominatim(q, sigla) {
+  const url = 'https://nominatim.openstreetmap.org/search?format=jsonv2&addressdetails=1&limit=8' +
+              '&countrycodes=it&accept-language=it&q=' + encodeURIComponent(q);
+  const res = await fetch(url, { headers: { 'Accept-Language': 'it' } });
+  if (!res.ok) throw new Error('HTTP ' + res.status);
+  const data = await res.json();
+  if (!Array.isArray(data) || !data.length) return null;
+  let cand = data;
+  if (sigla) {
+    const inProv = data.filter(r => r.address && r.address['ISO3166-2-lvl6'] === 'IT-' + sigla);
+    if (inProv.length) cand = inProv;
+  }
+  const r = cand.find(x => PW_SPOST_GEO_COMUNI.indexOf(x.addresstype) >= 0) ||
+            cand.find(x => PW_SPOST_GEO_FRAZIONI.indexOf(x.addresstype) >= 0) ||
+            cand.find(x => x.category === 'place' || x.category === 'boundary') ||
+            cand[0];
+  return { lat: parseFloat(r.lat), lng: parseFloat(r.lon), label: r.display_name };
+}
+
+/* → { geo: {lat,lng,label}|null, rete: bool } — rete=true se è stato interrogato Nominatim */
+async function _pwSpostGeocodifica(nome) {
+  const m = nome.match(/^(.*?)\s*\(\s*([A-Za-z]{2})\s*\)\s*$/);
+  const base  = (m ? m[1] : nome).trim();
+  const sigla = m ? m[2].toUpperCase() : '';
+  const key = nome.toLowerCase().trim().replace(/\s+/g, ' ');
+  const cached = _pwSpostGeoValida(_geoCache[key]);
+  if (cached && (_pwSpostInItalia(cached) || /^Coordinate manuali/.test(cached.label || ''))) {
+    return { geo: cached, rete: false };
+  }
+  let g;
+  try {
+    g = await _pwSpostNominatim(base, sigla);
+  } catch (e) {
+    return { geo: null, rete: true };
+  }
+  if (g) {
+    _geoCache[key] = g;
+    await _geoCacheSaveSingle(key, g);
+  } else if (!(key in _geoCache)) {
+    _geoCache[key] = null;
+    await _geoCacheSaveSingle(key, null);
+  }
+  return { geo: g, rete: true };
+}
+
+/* Località risolta, accorciata per la tabella: "Ivrea, Torino, Piemonte" */
+function _pwSpostLabelBreve(p) {
+  if (!p || !p.label) return '';
+  if (/^Coordinate manuali/.test(p.label)) return p.label;
+  const parti = p.label.split(',').map(s => s.trim()).filter(s => s && !/^\d{5}$/.test(s) && s !== 'Italia');
+  return parti.slice(0, 1).concat(parti.slice(-2)).filter((s, i, a) => a.indexOf(s) === i).join(', ');
+}
+
+function _pwSpostLuogoHtml(p) {
+  const breve = _pwSpostLabelBreve(p);
+  if (!breve) return '';
+  return '<div class="text-[11px] text-slate-400 font-normal" title="' + esc(p.label) + '">📍 ' + esc(breve) + '</div>';
 }
 
 /* ---------- OSRM ---------- */
@@ -214,23 +295,25 @@ async function pwSpostCalcola() {
 
   try {
     _pwSpostStatus('Geocodifica partenza: ' + partenzaNome + '…');
-    let gp = await geocodifica(partenzaNome);
-    if (!gp) gp = await geocodifica(partenzaNome + ', Italia');
+    const rp = await _pwSpostGeocodifica(partenzaNome);
+    const gp = rp.geo;
     if (!gp) {
       _pwSpostStatus('Comune di partenza non trovato: ' + partenzaNome, true);
-      showAlertModal('Comune di partenza non trovato: ' + partenzaNome);
+      showAlertModal('Comune di partenza non trovato: ' + partenzaNome +
+                     '. Prova ad aggiungere la sigla della provincia, es. "Ivrea (TO)".');
       return;
     }
-    const punti = [{ nome: partenzaNome, lat: gp.lat, lng: gp.lng }];
+    const punti = [{ nome: partenzaNome, lat: gp.lat, lng: gp.lng, label: gp.label }];
     const nonTrovati = [];
+    let reteUsata = rp.rete;
 
     for (let i = 0; i < tappeNomi.length; i++) {
       _pwSpostStatus('Geocodifica tappa ' + (i + 1) + '/' + tappeNomi.length + ': ' + tappeNomi[i] + '…');
-      let g = await geocodifica(tappeNomi[i]);
-      if (!g) g = await geocodifica(tappeNomi[i] + ', Italia');
-      if (g) punti.push({ nome: tappeNomi[i], lat: g.lat, lng: g.lng });
+      if (reteUsata) await new Promise(r => setTimeout(r, 1100)); // Nominatim: max 1 richiesta/s
+      const r = await _pwSpostGeocodifica(tappeNomi[i]);
+      reteUsata = r.rete;
+      if (r.geo) punti.push({ nome: tappeNomi[i], lat: r.geo.lat, lng: r.geo.lng, label: r.geo.label });
       else nonTrovati.push(tappeNomi[i]);
-      await new Promise(r => setTimeout(r, 300)); // rate limit Nominatim
     }
 
     if (punti.length < 2) {
@@ -343,7 +426,7 @@ function pwSpostRenderResult() {
   html += '<tr class="border-t border-slate-100 bg-emerald-50">' +
     '<td class="px-2 py-2 text-center">🏁</td>' +
     '<td class="px-2 py-2 font-semibold text-slate-700">' + esc(s.partenza.nome) +
-      '<span class="text-xs text-slate-400 font-normal"> · partenza</span></td>' +
+      '<span class="text-xs text-slate-400 font-normal"> · partenza</span>' + _pwSpostLuogoHtml(s.partenza) + '</td>' +
     '<td class="px-2 py-2 text-right text-slate-400">—</td>' +
     '<td class="px-2 py-2 text-right text-slate-400">—</td>' +
     '<td class="px-2 py-2 text-right text-slate-400">—</td>' +
@@ -364,7 +447,8 @@ function pwSpostRenderResult() {
     html += '<tr class="border-t border-slate-100 hover:bg-slate-50 cursor-pointer" onclick="pwSpostFocus(' + n + ')">' +
       '<td class="px-2 py-2 text-center font-bold text-teal-700">' + (n + 1) + '</td>' +
       '<td class="px-2 py-2 font-medium text-slate-700">' + esc(leg.a) +
-        '<span class="text-xs text-slate-400 font-normal"> ← da ' + esc(leg.da) + '</span></td>' +
+        '<span class="text-xs text-slate-400 font-normal"> ← da ' + esc(leg.da) + '</span>' +
+        _pwSpostLuogoHtml(s.tappe[s.order[n] - 1]) + '</td>' +
       '<td class="px-2 py-2 text-right">' + _pwSpostKm(leg.metri) + '</td>' +
       '<td class="px-2 py-2 text-right">' + _pwSpostDur(leg.sec) + '</td>' +
       '<td class="px-2 py-2 text-right text-slate-500">' + _pwSpostKm(leg.cumM) + ' · ' + _pwSpostDur(leg.cumS) + '</td>' +

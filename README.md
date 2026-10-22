@@ -114,6 +114,10 @@ Limite noto: il progetto Supabase è sul piano **Free**, che non include backup 
 
 ## Changelog
 
+## v18.217.1
+- fix: **Pianifica spostamenti - geocodifica delle tappe.** La ricerca dei comuni è ora limitata all'**Italia** e dà priorità ai comuni rispetto a frazioni e vie: prima vincevano gli omonimi esteri (es. Ossasco → Svizzera, Pont Boset → Francia, Cava → Spagna). Le tappe segnate in rubrica come «non trovate» non finiscono più in mezzo al mare (coordinate 0,0) ma compaiono tra i non geocodificati. Le voci della rubrica fuori Italia vengono ricercate di nuovo e corrette anche per la Mappa. Si può aggiungere la sigla della provincia per i nomi ambigui, es. «Ivrea (TO)». In tabella sotto ogni tappa compare la località effettivamente trovata (📍).
+- Nessuna modifica allo schema Supabase né alle Edge Function.
+
 ## v18.217.0
 - feat: **Controllo anomalie - Jira diverso da MySond.** Nuova linguetta **🧾 Jira diverso da MySond**: per ogni operatore e giorno già passato con ore MySond caricate confronta il totale ore Jira del giorno con le ore lavorate in MySond (tutte le commesse). Le ore di **viaggio** (attività «Viaggio…») e le **ore non lavorate** nella norma non vanno su Jira: Jira è in regola se sta fra le ore di lavoro senza viaggio e quelle con il viaggio (chi carica anche il viaggio non viene segnalato). La scheda mostra MySond voce per voce (viaggio e non lavorate evidenziati) accanto ai ticket Jira, con le ore attese. Scarto minimo regolabile (0,5 h di default, per browser). I casi con Jira sotto MySond entrano nei **✉️ solleciti**. Un giorno pianificato senza ore Jira resta solo in «Pianificati senza worklog». Se la settimana non ha ore MySond caricate il controllo lo segnala e non viene fatto.
 - La colonna **MySond** del Controllo Produzione usa la stessa regola per il colore ambra (non segnala più i giorni di trasferta) e il dettaglio mostra le ore di viaggio con 🚐.
