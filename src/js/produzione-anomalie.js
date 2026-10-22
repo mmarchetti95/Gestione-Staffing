@@ -895,6 +895,7 @@ function _cpaBarra(r, attive, ign) {
     (nIgn ? '<button type="button" onclick="cpaToggleIgnorate()" class="text-xs text-slate-500 hover:text-slate-800">' + (_cpa.mostraIgnorate ? 'Nascondi' : 'Mostra') + ' ignorate (' + nIgn + ')</button>' : '') +
     (attive.some(a => a.solleciti && a.solleciti.length && !ign[a.id]) ? '<button type="button" onclick="cpaSollApri()" class="text-xs px-2 py-0.5 rounded font-semibold text-white" style="background:#4f46e5;" title="Bozze di messaggio per chi non ha caricato le ore su Jira o ne ha meno dei colleghi di squadra o di MySond">✉️ Prepara solleciti' + (_cpaSollDaInviare().length ? ' (' + _cpaSollDaInviare().length + ' da inviare)' : ' · tutti inviati') + '</button>' : '') +
     (nAperte ? '<button type="button" onclick="cpaCopia()" class="text-xs px-2 py-0.5 border border-slate-300 rounded bg-white hover:bg-slate-50">📋 Copia elenco</button>' : '') +
+    (nAperte ? '<button type="button" onclick="cpaEsportaPdf()" class="text-xs px-2 py-0.5 border rounded bg-white hover:bg-amber-50" style="border-color:#fcd34d;color:#b45309;" title="PDF delle anomalie aperte di questa linguetta (ignorate escluse), da mandare ai controller">📄 Esporta PDF</button>' : '') +
   '</div>';
 }
 

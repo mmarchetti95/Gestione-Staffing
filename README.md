@@ -114,6 +114,10 @@ Limite noto: il progetto Supabase è sul piano **Free**, che non include backup 
 
 ## Changelog
 
+## v18.218.0
+- feat: **Controllo anomalie - export PDF.** Nella barra del modal **📄 Esporta PDF** scarica le anomalie **aperte** della linguetta mostrata (es. solo «Jira diverso da MySond», da mandare ai controller); su «Tutte» una sezione per controllo. A4 orizzontale, una tabella per controllo con colonne sue (es. per MySond: lavoro, viaggio, non lavorate, Jira, atteso, scarto), giorno, correzione proposta ed eventuale «Sollecitato il …»; barretta colorata per la priorità, soglia in uso, data di lettura Jira, autore e numero di pagina. Le anomalie ignorate e quelle già corrette in Griglia restano fuori (il PDF dice quante). Nome file `Anomalie_<controllo>_W<sett>_<anno>.pdf`.
+- Nessuna modifica allo schema Supabase né alle Edge Function.
+
 ## v18.217.1
 - fix: **Pianifica spostamenti - geocodifica delle tappe.** La ricerca dei comuni è ora limitata all'**Italia** e dà priorità ai comuni rispetto a frazioni e vie: prima vincevano gli omonimi esteri (es. Ossasco → Svizzera, Pont Boset → Francia, Cava → Spagna). Le tappe segnate in rubrica come «non trovate» non finiscono più in mezzo al mare (coordinate 0,0) ma compaiono tra i non geocodificati. Le voci della rubrica fuori Italia vengono ricercate di nuovo e corrette anche per la Mappa. Si può aggiungere la sigla della provincia per i nomi ambigui, es. «Ivrea (TO)». In tabella sotto ogni tappa compare la località effettivamente trovata (📍).
 - Nessuna modifica allo schema Supabase né alle Edge Function.
