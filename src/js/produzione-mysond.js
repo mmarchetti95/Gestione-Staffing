@@ -10,6 +10,7 @@
 HELP_TEXTS['cp-mysond'] = 'Carica l\'export Excel delle ore inserite in MySond (colonne Dipendente, commessa, voce, attività, descrizione, dataintervento Anno/Mese/Giorno, Somma di durata).\n\nPer ogni operatore riconosciuto viene salvato il totale ore di ogni giorno, mostrato nella colonna "MySond" accanto a "Ore Jira" (click sul numero per il dettaglio). Il file può coprire qualsiasi periodo: i giorni presenti nel file sostituiscono quelli caricati in precedenza, gli altri restano invariati.\n\nI dipendenti non presenti nel Pool operatori vengono ignorati.';
 
 let _cpMysond = {}; // operatore → { giornoIdx: { ore, dipendente, dettaglio, caricato_at, caricato_da } }
+let _cpMysondDi = ''; // 'anno|week' a cui si riferisce _cpMysond (lo legge il Controllo anomalie)
 
 const CP_MYSOND_CHUNK = 500;
 
@@ -32,7 +33,9 @@ function _cpMysondIsoAdd(iso, days) {
    lasciano la colonna vuota senza bloccare il Controllo produzione. */
 async function cpMysondLoad() {
   _cpMysond = {};
+  _cpMysondDi = '';
   if (!_sbClient || !_sbUser) return;
+  const di = pwAnno + '|' + pwWeek;
   const lun = isoWeekToMonday(pwAnno, pwWeek).toISOString().slice(0, 10);
   try {
     const { data, error } = await _sbClient
@@ -51,19 +54,23 @@ async function cpMysondLoad() {
         caricato_at: r.caricato_at, caricato_da: r.caricato_da,
       };
     });
+    _cpMysondDi = di;
   } catch (e) {
     console.warn('cpMysondLoad:', e);
   }
 }
 
-/* Cella "MySond" di una riga del Controllo produzione. In ambra se il totale differisce dalle
-   Ore Jira del giorno (entrambe sono il totale giornaliero dell'operatore). */
+/* Cella "MySond" di una riga del Controllo produzione. In ambra se le Ore Jira del giorno
+   (entrambe sono il totale giornaliero dell'operatore) escono dall'intervallo atteso: fra le
+   ore di lavoro senza viaggio e quelle con il viaggio (stessa regola del Controllo anomalie). */
 function cpMysondCellHtml(operatore, g, jVal, cantieri) {
   const rec = (_cpMysond[operatore] || {})[g];
   if (!rec) return '<span style="color:#cbd5e1" title="Nessuna ora MySond caricata per questo giorno">—</span>';
   const jNum = parseFloat(String(jVal));
-  const diverso = !isNaN(jNum) && Math.abs(jNum - rec.ore) >= 0.25;
+  const m = cpaMysondRipartisci(rec);
+  const diverso = !isNaN(jNum) && cpaMysondScarto(jNum, m, 0.25) !== 0;
   const ttl = 'Totale ore MySond del giorno (' + rec.dettaglio.length + ' inseriment' + (rec.dettaglio.length === 1 ? 'o' : 'i') + ')'
+    + (m.viaggio > 0 ? ', di cui ' + _cpMysondOre(m.viaggio) + ' h di viaggio (non richieste su Jira)' : '')
     + (diverso ? ' — diverso dalle Ore Jira (' + jVal + ')' : '') + ' — clicca per il dettaglio';
   return '<button type="button" class="cp-mysond-btn' + (diverso ? ' cp-mysond-diff' : '') + '" title="' + esc(ttl) + '"'
     + ' data-op="' + esc(operatore) + '" data-g="' + g + '" data-jval="' + esc(String(jVal == null ? '' : jVal)) + '"'
@@ -87,17 +94,18 @@ function cpMysondDettaglio(btn) {
     + String(giorno.getUTCDate()).padStart(2, '0') + '/' + String(giorno.getUTCMonth() + 1).padStart(2, '0');
 
   const voci = rec.dettaglio.slice().sort((a, b) => (b.ore || 0) - (a.ore || 0));
-  let nonLav = 0;
+  const m = cpaMysondRipartisci(rec);
+  const nonLav = m.nonLavorate;
   const righe = voci.map(v => {
-    const isNonLav = /non lavorat/i.test(v.commessa || '');
-    if (isNonLav) nonLav += Number(v.ore) || 0;
+    const isNonLav = cpaMysondNonLavorata(v);
+    const isViaggio = !isNonLav && cpaMysondViaggio(v);
     const suCantiere = !isNonLav && v.voce && cantNorm.has(norm(v.voce));
     const att = [v.att1, v.att2].filter(Boolean).filter((x, i, a) => a.indexOf(x) === i).join(' › ');
-    const bg = suCantiere ? 'background:#ecfdf5;' : (isNonLav ? 'background:#fff7ed;' : '');
+    const bg = isNonLav ? 'background:#fff7ed;' : (isViaggio ? 'background:#eff6ff;' : (suCantiere ? 'background:#ecfdf5;' : ''));
     return '<tr style="' + bg + '">'
       + '<td class="px-2 py-1 align-top">' + esc(v.commessa || '') + (v.tipo ? '<div class="text-[10px] text-slate-400">' + esc(v.tipo) + '</div>' : '') + '</td>'
       + '<td class="px-2 py-1 align-top">' + esc(v.voce || '') + (suCantiere ? ' <span title="Cantiere pianificato in Griglia per questa riga">📍</span>' : '') + '</td>'
-      + '<td class="px-2 py-1 align-top">' + esc(att || '—') + '</td>'
+      + '<td class="px-2 py-1 align-top">' + (isViaggio ? '<span title="Viaggio: nella norma non va su Jira">🚐</span> ' : '') + esc(att || '—') + '</td>'
       + '<td class="px-2 py-1 align-top text-slate-500">' + esc(v.descrizione || '') + '</td>'
       + '<td class="px-2 py-1 align-top text-right font-semibold whitespace-nowrap">' + _cpMysondOre(Number(v.ore) || 0) + '</td>'
       + '</tr>';
@@ -105,8 +113,10 @@ function cpMysondDettaglio(btn) {
 
   const jVal = btn.dataset.jval;
   const jNum = parseFloat(jVal);
+  const scarto = isNaN(jNum) ? 0 : cpaMysondScarto(jNum, m, 0.25);
+  const atteso = m.viaggio > 0 ? _cpMysondOre(m.lavoro) + '–' + _cpMysondOre(m.lavoro + m.viaggio) : _cpMysondOre(m.lavoro);
   const jiraLbl = isNaN(jNum) ? 'non sincronizzate'
-    : _cpMysondOre(jNum) + ' h' + (Math.abs(jNum - rec.ore) >= 0.25 ? ' <span class="text-amber-700">(Δ ' + (rec.ore - jNum > 0 ? '+' : '') + _cpMysondOre(rec.ore - jNum) + ' h)</span>' : '');
+    : _cpMysondOre(jNum) + ' h' + (scarto ? ' <span class="text-amber-700">(Δ ' + (scarto > 0 ? '+' : '') + _cpMysondOre(scarto) + ' h rispetto alle ' + atteso + ' h attese)</span>' : '');
   const caricato = rec.caricato_at
     ? 'Caricato il ' + new Date(rec.caricato_at).toLocaleString('it-IT', { dateStyle: 'short', timeStyle: 'short' }) + (rec.caricato_da ? ' da ' + esc(rec.caricato_da) : '')
     : '';
@@ -117,7 +127,7 @@ function cpMysondDettaglio(btn) {
         <div class="px-5 py-4 border-b border-slate-100 flex items-start justify-between gap-3">
           <div>
             <div class="font-semibold text-slate-900 text-sm">MySond — ${esc(operatore)} · ${dataLbl}</div>
-            <div class="text-xs text-slate-500 mt-0.5">Totale <b>${_cpMysondOre(rec.ore)} h</b>${nonLav > 0 ? ' (di cui ' + _cpMysondOre(nonLav) + ' h non lavorate)' : ''} · Ore Jira ${jiraLbl}</div>
+            <div class="text-xs text-slate-500 mt-0.5">Totale <b>${_cpMysondOre(rec.ore)} h</b>${(nonLav > 0 || m.viaggio > 0) ? ' (di cui ' + [m.viaggio > 0 ? _cpMysondOre(m.viaggio) + ' h di viaggio' : '', nonLav > 0 ? _cpMysondOre(nonLav) + ' h non lavorate' : ''].filter(Boolean).join(', ') + ')' : ''} · Ore Jira ${jiraLbl}</div>
           </div>
           <button class="text-slate-400 hover:text-slate-600 text-lg leading-none" onclick="closeModal()">×</button>
         </div>
@@ -128,7 +138,7 @@ function cpMysondDettaglio(btn) {
             </tr></thead>
             <tbody class="divide-y divide-slate-100">${righe}</tbody>
           </table>
-          <div class="text-[11px] text-slate-400 mt-3">Totale del giorno su tutte le commesse.${cantNorm.size ? ' In verde le voci sul cantiere pianificato in questa riga, in arancio le ore non lavorate.' : ''}${rec.dipendente && rec.dipendente !== operatore ? ' In MySond: «' + esc(rec.dipendente) + '».' : ''}${caricato ? ' ' + caricato + '.' : ''}</div>
+          <div class="text-[11px] text-slate-400 mt-3">Totale del giorno su tutte le commesse. Viaggio (🚐, in azzurro) e ore non lavorate (in arancio) nella norma non vanno su Jira.${cantNorm.size ? ' In verde le voci sul cantiere pianificato in questa riga.' : ''}${rec.dipendente && rec.dipendente !== operatore ? ' In MySond: «' + esc(rec.dipendente) + '».' : ''}${caricato ? ' ' + caricato + '.' : ''}</div>
         </div>
         <div class="px-5 py-3 border-t border-slate-100 flex justify-end">
           <button class="px-3 py-1.5 text-sm border border-slate-300 rounded hover:bg-slate-50" onclick="closeModal()">Chiudi</button>

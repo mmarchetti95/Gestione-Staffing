@@ -114,6 +114,11 @@ Limite noto: il progetto Supabase è sul piano **Free**, che non include backup 
 
 ## Changelog
 
+## v18.217.0
+- feat: **Controllo anomalie - Jira diverso da MySond.** Nuova linguetta **🧾 Jira diverso da MySond**: per ogni operatore e giorno già passato con ore MySond caricate confronta il totale ore Jira del giorno con le ore lavorate in MySond (tutte le commesse). Le ore di **viaggio** (attività «Viaggio…») e le **ore non lavorate** nella norma non vanno su Jira: Jira è in regola se sta fra le ore di lavoro senza viaggio e quelle con il viaggio (chi carica anche il viaggio non viene segnalato). La scheda mostra MySond voce per voce (viaggio e non lavorate evidenziati) accanto ai ticket Jira, con le ore attese. Scarto minimo regolabile (0,5 h di default, per browser). I casi con Jira sotto MySond entrano nei **✉️ solleciti**. Un giorno pianificato senza ore Jira resta solo in «Pianificati senza worklog». Se la settimana non ha ore MySond caricate il controllo lo segnala e non viene fatto.
+- La colonna **MySond** del Controllo Produzione usa la stessa regola per il colore ambra (non segnala più i giorni di trasferta) e il dettaglio mostra le ore di viaggio con 🚐.
+- Nessuna modifica allo schema Supabase né alle Edge Function.
+
 ## v18.216.0
 - feat: **Indietro / Avanti in Pianificazione settimanale e Dashboard.** Ogni schermata ha la sua cronologia, separata dall'altra.
 - **Pianificazione settimanale:** nella toolbar della Griglia i pulsanti **↶ Indietro** e **↷ Avanti** (anche **Ctrl+Z** / **Ctrl+Y** o **Ctrl+Shift+Z** ovunque nella Pianificazione, fuori dai campi di testo e con nessun modal aperto) annullano e ripristinano le proprie modifiche a Griglia, Ferie/Permessi e Doppia week, fino a 50 passi. Il tooltip dice cosa si annulla (es. «Griglia · W43/2026» e l'ora); se il passo riguarda un'altra settimana ci si sposta lì. Le modifiche dei colleghi arrivate via sync non vengono annullate; se un collega ha cambiato la stessa settimana dopo il passo, viene chiesta conferma prima di sovrascriverla. La cronologia vale per la sessione (si azzera con il refresh).

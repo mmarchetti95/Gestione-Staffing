@@ -1899,7 +1899,7 @@
       </span>
       <button id="btn-presentation" class="px-3 py-1.5 text-sm rounded hover:bg-white/10" style="border:1px solid var(--dark-border-strong);color:var(--dark-text);visibility:visible;">📊 Modalità presentazione</button>
       <div class="text-xs pl-2" style="border-left:1px solid var(--dark-border-strong);color:var(--dark-text-muted);">
-        <span id="app-version" class="font-medium" style="color:var(--accent);">v18.216.0</span> · Michele Marchetti
+        <span id="app-version" class="font-medium" style="color:var(--accent);">v18.217.0</span> · Michele Marchetti
         <span id="sb-role-badge" style="margin-left:8px;padding:1px 8px;border-radius:9999px;background:rgba(255,255,255,.1);color:var(--dark-text);font-weight:600;"></span>
       </div>
     </div>
@@ -20496,6 +20496,7 @@ function pwControlloExportPDF() {
 HELP_TEXTS['cp-mysond'] = 'Carica l\'export Excel delle ore inserite in MySond (colonne Dipendente, commessa, voce, attività, descrizione, dataintervento Anno/Mese/Giorno, Somma di durata).\n\nPer ogni operatore riconosciuto viene salvato il totale ore di ogni giorno, mostrato nella colonna "MySond" accanto a "Ore Jira" (click sul numero per il dettaglio). Il file può coprire qualsiasi periodo: i giorni presenti nel file sostituiscono quelli caricati in precedenza, gli altri restano invariati.\n\nI dipendenti non presenti nel Pool operatori vengono ignorati.';
 
 let _cpMysond = {}; // operatore → { giornoIdx: { ore, dipendente, dettaglio, caricato_at, caricato_da } }
+let _cpMysondDi = ''; // 'anno|week' a cui si riferisce _cpMysond (lo legge il Controllo anomalie)
 
 const CP_MYSOND_CHUNK = 500;
 
@@ -20518,7 +20519,9 @@ function _cpMysondIsoAdd(iso, days) {
    lasciano la colonna vuota senza bloccare il Controllo produzione. */
 async function cpMysondLoad() {
   _cpMysond = {};
+  _cpMysondDi = '';
   if (!_sbClient || !_sbUser) return;
+  const di = pwAnno + '|' + pwWeek;
   const lun = isoWeekToMonday(pwAnno, pwWeek).toISOString().slice(0, 10);
   try {
     const { data, error } = await _sbClient
@@ -20537,19 +20540,23 @@ async function cpMysondLoad() {
         caricato_at: r.caricato_at, caricato_da: r.caricato_da,
       };
     });
+    _cpMysondDi = di;
   } catch (e) {
     console.warn('cpMysondLoad:', e);
   }
 }
 
-/* Cella "MySond" di una riga del Controllo produzione. In ambra se il totale differisce dalle
-   Ore Jira del giorno (entrambe sono il totale giornaliero dell'operatore). */
+/* Cella "MySond" di una riga del Controllo produzione. In ambra se le Ore Jira del giorno
+   (entrambe sono il totale giornaliero dell'operatore) escono dall'intervallo atteso: fra le
+   ore di lavoro senza viaggio e quelle con il viaggio (stessa regola del Controllo anomalie). */
 function cpMysondCellHtml(operatore, g, jVal, cantieri) {
   const rec = (_cpMysond[operatore] || {})[g];
   if (!rec) return '<span style="color:#cbd5e1" title="Nessuna ora MySond caricata per questo giorno">—</span>';
   const jNum = parseFloat(String(jVal));
-  const diverso = !isNaN(jNum) && Math.abs(jNum - rec.ore) >= 0.25;
+  const m = cpaMysondRipartisci(rec);
+  const diverso = !isNaN(jNum) && cpaMysondScarto(jNum, m, 0.25) !== 0;
   const ttl = 'Totale ore MySond del giorno (' + rec.dettaglio.length + ' inseriment' + (rec.dettaglio.length === 1 ? 'o' : 'i') + ')'
+    + (m.viaggio > 0 ? ', di cui ' + _cpMysondOre(m.viaggio) + ' h di viaggio (non richieste su Jira)' : '')
     + (diverso ? ' — diverso dalle Ore Jira (' + jVal + ')' : '') + ' — clicca per il dettaglio';
   return '<button type="button" class="cp-mysond-btn' + (diverso ? ' cp-mysond-diff' : '') + '" title="' + esc(ttl) + '"'
     + ' data-op="' + esc(operatore) + '" data-g="' + g + '" data-jval="' + esc(String(jVal == null ? '' : jVal)) + '"'
@@ -20573,17 +20580,18 @@ function cpMysondDettaglio(btn) {
     + String(giorno.getUTCDate()).padStart(2, '0') + '/' + String(giorno.getUTCMonth() + 1).padStart(2, '0');
 
   const voci = rec.dettaglio.slice().sort((a, b) => (b.ore || 0) - (a.ore || 0));
-  let nonLav = 0;
+  const m = cpaMysondRipartisci(rec);
+  const nonLav = m.nonLavorate;
   const righe = voci.map(v => {
-    const isNonLav = /non lavorat/i.test(v.commessa || '');
-    if (isNonLav) nonLav += Number(v.ore) || 0;
+    const isNonLav = cpaMysondNonLavorata(v);
+    const isViaggio = !isNonLav && cpaMysondViaggio(v);
     const suCantiere = !isNonLav && v.voce && cantNorm.has(norm(v.voce));
     const att = [v.att1, v.att2].filter(Boolean).filter((x, i, a) => a.indexOf(x) === i).join(' › ');
-    const bg = suCantiere ? 'background:#ecfdf5;' : (isNonLav ? 'background:#fff7ed;' : '');
+    const bg = isNonLav ? 'background:#fff7ed;' : (isViaggio ? 'background:#eff6ff;' : (suCantiere ? 'background:#ecfdf5;' : ''));
     return '<tr style="' + bg + '">'
       + '<td class="px-2 py-1 align-top">' + esc(v.commessa || '') + (v.tipo ? '<div class="text-[10px] text-slate-400">' + esc(v.tipo) + '</div>' : '') + '</td>'
       + '<td class="px-2 py-1 align-top">' + esc(v.voce || '') + (suCantiere ? ' <span title="Cantiere pianificato in Griglia per questa riga">📍</span>' : '') + '</td>'
-      + '<td class="px-2 py-1 align-top">' + esc(att || '—') + '</td>'
+      + '<td class="px-2 py-1 align-top">' + (isViaggio ? '<span title="Viaggio: nella norma non va su Jira">🚐</span> ' : '') + esc(att || '—') + '</td>'
       + '<td class="px-2 py-1 align-top text-slate-500">' + esc(v.descrizione || '') + '</td>'
       + '<td class="px-2 py-1 align-top text-right font-semibold whitespace-nowrap">' + _cpMysondOre(Number(v.ore) || 0) + '</td>'
       + '</tr>';
@@ -20591,8 +20599,10 @@ function cpMysondDettaglio(btn) {
 
   const jVal = btn.dataset.jval;
   const jNum = parseFloat(jVal);
+  const scarto = isNaN(jNum) ? 0 : cpaMysondScarto(jNum, m, 0.25);
+  const atteso = m.viaggio > 0 ? _cpMysondOre(m.lavoro) + '–' + _cpMysondOre(m.lavoro + m.viaggio) : _cpMysondOre(m.lavoro);
   const jiraLbl = isNaN(jNum) ? 'non sincronizzate'
-    : _cpMysondOre(jNum) + ' h' + (Math.abs(jNum - rec.ore) >= 0.25 ? ' <span class="text-amber-700">(Δ ' + (rec.ore - jNum > 0 ? '+' : '') + _cpMysondOre(rec.ore - jNum) + ' h)</span>' : '');
+    : _cpMysondOre(jNum) + ' h' + (scarto ? ' <span class="text-amber-700">(Δ ' + (scarto > 0 ? '+' : '') + _cpMysondOre(scarto) + ' h rispetto alle ' + atteso + ' h attese)</span>' : '');
   const caricato = rec.caricato_at
     ? 'Caricato il ' + new Date(rec.caricato_at).toLocaleString('it-IT', { dateStyle: 'short', timeStyle: 'short' }) + (rec.caricato_da ? ' da ' + esc(rec.caricato_da) : '')
     : '';
@@ -20603,7 +20613,7 @@ function cpMysondDettaglio(btn) {
         <div class="px-5 py-4 border-b border-slate-100 flex items-start justify-between gap-3">
           <div>
             <div class="font-semibold text-slate-900 text-sm">MySond — ${esc(operatore)} · ${dataLbl}</div>
-            <div class="text-xs text-slate-500 mt-0.5">Totale <b>${_cpMysondOre(rec.ore)} h</b>${nonLav > 0 ? ' (di cui ' + _cpMysondOre(nonLav) + ' h non lavorate)' : ''} · Ore Jira ${jiraLbl}</div>
+            <div class="text-xs text-slate-500 mt-0.5">Totale <b>${_cpMysondOre(rec.ore)} h</b>${(nonLav > 0 || m.viaggio > 0) ? ' (di cui ' + [m.viaggio > 0 ? _cpMysondOre(m.viaggio) + ' h di viaggio' : '', nonLav > 0 ? _cpMysondOre(nonLav) + ' h non lavorate' : ''].filter(Boolean).join(', ') + ')' : ''} · Ore Jira ${jiraLbl}</div>
           </div>
           <button class="text-slate-400 hover:text-slate-600 text-lg leading-none" onclick="closeModal()">×</button>
         </div>
@@ -20614,7 +20624,7 @@ function cpMysondDettaglio(btn) {
             </tr></thead>
             <tbody class="divide-y divide-slate-100">${righe}</tbody>
           </table>
-          <div class="text-[11px] text-slate-400 mt-3">Totale del giorno su tutte le commesse.${cantNorm.size ? ' In verde le voci sul cantiere pianificato in questa riga, in arancio le ore non lavorate.' : ''}${rec.dipendente && rec.dipendente !== operatore ? ' In MySond: «' + esc(rec.dipendente) + '».' : ''}${caricato ? ' ' + caricato + '.' : ''}</div>
+          <div class="text-[11px] text-slate-400 mt-3">Totale del giorno su tutte le commesse. Viaggio (🚐, in azzurro) e ore non lavorate (in arancio) nella norma non vanno su Jira.${cantNorm.size ? ' In verde le voci sul cantiere pianificato in questa riga.' : ''}${rec.dipendente && rec.dipendente !== operatore ? ' In MySond: «' + esc(rec.dipendente) + '».' : ''}${caricato ? ' ' + caricato + '.' : ''}</div>
         </div>
         <div class="px-5 py-3 border-t border-slate-100 flex justify-end">
           <button class="px-3 py-1.5 text-sm border border-slate-300 rounded hover:bg-slate-50" onclick="closeModal()">Chiudi</button>
@@ -20811,6 +20821,8 @@ async function cpMysondImportFile(file) {
      epicDiSottotask: { subtaskKey: { epicKey, epicName, taskKey, taskSummary } },
      sottotaskIndex: { subtaskKey: { commessa, cantiere, operatore, attivita, anno, week } },
                                                  sottotask di TUTTA la Griglia (non solo la settimana)
+     mysond: { operatore: { giorno: { ore, dettaglio: [{ commessa, voce, att1, att2, descrizione, ore }] } } } | null,
+                                                 ore MySond della settimana (null = non caricate)
      soglie: { ... }                             vedi CPA_SOGLIE_DEFAULT
    }
 */
@@ -20824,12 +20836,15 @@ const CPA_TIPI = {
     descrizione: 'Ore su un ticket di un Epic diverso da quello dei cantieri pianificati quel giorno.' },
   ore_squadra:                  { icona: '⚖️', etichetta: 'Ore diverse in squadra',
     descrizione: 'Operatori della stessa squadra, nello stesso giorno, con ore Jira diverse.' },
+  mysond_diverso:               { icona: '🧾', etichetta: 'Jira diverso da MySond',
+    descrizione: 'Ore Jira del giorno diverse dalle ore lavorate in MySond. Viaggio e ore non lavorate non vanno su Jira: Jira è in regola fra le ore di lavoro senza viaggio e quelle con il viaggio.' },
 };
 
 const CPA_SOGLIE_DEFAULT = {
   oreMinime: 0.25,      // sotto questa soglia un giorno vale "senza worklog"
   diffOreSquadra: 1,    // scarto (h) fra il massimo della squadra e un operatore oltre cui segnalare
   diffOreAlta: 3,       // scarto da cui la gravità passa a "media"
+  diffOreMysond: 0.5,   // scarto (h) fra Jira e MySond oltre cui segnalare
 };
 
 const CPA_GRAVITA_ORD = { alta: 0, media: 1, bassa: 2 };
@@ -21118,6 +21133,95 @@ function _cpaControllaOreSquadra(input, out, wl, ore) {
   });
 }
 
+/* ---------- 5) Ore Jira diverse dalle ore MySond ---------- */
+
+/* Nella norma su Jira non vanno né le ore di viaggio (attività "Viaggio …") né le ore non
+   lavorate (commessa "ORE NON LAVORATE": ferie, permessi). */
+function cpaMysondViaggio(v) { return /viaggi/i.test(String(v.att1 || '') + ' ' + String(v.att2 || '')); }
+function cpaMysondNonLavorata(v) { return /non lavorat/i.test(String(v.commessa || '')); }
+
+/* Giorno MySond diviso in lavoro / viaggio / non lavorate, con le voci etichettate */
+function cpaMysondRipartisci(rec) {
+  const m = { totale: 0, lavoro: 0, viaggio: 0, nonLavorate: 0, voci: [] };
+  const det = (rec && Array.isArray(rec.dettaglio)) ? rec.dettaglio : [];
+  det.forEach(v => {
+    const h = _cpaNum(v.ore) || 0;
+    const tipo = cpaMysondNonLavorata(v) ? 'non_lavorate' : (cpaMysondViaggio(v) ? 'viaggio' : 'lavoro');
+    m[tipo === 'non_lavorate' ? 'nonLavorate' : tipo] += h;
+    m.totale += h;
+    m.voci.push({ commessa: v.commessa || '', voce: v.voce || '', descrizione: v.descrizione || '', ore: h, tipo,
+      attivita: [v.att1, v.att2].filter(Boolean).filter((x, i, a) => a.indexOf(x) === i).join(' › ') });
+  });
+  if (!det.length && rec) m.totale = m.lavoro = _cpaNum(rec.ore) || 0;   // senza dettaglio: tutto lavoro
+  ['totale', 'lavoro', 'viaggio', 'nonLavorate'].forEach(k => { m[k] = Math.round(m[k] * 100) / 100; });
+  return m;
+}
+
+/* Jira è in regola fra le ore di lavoro senza viaggio e quelle con il viaggio (c'è chi il
+   viaggio lo carica comunque). 0 = in regola, altrimenti lo scarto con segno (< 0: Jira sotto). */
+function cpaMysondScarto(oreJira, m, tolleranza) {
+  const min = m.lavoro, max = m.lavoro + m.viaggio;
+  if (oreJira < min - tolleranza + 1e-9) return Math.round((oreJira - min) * 100) / 100;
+  if (oreJira > max + tolleranza - 1e-9) return Math.round((oreJira - max) * 100) / 100;
+  return 0;
+}
+
+/* Totale del giorno su entrambi i lati (tutte le commesse, come le colonne del Controllo
+   Produzione). Si valuta solo dove MySond è caricato; Jira a zero su un giorno pianificato
+   è già in "Pianificati senza worklog". */
+function _cpaControllaMysond(input, out, perOpGiorno, wl, ore) {
+  if (!input.mysond) return;
+  const S = input.soglie;
+  const valutabili = new Set(input.giorniValutabili || []);
+  (input.verificati || []).forEach(op => {
+    for (let g = 0; g < 6; g++) {
+      const rec = (input.mysond[op] || {})[g];
+      if (!rec || !valutabili.has(g)) continue;
+      const m = cpaMysondRipartisci(rec);
+      const h = Math.round(ore(op, g) * 100) / 100;
+      const scarto = cpaMysondScarto(h, m, S.diffOreMysond);
+      if (!scarto) continue;
+      const celle = (perOpGiorno[op + '|||' + g] || []).filter(c => !c.ferie);
+      if (h < S.oreMinime && celle.length) continue;
+      const sotto = scarto < 0, zero = h < S.oreMinime;
+      const ticket = ((wl(op, g) || {}).tickets) || [];
+      const sottotask = celle.flatMap(c => (c.voci || []).map(v => v.subtask).filter(Boolean));
+      const lavoroMs = m.voci.filter(v => v.tipo === 'lavoro');
+      const cantieri = celle.length ? [...new Set(celle.flatMap(_cpaCantieriCella))] : [...new Set(lavoroMs.map(v => v.voce).filter(Boolean))];
+      const commesse = celle.length ? [...new Set(celle.map(c => c.commessa))] : [...new Set(lavoroMs.map(v => v.commessa).filter(Boolean))];
+      const atteso = m.viaggio > 0 ? 'fra ' + _cpaFmt(m.lavoro) + ' e ' + _cpaFmt(m.lavoro + m.viaggio) + ' h' : _cpaFmt(m.lavoro) + ' h';
+      const delta = _cpaFmt(Math.abs(scarto));
+      out.push({
+        id: _cpaId('mysond_diverso', input, [op, g]),
+        tipo: 'mysond_diverso',
+        gravita: (zero || Math.abs(scarto) >= S.diffOreAlta - 1e-9) ? 'media' : 'bassa',
+        commessa: celle.length ? celle[0].commessa : (commesse[0] || ''), squadra: celle.length ? celle[0].squadra : '',
+        operatore: op, giorno: g, cpKey: celle.length ? celle[0].cpKey : null, cantiere: cantieri.join(', '),
+        titolo: zero ? op + ' ha ' + _cpaFmt(m.lavoro) + ' h lavorate in MySond ma nessuna su Jira'
+          : sotto ? op + ': ' + _cpaFmt(h) + ' h su Jira, ' + _cpaFmt(m.lavoro) + ' h lavorate in MySond (−' + delta + ' h)'
+          : op + ': ' + _cpaFmt(h) + ' h su Jira, ' + _cpaFmt(m.lavoro + m.viaggio) + ' h in MySond' + (m.viaggio > 0 ? ' viaggio compreso' : '') + ' (+' + delta + ' h)',
+        dettaglio: 'MySond: ' + _cpaFmt(m.lavoro) + ' h di lavoro' +
+          (m.viaggio > 0 ? ', ' + _cpaFmt(m.viaggio) + ' h di viaggio' : '') +
+          (m.nonLavorate > 0 ? ', ' + _cpaFmt(m.nonLavorate) + ' h non lavorate' : '') +
+          '. Jira: ' + _cpaFmt(h) + ' h' + (ticket.length ? ' (' + ticket.map(t => t.key).join(', ') + ')' : '') +
+          '. Atteso su Jira: ' + atteso + '.',
+        correzione: sotto
+          ? 'Mancano ' + delta + ' h su Jira: chiedere a ' + op + ' di registrarle' +
+            (sottotask.length ? ' sul sottotask ' + sottotask.map(s => s.key).join(' / ') : '') +
+            '. Se in MySond ha segnato come lavoro ore di viaggio, va corretta l\'attività in MySond ("Viaggio").'
+          : 'Su Jira ci sono ' + delta + ' h in più di MySond: verificare se il worklog è duplicato o sul giorno sbagliato, oppure se mancano ore in MySond' +
+            (m.nonLavorate > 0 ? ' (quel giorno MySond segna ' + _cpaFmt(m.nonLavorate) + ' h non lavorate)' : '') + '.',
+        confronto: { mysond: m, jira: _cpaTicketJira(input, ticket), oreJira: h, attesoMin: m.lavoro, attesoMax: m.lavoro + m.viaggio,
+          griglia: celle.flatMap(c => (c.voci || []).map(v => ({ commessa: c.commessa, squadra: c.squadra, cantiere: v.cantiere, attivita: v.attivita || '', subtask: v.subtask }))) },
+        azione: null,
+        solleciti: sotto ? [{ operatore: op, giorno: g, commesse, cantieri, oreRegistrate: h, oreAttese: m.lavoro,
+          sottotask: sottotask.map(s => s.key), ticket: ticket.map(t => t.key) }] : undefined,
+        link: sottotask.map(s => ({ label: s.key, url: s.url })),
+      });
+    }
+  });
+}
+
 /* ---------- Ingresso ---------- */
 
 function cpaRileva(input) {
@@ -21138,6 +21242,7 @@ function cpaRileva(input) {
     _cpaControllaSenzaPianificazione(inp, out, perOpGiorno, wl);
     _cpaControllaEpic(inp, out, perOpGiorno, wl, nonVerificabili);
     _cpaControllaOreSquadra(inp, out, wl, ore);
+    _cpaControllaMysond(inp, out, perOpGiorno, wl, ore);
   }
   const ordTipo = Object.keys(CPA_TIPI);
   out.sort((a, b) =>
@@ -21231,7 +21336,9 @@ function cpaTestoCorrezioni(anomalie, giorniLabel, intestazione) {
    - Epic dei sottotask della Griglia, via jira-task-status (stesse cache della Mappa:
      il sottotask è l'unico legame certo cantiere -> Task -> Epic, vedi
      supabase/functions/jira-task-status/index.ts);
-   - indice dei sottotask di TUTTA la Griglia, per dire su quale cantiere sta un ticket.
+   - indice dei sottotask di TUTTA la Griglia, per dire su quale cantiere sta un ticket;
+   - ore MySond della settimana già caricate dal Controllo Produzione (_cpMysond, nessuna
+     lettura in più): un nuovo caricamento ridisegna il tab e quindi ricalcola.
 
    Ogni settimana tiene il SUO controllo (_cpaCache, salvato anche in localStorage per le
    ultime CPA_CACHE_MAX settimane): cambiando settimana e tornando indietro si ritrova
@@ -21246,7 +21353,7 @@ function cpaTestoCorrezioni(anomalie, giorniLabel, intestazione) {
    Ferie, se quel giorno risultava assente). */
 
 const CPA_IGNORATE_KEY = 'cpa_ignorate_v1';
-const CPA_PREF_KEY = 'cpa_pref_v1';  // soglia ore in squadra, per browser
+const CPA_PREF_KEY = 'cpa_pref_v1';  // soglie ore (squadra, MySond), per browser
 const CPA_EMAIL_CHUNK = 8;           // email per chiamata a jira-sync-worklogs (evita timeout della funzione)
 const CPA_GIORNI = ['Lun', 'Mar', 'Mer', 'Gio', 'Ven', 'Sab'];
 const CPA_GIORNI_LUNGHI = ['Lunedì', 'Martedì', 'Mercoledì', 'Giovedì', 'Venerdì', 'Sabato'];
@@ -21282,8 +21389,15 @@ function _cpaSalvaIgnorate(m) {
 }
 
 function _cpaPref() {
-  try { return Object.assign({ diffOreSquadra: CPA_SOGLIE_DEFAULT.diffOreSquadra }, JSON.parse(localStorage.getItem(CPA_PREF_KEY) || '{}')); }
-  catch (_) { return { diffOreSquadra: CPA_SOGLIE_DEFAULT.diffOreSquadra }; }
+  const def = { diffOreSquadra: CPA_SOGLIE_DEFAULT.diffOreSquadra, diffOreMysond: CPA_SOGLIE_DEFAULT.diffOreMysond };
+  try { return Object.assign(def, JSON.parse(localStorage.getItem(CPA_PREF_KEY) || '{}')); }
+  catch (_) { return def; }
+}
+
+/* Ore MySond della settimana mostrata, se caricate (null = confronto non fattibile) */
+function _cpaMysondSettimana() {
+  if (_cpMysondDi !== _cpaKey(pwAnno, pwWeek)) return null;
+  return Object.keys(_cpMysond).length ? _cpMysond : null;
 }
 
 /* Stato del controllo per settimana: 'anno|week' -> { base, risolte, proposte, propMod }.
@@ -21571,13 +21685,17 @@ function _cpaRicalcola() {
   if (!B || _cpa.anno !== pwAnno || _cpa.week !== pwWeek) return;
   const { celle } = _cpaCelleSettimana();
   const fw = pwGetFerieWeek();
+  const pref = _cpaPref();
+  const mysond = _cpaMysondSettimana();
   const r = cpaRileva({
     anno: pwAnno, week: pwWeek, giorniLabel: B.date.label, giorniValutabili: B.giorniValutabili,
     celle, worklog: B.worklog, verificati: B.verificati, epicDiSottotask: B.epicDiSottotask,
-    sottotaskIndex: _cpaIndiceSottotask(),
+    sottotaskIndex: _cpaIndiceSottotask(), mysond,
     ferieDi: (op, g) => (fw[op] ? pwFerieTipo(fw[op][g]) : null),
-    soglie: { diffOreSquadra: Number(_cpaPref().diffOreSquadra) || CPA_SOGLIE_DEFAULT.diffOreSquadra },
+    soglie: { diffOreSquadra: Number(pref.diffOreSquadra) || CPA_SOGLIE_DEFAULT.diffOreSquadra,
+      diffOreMysond: Number(pref.diffOreMysond) || CPA_SOGLIE_DEFAULT.diffOreMysond },
   });
+  r.mysondCaricato = !!mysond;
   r.giorniLabel = B.date.label;
   r.ddmm = B.date.ddmm;
   r.avvisi = B.avvisi;
@@ -21657,7 +21775,9 @@ function cpaTogglePool(el) { _cpa.tuttoIlPool = !!el.checked; }
 
 function cpaSetSogliaOre(el) {
   const p = _cpaPref();
-  p.diffOreSquadra = Number(el.value) || CPA_SOGLIE_DEFAULT.diffOreSquadra;
+  const k = el.dataset.k;
+  if (!(k in CPA_SOGLIE_DEFAULT)) return;
+  p[k] = Number(el.value) || CPA_SOGLIE_DEFAULT[k];
   try { localStorage.setItem(CPA_PREF_KEY, JSON.stringify(p)); } catch (_) {}
   _cpaRicalcola();
   cpaRender();
@@ -21839,9 +21959,27 @@ function _cpaColonna(titolo, colore, contenuto) {
     '<div class="text-[11px] font-bold uppercase tracking-wide mb-1" style="color:' + colore + ';">' + titolo + '</div>' + contenuto + '</div>';
 }
 
-function _cpaConfronto(sx, dx) {
+function _cpaConfronto(sx, dx, titoloSx) {
   return '<div class="grid gap-2 mt-2" style="grid-template-columns:repeat(auto-fit,minmax(260px,1fr));">' +
-    _cpaColonna('📅 In Griglia', '#0f766e', sx) + _cpaColonna('🎫 Su Jira', '#4f46e5', dx) + '</div>';
+    _cpaColonna(titoloSx || '📅 In Griglia', '#0f766e', sx) + _cpaColonna('🎫 Su Jira', '#4f46e5', dx) + '</div>';
+}
+
+/* Colonna MySond: voci del giorno (viaggio e non lavorate in tinta, fuori dal confronto) */
+function _cpaMysondColonna(C) {
+  const M = C.mysond;
+  const stile = { lavoro: '', viaggio: 'background:#eff6ff;', non_lavorate: 'background:#fff7ed;' };
+  const tag = { lavoro: '', viaggio: ' <span class="text-[10px] font-semibold" style="color:#1d4ed8;">🚐 viaggio</span>',
+    non_lavorate: ' <span class="text-[10px] font-semibold" style="color:#c2410c;">non lavorate</span>' };
+  const voci = M.voci.slice().sort((x, y) => (x.tipo === 'lavoro' ? 0 : 1) - (y.tipo === 'lavoro' ? 0 : 1) || y.ore - x.ore);
+  const cant = [...new Set((C.griglia || []).map(v => v.cantiere))];
+  return '<div class="text-sm font-semibold text-slate-800">' + _cpaH(M.lavoro) + ' di lavoro' +
+      (M.viaggio > 0 ? ' <span class="text-xs font-normal" style="color:#1d4ed8;">+ ' + _cpaH(M.viaggio) + ' di viaggio</span>' : '') +
+      (M.nonLavorate > 0 ? ' <span class="text-xs font-normal" style="color:#c2410c;">· ' + _cpaH(M.nonLavorate) + ' non lavorate</span>' : '') + '</div>' +
+    voci.map(v => '<div class="text-xs leading-5 rounded px-1.5 py-0.5 mt-1" style="' + stile[v.tipo] + '">' +
+      '<b>' + _cpaH(v.ore) + '</b> <span class="text-slate-700">' + _cpaS(v.voce || v.commessa) + '</span>' + tag[v.tipo] +
+      '<div class="text-[11px] text-slate-500">' + _cpaS([v.commessa, v.attivita].filter(Boolean).join(' · ')) + '</div>' +
+      (v.descrizione ? '<div class="text-[11px] text-slate-400">' + _cpaS(v.descrizione) + '</div>' : '') + '</div>').join('') +
+    '<div class="text-[11px] text-slate-500 mt-1">In Griglia: ' + (cant.length ? _cpaS(cant.join(', ')) : 'nessun cantiere quel giorno') + '</div>';
 }
 
 /* Una voce di Griglia: cantiere in grassetto, poi attività e commessa/squadra */
@@ -21931,6 +22069,14 @@ function _cpaCorpo(a, r) {
       (C.griglia || []).map(v => _cpaVoceG(v, v.epic ? '<div class="text-[11px] text-slate-500">Epic ' + _cpaS(v.epic.name) + '</div>' : '<div class="text-[11px] text-slate-400">senza sottotask: Epic non noto</div>')).join(''),
       (C.jira || []).map(t => _cpaTicketJ(t, t.fuori)).join(''));
   }
+  if (a.tipo === 'mysond_diverso') {
+    const atteso = C.attesoMax > C.attesoMin ? 'fra ' + _cpaFmt(C.attesoMin) + ' e ' + _cpaH(C.attesoMax) : _cpaH(C.attesoMin);
+    return _cpaConfronto(_cpaMysondColonna(C),
+      '<div class="text-sm font-semibold" style="color:#b91c1c;">' + (C.oreJira > 0 ? _cpaH(C.oreJira) + ' registrate' : 'Nessuna ora registrata') + '</div>' +
+        '<div class="text-[11px] text-slate-500 mb-1">Attese in base a MySond: ' + _cpaS(atteso) + '</div>' +
+        (C.jira || []).map(t => _cpaTicketJ(t, false)).join(''),
+      '🧾 In MySond');
+  }
   if (a.tipo === 'ore_squadra') {
     const max = C.max || 1;
     return '<div class="rounded-md border border-slate-200 bg-white p-2 mt-2">' + (C.membri || []).map(m => {
@@ -22012,7 +22158,7 @@ function _cpaIntestazione(r) {
     '<div class="flex flex-wrap items-start gap-2">' +
       '<div class="min-w-0">' +
         '<div style="font-weight:700;font-size:16px;color:#0f172a;font-family:var(--font-display);">🔍 Controllo anomalie</div>' +
-        '<div class="text-xs text-slate-500 mt-0.5">Settimana ' + pwWeek + ' · ' + d.ddmm[0] + ' – ' + d.ddmm[5] + ' · Griglia confrontata con le ore Jira. Propone correzioni, su Jira non scrive mai. Le modifiche in Griglia si vedono subito; dopo una correzione su Jira usa ↻ sulla singola anomalia.' +
+        '<div class="text-xs text-slate-500 mt-0.5">Settimana ' + pwWeek + ' · ' + d.ddmm[0] + ' – ' + d.ddmm[5] + ' · Griglia e ore MySond confrontate con le ore Jira. Propone correzioni, su Jira non scrive mai. Le modifiche in Griglia si vedono subito; dopo una correzione su Jira usa ↻ sulla singola anomalia.' +
           '</div>' + _cpaLetturaHtml(r) +
       '</div>' +
       '<div class="flex-1"></div>' +
@@ -22059,16 +22205,22 @@ function _cpaBarra(r, attive, ign) {
   const nIgn = attive.filter(a => ign[a.id]).length;
   const nAperte = attive.length - nIgn;
   const desc = _cpa.filtro ? CPA_TIPI[_cpa.filtro].descrizione : 'Tutti i controlli, giorno per giorno.';
-  const soglia = Number(_cpaPref().diffOreSquadra);
-  const opzSoglia = CPA_SOGLIE_ORE.map(v => '<option value="' + v + '"' + (v === soglia ? ' selected' : '') + '>' + String(v).replace('.', ',') + ' h</option>').join('');
+  const pref = _cpaPref();
+  const selSoglia = (k, icona, titolo) => '<label class="text-xs text-slate-600 flex items-center gap-1" title="' + titolo + '">' + icona + ' scarto minimo ' +
+    '<select data-k="' + k + '" onchange="cpaSetSogliaOre(this)" class="border border-slate-300 rounded px-1 py-0.5 text-xs bg-white">' +
+    CPA_SOGLIE_ORE.map(v => '<option value="' + v + '"' + (v === Number(pref[k]) ? ' selected' : '') + '>' + String(v).replace('.', ',') + ' h</option>').join('') +
+    '</select></label>';
   return '<div class="flex flex-wrap items-center gap-2" style="padding:8px 20px;background:#f8fafc;border-bottom:1px solid #e2e8f0;">' +
     '<span class="text-xs text-slate-600">' + _cpaS(desc) + '</span>' +
     '<div class="flex-1"></div>' +
     (!_cpa.filtro || _cpa.filtro === 'ore_squadra'
-      ? '<label class="text-xs text-slate-600 flex items-center gap-1" title="Segnala un operatore quando ha almeno queste ore in meno del collega di squadra con più ore">⚖️ scarto minimo <select onchange="cpaSetSogliaOre(this)" class="border border-slate-300 rounded px-1 py-0.5 text-xs bg-white">' + opzSoglia + '</select></label>'
+      ? selSoglia('diffOreSquadra', '⚖️', 'Segnala un operatore quando ha almeno queste ore in meno del collega di squadra con più ore')
+      : '') +
+    ((!_cpa.filtro || _cpa.filtro === 'mysond_diverso') && r.mysondCaricato
+      ? selSoglia('diffOreMysond', '🧾', 'Segnala quando le ore Jira si scostano almeno di tanto dalle ore MySond (viaggio escluso)')
       : '') +
     (nIgn ? '<button type="button" onclick="cpaToggleIgnorate()" class="text-xs text-slate-500 hover:text-slate-800">' + (_cpa.mostraIgnorate ? 'Nascondi' : 'Mostra') + ' ignorate (' + nIgn + ')</button>' : '') +
-    (attive.some(a => a.solleciti && a.solleciti.length && !ign[a.id]) ? '<button type="button" onclick="cpaSollApri()" class="text-xs px-2 py-0.5 rounded font-semibold text-white" style="background:#4f46e5;" title="Bozze di messaggio per chi non ha caricato le ore su Jira o ne ha meno dei colleghi di squadra">✉️ Prepara solleciti' + (_cpaSollDaInviare().length ? ' (' + _cpaSollDaInviare().length + ' da inviare)' : ' · tutti inviati') + '</button>' : '') +
+    (attive.some(a => a.solleciti && a.solleciti.length && !ign[a.id]) ? '<button type="button" onclick="cpaSollApri()" class="text-xs px-2 py-0.5 rounded font-semibold text-white" style="background:#4f46e5;" title="Bozze di messaggio per chi non ha caricato le ore su Jira o ne ha meno dei colleghi di squadra o di MySond">✉️ Prepara solleciti' + (_cpaSollDaInviare().length ? ' (' + _cpaSollDaInviare().length + ' da inviare)' : ' · tutti inviati') + '</button>' : '') +
     (nAperte ? '<button type="button" onclick="cpaCopia()" class="text-xs px-2 py-0.5 border border-slate-300 rounded bg-white hover:bg-slate-50">📋 Copia elenco</button>' : '') +
   '</div>';
 }
@@ -22081,6 +22233,7 @@ function _cpaListaHtml(r, attive, ign) {
   const note = [
     r.nOperatori + ' operatori controllati su Jira, ' + valutati + '.',
     nv.epicSenzaSottotask ? nv.epicSenzaSottotask + ' giornate con ore ma senza sottotask in Griglia: Epic non confrontabile.' : '',
+    r.mysondCaricato ? '' : 'Ore MySond non caricate per questa settimana: confronto Jira/MySond non fatto (📥 Carica MySond nel Controllo Produzione).',
   ].concat(r.avvisi).filter(Boolean);
   let html = '';
   if (_cpa.esito) {
@@ -22146,7 +22299,8 @@ function cpaRender() {
 }
 /* ==================== CONTROLLO ANOMALIE · SOLLECITI WORKLOG ====================
    Bozze di messaggio per chi non ha caricato le ore su Jira, o ne ha meno dei colleghi
-   di squadra (anomalie con `solleciti`: pianificato_senza_worklog / ore_squadra).
+   di squadra o di quelle lavorate in MySond (anomalie con `solleciti`: pianificato_senza_worklog /
+   ore_squadra / mysond_diverso quando Jira è sotto).
    Il testo base è deterministico (cpaSollecitoBase, nel motore puro); "✨ Scrivi con
    l'assistente AI" lo fa riscrivere dall'azione 'solleciti' di ai-autoplan (una
    chiamata senza strumenti: il modello scrive testo e basta, non legge né modifica

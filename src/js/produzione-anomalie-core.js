@@ -21,6 +21,8 @@
      epicDiSottotask: { subtaskKey: { epicKey, epicName, taskKey, taskSummary } },
      sottotaskIndex: { subtaskKey: { commessa, cantiere, operatore, attivita, anno, week } },
                                                  sottotask di TUTTA la Griglia (non solo la settimana)
+     mysond: { operatore: { giorno: { ore, dettaglio: [{ commessa, voce, att1, att2, descrizione, ore }] } } } | null,
+                                                 ore MySond della settimana (null = non caricate)
      soglie: { ... }                             vedi CPA_SOGLIE_DEFAULT
    }
 */
@@ -34,12 +36,15 @@ const CPA_TIPI = {
     descrizione: 'Ore su un ticket di un Epic diverso da quello dei cantieri pianificati quel giorno.' },
   ore_squadra:                  { icona: '⚖️', etichetta: 'Ore diverse in squadra',
     descrizione: 'Operatori della stessa squadra, nello stesso giorno, con ore Jira diverse.' },
+  mysond_diverso:               { icona: '🧾', etichetta: 'Jira diverso da MySond',
+    descrizione: 'Ore Jira del giorno diverse dalle ore lavorate in MySond. Viaggio e ore non lavorate non vanno su Jira: Jira è in regola fra le ore di lavoro senza viaggio e quelle con il viaggio.' },
 };
 
 const CPA_SOGLIE_DEFAULT = {
   oreMinime: 0.25,      // sotto questa soglia un giorno vale "senza worklog"
   diffOreSquadra: 1,    // scarto (h) fra il massimo della squadra e un operatore oltre cui segnalare
   diffOreAlta: 3,       // scarto da cui la gravità passa a "media"
+  diffOreMysond: 0.5,   // scarto (h) fra Jira e MySond oltre cui segnalare
 };
 
 const CPA_GRAVITA_ORD = { alta: 0, media: 1, bassa: 2 };
@@ -328,6 +333,95 @@ function _cpaControllaOreSquadra(input, out, wl, ore) {
   });
 }
 
+/* ---------- 5) Ore Jira diverse dalle ore MySond ---------- */
+
+/* Nella norma su Jira non vanno né le ore di viaggio (attività "Viaggio …") né le ore non
+   lavorate (commessa "ORE NON LAVORATE": ferie, permessi). */
+function cpaMysondViaggio(v) { return /viaggi/i.test(String(v.att1 || '') + ' ' + String(v.att2 || '')); }
+function cpaMysondNonLavorata(v) { return /non lavorat/i.test(String(v.commessa || '')); }
+
+/* Giorno MySond diviso in lavoro / viaggio / non lavorate, con le voci etichettate */
+function cpaMysondRipartisci(rec) {
+  const m = { totale: 0, lavoro: 0, viaggio: 0, nonLavorate: 0, voci: [] };
+  const det = (rec && Array.isArray(rec.dettaglio)) ? rec.dettaglio : [];
+  det.forEach(v => {
+    const h = _cpaNum(v.ore) || 0;
+    const tipo = cpaMysondNonLavorata(v) ? 'non_lavorate' : (cpaMysondViaggio(v) ? 'viaggio' : 'lavoro');
+    m[tipo === 'non_lavorate' ? 'nonLavorate' : tipo] += h;
+    m.totale += h;
+    m.voci.push({ commessa: v.commessa || '', voce: v.voce || '', descrizione: v.descrizione || '', ore: h, tipo,
+      attivita: [v.att1, v.att2].filter(Boolean).filter((x, i, a) => a.indexOf(x) === i).join(' › ') });
+  });
+  if (!det.length && rec) m.totale = m.lavoro = _cpaNum(rec.ore) || 0;   // senza dettaglio: tutto lavoro
+  ['totale', 'lavoro', 'viaggio', 'nonLavorate'].forEach(k => { m[k] = Math.round(m[k] * 100) / 100; });
+  return m;
+}
+
+/* Jira è in regola fra le ore di lavoro senza viaggio e quelle con il viaggio (c'è chi il
+   viaggio lo carica comunque). 0 = in regola, altrimenti lo scarto con segno (< 0: Jira sotto). */
+function cpaMysondScarto(oreJira, m, tolleranza) {
+  const min = m.lavoro, max = m.lavoro + m.viaggio;
+  if (oreJira < min - tolleranza + 1e-9) return Math.round((oreJira - min) * 100) / 100;
+  if (oreJira > max + tolleranza - 1e-9) return Math.round((oreJira - max) * 100) / 100;
+  return 0;
+}
+
+/* Totale del giorno su entrambi i lati (tutte le commesse, come le colonne del Controllo
+   Produzione). Si valuta solo dove MySond è caricato; Jira a zero su un giorno pianificato
+   è già in "Pianificati senza worklog". */
+function _cpaControllaMysond(input, out, perOpGiorno, wl, ore) {
+  if (!input.mysond) return;
+  const S = input.soglie;
+  const valutabili = new Set(input.giorniValutabili || []);
+  (input.verificati || []).forEach(op => {
+    for (let g = 0; g < 6; g++) {
+      const rec = (input.mysond[op] || {})[g];
+      if (!rec || !valutabili.has(g)) continue;
+      const m = cpaMysondRipartisci(rec);
+      const h = Math.round(ore(op, g) * 100) / 100;
+      const scarto = cpaMysondScarto(h, m, S.diffOreMysond);
+      if (!scarto) continue;
+      const celle = (perOpGiorno[op + '|||' + g] || []).filter(c => !c.ferie);
+      if (h < S.oreMinime && celle.length) continue;
+      const sotto = scarto < 0, zero = h < S.oreMinime;
+      const ticket = ((wl(op, g) || {}).tickets) || [];
+      const sottotask = celle.flatMap(c => (c.voci || []).map(v => v.subtask).filter(Boolean));
+      const lavoroMs = m.voci.filter(v => v.tipo === 'lavoro');
+      const cantieri = celle.length ? [...new Set(celle.flatMap(_cpaCantieriCella))] : [...new Set(lavoroMs.map(v => v.voce).filter(Boolean))];
+      const commesse = celle.length ? [...new Set(celle.map(c => c.commessa))] : [...new Set(lavoroMs.map(v => v.commessa).filter(Boolean))];
+      const atteso = m.viaggio > 0 ? 'fra ' + _cpaFmt(m.lavoro) + ' e ' + _cpaFmt(m.lavoro + m.viaggio) + ' h' : _cpaFmt(m.lavoro) + ' h';
+      const delta = _cpaFmt(Math.abs(scarto));
+      out.push({
+        id: _cpaId('mysond_diverso', input, [op, g]),
+        tipo: 'mysond_diverso',
+        gravita: (zero || Math.abs(scarto) >= S.diffOreAlta - 1e-9) ? 'media' : 'bassa',
+        commessa: celle.length ? celle[0].commessa : (commesse[0] || ''), squadra: celle.length ? celle[0].squadra : '',
+        operatore: op, giorno: g, cpKey: celle.length ? celle[0].cpKey : null, cantiere: cantieri.join(', '),
+        titolo: zero ? op + ' ha ' + _cpaFmt(m.lavoro) + ' h lavorate in MySond ma nessuna su Jira'
+          : sotto ? op + ': ' + _cpaFmt(h) + ' h su Jira, ' + _cpaFmt(m.lavoro) + ' h lavorate in MySond (−' + delta + ' h)'
+          : op + ': ' + _cpaFmt(h) + ' h su Jira, ' + _cpaFmt(m.lavoro + m.viaggio) + ' h in MySond' + (m.viaggio > 0 ? ' viaggio compreso' : '') + ' (+' + delta + ' h)',
+        dettaglio: 'MySond: ' + _cpaFmt(m.lavoro) + ' h di lavoro' +
+          (m.viaggio > 0 ? ', ' + _cpaFmt(m.viaggio) + ' h di viaggio' : '') +
+          (m.nonLavorate > 0 ? ', ' + _cpaFmt(m.nonLavorate) + ' h non lavorate' : '') +
+          '. Jira: ' + _cpaFmt(h) + ' h' + (ticket.length ? ' (' + ticket.map(t => t.key).join(', ') + ')' : '') +
+          '. Atteso su Jira: ' + atteso + '.',
+        correzione: sotto
+          ? 'Mancano ' + delta + ' h su Jira: chiedere a ' + op + ' di registrarle' +
+            (sottotask.length ? ' sul sottotask ' + sottotask.map(s => s.key).join(' / ') : '') +
+            '. Se in MySond ha segnato come lavoro ore di viaggio, va corretta l\'attività in MySond ("Viaggio").'
+          : 'Su Jira ci sono ' + delta + ' h in più di MySond: verificare se il worklog è duplicato o sul giorno sbagliato, oppure se mancano ore in MySond' +
+            (m.nonLavorate > 0 ? ' (quel giorno MySond segna ' + _cpaFmt(m.nonLavorate) + ' h non lavorate)' : '') + '.',
+        confronto: { mysond: m, jira: _cpaTicketJira(input, ticket), oreJira: h, attesoMin: m.lavoro, attesoMax: m.lavoro + m.viaggio,
+          griglia: celle.flatMap(c => (c.voci || []).map(v => ({ commessa: c.commessa, squadra: c.squadra, cantiere: v.cantiere, attivita: v.attivita || '', subtask: v.subtask }))) },
+        azione: null,
+        solleciti: sotto ? [{ operatore: op, giorno: g, commesse, cantieri, oreRegistrate: h, oreAttese: m.lavoro,
+          sottotask: sottotask.map(s => s.key), ticket: ticket.map(t => t.key) }] : undefined,
+        link: sottotask.map(s => ({ label: s.key, url: s.url })),
+      });
+    }
+  });
+}
+
 /* ---------- Ingresso ---------- */
 
 function cpaRileva(input) {
@@ -348,6 +442,7 @@ function cpaRileva(input) {
     _cpaControllaSenzaPianificazione(inp, out, perOpGiorno, wl);
     _cpaControllaEpic(inp, out, perOpGiorno, wl, nonVerificabili);
     _cpaControllaOreSquadra(inp, out, wl, ore);
+    _cpaControllaMysond(inp, out, perOpGiorno, wl, ore);
   }
   const ordTipo = Object.keys(CPA_TIPI);
   out.sort((a, b) =>

@@ -1,6 +1,7 @@
 /* ==================== CONTROLLO ANOMALIE · SOLLECITI WORKLOG ====================
    Bozze di messaggio per chi non ha caricato le ore su Jira, o ne ha meno dei colleghi
-   di squadra (anomalie con `solleciti`: pianificato_senza_worklog / ore_squadra).
+   di squadra o di quelle lavorate in MySond (anomalie con `solleciti`: pianificato_senza_worklog /
+   ore_squadra / mysond_diverso quando Jira è sotto).
    Il testo base è deterministico (cpaSollecitoBase, nel motore puro); "✨ Scrivi con
    l'assistente AI" lo fa riscrivere dall'azione 'solleciti' di ai-autoplan (una
    chiamata senza strumenti: il modello scrive testo e basta, non legge né modifica
