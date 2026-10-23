@@ -1905,7 +1905,7 @@
       </span>
       <button id="btn-presentation" class="px-3 py-1.5 text-sm rounded hover:bg-white/10" style="border:1px solid var(--dark-border-strong);color:var(--dark-text);visibility:visible;">📊 Modalità presentazione</button>
       <div class="text-xs pl-2" style="border-left:1px solid var(--dark-border-strong);color:var(--dark-text-muted);">
-        <span id="app-version" class="font-medium" style="color:var(--accent);">v18.220.1</span> · Michele Marchetti
+        <span id="app-version" class="font-medium" style="color:var(--accent);">v18.221.0</span> · Michele Marchetti
         <span id="sb-role-badge" style="margin-left:8px;padding:1px 8px;border-radius:9999px;background:rgba(255,255,255,.1);color:var(--dark-text);font-weight:600;"></span>
       </div>
     </div>
@@ -20134,7 +20134,7 @@ function cpGetSquadraOpsByDay(commessa, squadra) {
           const cantieri = pwCellCantieri(opG);
           if (cantieri.length === 0) return;
           if (fw[op.nome] && pwFerieTipo(fw[op.nome][g])) return;
-          ops.push({ nome: op.nome, cantiere: cantieri.join(', '), attivita: opG.attivita || '' });
+          ops.push({ nome: op.nome, cantiere: cantieri.join(', '), attivita: opG.attivita || '', attivitaElenco: pwCellAttivitaElenco(opG) });
         });
         if (ops.length > 0) perDay[g] = ops;
       }
@@ -20143,7 +20143,38 @@ function cpGetSquadraOpsByDay(commessa, squadra) {
   return perDay;
 }
 
-HELP_TEXTS['cp-carica-report'] = 'Importa un file CSV/testo con le ore di produzione reale degli operatori di QUESTA squadra e compila "Ore Report Prod." e il Km/Cad del ticket del comune, per i soli giorni trovati nel file.\n\nI valori già presenti per quel ticket vengono sovrascritti. Se il file non copre nessun giorno della settimana, ti viene comunque chiesto se vuoi azzerare le ore per quei giorni.\n\nRiguarda solo "Ore Report Prod."/Km — le "Ore Jira" si aggiornano con "Sincronizza da Jira".';
+// Attività di ogni sottotask della commessa (chiave Jira → attività), dal legame certo
+// bc.jiraSubtask ("comune|||operatore|||attività"). Un entry legacy senza attività vale solo se
+// l'operatore ha una sola attività su quel comune (stessa regola di pwJiraSubtaskLookup).
+function cpReportAttivitaPerTicket(commessa) {
+  const out = {};
+  pwGetWeekData().forEach(bc => {
+    if (bc.commessa !== commessa) return;
+    Object.keys(bc.jiraSubtask || {}).forEach(mk => {
+      const e = bc.jiraSubtask[mk];
+      if (!e || !e.key) return;
+      const parti = mk.split('|||');
+      let att = parti[2];
+      if (att == null) {
+        const atts = pwJiraSubtaskAttivitaDiOperatore(bc, parti[0], parti[1]);
+        att = atts.length === 1 ? atts[0] : '';
+      }
+      if (att) out[e.key] = att;
+    });
+  });
+  return out;
+}
+
+// Attività di un ticket del worklog: dal legame bc.jiraSubtask; se il sottotask non è stato
+// creato dalla Griglia, dal summary, che per i sottotask creati dall'app è
+// "Attività - Comune - Cognome - Week N" (vedi pwJiraBuildSubtaskItem).
+function cpReportAttivitaTicket(t, perTicket, attivitaNote) {
+  if (perTicket[t.key]) return perTicket[t.key];
+  const sm = String(t.summary || '').trim().toLowerCase();
+  return (sm && attivitaNote.find(a => sm.startsWith(a.toLowerCase() + ' - '))) || '';
+}
+
+HELP_TEXTS['cp-carica-report'] = 'Importa un file CSV/testo con le ore di produzione reale degli operatori di QUESTA squadra e compila "Ore Report Prod." e il Km/Cad del ticket del comune, per i soli giorni trovati nel file.\n\nSe sullo stesso comune la squadra ha sottotask di più attività (es. due rilievi diversi nella stessa settimana), viene chiesta anche l\'attività: il Km/Cad va sul sottotask di quell\'attività e si aggiornano solo gli operatori/giorni che la svolgono.\n\nI valori già presenti per quel ticket vengono sovrascritti. Se il file non copre nessun giorno della settimana, ti viene comunque chiesto se vuoi azzerare le ore per quei giorni.\n\nRiguarda solo "Ore Report Prod."/Km — le "Ore Jira" si aggiornano con "Sincronizza da Jira".';
 
 // Handler del bottone: apre il selettore file (CSV) per la squadra indicata.
 async function cpCaricaReportSquadra(commessa, squadra) {
@@ -20235,13 +20266,52 @@ async function cpProcessReport(csvText, commessa, squadra) {
     comuni.map(c => ({ value: c, label: c })));
   if (!comuneSel) return;
 
+  // Attività: una squadra può lavorare sullo stesso comune con attività diverse, ognuna col suo
+  // sottotask e la sua produzione. Se i ticket del comune appartengono a più attività si sceglie
+  // anche quella; con una sola attività il comportamento resta quello di sempre.
+  const attPerTicket = cpReportAttivitaPerTicket(commessa);
+  const attNote = [...new Set(days.flatMap(g => opsByDay[g].flatMap(op => op.attivitaElenco || [])))]
+    .sort((a, b) => b.length - a.length);   // la più lunga prima: "Rilievo GPS 3D" non va confusa con "Rilievo GPS"
+  const ticketsCella = (op, g) => {
+    const k = `${commessa}|||${squadra}|||${op.nome}|||${g}`;
+    return (_cpData[k] && Array.isArray(_cpData[k].jira_tickets)) ? _cpData[k].jira_tickets : [];
+  };
+  const attivitaSet = new Set();
+  for (const g of days) {
+    for (const op of opsByDay[g]) {
+      ticketsCella(op, g).forEach(t => {
+        if (!t.epic || t.epic.name !== comuneSel) return;
+        const a = cpReportAttivitaTicket(t, attPerTicket, attNote);
+        if (a) attivitaSet.add(a);
+      });
+    }
+  }
+  let attSel = null;
+  if (attivitaSet.size > 1) {
+    attSel = await cpSelectModal(
+      'Attività del report',
+      `Sul comune "${comuneSel}" la squadra "${squadra}" ha sottotask di più attività.\nA quale attività si riferisce questo report?\n` +
+      `Il Km/Cad verrà scritto sul sottotask di quell'attività e verranno aggiornati solo gli operatori/giorni che la svolgono.`,
+      [...attivitaSet].sort().map(a => ({ value: a, label: a })));
+    if (!attSel) return;
+  }
+  const etichetta = `"${comuneSel}"` + (attSel ? ` — attività "${attSel}"` : '');
+  // Il ticket del report per un operatore/giorno: del comune scelto e, se scelta, dell'attività.
+  const ticketDelReport = tks => tks.find(t => t.epic && t.epic.name === comuneSel &&
+    (!attSel || cpReportAttivitaTicket(t, attPerTicket, attNote) === attSel));
+
   // Costruisci l'elenco delle celle da aggiornare
   const updates = [];
   const opsNoEmail = new Set();
   let daysWithData = 0, daysZero = 0, noTicket = 0;
 
   for (const g of days) {
-    const ops = opsByDay[g];
+    // Con un'attività scelta contano solo gli operatori che quel giorno la svolgono (in Griglia o
+    // con un worklog sul suo sottotask): gli altri restano come sono, non vengono azzerati.
+    const ops = attSel
+      ? opsByDay[g].filter(op => (op.attivitaElenco || []).includes(attSel) || !!ticketDelReport(ticketsCella(op, g)))
+      : opsByDay[g];
+    if (ops.length === 0) continue;
     const N = ops.length;
     const dateISO = isoDates[g];
 
@@ -20265,9 +20335,7 @@ async function cpProcessReport(csvText, commessa, squadra) {
     }
 
     ops.forEach(op => {
-      const k = `${commessa}|||${squadra}|||${op.nome}|||${g}`;
-      const tks = (_cpData[k] && Array.isArray(_cpData[k].jira_tickets)) ? _cpData[k].jira_tickets : [];
-      const ticket = tks.find(t => t.epic && t.epic.name === comuneSel);
+      const ticket = ticketDelReport(ticketsCella(op, g));
       if (source && !ticket) noTicket++;
       updates.push({
         operatore: op.nome, giorno: g, dataISO: dateISO,
@@ -20277,6 +20345,10 @@ async function cpProcessReport(csvText, commessa, squadra) {
     });
   }
 
+  if (updates.length === 0) {
+    showAlertModal(`Nessun operatore della squadra "${squadra}" svolge l'attività "${attSel}" questa settimana.`);
+    return;
+  }
   if (daysWithData === 0) {
     const range = (() => {
       const ds = Object.keys(parsed).map(k => k.split('|||')[1]).sort();
@@ -20290,8 +20362,8 @@ async function cpProcessReport(csvText, commessa, squadra) {
     if (!ok0) return;
   } else {
     const ok = await showConfirmAsync(
-      `Comune "${comuneSel}" — squadra "${squadra}": verranno compilati "Ore Report Prod." e il "Km/Cad" del ticket di quel comune ` +
-      `(${daysWithData} giorni con dati, ${daysZero} a zero` + (noTicket > 0 ? `, ${noTicket} senza ticket del comune` : ``) + `). ` +
+      `Comune ${etichetta} — squadra "${squadra}": verranno compilati "Ore Report Prod." e il "Km/Cad" del ticket ` + (attSel ? `di quell'attività ` : `di quel comune `) +
+      `(${daysWithData} giorni con dati, ${daysZero} a zero` + (noTicket > 0 ? `, ${noTicket} senza ticket` + (attSel ? ` dell'attività` : ` del comune`) : ``) + `). ` +
       `I valori esistenti per quel ticket saranno sovrascritti. Procedere?`,
       'Carica Report');
     if (!ok) return;
@@ -20329,10 +20401,10 @@ async function cpProcessReport(csvText, commessa, squadra) {
   pwControlloRender();
   pwApplyProduzioneColors();
 
-  let msg = `✅ Comune "${comuneSel}" — squadra "${squadra}": aggiornate ${records.length} celle ` +
+  let msg = `✅ Comune ${etichetta} — squadra "${squadra}": aggiornate ${records.length} celle ` +
             `(${daysWithData} giorni con dati, ${daysZero} a zero).`;
   if (noTicket > 0) {
-    msg += `\n\n⚠ ${noTicket} operatore/giorno con dati nel report ma senza ticket del comune "${comuneSel}" (KM non assegnato). Verifica di aver sincronizzato Jira.`;
+    msg += `\n\n⚠ ${noTicket} operatore/giorno con dati nel report ma senza ticket ${etichetta} (KM non assegnato). Verifica di aver sincronizzato Jira.`;
   }
   if (opsNoEmail.size > 0) {
     msg += `\n\n⚠ Operatori senza email assegnata (non abbinabili al report): ${[...opsNoEmail].join(', ')}.`;

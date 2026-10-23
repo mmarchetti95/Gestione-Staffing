@@ -114,6 +114,9 @@ Limite noto: il progetto Supabase è sul piano **Free**, che non include backup 
 
 ## Changelog
 
+## v18.221.0
+- feat: **Carica Report - scelta dell'attività oltre al comune.** Se nella settimana la squadra ha sullo stesso comune sottotask di attività diverse (ognuna con la sua produzione), dopo il comune viene chiesta anche l'attività del report. Il Km/Cad va sul sottotask di quell'attività e vengono aggiornati solo gli operatori/giorni che la svolgono (in Griglia o con un worklog sul suo sottotask): gli altri giorni restano com'erano invece di essere azzerati. L'attività di un sottotask si ricava dal legame creato dalla Griglia (🎫 Sottotask Jira) o, per i sottotask creati a mano, dal titolo «Attività - Comune - Cognome - Week N». Con una sola attività sul comune la domanda non compare e tutto funziona come prima.
+
 ## v18.220.1
 - fix: **Controllo Produzione - orario dello stato solo sul giorno giusto.** Il sottotask è uno per operatore e settimana, quindi le righe di più giorni ne mostrano lo stesso stato: l'orario «▶ 07:59» / «⏸ 12:30» ora compare solo sulla riga del giorno in cui è avvenuta la transizione, non più anche sulle giornate precedenti. Se il ticket è IN PROGRESS da un giorno prima, la riga di oggi lo mostra comunque con giorno e ⚠.
 
