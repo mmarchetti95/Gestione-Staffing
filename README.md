@@ -114,6 +114,12 @@ Limite noto: il progetto Supabase è sul piano **Free**, che non include backup 
 
 ## Changelog
 
+## v18.220.0
+- feat: **Controllo Produzione - lavoro in corso dei ticket IN PROGRESS.** Il worklog lo crea l'automazione Jira solo quando il sottotask lascia IN PROGRESS: finché l'operatore lavora non c'è traccia delle ore. Ora la colonna **Stato** mostra accanto al badge da quando il sottotask è nello stato attuale (**▶ 07:42** IN PROGRESS, **⏸ 12:30** IN PENDING), letto dal changelog Jira e aggiornato col polling ogni 30 s.
+- Nelle righe di **oggi**, sotto le **Ore Jira** compare la quota **▶ +2.3** di lavoro in corso, non ancora registrato (più sottotask aperti insieme contano una volta sola). Nell'infografica oraria è un segmento tratteggiato «07:42–ora» dopo gli interventi già chiusi, e il totale mostra «+ 2h 55m in corso». Solo visualizzazione: non scrive su Jira né in `controllo_produzione`.
+- Un sottotask **IN PROGRESS da un giorno precedente** è in ambra con ⚠ (probabilmente non messo in pausa: alla prossima transizione l'automazione registrerebbe tutto il tempo trascorso).
+- Edge Function `jira-task-status`: nuovo parametro opzionale `statoDa: true`, che per i sottotask IN PROGRESS / IN PENDING restituisce `statoDa` / `statoDaAutore` (ultima transizione verso lo stato attuale, via `changelog/bulkfetch` con ripiego sul changelog per issue). **Va ridistribuita**; senza, la pagina funziona come prima.
+
 ## v18.219.0
 - feat: **Controllo anomalie - maltempo sulle ore scoperte.** Quando un operatore ha meno ore del previsto, il controllo guarda il **meteo osservato** sul cantiere pianificato quel giorno (pioggia ora per ora dello storico meteo, allerta Protezione Civile) nella fascia di lavoro **8-17**. Ore scoperte = ore mancanti rispetto alla giornata piena (8 h), al collega di squadra più alto o alle ore di lavoro MySond. **Probabile maltempo** se la pioggia (≥ 0,5 mm/h o pioggia moderata/forte, neve, temporale) copre almeno metà delle ore scoperte (minimo 2 h), o con allerta arancione/rossa; **possibile** con almeno un'ora di pioggia, allerta gialla o ≥ 8 mm nel giorno.
 - Badge **🌧 probabile / 🌦 possibile maltempo** sulle anomalie «Pianificati senza worklog», «Ore diverse in squadra» (per l'operatore più basso) e «Jira diverso da MySond» (quando Jira è sotto), con il riquadro delle ore 8-17 e i mm caduti.

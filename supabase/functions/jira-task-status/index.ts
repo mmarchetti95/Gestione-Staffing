@@ -21,7 +21,8 @@
 //
 // Contratto richiesta (POST, JSON):
 //   { "subtaskKeys": ["W07R-451", "W07R-452", ...],    // max 500
-//     "soloSottotask": true }                          // opzionale: salta i Task padre
+//     "soloSottotask": true,                           // opzionale: salta i Task padre
+//     "statoDa": true }                                // opzionale: ora dell'ultimo cambio di stato
 //
 // Contratto risposta (JSON):
 //   {
@@ -38,7 +39,9 @@
 //     },
 //     "subtasks": {                                     // stato del sottotask stesso
 //       "W07R-451": { "key": "W07R-451", "summary": "...", "status": "Done",
-//                     "statusCategory": "done", "url": "https://.../browse/W07R-451" }
+//                     "statusCategory": "done", "url": "https://.../browse/W07R-451",
+//                     "statoDa": "2026-10-23T07:42:11.000+0200",   // solo con "statoDa": true
+//                     "statoDaAutore": "Mario Rossi" }
 //     },
 //     "count": 1
 //   }
@@ -47,6 +50,15 @@
 // statusCategory e' una delle tre categorie Jira ("new" | "indeterminate" |
 // "done"): il frontend colora su quella, non sul nome dello stato, che varia
 // da workflow a workflow.
+//
+// "statoDa" (dalla v18.220.0, richiesto da Controllo Produzione): per i sottotask
+// in categoria "indeterminate" (IN PROGRESS / IN PENDING) e' l'ora dell'ultima
+// transizione verso lo stato attuale, letta dal changelog. Serve a mostrare da
+// quando un operatore sta lavorando: il worklog lo crea un'automazione Jira solo
+// all'uscita da IN PROGRESS, quindi fino ad allora l'unica traccia e' la
+// transizione. Il campo di sistema "statuscategorychangedate" non basta: IN
+// PENDING -> IN PROGRESS resta nella stessa categoria e non lo aggiorna.
+// Se il changelog non si legge, i sottotask escono senza "statoDa" (nessun errore).
 
 const JIRA_BASE_URL  = (Deno.env.get("JIRA_BASE_URL")  || "").replace(/\/+$/, "");
 const JIRA_EMAIL     =  Deno.env.get("JIRA_EMAIL")     || "";
@@ -93,6 +105,70 @@ function jqlEscape(s: string): string {
 function chunked<T>(arr: T[], size: number): T[][] {
   const out: T[][] = [];
   for (let i = 0; i < arr.length; i += size) out.push(arr.slice(i, i + size));
+  return out;
+}
+
+async function jiraGet(path: string): Promise<Response> {
+  return fetch(`${JIRA_BASE_URL}${path}`, {
+    headers: { Authorization: jiraAuthHeader(), Accept: "application/json" },
+  });
+}
+
+// Ultima transizione verso lo stato con id statusId fra le history di un changelog.
+function ultimaTransizione(histories: any[], statusId: string): { created: string; autore: string } | null {
+  let best: any = null, bestT = -Infinity;
+  for (const h of histories || []) {
+    const ok = (h.items || []).some((it: any) =>
+      (it.fieldId === "status" || it.field === "status") && String(it.to) === statusId);
+    if (!ok) continue;
+    const t = Date.parse(String(h.created || "").replace(/([+-]\d{2})(\d{2})$/, "$1:$2"));
+    if (isNaN(t) || t <= bestT) continue;
+    bestT = t;
+    best = { created: h.created, autore: h.author?.displayName || "" };
+  }
+  return best;
+}
+
+// Changelog (solo campo status) delle issue indicate: id issue -> history.
+// Prima la bulkfetch (una chiamata per tutte), se non va il changelog per issue.
+async function changelogStato(issues: { id: string; key: string }[]): Promise<Record<string, any[]>> {
+  const out: Record<string, any[]> = {};
+  try {
+    const keyById: Record<string, string> = {};
+    issues.forEach((i) => { keyById[i.id] = i.key; });
+    let nextPageToken: string | undefined = undefined;
+    do {
+      const body: Record<string, unknown> = {
+        issueIdsOrKeys: issues.map((i) => i.key), fieldIds: ["status"], maxResults: 1000,
+      };
+      if (nextPageToken) body.nextPageToken = nextPageToken;
+      const res = await jiraPost(`/rest/api/3/changelog/bulkfetch`, body);
+      if (!res.ok) throw new Error(`changelog/bulkfetch HTTP ${res.status}`);
+      const data = await res.json();
+      (data.issueChangeLogs || []).forEach((c: any) => {
+        const k = keyById[String(c.issueId)] || String(c.issueId);
+        out[k] = (out[k] || []).concat(c.changeHistories || []);
+      });
+      nextPageToken = data.nextPageToken;
+    } while (nextPageToken);
+    return out;
+  } catch (e) {
+    console.warn("[jira-task-status] bulkfetch non disponibile, changelog per issue:", String(e));
+  }
+  for (const i of issues) {
+    try {
+      // Il changelog e' in ordine cronologico: basta l'ultima pagina.
+      let res = await jiraGet(`/rest/api/3/issue/${encodeURIComponent(i.key)}/changelog?maxResults=100`);
+      if (!res.ok) continue;
+      let data = await res.json();
+      if (Number(data.total) > 100) {
+        res = await jiraGet(`/rest/api/3/issue/${encodeURIComponent(i.key)}/changelog?maxResults=100&startAt=${Number(data.total) - 100}`);
+        if (!res.ok) continue;
+        data = await res.json();
+      }
+      out[i.key] = data.values || [];
+    } catch { /* senza statoDa */ }
+  }
   return out;
 }
 
@@ -149,7 +225,7 @@ Deno.serve(async (req: Request) => {
     // Passo 1: sottotask -> chiave del Task padre, piu' lo stato del sottotask stesso.
     const subIssues = await jiraSearch(subtaskKeys, ["parent", "status", "summary"]);
     const bySubtask: Record<string, string> = {};
-    const subtasks: Record<string, unknown> = {};
+    const subtasks: Record<string, any> = {};
     subIssues.forEach((iss: any) => {
       if (!iss.key) return;
       const f = iss.fields || {};
@@ -162,6 +238,18 @@ Deno.serve(async (req: Request) => {
         url: `${JIRA_BASE_URL}/browse/${iss.key}`,
       };
     });
+
+    if (payload?.statoDa === true) {
+      const inCorso = subIssues.filter((iss: any) =>
+        iss.key && iss.id && iss.fields?.status?.statusCategory?.key === "indeterminate");
+      if (inCorso.length) {
+        const logs = await changelogStato(inCorso.map((iss: any) => ({ id: String(iss.id), key: iss.key })));
+        inCorso.forEach((iss: any) => {
+          const tr = ultimaTransizione(logs[iss.key] || [], String(iss.fields.status.id || ""));
+          if (tr) { subtasks[iss.key].statoDa = tr.created; subtasks[iss.key].statoDaAutore = tr.autore; }
+        });
+      }
+    }
 
     // Il polling di Controllo Produzione (ogni 30s) vuole solo lo stato dei
     // sottotask: niente seconda search sui Task padre.

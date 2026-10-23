@@ -303,7 +303,7 @@ function pwControlloRender() {
       <td class="cp-wrap" style="color:#64748b" title="${esc(op.attivita)}">${esc(op.attivita)}</td>
       <td class="cp-stato" data-keys="${esc(JSON.stringify(statoKeys))}" style="vertical-align:top;padding-top:4px;text-align:center">${cpStatoCellHtml(statoKeys)}</td>
       <td class="cp-meteo" data-cantieri="${esc(JSON.stringify(op.cantieri))}" data-date="${dateISOs[g]}" style="text-align:center">${cpMeteoCellHtml(op.cantieri, dateISOs[g])}</td>
-      <td class="cp-oj-cell" style="${cpOreJiraStyle(jVal, g)}" data-date="${dateISOs[g]}" data-giorno="${esc(DAY_NAMES[g] + ' ' + dates[g])}" onmouseenter="cpOreJiraShow(this)" onmouseleave="cpOreJiraHide()"><span id="cp-j-${ri}" data-jval="${esc(String(jVal))}">${jDisplay}</span></td>
+      <td class="cp-oj-cell" style="${cpOreJiraStyle(jVal, g)}" data-date="${dateISOs[g]}" data-giorno="${esc(DAY_NAMES[g] + ' ' + dates[g])}" onmouseenter="cpOreJiraShow(this)" onmouseleave="cpOreJiraHide()"><span id="cp-j-${ri}" data-jval="${esc(String(jVal))}">${jDisplay}</span><div class="cp-oj-live-slot"></div></td>
       <td class="cp-mysond" style="text-align:center">${cpMysondCellHtml(op.nome, g, jVal, op.cantieri)}</td>
       <td style="vertical-align:top;padding-top:4px;">${ticketHtml}</td>
       <td style="vertical-align:top;padding-top:4px;">${epicHtml}</td>
@@ -400,10 +400,14 @@ async function cpMeteoRefresh(blocks, dateISOs) {
    giorno che non compaiono fra i worklog della riga (bc.jiraSubtask: è l'unico legame certo
    cantiere→sottotask). Solo l'attività del giorno: gli altri sottotask dello stesso operatore sullo
    stesso cantiere (altre attività, altri giorni della week) qui non c'entrano. Si aggiorna
-   da solo ogni CP_STATO_POLL_MS mentre il tab è aperto e visibile, e a ogni "Sincronizza". */
+   da solo ogni CP_STATO_POLL_MS mentre il tab è aperto e visibile, e a ogni "Sincronizza".
+   Per i sottotask IN PROGRESS / IN PENDING si chiede anche "statoDa", l'ora dell'ultimo cambio di
+   stato letta dal changelog Jira: il worklog lo crea un'automazione Jira solo all'uscita da IN
+   PROGRESS, quindi fino ad allora è l'unica traccia di quando l'operatore ha iniziato. Da qui la
+   quota "in corso" (non ancora registrata) nella colonna Ore Jira delle righe di oggi. */
 const CP_STATO_POLL_MS = 30000;
 const CP_STATO_CHUNK = 400;                 // la Edge Function accetta al massimo 500 chiavi
-const _cpStatoTicket = {};                  // chiave → { key, summary, status, statusCategory, url } | null (non trovato)
+const _cpStatoTicket = {};                  // chiave → { key, summary, status, statusCategory, url, statoDa?, statoDaAutore? } | null (non trovato)
 let _cpStatoBusy = false, _cpStatoPending = false, _cpStatoTimer = null;
 
 function cpStatoKeysRiga(bc, op, tickets) {
@@ -418,6 +422,63 @@ function cpStatoKeysRiga(bc, op, tickets) {
     add(e && e.key, 'griglia');
   });
   return keys;
+}
+
+/* Stati del workflow Jira dei sottotask: TO DO → IN PROGRESS (lavorano) ⇄ IN PENDING (pausa) → DONE. */
+function cpStatoInProgress(t) { return !!t && /^in\s*progress$/i.test(String(t.status || '').trim()); }
+function cpStatoInPending(t) { return !!t && /pending/i.test(String(t.status || '')); }
+
+/* Ora di Roma adesso: { data: 'YYYY-MM-DD', min } (stesso formato di _cpOjParti). */
+function cpOraRoma() { return _cpOjParti(new Date().toISOString()); }
+
+/* statoDa (formato Jira) → { data, min, oggi, testo }: testo "07:42" se è oggi, "gio 22/10 17:30" se prima. */
+function cpStatoDaInfo(statoDa) {
+  const p = _cpOjParti(statoDa), ora = cpOraRoma();
+  if (!p || !ora) return null;
+  const oggi = p.data === ora.data;
+  let testo = _cpOjOra(p.min);
+  if (!oggi) {
+    const gs = ['dom', 'lun', 'mar', 'mer', 'gio', 'ven', 'sab'][new Date(p.data + 'T12:00:00Z').getUTCDay()];
+    testo = gs + ' ' + p.data.slice(8, 10) + '/' + p.data.slice(5, 7) + ' ' + testo;
+  }
+  return { data: p.data, min: p.min, oggi, testo };
+}
+
+/* Lavoro in corso di una riga di Controllo Produzione: solo se la riga è di oggi e ha sottotask in
+   IN PROGRESS con l'ora della transizione. Più sottotask aperti insieme si contano una volta sola
+   (tutti finiscono "adesso", quindi l'unione parte dal primo). inizio/fine in minuti dalla
+   mezzanotte del giorno della riga: inizio è negativo se il ticket è aperto da un giorno prima. */
+function cpLavoroInCorso(tr, dateISO) {
+  const ora = cpOraRoma();
+  if (!tr || !ora || ora.data !== dateISO) return null;
+  const td = tr.querySelector('td.cp-stato');
+  let keys = [];
+  try { keys = JSON.parse((td && td.dataset.keys) || '[]'); } catch (_) {}
+  const voci = [];
+  keys.forEach(x => {
+    const t = _cpStatoTicket[x.key];
+    if (!cpStatoInProgress(t) || !t.statoDa) return;
+    const info = cpStatoDaInfo(t.statoDa);
+    if (!info) return;
+    const off = Math.round((Date.parse(info.data + 'T00:00:00Z') - Date.parse(dateISO + 'T00:00:00Z')) / 60000);
+    if (isNaN(off)) return;
+    voci.push({ t, info, inizio: info.min + off });
+  });
+  if (!voci.length) return null;
+  const inizio = Math.min(...voci.map(v => v.inizio));
+  return { voci, inizio, fine: ora.min, minuti: Math.max(0, ora.min - inizio), vecchio: voci.some(v => !v.info.oggi) };
+}
+
+/* Quota "in corso" sotto le Ore Jira: arancione, ambra con ⚠ se il ticket è IN PROGRESS da un giorno
+   prima (nessuno l'ha messo in pausa: alla prossima transizione l'automazione registrerebbe tutto). */
+function cpOreJiraLiveHtml(lv) {
+  if (!lv) return '';
+  const da = lv.voci.map(v => v.t.key + ' IN PROGRESS ' + (v.info.oggi ? 'dalle ' : 'da ') + v.info.testo + (v.t.statoDaAutore ? ' (' + v.t.statoDaAutore + ')' : '')).join('\n');
+  const ttl = 'Lavoro in corso, non ancora registrato su Jira: ' + _cpOjDurata(lv.minuti) + '\n' + da +
+    '\nIl worklog lo crea l\'automazione Jira al passaggio a IN PENDING o DONE.' +
+    (lv.vecchio ? '\n⚠ Il ticket è IN PROGRESS da un giorno precedente: probabilmente non è stato messo in pausa.' : '');
+  return '<div class="cp-oj-live' + (lv.vecchio ? ' vecchio' : '') + '" title="' + esc(ttl) + '">' +
+    (lv.vecchio ? '⚠' : '▶') + ' +' + (lv.minuti / 60).toFixed(1) + '</div>';
 }
 
 function cpStatoCellHtml(keys) {
@@ -435,12 +496,21 @@ function cpStatoCellHtml(keys) {
       bg = ML_STATUS_COLORS[t.statusCategory] || '#94a3b8';
       ttl = x.key + (t.summary && t.summary !== x.key ? ' — ' + t.summary : '') + '\nStato: ' + lbl;
     }
+    // Da quando è nello stato attuale (solo IN PROGRESS / IN PENDING, se Jira ha restituito statoDa)
+    let daHtml = '';
+    const daInfo = t && t.statoDa && (cpStatoInProgress(t) || cpStatoInPending(t)) ? cpStatoDaInfo(t.statoDa) : null;
+    if (daInfo) {
+      const prog = cpStatoInProgress(t), vecchio = prog && !daInfo.oggi;
+      daHtml = '<span class="cp-stato-da' + (vecchio ? ' vecchio' : '') + '">' + (prog ? '▶' : '⏸') + ' ' + esc(daInfo.testo) + (vecchio ? ' ⚠' : '') + '</span>';
+      ttl += '\n' + lbl + (daInfo.oggi ? ' dalle ' : ' da ') + daInfo.testo + (t.statoDaAutore ? ' (' + t.statoDaAutore + ')' : '') +
+        (vecchio ? '\n⚠ IN PROGRESS da un giorno precedente: probabilmente non è stato messo in pausa' : '');
+    }
     const url = (t && t.url) || cpStatoUrlFor(x.key);
     const prefisso = x.fonte === 'griglia' ? '<span style="color:' + (url ? '#2563eb' : '#64748b') + ';font-size:10px;margin-right:3px">' + esc(x.key) + '</span>' : '';
     const stile = 'height:24px;display:flex;align-items:center;justify-content:center;white-space:nowrap;text-decoration:none';
     const badge = '<span style="display:inline-block;max-width:90px;overflow:hidden;text-overflow:ellipsis;background:' + bg + ';color:#fff;border-radius:9px;padding:1px 7px;font-size:10px;font-weight:600;line-height:16px">' + esc(lbl) + '</span>';
-    if (!url) return '<div style="' + stile + '" title="' + esc(ttl + '\n' + fonte) + '">' + prefisso + badge + '</div>';
-    return '<a href="' + esc(url) + '" target="_blank" rel="noopener" style="' + stile + ';cursor:pointer" title="' + esc(ttl + '\n' + fonte + '\nClic per aprire su Jira') + '">' + prefisso + badge + '</a>';
+    if (!url) return '<div style="' + stile + '" title="' + esc(ttl + '\n' + fonte) + '">' + prefisso + badge + daHtml + '</div>';
+    return '<a href="' + esc(url) + '" target="_blank" rel="noopener" style="' + stile + ';cursor:pointer" title="' + esc(ttl + '\n' + fonte + '\nClic per aprire su Jira') + '">' + prefisso + badge + daHtml + '</a>';
   }).join('');
 }
 
@@ -454,12 +524,16 @@ function cpStatoUrlFor(key) {
   return '';
 }
 
-/* Ridisegna solo le celle Stato, senza un render completo (non fa perdere il focus agli input). */
+/* Ridisegna solo le celle Stato e la quota "in corso" delle Ore Jira, senza un render completo
+   (non fa perdere il focus agli input). */
 function cpApplyStatoToDom() {
   document.querySelectorAll('.cp-table td.cp-stato').forEach(td => {
     let keys = [];
     try { keys = JSON.parse(td.dataset.keys || '[]'); } catch (_) {}
     td.innerHTML = cpStatoCellHtml(keys);
+    const tr = td.closest('tr'), oj = tr && tr.querySelector('td.cp-oj-cell');
+    const live = oj && oj.querySelector('.cp-oj-live-slot');
+    if (live) live.innerHTML = cpOreJiraLiveHtml(cpLavoroInCorso(tr, oj.dataset.date));
   });
 }
 
@@ -479,7 +553,7 @@ async function cpStatoRefresh(force) {
     const all = [...keys];
     for (let i = 0; i < all.length; i += CP_STATO_CHUNK) {
       const c = all.slice(i, i + CP_STATO_CHUNK);
-      const { data, error } = await _sbClient.functions.invoke('jira-task-status', { body: { subtaskKeys: c, soloSottotask: true } });
+      const { data, error } = await _sbClient.functions.invoke('jira-task-status', { body: { subtaskKeys: c, soloSottotask: true, statoDa: true } });
       if (error) throw new Error(await _cpEdgeErr(error, 'jira-task-status'));
       if (data && data.error) throw new Error(data.error);
       const sub = (data && data.subtasks) || {};

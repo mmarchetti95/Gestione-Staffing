@@ -5,6 +5,8 @@
 // i worklog in jira_tickets[].worklogs, che jira-sync-worklogs restituisce dalla v18.210.0: le
 // righe sincronizzate prima hanno solo le ore per ticket finché non si risincronizza.
 // Orari sempre in ora italiana (Europe/Rome), qualunque sia il fuso registrato nel worklog.
+// Nelle righe di oggi, un sottotask IN PROGRESS aggiunge un segmento tratteggiato "in corso"
+// dall'ora della transizione (statoDa, vedi cpLavoroInCorso) ad adesso: non è ancora un worklog.
 
 const CP_OJ_COLORI = ['#0d9488', '#6366f1', '#f59e0b', '#ec4899', '#0ea5e9', '#84cc16', '#8b5cf6', '#ef4444'];
 const CP_OJ_PAUSA_MIN = 15;   // pause più brevi non vengono elencate
@@ -76,14 +78,14 @@ function _cpOjTimeline(iv) {
     axis += '<span style="left:' + pct(h * 60) + '">' + String(((h % 24) + 24) % 24).padStart(2, '0') + '</span>';
   }
   const bars = iv.map((x, i) =>
-    '<div class="cp-oj-bar" style="left:' + pct(x.inizio) + ';width:' + ((x.fine - x.inizio) / span * 100).toFixed(2) + '%;top:' +
+    '<div class="cp-oj-bar' + (x.inCorso ? ' cp-oj-bar-live' : '') + '" style="left:' + pct(x.inizio) + ';width:' + ((x.fine - x.inizio) / span * 100).toFixed(2) + '%;top:' +
     (2 + corsie[i] * CP_OJ_CORSIA_PX) + 'px;background:' + x.colore + '"></div>').join('');
   return '<div class="cp-oj-track" style="height:' + (fineCorsia.length * CP_OJ_CORSIA_PX + 4) + 'px">' + grid + bars + '</div>' +
     '<div class="cp-oj-axis">' + axis + '</div>';
 }
 
-function _cpOjRiga(colore, orario, durata, t, commento, sovrapposto) {
-  return '<div class="cp-oj-row"><span class="cp-oj-dot" style="background:' + colore + '"></span>' +
+function _cpOjRiga(colore, orario, durata, t, commento, sovrapposto, inCorso) {
+  return '<div class="cp-oj-row' + (inCorso ? ' cp-oj-row-live' : '') + '"><span class="cp-oj-dot" style="background:' + colore + '"></span>' +
     '<span class="cp-oj-ora">' + orario + (sovrapposto ? ' ⚠' : '') + '</span><span class="cp-oj-dur">' + durata + '</span>' +
     '<span class="cp-oj-tk"><b>' + esc(t.key || '') + '</b>' +
     (t.summary ? '<small>' + esc(t.summary) + '</small>' : (t.epic && t.epic.name ? '<small>🟣 ' + esc(t.epic.name) + '</small>' : '')) +
@@ -98,7 +100,9 @@ function _cpOjElenco(iv) {
     if (finoA != null && x.inizio - finoA >= CP_OJ_PAUSA_MIN) {
       html += '<div class="cp-oj-pausa">pausa ' + _cpOjOra(finoA) + '–' + _cpOjOra(x.inizio) + ' (' + _cpOjDurata(x.inizio - finoA) + ')</div>';
     }
-    html += _cpOjRiga(x.colore, _cpOjOra(x.inizio) + '–' + _cpOjOra(x.fine), _cpOjDurata(x.fine - x.inizio), x.t, x.commento, sovr);
+    html += x.inCorso
+      ? _cpOjRiga(x.colore, x.daTesto + '–ora', _cpOjDurata(x.fine - x.inizioReale), x.t, x.commento, sovr, true)
+      : _cpOjRiga(x.colore, _cpOjOra(x.inizio) + '–' + _cpOjOra(x.fine), _cpOjDurata(x.fine - x.inizio), x.t, x.commento, sovr);
     finoA = finoA == null ? x.fine : Math.max(finoA, x.fine);
   });
   if (sovrapposti) {
@@ -113,12 +117,32 @@ function cpOreJiraPopupHtml(td) {
   const cell = (tr && _cpData[tr.dataset.cpk]) || {};
   const tickets = Array.isArray(cell.jira_tickets) ? cell.jira_tickets : [];
   const ore = parseFloat(String(cell.ore_jira));
+  const live = cpLavoroInCorso(tr, td.dataset.date);
   let html = '<div class="cp-oj-h"><b>🕘 ' + esc(tr ? tr.dataset.operatore : '') + ' · ' + esc(td.dataset.giorno || '') + '</b>' +
-    (isNaN(ore) ? '' : '<span class="cp-oj-tot">Totale ' + _cpOjDurata(ore * 60) + '</span>') + '</div>';
-  if (isNaN(ore)) return html + '<div class="cp-oj-vuoto">Non ancora sincronizzato con Jira (🔄 Sincronizza squadra).</div>';
-  if (!tickets.length) return html + '<div class="cp-oj-vuoto">Nessun worklog Jira in questo giorno.</div>';
+    (isNaN(ore) && !live ? '' : '<span class="cp-oj-tot">Totale ' + _cpOjDurata((isNaN(ore) ? 0 : ore) * 60) +
+      (live ? ' <span class="cp-oj-tot-live">+ ' + _cpOjDurata(live.minuti) + ' in corso</span>' : '') + '</span>') + '</div>';
+  if (isNaN(ore) && !live) return html + '<div class="cp-oj-vuoto">Non ancora sincronizzato con Jira (🔄 Sincronizza squadra).</div>';
+  if (!tickets.length && !live) return html + '<div class="cp-oj-vuoto">Nessun worklog Jira in questo giorno.</div>';
   const { interventi, senzaOrari } = cpOreJiraInterventi(tickets, td.dataset.date);
+  if (live) {
+    // Stesso colore del ticket se compare già fra i worklog della riga; la barra parte al più da
+    // mezzanotte (un IN PROGRESS di ieri non allarga la timeline ai giorni prima).
+    live.voci.forEach((v, i) => {
+      const ti = tickets.findIndex(t => t.key === v.t.key);
+      interventi.push({
+        t: v.t, colore: CP_OJ_COLORI[(ti >= 0 ? ti : tickets.length + i) % CP_OJ_COLORI.length],
+        inizio: Math.max(0, v.inizio), inizioReale: v.inizio, fine: live.fine, inCorso: true,
+        daTesto: v.info.oggi ? v.info.testo : 'da ' + v.info.testo,
+        commento: 'IN PROGRESS, non ancora registrato su Jira' + (v.t.statoDaAutore ? ' (transizione di ' + v.t.statoDaAutore + ')' : ''),
+      });
+    });
+    interventi.sort((a, b) => a.inizio - b.inizio || a.fine - b.fine);
+  }
   if (interventi.length) html += _cpOjTimeline(interventi) + _cpOjElenco(interventi);
+  if (live && live.vecchio) {
+    html += '<div class="cp-oj-warn">⚠ Ticket IN PROGRESS da un giorno precedente: probabilmente non è stato messo in pausa. ' +
+      'Alla prossima transizione l\'automazione Jira registrerebbe tutto il tempo trascorso.</div>';
+  }
   if (senzaOrari.length) {
     html += '<div class="cp-oj-vuoto" style="margin-bottom:4px">Orari non disponibili: la riga è stata sincronizzata prima che venissero letti. Risincronizza (🔄 Sincronizza squadra) per vederli.</div>' +
       senzaOrari.map(x => _cpOjRiga(x.colore, '—', x.t.hours != null ? _cpOjDurata(x.t.hours * 60) : '', x.t, '', false)).join('');
