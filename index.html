@@ -1899,7 +1899,7 @@
       </span>
       <button id="btn-presentation" class="px-3 py-1.5 text-sm rounded hover:bg-white/10" style="border:1px solid var(--dark-border-strong);color:var(--dark-text);visibility:visible;">📊 Modalità presentazione</button>
       <div class="text-xs pl-2" style="border-left:1px solid var(--dark-border-strong);color:var(--dark-text-muted);">
-        <span id="app-version" class="font-medium" style="color:var(--accent);">v18.218.0</span> · Michele Marchetti
+        <span id="app-version" class="font-medium" style="color:var(--accent);">v18.219.0</span> · Michele Marchetti
         <span id="sb-role-badge" style="margin-left:8px;padding:1px 8px;border-radius:9999px;background:rgba(255,255,255,.1);color:var(--dark-text);font-weight:600;"></span>
       </div>
     </div>
@@ -20823,6 +20823,10 @@ async function cpMysondImportFile(file) {
                                                  sottotask di TUTTA la Griglia (non solo la settimana)
      mysond: { operatore: { giorno: { ore, dettaglio: [{ commessa, voce, att1, att2, descrizione, ore }] } } } | null,
                                                  ore MySond della settimana (null = non caricate)
+     meteoDi: (cantiere, giorno) => { cantiere, precip, hourly: [{hour,code,precip}], sev, pc } | null,
+                                                 meteo OSSERVATO del cantiere quel giorno (sev = severità
+                                                 giornaliera già calcolata, pc = colore peggiore del
+                                                 bollettino Protezione Civile)
      soglie: { ... }                             vedi CPA_SOGLIE_DEFAULT
    }
 */
@@ -20838,6 +20842,8 @@ const CPA_TIPI = {
     descrizione: 'Operatori della stessa squadra, nello stesso giorno, con ore Jira diverse.' },
   mysond_diverso:               { icona: '🧾', etichetta: 'Jira diverso da MySond',
     descrizione: 'Ore Jira del giorno diverse dalle ore lavorate in MySond. Viaggio e ore non lavorate non vanno su Jira: Jira è in regola fra le ore di lavoro senza viaggio e quelle con il viaggio.' },
+  ore_scoperte_maltempo:        { icona: '🌧', etichetta: 'Ore scoperte con maltempo',
+    descrizione: 'Giornate pianificate con meno ore Jira di una giornata piena e probabile maltempo sul cantiere nelle ore di lavoro (pioggia osservata ora per ora, allerta Protezione Civile). Sulle altre anomalie con meno ore il maltempo compare come segnalazione aggiuntiva.' },
 };
 
 const CPA_SOGLIE_DEFAULT = {
@@ -20845,7 +20851,15 @@ const CPA_SOGLIE_DEFAULT = {
   diffOreSquadra: 1,    // scarto (h) fra il massimo della squadra e un operatore oltre cui segnalare
   diffOreAlta: 3,       // scarto da cui la gravità passa a "media"
   diffOreMysond: 0.5,   // scarto (h) fra Jira e MySond oltre cui segnalare
+  oreGiornata: 8,       // giornata piena attesa su Jira, per le ore scoperte
 };
+
+/* Fascia di lavoro per il maltempo: ore di inizio degli slot orari 8..16 (8:00-17:00) */
+const CPA_METEO_FASCIA = [8, 17];
+/* Codici meteo WMO che fermano un rilievo anche con pochi mm: pioggia moderata/forte,
+   gelata, neve, rovesci, temporali */
+const CPA_METEO_CODICI = [63, 65, 66, 67, 73, 75, 77, 81, 82, 86, 95, 96, 99];
+const CPA_PC_RANK = { gialla: 1, arancione: 2, rossa: 3 };
 
 const CPA_GRAVITA_ORD = { alta: 0, media: 1, bassa: 2 };
 
@@ -21222,6 +21236,143 @@ function _cpaControllaMysond(input, out, perOpGiorno, wl, ore) {
   });
 }
 
+/* ---------- Maltempo nelle ore scoperte ---------- */
+
+/* Open-Meteo dà la pioggia "dell'ora precedente": il valore delle 10:00 è quella caduta
+   fra le 9 e le 10. Qui ogni slot è indicato con l'ora di INIZIO. */
+function _cpaMeteoOrario(m) {
+  return (m.hourly || []).map(x => {
+    const fine = parseInt(String(x.hour || '').slice(0, 2), 10);
+    if (!isFinite(fine)) return null;
+    const mm = _cpaNum(x.precip);
+    return { ora: fine - 1, mm: mm || 0, maltempo: (mm != null && mm >= 0.5) || CPA_METEO_CODICI.includes(x.code) };
+  }).filter(x => x && x.ora >= CPA_METEO_FASCIA[0] && x.ora < CPA_METEO_FASCIA[1]);
+}
+
+/* Ore con maltempo raggruppate in fasce leggibili: [8,9,10,14] -> "8-11, 14-15" */
+function _cpaMeteoFasce(ore) {
+  const out = [];
+  ore.forEach(h => {
+    const u = out[out.length - 1];
+    if (u && u[1] === h) u[1] = h + 1; else out.push([h, h + 1]);
+  });
+  return out.map(f => f[0] + '-' + f[1]).join(', ');
+}
+
+/* Evidenza di maltempo per le ore scoperte di un operatore in un giorno, sul peggiore dei
+   suoi cantieri. 'probabile': la pioggia copre almeno metà delle ore scoperte (minimo 2 h)
+   oppure allerta PC arancione/rossa, oppure giornata grave con almeno un'ora di pioggia in
+   fascia. 'possibile': almeno un'ora di pioggia in fascia, allerta gialla o giornata da
+   >= 8 mm. null = nessuna evidenza (o meteo non disponibile: vedi `mancante`). */
+function cpaMeteoEvidenza(input, cantieri, giorno, oreScoperte) {
+  if (!(oreScoperte >= 0.5) || typeof input.meteoDi !== 'function') return null;
+  const dati = [...new Set(cantieri || [])].map(c => input.meteoDi(c, giorno)).filter(Boolean);
+  if (!dati.length) return { mancante: true };
+  const valutati = dati.map(m => {
+    const orario = _cpaMeteoOrario(m);
+    const bagnate = orario.filter(x => x.maltempo);
+    const pcR = CPA_PC_RANK[m.pc] || 0;
+    const nOre = bagnate.length;
+    const mmFascia = Math.round(bagnate.reduce((a, x) => a + x.mm, 0) * 10) / 10;
+    let livello = null;
+    if ((nOre >= 2 && nOre >= oreScoperte / 2) || pcR >= 2 || (m.sev === 'alta' && nOre >= 1)) livello = 'probabile';
+    else if (nOre >= 1 || pcR === 1 || m.sev || (m.precip != null && m.precip >= 8)) livello = 'possibile';
+    return { cantiere: m.cantiere, livello, orePioggia: nOre, fasce: _cpaMeteoFasce(bagnate.map(x => x.ora)), mmFascia,
+      mmGiorno: _cpaNum(m.precip), pc: m.pc || null, orario, senzaOrario: !orario.length };
+  });
+  const rk = e => (e.livello === 'probabile' ? 20 : e.livello === 'possibile' ? 10 : 0) + e.orePioggia + (CPA_PC_RANK[e.pc] || 0) / 10;
+  const best = valutati.sort((x, y) => rk(y) - rk(x))[0];
+  if (!best.livello) return null;
+  const parti = [];
+  if (best.orePioggia) parti.push('pioggia in ' + best.orePioggia + (best.orePioggia === 1 ? ' ora' : ' ore') + ' di lavoro (' + best.fasce + ', ' + _cpaFmt(best.mmFascia) + ' mm)');
+  else if (best.senzaOrario && best.mmGiorno != null) parti.push(_cpaFmt(best.mmGiorno) + ' mm nel giorno (dettaglio orario non disponibile)');
+  else if (best.mmGiorno) parti.push(_cpaFmt(best.mmGiorno) + ' mm nel giorno');
+  if (best.pc) parti.push('allerta Protezione Civile ' + best.pc);
+  best.oreScoperte = Math.round(oreScoperte * 100) / 100;
+  best.testo = (best.livello === 'probabile' ? 'Probabile' : 'Possibile') + ' maltempo sul cantiere ' + best.cantiere + ': ' + parti.join('; ') +
+    '. Ore scoperte: ' + _cpaFmt(best.oreScoperte) + ' h.';
+  return best;
+}
+
+/* Il più forte fra due esiti di cpaMeteoEvidenza (per le squadre con più operatori bassi) */
+function _cpaMeteoMax(a, b) {
+  const v = e => (!e || e.mancante) ? 0 : (e.livello === 'probabile' ? 2 : 1);
+  return v(b) > v(a) ? b : a;
+}
+
+/* Badge meteo sulle anomalie con meno ore del previsto. Torna "operatore|||giorno" già
+   coperti, che il controllo "ore scoperte con maltempo" non ripete. */
+function _cpaAnnotaMeteo(input, out, nonVerificabili) {
+  const S = input.soglie;
+  const coperti = new Set();
+  const segna = (a, ev) => {
+    if (ev && ev.mancante) { nonVerificabili.meteoMancante++; return; }
+    if (ev) a.meteo = ev;
+  };
+  out.forEach(a => {
+    const C = a.confronto || {};
+    const cantG = (C.griglia || []).map(v => v.cantiere);
+    if (a.tipo === 'pianificato_senza_worklog') {
+      coperti.add(a.operatore + '|||' + a.giorno);
+      segna(a, cpaMeteoEvidenza(input, cantG, a.giorno, S.oreGiornata - (C.oreJira || 0)));
+    } else if (a.tipo === 'mysond_diverso' && C.oreJira < C.attesoMin) {
+      coperti.add(a.operatore + '|||' + a.giorno);
+      if (cantG.length) segna(a, cpaMeteoEvidenza(input, cantG, a.giorno, C.attesoMin - C.oreJira));
+    } else if (a.tipo === 'ore_squadra') {
+      let best = null;
+      (C.membri || []).filter(m => m.basso).forEach(m => {
+        coperti.add(m.operatore + '|||' + a.giorno);
+        const ev = cpaMeteoEvidenza(input, m.cantieri, a.giorno, C.max - m.ore);
+        if (ev && !ev.mancante) m.meteo = ev;
+        best = _cpaMeteoMax(best, ev);
+      });
+      segna(a, best);
+    }
+  });
+  return coperti;
+}
+
+/* ---------- 6) Ore scoperte con probabile maltempo ---------- */
+
+/* Giornate pianificate con ore Jira parziali (almeno un'ora in meno della giornata piena)
+   non già segnalate da altri controlli, solo se il maltempo è PROBABILE: è l'evidenza da
+   portare ai controller, non un errore da correggere. */
+function _cpaControllaMaltempo(input, out, perOpGiorno, wl, ore, coperti, nonVerificabili) {
+  const S = input.soglie;
+  const verificati = new Set(input.verificati || []);
+  const valutabili = new Set(input.giorniValutabili || []);
+  Object.keys(perOpGiorno).forEach(k => {
+    if (coperti.has(k)) return;
+    const celle = perOpGiorno[k].filter(c => !c.ferie);
+    if (!celle.length) return;
+    const op = celle[0].operatore, g = celle[0].giorno;
+    if (!verificati.has(op) || !valutabili.has(g)) return;
+    const h = Math.round(ore(op, g) * 100) / 100;
+    if (h < S.oreMinime || h > S.oreGiornata - 1 + 1e-9) return;
+    const cantieri = [...new Set(celle.flatMap(_cpaCantieriCella))];
+    const ev = cpaMeteoEvidenza(input, cantieri, g, S.oreGiornata - h);
+    if (ev && ev.mancante) { nonVerificabili.meteoMancante++; return; }
+    if (!ev || ev.livello !== 'probabile') return;
+    const ticket = ((wl(op, g) || {}).tickets) || [];
+    out.push({
+      id: _cpaId('ore_scoperte_maltempo', input, [op, g]),
+      tipo: 'ore_scoperte_maltempo', gravita: 'bassa',
+      commessa: celle[0].commessa, squadra: celle[0].squadra, operatore: op, giorno: g,
+      cpKey: celle[0].cpKey, cantiere: cantieri.join(', '),
+      titolo: op + ': ' + _cpaFmt(h) + ' h su Jira, probabile maltempo per le ' + _cpaFmt(ev.oreScoperte) + ' h scoperte',
+      dettaglio: ev.testo,
+      correzione: 'Se il cantiere si è fermato per maltempo non c\'è nulla da correggere: è la giustificazione delle ore mancanti. Altrimenti chiedere a ' + op + ' se mancano ore su Jira.',
+      confronto: {
+        griglia: celle.flatMap(c => (c.voci || []).map(v => ({ commessa: c.commessa, squadra: c.squadra, cantiere: v.cantiere, attivita: v.attivita || '', subtask: v.subtask }))),
+        jira: _cpaTicketJira(input, ticket), oreJira: h,
+      },
+      meteo: ev,
+      azione: null,
+      link: [],
+    });
+  });
+}
+
 /* ---------- Ingresso ---------- */
 
 function cpaRileva(input) {
@@ -21229,7 +21380,7 @@ function cpaRileva(input) {
   inp.soglie = Object.assign({}, CPA_SOGLIE_DEFAULT, (input && input.soglie) || {});
   if (typeof inp.ferieDi !== 'function') inp.ferieDi = () => null;
   const out = [];
-  const nonVerificabili = { epicSenzaSottotask: 0 };
+  const nonVerificabili = { epicSenzaSottotask: 0, meteoMancante: 0 };
   if (inp.worklog) {
     const perOpGiorno = {};   // operatore|||giorno -> celle (tutte le commesse)
     inp.celle.forEach(c => {
@@ -21243,6 +21394,8 @@ function cpaRileva(input) {
     _cpaControllaEpic(inp, out, perOpGiorno, wl, nonVerificabili);
     _cpaControllaOreSquadra(inp, out, wl, ore);
     _cpaControllaMysond(inp, out, perOpGiorno, wl, ore);
+    const coperti = _cpaAnnotaMeteo(inp, out, nonVerificabili);
+    _cpaControllaMaltempo(inp, out, perOpGiorno, wl, ore, coperti, nonVerificabili);
   }
   const ordTipo = Object.keys(CPA_TIPI);
   out.sort((a, b) =>
@@ -21321,6 +21474,7 @@ function cpaTestoCorrezioni(anomalie, giorniLabel, intestazione) {
       righe.push('- ' + (giorniLabel[a.giorno] || '') + ' · ' + [a.commessa, a.squadra].filter(Boolean).join(' / ') + ' · ' + a.titolo);
       righe.push('  ' + a.dettaglio);
       righe.push('  ' + a.correzione);
+      if (a.meteo && a.meteo.testo && a.tipo !== 'ore_scoperte_maltempo') righe.push('  ' + a.meteo.testo);
     });
   });
   return righe.join('\n');
@@ -21392,6 +21546,49 @@ function _cpaPref() {
   const def = { diffOreSquadra: CPA_SOGLIE_DEFAULT.diffOreSquadra, diffOreMysond: CPA_SOGLIE_DEFAULT.diffOreMysond };
   try { return Object.assign(def, JSON.parse(localStorage.getItem(CPA_PREF_KEY) || '{}')); }
   catch (_) { return def; }
+}
+
+/* Meteo OSSERVATO di un cantiere in un giorno della settimana del controllo, per il motore
+   (storico Open-Meteo con dettaglio orario + colore peggiore del bollettino PC). */
+function _cpaMeteoDi(dateIso) {
+  return (cantiere, g) => {
+    const d = dateIso[g];
+    if (!d || d >= meteoTodayISO()) return null;
+    const info = pwMeteoInfoFor(cantiere, d);
+    const pc = pcColorePeggiore(pcInfoFor(cantiere, d));
+    if (!info && !pc) return null;
+    return { cantiere, precip: info ? info.precip : null, hourly: info ? info.hourly : [], sev: pwMeteoSeverityFor(info), pc };
+  };
+}
+
+/* Carica lo storico meteo della settimana (Supabase, poi in coda il recupero di quanto
+   manca) e ricalcola quando arriva. Una volta per settimana per sessione; Ricontrolla lo
+   rilancia. */
+const _cpaMeteoAvviato = new Set();
+function _cpaMeteoCarica(forza) {
+  if (typeof msCanSync !== 'function' || !msCanSync()) return;
+  const k = _cpaKey(pwAnno, pwWeek);
+  if (_cpaMeteoAvviato.has(k) && !forza) return;
+  _cpaMeteoAvviato.add(k);
+  const d = _cpaDateSettimana();
+  const oggi = _cpaOggiISO();
+  const visti = new Set(), pairs = [];
+  _cpaCelleSettimana().celle.forEach(c => {
+    const dateISO = d.iso[c.giorno];
+    if (c.ferie || dateISO >= oggi) return;
+    c.voci.forEach(v => {
+      const kk = dateISO + '|' + msKeyOf(v.cantiere);
+      if (!visti.has(kk)) { visti.add(kk); pairs.push({ cantiere: v.cantiere, dateISO }); }
+    });
+  });
+  if (!pairs.length) return;
+  const anno = pwAnno, week = pwWeek;
+  const aggiorna = () => { if (_cpa.anno === anno && _cpa.week === week && pwAnno === anno && pwWeek === week) { _cpaRicalcola(); cpaRender(); } };
+  msLoadRange(d.iso[0], d.iso[5], { hourly: true })
+    .then(aggiorna)
+    .then(() => msRun(() => msEnsurePast(pairs)))
+    .then(cambiato => { if (cambiato) aggiorna(); })
+    .catch(e => console.warn('cpa meteo', e));
 }
 
 /* Ore MySond della settimana mostrata, se caricate (null = confronto non fattibile) */
@@ -21667,6 +21864,7 @@ async function cpaAvvia() {
     catch (e) { console.error('cpa epic', e); avvisi.push('Epic dei sottotask non letti (' + (e.message || e) + '): confronto Epic saltato.'); }
 
     _cpaMemorizza(anno, week, { date, giorniValutabili, worklog, verificati, epicDiSottotask, avvisi, quando: new Date() });
+    _cpaMeteoCarica(true);
     _cpaRicalcola();
     _cpa.msg = '';
     sbLogActivity('Controllo anomalie produzione', { anno, week, anomalie: _cpa.risultato ? _cpa.risultato.anomalie.length : null });
@@ -21692,6 +21890,7 @@ function _cpaRicalcola() {
     celle, worklog: B.worklog, verificati: B.verificati, epicDiSottotask: B.epicDiSottotask,
     sottotaskIndex: _cpaIndiceSottotask(), mysond,
     ferieDi: (op, g) => (fw[op] ? pwFerieTipo(fw[op][g]) : null),
+    meteoDi: _cpaMeteoDi(B.date.iso),
     soglie: { diffOreSquadra: Number(pref.diffOreSquadra) || CPA_SOGLIE_DEFAULT.diffOreSquadra,
       diffOreMysond: Number(pref.diffOreMysond) || CPA_SOGLIE_DEFAULT.diffOreMysond },
   });
@@ -22077,13 +22276,21 @@ function _cpaCorpo(a, r) {
         (C.jira || []).map(t => _cpaTicketJ(t, false)).join(''),
       '🧾 In MySond');
   }
+  if (a.tipo === 'ore_scoperte_maltempo') {
+    return _cpaConfronto(
+      (C.griglia || []).map(v => _cpaVoceG(v)).join(''),
+      '<div class="text-sm font-semibold text-slate-800">' + _cpaH(C.oreJira) + ' registrate</div>' +
+        '<div class="text-[11px] text-slate-500 mb-1">Giornata piena: ' + _cpaH(CPA_SOGLIE_DEFAULT.oreGiornata) + '</div>' +
+        (C.jira || []).map(t => _cpaTicketJ(t, false)).join(''));
+  }
   if (a.tipo === 'ore_squadra') {
     const max = C.max || 1;
     return '<div class="rounded-md border border-slate-200 bg-white p-2 mt-2">' + (C.membri || []).map(m => {
       const w = m.escluso ? 0 : Math.max(2, Math.round(m.ore / max * 100));
       const col = m.basso ? '#d97706' : '#0f766e';
       const nota = m.piuSquadre ? 'su più squadre quel giorno: escluso dal confronto'
-        : (m.escluso ? 'nessuna ora: vedi ⏱ Pianificati senza worklog' : (m.basso ? '−' + _cpaFmt(Math.round((C.max - m.ore) * 100) / 100) + ' h rispetto al più alto' : ''));
+        : (m.escluso ? 'nessuna ora: vedi ⏱ Pianificati senza worklog' : (m.basso ? '−' + _cpaFmt(Math.round((C.max - m.ore) * 100) / 100) + ' h rispetto al più alto' +
+          (m.meteo ? ' · ' + (m.meteo.livello === 'probabile' ? '🌧 probabile' : '🌦 possibile') + ' maltempo (' + m.meteo.cantiere + ')' : '') : ''));
       return '<div class="grid items-center gap-2 py-0.5" style="grid-template-columns:minmax(110px,180px) minmax(0,1fr) 56px;">' +
         '<button type="button" data-cpk="' + _cpaS(m.cpKey) + '" onclick="cpaVaiAllaRiga(this)" class="text-xs text-left truncate hover:underline ' + (m.basso ? 'font-semibold' : 'text-slate-700') + '" style="' + (m.basso ? 'color:#b45309;' : '') + '" title="Vai alla riga in Controllo Produzione">' + _cpaS(m.operatore) + '</button>' +
         '<div class="min-w-0"><div style="height:10px;border-radius:5px;background:#f1f5f9;overflow:hidden;"><div style="height:10px;width:' + w + '%;background:' + col + ';"></div></div>' +
@@ -22093,6 +22300,30 @@ function _cpaCorpo(a, r) {
     }).join('') + '</div>';
   }
   return '';
+}
+
+const CPA_METEO_STILE = {
+  probabile: { colore: '#1d4ed8', sfondo: '#eff6ff', bordo: '#bfdbfe', testo: '🌧 probabile maltempo' },
+  possibile: { colore: '#0e7490', sfondo: '#f0fdfa', bordo: '#a5f3fc', testo: '🌦 possibile maltempo' },
+};
+
+function _cpaTagMeteo(a) {
+  const M = a.meteo && CPA_METEO_STILE[a.meteo.livello];
+  if (!M) return '';
+  return ' <span class="text-[10px] font-bold rounded px-1.5" style="color:' + M.colore + ';background:' + M.sfondo + ';" title="' + _cpaS(a.meteo.testo) + '">' + M.testo + '</span>';
+}
+
+/* Evidenza meteo: testo + le ore di lavoro 8-17, in blu quelle con maltempo (mm caduti) */
+function _cpaMeteoHtml(ev) {
+  const M = ev && CPA_METEO_STILE[ev.livello];
+  if (!M) return '';
+  const ore = (ev.orario || []).slice().sort((x, y) => x.ora - y.ora);
+  const striscia = ore.length ? '<div class="grid gap-0.5 mt-1.5" style="grid-template-columns:repeat(' + ore.length + ',minmax(0,1fr));max-width:460px;">' + ore.map(x =>
+    '<div class="rounded text-center text-[10px] leading-4 py-0.5" style="' + (x.maltempo ? 'background:#3b82f6;color:#fff;' : 'background:#f1f5f9;color:#94a3b8;') + '" title="' +
+      _cpaS(x.ora + '-' + (x.ora + 1) + ': ' + _cpaFmt(x.mm) + ' mm') + '"><div class="font-semibold">' + x.ora + '</div><div>' + (x.mm ? _cpaS(_cpaFmt(x.mm)) : '·') + '</div></div>').join('') + '</div>' : '';
+  return '<div class="rounded-md border mt-2 px-2 py-1.5" style="border-color:' + M.bordo + ';background:' + M.sfondo + ';">' +
+    '<div class="text-xs" style="color:' + M.colore + ';"><b>' + M.testo + '</b> · ' + _cpaS(ev.testo.replace(/^(Probabile|Possibile) maltempo /, '')) + '</div>' +
+    striscia + (striscia ? '<div class="text-[10px] text-slate-400 mt-0.5">Ore di lavoro 8-17 sul cantiere ' + _cpaS(ev.cantiere) + ', mm di pioggia osservati ora per ora.</div>' : '') + '</div>';
 }
 
 /* Etichetta sulle anomalie già coperte da un sollecito inviato (vedi produzione-anomalie-solleciti.js) */
@@ -22124,12 +22355,12 @@ function _cpaSchedaHtml(a, r, ignorata) {
         '<div class="flex flex-wrap items-center gap-x-2 gap-y-0.5">' +
           '<span class="text-sm font-semibold text-slate-800">' + _cpaS(a.titolo) + '</span>' +
           '<span class="text-[10px] font-bold uppercase rounded px-1.5" style="color:' + G.colore + ';background:' + G.sfondo + ';">' + G.testo + '</span>' +
-          _cpaTagSollecito(a) +
+          _cpaTagSollecito(a) + (a.tipo === 'ore_scoperte_maltempo' ? '' : _cpaTagMeteo(a)) +
           '<div class="flex-1"></div>' +
           '<button type="button" onclick="cpaIgnora(this)" class="text-xs text-slate-400 hover:text-slate-800" title="' + (ignorata ? 'Rimetti fra le anomalie aperte' : 'Nascondi questa anomalia (solo su questo browser)') + '">' + (ignorata ? '↩ Ripristina' : 'Ignora') + '</button>' +
         '</div>' +
         (dove ? '<div class="text-[11px] text-slate-500">' + dove + '</div>' : '') +
-        (ignorata ? '' : _cpaCorpo(a, r)) +
+        (ignorata ? '' : _cpaCorpo(a, r) + _cpaMeteoHtml(a.meteo)) +
         '<div class="text-xs mt-2" style="color:#0f766e;">💡 ' + _cpaS(a.correzione) + '</div>' +
         (bottoni ? '<div class="flex flex-wrap items-center gap-1.5 mt-1.5">' + bottoni + '</div>' : '') +
       '</div>' +
@@ -22235,6 +22466,7 @@ function _cpaListaHtml(r, attive, ign) {
     r.nOperatori + ' operatori controllati su Jira, ' + valutati + '.',
     nv.epicSenzaSottotask ? nv.epicSenzaSottotask + ' giornate con ore ma senza sottotask in Griglia: Epic non confrontabile.' : '',
     r.mysondCaricato ? '' : 'Ore MySond non caricate per questa settimana: confronto Jira/MySond non fatto (📥 Carica MySond nel Controllo Produzione).',
+    nv.meteoMancante ? nv.meteoMancante + ' giornate con ore scoperte senza dati meteo (cantiere non localizzato o storico meteo ancora in recupero): maltempo non valutato.' : '',
   ].concat(r.avvisi).filter(Boolean);
   let html = '';
   if (_cpa.esito) {
@@ -22279,6 +22511,7 @@ function cpaRender() {
   if (!modal || !root) return;
   modal.style.display = _cpa.aperto ? 'flex' : 'none';
   if (!_cpa.aperto) return;
+  if (r) _cpaMeteoCarica();
 
   /* Il ridisegno non deve far perdere la posizione di lettura nella stessa vista */
   const vista = _cpa.registro ? 'registro' : (_cpa.soll && r && !_cpa.inCorso ? 'soll' : 'lista|' + _cpa.filtro);
@@ -22814,6 +23047,7 @@ function _cpaPdfTicket(t) {
 /* Correzione proposta + stato del sollecito, se già inviato */
 function _cpaPdfCorrezione(a) {
   let s = (a.correzione || '').replace('(proposta sotto)', '(colonna "Cella proposta")');
+  if (a.meteo && a.meteo.testo && a.tipo !== 'ore_scoperte_maltempo') s += '\n' + a.meteo.testo;
   if (a.solleciti && a.solleciti.length) {
     const inv = _cpaSollInviati(_cpa.anno, _cpa.week);
     const fatti = a.solleciti.filter(x => inv[x.operatore] && (inv[x.operatore].giorni || []).includes(x.giorno));
@@ -22865,7 +23099,26 @@ const CPA_PDF_COLONNE = {
     ['Atteso su Jira', 19, a => { const C = a.confronto; return C.attesoMax > C.attesoMin ? _cpaFmt(C.attesoMin) + ' – ' + _cpaPdfH(C.attesoMax) : _cpaPdfH(C.attesoMin); }],
     ['Scarto', 15, a => { const C = a.confronto; return _cpaPdfSegno(Math.round((C.oreJira - (C.oreJira < C.attesoMin ? C.attesoMin : C.attesoMax)) * 100) / 100); }],
   ],
+  ore_scoperte_maltempo: [
+    ['Operatore', 32, a => a.operatore],
+    ['Commessa / squadra / cantiere', 46, a => [a.commessa, a.squadra, a.cantiere].filter(Boolean).join('\n')],
+    ['Ore Jira', 16, a => _cpaPdfH(a.confronto.oreJira)],
+    ['Ore scoperte', 18, a => _cpaPdfH(a.meteo.oreScoperte)],
+    ['Evidenza maltempo', 70, a => _cpaPdfMeteo(a.meteo)],
+  ],
 };
+
+/* Evidenza meteo per il PDF: pioggia nelle ore di lavoro e allerta, ora per ora in breve */
+function _cpaPdfMeteo(ev) {
+  if (!ev) return '';
+  const righe = ['Cantiere ' + ev.cantiere];
+  if (ev.orePioggia) righe.push('Pioggia in ' + ev.orePioggia + (ev.orePioggia === 1 ? ' ora' : ' ore') + ' di lavoro: ' + ev.fasce + ' (' + _cpaFmt(ev.mmFascia) + ' mm)');
+  if (ev.mmGiorno != null) righe.push('Totale giorno: ' + _cpaFmt(ev.mmGiorno) + ' mm');
+  if (ev.pc) righe.push('Allerta Protezione Civile ' + ev.pc);
+  const bagnate = (ev.orario || []).filter(x => x.maltempo).sort((x, y) => x.ora - y.ora);
+  if (bagnate.length) righe.push('Ora per ora: ' + bagnate.map(x => x.ora + '-' + (x.ora + 1) + ' ' + _cpaFmt(x.mm) + ' mm').join(', '));
+  return righe.join('\n');
+}
 
 /* Soglia in uso, citata nel sottotitolo della sezione */
 function _cpaPdfSoglia(tipo) {

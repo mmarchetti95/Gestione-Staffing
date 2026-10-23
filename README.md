@@ -114,6 +114,13 @@ Limite noto: il progetto Supabase è sul piano **Free**, che non include backup 
 
 ## Changelog
 
+## v18.219.0
+- feat: **Controllo anomalie - maltempo sulle ore scoperte.** Quando un operatore ha meno ore del previsto, il controllo guarda il **meteo osservato** sul cantiere pianificato quel giorno (pioggia ora per ora dello storico meteo, allerta Protezione Civile) nella fascia di lavoro **8-17**. Ore scoperte = ore mancanti rispetto alla giornata piena (8 h), al collega di squadra più alto o alle ore di lavoro MySond. **Probabile maltempo** se la pioggia (≥ 0,5 mm/h o pioggia moderata/forte, neve, temporale) copre almeno metà delle ore scoperte (minimo 2 h), o con allerta arancione/rossa; **possibile** con almeno un'ora di pioggia, allerta gialla o ≥ 8 mm nel giorno.
+- Badge **🌧 probabile / 🌦 possibile maltempo** sulle anomalie «Pianificati senza worklog», «Ore diverse in squadra» (per l'operatore più basso) e «Jira diverso da MySond» (quando Jira è sotto), con il riquadro delle ore 8-17 e i mm caduti.
+- Nuova linguetta **🌧 Ore scoperte con maltempo**: giornate pianificate con ore Jira parziali (almeno 1 h in meno della giornata piena), non già segnalate da altri controlli, con maltempo probabile. È l'evidenza da portare ai controller: si esporta in PDF con le ore scoperte e la pioggia ora per ora; l'evidenza meteo compare anche nel PDF e nell'elenco copiato delle altre anomalie.
+- Il meteo si carica da solo all'apertura del controllo (storico già salvato su Supabase, poi il recupero di quanto manca); i giorni senza dati meteo (cantiere non localizzato o storico in recupero) sono contati nelle note.
+- Nessuna modifica allo schema Supabase né alle Edge Function.
+
 ## v18.218.0
 - feat: **Controllo anomalie - export PDF.** Nella barra del modal **📄 Esporta PDF** scarica le anomalie **aperte** della linguetta mostrata (es. solo «Jira diverso da MySond», da mandare ai controller); su «Tutte» una sezione per controllo. A4 orizzontale, una tabella per controllo con colonne sue (es. per MySond: lavoro, viaggio, non lavorate, Jira, atteso, scarto), giorno, correzione proposta ed eventuale «Sollecitato il …»; barretta colorata per la priorità, soglia in uso, data di lettura Jira, autore e numero di pagina. Le anomalie ignorate e quelle già corrette in Griglia restano fuori (il PDF dice quante). Nome file `Anomalie_<controllo>_W<sett>_<anno>.pdf`.
 - Nessuna modifica allo schema Supabase né alle Edge Function.

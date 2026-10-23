@@ -32,6 +32,7 @@ function _cpaPdfTicket(t) {
 /* Correzione proposta + stato del sollecito, se già inviato */
 function _cpaPdfCorrezione(a) {
   let s = (a.correzione || '').replace('(proposta sotto)', '(colonna "Cella proposta")');
+  if (a.meteo && a.meteo.testo && a.tipo !== 'ore_scoperte_maltempo') s += '\n' + a.meteo.testo;
   if (a.solleciti && a.solleciti.length) {
     const inv = _cpaSollInviati(_cpa.anno, _cpa.week);
     const fatti = a.solleciti.filter(x => inv[x.operatore] && (inv[x.operatore].giorni || []).includes(x.giorno));
@@ -83,7 +84,26 @@ const CPA_PDF_COLONNE = {
     ['Atteso su Jira', 19, a => { const C = a.confronto; return C.attesoMax > C.attesoMin ? _cpaFmt(C.attesoMin) + ' – ' + _cpaPdfH(C.attesoMax) : _cpaPdfH(C.attesoMin); }],
     ['Scarto', 15, a => { const C = a.confronto; return _cpaPdfSegno(Math.round((C.oreJira - (C.oreJira < C.attesoMin ? C.attesoMin : C.attesoMax)) * 100) / 100); }],
   ],
+  ore_scoperte_maltempo: [
+    ['Operatore', 32, a => a.operatore],
+    ['Commessa / squadra / cantiere', 46, a => [a.commessa, a.squadra, a.cantiere].filter(Boolean).join('\n')],
+    ['Ore Jira', 16, a => _cpaPdfH(a.confronto.oreJira)],
+    ['Ore scoperte', 18, a => _cpaPdfH(a.meteo.oreScoperte)],
+    ['Evidenza maltempo', 70, a => _cpaPdfMeteo(a.meteo)],
+  ],
 };
+
+/* Evidenza meteo per il PDF: pioggia nelle ore di lavoro e allerta, ora per ora in breve */
+function _cpaPdfMeteo(ev) {
+  if (!ev) return '';
+  const righe = ['Cantiere ' + ev.cantiere];
+  if (ev.orePioggia) righe.push('Pioggia in ' + ev.orePioggia + (ev.orePioggia === 1 ? ' ora' : ' ore') + ' di lavoro: ' + ev.fasce + ' (' + _cpaFmt(ev.mmFascia) + ' mm)');
+  if (ev.mmGiorno != null) righe.push('Totale giorno: ' + _cpaFmt(ev.mmGiorno) + ' mm');
+  if (ev.pc) righe.push('Allerta Protezione Civile ' + ev.pc);
+  const bagnate = (ev.orario || []).filter(x => x.maltempo).sort((x, y) => x.ora - y.ora);
+  if (bagnate.length) righe.push('Ora per ora: ' + bagnate.map(x => x.ora + '-' + (x.ora + 1) + ' ' + _cpaFmt(x.mm) + ' mm').join(', '));
+  return righe.join('\n');
+}
 
 /* Soglia in uso, citata nel sottotitolo della sezione */
 function _cpaPdfSoglia(tipo) {

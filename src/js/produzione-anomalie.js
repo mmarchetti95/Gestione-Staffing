@@ -67,6 +67,49 @@ function _cpaPref() {
   catch (_) { return def; }
 }
 
+/* Meteo OSSERVATO di un cantiere in un giorno della settimana del controllo, per il motore
+   (storico Open-Meteo con dettaglio orario + colore peggiore del bollettino PC). */
+function _cpaMeteoDi(dateIso) {
+  return (cantiere, g) => {
+    const d = dateIso[g];
+    if (!d || d >= meteoTodayISO()) return null;
+    const info = pwMeteoInfoFor(cantiere, d);
+    const pc = pcColorePeggiore(pcInfoFor(cantiere, d));
+    if (!info && !pc) return null;
+    return { cantiere, precip: info ? info.precip : null, hourly: info ? info.hourly : [], sev: pwMeteoSeverityFor(info), pc };
+  };
+}
+
+/* Carica lo storico meteo della settimana (Supabase, poi in coda il recupero di quanto
+   manca) e ricalcola quando arriva. Una volta per settimana per sessione; Ricontrolla lo
+   rilancia. */
+const _cpaMeteoAvviato = new Set();
+function _cpaMeteoCarica(forza) {
+  if (typeof msCanSync !== 'function' || !msCanSync()) return;
+  const k = _cpaKey(pwAnno, pwWeek);
+  if (_cpaMeteoAvviato.has(k) && !forza) return;
+  _cpaMeteoAvviato.add(k);
+  const d = _cpaDateSettimana();
+  const oggi = _cpaOggiISO();
+  const visti = new Set(), pairs = [];
+  _cpaCelleSettimana().celle.forEach(c => {
+    const dateISO = d.iso[c.giorno];
+    if (c.ferie || dateISO >= oggi) return;
+    c.voci.forEach(v => {
+      const kk = dateISO + '|' + msKeyOf(v.cantiere);
+      if (!visti.has(kk)) { visti.add(kk); pairs.push({ cantiere: v.cantiere, dateISO }); }
+    });
+  });
+  if (!pairs.length) return;
+  const anno = pwAnno, week = pwWeek;
+  const aggiorna = () => { if (_cpa.anno === anno && _cpa.week === week && pwAnno === anno && pwWeek === week) { _cpaRicalcola(); cpaRender(); } };
+  msLoadRange(d.iso[0], d.iso[5], { hourly: true })
+    .then(aggiorna)
+    .then(() => msRun(() => msEnsurePast(pairs)))
+    .then(cambiato => { if (cambiato) aggiorna(); })
+    .catch(e => console.warn('cpa meteo', e));
+}
+
 /* Ore MySond della settimana mostrata, se caricate (null = confronto non fattibile) */
 function _cpaMysondSettimana() {
   if (_cpMysondDi !== _cpaKey(pwAnno, pwWeek)) return null;
@@ -340,6 +383,7 @@ async function cpaAvvia() {
     catch (e) { console.error('cpa epic', e); avvisi.push('Epic dei sottotask non letti (' + (e.message || e) + '): confronto Epic saltato.'); }
 
     _cpaMemorizza(anno, week, { date, giorniValutabili, worklog, verificati, epicDiSottotask, avvisi, quando: new Date() });
+    _cpaMeteoCarica(true);
     _cpaRicalcola();
     _cpa.msg = '';
     sbLogActivity('Controllo anomalie produzione', { anno, week, anomalie: _cpa.risultato ? _cpa.risultato.anomalie.length : null });
@@ -365,6 +409,7 @@ function _cpaRicalcola() {
     celle, worklog: B.worklog, verificati: B.verificati, epicDiSottotask: B.epicDiSottotask,
     sottotaskIndex: _cpaIndiceSottotask(), mysond,
     ferieDi: (op, g) => (fw[op] ? pwFerieTipo(fw[op][g]) : null),
+    meteoDi: _cpaMeteoDi(B.date.iso),
     soglie: { diffOreSquadra: Number(pref.diffOreSquadra) || CPA_SOGLIE_DEFAULT.diffOreSquadra,
       diffOreMysond: Number(pref.diffOreMysond) || CPA_SOGLIE_DEFAULT.diffOreMysond },
   });
@@ -750,13 +795,21 @@ function _cpaCorpo(a, r) {
         (C.jira || []).map(t => _cpaTicketJ(t, false)).join(''),
       '🧾 In MySond');
   }
+  if (a.tipo === 'ore_scoperte_maltempo') {
+    return _cpaConfronto(
+      (C.griglia || []).map(v => _cpaVoceG(v)).join(''),
+      '<div class="text-sm font-semibold text-slate-800">' + _cpaH(C.oreJira) + ' registrate</div>' +
+        '<div class="text-[11px] text-slate-500 mb-1">Giornata piena: ' + _cpaH(CPA_SOGLIE_DEFAULT.oreGiornata) + '</div>' +
+        (C.jira || []).map(t => _cpaTicketJ(t, false)).join(''));
+  }
   if (a.tipo === 'ore_squadra') {
     const max = C.max || 1;
     return '<div class="rounded-md border border-slate-200 bg-white p-2 mt-2">' + (C.membri || []).map(m => {
       const w = m.escluso ? 0 : Math.max(2, Math.round(m.ore / max * 100));
       const col = m.basso ? '#d97706' : '#0f766e';
       const nota = m.piuSquadre ? 'su più squadre quel giorno: escluso dal confronto'
-        : (m.escluso ? 'nessuna ora: vedi ⏱ Pianificati senza worklog' : (m.basso ? '−' + _cpaFmt(Math.round((C.max - m.ore) * 100) / 100) + ' h rispetto al più alto' : ''));
+        : (m.escluso ? 'nessuna ora: vedi ⏱ Pianificati senza worklog' : (m.basso ? '−' + _cpaFmt(Math.round((C.max - m.ore) * 100) / 100) + ' h rispetto al più alto' +
+          (m.meteo ? ' · ' + (m.meteo.livello === 'probabile' ? '🌧 probabile' : '🌦 possibile') + ' maltempo (' + m.meteo.cantiere + ')' : '') : ''));
       return '<div class="grid items-center gap-2 py-0.5" style="grid-template-columns:minmax(110px,180px) minmax(0,1fr) 56px;">' +
         '<button type="button" data-cpk="' + _cpaS(m.cpKey) + '" onclick="cpaVaiAllaRiga(this)" class="text-xs text-left truncate hover:underline ' + (m.basso ? 'font-semibold' : 'text-slate-700') + '" style="' + (m.basso ? 'color:#b45309;' : '') + '" title="Vai alla riga in Controllo Produzione">' + _cpaS(m.operatore) + '</button>' +
         '<div class="min-w-0"><div style="height:10px;border-radius:5px;background:#f1f5f9;overflow:hidden;"><div style="height:10px;width:' + w + '%;background:' + col + ';"></div></div>' +
@@ -766,6 +819,30 @@ function _cpaCorpo(a, r) {
     }).join('') + '</div>';
   }
   return '';
+}
+
+const CPA_METEO_STILE = {
+  probabile: { colore: '#1d4ed8', sfondo: '#eff6ff', bordo: '#bfdbfe', testo: '🌧 probabile maltempo' },
+  possibile: { colore: '#0e7490', sfondo: '#f0fdfa', bordo: '#a5f3fc', testo: '🌦 possibile maltempo' },
+};
+
+function _cpaTagMeteo(a) {
+  const M = a.meteo && CPA_METEO_STILE[a.meteo.livello];
+  if (!M) return '';
+  return ' <span class="text-[10px] font-bold rounded px-1.5" style="color:' + M.colore + ';background:' + M.sfondo + ';" title="' + _cpaS(a.meteo.testo) + '">' + M.testo + '</span>';
+}
+
+/* Evidenza meteo: testo + le ore di lavoro 8-17, in blu quelle con maltempo (mm caduti) */
+function _cpaMeteoHtml(ev) {
+  const M = ev && CPA_METEO_STILE[ev.livello];
+  if (!M) return '';
+  const ore = (ev.orario || []).slice().sort((x, y) => x.ora - y.ora);
+  const striscia = ore.length ? '<div class="grid gap-0.5 mt-1.5" style="grid-template-columns:repeat(' + ore.length + ',minmax(0,1fr));max-width:460px;">' + ore.map(x =>
+    '<div class="rounded text-center text-[10px] leading-4 py-0.5" style="' + (x.maltempo ? 'background:#3b82f6;color:#fff;' : 'background:#f1f5f9;color:#94a3b8;') + '" title="' +
+      _cpaS(x.ora + '-' + (x.ora + 1) + ': ' + _cpaFmt(x.mm) + ' mm') + '"><div class="font-semibold">' + x.ora + '</div><div>' + (x.mm ? _cpaS(_cpaFmt(x.mm)) : '·') + '</div></div>').join('') + '</div>' : '';
+  return '<div class="rounded-md border mt-2 px-2 py-1.5" style="border-color:' + M.bordo + ';background:' + M.sfondo + ';">' +
+    '<div class="text-xs" style="color:' + M.colore + ';"><b>' + M.testo + '</b> · ' + _cpaS(ev.testo.replace(/^(Probabile|Possibile) maltempo /, '')) + '</div>' +
+    striscia + (striscia ? '<div class="text-[10px] text-slate-400 mt-0.5">Ore di lavoro 8-17 sul cantiere ' + _cpaS(ev.cantiere) + ', mm di pioggia osservati ora per ora.</div>' : '') + '</div>';
 }
 
 /* Etichetta sulle anomalie già coperte da un sollecito inviato (vedi produzione-anomalie-solleciti.js) */
@@ -797,12 +874,12 @@ function _cpaSchedaHtml(a, r, ignorata) {
         '<div class="flex flex-wrap items-center gap-x-2 gap-y-0.5">' +
           '<span class="text-sm font-semibold text-slate-800">' + _cpaS(a.titolo) + '</span>' +
           '<span class="text-[10px] font-bold uppercase rounded px-1.5" style="color:' + G.colore + ';background:' + G.sfondo + ';">' + G.testo + '</span>' +
-          _cpaTagSollecito(a) +
+          _cpaTagSollecito(a) + (a.tipo === 'ore_scoperte_maltempo' ? '' : _cpaTagMeteo(a)) +
           '<div class="flex-1"></div>' +
           '<button type="button" onclick="cpaIgnora(this)" class="text-xs text-slate-400 hover:text-slate-800" title="' + (ignorata ? 'Rimetti fra le anomalie aperte' : 'Nascondi questa anomalia (solo su questo browser)') + '">' + (ignorata ? '↩ Ripristina' : 'Ignora') + '</button>' +
         '</div>' +
         (dove ? '<div class="text-[11px] text-slate-500">' + dove + '</div>' : '') +
-        (ignorata ? '' : _cpaCorpo(a, r)) +
+        (ignorata ? '' : _cpaCorpo(a, r) + _cpaMeteoHtml(a.meteo)) +
         '<div class="text-xs mt-2" style="color:#0f766e;">💡 ' + _cpaS(a.correzione) + '</div>' +
         (bottoni ? '<div class="flex flex-wrap items-center gap-1.5 mt-1.5">' + bottoni + '</div>' : '') +
       '</div>' +
@@ -908,6 +985,7 @@ function _cpaListaHtml(r, attive, ign) {
     r.nOperatori + ' operatori controllati su Jira, ' + valutati + '.',
     nv.epicSenzaSottotask ? nv.epicSenzaSottotask + ' giornate con ore ma senza sottotask in Griglia: Epic non confrontabile.' : '',
     r.mysondCaricato ? '' : 'Ore MySond non caricate per questa settimana: confronto Jira/MySond non fatto (📥 Carica MySond nel Controllo Produzione).',
+    nv.meteoMancante ? nv.meteoMancante + ' giornate con ore scoperte senza dati meteo (cantiere non localizzato o storico meteo ancora in recupero): maltempo non valutato.' : '',
   ].concat(r.avvisi).filter(Boolean);
   let html = '';
   if (_cpa.esito) {
@@ -952,6 +1030,7 @@ function cpaRender() {
   if (!modal || !root) return;
   modal.style.display = _cpa.aperto ? 'flex' : 'none';
   if (!_cpa.aperto) return;
+  if (r) _cpaMeteoCarica();
 
   /* Il ridisegno non deve far perdere la posizione di lettura nella stessa vista */
   const vista = _cpa.registro ? 'registro' : (_cpa.soll && r && !_cpa.inCorso ? 'soll' : 'lista|' + _cpa.filtro);
