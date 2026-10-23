@@ -114,6 +114,9 @@ Limite noto: il progetto Supabase è sul piano **Free**, che non include backup 
 
 ## Changelog
 
+## v18.220.1
+- fix: **Controllo Produzione - orario dello stato solo sul giorno giusto.** Il sottotask è uno per operatore e settimana, quindi le righe di più giorni ne mostrano lo stesso stato: l'orario «▶ 07:59» / «⏸ 12:30» ora compare solo sulla riga del giorno in cui è avvenuta la transizione, non più anche sulle giornate precedenti. Se il ticket è IN PROGRESS da un giorno prima, la riga di oggi lo mostra comunque con giorno e ⚠.
+
 ## v18.220.0
 - feat: **Controllo Produzione - lavoro in corso dei ticket IN PROGRESS.** Il worklog lo crea l'automazione Jira solo quando il sottotask lascia IN PROGRESS: finché l'operatore lavora non c'è traccia delle ore. Ora la colonna **Stato** mostra accanto al badge da quando il sottotask è nello stato attuale (**▶ 07:42** IN PROGRESS, **⏸ 12:30** IN PENDING), letto dal changelog Jira e aggiornato col polling ogni 30 s.
 - Nelle righe di **oggi**, sotto le **Ore Jira** compare la quota **▶ +2.3** di lavoro in corso, non ancora registrato (più sottotask aperti insieme contano una volta sola). Nell'infografica oraria è un segmento tratteggiato «07:42–ora» dopo gli interventi già chiusi, e il totale mostra «+ 2h 55m in corso». Solo visualizzazione: non scrive su Jira né in `controllo_produzione`.

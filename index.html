@@ -1905,7 +1905,7 @@
       </span>
       <button id="btn-presentation" class="px-3 py-1.5 text-sm rounded hover:bg-white/10" style="border:1px solid var(--dark-border-strong);color:var(--dark-text);visibility:visible;">📊 Modalità presentazione</button>
       <div class="text-xs pl-2" style="border-left:1px solid var(--dark-border-strong);color:var(--dark-text-muted);">
-        <span id="app-version" class="font-medium" style="color:var(--accent);">v18.220.0</span> · Michele Marchetti
+        <span id="app-version" class="font-medium" style="color:var(--accent);">v18.220.1</span> · Michele Marchetti
         <span id="sb-role-badge" style="margin-left:8px;padding:1px 8px;border-radius:9999px;background:rgba(255,255,255,.1);color:var(--dark-text);font-weight:600;"></span>
       </div>
     </div>
@@ -18924,7 +18924,7 @@ function pwControlloRender() {
       <td>${dates[g]}</td>
       <td class="cp-wrap" style="color:#64748b" title="${esc(op.cantiere)}">${esc(op.cantiere)}</td>
       <td class="cp-wrap" style="color:#64748b" title="${esc(op.attivita)}">${esc(op.attivita)}</td>
-      <td class="cp-stato" data-keys="${esc(JSON.stringify(statoKeys))}" style="vertical-align:top;padding-top:4px;text-align:center">${cpStatoCellHtml(statoKeys)}</td>
+      <td class="cp-stato" data-keys="${esc(JSON.stringify(statoKeys))}" data-date="${dateISOs[g]}" style="vertical-align:top;padding-top:4px;text-align:center">${cpStatoCellHtml(statoKeys, dateISOs[g])}</td>
       <td class="cp-meteo" data-cantieri="${esc(JSON.stringify(op.cantieri))}" data-date="${dateISOs[g]}" style="text-align:center">${cpMeteoCellHtml(op.cantieri, dateISOs[g])}</td>
       <td class="cp-oj-cell" style="${cpOreJiraStyle(jVal, g)}" data-date="${dateISOs[g]}" data-giorno="${esc(DAY_NAMES[g] + ' ' + dates[g])}" onmouseenter="cpOreJiraShow(this)" onmouseleave="cpOreJiraHide()"><span id="cp-j-${ri}" data-jval="${esc(String(jVal))}">${jDisplay}</span><div class="cp-oj-live-slot"></div></td>
       <td class="cp-mysond" style="text-align:center">${cpMysondCellHtml(op.nome, g, jVal, op.cantieri)}</td>
@@ -19104,7 +19104,10 @@ function cpOreJiraLiveHtml(lv) {
     (lv.vecchio ? '⚠' : '▶') + ' +' + (lv.minuti / 60).toFixed(1) + '</div>';
 }
 
-function cpStatoCellHtml(keys) {
+/* dateISO = giorno della riga. Il sottotask è uno per operatore/settimana, quindi le righe di più
+   giorni ne mostrano lo stesso stato: l'orario "▶ 07:59" compare solo sulla riga del giorno della
+   transizione e, se il ticket è IN PROGRESS da un giorno prima, anche su quella di oggi (con ⚠). */
+function cpStatoCellHtml(keys, dateISO) {
   if (!keys || !keys.length) return '<span style="color:#cbd5e1" title="Nessun ticket né sottotask Jira">—</span>';
   return keys.map(x => {
     const fonte = x.fonte === 'griglia' ? 'Sottotask creato dalla Griglia per questo cantiere/attività (nessun worklog in questo giorno)' : 'Ticket del worklog';
@@ -19122,9 +19125,13 @@ function cpStatoCellHtml(keys) {
     // Da quando è nello stato attuale (solo IN PROGRESS / IN PENDING, se Jira ha restituito statoDa)
     let daHtml = '';
     const daInfo = t && t.statoDa && (cpStatoInProgress(t) || cpStatoInPending(t)) ? cpStatoDaInfo(t.statoDa) : null;
-    if (daInfo) {
-      const prog = cpStatoInProgress(t), vecchio = prog && !daInfo.oggi;
-      daHtml = '<span class="cp-stato-da' + (vecchio ? ' vecchio' : '') + '">' + (prog ? '▶' : '⏸') + ' ' + esc(daInfo.testo) + (vecchio ? ' ⚠' : '') + '</span>';
+    const prog = cpStatoInProgress(t), vecchio = !!daInfo && prog && !daInfo.oggi;
+    const ora = cpOraRoma();
+    const giornoTransizione = !!daInfo && daInfo.data === dateISO;
+    if (daInfo && (giornoTransizione || (vecchio && ora && ora.data === dateISO))) {
+      // Sulla riga del giorno della transizione basta l'ora; su quella di oggi serve anche il giorno.
+      const testo = giornoTransizione ? _cpOjOra(daInfo.min) : daInfo.testo;
+      daHtml = '<span class="cp-stato-da' + (vecchio ? ' vecchio' : '') + '">' + (prog ? '▶' : '⏸') + ' ' + esc(testo) + (vecchio ? ' ⚠' : '') + '</span>';
       ttl += '\n' + lbl + (daInfo.oggi ? ' dalle ' : ' da ') + daInfo.testo + (t.statoDaAutore ? ' (' + t.statoDaAutore + ')' : '') +
         (vecchio ? '\n⚠ IN PROGRESS da un giorno precedente: probabilmente non è stato messo in pausa' : '');
     }
@@ -19153,7 +19160,7 @@ function cpApplyStatoToDom() {
   document.querySelectorAll('.cp-table td.cp-stato').forEach(td => {
     let keys = [];
     try { keys = JSON.parse(td.dataset.keys || '[]'); } catch (_) {}
-    td.innerHTML = cpStatoCellHtml(keys);
+    td.innerHTML = cpStatoCellHtml(keys, td.dataset.date);
     const tr = td.closest('tr'), oj = tr && tr.querySelector('td.cp-oj-cell');
     const live = oj && oj.querySelector('.cp-oj-live-slot');
     if (live) live.innerHTML = cpOreJiraLiveHtml(cpLavoroInCorso(tr, oj.dataset.date));
