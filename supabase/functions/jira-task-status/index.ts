@@ -40,7 +40,7 @@
 //     "subtasks": {                                     // stato del sottotask stesso
 //       "W07R-451": { "key": "W07R-451", "summary": "...", "status": "Done",
 //                     "statusCategory": "done", "url": "https://.../browse/W07R-451",
-//                     "statoDa": "2026-10-23T07:42:11.000+0200",   // solo con "statoDa": true
+//                     "statoDa": "2026-10-23T05:42:11.000Z",      // solo con "statoDa": true
 //                     "statoDaAutore": "Mario Rossi" }
 //     },
 //     "count": 1
@@ -114,25 +114,40 @@ async function jiraGet(path: string): Promise<Response> {
   });
 }
 
-// Ultima transizione verso lo stato con id statusId fra le history di un changelog.
-function ultimaTransizione(histories: any[], statusId: string): { created: string; autore: string } | null {
+// Ultima transizione verso lo stato attuale fra le history di un changelog
+// (confronto sull'id dello stato, oppure sul nome se l'id non torna).
+// "created" arriva come millisecondi dalla bulkfetch e come stringa Jira
+// ("2026-10-23T07:42:11.000+0200") dal changelog per issue: esce sempre ISO UTC.
+function ultimaTransizione(histories: any[], statusId: string, statusName: string): { created: string; autore: string } | null {
+  const nome = statusName.trim().toLowerCase();
   let best: any = null, bestT = -Infinity;
   for (const h of histories || []) {
     const ok = (h.items || []).some((it: any) =>
-      (it.fieldId === "status" || it.field === "status") && String(it.to) === statusId);
+      (it.fieldId === "status" || it.field === "status") &&
+      (String(it.to) === statusId || (!!nome && typeof it.toString === "string" && it.toString.trim().toLowerCase() === nome)));
     if (!ok) continue;
-    const t = Date.parse(String(h.created || "").replace(/([+-]\d{2})(\d{2})$/, "$1:$2"));
+    const t = typeof h.created === "number"
+      ? h.created
+      : Date.parse(String(h.created || "").replace(/([+-]\d{2})(\d{2})$/, "$1:$2"));
     if (isNaN(t) || t <= bestT) continue;
     bestT = t;
-    best = { created: h.created, autore: h.author?.displayName || "" };
+    best = { created: new Date(t).toISOString(), autore: h.author?.displayName || "" };
   }
   return best;
 }
 
-// Changelog (solo campo status) delle issue indicate: id issue -> history.
-// Prima la bulkfetch (una chiamata per tutte), se non va il changelog per issue.
+// Changelog (solo campo status) delle issue indicate: chiave issue -> history.
+// Prima la bulkfetch (una chiamata per tutte); le issue che non ne escono con
+// almeno una history passano dal changelog per issue.
 async function changelogStato(issues: { id: string; key: string }[]): Promise<Record<string, any[]>> {
   const out: Record<string, any[]> = {};
+  await changelogBulk(issues, out);
+  const mancanti = issues.filter((i) => !(out[i.key] || []).length);
+  if (mancanti.length) await changelogPerIssue(mancanti, out);
+  return out;
+}
+
+async function changelogBulk(issues: { id: string; key: string }[], out: Record<string, any[]>): Promise<void> {
   try {
     const keyById: Record<string, string> = {};
     issues.forEach((i) => { keyById[i.id] = i.key; });
@@ -145,21 +160,25 @@ async function changelogStato(issues: { id: string; key: string }[]): Promise<Re
       const res = await jiraPost(`/rest/api/3/changelog/bulkfetch`, body);
       if (!res.ok) throw new Error(`changelog/bulkfetch HTTP ${res.status}`);
       const data = await res.json();
-      (data.issueChangeLogs || []).forEach((c: any) => {
-        const k = keyById[String(c.issueId)] || String(c.issueId);
+      const logs = data.issueChangeLogs || [];
+      if (!logs.length) console.warn("[jira-task-status] bulkfetch vuota, chiavi risposta:", Object.keys(data || {}).join(","));
+      logs.forEach((c: any) => {
+        const k = keyById[String(c.issueId)] || String(c.issueKey || c.issueId);
         out[k] = (out[k] || []).concat(c.changeHistories || []);
       });
       nextPageToken = data.nextPageToken;
     } while (nextPageToken);
-    return out;
   } catch (e) {
     console.warn("[jira-task-status] bulkfetch non disponibile, changelog per issue:", String(e));
   }
+}
+
+async function changelogPerIssue(issues: { id: string; key: string }[], out: Record<string, any[]>): Promise<void> {
   for (const i of issues) {
     try {
       // Il changelog e' in ordine cronologico: basta l'ultima pagina.
       let res = await jiraGet(`/rest/api/3/issue/${encodeURIComponent(i.key)}/changelog?maxResults=100`);
-      if (!res.ok) continue;
+      if (!res.ok) { console.warn(`[jira-task-status] changelog ${i.key} HTTP ${res.status}`); continue; }
       let data = await res.json();
       if (Number(data.total) > 100) {
         res = await jiraGet(`/rest/api/3/issue/${encodeURIComponent(i.key)}/changelog?maxResults=100&startAt=${Number(data.total) - 100}`);
@@ -169,7 +188,6 @@ async function changelogStato(issues: { id: string; key: string }[]): Promise<Re
       out[i.key] = data.values || [];
     } catch { /* senza statoDa */ }
   }
-  return out;
 }
 
 // Esegue una search JQL paginata e restituisce tutte le issue trovate.
@@ -245,8 +263,13 @@ Deno.serve(async (req: Request) => {
       if (inCorso.length) {
         const logs = await changelogStato(inCorso.map((iss: any) => ({ id: String(iss.id), key: iss.key })));
         inCorso.forEach((iss: any) => {
-          const tr = ultimaTransizione(logs[iss.key] || [], String(iss.fields.status.id || ""));
-          if (tr) { subtasks[iss.key].statoDa = tr.created; subtasks[iss.key].statoDaAutore = tr.autore; }
+          const tr = ultimaTransizione(logs[iss.key] || [], String(iss.fields.status.id || ""), String(iss.fields.status.name || ""));
+          if (tr) { subtasks[iss.key].statoDa = tr.created; subtasks[iss.key].statoDaAutore = tr.autore; return; }
+          const h = logs[iss.key] || [];
+          const recenti = h.slice(-3).map((x: any) => x.created + " " + (x.items || [])
+            .filter((it: any) => it.fieldId === "status" || it.field === "status")
+            .map((it: any) => `${it.fromString}(${it.from})->${it.toString}(${it.to})`).join(",")).join(" | ");
+          console.warn(`[jira-task-status] ${iss.key}: nessuna transizione verso ${iss.fields.status.name}(${iss.fields.status.id}) fra ${h.length} history; ultime: ${recenti}`);
         });
       }
     }
