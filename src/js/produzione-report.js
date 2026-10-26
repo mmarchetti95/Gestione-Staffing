@@ -359,6 +359,7 @@ async function cpProcessReport(csvText, commessa, squadra) {
     if (u.ticketKey) {
       if (!_cpData[k].km_by_ticket || typeof _cpData[k].km_by_ticket !== 'object') _cpData[k].km_by_ticket = {};
       _cpData[k].km_by_ticket[u.ticketKey] = u.km;
+      cpKmMetaSet(_cpData[k], u.ticketKey, { fonte: 'report' });
       _cpData[k].km_cad = cpSumKm(_cpData[k].km_by_ticket);
     }
     touched.set(k, u);
@@ -386,7 +387,7 @@ async function cpProcessReport(csvText, commessa, squadra) {
             `(${daysWithData} giorni con dati, ${daysZero} a zero).`;
   // Promemoria: il report aggiorna solo l'app, su Jira i Km/Cad arrivano con Sincronizza.
   const inSospeso = updates.filter(u => u.ticketKey &&
-    ['da_aggiornare', 'da_inviare'].includes(cpKmJiraStato(_cpData[`${commessa}|||${squadra}|||${u.operatore}|||${u.giorno}`], u.ticketKey, u.operatore).stato)).length;
+    ['da_aggiornare', 'da_inviare'].includes(cpKmJiraStato(_cpData[`${commessa}|||${squadra}|||${u.operatore}|||${u.giorno}`], u.ticketKey, u.operatore, cpCampoProduzione(commessa)).stato)).length;
   if (inSospeso > 0) {
     msg += `\n\n⬆ ${inSospeso} valor${inSospeso === 1 ? 'e' : 'i'} Km/Cad non ancora su Jira: premi 🔄 Sincronizza squadra per inviarl${inSospeso === 1 ? 'o' : 'i'}.`;
   }

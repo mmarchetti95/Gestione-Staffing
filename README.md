@@ -114,6 +114,11 @@ Limite noto: il progetto Supabase è sul piano **Free**, che non include backup 
 
 ## Changelog
 
+## v18.224.0
+- feat: **Controllo Produzione - Km/Cad verificato dall'ufficio.** Per chiudere il ticket l'operatore mette un valore di produzione (di solito «1»): la sincronizzazione lo leggeva da Jira e lo dava per allineato. Ora l'app ricorda la provenienza di ogni Km/Cad: **report**, **inserimento manuale confermato** o **letto da Jira**. I valori letti da Jira mostrano **👁 Verifica** (viola), non vengono mai inviati e non contano come allineati; «✓ KM verificati e allineati su Jira» compare solo quando ogni Km/Cad della squadra viene da un report o da una conferma ed è già su Jira. Scrivendo un Km/Cad a mano viene chiesta conferma; un clic su «👁 Verifica» conferma il valore letto se è davvero quello giusto. Righe salvate prima: con Ore Report compilate contano come report, le altre come lette da Jira.
+- feat: **Campo di produzione per commessa: «KPI_Quantità lavorata».** Sulla riga di ogni commessa un selettore «Produzione su: Actual Production / KPI_Quantità lavorata» (admin/responsabile, condiviso). SINFI è già impostata sul KPI. Sul KPI si scrive solo il sottotask (niente Task padre, niente avanzamento %). Lo storico degli invii è per campo: i valori già scritti su Actual Production restano lì e alla prossima sincronizzazione ogni Km/Cad verificato viene scritto per intero sul KPI. La scelta non si può ricavare da Jira: il campo è presente sui sottotask di tutte le commesse.
+- Supabase: nuova colonna `controllo_produzione.km_meta_by_ticket` e nuova tabella `cp_campo_produzione` (migrazioni in `supabase/migrations/20261026_*`); Edge Function `jira-update-production` ridistribuita (parametro `campo` in `updates`/`reads`, compatibile con i client precedenti).
+
 ## v18.223.0
 - feat: **Griglia - il controllo «🎫 Sottotask» verifica su Jira anche assegnatario e stato.** All'apertura e con «↻ Ricontrolla» rilegge da Jira, oltre all'esistenza, a chi è assegnato ogni sottotask e in che stato è. Nuove anomalie:
   - **🗑️ Sottotask cancellato su Jira** (rosso, prima risultava solo «senza sottotask» con l'invito a ricrearlo): se l'operatore non lavora più lì va tolto dalla Griglia; «✕ togli indicatore» toglie solo l'indicatore.

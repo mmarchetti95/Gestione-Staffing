@@ -50,13 +50,23 @@
 // viene saltato per quel sottotask (nessun errore: e' un caso atteso, non tutte
 // le commesse valorizzano il Target Production).
 //
+// --- Campo di produzione per commessa (KPI_Quantità lavorata, dalla v18.224.0) ---
+// Le commesse col nuovo formato (per ora SINFI) registrano la produzione su
+// "KPI_Quantità lavorata" invece che su "Actual Production". Il campo lo sceglie
+// il frontend per commessa (tabella cp_campo_produzione) e lo passa in "campo":
+// su Jira non si puo' ricavare, perche' KPI_Quantità lavorata e' sullo screen dei
+// sottotask di tutte le commesse. Sul KPI si scrive SOLO il sottotask: niente
+// delta sul Task padre e niente avanzamento (%), che restano dell'Actual Production.
+// Senza "campo" (client precedenti) tutto va sull'Actual Production come prima.
+//
 // SECRET RICHIESTI (gli stessi della funzione worklog):
 //   JIRA_BASE_URL, JIRA_EMAIL, JIRA_API_TOKEN
 //
 // Contratto richiesta (POST, JSON):
-//   { "updates": [ { "issueKey": "AI029-171", "add": 3.183 }, ... ] }
+//   { "updates": [ { "issueKey": "AI029-171", "add": 3.183, "campo": "KPI_Quantità lavorata" }, ... ] }
 //   e/o
-//   { "reads": [ "AI029-171", ... ] }   // sola lettura dell'Actual Production
+//   { "reads": [ "AI029-171", { "issueKey": "AI029-172", "campo": "KPI_Quantità lavorata" }, ... ] }
+//      // sola lettura del campo (stringa semplice = Actual Production)
 //
 // Contratto risposta (JSON):
 //   { "fieldId": "customfield_XXXXX",
@@ -76,6 +86,7 @@ const JIRA_API_TOKEN =  Deno.env.get("JIRA_API_TOKEN") || "";
 const FIELD_NAME             = "Actual Production";
 const TARGET_FIELD_NAME      = "Target Production";
 const PROGRESS_FIELD_NAME    = "Actual Production progress (%)";
+const KPI_FIELD_NAME         = "KPI_Quantità lavorata";
 
 const CORS_HEADERS = {
   "Access-Control-Allow-Origin": "*",
@@ -128,9 +139,16 @@ async function fetchJiraFields(): Promise<{ fields?: any[]; error?: string }> {
 // nome corrisponde esattamente a `name`. Nessun match o piu' match ambigui ->
 // nessun id (il chiamante decide se e' un errore bloccante o un'opzione da
 // saltare, vedi commento in testa al file).
+// Confronto tollerante a maiuscole, accenti e "_"/spazi ("KPI_Quantità lavorata"
+// = "KPI Quantita Lavorata"): il nome e' digitato a mano su Jira.
+function normNome(s: string): string {
+  return String(s || "").normalize("NFD").replace(/\p{M}/gu, "")
+    .replace(/[_\s]+/g, " ").trim().toLowerCase();
+}
+
 function findFieldId(fields: any[], name: string): { id?: string; ambiguous?: boolean } {
-  const target = name.trim().toLowerCase();
-  const matches = fields.filter((f: any) => String(f.name || "").trim().toLowerCase() === target);
+  const target = normNome(name);
+  const matches = fields.filter((f: any) => normNome(f.name) === target);
   if (matches.length === 1) return { id: matches[0].id };
   if (matches.length > 1) return { ambiguous: true };
   return {};
@@ -215,21 +233,34 @@ Deno.serve(async (req: Request) => {
   const progressField = findFieldId(jiraFields, PROGRESS_FIELD_NAME);
   const canComputeProgress = !!(targetField.id && progressField.id);
 
-  const results: Record<string, { ok: boolean; oldValue: number; newValue: number; progress?: number; parentKey?: string; parentOldValue?: number; parentNewValue?: number }> = {};
+  // Campo richiesto (null/assente = Actual Production) -> id Jira. Il KPI serve
+  // solo se qualcuno lo chiede: se manca su Jira quegli issue vanno in errore,
+  // mai in silenzio sull'Actual Production.
+  const kpiField = findFieldId(jiraFields, KPI_FIELD_NAME);
+  const idDelCampo = (campo: unknown): { id?: string; kpi: boolean; error?: string } => {
+    if (campo == null || normNome(String(campo)) === normNome(FIELD_NAME)) return { id: fieldId, kpi: false };
+    if (normNome(String(campo)) !== normNome(KPI_FIELD_NAME)) return { kpi: false, error: `Campo "${campo}" non gestito` };
+    if (!kpiField.id) return { kpi: true, error: kpiField.ambiguous ? `Trovati piu' campi "${KPI_FIELD_NAME}"` : `Campo "${KPI_FIELD_NAME}" non trovato su Jira` };
+    return { id: kpiField.id, kpi: true };
+  };
+
+  const results: Record<string, { ok: boolean; oldValue: number; newValue: number; campo?: string; progress?: number; parentKey?: string; parentOldValue?: number; parentNewValue?: number }> = {};
   const errors: Record<string, string> = {};
   const parentErrors: Record<string, string> = {};
   const progressErrors: Record<string, string> = {};
   const values: Record<string, number | null> = {};
 
-  // --- Sola lettura: ritorna il valore attuale di Actual Production per issue ---
+  // --- Sola lettura: valore attuale del campo di produzione per issue ---
   for (const rk of reads) {
-    const issueKey = String(rk || "").trim();
+    const issueKey = String((rk && typeof rk === "object" ? rk.issueKey : rk) || "").trim();
     if (!issueKey) continue;
+    const c = idDelCampo(rk && typeof rk === "object" ? rk.campo : null);
+    if (c.error) { errors[issueKey] = c.error; continue; }
     try {
-      const gres = await jiraGet(`/rest/api/3/issue/${encodeURIComponent(issueKey)}?fields=${encodeURIComponent(fieldId)}`);
+      const gres = await jiraGet(`/rest/api/3/issue/${encodeURIComponent(issueKey)}?fields=${encodeURIComponent(c.id!)}`);
       if (!gres.ok) { errors[issueKey] = `GET issue HTTP ${gres.status}`; continue; }
       const gdata = await gres.json();
-      const raw = gdata?.fields?.[fieldId];
+      const raw = gdata?.fields?.[c.id!];
       values[issueKey] = (raw == null || raw === "") ? null : Number(raw);
     } catch (e) {
       errors[issueKey] = String((e as Error)?.message || e);
@@ -241,20 +272,24 @@ Deno.serve(async (req: Request) => {
     const add = Number(u?.add);
     if (!issueKey) continue;
     if (!isFinite(add)) { errors[issueKey] = "Valore 'add' non numerico"; continue; }
+    const c = idDelCampo(u?.campo);
+    if (c.error) { errors[issueKey] = c.error; continue; }
+    const scriviId = c.id!;
 
     try {
       // Leggi il valore attuale del campo sul sottotask, insieme al padre diretto
       // (fields.parent: relazione standard Jira, distinta dall'Epic Link).
-      const gres = await jiraGet(`/rest/api/3/issue/${encodeURIComponent(issueKey)}?fields=${encodeURIComponent(fieldId)},parent`);
+      const gres = await jiraGet(`/rest/api/3/issue/${encodeURIComponent(issueKey)}?fields=${encodeURIComponent(scriviId)},parent`);
       if (!gres.ok) { errors[issueKey] = `GET issue HTTP ${gres.status}`; continue; }
       const gdata = await gres.json();
-      const raw = gdata?.fields?.[fieldId];
+      const raw = gdata?.fields?.[scriviId];
       const oldValue = (raw == null || raw === "") ? 0 : Number(raw);
       if (!isFinite(oldValue)) { errors[issueKey] = "Valore attuale non numerico"; continue; }
 
       // Somma e arrotonda a 3 decimali (precisione al metro)
       const newValue = Math.round((oldValue + add) * 1000) / 1000;
-      const parentKey = gdata?.fields?.parent?.key;
+      // Sul KPI solo il sottotask: niente Task padre, niente avanzamento.
+      const parentKey = c.kpi ? undefined : gdata?.fields?.parent?.key;
 
       // Avanzamento rispetto al Target Production del Task padre, normalizzato
       // a 1 (vedi commento in testa al file). Nessun Target Production
@@ -268,7 +303,7 @@ Deno.serve(async (req: Request) => {
         }
       }
 
-      const subtaskFields: Record<string, number> = { [fieldId]: newValue };
+      const subtaskFields: Record<string, number> = { [scriviId]: newValue };
       if (progress != null) subtaskFields[progressField.id!] = progress;
 
       let pres = await jiraPut(`/rest/api/3/issue/${encodeURIComponent(issueKey)}`, { fields: subtaskFields });
@@ -281,7 +316,7 @@ Deno.serve(async (req: Request) => {
         try { const b = await pres.json(); if (b) detail += " " + JSON.stringify(b); } catch { /* ignore */ }
         progressErrors[issueKey] = detail;
         progress = null;
-        pres = await jiraPut(`/rest/api/3/issue/${encodeURIComponent(issueKey)}`, { fields: { [fieldId]: newValue } });
+        pres = await jiraPut(`/rest/api/3/issue/${encodeURIComponent(issueKey)}`, { fields: { [scriviId]: newValue } });
       }
       // PUT issue ritorna 204 in caso di successo
       if (pres.status !== 204 && !pres.ok) {
@@ -291,7 +326,7 @@ Deno.serve(async (req: Request) => {
         continue;
       }
 
-      results[issueKey] = { ok: true, oldValue, newValue };
+      results[issueKey] = { ok: true, oldValue, newValue, campo: c.kpi ? KPI_FIELD_NAME : FIELD_NAME };
       if (progress != null) results[issueKey].progress = progress;
 
       // Propaga lo stesso delta al Task padre diretto, se presente. Un fallimento
@@ -312,5 +347,5 @@ Deno.serve(async (req: Request) => {
     }
   }
 
-  return json({ fieldId, results, errors, parentErrors, progressErrors, values });
+  return json({ fieldId, kpiFieldId: kpiField.id || null, results, errors, parentErrors, progressErrors, values });
 });

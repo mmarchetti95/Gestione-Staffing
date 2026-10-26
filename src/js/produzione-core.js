@@ -32,7 +32,7 @@ async function pwSyncCpDataForGrid() {
   try {
     const { data, error } = await _sbClient
       .from('controllo_produzione')
-      .select('commessa,squadra,operatore,giorno,ore_jira,ore_report,km_cad,note,jira_tickets,verificato,km_jira_uploaded,km_jira_last,km_by_ticket,km_last_by_ticket')
+      .select('commessa,squadra,operatore,giorno,ore_jira,ore_report,km_cad,note,jira_tickets,verificato,km_jira_uploaded,km_jira_last,km_by_ticket,km_last_by_ticket,km_meta_by_ticket')
       .eq('anno', pwAnno)
       .eq('week', pwWeek);
     if (error) throw error;
@@ -84,12 +84,19 @@ function cpRowToCell(r) {
     km_jira_last: (r.km_jira_last == null ? null : Number(r.km_jira_last)),
     km_by_ticket: (r.km_by_ticket && typeof r.km_by_ticket === 'object') ? { ...r.km_by_ticket } : {},
     km_last_by_ticket: (r.km_last_by_ticket && typeof r.km_last_by_ticket === 'object') ? { ...r.km_last_by_ticket } : {},
+    km_meta_by_ticket: (r.km_meta_by_ticket && typeof r.km_meta_by_ticket === 'object') ? JSON.parse(JSON.stringify(r.km_meta_by_ticket)) : {},
   };
   const tks = Array.isArray(cell.jira_tickets) ? cell.jira_tickets : [];
   if (Object.keys(cell.km_by_ticket).length === 0 && cell.km_cad != null && tks.length === 1 && tks[0] && tks[0].key) {
     cell.km_by_ticket = { [tks[0].key]: Number(cell.km_cad) };
     if (cell.km_jira_last != null) cell.km_last_by_ticket = { [tks[0].key]: Number(cell.km_jira_last) };
   }
+  // Righe salvate prima della v18.224.0, senza provenienza: con "Ore Report Prod." compilate il
+  // report è stato caricato e il Km/Cad viene da lì; altrimenti è il valore letto da Jira.
+  Object.keys(cell.km_by_ticket).forEach(key => {
+    const m = cell.km_meta_by_ticket[key] || (cell.km_meta_by_ticket[key] = {});
+    if (!m.fonte) m.fonte = cell.ore_report != null ? 'report' : 'jira';
+  });
   return cell;
 }
 
@@ -118,6 +125,7 @@ function cpBuildRecordDa(cell, anno, week, commessa, squadra, operatore, giorno,
     km_jira_uploaded: lastSum != null,
     km_by_ticket: byTicket,
     km_last_by_ticket: lastByTicket,
+    km_meta_by_ticket: (cell.km_meta_by_ticket && typeof cell.km_meta_by_ticket === 'object') ? cell.km_meta_by_ticket : {},
     note: cell.note ?? null,
     verificato: cell.verificato === true,
     updated_at: new Date().toISOString(),
@@ -139,7 +147,7 @@ async function pwControlloLoad() {
     if (_sbClient && _sbUser) {
       const { data, error } = await _sbClient
         .from('controllo_produzione')
-        .select('commessa,squadra,operatore,giorno,ore_jira,ore_report,km_cad,note,jira_tickets,verificato,km_jira_uploaded,km_jira_last,km_by_ticket,km_last_by_ticket')
+        .select('commessa,squadra,operatore,giorno,ore_jira,ore_report,km_cad,note,jira_tickets,verificato,km_jira_uploaded,km_jira_last,km_by_ticket,km_last_by_ticket,km_meta_by_ticket')
         .eq('anno', pwAnno)
         .eq('week', pwWeek);
       if (error) throw error;
@@ -149,6 +157,7 @@ async function pwControlloLoad() {
         _cpData[k] = cpRowToCell(r);
       });
       await cpMysondLoad();
+      await cpCampoProdLoad();
       if (status) status.textContent = `${(data||[]).length} record caricati`;
     } else {
       _cpData = {};
@@ -229,7 +238,7 @@ function pwControlloRender() {
   let ri = 0;
 
   blocks.forEach((bl, blIdx) => {
-    html += `<tr class="cp-tr-commessa" data-comm-idx="${blIdx}"><td colspan="19"><span class="cp-carr" style="cursor:pointer;user-select:none;margin-right:5px;font-size:11px;display:inline-block;width:10px;text-align:center;" onclick="cpToggleComm(${blIdx})">▼</span>📁 ${esc(bl.commessa)}</td></tr>`;
+    html += `<tr class="cp-tr-commessa" data-comm-idx="${blIdx}"><td colspan="19"><span class="cp-carr" style="cursor:pointer;user-select:none;margin-right:5px;font-size:11px;display:inline-block;width:10px;text-align:center;" onclick="cpToggleComm(${blIdx})">▼</span>📁 ${esc(bl.commessa)}${cpCampoSelectHtml(bl.commessa)}</td></tr>`;
     bl.squadre.forEach((sq, sqIdx) => {
       const sqKey = blIdx + '-' + sqIdx;
       html += `<tr class="cp-tr-squadra" data-comm-idx="${blIdx}" data-sq-idx="${sqKey}"><td colspan="19">&nbsp;&nbsp;&nbsp;<span class="cp-sarr" style="cursor:pointer;user-select:none;margin-right:5px;font-size:11px;display:inline-block;width:10px;text-align:center;" onclick="cpToggleSq('${jsAttr(sqKey)}')">▼</span>👥 ${esc(sq.nome)}<button class="no-print pw-write-action" style="margin-left:10px;font-size:11px;font-weight:600;background:#4f46e5;color:#fff;border:none;border-radius:5px;padding:2px 8px;cursor:pointer;" onclick="event.stopPropagation();pwControlloSyncJira('${jsesc(bl.commessa)}','${jsesc(sq.nome)}',this)">🔄 Sincronizza squadra</button><button class="no-print pw-write-action" style="margin-left:6px;font-size:11px;font-weight:600;background:#0ea5e9;color:#fff;border:none;border-radius:5px;padding:2px 8px;cursor:pointer;" data-help-key="cp-carica-report" title="Click destro per la guida" onclick="event.stopPropagation();cpCaricaReportSquadra('${jsesc(bl.commessa)}','${jsesc(sq.nome)}')">📄 Carica Report</button><span class="cp-kmj-sum no-print" data-sq-idx="${sqKey}" onclick="event.stopPropagation();cpKmJiraVaiPrimo('${jsAttr(sqKey)}')"></span></td></tr>`;
@@ -808,9 +817,12 @@ async function pwControlloSyncJira(scopeCommessa, scopeSquadra, btnEl) {
     });
 
     if (readSet.size > 0) {
-      if (status) status.textContent = '⏳ Recupero Actual Production da Jira…';
+      if (status) status.textContent = '⏳ Recupero produzione da Jira…';
+      await cpCampoProdLoad();
+      const campoDiKey = {};
+      readCellByKey.forEach(u => { campoDiKey[u.issueKey] = cpCampoProduzione(u.c.commessa); });
       const { data: rData, error: rErr } = await _sbClient.functions.invoke('jira-update-production', {
-        body: { reads: [...readSet] },
+        body: { reads: [...readSet].map(k => ({ issueKey: k, campo: campoDiKey[k] })) },
       });
       if (rErr) {
         kmReadMsg = `\n\n⚠ Errore lettura Actual Production da Jira: ${await _cpEdgeErr(rErr, 'jira-update-production')}.`;
@@ -829,6 +841,8 @@ async function pwControlloSyncJira(scopeCommessa, scopeSquadra, btnEl) {
           if (!cell.km_last_by_ticket || typeof cell.km_last_by_ticket !== 'object') cell.km_last_by_ticket = {};
           cell.km_by_ticket[u.issueKey] = val;
           cell.km_last_by_ticket[u.issueKey] = val; // adottato: delta futuro = km - val
+          // Valore messo su Jira (di solito dall'operatore per chiudere il ticket): da verificare.
+          cpKmMetaSet(cell, u.issueKey, { fonte: 'jira', campoLast: campoDiKey[u.issueKey] });
           cell.km_cad = cpSumKm(cell.km_by_ticket);
           touchedCells.set(u.c.k, u.c);
           filled++;
@@ -841,7 +855,7 @@ async function pwControlloSyncJira(scopeCommessa, scopeSquadra, btnEl) {
           if (rUpErr) {
             kmReadMsg = `\n\n⚠ Valori KM recuperati da Jira ma errore nel salvataggio: ${rUpErr.message || rUpErr}.`;
           } else {
-            kmReadMsg = `\n\nℹ ${filled} valore/i "Km/Cad" recuperati da Jira (Actual Production).`;
+            kmReadMsg = `\n\nℹ ${filled} valore/i "Km/Cad" letti da Jira: restano 👁 da verificare finché non carichi il report o li confermi.`;
           }
         }
       }
@@ -851,41 +865,49 @@ async function pwControlloSyncJira(scopeCommessa, scopeSquadra, btnEl) {
     // Per ogni ticket con valore locale, si scrive su Jira solo la DIFFERENZA
     // rispetto all'ultimo valore scritto per quel ticket (km_last_by_ticket).
     // delta può essere negativo. I ticket con delta 0 vengono saltati.
+    // Solo i valori verificati dall'ufficio (report o inserimento confermato): quelli letti da
+    // Jira restano lì come sono. Lo storico delta vale solo se l'ultimo invio era sullo stesso
+    // campo della commessa: cambiato il campo (es. SINFI su KPI_Quantità lavorata) il primo invio
+    // scrive il valore intero sul nuovo campo e l'altro resta com'è.
     let kmMsg = '';
     const kmUpdates = [];
+    let nonVerificati = 0;
+    await cpCampoProdLoad();
     cells.forEach(c => {
       if (!c.email) return;
       const cell = celle[c.k];
       const tks = Array.isArray(cell.jira_tickets) ? cell.jira_tickets : [];
       const byTicket = (cell.km_by_ticket && typeof cell.km_by_ticket === 'object') ? cell.km_by_ticket : {};
-      const lastByTicket = (cell.km_last_by_ticket && typeof cell.km_last_by_ticket === 'object') ? cell.km_last_by_ticket : {};
       const ticketKeys = new Set(tks.map(t => t.key).filter(Boolean));
+      const campo = cpCampoProduzione(c.commessa);
       Object.keys(byTicket).forEach(issueKey => {
         if (!ticketKeys.has(issueKey)) return; // ignora km orfani (ticket non più presente)
         const km = Number(byTicket[issueKey]);
         if (!isFinite(km)) return;
-        const last = (lastByTicket[issueKey] == null) ? 0 : Number(lastByTicket[issueKey]);
-        const delta = Math.round((km - last) * 1000) / 1000;
+        if (!cpKmVerificato(cell, issueKey)) { nonVerificati++; return; }
+        const lastEff = cpKmLastSulCampo(cell, issueKey, campo);
+        const delta = Math.round((km - (lastEff == null ? 0 : lastEff)) * 1000) / 1000;
         if (delta === 0) return;
-        kmUpdates.push({ c, issueKey, add: delta, newLast: km, isFirst: (lastByTicket[issueKey] == null) });
+        kmUpdates.push({ c, issueKey, add: delta, newLast: km, isFirst: lastEff == null, campo });
       });
     });
 
     if (kmUpdates.length > 0) {
       const nNew = kmUpdates.filter(u => u.isFirst).length;
       const nUpd = kmUpdates.length - nNew;
+      const nKpi = kmUpdates.filter(u => u.campo === CP_CAMPO_KPI).length;
       const okKm = await showConfirmAsync(
-        `Aggiornamento "Actual Production" su Jira per ${kmUpdates.length} ticket ` +
-        `(${nNew} nuovi, ${nUpd} corretti).\n\n` +
+        `Aggiornamento della produzione su Jira per ${kmUpdates.length} ticket ` +
+        `(${nNew} nuovi, ${nUpd} corretti` + (nKpi ? `; ${nKpi} su "${CP_CAMPO_KPI}"` : '') + `).\n\n` +
         `Verrà applicata la differenza rispetto all'ultimo valore già scritto per ciascun ticket (la tua quota viene sostituita, non risommata). ` +
-        `La stessa differenza verrà sommata anche all'"Actual Production" del Task padre diretto di ciascun sottotask. Procedere?`,
+        `Su "${CP_CAMPO_AP}" la stessa differenza viene sommata anche al Task padre diretto; su "${CP_CAMPO_KPI}" si aggiorna solo il sottotask. Procedere?`,
         'Aggiorna Jira');
       if (!okKm) {
         kmMsg = `\n\n(Aggiornamento KM su Jira annullato — nessuna modifica ai ticket.)`;
       } else {
         if (status) status.textContent = '⏳ Aggiornamento Actual Production su Jira…';
         const { data: pData, error: pErr } = await _sbClient.functions.invoke('jira-update-production', {
-          body: { updates: kmUpdates.map(u => ({ issueKey: u.issueKey, add: u.add })) },
+          body: { updates: kmUpdates.map(u => ({ issueKey: u.issueKey, add: u.add, campo: u.campo })) },
         });
         if (pErr) {
           kmMsg = `\n\n⚠ Errore upload KM su Jira: ${await _cpEdgeErr(pErr, 'jira-update-production')}. Nessuno storico modificato.`;
@@ -903,6 +925,7 @@ async function pwControlloSyncJira(scopeCommessa, scopeSquadra, btnEl) {
               const cell = celle[u.c.k];
               if (!cell.km_last_by_ticket || typeof cell.km_last_by_ticket !== 'object') cell.km_last_by_ticket = {};
               cell.km_last_by_ticket[u.issueKey] = u.newLast;
+              cpKmMetaSet(cell, u.issueKey, { campoLast: r.campo || u.campo });
               touched.set(u.c.k, u.c);
               uploaded++;
               if (r.parentKey) uploadedParents++;
@@ -919,8 +942,7 @@ async function pwControlloSyncJira(scopeCommessa, scopeSquadra, btnEl) {
             }
           }
           if (!kmMsg) {
-            kmMsg = `\n\n✅ Actual Production aggiornata su Jira: ${uploaded}/${kmUpdates.length} ticket` +
-                    (pData.fieldId ? ` (campo ${pData.fieldId})` : '') + '.';
+            kmMsg = `\n\n✅ Produzione aggiornata su Jira: ${uploaded}/${kmUpdates.length} ticket.`;
             if (uploadedParents > 0) {
               kmMsg += ` Aggiornato anche il Task padre per ${uploadedParents} ticket.`;
             }
@@ -959,6 +981,9 @@ async function pwControlloSyncJira(scopeCommessa, scopeSquadra, btnEl) {
     }
     msg += kmReadMsg;
     msg += kmMsg;
+    if (nonVerificati > 0) {
+      msg += `\n\n👁 ${nonVerificati} Km/Cad letti da Jira e non ancora verificati: non inviati. Carica il report o confermali (clic su "👁 Verifica").`;
+    }
     if (status) status.textContent = `${updated} record sincronizzati`;
     showAlertModal(msg);
   } catch (e) {
@@ -1085,8 +1110,26 @@ async function cpSaveKmTicket(commessa, squadra, operatore, giorno, dataGiorno, 
   if (!_cpData[k].km_by_ticket || typeof _cpData[k].km_by_ticket !== 'object') _cpData[k].km_by_ticket = {};
 
   const v = (value === '' || value == null) ? null : parseFloat(value);
-  if (v == null || isNaN(v)) delete _cpData[k].km_by_ticket[ticketKey];
-  else _cpData[k].km_by_ticket[ticketKey] = Math.round(v * 1000) / 1000;
+  const nuovo = (v == null || isNaN(v)) ? null : Math.round(v * 1000) / 1000;
+  const prima = _cpData[k].km_by_ticket[ticketKey] == null ? null : Number(_cpData[k].km_by_ticket[ticketKey]);
+  if (nuovo === prima) return;   // uscita dal campo senza modifiche
+  // Un valore scritto a mano conta come verificato dall'ufficio solo dopo una conferma esplicita.
+  if (nuovo != null) {
+    const ok = await showConfirmAsync(
+      `Confermi Km/Cad ${nuovo} per il ticket ${ticketKey} (${operatore})?\n\n` +
+      `Il valore sarà considerato verificato dall'ufficio e, con 🔄 Sincronizza, scritto su Jira nel campo "${cpCampoProduzione(commessa)}".`,
+      'Conferma');
+    if (!ok) {
+      const inp = document.querySelector('.cp-km-in[data-cpk="' + CSS.escape(k) + '"][data-tk="' + CSS.escape(ticketKey) + '"]');
+      if (inp) inp.value = prima == null ? '' : String(prima);
+      return;
+    }
+    _cpData[k].km_by_ticket[ticketKey] = nuovo;
+    cpKmMetaSet(_cpData[k], ticketKey, { fonte: 'manuale' });
+  } else {
+    delete _cpData[k].km_by_ticket[ticketKey];
+    cpKmMetaSet(_cpData[k], ticketKey, { fonte: null });
+  }
 
   // Aggiorna lo specchio km_cad (somma) per colorazione griglia/export
   _cpData[k].km_cad = cpSumKm(_cpData[k].km_by_ticket);
@@ -1116,16 +1159,125 @@ async function cpSaveKmTicket(commessa, squadra, operatore, giorno, dataGiorno, 
    - senza_email   come da_inviare, ma l'operatore non ha email: la sincronizzazione lo salta
    - vuoto         niente da inviare (nessun Km/Cad, o 0 mai inviato: delta nullo)
    - orfano        Km/Cad tolto qui ma su Jira resta l'ultimo valore inviato (la sync non lo toglie) */
-function cpKmJiraStato(cell, ticketKey, operatore) {
+function cpKmJiraStato(cell, ticketKey, operatore, campo) {
+  campo = campo || CP_CAMPO_AP;
   const by = (cell && cell.km_by_ticket && typeof cell.km_by_ticket === 'object') ? cell.km_by_ticket : {};
   const lastMap = (cell && cell.km_last_by_ticket && typeof cell.km_last_by_ticket === 'object') ? cell.km_last_by_ticket : {};
   const km = by[ticketKey] == null ? null : Number(by[ticketKey]);
   const last = lastMap[ticketKey] == null ? null : Number(lastMap[ticketKey]);
-  if (km == null || !isFinite(km)) return { stato: last != null ? 'orfano' : 'vuoto', km: null, last };
-  const delta = Math.round((km - (last == null ? 0 : last)) * 1000) / 1000;
-  if (delta === 0) return { stato: last != null ? 'ok' : 'vuoto', km, last };
-  if (operatore && !cpOperatoreHaEmail(operatore)) return { stato: 'senza_email', km, last };
-  return { stato: last != null ? 'da_aggiornare' : 'da_inviare', km, last };
+  const base = { km: null, last, campo, campoLast: cpKmMeta(cell, ticketKey).campoLast || CP_CAMPO_AP };
+  if (km == null || !isFinite(km)) return { ...base, stato: last != null ? 'orfano' : 'vuoto' };
+  base.km = km;
+  if (!cpKmVerificato(cell, ticketKey)) return { ...base, stato: 'da_verificare' };
+  const lastEff = cpKmLastSulCampo(cell, ticketKey, campo);
+  base.altroCampo = last != null && lastEff == null;
+  const delta = Math.round((km - (lastEff == null ? 0 : lastEff)) * 1000) / 1000;
+  if (delta === 0) return { ...base, stato: lastEff != null ? 'ok' : 'vuoto' };
+  if (operatore && !cpOperatoreHaEmail(operatore)) return { ...base, stato: 'senza_email' };
+  return { ...base, stato: lastEff != null ? 'da_aggiornare' : 'da_inviare' };
+}
+
+/* ----- Provenienza e campo Jira del Km/Cad, per ticket (km_meta_by_ticket, dalla v18.224.0) -----
+   fonte: 'report' | 'manuale' (verificati dall'ufficio) | 'jira' (letto da Jira, di solito il
+   segnaposto messo dall'operatore per chiudere il ticket: non conta come allineato).
+   campoLast: campo su cui è stato scritto km_last_by_ticket (assente = Actual Production). */
+function cpKmMeta(cell, key) {
+  const m = cell && cell.km_meta_by_ticket && cell.km_meta_by_ticket[key];
+  return (m && typeof m === 'object') ? m : {};
+}
+function cpKmMetaSet(cell, key, patch) {
+  if (!cell.km_meta_by_ticket || typeof cell.km_meta_by_ticket !== 'object') cell.km_meta_by_ticket = {};
+  const m = { ...cpKmMeta(cell, key), ...patch };
+  Object.keys(m).forEach(f => { if (m[f] == null) delete m[f]; });
+  if (Object.keys(m).length) cell.km_meta_by_ticket[key] = m;
+  else delete cell.km_meta_by_ticket[key];
+}
+function cpKmVerificato(cell, key) {
+  const f = cpKmMeta(cell, key).fonte;
+  return f === 'report' || f === 'manuale';
+}
+// Ultimo valore scritto sul campo indicato, o null se l'ultimo invio era su un altro campo.
+function cpKmLastSulCampo(cell, key, campo) {
+  const lastMap = (cell && cell.km_last_by_ticket && typeof cell.km_last_by_ticket === 'object') ? cell.km_last_by_ticket : {};
+  if (lastMap[key] == null) return null;
+  return (cpKmMeta(cell, key).campoLast || CP_CAMPO_AP) === campo ? Number(lastMap[key]) : null;
+}
+// Salva solo i meta di una cella (conferma di un valore, senza toccare il resto).
+async function cpKmMetaSalva(commessa, squadra, operatore, giorno) {
+  if (!_sbClient || !_sbUser) return;
+  const k = `${commessa}|||${squadra}|||${operatore}|||${giorno}`;
+  try {
+    const { error } = await _sbClient
+      .from('controllo_produzione')
+      .update({ km_meta_by_ticket: (_cpData[k] && _cpData[k].km_meta_by_ticket) || {}, updated_at: new Date().toISOString(), updated_by: _sbUser?.email || null })
+      .eq('anno', pwAnno).eq('week', pwWeek)
+      .eq('commessa', commessa).eq('squadra', squadra)
+      .eq('operatore', operatore).eq('giorno', giorno);
+    if (error) throw error;
+  } catch (e) {
+    console.error('cpKmMetaSalva error:', e);
+    showAlertModal('Errore nel salvare la conferma: ' + (e.message || e));
+  }
+}
+
+/* ----- Campo Jira di produzione per commessa (tabella cp_campo_produzione) -----
+   Le commesse col nuovo formato (per ora SINFI) scrivono su "KPI_Quantità lavorata". Su Jira non
+   si può ricavare (il campo è sullo screen dei sottotask di tutte le commesse): lo si sceglie qui,
+   sulla riga della commessa. Commessa assente = Actual Production. */
+const CP_CAMPO_AP = 'Actual Production';
+const CP_CAMPO_KPI = 'KPI_Quantità lavorata';
+let _cpCampoProd = null;   // commessa → campo; null = non ancora letto
+
+async function cpCampoProdLoad() {
+  if (!_sbClient || !_sbUser) { if (!_cpCampoProd) _cpCampoProd = {}; return; }
+  try {
+    const { data, error } = await _sbClient.from('cp_campo_produzione').select('commessa,campo');
+    if (error) throw error;
+    const m = {};
+    (data || []).forEach(r => { m[r.commessa] = r.campo; });
+    _cpCampoProd = m;
+  } catch (e) {
+    console.warn('[controllo produzione] campo di produzione per commessa non letto', e);
+    if (!_cpCampoProd) _cpCampoProd = {};
+  }
+}
+
+function cpCampoProduzione(commessa) {
+  return (_cpCampoProd && _cpCampoProd[commessa]) || CP_CAMPO_AP;
+}
+
+function cpCampoSelectHtml(commessa) {
+  const campo = cpCampoProduzione(commessa);
+  const opt = (v, l) => '<option value="' + esc(v) + '"' + (v === campo ? ' selected' : '') + '>' + esc(l) + '</option>';
+  return '<select class="cp-campo-sel no-print pw-write-action' + (campo === CP_CAMPO_KPI ? ' kpi' : '') + '" ' +
+    'title="Campo Jira del sottotask su cui va il Km/Cad di questa commessa (Sincronizza)" ' +
+    'onclick="event.stopPropagation()" onchange="cpSetCampoProduzione(\'' + jsAttr(commessa) + '\',this)">' +
+    opt(CP_CAMPO_AP, 'Produzione su: Actual Production') + opt(CP_CAMPO_KPI, 'Produzione su: KPI_Quantità lavorata') + '</select>';
+}
+
+async function cpSetCampoProduzione(commessa, sel) {
+  const prima = cpCampoProduzione(commessa), campo = sel.value;
+  if (campo === prima) return;
+  if (!sbGuardWrite()) { sel.value = prima; return; }
+  const ok = await showConfirmAsync(
+    `Da ora il Km/Cad dei sottotask di "${commessa}" verrà scritto su Jira nel campo "${campo}" (prima: "${prima}").\n\n` +
+    `I valori già scritti su "${prima}" restano dove sono. Alla prossima 🔄 Sincronizza ogni Km/Cad verificato viene scritto per intero su "${campo}".` +
+    (campo === CP_CAMPO_KPI ? ` Su "${CP_CAMPO_KPI}" si aggiorna solo il sottotask, non il Task padre.` : ''),
+    'Cambia campo');
+  if (!ok) { sel.value = prima; return; }
+  try {
+    const { error } = await _sbClient.from('cp_campo_produzione')
+      .upsert({ commessa, campo, aggiornato_da: _sbUser?.email || null, aggiornato_il: new Date().toISOString() }, { onConflict: 'commessa' });
+    if (error) throw error;
+  } catch (e) {
+    sel.value = prima;
+    showAlertModal('Errore nel salvare il campo di produzione: ' + (e.message || e));
+    return;
+  }
+  if (!_cpCampoProd) _cpCampoProd = {};
+  _cpCampoProd[commessa] = campo;
+  sel.classList.toggle('kpi', campo === CP_CAMPO_KPI);
+  cpKmJiraRefreshDom();
 }
 
 function cpOperatoreHaEmail(nome) {
@@ -1134,20 +1286,24 @@ function cpOperatoreHaEmail(nome) {
 
 const CP_KMJ_STATI = {
   ok:            { lbl: '✓ Jira',  cls: 'ok' },
+  da_verificare: { lbl: '👁 Verifica', cls: 'ver' },
   da_aggiornare: { lbl: '↻ Agg.',  cls: 'agg' },
   da_inviare:    { lbl: '⬆ Invia', cls: 'inv' },
   senza_email:   { lbl: '⚠ Email', cls: 'mail' },
   vuoto:         { lbl: '—',       cls: 'vuoto' },
   orfano:        { lbl: '○ Jira',  cls: 'vuoto' },
 };
-const CP_KMJ_IN_SOSPESO = ['da_aggiornare', 'da_inviare', 'senza_email'];
+const CP_KMJ_IN_SOSPESO = ['da_verificare', 'da_aggiornare', 'da_inviare', 'senza_email'];
 
 function cpKmJiraTitolo(st, ticketKey) {
   const f = v => String(Math.round(v * 1000) / 1000);
+  const campo = '\nCampo Jira: ' + (st.campo || CP_CAMPO_AP);
   switch (st.stato) {
-    case 'ok': return `${ticketKey}: su Jira c'è ${f(st.last)}, uguale al Km/Cad.\nClic per azzerare lo storico (con conferma).`;
-    case 'da_aggiornare': return `${ticketKey}: Km/Cad cambiato dopo l'ultimo invio.\nSu Jira: ${f(st.last)} → da inviare: ${f(st.km)}.\nPremi 🔄 Sincronizza squadra per aggiornarlo.`;
-    case 'da_inviare': return `${ticketKey}: Km/Cad ${f(st.km)} non ancora inviato a Jira.\nPremi 🔄 Sincronizza squadra per inviarlo.`;
+    case 'ok': return `${ticketKey}: su Jira c'è ${f(st.last)}, uguale al Km/Cad verificato.${campo}\nClic per azzerare lo storico (con conferma).`;
+    case 'da_verificare': return `${ticketKey}: Km/Cad ${f(st.km)} letto da Jira (di solito il valore messo dall'operatore per chiudere il ticket), non verificato dall'ufficio.\nCarica il report o scrivi il valore giusto; se ${f(st.km)} è corretto, clic per confermarlo.`;
+    case 'da_aggiornare': return `${ticketKey}: Km/Cad cambiato dopo l'ultimo invio.\nSu Jira: ${f(st.last)} → da inviare: ${f(st.km)}.${campo}\nPremi 🔄 Sincronizza squadra per aggiornarlo.`;
+    case 'da_inviare': return `${ticketKey}: Km/Cad ${f(st.km)} non ancora inviato a Jira` +
+      (st.altroCampo ? ` su questo campo (l'ultimo invio, ${f(st.last)}, era su "${st.campoLast}")` : '') + `.${campo}\nPremi 🔄 Sincronizza squadra per inviarlo.`;
     case 'senza_email': return `${ticketKey}: Km/Cad ${f(st.km)} non inviabile, l'operatore non ha un'email assegnata (la sincronizzazione lo salta).`;
     case 'orfano': return `${ticketKey}: Km/Cad vuoto qui, ma su Jira resta l'ultimo valore inviato (${f(st.last)}): la sincronizzazione non lo toglie.\nClic per azzerare lo storico (con conferma).`;
     default: return `${ticketKey}: nessun Km/Cad da inviare.`;
@@ -1159,7 +1315,7 @@ function cpKmJiraTitolo(st, ticketKey) {
 function cpKmJiraRefreshDom() {
   const perSquadra = {};
   document.querySelectorAll('.cp-table .cp-kmj').forEach(b => {
-    const st = cpKmJiraStato(_cpData[b.dataset.cpk], b.dataset.tk, b.dataset.operatore);
+    const st = cpKmJiraStato(_cpData[b.dataset.cpk], b.dataset.tk, b.dataset.operatore, cpCampoProduzione(String(b.dataset.cpk || '').split('|||')[0]));
     const d = CP_KMJ_STATI[st.stato];
     b.className = 'cp-kmj cp-kmj-' + d.cls;
     b.textContent = d.lbl;
@@ -1167,7 +1323,7 @@ function cpKmJiraRefreshDom() {
     b.dataset.stato = st.stato;
     const tr = b.closest('tr'), sq = tr && tr.dataset.sqIdx;
     if (sq == null) return;
-    const c = perSquadra[sq] || (perSquadra[sq] = { ok: 0, da_aggiornare: 0, da_inviare: 0, senza_email: 0 });
+    const c = perSquadra[sq] || (perSquadra[sq] = { ok: 0, da_verificare: 0, da_aggiornare: 0, da_inviare: 0, senza_email: 0 });
     if (st.stato in c) c[st.stato]++;
   });
   document.querySelectorAll('.cp-table .cp-km-in').forEach(inp => {
@@ -1175,25 +1331,27 @@ function cpKmJiraRefreshDom() {
     const stato = b ? b.dataset.stato : '';
     inp.classList.toggle('cp-km-agg', stato === 'da_aggiornare');
     inp.classList.toggle('cp-km-inv', stato === 'da_inviare' || stato === 'senza_email');
+    inp.classList.toggle('cp-km-ver', stato === 'da_verificare');
   });
   document.querySelectorAll('.cp-table .cp-kmj-sum').forEach(el => {
     const c = perSquadra[el.dataset.sqIdx];
-    const pend = c ? c.da_aggiornare + c.da_inviare + c.senza_email : 0;
+    const pend = c ? c.da_verificare + c.da_aggiornare + c.da_inviare + c.senza_email : 0;
     if (!c || (!pend && !c.ok)) { el.innerHTML = ''; el.className = 'cp-kmj-sum no-print'; el.title = ''; return; }
     if (!pend) {
       el.className = 'cp-kmj-sum no-print ok';
-      el.textContent = '✓ KM allineati su Jira';
-      el.title = 'Tutti i Km/Cad di questa squadra sono già su Jira (' + c.ok + ' ticket)';
+      el.textContent = '✓ KM verificati e allineati su Jira';
+      el.title = 'Tutti i Km/Cad di questa squadra vengono da un report o sono stati confermati, e sono già su Jira (' + c.ok + ' ticket)';
       return;
     }
     const parti = [];
     if (c.ok) parti.push(c.ok + ' ✓');
+    if (c.da_verificare) parti.push(c.da_verificare + ' da verificare');
     if (c.da_aggiornare) parti.push(c.da_aggiornare + ' da aggiornare');
     if (c.da_inviare) parti.push(c.da_inviare + ' da inviare');
     if (c.senza_email) parti.push(c.senza_email + ' senza email');
     el.className = 'cp-kmj-sum no-print pend';
     el.textContent = 'KM su Jira: ' + parti.join(' · ');
-    el.title = 'Km/Cad di questa squadra non ancora allineati con Jira: premi 🔄 Sincronizza squadra per inviarli.\nClic qui per andare al primo in sospeso.';
+    el.title = 'Km/Cad di questa squadra non ancora verificati o non ancora su Jira.\n«Da verificare» = letti da Jira (valore dell\'operatore): carica il report o confermali. Gli altri si inviano con 🔄 Sincronizza squadra.\nClic qui per andare al primo in sospeso.';
   });
 }
 
@@ -1222,9 +1380,23 @@ async function cpJiraFlagTicketClick(ev, commessa, squadra, operatore, giorno, t
   const cell = _cpData[k] || {};
   const lastMap = (cell.km_last_by_ticket && typeof cell.km_last_by_ticket === 'object') ? cell.km_last_by_ticket : {};
   const cur = lastMap[ticketKey] != null;
+  const st0 = cpKmJiraStato(cell, ticketKey, operatore, cpCampoProduzione(commessa));
+
+  if (st0.stato === 'da_verificare') {
+    if (!sbGuardWrite()) return;
+    const ok = await showConfirmAsync(
+      `Il Km/Cad ${st0.km} del ticket ${ticketKey} è stato letto da Jira (di solito è il valore messo dall'operatore per chiudere il ticket).\n\n` +
+      `Confermi che ${st0.km} è la produzione reale? Se non lo è, scrivi il valore giusto nel campo Km/Cad (o carica il report).`,
+      'Confermo ' + st0.km);
+    if (!ok) return;
+    cpKmMetaSet(_cpData[k] || (_cpData[k] = {}), ticketKey, { fonte: 'manuale' });
+    await cpKmMetaSalva(commessa, squadra, operatore, giorno);
+    cpKmJiraRefreshDom();
+    return;
+  }
 
   if (!cur) {
-    const st = cpKmJiraStato(cell, ticketKey, operatore);
+    const st = st0;
     showAlertModal(st.stato === 'senza_email'
       ? `${operatore} non ha un'email assegnata: la sincronizzazione lo salta e il Km/Cad del ticket ${ticketKey} non può essere inviato a Jira. Assegna l'email dalla tab "Email/operatore".`
       : st.stato === 'da_inviare'
@@ -1244,6 +1416,7 @@ async function cpJiraFlagTicketClick(ev, commessa, squadra, operatore, giorno, t
   if (!_cpData[k]) _cpData[k] = {};
   if (!_cpData[k].km_last_by_ticket || typeof _cpData[k].km_last_by_ticket !== 'object') _cpData[k].km_last_by_ticket = {};
   delete _cpData[k].km_last_by_ticket[ticketKey];
+  cpKmMetaSet(_cpData[k], ticketKey, { campoLast: null });
   const newLastMap = _cpData[k].km_last_by_ticket;
   const lastSum = cpSumKm(newLastMap);
 
@@ -1253,6 +1426,7 @@ async function cpJiraFlagTicketClick(ev, commessa, squadra, operatore, giorno, t
         .from('controllo_produzione')
         .update({
           km_last_by_ticket: newLastMap,
+          km_meta_by_ticket: _cpData[k].km_meta_by_ticket || {},
           km_jira_last: lastSum,
           km_jira_uploaded: lastSum != null,
           updated_at: new Date().toISOString(),
@@ -1285,8 +1459,8 @@ async function cpRereadTicket(ev, commessa, squadra, operatore, giorno, dataGior
 
   const ok = await showConfirmAsync(
     `Rileggere ora da Jira l'Actual Production del ticket ${ticketKey}?\n\n` +
-    'Il valore locale "Km/Cad" di questo ticket verrà sostituito con quello letto da Jira in questo momento. ' +
-    'Usa questa opzione se hai modificato il valore direttamente su Jira dopo che l\'app lo aveva già adottato (spunta "Su Jira" attiva).',
+    `Il valore locale "Km/Cad" di questo ticket verrà sostituito con quello letto ora da Jira (campo "${cpCampoProduzione(commessa)}") e considerato verificato. ` +
+    'Usa questa opzione se hai modificato il valore direttamente su Jira dopo che l\'app lo aveva già adottato.',
     'Rileggi da Jira');
   if (!ok) return;
 
@@ -1295,8 +1469,10 @@ async function cpRereadTicket(ev, commessa, squadra, operatore, giorno, dataGior
   if (status) status.textContent = '⏳ Rilettura Actual Production…';
 
   try {
+    await cpCampoProdLoad();
+    const campo = cpCampoProduzione(commessa);
     const { data: rData, error: rErr } = await _sbClient.functions.invoke('jira-update-production', {
-      body: { reads: [ticketKey] },
+      body: { reads: [{ issueKey: ticketKey, campo }] },
     });
     if (rErr) throw new Error(await _cpEdgeErr(rErr, 'jira-update-production'));
     if (rData && rData.error) throw new Error(rData.error);
@@ -1304,7 +1480,7 @@ async function cpRereadTicket(ev, commessa, squadra, operatore, giorno, dataGior
     const v = (rData && rData.values) ? rData.values[ticketKey] : null;
     if (v == null || !isFinite(Number(v)) || Number(v) <= 0) {
       if (status) status.textContent = '';
-      showAlertModal(`Nessun valore leggibile per ${ticketKey} (campo Actual Production vuoto o non valido su Jira).`);
+      showAlertModal(`Nessun valore leggibile per ${ticketKey} (campo "${campo}" vuoto o non valido su Jira).`);
       return;
     }
     const val = Math.round(Number(v) * 1000) / 1000;
@@ -1314,6 +1490,7 @@ async function cpRereadTicket(ev, commessa, squadra, operatore, giorno, dataGior
     if (!_cpData[k].km_last_by_ticket || typeof _cpData[k].km_last_by_ticket !== 'object') _cpData[k].km_last_by_ticket = {};
     _cpData[k].km_by_ticket[ticketKey] = val;
     _cpData[k].km_last_by_ticket[ticketKey] = val; // adottato di nuovo: delta futuro = 0
+    cpKmMetaSet(_cpData[k], ticketKey, { fonte: 'manuale', campoLast: campo });
     _cpData[k].km_cad = cpSumKm(_cpData[k].km_by_ticket);
 
     const record = cpBuildRecord(commessa, squadra, operatore, giorno, cpDataISO(dataGiorno), cantiere, attivita);
