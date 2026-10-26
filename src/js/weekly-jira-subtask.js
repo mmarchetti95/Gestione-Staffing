@@ -616,7 +616,7 @@ function pwJiraSubtaskOpenComuniModal(cIdx, commessaNome, meta, gruppi, squadreO
     return `<div class="border border-slate-200 rounded p-2 mb-2" data-comune-idx="${i}">
       <div class="flex items-center justify-between gap-2 mb-1">
         <div class="text-sm font-medium text-slate-800">${esc(gr.comune)}${gr.attivita ? ' <span class="text-[11px] font-normal text-slate-500">· ' + esc(gr.attivita) + '</span>' : ''}</div>
-        <label class="text-[11px] text-slate-500 flex items-center gap-1 cursor-pointer">
+        <label data-help-key="pw-jira-salta-comune" class="text-[11px] text-slate-500 flex items-center gap-1 cursor-pointer">
           <input type="checkbox" class="pw-jira-skip-comune" data-idx="${i}"${allDone ? ' checked' : ''}> salta
         </label>
       </div>
@@ -625,8 +625,8 @@ function pwJiraSubtaskOpenComuniModal(cIdx, commessaNome, meta, gruppi, squadreO
       ${errorNote}
       ${noEmailNote}
       <div class="grid grid-cols-2 gap-2">
-        <button type="button" class="pw-jira-panel-trigger pw-jira-epic-trigger w-full text-left border border-slate-300 rounded px-2 py-1.5 text-sm bg-white hover:bg-slate-50 truncate block" data-idx="${i}"${allDone ? ' disabled style="opacity:0.5;"' : ''}>— scegli Epic —</button>
-        <button type="button" class="pw-jira-panel-trigger pw-jira-task-trigger w-full text-left border border-slate-300 rounded px-2 py-1.5 text-sm bg-white hover:bg-slate-50 truncate block" data-idx="${i}" disabled style="opacity:0.5;">— scegli prima l'Epic —</button>
+        <button type="button" data-help-key="pw-jira-epic" class="pw-jira-panel-trigger pw-jira-epic-trigger w-full text-left border border-slate-300 rounded px-2 py-1.5 text-sm bg-white hover:bg-slate-50 truncate block" data-idx="${i}"${allDone ? ' disabled style="opacity:0.5;"' : ''}>— scegli Epic —</button>
+        <button type="button" data-help-key="pw-jira-task" class="pw-jira-panel-trigger pw-jira-task-trigger w-full text-left border border-slate-300 rounded px-2 py-1.5 text-sm bg-white hover:bg-slate-50 truncate block" data-idx="${i}" disabled style="opacity:0.5;">— scegli prima l'Epic —</button>
       </div>
       <div class="pw-jira-comune-status text-[11px] mt-1.5 min-h-[14px]" data-idx="${i}"></div>
     </div>`;
@@ -638,13 +638,13 @@ function pwJiraSubtaskOpenComuniModal(cIdx, commessaNome, meta, gruppi, squadreO
     const rows = list.map(i => rowHtml(i)).join('');
     return `<div class="pw-jira-squadra-group border border-slate-200 rounded mb-2 overflow-hidden">
       <div class="w-full flex items-center justify-between gap-2 px-2.5 py-2 bg-slate-50 hover:bg-slate-100">
-        <button type="button" class="pw-jira-squadra-toggle flex items-center gap-1.5 text-sm font-medium text-slate-700 flex-1 min-w-0 text-left" data-squadra-idx="${gi}">
+        <button type="button" data-help-key="pw-jira-squadra-toggle" class="pw-jira-squadra-toggle flex items-center gap-1.5 text-sm font-medium text-slate-700 flex-1 min-w-0 text-left" data-squadra-idx="${gi}">
           <span class="pw-jira-squadra-arrow text-slate-400 shrink-0">▾</span>
           <span class="truncate">${esc(sqNome)} <span class="text-slate-400 font-normal">(${list.length} cantier${list.length === 1 ? 'e' : 'i'})</span></span>
         </button>
         <div class="flex gap-2 shrink-0 text-[11px]">
-          <button type="button" class="pw-jira-squadra-skip-all text-slate-500 hover:underline whitespace-nowrap" data-squadra-idx="${gi}">salta tutti</button>
-          <button type="button" class="pw-jira-squadra-skip-none text-teal-700 hover:underline whitespace-nowrap" data-squadra-idx="${gi}">includi tutti</button>
+          <button type="button" data-help-key="pw-jira-salta-tutti" class="pw-jira-squadra-skip-all text-slate-500 hover:underline whitespace-nowrap" data-squadra-idx="${gi}">salta tutti</button>
+          <button type="button" data-help-key="pw-jira-includi-tutti" class="pw-jira-squadra-skip-none text-teal-700 hover:underline whitespace-nowrap" data-squadra-idx="${gi}">includi tutti</button>
         </div>
       </div>
       <div class="pw-jira-squadra-body px-2.5 pt-2 pb-1" data-squadra-idx="${gi}">${rows}</div>
@@ -875,7 +875,7 @@ function pwJiraSubtaskOpenSelectItemsModal(cIdx, commessaNome, meta, items, skip
     let noteHtml = '';
     if (already) noteHtml = ` <span class="text-blue-600">🎫 già presente${already.key ? ' · ' + esc(already.key) : ''}</span>`;
     else if (erroredBefore) noteHtml = ` <span class="text-red-700">⚠️ tentativo precedente fallito${entry.message ? ' · ' + esc(entry.message) : ''}</span>`;
-    return `<label class="flex items-center gap-2 border-b border-slate-100 py-1.5 text-sm cursor-pointer${already ? ' opacity-70' : ''}">
+    return `<label data-help-key="pw-jira-seleziona-sottotask" class="flex items-center gap-2 border-b border-slate-100 py-1.5 text-sm cursor-pointer${already ? ' opacity-70' : ''}">
       <input type="checkbox" class="pw-jira-select-item" data-idx="${i}"${already ? '' : ' checked'}>
       <div class="min-w-0">
         <div class="truncate">${esc(pwJiraGruppoLabel(item._comune || '', item._attivita))} — ${esc(item._operatore || '')} <span class="text-[11px] text-slate-400">(${esc(item.taskKey || '')})</span>${noteHtml}</div>
@@ -1102,7 +1102,7 @@ async function pwJiraSubtaskOpenExtraFieldsModal(cIdx, commessaNome, meta, items
     </div>`).join('') : '';
   const productionWeightSectionHtml = hasProductionWeight ? `<div class="mb-3">
       <label class="block text-[11px] text-slate-500 mb-1">Production Weight (%)</label>
-      <label class="flex items-start gap-2 text-xs text-slate-700 mb-1.5 cursor-pointer">
+      <label data-help-key="pw-jira-ricalcola-weight" class="flex items-start gap-2 text-xs text-slate-700 mb-1.5 cursor-pointer">
         <input type="checkbox" id="pw-jira-weight-recalc" checked class="mt-0.5">
         <span>Ricalcola su <b>tutti</b> i sottotask del Task (100% diviso il totale, aggiorna anche quelli già su Jira). Il conteggio reale compare nell'anteprima.</span>
       </label>

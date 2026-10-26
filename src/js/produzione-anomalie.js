@@ -912,7 +912,7 @@ function _cpaIntestazione(r) {
           '</div>' + _cpaLetturaHtml(r) +
       '</div>' +
       '<div class="flex-1"></div>' +
-      '<label class="text-xs text-slate-600 flex items-center gap-1 mt-1" title="Legge i worklog anche degli operatori del pool che non compaiono in Griglia questa settimana (più lento)">' +
+      '<label data-help-key="cpaTogglePool" class="text-xs text-slate-600 flex items-center gap-1 mt-1" title="Legge i worklog anche degli operatori del pool che non compaiono in Griglia questa settimana (più lento)">' +
         '<input type="checkbox" onchange="cpaTogglePool(this)"' + (_cpa.tuttoIlPool ? ' checked' : '') + '> anche chi non è in Griglia</label>' +
       '<button type="button" onclick="cpaRegistroApri()" class="' + btn + '" style="color:#047857;border-color:#6ee7b7;" title="Chi è già stato sollecitato: resta salvato anche dopo aver chiuso la dashboard">📒 Registro solleciti' + (_cpaRegistroConta() ? ' (' + _cpaRegistroConta() + ')' : '') + '</button>' +
       '<button type="button" onclick="cpaAvvia()" class="text-xs px-3 py-1 rounded font-semibold text-white" style="background:#b45309;' + (_cpa.inCorso ? 'opacity:.55;' : '') + '"' + (_cpa.inCorso ? ' disabled' : '') + ' title="Rilegge worklog ed Epic da Jira">' + (r ? '↻ Ricontrolla' : '▶ Avvia controllo') + '</button>' +
@@ -943,7 +943,7 @@ function _cpaSchede(r) {
   r.anomalie.forEach(a => { if (!ign[a.id] && !_cpa.risolte.has(a.id)) { conta[a.tipo] = (conta[a.tipo] || 0) + 1; tot++; } });
   const tab = (tipo, testo, n) => {
     const on = _cpa.filtro === tipo;
-    return '<button type="button" data-tipo="' + tipo + '" onclick="cpaFiltro(this.dataset.tipo)" class="text-xs px-3 py-2 whitespace-nowrap" style="border-bottom:3px solid ' + (on ? '#b45309' : 'transparent') + ';' +
+    return '<button type="button" data-tipo="' + tipo + '" data-help-key="cpaFiltro:' + (tipo || 'tutte') + '" onclick="cpaFiltro(this.dataset.tipo)" class="text-xs px-3 py-2 whitespace-nowrap" style="border-bottom:3px solid ' + (on ? '#b45309' : 'transparent') + ';' +
       (on ? 'color:#0f172a;font-weight:700;' : 'color:#475569;') + '">' + testo +
       ' <span class="rounded-full px-1.5 text-[11px] font-bold" style="' + (n ? 'background:#fef3c7;color:#92400e;' : 'background:#f1f5f9;color:#94a3b8;') + '">' + n + '</span></button>';
   };
@@ -956,7 +956,7 @@ function _cpaBarra(r, attive, ign) {
   const nAperte = attive.length - nIgn;
   const desc = _cpa.filtro ? CPA_TIPI[_cpa.filtro].descrizione : 'Tutti i controlli, giorno per giorno.';
   const pref = _cpaPref();
-  const selSoglia = (k, icona, titolo) => '<label class="text-xs text-slate-600 flex items-center gap-1" title="' + titolo + '">' + icona + ' scarto minimo ' +
+  const selSoglia = (k, icona, titolo) => '<label data-help-key="cpaSetSogliaOre:' + k + '" class="text-xs text-slate-600 flex items-center gap-1" title="' + titolo + '">' + icona + ' scarto minimo ' +
     '<select data-k="' + k + '" onchange="cpaSetSogliaOre(this)" class="border border-slate-300 rounded px-1 py-0.5 text-xs bg-white">' +
     CPA_SOGLIE_ORE.map(v => '<option value="' + v + '"' + (v === Number(pref[k]) ? ' selected' : '') + '>' + String(v).replace('.', ',') + ' h</option>').join('') +
     '</select></label>';

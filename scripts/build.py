@@ -70,6 +70,7 @@ JS_FILES = [
     'weekly-note-variazioni.js',
     'weekly-jira-check.js',
     'weekly-undo.js',
+    'weekly-guida.js',
     'meteo-storico.js',
     'mappa-live.js',
     'ai-assistant.js',

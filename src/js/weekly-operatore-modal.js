@@ -138,6 +138,7 @@ function pwOpenOpModal(cidx, sidx, oidx) {
   btnDw.textContent = '🔁 Doppia week (' + nDw + ')';
   btnDw.title = nDw ? 'Mostra solo chi è in doppia week questa settimana' : 'Nessuno in doppia week questa settimana';
   btnDw.disabled = !nDw;
+  btnDw.dataset.helpKey = 'pw-opmodal-dw';
   if (!nDw) btnDw.style.opacity = '.5';
   btnDw.onclick = () => {
     filtroDw = !filtroDw;
@@ -173,7 +174,7 @@ function pwOpenOpModal(cidx, sidx, oidx) {
 
   const skillRow = document.createElement('div');
   skillRow.style.cssText = 'display:flex;flex-wrap:wrap;gap:5px;padding:0 16px 8px;';
-  skillRow.innerHTML = SKILLS.map(s => '<button type="button" class="op-modal-skill-btn" data-skill="' + esc(s) + '">' + esc(s) + '</button>').join('');
+  skillRow.innerHTML = SKILLS.map(s => '<button type="button" class="op-modal-skill-btn" data-help-key="pw-opmodal-skill" data-skill="' + esc(s) + '">' + esc(s) + '</button>').join('');
   modal.appendChild(skillRow);
   function paintSkillBtn(btn, on) {
     btn.style.background = on ? '#ccfbf1' : '#fff';
@@ -250,6 +251,7 @@ function pwOpenOpModal(cidx, sidx, oidx) {
     const noneEl = document.createElement('div');
     noneEl.className = 'op-modal-item stato-nessuno' + (!nomeCorrente ? ' is-selected' : '');
     noneEl.innerHTML = `<div class="op-modal-dot stato-nessuno"></div><span>— nessuno / rimuovi —</span>`;
+    noneEl.dataset.helpKey = 'pw-opmodal-nessuno';
     noneEl.onclick = () => pwConfirmOpModal(cidx, sidx, oidx, '');
     list.appendChild(noneEl);
 
@@ -327,6 +329,7 @@ function pwOpenOpModal(cidx, sidx, oidx) {
         '<div class="op-modal-item-body"><div class="op-modal-item-nome">' + esc(nome) + '</div>' +
         '<div class="op-modal-item-meta">' + meta + '</div></div>' +
         '<span class="op-modal-tag stato-' + stato + '">' + tagLabel + '</span>';
+      item.dataset.helpKey = 'pw-opmodal-operatore';
       item.onclick = () => pwConfirmOpModal(cidx, sidx, oidx, nome, fornNome);
       list.appendChild(item);
     });

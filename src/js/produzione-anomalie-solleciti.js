@@ -293,7 +293,7 @@ function _cpaSollSchedaHtml(g, r, email, inp) {
     (st && nuovi.has(v.giorno) ? ' title="Giornata nuova, non compresa nel sollecito già inviato"' : '') + '>' +
     esc(r.giorniLabel[v.giorno]) + ' · ' + (v.oreRegistrate > 0 ? esc(_cpaFmt(v.oreRegistrate)) + (v.oreAttese != null ? '/' + esc(_cpaFmt(v.oreAttese)) : '') + ' h' : '0 h') + '</span>').join('');
   const quando = st ? new Date(st.rec.ts).toLocaleString('it-IT', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }) : '';
-  const spunta = '<label class="pw-write-action text-xs flex items-center gap-1 font-semibold" style="color:' + (st && st.completo ? '#15803d' : '#334155') + ';">' +
+  const spunta = '<label data-help-key="cpaSollSegnaInviato" class="pw-write-action text-xs flex items-center gap-1 font-semibold" style="color:' + (st && st.completo ? '#15803d' : '#334155') + ';">' +
     '<input type="checkbox" data-soll-op="' + op + '" onchange="cpaSollSegnaInviato(this)"' + (st && st.completo ? ' checked' : '') + '> Sollecito inviato</label>' +
     (st ? '<span class="text-[11px] text-slate-500">' + (st.completo ? '' : '⚠ inviato il ' + quando + ', ma ci sono giornate nuove (riquadrate): spunta di nuovo dopo il nuovo invio · ') +
       (st.completo ? 'il ' + quando : '') + (st.rec.da ? ' da ' + esc(st.rec.da) : '') + '</span>' : '');
@@ -340,7 +340,7 @@ function _cpaSollHtml(r) {
     '<button type="button" onclick="cpaToggle()" class="text-xs px-2 py-1 text-slate-500 hover:text-slate-800" title="Chiudi">✕</button></div>';
   const toni = [['cordiale', 'Cordiale'], ['formale', 'Formale'], ['diretto', 'Diretto']];
   const opzioni = '<div class="flex flex-wrap items-center gap-2 mt-2">' +
-    '<label class="text-xs text-slate-600 flex items-center gap-1" title="Usato dall\'assistente AI">Tono <select data-f="tono" onchange="cpaSollOpzione(this)" class="' + inp + '">' +
+    '<label data-help-key="cpaSollOpzione:tono" class="text-xs text-slate-600 flex items-center gap-1" title="Usato dall\'assistente AI">Tono <select data-f="tono" onchange="cpaSollOpzione(this)" class="' + inp + '">' +
       toni.map(t => '<option value="' + t[0] + '"' + (S.tono === t[0] ? ' selected' : '') + '>' + t[1] + '</option>').join('') +
     '</select></label>' +
     '<label class="text-xs text-slate-600 flex items-center gap-1">Entro <input type="text" data-f="entro" oninput="cpaSollOpzione(this)" value="' + esc(S.entro) + '" placeholder="es. venerdì 2 ottobre" class="' + inp + '" style="width:150px;"></label>' +
@@ -348,7 +348,7 @@ function _cpaSollHtml(r) {
     '<div class="flex-1"></div>' +
     '<button type="button" onclick="cpaSollTestoBase()" class="text-xs px-2 py-1 border border-slate-300 rounded bg-white hover:bg-slate-50">↺ Testo base</button>' +
     '<button type="button" onclick="cpaSollAi()" class="text-xs px-3 py-1.5 rounded font-semibold text-white" style="background:#7c3aed;' + (aiOk && !S.aiInCorso ? '' : 'opacity:.55;') + '" title="' + esc(aiTitolo) + '"' + (S.aiInCorso ? ' disabled' : '') + '>✨ Scrivi con l\'assistente AI</button>' +
-    '<button type="button" onclick="cpaSollCopia(this)" class="text-xs px-2 py-1 border border-slate-300 rounded bg-white hover:bg-slate-50">📋 Copia tutti</button>' +
+    '<button type="button" data-help-key="cpaSollCopia:tutti" onclick="cpaSollCopia(this)" class="text-xs px-2 py-1 border border-slate-300 rounded bg-white hover:bg-slate-50">📋 Copia tutti</button>' +
     '</div>';
   const msg = S.msg ? '<div class="text-xs mt-2 ' + (S.msg.startsWith('⚠') ? 'text-rose-700' : 'text-slate-600') + '">' + esc(S.msg) + '</div>' : '';
   // confronto per NOME: _cpaSollGruppi() crea oggetti nuovi a ogni chiamata
@@ -438,7 +438,7 @@ function _cpaRegistroHtml() {
     '<span class="text-xs font-semibold text-slate-700 uppercase tracking-wide">📒 Registro solleciti · ' + (R.tutte ? 'tutte le settimane' : 'settimana ' + pwWeek + '/' + pwAnno) + '</span>' +
     '<span class="text-[11px] text-slate-500">Salvato con la pianificazione: lo vedono tutti e resta anche dopo aver chiuso la dashboard.</span>' +
     '<div class="flex-1"></div>' +
-    '<label class="text-xs text-slate-600 flex items-center gap-1"><input type="checkbox" onchange="cpaRegistroTutte(this)"' + (R.tutte ? ' checked' : '') + '> tutte le settimane</label>' +
+    '<label data-help-key="cpaRegistroTutte" class="text-xs text-slate-600 flex items-center gap-1"><input type="checkbox" onchange="cpaRegistroTutte(this)"' + (R.tutte ? ' checked' : '') + '> tutte le settimane</label>' +
     '<button type="button" onclick="cpaToggle()" class="text-xs px-2 py-1 text-slate-500 hover:text-slate-800" title="Chiudi">✕</button></div>';
   if (!righe.length) {
     return '<div class="bg-white border border-emerald-200 rounded-lg p-3 shadow-sm">' + intest +

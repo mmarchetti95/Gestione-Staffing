@@ -904,7 +904,7 @@ function _apcPassiHtml(m, inCorso) {
   }).join('');
   /* Durante il turno i passi sono aperti (si vede il lavoro); a fine turno si chiudono
      in una riga, riapribile. */
-  return '<details class="apc-passi"' + (inCorso ? ' open' : '') + '><summary>' +
+  return '<details class="apc-passi"' + (inCorso ? ' open' : '') + '><summary data-help-key="apc-passi">' +
     (inCorso ? 'Sto lavorando…' : nOk + (nOk === 1 ? ' passaggio' : ' passaggi')) + '</summary>' + righe + '</details>';
 }
 
@@ -943,11 +943,11 @@ function _apcDiffHtml(m, i) {
   const b = _ap.bozza;
   const ultima = i === _apc.msgs.length - 1;
   html += '<div class="apc-diff-az">' +
-    (puoAnnullare ? '<button type="button" data-apc="annulla" data-i="' + i + '" class="apc-btn">↶ Annulla</button>' : '') +
-    (b && ultima && !m.annullato ? '<button type="button" data-apc="vedi" class="apc-btn">Vedi nella bozza</button>' : '') +
-    (b && ultima && !m.annullato && b.risultato.assegnazioni.length ? '<button type="button" data-apc="applica" class="apc-btn primario" title="Scrive la bozza in Griglia (chiede conferma, annullabile)">✓ Applica alla Griglia</button>' : '') +
-    (_ap.riparazione && ultima && !m.annullato ? '<button type="button" data-apc="vedi-rip" class="apc-btn">Vedi riparazione</button>' +
-      '<button type="button" data-apc="applica-rip" class="apc-btn primario" title="Toglie le celle colpite e scrive sostituti e recuperi (chiede conferma, annullabile)">✓ Applica riparazione</button>' : '') +
+    (puoAnnullare ? '<button type="button" data-apc="annulla" data-help-key="apc-annulla" data-i="' + i + '" class="apc-btn">↶ Annulla</button>' : '') +
+    (b && ultima && !m.annullato ? '<button type="button" data-apc="vedi" data-help-key="apc-vedi" class="apc-btn">Vedi nella bozza</button>' : '') +
+    (b && ultima && !m.annullato && b.risultato.assegnazioni.length ? '<button type="button" data-apc="applica" data-help-key="apApplica" class="apc-btn primario" title="Scrive la bozza in Griglia (chiede conferma, annullabile)">✓ Applica alla Griglia</button>' : '') +
+    (_ap.riparazione && ultima && !m.annullato ? '<button type="button" data-apc="vedi-rip" data-help-key="apc-vedi-rip" class="apc-btn">Vedi riparazione</button>' +
+      '<button type="button" data-apc="applica-rip" data-help-key="apApplicaRiparazione" class="apc-btn primario" title="Toglie le celle colpite e scrive sostituti e recuperi (chiede conferma, annullabile)">✓ Applica riparazione</button>' : '') +
     '</div></div>';
   return html;
 }
@@ -990,7 +990,7 @@ function _apcCostruisci() {
     '<div class="apc-head">' +
       '<div class="apc-head-ic">✦</div>' +
       '<div class="min-w-0 flex-1"><div class="apc-head-t">Assistente pianificazione</div><div id="apc-sub" class="apc-head-s"></div></div>' +
-      '<button type="button" data-apc="nuova" class="apc-ibtn" title="Nuova conversazione">⟲</button>' +
+      '<button type="button" data-apc="nuova" data-help-key="apc-nuova" class="apc-ibtn" title="Nuova conversazione">⟲</button>' +
       '<button type="button" data-apc="chiudi" class="apc-ibtn" title="Chiudi">✕</button>' +
     '</div>' +
     '<div id="apc-msgs" class="apc-msgs" aria-live="polite"></div>' +
@@ -1046,7 +1046,7 @@ function _apcRenderComposer() {
   const st = _apc.stato;
   let msg = '';
   if (!st) msg = '';
-  else if (st.errore) msg = _apE(st.errore) + ' <button type="button" data-apc="riprova" class="apc-link">Riprova</button>';
+  else if (st.errore) msg = _apE(st.errore) + ' <button type="button" data-apc="riprova" data-help-key="apc-riprova" class="apc-link">Riprova</button>';
   else if (!st.enabled) msg = 'L\'assistente AI è disattivato. ' + (sbIsAdmin() ? 'Attivalo in <b>Gestione Assistente AI</b> (menu admin).' : 'Chiedi a un amministratore di attivarlo.');
   else if (st.has_key === false) msg = 'Manca la API key per il provider scelto (' + _apE(st.provider || '') + '). ' + (sbIsAdmin() ? 'Inseriscila in <b>Gestione Assistente AI</b>.' : 'Chiedi a un amministratore.');
   banner.innerHTML = msg;
@@ -1082,7 +1082,7 @@ function apcRender(scorri) {
   if (chips) {
     const pronto = _apc.stato && _apc.stato.enabled && !_apc.stato.errore && _apc.stato.has_key !== false;
     chips.innerHTML = !_apc.busy && pronto ? _apcSuggerimenti().map(t =>
-      '<button type="button" class="apc-chip" data-apc-chip="' + _apE(t) + '">' + _apE(t) + '</button>').join('') : '';
+      '<button type="button" class="apc-chip" data-help-key="apc-chip" data-apc-chip="' + _apE(t) + '">' + _apE(t) + '</button>').join('') : '';
   }
   _apcRenderComposer();
 }

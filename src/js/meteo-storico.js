@@ -693,7 +693,7 @@ function msRenderKpi() {
     pc: !!(f.pc && f.pc.size === 3 && !f.pc.has('Nessuna')),
   };
   const tile = (kind, label, val, sub, tone) =>
-    '<button type="button" data-ms-kpi="' + kind + '" class="ms-kpi ms-kpi-' + tone + (attivo[kind] ? ' ms-kpi-on' : '') + '" title="' +
+    '<button type="button" data-ms-kpi="' + kind + '" data-help-key="ms-kpi-' + kind + '" class="ms-kpi ms-kpi-' + tone + (attivo[kind] ? ' ms-kpi-on' : '') + '" title="' +
       (kind === 'all' ? 'Rimuovi i filtri di colonna' : 'Mostra solo queste righe') + '">' +
       '<span class="ms-kpi-l">' + label + '</span><span class="ms-kpi-v">' + val + '</span>' +
       (sub ? '<span class="ms-kpi-s">' + sub + '</span>' : '') +
@@ -724,12 +724,12 @@ function msRenderChips() {
   const el = document.getElementById('ms-chips');
   if (!el) return;
   const chips = [];
-  if (_msFiltri.q) chips.push('<span class="ms-chip">Ricerca: <b>' + esc(_msFiltri.q) + '</b><button data-ms-chip="q" title="Rimuovi">✕</button></span>');
+  if (_msFiltri.q) chips.push('<span class="ms-chip">Ricerca: <b>' + esc(_msFiltri.q) + '</b><button data-ms-chip="q" data-help-key="ms-chip-rimuovi" title="Rimuovi">✕</button></span>');
   MS_COLS.forEach(c => {
     const f = _msColFiltri[c.key];
-    if (f) chips.push('<span class="ms-chip">' + esc(c.label) + ': <b>' + esc(msFiltroTesto(c, f)) + '</b><button data-ms-chip="' + c.key + '" title="Rimuovi">✕</button></span>');
+    if (f) chips.push('<span class="ms-chip">' + esc(c.label) + ': <b>' + esc(msFiltroTesto(c, f)) + '</b><button data-ms-chip="' + c.key + '" data-help-key="ms-chip-rimuovi" title="Rimuovi">✕</button></span>');
   });
-  if (chips.length > 1) chips.push('<button class="ms-chip-clear" data-ms-chip="*">Azzera tutti i filtri</button>');
+  if (chips.length > 1) chips.push('<button class="ms-chip-clear" data-ms-chip="*" data-help-key="ms-chip-azzera">Azzera tutti i filtri</button>');
   const sortTxt = _msSort.map((s, i) => (i ? ', poi ' : '') + msCol(s.col).label + (s.dir === 'asc' ? ' ↑' : ' ↓')).join('');
   el.innerHTML = (chips.length ? chips.join('') : '<span class="ms-chip-none">Nessun filtro di colonna — usa ⏷ nelle intestazioni</span>') +
     '<span class="ms-sort-txt">Ordinato per ' + esc(sortTxt) + ' · Maiusc+click su un\'intestazione per aggiungere un criterio</span>';
@@ -759,8 +759,8 @@ function msThHtml(col, extraCls) {
     : '<span class="ms-sort-ind">' + (_msSort[i].dir === 'asc' ? '▲' : '▼') + (_msSort.length > 1 ? '<sup>' + (i + 1) + '</sup>' : '') + '</span>';
   const fOn = !!_msColFiltri[col.key];
   return '<th class="' + (extraCls || '') + '"><div class="ms-th">' +
-    '<button type="button" class="ms-th-sort" data-ms-sort="' + col.key + '" title="Ordina (Maiusc+click: aggiungi criterio)">' + esc(col.label) + ind + '</button>' +
-    '<button type="button" class="ms-th-f' + (fOn ? ' ms-th-f-on' : '') + '" data-ms-filter="' + col.key + '" title="Filtra ' + esc(col.label) + '">⏷</button>' +
+    '<button type="button" class="ms-th-sort" data-help-key="ms-th-sort" data-ms-sort="' + col.key + '" title="Ordina (Maiusc+click: aggiungi criterio)">' + esc(col.label) + ind + '</button>' +
+    '<button type="button" class="ms-th-f' + (fOn ? ' ms-th-f-on' : '') + '" data-ms-filter="' + col.key + '" data-help-key="ms-th-filtro" title="Filtra ' + esc(col.label) + '">⏷</button>' +
   '</div></th>';
 }
 
@@ -792,7 +792,7 @@ function msRenderTable(rows) {
         (nPioggia ? ' · 🌧️ ' + nPioggia + ' con pioggia' : '') + (nMal ? ' · ⚠️ ' + nMal + ' con maltempo' : '') + '</span></td></tr>';
     }
     const i0 = r.info;
-    html += '<tr class="ms-row' + (r.severity ? ' ms-sev-' + r.severity : '') + '" data-ms-row="' + i + '" title="Clicca per il dettaglio orario e il bollettino">' +
+    html += '<tr class="ms-row' + (r.severity ? ' ms-sev-' + r.severity : '') + '" data-ms-row="' + i + '" data-help-key="ms-riga" title="Clicca per il dettaglio orario e il bollettino">' +
       '<td class="ms-c-data">' + (perGiorno ? '<span class="ms-muted">' + esc(msFormatData(r.dateISO).split(' ')[0]) + '</span>' : esc(msFormatData(r.dateISO))) + '</td>' +
       '<td class="ms-c-comm" title="' + esc(r.commessa) + '">' + esc(r.commessa) + '</td>' +
       '<td class="ms-c-sq">' + esc(r.squadra) + '</td>' +
@@ -842,20 +842,20 @@ function msOpenPop(key, anchor) {
   const ord = col.type === 'num' || key === 'data' ? ['↑ Dal più basso', '↓ Dal più alto'] : ['↑ A → Z', '↓ Z → A'];
   if (key === 'data') { ord[0] = '↑ Dal più vecchio'; ord[1] = '↓ Dal più recente'; }
   let html = '<div class="ms-pop-h">' + esc(col.label) + '</div>' +
-    '<div class="ms-pop-sort"><button type="button" data-pop-sort="asc">' + ord[0] + '</button><button type="button" data-pop-sort="desc">' + ord[1] + '</button></div>';
+    '<div class="ms-pop-sort"><button type="button" data-pop-sort="asc" data-help-key="ms-pop-ordina">' + ord[0] + '</button><button type="button" data-pop-sort="desc" data-help-key="ms-pop-ordina">' + ord[1] + '</button></div>';
   if (col.type === 'num') {
     const f = _msColFiltri[key] || {};
     html += '<div class="ms-pop-num">' +
       '<label>Da <input type="number" step="0.1" data-pop-min value="' + (f.min != null ? f.min : '') + '"></label>' +
       '<label>a <input type="number" step="0.1" data-pop-max value="' + (f.max != null ? f.max : '') + '"></label>' +
       '<span>' + esc(col.unit) + '</span></div>' +
-      (col.presets ? '<div class="ms-pop-presets">' + col.presets.map((p, i) => '<button type="button" data-pop-preset="' + i + '">' + esc(p.label) + '</button>').join('') + '</div>' : '');
+      (col.presets ? '<div class="ms-pop-presets">' + col.presets.map((p, i) => '<button type="button" data-pop-preset="' + i + '" data-help-key="ms-pop-preset">' + esc(p.label) + '</button>').join('') + '</div>' : '');
   } else {
     html += '<input type="text" class="ms-pop-search" placeholder="Cerca valori…" data-pop-search>' +
-      '<div class="ms-pop-bulk"><button type="button" data-pop-bulk="all">Seleziona tutti</button><button type="button" data-pop-bulk="none">Deseleziona tutti</button></div>' +
+      '<div class="ms-pop-bulk"><button type="button" data-pop-bulk="all" data-help-key="ms-pop-tutti">Seleziona tutti</button><button type="button" data-pop-bulk="none" data-help-key="ms-pop-nessuno">Deseleziona tutti</button></div>' +
       '<div class="ms-pop-list" data-pop-list></div>';
   }
-  html += '<div class="ms-pop-foot"><button type="button" data-pop-clear>Rimuovi filtro</button><button type="button" data-pop-close class="ms-pop-ok">Chiudi</button></div>';
+  html += '<div class="ms-pop-foot"><button type="button" data-pop-clear data-help-key="ms-pop-rimuovi">Rimuovi filtro</button><button type="button" data-pop-close class="ms-pop-ok">Chiudi</button></div>';
   pop.innerHTML = html;
   document.body.appendChild(pop);
   const rc = anchor.getBoundingClientRect();

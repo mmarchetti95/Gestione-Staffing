@@ -29,6 +29,7 @@ function _pwShowCtxMenu(x, y, items) {
     btn.type = 'button';
     btn.className = 'pw-ctx-menu-item' + (it.disabled ? ' disabled' : '');
     btn.textContent = it.label;
+    if (it.helpKey) btn.dataset.helpKey = it.helpKey;
     if (!it.disabled) btn.onclick = () => { _pwCloseCtxMenu(); it.onClick(); };
     menu.appendChild(btn);
   });
@@ -49,10 +50,11 @@ function _pwShowCtxMenu(x, y, items) {
 
 /* ----- Singola cella (cantiere/i + attività di un giorno) ----- */
 function pwCellCtxMenu(ev, cidx, sidx, oidx, day) {
+  if (helpGuidaSuBottone(ev)) return true;
   ev.preventDefault();
   _pwShowCtxMenu(ev.clientX, ev.clientY, [
-    { label: '📋 Copia cantiere/attività', onClick: () => pwCopyCell(cidx, sidx, oidx, day) },
-    { label: '📥 Incolla qui', disabled: !_pwClipCell || !sbCanWrite(), onClick: () => pwPasteCell(cidx, sidx, oidx, day) },
+    { label: '📋 Copia cantiere/attività', helpKey: 'pw-ctx-copia-cella', onClick: () => pwCopyCell(cidx, sidx, oidx, day) },
+    { label: '📥 Incolla qui', helpKey: 'pw-ctx-incolla-cella', disabled: !_pwClipCell || !sbCanWrite(), onClick: () => pwPasteCell(cidx, sidx, oidx, day) },
   ]);
   return false;
 }
@@ -80,10 +82,11 @@ async function pwPasteCell(cidx, sidx, oidx, day) {
 
 /* ----- Intera settimana di un operatore (tutti i giorni Lun-Sab) ----- */
 function pwRowCtxMenu(ev, cidx, sidx, oidx) {
+  if (helpGuidaSuBottone(ev, ['pwOpenOpModal'])) return true;
   ev.preventDefault();
   _pwShowCtxMenu(ev.clientX, ev.clientY, [
-    { label: '📋 Copia settimana (cantieri/attività)', onClick: () => pwCopyRow(cidx, sidx, oidx) },
-    { label: '📥 Incolla settimana qui', disabled: !_pwClipRow || !sbCanWrite(), onClick: () => pwPasteRow(cidx, sidx, oidx) },
+    { label: '📋 Copia settimana (cantieri/attività)', helpKey: 'pw-ctx-copia-settimana', onClick: () => pwCopyRow(cidx, sidx, oidx) },
+    { label: '📥 Incolla settimana qui', helpKey: 'pw-ctx-incolla-settimana', disabled: !_pwClipRow || !sbCanWrite(), onClick: () => pwPasteRow(cidx, sidx, oidx) },
   ]);
   return false;
 }

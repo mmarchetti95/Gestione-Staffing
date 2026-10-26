@@ -400,6 +400,7 @@ async function pwMapRender(dayIdx) {
     }).join('') +
       `<button class="pw-map-day-btn pw-map-week-btn ${dayIdx === PW_MAP_WEEK ? 'active' : ''}" data-di="${PW_MAP_WEEK}">📅 Tutta la settimana</button>`;
     daysEl.querySelectorAll('.pw-map-day-btn').forEach(b => {
+      b.dataset.helpKey = b.classList.contains('pw-map-week-btn') ? 'pw-map-settimana' : 'pw-map-giorno';
       b.onclick = () => pwMapRender(parseInt(b.dataset.di));
     });
   }
@@ -422,6 +423,7 @@ function pwMapRenderCantieriModeButtons() {
     <button class="pw-map-mode-btn ${_mapCantieriMode === 'operatori' ? 'active' : ''}" data-mode="operatori">👷 Operatori</button>
     <button class="pw-map-mode-btn ${_mapCantieriMode === 'strumenti' ? 'active' : ''}" data-mode="strumenti">🔧 Strumenti</button>`;
   el.querySelectorAll('.pw-map-mode-btn').forEach(b => {
+    b.dataset.helpKey = 'pw-map-mode-' + b.dataset.mode;
     b.onclick = () => {
       if (_mapCantieriMode === b.dataset.mode) return;
       _mapCantieriMode = b.dataset.mode;
@@ -623,9 +625,11 @@ async function pwMapRenderCantieri(itemsAll, dayIdx) {
       }).join('');
 
       sumEl.querySelectorAll('.pw-squad-group-header').forEach(h => {
+        h.dataset.helpKey = 'pw-map-gruppo';
         h.onclick = () => pwMapToggleGroup(h);
       });
       sumEl.querySelectorAll('.pw-squad-card').forEach(card => {
+        card.dataset.helpKey = 'pw-map-card';
         card.onclick = () => pwMapFocusItem(parseInt(card.dataset.idx, 10));
       });
     } else {
@@ -676,9 +680,11 @@ async function pwMapRenderCantieri(itemsAll, dayIdx) {
       }).join('');
 
       sumEl.querySelectorAll('.pw-squad-group-header').forEach(h => {
+        h.dataset.helpKey = 'pw-map-gruppo';
         h.onclick = () => pwMapToggleGroup(h);
       });
       sumEl.querySelectorAll('.pw-squad-card').forEach(card => {
+        card.dataset.helpKey = 'pw-map-card';
         card.onclick = () => pwMapFocusItem(parseInt(card.dataset.idx, 10));
       });
     }
@@ -990,9 +996,11 @@ async function pwMapRenderResidenze(itemsAll, dayIdx) {
       }).join('');
 
       sumEl.querySelectorAll('.pw-squad-group-header').forEach(h => {
+        h.dataset.helpKey = 'pw-map-op-gruppo';
         h.onclick = () => pwMapOpToggleGroup(h);
       });
       sumEl.querySelectorAll('.pw-squad-card').forEach(card => {
+        card.dataset.helpKey = 'pw-map-op-card';
         card.onclick = () => pwMapOpFocusItem(parseInt(card.dataset.idx, 10));
       });
     }

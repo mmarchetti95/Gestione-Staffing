@@ -305,7 +305,7 @@ function pwControlloRender() {
       <td class="cp-wrap" title="${esc(bl.commessa)}">${esc(bl.commessa)}</td>
       <td class="cp-wrap" title="${esc(sq.nome)}">${esc(sq.nome)}</td>
       <td class="cp-wrap" title="${esc(op.nome)}"><button type="button" class="no-print cp-griglia-btn" title="Apri questo intervento nella Griglia settimanale" onclick="cpApriInGriglia(${op.cIdx},${op.sIdx},${op.oIdx},${g})">🗓️</button><strong>${esc(op.nome)}</strong>${isOperatoreLicenziato(op.nome) ? '<span class="op-ex-tag">ex</span>' : ''}</td>
-      <td style="text-align:center"><input type="checkbox" class="pw-write-action" ${verificato ? 'checked' : ''} title="Verificato" style="width:16px;height:16px;cursor:pointer;" onchange="pwControlloSaveCell('${ci}','${si}','${oi}',${g},'${dt}','${ca}','${at}','verificato',this.checked)"></td>
+      <td data-help-key="cp-verificato" style="text-align:center"><input type="checkbox" class="pw-write-action" ${verificato ? 'checked' : ''} title="Verificato" style="width:16px;height:16px;cursor:pointer;" onchange="pwControlloSaveCell('${ci}','${si}','${oi}',${g},'${dt}','${ca}','${at}','verificato',this.checked)"></td>
       <td>${DAY_NAMES[g]}</td>
       <td>${dates[g]}</td>
       <td class="cp-wrap" style="color:#64748b" title="${esc(op.cantiere)}">${esc(op.cantiere)}</td>
@@ -674,7 +674,7 @@ async function _cpEdgeErr(error, fnName) {
   return prefix + (error && error.message ? error.message : String(error));
 }
 
-HELP_TEXTS['cp-sync-jira'] = 'Aggiorna le colonne "Ore Jira" e "Ticket/Epic" di TUTTE le squadre pianificate questa settimana, prendendo i worklog reali da Jira.\n\nSovrascrive i valori già presenti in quelle colonne. Non tocca "Ore Report Prod." né il Km/Cad, che si aggiornano solo con "Carica Report".\n\nOgni squadra ha anche un bottone "🔄 Sincronizza squadra" per farlo solo su quella riga invece che su tutta la settimana.';
+HELP_TEXTS['cp-sync-jira'] = 'Aggiorna le colonne "Ore Jira" e "Ticket/Epic" di TUTTE le squadre pianificate questa settimana, prendendo i worklog reali da Jira. Sovrascrive i valori già presenti in quelle colonne; non tocca "Ore Report Prod.".\n\nKm/Cad: per i ticket che qui non hanno ancora un valore lo legge da Jira e lo segna "👁 da verificare". Dopo una seconda conferma SCRIVE SU JIRA i Km/Cad verificati (da report o confermati a mano), solo per la differenza rispetto all\'ultimo invio e nel campo scelto per la commessa; i valori da verificare non vengono inviati.\n\nOgni squadra ha anche un bottone "🔄 Sincronizza squadra" per farlo solo su quella riga invece che su tutta la settimana.';
 
 // scopeCommessa/scopeSquadra: se entrambi valorizzati, la sync (worklog + KM) si limita
 // a quella squadra invece che a tutta la settimana. btnEl: bottone da disabilitare durante
@@ -1249,7 +1249,7 @@ function cpCampoProduzione(commessa) {
 function cpCampoSelectHtml(commessa) {
   const campo = cpCampoProduzione(commessa);
   const opt = (v, l) => '<option value="' + esc(v) + '"' + (v === campo ? ' selected' : '') + '>' + esc(l) + '</option>';
-  return '<select class="cp-campo-sel no-print pw-write-action' + (campo === CP_CAMPO_KPI ? ' kpi' : '') + '" ' +
+  return '<select data-help-key="cp-campo-produzione" class="cp-campo-sel no-print pw-write-action' + (campo === CP_CAMPO_KPI ? ' kpi' : '') + '" ' +
     'title="Campo Jira del sottotask su cui va il Km/Cad di questa commessa (Sincronizza)" ' +
     'onclick="event.stopPropagation()" onchange="cpSetCampoProduzione(\'' + jsAttr(commessa) + '\',this)">' +
     opt(CP_CAMPO_AP, 'Produzione su: Actual Production') + opt(CP_CAMPO_KPI, 'Produzione su: KPI_Quantità lavorata') + '</select>';

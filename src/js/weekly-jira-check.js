@@ -419,7 +419,7 @@ function _pwJchkRenderModal(accendi) {
     const primo = r.anomalie[idxs[0]];
     const collegata = primo.tipo !== 'commessa';
     const creaBtn = collegata && sbCanWrite() && idxs.some(i => r.anomalie[i].tipo === 'mancante' || r.anomalie[i].tipo === 'errore')
-      ? '<button type="button" class="pw-jchk-crea" onclick="closeModal();pwJiraSubtaskInit(' + cIdx + ')" title="Apre la creazione sottotask per questa commessa">🎫 Crea sottotask</button>'
+      ? '<button type="button" class="pw-jchk-crea" data-help-key="pw-jchk-crea" onclick="closeModal();pwJiraSubtaskInit(' + cIdx + ')" title="Apre la creazione sottotask per questa commessa">🎫 Crea sottotask</button>'
       : '';
     return '<div class="pw-jchk-blocco">'
       + '<div class="pw-jchk-blocco-head"><span class="truncate">' + esc(primo.commessa || '(blocco senza commessa)') + '</span>'
@@ -440,7 +440,7 @@ function _pwJchkRenderModal(accendi) {
     + '<div class="flex items-start justify-between gap-3 mb-3">'
     +   '<div><h3 class="font-semibold text-slate-900">🎫 Controllo sottotask Jira</h3>'
     +   '<div class="text-xs text-slate-500">Week ' + pwWeek + ' · ' + pwAnno + ' · tutte le commesse della Griglia</div></div>'
-    +   (n ? '<label class="text-xs text-slate-600 flex items-center gap-1.5 cursor-pointer whitespace-nowrap mt-1">'
+    +   (n ? '<label data-help-key="pw-jchk-evidenzia" class="text-xs text-slate-600 flex items-center gap-1.5 cursor-pointer whitespace-nowrap mt-1">'
     +     '<input type="checkbox"' + (_pwJchk.evidenzia ? ' checked' : '') + ' onchange="pwJchkSetEvidenzia(this.checked)"> Evidenzia in Griglia</label>' : '')
     + '</div>'
     + esito

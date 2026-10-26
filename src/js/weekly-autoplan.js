@@ -1196,7 +1196,7 @@ function _apImprevistiHtml() {
   const mod = _apGiorniModificabili();
   const F = _ap.impForm;
   const aperto = _ap.impAperto || _ap.imprevisti.length || _ap.riparazione;
-  const titolo = '<summary class="cursor-pointer select-none text-xs font-semibold text-slate-700 uppercase tracking-wide">⚡ Imprevisti · ripara la settimana già in Griglia' +
+  const titolo = '<summary data-help-key="ap-imprevisti" class="cursor-pointer select-none text-xs font-semibold text-slate-700 uppercase tracking-wide">⚡ Imprevisti · ripara la settimana già in Griglia' +
     (_ap.imprevisti.length ? ' <span class="ml-1 normal-case font-bold" style="background:#fef3c7;color:#b45309;padding:0 6px;border-radius:9px;">' + _ap.imprevisti.length + '</span>' : '') + '</summary>';
   if (!mod.length) {
     return '<details class="ap-imprevisti-box bg-white border border-slate-200 rounded-lg p-3 shadow-sm"' + (aperto ? ' open' : '') + ' ontoggle="apImpToggle(this)">' + titolo +
@@ -1204,20 +1204,20 @@ function _apImprevistiHtml() {
   }
   const sel = 'border border-slate-300 rounded px-1.5 py-1 text-xs';
   const opzioni = F.tipo === 'assenza' ? _apOperatoriCatalogo() : _apCantieriSettimana();
-  const chi = '<select data-f="chi" onchange="apImpForm(this)" class="' + sel + '" style="max-width:220px;">' +
+  const chi = '<select data-f="chi" data-help-key="ap-imp-chi" onchange="apImpForm(this)" class="' + sel + '" style="max-width:220px;">' +
     '<option value="">' + (F.tipo === 'assenza' ? '— operatore —' : (opzioni.length ? '— cantiere in Griglia —' : 'nessun cantiere in Griglia')) + '</option>' +
     opzioni.map(n => '<option value="' + _apE(n) + '"' + (n === F.chi ? ' selected' : '') + '>' + _apE(n) + '</option>').join('') + '</select>';
   const giorni = '<span class="inline-flex items-center gap-1">' + [0, 1, 2, 3, 4, 5].map(d => {
     const ok = mod.includes(d);
     return '<label class="text-xs flex items-center gap-0.5' + (ok ? ' text-slate-700' : ' text-slate-300') + '" title="' + (ok ? '' : 'giorno già passato') + '">' +
-      '<input type="checkbox" data-f="giorno" data-g="' + d + '" onchange="apImpForm(this)"' + (F.giorni.includes(d) ? ' checked' : '') + (ok ? '' : ' disabled') + '>' + AP_GIORNI[d] + '</label>';
+      '<input type="checkbox" data-f="giorno" data-help-key="ap-imp-giorno" data-g="' + d + '" onchange="apImpForm(this)"' + (F.giorni.includes(d) ? ' checked' : '') + (ok ? '' : ' disabled') + '>' + AP_GIORNI[d] + '</label>';
   }).join('') + '</span>';
   const registra = F.tipo === 'assenza'
-    ? '<label class="text-xs text-slate-600 flex items-center gap-1">in Ferie come <select data-f="registra" onchange="apImpForm(this)" class="' + sel + '">' +
+    ? '<label class="text-xs text-slate-600 flex items-center gap-1">in Ferie come <select data-f="registra" data-help-key="ap-imp-registra" onchange="apImpForm(this)" class="' + sel + '">' +
       Object.keys(AP_IMP_REGISTRA).map(k => '<option value="' + k + '"' + ((F.registra || '') === k ? ' selected' : '') + '>' + AP_IMP_REGISTRA[k] + '</option>').join('') + '</select></label>'
     : '';
   const form = '<div class="flex flex-wrap items-center gap-2 mt-2">' +
-    '<select data-f="tipo" onchange="apImpForm(this)" class="' + sel + '">' +
+    '<select data-f="tipo" data-help-key="ap-imp-tipo" onchange="apImpForm(this)" class="' + sel + '">' +
       '<option value="assenza"' + (F.tipo === 'assenza' ? ' selected' : '') + '>🤒 Assenza operatore</option>' +
       '<option value="cantiere_fermo"' + (F.tipo === 'cantiere_fermo' ? ' selected' : '') + '>🚧 Cantiere fermo</option>' +
     '</select>' + chi + giorni + registra +
@@ -1434,9 +1434,9 @@ function apRender() {
           '<div class="flex flex-wrap items-center gap-2 mb-2">' +
             '<div class="text-xs font-semibold text-slate-700 uppercase tracking-wide">📋 Cantieri da pianificare · ' + _apE(giorniLabel) + '</div>' +
             '<div class="flex-1"></div>' +
-            '<label class="text-xs text-slate-600 flex items-center gap-1"><input type="checkbox" data-opz="sabato" onchange="apSetOpzione(this)"' + (_ap.opzioni.sabato ? ' checked' : '') + '> anche sabato</label>' +
-            '<label class="text-xs text-slate-600 flex items-center gap-1" title="Evita i giorni con allerta Protezione Civile e sposta, se possibile, quelli con maltempo previsto"><input type="checkbox" data-opz="meteo" onchange="apSetOpzione(this)"' + (_ap.opzioni.meteo ? ' checked' : '') + '> considera meteo</label>' +
-            '<label class="text-xs text-slate-600 flex items-center gap-1" title="Spostamento massimo da un cantiere all&#39;altro durante la settimana. Il viaggio da casa a inizio trasferta non ha limite: costa i suoi km e, oltre 200 km, vale mezza giornata produttiva.">max km fra cantieri <input type="number" min="20" step="10" data-opz="maxKm" onchange="apSetOpzione(this)" value="' + _apE(_ap.opzioni.maxKm) + '" class="w-16 border border-slate-300 rounded px-1 py-0.5 text-xs"></label>' +
+            '<label data-help-key="ap-opz-sabato" class="text-xs text-slate-600 flex items-center gap-1"><input type="checkbox" data-opz="sabato" onchange="apSetOpzione(this)"' + (_ap.opzioni.sabato ? ' checked' : '') + '> anche sabato</label>' +
+            '<label data-help-key="ap-opz-meteo" class="text-xs text-slate-600 flex items-center gap-1" title="Evita i giorni con allerta Protezione Civile e sposta, se possibile, quelli con maltempo previsto"><input type="checkbox" data-opz="meteo" onchange="apSetOpzione(this)"' + (_ap.opzioni.meteo ? ' checked' : '') + '> considera meteo</label>' +
+            '<label data-help-key="ap-opz-maxkm" class="text-xs text-slate-600 flex items-center gap-1" title="Spostamento massimo da un cantiere all&#39;altro durante la settimana. Il viaggio da casa a inizio trasferta non ha limite: costa i suoi km e, oltre 200 km, vale mezza giornata produttiva.">max km fra cantieri <input type="number" min="20" step="10" data-opz="maxKm" onchange="apSetOpzione(this)" value="' + _apE(_ap.opzioni.maxKm) + '" class="w-16 border border-slate-300 rounded px-1 py-0.5 text-xs"></label>' +
             '<button type="button" onclick="apSvuota()" class="text-xs px-2 py-1 border border-slate-300 rounded hover:bg-slate-50">Svuota</button>' +
             '<button type="button" id="ap-calcola-btn" onclick="apCalcola()" class="text-xs px-3 py-1.5 rounded font-semibold text-white" style="background:var(--accent,#0d9488);">🤖 Calcola bozza</button>' +
             (typeof apcToggle === 'function' ? '<button type="button" onclick="apcToggle()" class="apc-toggle' + (chat ? ' on' : '') + '" title="Chiedi all\'assistente di modificare la bozza in linguaggio naturale"><span class="apc-spark">✦</span> Assistente</button>' : '') +
@@ -1454,7 +1454,7 @@ function apRender() {
 
 function _apFontiRichiudibiliHtml() {
   return '<details class="ap-fonti-box no-print"' + (_ap.fontiAperte ? ' open' : '') + ' ontoggle="apFontiToggle(this)">' +
-    '<summary><span class="text-xs font-semibold text-slate-700">📥 Aggiungi cantieri</span>' +
+    '<summary data-help-key="ap-fonti"><span class="text-xs font-semibold text-slate-700">📥 Aggiungi cantieri</span>' +
     '<span class="text-[11px] text-slate-400">incolla da Excel · file · settimana precedente · riga manuale</span></summary>' +
     '<div class="pt-2 grid grid-cols-1 md:grid-cols-2 gap-3">' + _apFontiCorpoHtml() + '</div></details>';
 }
@@ -1601,7 +1601,7 @@ function apDdApri(btn) {
       '<input id="ap-dd-cerca" type="text" autocomplete="off" placeholder="Cerca' + (campo === 'attivita' ? ' o scrivi una nuova attività' : '') + '…" ' +
       'style="width:100%;border:1px solid #cbd5e1;border-radius:4px;padding:4px 6px;font-size:12px;outline:none;">' +
     '</div>' +
-    (campo === 'attivita' ? '<div class="ap-dd-item ap-dd-nuova" data-nuova="1" style="display:none;padding:5px 8px;cursor:pointer;color:#0f766e;font-weight:600;border-bottom:1px solid #f1f5f9;"></div>' : '') +
+    (campo === 'attivita' ? '<div class="ap-dd-item ap-dd-nuova" data-nuova="1" data-help-key="ap-dd-nuova-attivita" style="display:none;padding:5px 8px;cursor:pointer;color:#0f766e;font-weight:600;border-bottom:1px solid #f1f5f9;"></div>' : '') +
     '<div id="ap-dd-lista" style="max-height:260px;overflow-y:auto;">' +
       (!multi && campo !== 'commessa' ? '<div class="ap-dd-item" data-val="" style="padding:5px 8px;cursor:pointer;color:#94a3b8;font-style:italic;">— nessuna —</div>' : '') +
       opzioni.map(v =>
@@ -1612,7 +1612,7 @@ function apDdApri(btn) {
     '</div>' +
     (nota ? '<div style="padding:5px 8px;border-top:1px solid #e2e8f0;color:#64748b;font-size:11px;">' + _apE(nota) + '</div>' : '') +
     (multi ? '<div style="padding:5px 8px;border-top:1px solid #e2e8f0;display:flex;gap:8px;justify-content:flex-end;">' +
-      '<button type="button" data-azione="nessuno" style="font-size:11px;color:#64748b;text-decoration:underline;">Deseleziona tutto</button>' +
+      '<button type="button" data-azione="nessuno" data-help-key="ap-dd-deseleziona" style="font-size:11px;color:#64748b;text-decoration:underline;">Deseleziona tutto</button>' +
       '<button type="button" data-azione="chiudi" style="font-size:11px;font-weight:600;padding:2px 10px;border-radius:4px;background:#0d9488;color:#fff;">Fatto</button></div>' : '');
 
   el.style.display = 'block';
@@ -1756,7 +1756,7 @@ function _apDdEtichetta(r, campo) {
 }
 
 function _apDdBottone(r, campo, titolo) {
-  return '<button type="button" data-dd="' + campo + '" onclick="apDdApri(this)" title="' + _apE(titolo) + '" ' +
+  return '<button type="button" data-dd="' + campo + '" data-help-key="ap-dd-' + campo + '" onclick="apDdApri(this)" title="' + _apE(titolo) + '" ' +
     'class="ap-cell w-full border border-slate-200 rounded px-1 py-0.5 text-xs text-left bg-white hover:bg-slate-50 flex items-center gap-1">' +
     '<span class="ap-dd-lbl truncate flex-1" style="min-width:0;">' + _apDdEtichetta(r, campo) + '</span>' +
     '<span class="text-slate-400" style="font-size:9px;">▾</span></button>';
@@ -1809,7 +1809,7 @@ function _apTabellaRigheHtml() {
     const warn = 'border-color:#f59e0b;background:#fffbeb;';
     const ge = _apGiorniLista(r.giorniEsclusi);
     html += '<tr data-ap-id="' + _apE(r.id) + '" class="border-t border-slate-100' + (r.includi ? '' : ' opacity-50') + (_ap.toccate.has(r.id) ? ' ap-riga-toccata' : '') + '">' +
-      '<td class="px-1 py-1"><input type="checkbox" data-campo="includi" onchange="apSetCampo(this)"' + (r.includi ? ' checked' : '') + ' title="Includi nel calcolo e nell\'applicazione"></td>' +
+      '<td class="px-1 py-1"><input type="checkbox" data-campo="includi" data-help-key="ap-includi" onchange="apSetCampo(this)"' + (r.includi ? ' checked' : '') + ' title="Includi nel calcolo e nell\'applicazione"></td>' +
       '<td class="px-1 py-1"><div class="flex items-center gap-1">' + inp('cantiere', r.cantiere, ' placeholder="Comune / sito" title="' + _apE(r.cantiere + (r.fonte ? ' · fonte: ' + r.fonte : '')) + '"') +
         (ge.length ? '<button type="button" onclick="apTogliGiorniEsclusi(this)" class="ap-ge-badge" title="' + _apE('Mai di ' + ge.map(d => AP_GIORNI[d]).join(', ') + ' — clic per togliere il vincolo') + '">⊘ ' + _apE(ge.map(d => AP_GIORNI[d].charAt(0)).join('')) + '</button>' : '') +
         '</div></td>' +
@@ -1819,7 +1819,7 @@ function _apTabellaRigheHtml() {
       '<td class="px-1 py-1">' + inp('km', r.km, ' inputmode="decimal"') + '</td>' +
       '<td class="px-1 py-1">' + inp('giorniManuali', r.giorniManuali, ' inputmode="decimal" placeholder="' + _apE(apFmtNum(stima.giorni)) + '" title="' + _apE(r.giorniManuali > 0 ? 'Inserito a mano (svuota per usare la stima)' : 'Stima: ' + stima.fonte) + '"') + '</td>' +
       '<td class="px-1 py-1">' + inp('nOp', r.nOp, ' inputmode="numeric" placeholder="' + _apE(stima.nOp) + '"') + '</td>' +
-      '<td class="px-1 py-1"><select data-campo="priorita" onchange="apSetCampo(this)" class="ap-cell w-full border border-slate-200 rounded text-xs py-0.5">' +
+      '<td class="px-1 py-1"><select data-campo="priorita" data-help-key="ap-priorita" onchange="apSetCampo(this)" class="ap-cell w-full border border-slate-200 rounded text-xs py-0.5">' +
         [1, 2, 3].map(p => '<option value="' + p + '"' + (r.priorita === p ? ' selected' : '') + '>P' + p + '</option>').join('') + '</select></td>' +
       '<td class="px-1 py-1"><input type="date" data-campo="scadenza" onchange="apSetCampo(this)" value="' + _apE(r.scadenza) + '" class="ap-cell w-full border border-slate-200 rounded px-0.5 py-0.5 text-xs"></td>' +
       '<td class="px-1 py-1"><input type="date" data-campo="dal" onchange="apSetCampo(this)" value="' + _apE(r.dal) + '" class="ap-cell w-full border border-slate-200 rounded px-0.5 py-0.5 text-xs"></td>' +

@@ -171,7 +171,10 @@ function pwStrRenderList(filter) {
   });
 
   list.innerHTML = html;
-  list.querySelectorAll('.pw-str-item').forEach(el => { el.onclick = () => pwStrPick(el.dataset.key); });
+  list.querySelectorAll('.pw-str-item').forEach(el => {
+    el.dataset.helpKey = 'pw-str-voce';
+    el.onclick = () => pwStrPick(el.dataset.key);
+  });
 }
 async function pwStrPick(key) {
   if (!sbGuardWrite()) { pwStrClose(); return; }

@@ -1215,13 +1215,14 @@ async function pwFerieToggleWeek(nome) {
    sinistro/checkbox resta il toggle rapido "Ferie", click destro apre un mini-menu per
    scegliere esplicitamente "Ferie" / "Non disponibile" o rimuovere l'assenza. */
 function pwFerieCellCtxMenu(ev, nome, day) {
+  if (helpGuidaSuBottone(ev)) return true;
   ev.preventDefault();
   const fw = pwGetFerieWeek();
   const tipoAttuale = pwFerieTipo((fw[nome] || {})[day]);
   _pwShowCtxMenu(ev.clientX, ev.clientY, [
-    { label: (tipoAttuale === 'ferie' ? '✓ ' : '') + '🏖 Ferie', disabled: !sbCanWrite(), onClick: () => pwSetFeriaTipo(nome, day, 'ferie') },
-    { label: (tipoAttuale === 'non_disponibile' ? '✓ ' : '') + '🚫 Non disponibile', disabled: !sbCanWrite(), onClick: () => pwSetFeriaTipo(nome, day, 'non_disponibile') },
-    { label: '✕ Rimuovi assenza', disabled: !tipoAttuale || !sbCanWrite(), onClick: () => pwSetFeriaTipo(nome, day, null) },
+    { label: (tipoAttuale === 'ferie' ? '✓ ' : '') + '🏖 Ferie', helpKey: 'pw-ctx-ferie', disabled: !sbCanWrite(), onClick: () => pwSetFeriaTipo(nome, day, 'ferie') },
+    { label: (tipoAttuale === 'non_disponibile' ? '✓ ' : '') + '🚫 Non disponibile', helpKey: 'pw-ctx-non-disp', disabled: !sbCanWrite(), onClick: () => pwSetFeriaTipo(nome, day, 'non_disponibile') },
+    { label: '✕ Rimuovi assenza', helpKey: 'pw-ctx-rimuovi-assenza', disabled: !tipoAttuale || !sbCanWrite(), onClick: () => pwSetFeriaTipo(nome, day, null) },
   ]);
   return false;
 }

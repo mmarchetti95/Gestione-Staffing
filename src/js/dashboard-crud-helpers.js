@@ -667,33 +667,112 @@ function showConfirmAsync(msg, btnLabel) {
   });
 }
 
-// Guide contestuali sui bottoni della Pianificazione Settimanale: click destro su un
-// bottone con data-help-key apre showHelpGuide(key) con un testo breve, tenuto vicino
-// alla funzione del bottone nel rispettivo file e popolato qui in HELP_TEXTS. Aggiungere
-// una guida = aggiungere data-help-key="..." al bottone + HELP_TEXTS['...'] = '...'.
-// z-index del backdrop tenuto sotto quello di showAlertModal/showConfirmAsync (100050),
-// per non nascondere un eventuale conferma/alert aperto sopra questa guida.
+// Guide contestuali sui bottoni (Pianificazione Settimanale): click destro su un bottone
+// apre showHelpGuide(key) con un testo breve preso da HELP_TEXTS. La chiave si ricava
+// dall'elemento (helpKeysFor), così i bottoni rigenerati dai render non vanno toccati uno a uno:
+//   1. data-help-key="..."  (per elementi senza id né onclick/onchange inline, o per
+//                            distinguere bottoni che chiamano la stessa funzione)
+//   2. '#' + id             (es. '#pw-prev'; vale anche per click assegnati in JS)
+//   3. da onclick/onchange inline, per ogni chiamata in ordine: 'fn:arg' se il primo
+//      argomento è una stringa (es. 'pwNvSetTipo:nota'), poi 'fn'; getElementById('x').click()
+//      → '#x'. closeModal/if sono saltati: 'closeModal();pwJiraSubtaskInit(1)' → pwJiraSubtaskInit.
+// Si risale dall'elemento cliccato ai suoi antenati e vale il primo che ha un testo. Aggiungere
+// una guida = HELP_TEXTS['chiave'] = '...' (i testi della settimanale sono in weekly-guida.js);
+// senza testo il click destro resta quello del browser.
+// La guida ha un suo contenitore (non #modal-root), così aprirla da dentro un modale che usa
+// #modal-root non lo distrugge; z-index sotto quello di showAlertModal/showConfirmAsync
+// (100050), per non nascondere un eventuale conferma/alert aperto sopra.
 const HELP_TEXTS = {};
+const _HELP_FN_SALTA = new Set(['if', 'return', 'closeModal']);
 
-function showHelpGuide(key) {
-  const text = HELP_TEXTS[key];
-  if (!text) return;
-  const root = document.getElementById('modal-root');
-  const safeMsg = esc(text).replace(/\n/g, '<br>');
-  root.innerHTML = '<div class="modal-backdrop" style="z-index:100040;"><div class="bg-white rounded-lg shadow-xl w-full max-w-lg mx-4 p-5 flex flex-col" style="max-height:80vh;">' +
-    '<div class="flex items-center justify-between mb-3" style="flex-shrink:0;"><span class="font-semibold text-slate-700">ℹ️ Guida</span><button id="hg-close" class="text-slate-400 hover:text-slate-600 text-xl leading-none">&times;</button></div>' +
-    '<div class="text-sm text-slate-700" style="overflow-y:auto;flex:1;min-height:0;">' + safeMsg + '</div></div></div>';
-  document.getElementById('hg-close').onclick = () => closeModal();
+function helpKeysFor(el) {
+  const keys = [];
+  if (el.dataset && el.dataset.helpKey) keys.push(el.dataset.helpKey);
+  if (el.id) keys.push('#' + el.id);
+  const oc = (el.getAttribute && (el.getAttribute('onclick') || el.getAttribute('onchange'))) || '';
+  const byId = oc.match(/getElementById\(\s*['"]([^'"]+)['"]\s*\)\s*\.click\(\)/);
+  if (byId) keys.push('#' + byId[1]);
+  oc.split(';').forEach(st => {
+    const fn = st.trim().replace(/^return\s+/, '')
+      .match(/^([A-Za-z_$][\w$]*)\s*\(\s*(?:(['"])((?:\\.|(?!\2).)*)\2)?/);
+    if (!fn || _HELP_FN_SALTA.has(fn[1])) return;
+    if (fn[2]) keys.push(fn[1] + ':' + fn[3].replace(/\\(.)/g, '$1'));
+    keys.push(fn[1]);
+  });
+  return keys;
 }
 
-// Delegato su document invece che per-elemento: alcuni bottoni con guida (Carica Report,
-// Sottotask Jira) sono rigenerati a ogni pwRender/cpRender, un listener diretto andrebbe
-// riattaccato manualmente ogni volta.
+function helpKeyFor(el) {
+  return helpKeysFor(el).find(k => HELP_TEXTS[k]) || null;
+}
+
+function closeHelpGuide() {
+  const root = document.getElementById('help-guide-root');
+  if (root) root.remove();
+  document.removeEventListener('keydown', _helpGuideEsc, true);
+}
+
+function _helpGuideEsc(e) {
+  if (e.key !== 'Escape') return;
+  e.stopPropagation();
+  closeHelpGuide();
+}
+
+function showHelpGuide(key, titolo) {
+  const text = HELP_TEXTS[key];
+  if (!text) return;
+  closeHelpGuide();
+  const root = document.createElement('div');
+  root.id = 'help-guide-root';
+  const safeMsg = esc(text).replace(/\n/g, '<br>');
+  const head = titolo ? 'ℹ️ ' + esc(titolo) : 'ℹ️ Guida';
+  root.innerHTML = '<div class="modal-backdrop" style="z-index:100040;"><div class="bg-white rounded-lg shadow-xl w-full max-w-lg mx-4 p-5 flex flex-col" style="max-height:80vh;">' +
+    '<div class="flex items-center justify-between gap-3 mb-3" style="flex-shrink:0;"><span class="font-semibold text-slate-700">' + head + '</span><button id="hg-close" class="text-slate-400 hover:text-slate-600 text-xl leading-none">&times;</button></div>' +
+    '<div class="text-sm text-slate-700" style="overflow-y:auto;flex:1;min-height:0;">' + safeMsg + '</div></div></div>';
+  document.body.appendChild(root);
+  root.querySelector('.modal-backdrop').addEventListener('click', e => { if (e.target === e.currentTarget) closeHelpGuide(); });
+  document.getElementById('hg-close').onclick = closeHelpGuide;
+  document.addEventListener('keydown', _helpGuideEsc, true);
+}
+
+// Titolo della guida: il testo visibile del bottone, o il suo title se è solo un'icona.
+function _helpGuideTitolo(el) {
+  let t = (el.textContent || '').replace(/\s+/g, ' ').trim();
+  if (t.length < 3 && el.title) t = el.title.split(' — ')[0].trim() || t;
+  return t.length > 60 ? t.slice(0, 57) + '…' : t;
+}
+
+// Per i menu del click destro delle celle (Griglia, Ferie): vero se il click destro è su un
+// bottone della cella che ha una guida — il menu della cella deve allora lasciar passare
+// l'evento (return true, niente preventDefault) e si apre la guida. `escludi` = funzioni
+// dell'onclick per cui vince comunque il menu della cella (es. il nome operatore, che copre
+// quasi tutta la cella del nome e porterebbe fuori portata «Copia/Incolla settimana»).
+function helpGuidaSuBottone(ev, escludi) {
+  const b = ev.target.closest('button');
+  if (!b) return false;
+  const oc = b.getAttribute('onclick') || '';
+  if (escludi && escludi.some(fn => oc.indexOf(fn + '(') >= 0)) return false;
+  return !!helpKeyFor(b);
+}
+
+// Delegato su document invece che per-elemento: i bottoni sono in gran parte rigenerati a
+// ogni render, un listener diretto andrebbe riattaccato ogni volta. Un elemento che gestisce
+// già il suo click destro (menu delle celle in Griglia/Ferie) chiama preventDefault e qui
+// viene lasciato stare.
 document.addEventListener('contextmenu', e => {
-  const el = e.target.closest('[data-help-key]');
-  if (!el) return;
-  e.preventDefault();
-  showHelpGuide(el.dataset.helpKey);
+  if (e.defaultPrevented) return;
+  // Nei campi di testo (copia/incolla) e sui link veri (apri in nuova scheda, copia link)
+  // resta il menu del browser.
+  if (e.target.closest('textarea, [contenteditable="true"], input:not([type="checkbox"]):not([type="radio"]):not([type="button"]), a[href]')) return;
+  for (let el = e.target; el && el !== document.body; el = el.parentElement) {
+    if (el.nodeType !== 1) continue;
+    const key = helpKeyFor(el);
+    if (key) {
+      e.preventDefault();
+      showHelpGuide(key, _helpGuideTitolo(el));
+      return;
+    }
+  }
 });
 
 /* Vero se il rapporto a termine e' scaduto (data fine gia' passata rispetto a oggi).

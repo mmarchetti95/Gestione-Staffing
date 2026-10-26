@@ -304,10 +304,10 @@ function _rsFilterList(containerId, val) {
 function rsFilterSkills(val) { _rsFilterList('rs-skills-list', val); }
 function rsFilterStrumenti(val) { _rsFilterList('rs-strumenti-list', val); }
 
-function _rsOptionRowHtml(value, label, checked) {
+function _rsOptionRowHtml(value, label, checked, helpKey) {
   const vAttr = esc(value);
   const mark = checked ? ' checked' : '';
-  return '<label data-val="' + vAttr + '" title="' + esc(label) + '" ' +
+  return '<label data-val="' + vAttr + '"' + (helpKey ? ' data-help-key="' + helpKey + '"' : '') + ' title="' + esc(label) + '" ' +
     'style="display:flex;align-items:center;gap:7px;width:100%;padding:6px 9px;cursor:pointer;' +
     'font-size:12px;color:#334155;border-bottom:1px solid #f1f5f9;box-sizing:border-box;">' +
     '<input type="checkbox" data-val="' + vAttr + '"' + mark + ' style="flex:none;margin:0;">' +
@@ -324,7 +324,7 @@ function rsRenderSkillsDropdown() {
     return;
   }
   container.innerHTML = disponibili
-    .map(s => _rsOptionRowHtml(s, s, _rsSelSkills.has(s)))
+    .map(s => _rsOptionRowHtml(s, s, _rsSelSkills.has(s), 'rs-opzione-skill'))
     .join('');
   container.querySelectorAll('input[type=checkbox]').forEach(cb => {
     cb.onchange = () => {
@@ -344,7 +344,7 @@ function rsRenderStrumentiDropdown() {
     return;
   }
   container.innerHTML = disponibili
-    .map(s => _rsOptionRowHtml(s.key, s.label, _rsSelStrumenti.has(s.key)))
+    .map(s => _rsOptionRowHtml(s.key, s.label, _rsSelStrumenti.has(s.key), 'rs-opzione-strumento'))
     .join('');
   container.querySelectorAll('input[type=checkbox]').forEach(cb => {
     cb.onchange = () => {
@@ -455,7 +455,7 @@ function rsRenderTappe() {
     return '<div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:6px;padding:6px 8px;margin-bottom:6px;font-size:11px;">' +
       '<div style="display:flex;justify-content:space-between;gap:6px;">' +
         '<span style="font-weight:600;color:#0f172a;">📍 ' + esc(t.nome) + '</span>' +
-        '<button type="button" data-rm="' + i + '" style="color:#f43f5e;font-weight:700;background:none;border:none;cursor:pointer;line-height:1;">×</button>' +
+        '<button type="button" data-rm="' + i + '" data-help-key="rs-rimuovi-tappa" style="color:#f43f5e;font-weight:700;background:none;border:none;cursor:pointer;line-height:1;">×</button>' +
       '</div>' + skillsLine + strLine + priorLine + '</div>';
   }).join('');
   container.querySelectorAll('button[data-rm]').forEach(b => {
