@@ -114,6 +114,12 @@ Limite noto: il progetto Supabase è sul piano **Free**, che non include backup 
 
 ## Changelog
 
+## v18.222.0
+- feat: **Controllo Produzione - stato chiaro del Km/Cad su Jira.** La casella «Su Jira» restava spuntata anche dopo aver ricaricato un report con un Km/Cad diverso (voleva dire «inviato almeno una volta», non «allineato»). Ora ogni ticket mostra uno stato: **✓ Jira** (su Jira c'è già questo valore), **↻ Agg.** (cambiato dopo l'ultimo invio, nel tooltip «Su Jira 2.0 → da inviare 2.5»), **⬆ Invia** (mai inviato), **⚠ Email** (l'operatore non ha email: la sincronizzazione lo salta), **○ Jira** (Km/Cad tolto qui ma su Jira resta l'ultimo valore inviato). Clic: spiegazione se non ancora inviato, altrimenti l'azzeramento dello storico come prima.
+- Il campo Km/Cad ha il bordo arancione/rosso finché il valore non è su Jira; si aggiorna appena lo modifichi.
+- Riepilogo accanto a «📄 Carica Report» di ogni squadra: «KM su Jira: 6 ✓ · 2 da aggiornare · 3 da inviare» (clic: va alla prima riga in sospeso, aprendo la squadra se chiusa) oppure «✓ KM allineati su Jira».
+- Dopo «Carica Report» il messaggio finale ricorda quanti Km/Cad non sono ancora su Jira e di premere 🔄 Sincronizza squadra. Nessuna modifica al database.
+
 ## v18.221.0
 - feat: **Carica Report - scelta dell'attività oltre al comune.** Se nella settimana la squadra ha sullo stesso comune sottotask di attività diverse (ognuna con la sua produzione), dopo il comune viene chiesta anche l'attività del report. Il Km/Cad va sul sottotask di quell'attività e vengono aggiornati solo gli operatori/giorni che la svolgono (in Griglia o con un worklog sul suo sottotask): gli altri giorni restano com'erano invece di essere azzerati. L'attività di un sottotask si ricava dal legame creato dalla Griglia (🎫 Sottotask Jira) o, per i sottotask creati a mano, dal titolo «Attività - Comune - Cognome - Week N». Con una sola attività sul comune la domanda non compare e tutto funziona come prima.
 

@@ -223,7 +223,7 @@ function pwControlloRender() {
       <th style="text-align:center;min-width:44px;max-width:56px" title="Meteo osservato nel giorno sul cantiere (passa il mouse per il dettaglio)">Meteo</th>
       <th style="text-align:center;max-width:50px">Ore Jira</th><th style="text-align:center;max-width:56px" title="Totale ore inserite in MySond dall'operatore nel giorno (📥 Carica MySond). In ambra se diverso dalle Ore Jira; clicca per il dettaglio">MySond</th><th style="min-width:66px;max-width:66px">Ticket</th><th style="min-width:80px;max-width:80px">Epic</th><th style="max-width:60px">Ore Report Prod.</th>
       <th style="min-width:40px;text-align:center">Δ Ore</th>
-      <th style="max-width:60px">Km / Cad</th><th style="text-align:center;min-width:60px">Su Jira</th><th style="max-width:90px">Note</th>
+      <th style="max-width:60px">Km / Cad</th><th style="text-align:center;min-width:60px" title="Stato del Km/Cad di ogni ticket rispetto a Jira (Actual Production): ✓ allineato · ↻ cambiato dopo l'ultimo invio · ⬆ mai inviato. Si invia con 🔄 Sincronizza">Su Jira</th><th style="max-width:90px">Note</th>
     </tr></thead><tbody>`;
 
   let ri = 0;
@@ -232,7 +232,7 @@ function pwControlloRender() {
     html += `<tr class="cp-tr-commessa" data-comm-idx="${blIdx}"><td colspan="19"><span class="cp-carr" style="cursor:pointer;user-select:none;margin-right:5px;font-size:11px;display:inline-block;width:10px;text-align:center;" onclick="cpToggleComm(${blIdx})">▼</span>📁 ${esc(bl.commessa)}</td></tr>`;
     bl.squadre.forEach((sq, sqIdx) => {
       const sqKey = blIdx + '-' + sqIdx;
-      html += `<tr class="cp-tr-squadra" data-comm-idx="${blIdx}" data-sq-idx="${sqKey}"><td colspan="19">&nbsp;&nbsp;&nbsp;<span class="cp-sarr" style="cursor:pointer;user-select:none;margin-right:5px;font-size:11px;display:inline-block;width:10px;text-align:center;" onclick="cpToggleSq('${jsAttr(sqKey)}')">▼</span>👥 ${esc(sq.nome)}<button class="no-print pw-write-action" style="margin-left:10px;font-size:11px;font-weight:600;background:#4f46e5;color:#fff;border:none;border-radius:5px;padding:2px 8px;cursor:pointer;" onclick="event.stopPropagation();pwControlloSyncJira('${jsesc(bl.commessa)}','${jsesc(sq.nome)}',this)">🔄 Sincronizza squadra</button><button class="no-print pw-write-action" style="margin-left:6px;font-size:11px;font-weight:600;background:#0ea5e9;color:#fff;border:none;border-radius:5px;padding:2px 8px;cursor:pointer;" data-help-key="cp-carica-report" title="Click destro per la guida" onclick="event.stopPropagation();cpCaricaReportSquadra('${jsesc(bl.commessa)}','${jsesc(sq.nome)}')">📄 Carica Report</button></td></tr>`;
+      html += `<tr class="cp-tr-squadra" data-comm-idx="${blIdx}" data-sq-idx="${sqKey}"><td colspan="19">&nbsp;&nbsp;&nbsp;<span class="cp-sarr" style="cursor:pointer;user-select:none;margin-right:5px;font-size:11px;display:inline-block;width:10px;text-align:center;" onclick="cpToggleSq('${jsAttr(sqKey)}')">▼</span>👥 ${esc(sq.nome)}<button class="no-print pw-write-action" style="margin-left:10px;font-size:11px;font-weight:600;background:#4f46e5;color:#fff;border:none;border-radius:5px;padding:2px 8px;cursor:pointer;" onclick="event.stopPropagation();pwControlloSyncJira('${jsesc(bl.commessa)}','${jsesc(sq.nome)}',this)">🔄 Sincronizza squadra</button><button class="no-print pw-write-action" style="margin-left:6px;font-size:11px;font-weight:600;background:#0ea5e9;color:#fff;border:none;border-radius:5px;padding:2px 8px;cursor:pointer;" data-help-key="cp-carica-report" title="Click destro per la guida" onclick="event.stopPropagation();cpCaricaReportSquadra('${jsesc(bl.commessa)}','${jsesc(sq.nome)}')">📄 Carica Report</button><span class="cp-kmj-sum no-print" data-sq-idx="${sqKey}" onclick="event.stopPropagation();cpKmJiraVaiPrimo('${jsAttr(sqKey)}')"></span></td></tr>`;
       sq.giorni.forEach((gBlock, gIdx) => {
         const g   = gBlock.giornoIdx;
         const sep = gIdx > 0 ? ' cp-day-sep' : '';
@@ -263,15 +263,15 @@ function pwControlloRender() {
             ? '<span style="color:#cbd5e1">—</span>'
             : tickets.map(t => {
                 const kv = byTicket[t.key];
-                return `<input class="cp-input pw-write-action" type="number" step="0.1" min="0" style="width:64px;height:22px;display:block;margin:1px 0;box-sizing:border-box;" value="${kv==null?'':esc(String(kv))}" title="${esc(t.key||'')}" onblur="cpSaveKmTicket('${jsesc(bl.commessa)}','${jsesc(sq.nome)}','${jsesc(op.nome)}',${g},'${jsesc(dates[g])}','${jsesc(op.cantiere)}','${jsesc(op.attivita)}','${jsesc(t.key||'')}',this.value)">`;
+                return `<input class="cp-input cp-km-in pw-write-action" type="number" step="0.1" min="0" style="width:64px;height:22px;display:block;margin:1px 0;box-sizing:border-box;" value="${kv==null?'':esc(String(kv))}" title="${esc(t.key||'')}" data-cpk="${esc(k)}" data-tk="${esc(t.key||'')}" onblur="cpSaveKmTicket('${jsesc(bl.commessa)}','${jsesc(sq.nome)}','${jsesc(op.nome)}',${g},'${jsesc(dates[g])}','${jsesc(op.cantiere)}','${jsesc(op.attivita)}','${jsesc(t.key||'')}',this.value)">`;
               }).join('');
+          // Il badge si compila in cpKmJiraRefreshDom (subito dopo il render e a ogni modifica del Km/Cad).
           const suJiraHtml = tickets.length === 0
             ? '<span style="color:#cbd5e1">—</span>'
             : tickets.map(t => {
                 const wrote = lastByTicket[t.key] != null;
-                const ttl = wrote ? ('Ultimo scritto su Jira: ' + lastByTicket[t.key] + ' — clicca per azzerare lo storico (con conferma)') : 'Si spunta dopo la scrittura su Jira';
                 const reloadBtn = wrote ? `<button type="button" class="no-print pw-write-action" title="Rileggi il valore attuale da Jira (sovrascrive il Km/Cad locale di questo ticket)" style="border:none;background:transparent;cursor:pointer;font-size:12px;line-height:1;padding:0;margin-left:3px;" onclick="cpRereadTicket(event,'${jsesc(bl.commessa)}','${jsesc(sq.nome)}','${jsesc(op.nome)}',${g},'${jsesc(dates[g])}','${jsesc(op.cantiere)}','${jsesc(op.attivita)}','${jsesc(t.key||'')}')">🔄</button>` : '';
-                return `<div style="height:24px;display:flex;align-items:center;justify-content:center;"><input type="checkbox" class="pw-write-action" ${wrote?'checked':''} title="${esc(ttl)}" style="width:15px;height:15px;cursor:pointer;" onclick="cpJiraFlagTicketClick(event,'${jsesc(bl.commessa)}','${jsesc(sq.nome)}','${jsesc(op.nome)}',${g},'${jsesc(t.key||'')}')">${reloadBtn}</div>`;
+                return `<div style="height:24px;display:flex;align-items:center;justify-content:center;"><button type="button" class="cp-kmj" data-cpk="${esc(k)}" data-tk="${esc(t.key||'')}" data-operatore="${esc(op.nome)}" onclick="cpJiraFlagTicketClick(event,'${jsesc(bl.commessa)}','${jsesc(sq.nome)}','${jsesc(op.nome)}',${g},'${jsesc(t.key||'')}')"></button>${reloadBtn}</div>`;
               }).join('');
           const jDisplay = (jVal === '' || jVal == null)
             ? '<span style="color:#cbd5e1">—</span>'
@@ -326,6 +326,7 @@ function pwControlloRender() {
   html += '</tbody></table>';
   cpOreJiraHide();
   container.innerHTML = html;
+  cpKmJiraRefreshDom();
   cpApplyCollapse();
   // Re-applica ricerca operatore/cantiere se attiva (il DOM è appena stato ricreato)
   if (_cpSearchTerm) cpSearchOp(_cpSearchTerm);
@@ -1090,6 +1091,7 @@ async function cpSaveKmTicket(commessa, squadra, operatore, giorno, dataGiorno, 
   // Aggiorna lo specchio km_cad (somma) per colorazione griglia/export
   _cpData[k].km_cad = cpSumKm(_cpData[k].km_by_ticket);
   pwApplyProduzioneColors();
+  cpKmJiraRefreshDom();
 
   if (!_sbClient || !_sbUser) return;
   try {
@@ -1105,20 +1107,132 @@ async function cpSaveKmTicket(commessa, squadra, operatore, giorno, dataGiorno, 
   }
 }
 
+/* ----- Stato "Su Jira" del Km/Cad di un ticket -----
+   Confronta il Km/Cad locale (km_by_ticket) con l'ultimo valore scritto su Jira da questa app
+   (km_last_by_ticket), con la stessa regola della sincronizzazione (delta arrotondato al metro):
+   - ok            allineato: Jira ha già questo valore
+   - da_aggiornare cambiato dopo l'ultimo invio (es. report ricaricato): Jira ha ancora il vecchio
+   - da_inviare    compilato ma mai inviato
+   - senza_email   come da_inviare, ma l'operatore non ha email: la sincronizzazione lo salta
+   - vuoto         niente da inviare (nessun Km/Cad, o 0 mai inviato: delta nullo)
+   - orfano        Km/Cad tolto qui ma su Jira resta l'ultimo valore inviato (la sync non lo toglie) */
+function cpKmJiraStato(cell, ticketKey, operatore) {
+  const by = (cell && cell.km_by_ticket && typeof cell.km_by_ticket === 'object') ? cell.km_by_ticket : {};
+  const lastMap = (cell && cell.km_last_by_ticket && typeof cell.km_last_by_ticket === 'object') ? cell.km_last_by_ticket : {};
+  const km = by[ticketKey] == null ? null : Number(by[ticketKey]);
+  const last = lastMap[ticketKey] == null ? null : Number(lastMap[ticketKey]);
+  if (km == null || !isFinite(km)) return { stato: last != null ? 'orfano' : 'vuoto', km: null, last };
+  const delta = Math.round((km - (last == null ? 0 : last)) * 1000) / 1000;
+  if (delta === 0) return { stato: last != null ? 'ok' : 'vuoto', km, last };
+  if (operatore && !cpOperatoreHaEmail(operatore)) return { stato: 'senza_email', km, last };
+  return { stato: last != null ? 'da_aggiornare' : 'da_inviare', km, last };
+}
+
+function cpOperatoreHaEmail(nome) {
+  return (state.operatori || []).some(o => (o.nome_esteso || o.nome_breve || o.nome) === nome && o.email && o.email.trim());
+}
+
+const CP_KMJ_STATI = {
+  ok:            { lbl: '✓ Jira',  cls: 'ok' },
+  da_aggiornare: { lbl: '↻ Agg.',  cls: 'agg' },
+  da_inviare:    { lbl: '⬆ Invia', cls: 'inv' },
+  senza_email:   { lbl: '⚠ Email', cls: 'mail' },
+  vuoto:         { lbl: '—',       cls: 'vuoto' },
+  orfano:        { lbl: '○ Jira',  cls: 'vuoto' },
+};
+const CP_KMJ_IN_SOSPESO = ['da_aggiornare', 'da_inviare', 'senza_email'];
+
+function cpKmJiraTitolo(st, ticketKey) {
+  const f = v => String(Math.round(v * 1000) / 1000);
+  switch (st.stato) {
+    case 'ok': return `${ticketKey}: su Jira c'è ${f(st.last)}, uguale al Km/Cad.\nClic per azzerare lo storico (con conferma).`;
+    case 'da_aggiornare': return `${ticketKey}: Km/Cad cambiato dopo l'ultimo invio.\nSu Jira: ${f(st.last)} → da inviare: ${f(st.km)}.\nPremi 🔄 Sincronizza squadra per aggiornarlo.`;
+    case 'da_inviare': return `${ticketKey}: Km/Cad ${f(st.km)} non ancora inviato a Jira.\nPremi 🔄 Sincronizza squadra per inviarlo.`;
+    case 'senza_email': return `${ticketKey}: Km/Cad ${f(st.km)} non inviabile, l'operatore non ha un'email assegnata (la sincronizzazione lo salta).`;
+    case 'orfano': return `${ticketKey}: Km/Cad vuoto qui, ma su Jira resta l'ultimo valore inviato (${f(st.last)}): la sincronizzazione non lo toglie.\nClic per azzerare lo storico (con conferma).`;
+    default: return `${ticketKey}: nessun Km/Cad da inviare.`;
+  }
+}
+
+/* Ridisegna badge "Su Jira", bordo dei campi Km/Cad e riepiloghi per squadra dallo stato in _cpData,
+   senza un render completo (non fa perdere il focus agli input). */
+function cpKmJiraRefreshDom() {
+  const perSquadra = {};
+  document.querySelectorAll('.cp-table .cp-kmj').forEach(b => {
+    const st = cpKmJiraStato(_cpData[b.dataset.cpk], b.dataset.tk, b.dataset.operatore);
+    const d = CP_KMJ_STATI[st.stato];
+    b.className = 'cp-kmj cp-kmj-' + d.cls;
+    b.textContent = d.lbl;
+    b.title = cpKmJiraTitolo(st, b.dataset.tk);
+    b.dataset.stato = st.stato;
+    const tr = b.closest('tr'), sq = tr && tr.dataset.sqIdx;
+    if (sq == null) return;
+    const c = perSquadra[sq] || (perSquadra[sq] = { ok: 0, da_aggiornare: 0, da_inviare: 0, senza_email: 0 });
+    if (st.stato in c) c[st.stato]++;
+  });
+  document.querySelectorAll('.cp-table .cp-km-in').forEach(inp => {
+    const tr = inp.closest('tr'), b = tr && tr.querySelector('.cp-kmj[data-tk="' + CSS.escape(inp.dataset.tk) + '"]');
+    const stato = b ? b.dataset.stato : '';
+    inp.classList.toggle('cp-km-agg', stato === 'da_aggiornare');
+    inp.classList.toggle('cp-km-inv', stato === 'da_inviare' || stato === 'senza_email');
+  });
+  document.querySelectorAll('.cp-table .cp-kmj-sum').forEach(el => {
+    const c = perSquadra[el.dataset.sqIdx];
+    const pend = c ? c.da_aggiornare + c.da_inviare + c.senza_email : 0;
+    if (!c || (!pend && !c.ok)) { el.innerHTML = ''; el.className = 'cp-kmj-sum no-print'; el.title = ''; return; }
+    if (!pend) {
+      el.className = 'cp-kmj-sum no-print ok';
+      el.textContent = '✓ KM allineati su Jira';
+      el.title = 'Tutti i Km/Cad di questa squadra sono già su Jira (' + c.ok + ' ticket)';
+      return;
+    }
+    const parti = [];
+    if (c.ok) parti.push(c.ok + ' ✓');
+    if (c.da_aggiornare) parti.push(c.da_aggiornare + ' da aggiornare');
+    if (c.da_inviare) parti.push(c.da_inviare + ' da inviare');
+    if (c.senza_email) parti.push(c.senza_email + ' senza email');
+    el.className = 'cp-kmj-sum no-print pend';
+    el.textContent = 'KM su Jira: ' + parti.join(' · ');
+    el.title = 'Km/Cad di questa squadra non ancora allineati con Jira: premi 🔄 Sincronizza squadra per inviarli.\nClic qui per andare al primo in sospeso.';
+  });
+}
+
+/* Clic sul riepilogo della squadra: apre la squadra se chiusa e va alla prima riga in sospeso. */
+function cpKmJiraVaiPrimo(sqKey) {
+  const b = [...document.querySelectorAll('.cp-table .cp-kmj')].find(x => {
+    const tr = x.closest('tr');
+    return tr && tr.dataset.sqIdx === String(sqKey) && CP_KMJ_IN_SOSPESO.includes(x.dataset.stato);
+  });
+  if (!b) return;
+  const tr = b.closest('tr');
+  if (_collapseSets('cp').comm.has(tr.dataset.commIdx)) cpToggleComm(Number(tr.dataset.commIdx));
+  if (_collapseSets('cp').sq.has(String(sqKey))) cpToggleSq(String(sqKey));
+  tr.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  tr.classList.remove('cpa-flash');
+  void tr.offsetWidth;
+  tr.classList.add('cpa-flash');
+  setTimeout(() => tr.classList.remove('cpa-flash'), 4000);
+}
+
 // Click sull'indicatore "Su Jira" di un singolo ticket: non attivabile a mano,
 // azzerabile solo con conferma (rimuove lo storico di scrittura per quel ticket).
 async function cpJiraFlagTicketClick(ev, commessa, squadra, operatore, giorno, ticketKey) {
   if (ev && ev.preventDefault) ev.preventDefault();
-  if (!sbGuardWrite()) return;
   const k = `${commessa}|||${squadra}|||${operatore}|||${giorno}`;
   const cell = _cpData[k] || {};
   const lastMap = (cell.km_last_by_ticket && typeof cell.km_last_by_ticket === 'object') ? cell.km_last_by_ticket : {};
   const cur = lastMap[ticketKey] != null;
 
   if (!cur) {
-    showAlertModal('Questo indicatore si spunta automaticamente dopo la scrittura del KM/CAD su Jira per questo ticket. Non può essere attivato manualmente.');
+    const st = cpKmJiraStato(cell, ticketKey, operatore);
+    showAlertModal(st.stato === 'senza_email'
+      ? `${operatore} non ha un'email assegnata: la sincronizzazione lo salta e il Km/Cad del ticket ${ticketKey} non può essere inviato a Jira. Assegna l'email dalla tab "Email/operatore".`
+      : st.stato === 'da_inviare'
+        ? `Il Km/Cad ${st.km} del ticket ${ticketKey} non è ancora su Jira.\n\nPremi 🔄 Sincronizza squadra (o Sincronizza da Jira) per inviarlo all'Actual Production.`
+        : `Nessun Km/Cad da inviare per il ticket ${ticketKey}. Lo stato si aggiorna da solo dopo la scrittura su Jira.`);
     return;
   }
+  if (!sbGuardWrite()) return;
 
   const ok = await showConfirmAsync(
     `Vuoi azzerare lo storico di scrittura su Jira per il ticket ${ticketKey}?\n\n` +

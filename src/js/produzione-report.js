@@ -384,6 +384,12 @@ async function cpProcessReport(csvText, commessa, squadra) {
 
   let msg = `✅ Comune ${etichetta} — squadra "${squadra}": aggiornate ${records.length} celle ` +
             `(${daysWithData} giorni con dati, ${daysZero} a zero).`;
+  // Promemoria: il report aggiorna solo l'app, su Jira i Km/Cad arrivano con Sincronizza.
+  const inSospeso = updates.filter(u => u.ticketKey &&
+    ['da_aggiornare', 'da_inviare'].includes(cpKmJiraStato(_cpData[`${commessa}|||${squadra}|||${u.operatore}|||${u.giorno}`], u.ticketKey, u.operatore).stato)).length;
+  if (inSospeso > 0) {
+    msg += `\n\n⬆ ${inSospeso} valor${inSospeso === 1 ? 'e' : 'i'} Km/Cad non ancora su Jira: premi 🔄 Sincronizza squadra per inviarl${inSospeso === 1 ? 'o' : 'i'}.`;
+  }
   if (noTicket > 0) {
     msg += `\n\n⚠ ${noTicket} operatore/giorno con dati nel report ma senza ticket ${etichetta} (KM non assegnato). Verifica di aver sincronizzato Jira.`;
   }
