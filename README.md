@@ -114,6 +114,14 @@ Limite noto: il progetto Supabase è sul piano **Free**, che non include backup 
 
 ## Changelog
 
+## v18.223.0
+- feat: **Griglia - il controllo «🎫 Sottotask» verifica su Jira anche assegnatario e stato.** All'apertura e con «↻ Ricontrolla» rilegge da Jira, oltre all'esistenza, a chi è assegnato ogni sottotask e in che stato è. Nuove anomalie:
+  - **🗑️ Sottotask cancellato su Jira** (rosso, prima risultava solo «senza sottotask» con l'invito a ricrearlo): se l'operatore non lavora più lì va tolto dalla Griglia; «✕ togli indicatore» toglie solo l'indicatore.
+  - **🔀 Sottotask riassegnato su Jira** (rosso): «su Jira ora è assegnato a Bianchi». Se Bianchi è in Griglia sullo stesso cantiere senza sottotask compare «⇄ sposta a Bianchi», che sposta l'indicatore su di lui; vale anche quando in Griglia hai già sostituito l'operatore (l'indicatore era rimasto orfano sotto il vecchio nome). Il confronto è per account Jira (dall'email in anagrafica), mai per nome.
+  - **🆕 Sottotask in stato CREATED** (ambra): sottotask non ancora avviato nel workflow Jira, evidenziato anche in Griglia con «Evidenzia in Griglia».
+- Su Jira non viene scritto niente: le correzioni toccano solo gli indicatori in Griglia e solo su click.
+- Richiede il redeploy dell'Edge Function `jira-task-status` (ora restituisce l'assegnatario dei sottotask e, con `emails`, la corrispondenza email → account Jira). Senza redeploy funzionano cancellati e CREATED, non i riassegnati. Nessuna modifica al database.
+
 ## v18.222.0
 - feat: **Controllo Produzione - stato chiaro del Km/Cad su Jira.** La casella «Su Jira» restava spuntata anche dopo aver ricaricato un report con un Km/Cad diverso (voleva dire «inviato almeno una volta», non «allineato»). Ora ogni ticket mostra uno stato: **✓ Jira** (su Jira c'è già questo valore), **↻ Agg.** (cambiato dopo l'ultimo invio, nel tooltip «Su Jira 2.0 → da inviare 2.5»), **⬆ Invia** (mai inviato), **⚠ Email** (l'operatore non ha email: la sincronizzazione lo salta), **○ Jira** (Km/Cad tolto qui ma su Jira resta l'ultimo valore inviato). Clic: spiegazione se non ancora inviato, altrimenti l'azzeramento dello storico come prima.
 - Il campo Km/Cad ha il bordo arancione/rosso finché il valore non è su Jira; si aggiorna appena lo modifichi.

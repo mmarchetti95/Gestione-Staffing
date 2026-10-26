@@ -22,7 +22,8 @@
 // Contratto richiesta (POST, JSON):
 //   { "subtaskKeys": ["W07R-451", "W07R-452", ...],    // max 500
 //     "soloSottotask": true,                           // opzionale: salta i Task padre
-//     "statoDa": true }                                // opzionale: ora dell'ultimo cambio di stato
+//     "statoDa": true,                                 // opzionale: ora dell'ultimo cambio di stato
+//     "emails": ["mario.rossi@...", ...] }             // opzionale (max 300): email -> accountId
 //
 // Contratto risposta (JSON):
 //   {
@@ -41,8 +42,10 @@
 //       "W07R-451": { "key": "W07R-451", "summary": "...", "status": "Done",
 //                     "statusCategory": "done", "url": "https://.../browse/W07R-451",
 //                     "statoDa": "2026-10-23T05:42:11.000Z",      // solo con "statoDa": true
-//                     "statoDaAutore": "Mario Rossi" }
+//                     "statoDaAutore": "Mario Rossi",
+//                     "assignee": { "accountId": "...", "displayName": "Mario Rossi" } | null }
 //     },
+//     "accountByEmail": { "mario.rossi@...": "5b10...", "x@...": null },   // solo con "emails"
 //     "count": 1
 //   }
 // "subtasks" e' usato dalla colonna "Stato" di Controllo Produzione
@@ -59,6 +62,14 @@
 // transizione. Il campo di sistema "statuscategorychangedate" non basta: IN
 // PENDING -> IN PROGRESS resta nella stessa categoria e non lo aggiorna.
 // Se il changelog non si legge, i sottotask escono senza "statoDa" (nessun errore).
+//
+// "assignee" + "emails" (dalla v18.223.0, controllo "🎫 Sottotask" della Griglia):
+// un sottotask riassegnato su Jira a un altro operatore resta in Griglia sotto il
+// primo. Il confronto si fa sull'accountId, non sul nome ne' sull'email
+// dell'assegnatario (Jira la nasconde spesso per privacy): il client manda le
+// email degli operatori in anagrafica e qui diventano accountId con la ricerca
+// utenti (email esatta, oppure l'unico utente trovato). null = email non
+// risolta: il client non confronta quell'operatore.
 
 const JIRA_BASE_URL  = (Deno.env.get("JIRA_BASE_URL")  || "").replace(/\/+$/, "");
 const JIRA_EMAIL     =  Deno.env.get("JIRA_EMAIL")     || "";
@@ -190,6 +201,26 @@ async function changelogPerIssue(issues: { id: string; key: string }[], out: Rec
   }
 }
 
+const MAX_EMAILS = 300;
+
+// email (minuscola) -> accountId | null, poche richieste alla volta.
+async function accountIdDaEmail(emails: string[]): Promise<Record<string, string | null>> {
+  const out: Record<string, string | null> = {};
+  for (const group of chunked(emails, 8)) {
+    await Promise.all(group.map(async (email) => {
+      try {
+        const res = await jiraGet(`/rest/api/3/user/search?query=${encodeURIComponent(email)}&maxResults=5`);
+        if (!res.ok) { out[email] = null; return; }
+        const users = (await res.json() || []).filter((u: any) => u && u.accountId && u.accountType !== "app");
+        const exact = users.find((u: any) => (u.emailAddress || "").toLowerCase() === email);
+        const chosen = exact || (users.length === 1 ? users[0] : null);
+        out[email] = chosen ? String(chosen.accountId) : null;
+      } catch { out[email] = null; }
+    }));
+  }
+  return out;
+}
+
 // Esegue una search JQL paginata e restituisce tutte le issue trovate.
 // Le chiavi inesistenti o non visibili all'utente Jira vengono semplicemente
 // omesse dal risultato (nessun errore): il chiamante le tratta come "senza stato".
@@ -234,6 +265,11 @@ Deno.serve(async (req: Request) => {
     rawKeys.map((k: unknown) => String(k || "").trim()).filter((k: string) => k),
   )] as string[];
 
+  const emails = [...new Set(
+    (Array.isArray(payload?.emails) ? payload.emails : [])
+      .map((e: unknown) => String(e || "").trim().toLowerCase()).filter((e: string) => e.includes("@")),
+  )].slice(0, MAX_EMAILS) as string[];
+
   if (!subtaskKeys.length) return json({ bySubtask: {}, tasks: {}, subtasks: {}, count: 0 });
   if (subtaskKeys.length > MAX_SUBTASKS) {
     return json({ error: `Troppi sottotask richiesti (${subtaskKeys.length}, massimo ${MAX_SUBTASKS})` }, 400);
@@ -241,7 +277,10 @@ Deno.serve(async (req: Request) => {
 
   try {
     // Passo 1: sottotask -> chiave del Task padre, piu' lo stato del sottotask stesso.
-    const subIssues = await jiraSearch(subtaskKeys, ["parent", "status", "summary"]);
+    const [subIssues, accountByEmail] = await Promise.all([
+      jiraSearch(subtaskKeys, ["parent", "status", "summary", "assignee"]),
+      emails.length ? accountIdDaEmail(emails) : Promise.resolve(undefined),
+    ]);
     const bySubtask: Record<string, string> = {};
     const subtasks: Record<string, any> = {};
     subIssues.forEach((iss: any) => {
@@ -254,6 +293,9 @@ Deno.serve(async (req: Request) => {
         status: f.status?.name || "",
         statusCategory: f.status?.statusCategory?.key || "",
         url: `${JIRA_BASE_URL}/browse/${iss.key}`,
+        assignee: f.assignee?.accountId
+          ? { accountId: String(f.assignee.accountId), displayName: f.assignee.displayName || "" }
+          : null,
       };
     });
 
@@ -277,11 +319,11 @@ Deno.serve(async (req: Request) => {
     // Il polling di Controllo Produzione (ogni 30s) vuole solo lo stato dei
     // sottotask: niente seconda search sui Task padre.
     if (payload?.soloSottotask === true) {
-      return json({ bySubtask, tasks: {}, subtasks, count: 0 });
+      return json({ bySubtask, tasks: {}, subtasks, accountByEmail, count: 0 });
     }
 
     const taskKeys = [...new Set(Object.values(bySubtask))];
-    if (!taskKeys.length) return json({ bySubtask, tasks: {}, subtasks, count: 0 });
+    if (!taskKeys.length) return json({ bySubtask, tasks: {}, subtasks, accountByEmail, count: 0 });
 
     // Passo 2: dati dei Task padre. "parent" e' richiesto anche qui perche' il
     // padre del Task e' l'Epic (stessa gerarchia via campo parent usata da
@@ -310,7 +352,7 @@ Deno.serve(async (req: Request) => {
       };
     });
 
-    return json({ bySubtask, tasks, subtasks, count: Object.keys(tasks).length });
+    return json({ bySubtask, tasks, subtasks, accountByEmail, count: Object.keys(tasks).length });
   } catch (e) {
     return json({ error: String((e as Error)?.message || e) }, 500);
   }
