@@ -25,6 +25,7 @@ function getCommessaAttivaMeta(nome) {
     jira_project_code: stored.jira_project_code||'',
     documenti: stored.documenti || [],
     fabbisogno_dettagliato: stored.fabbisogno_dettagliato || [],
+    attivita: stored.attivita || [],
     _risorseAttuali: risorseAttuali,
     _dedotto: !state.commesse_attive_meta[nome],
   };
@@ -36,6 +37,8 @@ function openCommessaAttivaModal(nome) {
   const nRis = new Set(state.staffing.filter(r=>r.commessa===nome).map(r=>r.risorsa)).size;
   // Bozza del fabbisogno per skill: si persiste col "Salva" di questo modal (vedi openFabbisognoModal)
   let fabbDraft = fabbisognoClona(m.fabbisogno_dettagliato);
+  // Bozza del catalogo attività (vedi commessa-attivita.js), stesso schema del fabbisogno.
+  let attDraft = caClona(m.attivita);
   const root = document.getElementById('modal-root');
   root.innerHTML = `<div class="modal-backdrop"><div class="bg-white rounded-lg shadow-xl w-full max-w-2xl mx-4 my-8 p-5 max-h-[90vh] overflow-y-auto">
     <h3 class="font-semibold text-slate-900 mb-1">Modifica commessa attiva</h3>
@@ -54,6 +57,13 @@ function openCommessaAttivaModal(nome) {
         <input id="ma-cod" class="mt-0.5 w-full border border-slate-300 rounded px-2 py-1.5 text-sm" placeholder="Es: C-2026-0123" value="${(m.codice_commessa||'').replace(/"/g,'&quot;')}"></label>
       <label class="block text-xs"><span class="text-slate-600">Codice progetto Jira <span class="text-slate-400 font-normal">(per creazione sottotask da Griglia — l'Epic e il Task si scelgono per comune al momento della creazione)</span></span>
         <input id="ma-jira-project" class="mt-0.5 w-full border border-slate-300 rounded px-2 py-1.5 text-sm" placeholder="Es: W07R" value="${(m.jira_project_code||'').replace(/"/g,'&quot;')}"></label>
+      <div class="p-2 bg-slate-50 rounded border border-slate-200">
+        <div class="flex items-center justify-between gap-2">
+          <div class="text-xs text-slate-600">Attività e KPI <span class="text-slate-400 font-normal">(tendina dell'attività in Griglia, KPI_Quantità target dei sottotask Jira)</span></div>
+          <button type="button" id="ma-btn-attivita" class="px-2 py-1.5 text-xs bg-teal-50 text-teal-700 border border-teal-200 rounded hover:bg-teal-100 whitespace-nowrap">🏷️ Attività e KPI</button>
+        </div>
+        <div id="ma-att-summary">${caSummaryHtml(attDraft, false)}</div>
+      </div>
       <div class="grid grid-cols-2 gap-2">
         <label class="block text-xs"><span class="text-slate-600">Data inizio</span>
           <input id="ma-ini" type="date" class="mt-0.5 w-full border border-slate-300 rounded px-2 py-1.5 text-sm" value="${m.inizio?m.inizio.slice(0,10):''}"></label>
@@ -195,6 +205,17 @@ function openCommessaAttivaModal(nome) {
       },
     });
   };
+  document.getElementById('ma-btn-attivita').onclick = () => {
+    caOpenEditor({
+      commessa: nome,
+      jiraProjectCode: document.getElementById('ma-jira-project').value.trim(),
+      lista: attDraft,
+      onSave: lista => {
+        attDraft = lista;
+        document.getElementById('ma-att-summary').innerHTML = caSummaryHtml(attDraft, true);
+      },
+    });
+  };
   document.getElementById('ma-reset').onclick = async () => {
     if (!sbGuardWrite()) return;
     const nDocs = (state.commesse_attive_meta[nome]?.documenti || []).length;
@@ -234,6 +255,7 @@ function openCommessaAttivaModal(nome) {
       dpi_richiesti: [...document.querySelectorAll('.ma-dpi:checked')].map(x=>x.value),
       risorse_necessarie: risDichiarate,
       fabbisogno_dettagliato: fabbDraft,
+      attivita: attDraft,
     };
     await saveState('Modifica commessa attiva', {commessa: nome}, true); renderAll(); closeModal();
   };

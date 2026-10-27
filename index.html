@@ -504,6 +504,8 @@
     font-style: italic;
     transition: border-color .15s;
   }
+  /* Attività fuori dal catalogo della commessa (scritta prima del catalogo o a mano). */
+  .pw-attivita-input.pw-att-fuori { color: #b45309; background: #fffbeb; border-color: #fcd34d; font-style: normal; }
   .pw-attivita-input:focus {
     outline: none;
     border-color: #94a3b8;
@@ -11149,6 +11151,7 @@ function getCommessaAttivaMeta(nome) {
     jira_project_code: stored.jira_project_code||'',
     documenti: stored.documenti || [],
     fabbisogno_dettagliato: stored.fabbisogno_dettagliato || [],
+    attivita: stored.attivita || [],
     _risorseAttuali: risorseAttuali,
     _dedotto: !state.commesse_attive_meta[nome],
   };
@@ -11160,6 +11163,8 @@ function openCommessaAttivaModal(nome) {
   const nRis = new Set(state.staffing.filter(r=>r.commessa===nome).map(r=>r.risorsa)).size;
   // Bozza del fabbisogno per skill: si persiste col "Salva" di questo modal (vedi openFabbisognoModal)
   let fabbDraft = fabbisognoClona(m.fabbisogno_dettagliato);
+  // Bozza del catalogo attività (vedi commessa-attivita.js), stesso schema del fabbisogno.
+  let attDraft = caClona(m.attivita);
   const root = document.getElementById('modal-root');
   root.innerHTML = `<div class="modal-backdrop"><div class="bg-white rounded-lg shadow-xl w-full max-w-2xl mx-4 my-8 p-5 max-h-[90vh] overflow-y-auto">
     <h3 class="font-semibold text-slate-900 mb-1">Modifica commessa attiva</h3>
@@ -11178,6 +11183,13 @@ function openCommessaAttivaModal(nome) {
         <input id="ma-cod" class="mt-0.5 w-full border border-slate-300 rounded px-2 py-1.5 text-sm" placeholder="Es: C-2026-0123" value="${(m.codice_commessa||'').replace(/"/g,'&quot;')}"></label>
       <label class="block text-xs"><span class="text-slate-600">Codice progetto Jira <span class="text-slate-400 font-normal">(per creazione sottotask da Griglia — l'Epic e il Task si scelgono per comune al momento della creazione)</span></span>
         <input id="ma-jira-project" class="mt-0.5 w-full border border-slate-300 rounded px-2 py-1.5 text-sm" placeholder="Es: W07R" value="${(m.jira_project_code||'').replace(/"/g,'&quot;')}"></label>
+      <div class="p-2 bg-slate-50 rounded border border-slate-200">
+        <div class="flex items-center justify-between gap-2">
+          <div class="text-xs text-slate-600">Attività e KPI <span class="text-slate-400 font-normal">(tendina dell'attività in Griglia, KPI_Quantità target dei sottotask Jira)</span></div>
+          <button type="button" id="ma-btn-attivita" class="px-2 py-1.5 text-xs bg-teal-50 text-teal-700 border border-teal-200 rounded hover:bg-teal-100 whitespace-nowrap">🏷️ Attività e KPI</button>
+        </div>
+        <div id="ma-att-summary">${caSummaryHtml(attDraft, false)}</div>
+      </div>
       <div class="grid grid-cols-2 gap-2">
         <label class="block text-xs"><span class="text-slate-600">Data inizio</span>
           <input id="ma-ini" type="date" class="mt-0.5 w-full border border-slate-300 rounded px-2 py-1.5 text-sm" value="${m.inizio?m.inizio.slice(0,10):''}"></label>
@@ -11319,6 +11331,17 @@ function openCommessaAttivaModal(nome) {
       },
     });
   };
+  document.getElementById('ma-btn-attivita').onclick = () => {
+    caOpenEditor({
+      commessa: nome,
+      jiraProjectCode: document.getElementById('ma-jira-project').value.trim(),
+      lista: attDraft,
+      onSave: lista => {
+        attDraft = lista;
+        document.getElementById('ma-att-summary').innerHTML = caSummaryHtml(attDraft, true);
+      },
+    });
+  };
   document.getElementById('ma-reset').onclick = async () => {
     if (!sbGuardWrite()) return;
     const nDocs = (state.commesse_attive_meta[nome]?.documenti || []).length;
@@ -11358,6 +11381,7 @@ function openCommessaAttivaModal(nome) {
       dpi_richiesti: [...document.querySelectorAll('.ma-dpi:checked')].map(x=>x.value),
       risorse_necessarie: risDichiarate,
       fabbisogno_dettagliato: fabbDraft,
+      attivita: attDraft,
     };
     await saveState('Modifica commessa attiva', {commessa: nome}, true); renderAll(); closeModal();
   };
@@ -11643,6 +11667,264 @@ function renderConfrontoBox(commessaNome, meseSel) {
   </details>`;
 }
 
+/* ===================== CATALOGO ATTIVITÀ PER COMMESSA =====================
+   state.commesse_attive_meta[commessa].attivita = [{ nome, produttiva, kpi_target, unita,
+   activity_type: { id, label } | null, alias: string[] }] (dominio core, salvato col
+   "Salva" della scheda commessa). Se una commessa ha il catalogo, in Griglia il campo
+   attività propone solo quelle voci più le voci di servizio comuni (CA_ATTIVITA_SERVIZIO,
+   mai produttive); le commesse senza catalogo restano a testo libero.
+   - kpi_target: KPI_Quantità target GIORNALIERO per SQUADRA. Il target del sottotask di un
+     operatore è kpi_target diviso chi, della sua squadra in Griglia, quel giorno è sullo
+     stesso cantiere con la stessa attività (caKpiTargetVoce): chi è da solo prende tutto.
+   - alias: nomi scritti a mano prima del catalogo ("Rielivo Wo Ip"…). Lo storico di pwData
+     non viene riscritto: gli alias lo ricollegano alla voce giusta (caTrova).
+   - activity_type: Activity Type Jira proposto nella creazione dei sottotask (prima era
+     ricordato solo nel browser, vedi pwJiraActivityTypeGuess). */
+
+HELP_TEXTS['#ma-btn-attivita'] = 'Apre il catalogo delle attività di questa commessa: nome, se è produttiva, KPI_Quantità target giornaliero per squadra, unità, Activity Type Jira e nomi vecchi (alias).\n\nCon il catalogo, in Griglia il campo attività diventa una tendina con queste voci (più Viaggio, Riposo compensativo e le altre voci di servizio) e un nome fuori catalogo viene rifiutato; i nomi già scritti nelle settimane passate non vengono toccati, gli alias li ricollegano alla voce giusta. «Importa dalla Griglia» propone i nomi già usati.\n\nLe modifiche valgono solo dopo «Salva» della scheda commessa e sono condivise con tutti.';
+
+const CA_ATTIVITA_SERVIZIO = ['Viaggio', 'Rientro in sede', 'Riposo compensativo', 'Maltempo (pioggia)', 'Formazione', 'Infortunio', 'Permesso'];
+
+// Confronto tollerante a maiuscole, accenti, spazi e "_" (i nomi in Griglia sono digitati a mano).
+function caNorm(s) {
+  return String(s || '').normalize('NFD').replace(/[̀-ͯ]/g, '')
+    .replace(/[_\s]+/g, ' ').trim().toLowerCase();
+}
+
+function caCatalogo(commessa) {
+  const meta = (state.commesse_attive_meta || {})[commessa];
+  return (meta && Array.isArray(meta.attivita)) ? meta.attivita : [];
+}
+
+function caHaCatalogo(commessa) {
+  return caCatalogo(commessa).length > 0;
+}
+
+/* Voce di catalogo per un testo di Griglia: per nome o alias della commessa, oppure voce di
+   servizio ({ nome, produttiva: false, servizio: true }). null = fuori catalogo. */
+function caTrova(commessa, testo) {
+  const n = caNorm(testo);
+  if (!n) return null;
+  const voce = caCatalogo(commessa).find(a => caNorm(a.nome) === n || (a.alias || []).some(x => caNorm(x) === n));
+  if (voce) return voce;
+  const serv = CA_ATTIVITA_SERVIZIO.find(s => caNorm(s) === n);
+  return serv ? { nome: serv, produttiva: false, servizio: true } : null;
+}
+
+// Nomi proposti nella tendina della Griglia: catalogo, poi voci di servizio.
+function caNomiTendina(commessa) {
+  return caCatalogo(commessa).map(a => a.nome).concat(CA_ATTIVITA_SERVIZIO);
+}
+
+function caFmtNum(n) {
+  return (Math.round(Number(n) * 1000) / 1000).toLocaleString('it-IT', { maximumFractionDigits: 3 });
+}
+
+/* KPI_Quantità target del sottotask di un operatore in un giorno: kpi_target della voce di
+   catalogo diviso i presenti della SUA squadra quel giorno sullo stesso cantiere con la
+   stessa attività (stessa voce di catalogo, alias compresi). Un giorno senza attività
+   prende quella dell'operatore sullo stesso cantiere (pwJiraAttivitaSottotask), come la
+   creazione dei sottotask. null se la voce non è nel catalogo, non è produttiva o non ha
+   un target. */
+function caKpiTargetVoce(bc, comune, operatore, attivita, giorno) {
+  if (!bc || !bc.commessa) return null;
+  const voce = caTrova(bc.commessa, attivita);
+  if (!voce || voce.servizio || voce.produttiva === false) return null;
+  const kpi = Number(voce.kpi_target);
+  if (!(kpi > 0)) return null;
+  const dKey = String(giorno);
+  const stessaVoce = (op, v) => v.cantiere === comune
+    && caTrova(bc.commessa, pwJiraAttivitaSottotask(bc, v.cantiere, op.nome, v.attivita)) === voce;
+  const squadra = (bc.squadre || []).find(sq => (sq.operatori || []).some(op =>
+    op.nome === operatore && pwCellVoci((op.giorni || {})[dKey]).some(v => stessaVoce(op, v))));
+  if (!squadra) return null;
+  const presenti = new Set();
+  (squadra.operatori || []).forEach(op => {
+    if (op.nome && pwCellVoci((op.giorni || {})[dKey]).some(v => stessaVoce(op, v))) presenti.add(op.nome);
+  });
+  const n = Math.max(1, presenti.size);
+  return { target: Math.round((kpi / n) * 1000) / 1000, kpiSquadra: kpi, presenti: n, unita: voce.unita || '', voce: voce.nome };
+}
+
+/* Nomi di attività usati in Griglia per una commessa (tutte le settimane), con il numero di
+   voci, per costruire il catalogo dai dati esistenti. */
+function caNomiUsatiInGriglia(commessa) {
+  const conta = {};
+  Object.keys(pwData || {}).forEach(anno => {
+    if (!/^\d+$/.test(anno)) return;
+    Object.values(pwData[anno] || {}).forEach(week => {
+      if (!Array.isArray(week)) return;
+      week.forEach(bc => {
+        if (!bc || bc.commessa !== commessa) return;
+        (bc.squadre || []).forEach(sq => (sq.operatori || []).forEach(op => Object.keys(op.giorni || {}).forEach(d => {
+          pwCellVoci(op.giorni[d]).forEach(v => {
+            const a = (v.attivita || '').trim();
+            if (a) conta[a] = (conta[a] || 0) + 1;
+          });
+        })));
+      });
+    });
+  });
+  return Object.keys(conta).map(nome => ({ nome, n: conta[nome] })).sort((a, b) => b.n - a.n);
+}
+
+function caClona(lista) {
+  return (lista || []).map(a => ({
+    nome: a.nome || '',
+    produttiva: a.produttiva !== false,
+    kpi_target: (a.kpi_target === null || a.kpi_target === undefined || a.kpi_target === '') ? null : Number(a.kpi_target),
+    unita: a.unita || '',
+    activity_type: a.activity_type && a.activity_type.id ? { id: String(a.activity_type.id), label: a.activity_type.label || '' } : null,
+    alias: [...(a.alias || [])],
+  }));
+}
+
+function caSummaryHtml(lista, daSalvare) {
+  if (!(lista || []).length) return '<div class="text-[10px] text-slate-400 mt-1">Nessun catalogo: in Griglia l\'attività resta a testo libero.</div>';
+  return '<div class="mt-1 text-[10px] text-teal-700 bg-teal-50 rounded px-2 py-1 border border-teal-100">' +
+    esc(lista.length + ' attività: ' + lista.map(a => a.nome + (a.produttiva !== false && a.kpi_target ? ' (' + caFmtNum(a.kpi_target) + (a.unita ? ' ' + a.unita : '') + '/sq)' : '')).join(', ')) +
+    (daSalvare ? ' <span class="text-amber-700 font-medium">· premi «Salva» per confermarlo</span>' : '') + '</div>';
+}
+
+/* Editor del catalogo, aperto SOPRA la scheda commessa (stesso schema di
+   openFabbisognoModal): lavora su una copia e la restituisce con opts.onSave(lista); il
+   salvataggio vero lo fa il "Salva" della scheda commessa.
+   opts: { commessa, jiraProjectCode, lista, onSave } */
+function caOpenEditor(opts) {
+  const commessa = opts.commessa || '';
+  let lista = caClona(opts.lista);
+  let activityValues = null; // [{id, value}] da Jira, se il progetto ha il campo
+  let activityStato = opts.jiraProjectCode ? 'caricamento' : 'nocodice';
+
+  const root = document.getElementById('modal-root');
+  const layer = document.createElement('div');
+  layer.className = 'modal-backdrop';
+  const chiudi = () => layer.remove();
+
+  // Legge i valori digitati prima di ogni re-render, così non si perdono.
+  function leggi() {
+    layer.querySelectorAll('[data-ca-idx]').forEach(row => {
+      const a = lista[Number(row.dataset.caIdx)];
+      if (!a) return;
+      a.nome = row.querySelector('.ca-nome').value.trim();
+      a.produttiva = row.querySelector('.ca-prod').checked;
+      const k = row.querySelector('.ca-kpi').value.trim().replace(',', '.');
+      a.kpi_target = k === '' || !isFinite(Number(k)) ? null : Number(k);
+      a.unita = row.querySelector('.ca-unita').value.trim();
+      a.alias = row.querySelector('.ca-alias').value.split(',').map(s => s.trim()).filter(Boolean);
+      const sel = row.querySelector('.ca-at');
+      if (sel) {
+        const v = (activityValues || []).find(x => String(x.id) === sel.value);
+        a.activity_type = v ? { id: String(v.id), label: v.value } : (sel.value === '' ? null : a.activity_type);
+      }
+    });
+  }
+
+  function activityHtml(a) {
+    if (activityStato === 'nocodice') return '<span class="text-[10px] text-slate-400" title="Imposta il Codice progetto Jira della commessa">—</span>';
+    if (activityStato === 'caricamento') return '<span class="text-[10px] text-slate-400">⏳</span>';
+    if (!activityValues) return '<span class="text-[10px] text-slate-400" title="Il progetto Jira non ha il campo Activity Type">n/d</span>';
+    const cur = a.activity_type ? String(a.activity_type.id) : '';
+    return '<select class="ca-at w-full border border-slate-300 rounded px-1 py-1 text-xs"><option value="">—</option>' +
+      activityValues.map(v => '<option value="' + esc(String(v.id)) + '"' + (String(v.id) === cur ? ' selected' : '') + '>' + esc(v.value) + '</option>').join('') + '</select>';
+  }
+
+  function righeHtml() {
+    if (!lista.length) return '<div class="text-xs text-slate-400 italic py-2">Nessuna attività: aggiungile a mano o importale dai nomi usati in Griglia.</div>';
+    return lista.map((a, i) => '<div data-ca-idx="' + i + '" class="grid gap-1 items-center py-1 border-b border-slate-100" style="grid-template-columns: minmax(0,2fr) 52px 70px 60px minmax(0,1.5fr) minmax(0,2fr) 22px;">' +
+      '<input class="ca-nome border border-slate-300 rounded px-1.5 py-1 text-xs" value="' + esc(a.nome) + '" placeholder="Es: Rilievo IP">' +
+      '<label class="flex justify-center"><input type="checkbox" class="ca-prod"' + (a.produttiva !== false ? ' checked' : '') + '></label>' +
+      '<input class="ca-kpi border border-slate-300 rounded px-1.5 py-1 text-xs text-right" inputmode="decimal" value="' + (a.kpi_target === null ? '' : esc(String(a.kpi_target).replace('.', ','))) + '" placeholder="—">' +
+      '<input class="ca-unita border border-slate-300 rounded px-1.5 py-1 text-xs" value="' + esc(a.unita) + '" placeholder="km">' +
+      '<div>' + activityHtml(a) + '</div>' +
+      '<input class="ca-alias border border-slate-300 rounded px-1.5 py-1 text-xs" value="' + esc((a.alias || []).join(', ')) + '" placeholder="nomi vecchi, separati da virgola">' +
+      '<button type="button" class="ca-del text-slate-400 hover:text-red-600 text-sm" data-del="' + i + '" title="Togli">✕</button>' +
+      '</div>').join('');
+  }
+
+  // Nomi usati in Griglia che il catalogo (nomi + alias + voci di servizio) non copre ancora.
+  function nonCoperti() {
+    const coperto = new Set();
+    lista.forEach(a => { coperto.add(caNorm(a.nome)); (a.alias || []).forEach(x => coperto.add(caNorm(x))); });
+    CA_ATTIVITA_SERVIZIO.forEach(s => coperto.add(caNorm(s)));
+    return caNomiUsatiInGriglia(commessa).filter(x => !coperto.has(caNorm(x.nome)));
+  }
+
+  function importHtml() {
+    const nc = nonCoperti();
+    if (!nc.length) return '<div class="text-[11px] text-emerald-700">✓ Tutti i nomi usati in Griglia per questa commessa sono coperti dal catalogo.</div>';
+    const opzioni = '<option value="">— ignora —</option><option value="__nuova__">+ nuova attività</option>' +
+      lista.map((a, i) => a.nome ? '<option value="' + i + '">alias di: ' + esc(a.nome) + '</option>' : '').join('');
+    return '<div class="text-[11px] text-slate-500 mb-1">Nomi usati in Griglia non ancora coperti (' + nc.length + '): scegli se farne una nuova attività o il nome vecchio di una esistente.</div>' +
+      '<div class="max-h-48 overflow-y-auto border border-slate-200 rounded px-2">' +
+      nc.map(x => '<div class="flex items-center justify-between gap-2 py-1 border-b border-slate-100 last:border-0 text-xs">' +
+        '<span class="min-w-0 truncate">' + esc(x.nome) + ' <span class="text-slate-400">(' + x.n + ')</span></span>' +
+        '<select class="ca-imp border border-slate-300 rounded px-1 py-0.5 text-xs w-48 shrink-0" data-nome="' + esc(x.nome) + '">' + opzioni + '</select></div>').join('') +
+      '</div><div class="flex justify-end mt-1"><button type="button" id="ca-imp-applica" class="text-xs px-2 py-1 bg-teal-50 text-teal-700 border border-teal-200 rounded hover:bg-teal-100">Applica scelte</button></div>';
+  }
+
+  function render() {
+    layer.querySelector('#ca-righe').innerHTML = righeHtml();
+    layer.querySelector('#ca-import').innerHTML = importHtml();
+    layer.querySelectorAll('.ca-del').forEach(b => b.onclick = () => { leggi(); lista.splice(Number(b.dataset.del), 1); render(); });
+    const imp = layer.querySelector('#ca-imp-applica');
+    if (imp) imp.onclick = () => {
+      leggi();
+      const nuove = [];
+      layer.querySelectorAll('.ca-imp').forEach(sel => {
+        const nome = sel.dataset.nome;
+        if (sel.value === '__nuova__') nuove.push({ nome, produttiva: true, kpi_target: null, unita: '', activity_type: null, alias: [] });
+        else if (sel.value !== '' && lista[Number(sel.value)]) lista[Number(sel.value)].alias.push(nome);
+      });
+      lista = lista.concat(nuove);
+      render();
+    };
+  }
+
+  layer.innerHTML = '<div class="bg-white rounded-lg shadow-xl w-full max-w-4xl mx-4 my-8 p-5 max-h-[90vh] overflow-y-auto">' +
+    '<h3 class="font-semibold text-slate-900 mb-1">Attività e KPI — ' + esc(commessa) + '</h3>' +
+    '<p class="text-xs text-slate-500 mb-3">Le attività di questa commessa diventano la tendina del campo attività in Griglia. ' +
+    '<b>KPI target</b> = KPI_Quantità target <b>giornaliero per squadra</b>: nel sottotask di ogni operatore va diviso per chi della sua squadra è quel giorno sullo stesso cantiere con la stessa attività. ' +
+    'Le voci di servizio (' + esc(CA_ATTIVITA_SERVIZIO.join(', ')) + ') ci sono sempre e non sono produttive.</p>' +
+    '<div class="grid gap-1 text-[10px] text-slate-500 uppercase font-medium border-b border-slate-200 pb-1" style="grid-template-columns: minmax(0,2fr) 52px 70px 60px minmax(0,1.5fr) minmax(0,2fr) 22px;">' +
+    '<span>Attività</span><span class="text-center">Produttiva</span><span class="text-right">KPI/sq/gg</span><span>Unità</span><span>Activity Type</span><span>Nomi vecchi (alias)</span><span></span></div>' +
+    '<div id="ca-righe"></div>' +
+    '<button type="button" id="ca-add" class="mt-2 text-xs px-2 py-1 bg-slate-100 text-slate-700 border border-slate-300 rounded hover:bg-slate-200">+ Attività</button>' +
+    '<div class="mt-4 pt-3 border-t border-slate-200"><div class="text-xs font-medium text-slate-600 mb-1">Importa dalla Griglia</div><div id="ca-import"></div></div>' +
+    '<div class="flex justify-end gap-2 mt-4">' +
+    '<button type="button" id="ca-annulla" class="px-3 py-1.5 text-sm border border-slate-300 rounded">Annulla</button>' +
+    '<button type="button" id="ca-ok" class="px-3 py-1.5 text-sm bg-teal-600 text-white rounded hover:bg-teal-700">OK</button>' +
+    '</div></div>';
+  root.appendChild(layer);
+  render();
+
+  layer.querySelector('#ca-add').onclick = () => { leggi(); lista.push({ nome: '', produttiva: true, kpi_target: null, unita: '', activity_type: null, alias: [] }); render(); };
+  layer.querySelector('#ca-annulla').onclick = chiudi;
+  layer.querySelector('#ca-ok').onclick = () => {
+    leggi();
+    const pulita = lista.filter(a => a.nome);
+    const visti = new Map();
+    for (const a of pulita) {
+      for (const n of [a.nome].concat(a.alias || [])) {
+        const k = caNorm(n);
+        if (visti.has(k) && visti.get(k) !== a) { pwJiraFlowAlert('«' + n + '» compare due volte nel catalogo (come nome o come alias): ogni nome deve portare a una sola attività.'); return; }
+        visti.set(k, a);
+      }
+      if (CA_ATTIVITA_SERVIZIO.some(s => caNorm(s) === caNorm(a.nome))) { pwJiraFlowAlert('«' + a.nome + '» è già una voce di servizio comune a tutte le commesse.'); return; }
+    }
+    opts.onSave(pulita);
+    chiudi();
+  };
+
+  if (opts.jiraProjectCode) {
+    pwJiraFetchExtraFields(opts.jiraProjectCode).then(fields => {
+      const f = fields.find(x => x.extraKey === 'activityType' && x.allowedValues && x.allowedValues.length);
+      activityValues = f ? f.allowedValues : null;
+      activityStato = 'ok';
+    }).catch(() => { activityStato = 'ok'; activityValues = null; })
+      .then(() => { if (layer.isConnected) { leggi(); render(); } });
+  }
+}
 /* ===================== DPI: CATALOGO, ASSEGNAZIONI E SCADENZE ===================== */
 /* Mappa i DPI consegnati agli operatori con data di assegnazione e data di scadenza
    (entrambe facoltative) e li confronta con i DPI richiesti dalle commesse.
@@ -15366,6 +15648,15 @@ function pwRender() {
         }).join('')}
       </div>`;
 
+    // Catalogo attività della commessa (commessa-attivita.js): se c'è, il campo attività
+    // propone le sue voci (datalist) e un nome fuori catalogo resta evidenziato.
+    const attCatalogo = caHaCatalogo(bloccoCommessa.commessa);
+    const attListId = 'pw-att-dl-' + cIdx;
+    const attDatalistHtml = attCatalogo
+      ? '<datalist id="' + attListId + '">' + caNomiTendina(bloccoCommessa.commessa).map(n => '<option value="' + esc(n) + '"></option>').join('') + '</datalist>'
+      : '';
+    const attFuori = a => attCatalogo && a && !caTrova(bloccoCommessa.commessa, a);
+
     const squadreHtml = bloccoCommessa.squadre.map((squadra, sIdx) => {
 
       const operatoriHtml = squadra.operatori.map((op, oIdx) => {
@@ -15393,7 +15684,9 @@ function pwRender() {
                 data-cidx="${cIdx}" data-sidx="${sIdx}" data-oidx="${oIdx}" data-day="${dKey}" data-idx="${ci}"
                 onclick="pwRemoveCantiereField(this)">✕</button>` : ''}
             </div>
-            <input class="pw-attivita-input pw-write-action" type="text" placeholder="${attivitaPlaceholder}"
+            <input class="pw-attivita-input pw-write-action${attFuori(attivitaList[ci]) ? ' pw-att-fuori' : ''}" type="text" placeholder="${attCatalogo && !isInFerie ? 'attività ▾' : attivitaPlaceholder}"
+              ${attCatalogo ? 'list="' + attListId + '" autocomplete="off"' : ''}
+              ${attFuori(attivitaList[ci]) ? 'title="Attività non nel catalogo della commessa: sceglila dall’elenco"' : ''}
               value="${(attivitaList[ci] || '').replace(/"/g, '&quot;')}"
               data-cidx="${cIdx}" data-sidx="${sIdx}" data-oidx="${oIdx}" data-day="${dKey}" data-idx="${ci}"
               onchange="pwUpdateAttivitaCantiere(this)">`).join('');
@@ -15531,6 +15824,7 @@ function pwRender() {
             data-cidx="${cIdx}" onclick="pwRemoveCommessa(this)">✕</button>
         </div>
       </div>
+      ${attDatalistHtml}
       ${squadreHtml || `<div class="text-xs text-slate-500 italic px-4 py-3">Nessuna squadra — clicca "+ Squadra"</div>`}
       <div class="pw-op-legenda no-print">
         <div class="pw-op-legenda-item"><span class="op-stato-badge libero">LIBERO</span> disponibile</div>
@@ -15978,10 +16272,24 @@ async function pwUpdateAttivitaCantiere(inp) {
   if (!sbGuardWrite()) return;
   const g = pwCantiereCellOf(inp.dataset);
   if (!g) return;
-  const arr = pwCellEnsureAttivitaArray(g);
   const idx = Number(inp.dataset.idx);
-  const value = pwTitleCase(inp.value.trim());
+  // Commessa col catalogo attività: si accettano solo le sue voci (anche scritte come un
+  // alias o con maiuscole diverse: si salva il nome del catalogo); il resto viene rifiutato.
+  const commessa = (pwGetWeekData()[inp.dataset.cidx] || {}).commessa;
+  let value = pwTitleCase(inp.value.trim());
+  if (value && caHaCatalogo(commessa)) {
+    const voce = caTrova(commessa, inp.value);
+    if (!voce) {
+      inp.value = pwCellAttivitaAt(g, idx);
+      undoToast('«' + value + '» non è nel catalogo attività di ' + commessa + ': sceglila dall’elenco (o aggiungila nella scheda della commessa).');
+      return;
+    }
+    value = voce.nome;
+  }
+  const arr = pwCellEnsureAttivitaArray(g);
   inp.value = value;
+  inp.classList.remove('pw-att-fuori');
+  inp.removeAttribute('title');
   while (arr.length <= idx) arr.push('');
   arr[idx] = value;
   pwCellSyncAttivita(g);
@@ -16612,7 +16920,7 @@ document.addEventListener('DOMContentLoaded', async () => {
    Edge Function per il contratto e il check di idempotenza per assignee/Task.
 */
 
-HELP_TEXTS['pw-sottotask-jira'] = 'Crea sottotask su Jira per gli operatori pianificati questa settimana su QUESTA commessa (o, se lanciato dal bottone nell\'header di una squadra, solo per quella squadra): uno per operatore, cantiere/attività e GIORNO ("[Attività] - [Comune] - [Cognome] - Gio 29/10/2026"), con data inizio e scadenza nel giorno stesso. Di solito si lancia il giovedì/venerdì per la settimana dopo, e di nuovo durante la settimana per i giorni aggiunti o cambiati: i giorni che hanno già il sottotask non vengono ricreati.\n\nRichiede di scegliere Epic e Task Jira per ogni cantiere/attività, poi permette di selezionare giorno per giorno quali sottotask creare davvero. Mostra sempre un\'anteprima (dryRun) prima di creare qualsiasi cosa su Jira.\n\nGli indicatori 🎫 sono condivisi con i colleghi. Richiede il "Codice progetto Jira" configurato sulla commessa.';
+HELP_TEXTS['pw-sottotask-jira'] = 'Crea sottotask su Jira per gli operatori pianificati questa settimana su QUESTA commessa (o, se lanciato dal bottone nell\'header di una squadra, solo per quella squadra): uno per operatore, cantiere/attività e GIORNO ("[Attività] - [Comune] - [Cognome] - Gio 29/10/2026"), con data inizio e scadenza nel giorno stesso. Di solito si lancia il giovedì/venerdì per la settimana dopo, e di nuovo durante la settimana per i giorni aggiunti o cambiati: i giorni che hanno già il sottotask non vengono ricreati.\n\nRichiede di scegliere Epic e Task Jira per ogni cantiere/attività, poi permette di selezionare giorno per giorno quali sottotask creare davvero. Mostra sempre un\'anteprima (dryRun) prima di creare qualsiasi cosa su Jira.\n\nSe la commessa ha il catalogo «🏷️ Attività e KPI», ogni sottotask riceve il suo KPI_Quantità target: il target giornaliero della squadra diviso chi della squadra è quel giorno sullo stesso cantiere con la stessa attività (da solo prende il target intero). In quel caso il Target Production del Task non viene più copiato. Le attività non produttive (Viaggio, Riposo…) partono senza spunta.\n\nGli indicatori 🎫 sono condivisi con i colleghi. Richiede il "Codice progetto Jira" configurato sulla commessa.';
 
 /* ----- Pannello di ricerca condiviso (Epic/Task Jira) -----
    Clone parametrico del pattern "tendina custom" di weekly-strumenti.js
@@ -17596,6 +17904,15 @@ function pwJiraSubtaskOpenComuniModal(cIdx, commessaNome, meta, gruppi, squadreO
 function pwJiraSubtaskOpenSelectItemsModal(cIdx, commessaNome, meta, items, skippedComuni) {
   const root = document.getElementById('modal-root');
   const bcForBadges = pwGetWeekData()[cIdx];
+  // Catalogo attività della commessa (commessa-attivita.js): KPI_Quantità target di ogni
+  // sottotask, calcolato qui sulla Griglia intera (presenti della squadra quel giorno), non
+  // sui soli sottotask che si selezionano. Una voce non produttiva (Viaggio, Riposo…)
+  // parte senza spunta: di solito non ha un sottotask.
+  const conCatalogo = caHaCatalogo(bcForBadges && bcForBadges.commessa);
+  items.forEach(it => {
+    it._voce = conCatalogo ? caTrova(bcForBadges.commessa, it._attivita) : null;
+    it._kpi = conCatalogo ? caKpiTargetVoce(bcForBadges, it._comune || '', it._operatore || '', it._attivita, it._giorno) : null;
+  });
   // Una riga per comune+attività+operatore (stesso Task), con una casella per giorno:
   // ogni casella è un sottotask. Un giorno che ha già il suo sottotask (creato o già
   // esistente) parte deselezionato: inutile riproporlo per poi doverlo scartare a mano.
@@ -17614,12 +17931,15 @@ function pwJiraSubtaskOpenSelectItemsModal(cIdx, commessaNome, meta, items, skip
       const entry = pwJiraSubtaskEntry(bcForBadges, it._comune || '', it._operatore || '', it._attivita, it._giorno);
       const already = pwJiraSubtaskIsResolved(entry) ? entry : null;
       if (already) nGia++;
+      const nonProduttiva = !!(it._voce && (it._voce.servizio || it._voce.produttiva === false));
       const errored = !already && entry && entry.status === 'error';
       const stato = already ? ' 🎫' : (errored ? ' ⚠️' : '');
       const title = already ? 'Già presente' + (already.key ? ': ' + already.key : '') + (already._db ? '' : ' (sottotask settimanale)')
-        : (errored ? 'Tentativo precedente fallito' + (entry.message ? ': ' + entry.message : '') : it.summary);
+        : (errored ? 'Tentativo precedente fallito' + (entry.message ? ': ' + entry.message : '') : it.summary)
+          + (nonProduttiva ? ' (attività non produttiva: di solito senza sottotask)' : '')
+          + (it._kpi ? ' · KPI target ' + caFmtNum(it._kpi.target) + (it._kpi.unita ? ' ' + it._kpi.unita : '') : '');
       return `<label data-help-key="pw-jira-seleziona-sottotask" class="pw-jira-day-chip inline-flex items-center gap-1 border rounded px-1.5 py-0.5 text-[11px] cursor-pointer whitespace-nowrap ${already ? 'border-blue-200 bg-blue-50 text-blue-800' : (errored ? 'border-red-200 bg-red-50 text-red-800' : 'border-slate-300 bg-white text-slate-700')}" title="${esc(title)}">
-        <input type="checkbox" class="pw-jira-select-item" data-idx="${i}"${already ? '' : ' checked'}>${esc(pwJsubGiornoLabel(pwAnno, pwWeek, it._giorno))}${stato}</label>`;
+        <input type="checkbox" class="pw-jira-select-item" data-idx="${i}"${already || nonProduttiva ? '' : ' checked'}>${esc(pwJsubGiornoLabel(pwAnno, pwWeek, it._giorno))}${stato}</label>`;
     }).join('');
     return `<div class="border-b border-slate-100 py-1.5 text-sm">
       <div class="truncate mb-1">${esc(pwJiraGruppoLabel(item._comune || '', item._attivita))} — ${esc(item._operatore || '')} <span class="text-[11px] text-slate-400">(${esc(item.taskKey || '')})</span></div>
@@ -17699,18 +18019,60 @@ function pwJiraExtraMemorySave(projectKey, patch) {
   } catch (e) { /* solo una comodità */ }
 }
 
-// Activity Type proposto per un'attività della Griglia: l'ultimo scelto per
-// quell'attività su questo progetto, altrimenti la voce Jira con lo stesso
-// nome, altrimenti l'unica voce disponibile.
-function pwJiraActivityTypeGuess(projectKey, attivita, field) {
+// Activity Type proposto per un'attività della Griglia: quello del catalogo attività
+// della commessa, altrimenti l'ultimo scelto per quell'attività su questo progetto (in
+// questo browser), altrimenti la voce Jira con lo stesso nome, altrimenti l'unica voce
+// disponibile.
+function pwJiraActivityTypeGuess(projectKey, attivita, field, commessa) {
   const values = (field && field.allowedValues) || [];
   const has = id => values.some(v => String(v.id) === String(id));
+  const voce = commessa ? caTrova(commessa, attivita) : null;
+  if (voce && voce.activity_type && has(voce.activity_type.id)) return String(voce.activity_type.id);
   const mem = (pwJiraExtraMemoryLoad()[projectKey] || {}).activityType || {};
   const a = (attivita || '').trim().toLowerCase();
   if (mem[a] && has(mem[a])) return String(mem[a]);
   const byName = a ? values.find(v => String(v.value || '').trim().toLowerCase() === a) : null;
   if (byName) return String(byName.id);
   return values.length === 1 ? String(values[0].id) : '';
+}
+
+/* Sezione "KPI_Quantità target" del passo dei campi extra (solo commesse col catalogo
+   attività): riepilogo per attività di quanto si scrive su ogni sottotask (target della
+   squadra diviso i presenti quel giorno), più gli avvisi su cosa resta senza target. Solo
+   lettura: il valore si corregge nel catalogo della commessa. */
+function pwJiraKpiSectionHtml(items, kpiField, projectKey) {
+  const perVoce = {};
+  const fuori = new Set();
+  const senzaTarget = new Set();
+  items.forEach(it => {
+    if (it._kpi) {
+      const g = perVoce[it._kpi.voce] = perVoce[it._kpi.voce] || { kpi: it._kpi.kpiSquadra, unita: it._kpi.unita, valori: {} };
+      const k = it._kpi.target + '|' + it._kpi.presenti;
+      g.valori[k] = (g.valori[k] || 0) + 1;
+    } else if (!it._voce) {
+      fuori.add(it._attivita || '(senza attività)');
+    } else if (!it._voce.servizio && it._voce.produttiva !== false) {
+      senzaTarget.add(it._voce.nome);
+    }
+  });
+  const righe = Object.keys(perVoce).map(nome => {
+    const g = perVoce[nome];
+    const u = g.unita ? ' ' + g.unita : '';
+    const dett = Object.keys(g.valori).map(k => {
+      const [t, p] = k.split('|');
+      return g.valori[k] + ' a ' + caFmtNum(t) + u + (Number(p) === 1 ? ' (da solo)' : ' (' + p + ' presenti)');
+    }).join(' · ');
+    return '<div class="py-1 border-b border-slate-100 last:border-0 text-xs"><b>' + esc(nome) + '</b> — ' + esc(caFmtNum(g.kpi) + u) + ' per squadra al giorno: ' + esc(dett) + '</div>';
+  }).join('');
+  const avvisi = [];
+  if (!kpiField && righe) avvisi.push('Il progetto Jira ' + projectKey + ' non ha il campo «KPI_Quantità target» nella creazione dei sottotask: il target non verrà scritto.');
+  if (fuori.size) avvisi.push('Attività fuori catalogo, senza target: ' + [...fuori].join(', ') + '.');
+  if (senzaTarget.size) avvisi.push('Attività del catalogo senza KPI target: ' + [...senzaTarget].join(', ') + '.');
+  if (!righe && !avvisi.length) return '';
+  return '<div class="mb-3"><label class="block text-[11px] text-slate-500 mb-1">' + esc(kpiField ? kpiField.name : 'KPI_Quantità target') + ' — dal catalogo attività della commessa</label>' +
+    (righe ? '<div class="border border-slate-200 rounded px-2">' + righe + '</div>' : '') +
+    avvisi.map(a => '<div class="text-[11px] text-amber-700 bg-amber-50 border border-amber-200 rounded px-2 py-1 mt-1">⚠ ' + esc(a) + '</div>').join('') +
+    '</div>';
 }
 
 /* ----- Step 1.5: campi extra spesso obbligatori in creazione (Data scadenza,
@@ -17751,7 +18113,16 @@ async function pwJiraSubtaskOpenExtraFieldsModal(cIdx, commessaNome, meta, items
     fields = [];
   }
 
-  if (fields.some(f => f.extraKey === 'targetProduction')) {
+  // Commessa col catalogo attività: il target va SOLO in KPI_Quantità target (per item,
+  // dal catalogo), mai il Target Production copiato dal Task.
+  const commessa = (pwGetWeekData()[cIdx] || {}).commessa || '';
+  const conCatalogo = caHaCatalogo(commessa);
+  const kpiField = fields.find(f => f.extraKey === 'kpiTarget') || null;
+  items.forEach(item => {
+    item.targetProduction = undefined;
+    item.kpiTarget = kpiField && item._kpi ? item._kpi.target : undefined;
+  });
+  if (!conCatalogo && fields.some(f => f.extraKey === 'targetProduction')) {
     items.forEach(item => {
       if (item._targetProduction !== undefined && item._targetProduction !== null && item._targetProduction !== '') {
         item.targetProduction = item._targetProduction;
@@ -17782,11 +18153,13 @@ async function pwJiraSubtaskOpenExtraFieldsModal(cIdx, commessaNome, meta, items
   const hasDue = fields.some(f => f.extraKey === 'duedate');
   const hasStart = fields.some(f => f.extraKey === 'startDatePianificato');
   pwJiraSubtaskApplyGiorno(items, hasDue, hasStart);
-  const visibleFields = fields.filter(f => f.extraKey !== 'targetProduction' && f.extraKey !== 'productionWeight'
+  const visibleFields = fields.filter(f => f.extraKey !== 'targetProduction' && f.extraKey !== 'productionWeight' && f.extraKey !== 'kpiTarget'
     && f.extraKey !== 'duedate' && f.extraKey !== 'startDatePianificato' && !(activityField && f.extraKey === 'activityType'));
   const fieldsRecap = fields.filter(f => f.extraKey === 'duedate' || f.extraKey === 'startDatePianificato').concat(visibleFields);
 
-  if (visibleFields.length === 0 && !hasProductionWeight && !activityField) {
+  const kpiSectionHtml = conCatalogo ? pwJiraKpiSectionHtml(items, kpiField, meta.jira_project_code) : '';
+
+  if (visibleFields.length === 0 && !hasProductionWeight && !activityField && !kpiSectionHtml) {
     pwJiraSubtaskPreview(cIdx, commessaNome, items, skippedComuni, {}, fieldsRecap);
     return;
   }
@@ -17859,7 +18232,7 @@ async function pwJiraSubtaskOpenExtraFieldsModal(cIdx, commessaNome, meta, items
     const rows = attivitaDistinte.map((attivita, i) => {
       const selKey = 'activityType::' + i;
       _pwExtraFieldsByKey[selKey] = activityField;
-      const preselect = pwJiraActivityTypeGuess(meta.jira_project_code, attivita, activityField);
+      const preselect = pwJiraActivityTypeGuess(meta.jira_project_code, attivita, activityField, commessa);
       const selected = activityField.allowedValues.find(v => String(v.id) === preselect);
       return `<div class="flex items-center justify-between gap-2 py-1 text-sm border-b border-slate-100 last:border-b-0">
         <span class="min-w-0 truncate ${attivita ? 'text-slate-700' : 'text-slate-400 italic'}">${esc(attivita || '(senza attività)')}</span>
@@ -17880,6 +18253,7 @@ async function pwJiraSubtaskOpenExtraFieldsModal(cIdx, commessaNome, meta, items
     <p class="text-xs text-slate-500 mb-3">Alcuni campi possono essere obbligatori in creazione su questo progetto Jira. Valori di esempio precompilati, modificabili o lasciabili vuoti.</p>
     ${(hasDue || hasStart) ? '<div class="text-[11px] text-slate-600 bg-slate-50 border border-slate-200 rounded px-2 py-1.5 mb-2">📅 ' + esc(fields.filter(f => f.extraKey === 'duedate' || f.extraKey === 'startDatePianificato').map(f => f.name).join(' e ')) + ': il giorno di ciascun sottotask (un sottotask per operatore per giorno).</div>' : ''}
     <div id="pw-jira-extra-fields">${rowsHtml}</div>
+    ${kpiSectionHtml}
     ${activitySectionHtml}
     ${productionWeightSectionHtml}
     <div class="flex justify-end gap-2 mt-4">
@@ -18078,10 +18452,12 @@ function pwJiraSubtaskRenderPreview(cIdx, commessaNome, items, results, skippedC
     const weightHtml = (item.productionWeight !== undefined && item.productionWeight !== null && item.productionWeight !== '')
       ? ` <span class="text-slate-400">· Weight ${esc(String(item.productionWeight))}%</span>` : '';
     const activityTypeHtml = item._activityTypeLabel ? ` <span class="text-slate-400">· ${esc(item._activityTypeLabel)}</span>` : '';
+    const kpiHtml = (item.kpiTarget !== undefined && item.kpiTarget !== null)
+      ? ' <span class="text-teal-700">· KPI target ' + esc(caFmtNum(item.kpiTarget) + (item._kpi && item._kpi.unita ? ' ' + item._kpi.unita : '')) + '</span>' : '';
     return `<div class="flex items-center justify-between gap-2 border-b border-slate-100 py-1.5 text-sm">
       <div class="min-w-0">
         <div class="truncate">${esc(pwJiraGruppoLabel(item._comune || '', item._attivita))} — ${esc(item._operatore || '')} <span class="text-slate-500">· ${esc(pwJsubGiornoLabel(pwAnno, pwWeek, item._giorno))}</span></div>
-        <div class="text-[11px] text-slate-400 truncate">${esc(item.summary || '')}${activityTypeHtml}${weightHtml}</div>
+        <div class="text-[11px] text-slate-400 truncate">${esc(item.summary || '')}${activityTypeHtml}${kpiHtml}${weightHtml}</div>
       </div>
       ${statusHtml}
     </div>`;

@@ -324,10 +324,24 @@ async function pwUpdateAttivitaCantiere(inp) {
   if (!sbGuardWrite()) return;
   const g = pwCantiereCellOf(inp.dataset);
   if (!g) return;
-  const arr = pwCellEnsureAttivitaArray(g);
   const idx = Number(inp.dataset.idx);
-  const value = pwTitleCase(inp.value.trim());
+  // Commessa col catalogo attività: si accettano solo le sue voci (anche scritte come un
+  // alias o con maiuscole diverse: si salva il nome del catalogo); il resto viene rifiutato.
+  const commessa = (pwGetWeekData()[inp.dataset.cidx] || {}).commessa;
+  let value = pwTitleCase(inp.value.trim());
+  if (value && caHaCatalogo(commessa)) {
+    const voce = caTrova(commessa, inp.value);
+    if (!voce) {
+      inp.value = pwCellAttivitaAt(g, idx);
+      undoToast('«' + value + '» non è nel catalogo attività di ' + commessa + ': sceglila dall’elenco (o aggiungila nella scheda della commessa).');
+      return;
+    }
+    value = voce.nome;
+  }
+  const arr = pwCellEnsureAttivitaArray(g);
   inp.value = value;
+  inp.classList.remove('pw-att-fuori');
+  inp.removeAttribute('title');
   while (arr.length <= idx) arr.push('');
   arr[idx] = value;
   pwCellSyncAttivita(g);

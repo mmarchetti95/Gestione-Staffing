@@ -16,7 +16,7 @@
    Edge Function per il contratto e il check di idempotenza per assignee/Task.
 */
 
-HELP_TEXTS['pw-sottotask-jira'] = 'Crea sottotask su Jira per gli operatori pianificati questa settimana su QUESTA commessa (o, se lanciato dal bottone nell\'header di una squadra, solo per quella squadra): uno per operatore, cantiere/attività e GIORNO ("[Attività] - [Comune] - [Cognome] - Gio 29/10/2026"), con data inizio e scadenza nel giorno stesso. Di solito si lancia il giovedì/venerdì per la settimana dopo, e di nuovo durante la settimana per i giorni aggiunti o cambiati: i giorni che hanno già il sottotask non vengono ricreati.\n\nRichiede di scegliere Epic e Task Jira per ogni cantiere/attività, poi permette di selezionare giorno per giorno quali sottotask creare davvero. Mostra sempre un\'anteprima (dryRun) prima di creare qualsiasi cosa su Jira.\n\nGli indicatori 🎫 sono condivisi con i colleghi. Richiede il "Codice progetto Jira" configurato sulla commessa.';
+HELP_TEXTS['pw-sottotask-jira'] = 'Crea sottotask su Jira per gli operatori pianificati questa settimana su QUESTA commessa (o, se lanciato dal bottone nell\'header di una squadra, solo per quella squadra): uno per operatore, cantiere/attività e GIORNO ("[Attività] - [Comune] - [Cognome] - Gio 29/10/2026"), con data inizio e scadenza nel giorno stesso. Di solito si lancia il giovedì/venerdì per la settimana dopo, e di nuovo durante la settimana per i giorni aggiunti o cambiati: i giorni che hanno già il sottotask non vengono ricreati.\n\nRichiede di scegliere Epic e Task Jira per ogni cantiere/attività, poi permette di selezionare giorno per giorno quali sottotask creare davvero. Mostra sempre un\'anteprima (dryRun) prima di creare qualsiasi cosa su Jira.\n\nSe la commessa ha il catalogo «🏷️ Attività e KPI», ogni sottotask riceve il suo KPI_Quantità target: il target giornaliero della squadra diviso chi della squadra è quel giorno sullo stesso cantiere con la stessa attività (da solo prende il target intero). In quel caso il Target Production del Task non viene più copiato. Le attività non produttive (Viaggio, Riposo…) partono senza spunta.\n\nGli indicatori 🎫 sono condivisi con i colleghi. Richiede il "Codice progetto Jira" configurato sulla commessa.';
 
 /* ----- Pannello di ricerca condiviso (Epic/Task Jira) -----
    Clone parametrico del pattern "tendina custom" di weekly-strumenti.js
@@ -1000,6 +1000,15 @@ function pwJiraSubtaskOpenComuniModal(cIdx, commessaNome, meta, gruppi, squadreO
 function pwJiraSubtaskOpenSelectItemsModal(cIdx, commessaNome, meta, items, skippedComuni) {
   const root = document.getElementById('modal-root');
   const bcForBadges = pwGetWeekData()[cIdx];
+  // Catalogo attività della commessa (commessa-attivita.js): KPI_Quantità target di ogni
+  // sottotask, calcolato qui sulla Griglia intera (presenti della squadra quel giorno), non
+  // sui soli sottotask che si selezionano. Una voce non produttiva (Viaggio, Riposo…)
+  // parte senza spunta: di solito non ha un sottotask.
+  const conCatalogo = caHaCatalogo(bcForBadges && bcForBadges.commessa);
+  items.forEach(it => {
+    it._voce = conCatalogo ? caTrova(bcForBadges.commessa, it._attivita) : null;
+    it._kpi = conCatalogo ? caKpiTargetVoce(bcForBadges, it._comune || '', it._operatore || '', it._attivita, it._giorno) : null;
+  });
   // Una riga per comune+attività+operatore (stesso Task), con una casella per giorno:
   // ogni casella è un sottotask. Un giorno che ha già il suo sottotask (creato o già
   // esistente) parte deselezionato: inutile riproporlo per poi doverlo scartare a mano.
@@ -1018,12 +1027,15 @@ function pwJiraSubtaskOpenSelectItemsModal(cIdx, commessaNome, meta, items, skip
       const entry = pwJiraSubtaskEntry(bcForBadges, it._comune || '', it._operatore || '', it._attivita, it._giorno);
       const already = pwJiraSubtaskIsResolved(entry) ? entry : null;
       if (already) nGia++;
+      const nonProduttiva = !!(it._voce && (it._voce.servizio || it._voce.produttiva === false));
       const errored = !already && entry && entry.status === 'error';
       const stato = already ? ' 🎫' : (errored ? ' ⚠️' : '');
       const title = already ? 'Già presente' + (already.key ? ': ' + already.key : '') + (already._db ? '' : ' (sottotask settimanale)')
-        : (errored ? 'Tentativo precedente fallito' + (entry.message ? ': ' + entry.message : '') : it.summary);
+        : (errored ? 'Tentativo precedente fallito' + (entry.message ? ': ' + entry.message : '') : it.summary)
+          + (nonProduttiva ? ' (attività non produttiva: di solito senza sottotask)' : '')
+          + (it._kpi ? ' · KPI target ' + caFmtNum(it._kpi.target) + (it._kpi.unita ? ' ' + it._kpi.unita : '') : '');
       return `<label data-help-key="pw-jira-seleziona-sottotask" class="pw-jira-day-chip inline-flex items-center gap-1 border rounded px-1.5 py-0.5 text-[11px] cursor-pointer whitespace-nowrap ${already ? 'border-blue-200 bg-blue-50 text-blue-800' : (errored ? 'border-red-200 bg-red-50 text-red-800' : 'border-slate-300 bg-white text-slate-700')}" title="${esc(title)}">
-        <input type="checkbox" class="pw-jira-select-item" data-idx="${i}"${already ? '' : ' checked'}>${esc(pwJsubGiornoLabel(pwAnno, pwWeek, it._giorno))}${stato}</label>`;
+        <input type="checkbox" class="pw-jira-select-item" data-idx="${i}"${already || nonProduttiva ? '' : ' checked'}>${esc(pwJsubGiornoLabel(pwAnno, pwWeek, it._giorno))}${stato}</label>`;
     }).join('');
     return `<div class="border-b border-slate-100 py-1.5 text-sm">
       <div class="truncate mb-1">${esc(pwJiraGruppoLabel(item._comune || '', item._attivita))} — ${esc(item._operatore || '')} <span class="text-[11px] text-slate-400">(${esc(item.taskKey || '')})</span></div>
@@ -1103,18 +1115,60 @@ function pwJiraExtraMemorySave(projectKey, patch) {
   } catch (e) { /* solo una comodità */ }
 }
 
-// Activity Type proposto per un'attività della Griglia: l'ultimo scelto per
-// quell'attività su questo progetto, altrimenti la voce Jira con lo stesso
-// nome, altrimenti l'unica voce disponibile.
-function pwJiraActivityTypeGuess(projectKey, attivita, field) {
+// Activity Type proposto per un'attività della Griglia: quello del catalogo attività
+// della commessa, altrimenti l'ultimo scelto per quell'attività su questo progetto (in
+// questo browser), altrimenti la voce Jira con lo stesso nome, altrimenti l'unica voce
+// disponibile.
+function pwJiraActivityTypeGuess(projectKey, attivita, field, commessa) {
   const values = (field && field.allowedValues) || [];
   const has = id => values.some(v => String(v.id) === String(id));
+  const voce = commessa ? caTrova(commessa, attivita) : null;
+  if (voce && voce.activity_type && has(voce.activity_type.id)) return String(voce.activity_type.id);
   const mem = (pwJiraExtraMemoryLoad()[projectKey] || {}).activityType || {};
   const a = (attivita || '').trim().toLowerCase();
   if (mem[a] && has(mem[a])) return String(mem[a]);
   const byName = a ? values.find(v => String(v.value || '').trim().toLowerCase() === a) : null;
   if (byName) return String(byName.id);
   return values.length === 1 ? String(values[0].id) : '';
+}
+
+/* Sezione "KPI_Quantità target" del passo dei campi extra (solo commesse col catalogo
+   attività): riepilogo per attività di quanto si scrive su ogni sottotask (target della
+   squadra diviso i presenti quel giorno), più gli avvisi su cosa resta senza target. Solo
+   lettura: il valore si corregge nel catalogo della commessa. */
+function pwJiraKpiSectionHtml(items, kpiField, projectKey) {
+  const perVoce = {};
+  const fuori = new Set();
+  const senzaTarget = new Set();
+  items.forEach(it => {
+    if (it._kpi) {
+      const g = perVoce[it._kpi.voce] = perVoce[it._kpi.voce] || { kpi: it._kpi.kpiSquadra, unita: it._kpi.unita, valori: {} };
+      const k = it._kpi.target + '|' + it._kpi.presenti;
+      g.valori[k] = (g.valori[k] || 0) + 1;
+    } else if (!it._voce) {
+      fuori.add(it._attivita || '(senza attività)');
+    } else if (!it._voce.servizio && it._voce.produttiva !== false) {
+      senzaTarget.add(it._voce.nome);
+    }
+  });
+  const righe = Object.keys(perVoce).map(nome => {
+    const g = perVoce[nome];
+    const u = g.unita ? ' ' + g.unita : '';
+    const dett = Object.keys(g.valori).map(k => {
+      const [t, p] = k.split('|');
+      return g.valori[k] + ' a ' + caFmtNum(t) + u + (Number(p) === 1 ? ' (da solo)' : ' (' + p + ' presenti)');
+    }).join(' · ');
+    return '<div class="py-1 border-b border-slate-100 last:border-0 text-xs"><b>' + esc(nome) + '</b> — ' + esc(caFmtNum(g.kpi) + u) + ' per squadra al giorno: ' + esc(dett) + '</div>';
+  }).join('');
+  const avvisi = [];
+  if (!kpiField && righe) avvisi.push('Il progetto Jira ' + projectKey + ' non ha il campo «KPI_Quantità target» nella creazione dei sottotask: il target non verrà scritto.');
+  if (fuori.size) avvisi.push('Attività fuori catalogo, senza target: ' + [...fuori].join(', ') + '.');
+  if (senzaTarget.size) avvisi.push('Attività del catalogo senza KPI target: ' + [...senzaTarget].join(', ') + '.');
+  if (!righe && !avvisi.length) return '';
+  return '<div class="mb-3"><label class="block text-[11px] text-slate-500 mb-1">' + esc(kpiField ? kpiField.name : 'KPI_Quantità target') + ' — dal catalogo attività della commessa</label>' +
+    (righe ? '<div class="border border-slate-200 rounded px-2">' + righe + '</div>' : '') +
+    avvisi.map(a => '<div class="text-[11px] text-amber-700 bg-amber-50 border border-amber-200 rounded px-2 py-1 mt-1">⚠ ' + esc(a) + '</div>').join('') +
+    '</div>';
 }
 
 /* ----- Step 1.5: campi extra spesso obbligatori in creazione (Data scadenza,
@@ -1155,7 +1209,16 @@ async function pwJiraSubtaskOpenExtraFieldsModal(cIdx, commessaNome, meta, items
     fields = [];
   }
 
-  if (fields.some(f => f.extraKey === 'targetProduction')) {
+  // Commessa col catalogo attività: il target va SOLO in KPI_Quantità target (per item,
+  // dal catalogo), mai il Target Production copiato dal Task.
+  const commessa = (pwGetWeekData()[cIdx] || {}).commessa || '';
+  const conCatalogo = caHaCatalogo(commessa);
+  const kpiField = fields.find(f => f.extraKey === 'kpiTarget') || null;
+  items.forEach(item => {
+    item.targetProduction = undefined;
+    item.kpiTarget = kpiField && item._kpi ? item._kpi.target : undefined;
+  });
+  if (!conCatalogo && fields.some(f => f.extraKey === 'targetProduction')) {
     items.forEach(item => {
       if (item._targetProduction !== undefined && item._targetProduction !== null && item._targetProduction !== '') {
         item.targetProduction = item._targetProduction;
@@ -1186,11 +1249,13 @@ async function pwJiraSubtaskOpenExtraFieldsModal(cIdx, commessaNome, meta, items
   const hasDue = fields.some(f => f.extraKey === 'duedate');
   const hasStart = fields.some(f => f.extraKey === 'startDatePianificato');
   pwJiraSubtaskApplyGiorno(items, hasDue, hasStart);
-  const visibleFields = fields.filter(f => f.extraKey !== 'targetProduction' && f.extraKey !== 'productionWeight'
+  const visibleFields = fields.filter(f => f.extraKey !== 'targetProduction' && f.extraKey !== 'productionWeight' && f.extraKey !== 'kpiTarget'
     && f.extraKey !== 'duedate' && f.extraKey !== 'startDatePianificato' && !(activityField && f.extraKey === 'activityType'));
   const fieldsRecap = fields.filter(f => f.extraKey === 'duedate' || f.extraKey === 'startDatePianificato').concat(visibleFields);
 
-  if (visibleFields.length === 0 && !hasProductionWeight && !activityField) {
+  const kpiSectionHtml = conCatalogo ? pwJiraKpiSectionHtml(items, kpiField, meta.jira_project_code) : '';
+
+  if (visibleFields.length === 0 && !hasProductionWeight && !activityField && !kpiSectionHtml) {
     pwJiraSubtaskPreview(cIdx, commessaNome, items, skippedComuni, {}, fieldsRecap);
     return;
   }
@@ -1263,7 +1328,7 @@ async function pwJiraSubtaskOpenExtraFieldsModal(cIdx, commessaNome, meta, items
     const rows = attivitaDistinte.map((attivita, i) => {
       const selKey = 'activityType::' + i;
       _pwExtraFieldsByKey[selKey] = activityField;
-      const preselect = pwJiraActivityTypeGuess(meta.jira_project_code, attivita, activityField);
+      const preselect = pwJiraActivityTypeGuess(meta.jira_project_code, attivita, activityField, commessa);
       const selected = activityField.allowedValues.find(v => String(v.id) === preselect);
       return `<div class="flex items-center justify-between gap-2 py-1 text-sm border-b border-slate-100 last:border-b-0">
         <span class="min-w-0 truncate ${attivita ? 'text-slate-700' : 'text-slate-400 italic'}">${esc(attivita || '(senza attività)')}</span>
@@ -1284,6 +1349,7 @@ async function pwJiraSubtaskOpenExtraFieldsModal(cIdx, commessaNome, meta, items
     <p class="text-xs text-slate-500 mb-3">Alcuni campi possono essere obbligatori in creazione su questo progetto Jira. Valori di esempio precompilati, modificabili o lasciabili vuoti.</p>
     ${(hasDue || hasStart) ? '<div class="text-[11px] text-slate-600 bg-slate-50 border border-slate-200 rounded px-2 py-1.5 mb-2">📅 ' + esc(fields.filter(f => f.extraKey === 'duedate' || f.extraKey === 'startDatePianificato').map(f => f.name).join(' e ')) + ': il giorno di ciascun sottotask (un sottotask per operatore per giorno).</div>' : ''}
     <div id="pw-jira-extra-fields">${rowsHtml}</div>
+    ${kpiSectionHtml}
     ${activitySectionHtml}
     ${productionWeightSectionHtml}
     <div class="flex justify-end gap-2 mt-4">
@@ -1482,10 +1548,12 @@ function pwJiraSubtaskRenderPreview(cIdx, commessaNome, items, results, skippedC
     const weightHtml = (item.productionWeight !== undefined && item.productionWeight !== null && item.productionWeight !== '')
       ? ` <span class="text-slate-400">· Weight ${esc(String(item.productionWeight))}%</span>` : '';
     const activityTypeHtml = item._activityTypeLabel ? ` <span class="text-slate-400">· ${esc(item._activityTypeLabel)}</span>` : '';
+    const kpiHtml = (item.kpiTarget !== undefined && item.kpiTarget !== null)
+      ? ' <span class="text-teal-700">· KPI target ' + esc(caFmtNum(item.kpiTarget) + (item._kpi && item._kpi.unita ? ' ' + item._kpi.unita : '')) + '</span>' : '';
     return `<div class="flex items-center justify-between gap-2 border-b border-slate-100 py-1.5 text-sm">
       <div class="min-w-0">
         <div class="truncate">${esc(pwJiraGruppoLabel(item._comune || '', item._attivita))} — ${esc(item._operatore || '')} <span class="text-slate-500">· ${esc(pwJsubGiornoLabel(pwAnno, pwWeek, item._giorno))}</span></div>
-        <div class="text-[11px] text-slate-400 truncate">${esc(item.summary || '')}${activityTypeHtml}${weightHtml}</div>
+        <div class="text-[11px] text-slate-400 truncate">${esc(item.summary || '')}${activityTypeHtml}${kpiHtml}${weightHtml}</div>
       </div>
       ${statusHtml}
     </div>`;

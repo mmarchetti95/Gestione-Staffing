@@ -37,6 +37,7 @@ JS_FILES = [
     'dashboard-import-export.js',
     'dashboard-gantt.js',
     'dashboard-commessa-attiva.js',
+    'commessa-attivita.js',
     'dashboard-dpi-admin.js',
     'dashboard-staffing-celle.js',
     'dashboard-dettaglio-mese.js',

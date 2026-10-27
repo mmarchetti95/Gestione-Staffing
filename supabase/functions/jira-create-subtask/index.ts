@@ -87,8 +87,16 @@
 // Contratto richiesta — scoperta campi extra:
 //   { "mode": "fields", "projectKey": "W07R" }
 // Contratto risposta:
-//   { "fields": [ { "key", "name", "type", "allowedValues"? }, ... ] }
+//   { "fields": [ { "key", "extraKey", "name", "type", "allowedValues"? }, ... ] }
 // (solo i campi tra quelli noti che esistono davvero per quel progetto/issuetype)
+//
+// KPI_Quantità target (v18.229.0): l'item puo' portare "kpiTarget" (numero, il target
+// giornaliero dell'operatore calcolato lato client dal catalogo attivita' della commessa:
+// target della squadra diviso i presenti). Il campo non ha un id fisso: si cerca per nome
+// fra i campi dello screen di creazione dei sottotask del progetto (stesso confronto
+// tollerante di jira-update-production per "KPI_Quantità lavorata"); in mode "fields"
+// compare come extraKey "kpiTarget". Se il progetto non lo ha, l'item va in errore invece
+// di creare un sottotask senza target.
 //
 // Tempo Team (customfield_10602) e' un campo del plugin Tempo: i team vivono
 // in Tempo, non in Jira, e createmeta non ne restituisce le voci (per questo
@@ -117,6 +125,14 @@ const KNOWN_EXTRA_FIELDS = [
 ];
 
 const TEMPO_TEAM_FIELD = "customfield_10602";
+
+const KPI_TARGET_FIELD_NAME = "KPI_Quantità target";
+
+// Confronto tollerante a maiuscole, accenti e "_"/spazi: il nome e' digitato a mano su Jira.
+function normNome(s: string): string {
+  return String(s || "").normalize("NFD").replace(/\p{M}/gu, "")
+    .replace(/[_\s]+/g, " ").trim().toLowerCase();
+}
 const START_DATE_FIELD = "customfield_13093";
 
 const CORS_HEADERS = {
@@ -320,13 +336,26 @@ async function fetchTempoTeamValues(projectKey: string): Promise<{ id: string; v
     .sort((a, b) => a.value.localeCompare(b.value, "it"));
 }
 
-async function fetchKnownExtraFields(projectKey: string): Promise<any[]> {
+// Campi dello screen di creazione dei sottotask di un progetto (createmeta).
+async function fetchSubtaskCreateFields(projectKey: string): Promise<any[]> {
   const issueTypeId = await resolveSubtaskIssueTypeId(projectKey);
   if (!issueTypeId) return [];
   const res = await jiraGet(`/rest/api/3/issue/createmeta/${encodeURIComponent(projectKey)}/issuetypes/${issueTypeId}?maxResults=200`);
   if (!res.ok) return [];
   const data = await res.json();
-  const allFields = Array.isArray(data.fields) ? data.fields : [];
+  return Array.isArray(data.fields) ? data.fields : [];
+}
+
+// Id del campo KPI_Quantità target sullo screen dei sottotask del progetto (null se
+// assente o ambiguo).
+function findKpiTargetField(allFields: any[]): any | null {
+  const matches = allFields.filter((f: any) => normNome(f.name) === normNome(KPI_TARGET_FIELD_NAME));
+  return matches.length === 1 ? matches[0] : null;
+}
+
+async function fetchKnownExtraFields(projectKey: string): Promise<any[]> {
+  const allFields = await fetchSubtaskCreateFields(projectKey);
+  if (!allFields.length) return [];
   const byKey = new Map(allFields.map((f: any) => [f.fieldId || f.key, f]));
   const out: any[] = [];
   for (const known of KNOWN_EXTRA_FIELDS) {
@@ -348,6 +377,10 @@ async function fetchKnownExtraFields(projectKey: string): Promise<any[]> {
       type: f.schema?.type || "string",
       allowedValues,
     });
+  }
+  const kpi = findKpiTargetField(allFields);
+  if (kpi) {
+    out.push({ key: kpi.fieldId || kpi.key, extraKey: "kpiTarget", name: String(kpi.name || KPI_TARGET_FIELD_NAME).trim(), type: kpi.schema?.type || "number" });
   }
   return out;
 }
@@ -513,6 +546,7 @@ Deno.serve(async (req: Request) => {
 
   const accountIdCache = new Map<string, string | null>();
   const dailyCache = new Map<string, SubtaskInfo[]>();
+  const kpiFieldCache = new Map<string, string | null>(); // projectKey -> id campo KPI_Quantità target
   const results: any[] = [];
 
   for (const item of items) {
@@ -550,6 +584,21 @@ Deno.serve(async (req: Request) => {
         continue;
       }
 
+      const kpiFields: Record<string, unknown> = {};
+      const kpiRaw = item?.kpiTarget;
+      if (kpiRaw !== undefined && kpiRaw !== null && kpiRaw !== "") {
+        if (!kpiFieldCache.has(projectKey)) {
+          const f = findKpiTargetField(await fetchSubtaskCreateFields(projectKey));
+          kpiFieldCache.set(projectKey, f ? String(f.fieldId || f.key) : null);
+        }
+        const kpiId = kpiFieldCache.get(projectKey);
+        if (!kpiId) {
+          results.push({ taskKey, operatorEmail, status: "error", message: `Campo "${KPI_TARGET_FIELD_NAME}" non presente nella creazione dei sottotask di ${projectKey}` });
+          continue;
+        }
+        kpiFields[kpiId] = Number(kpiRaw);
+      }
+
       const createRes = await jiraPost(`/rest/api/3/issue`, {
         fields: {
           project: { key: projectKey },
@@ -562,6 +611,7 @@ Deno.serve(async (req: Request) => {
           ...buildItemTargetProductionField(item),
           ...buildItemProductionWeightField(item),
           ...buildItemActivityTypeField(item),
+          ...kpiFields,
         },
       });
 

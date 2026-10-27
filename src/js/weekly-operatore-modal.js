@@ -554,6 +554,15 @@ function pwRender() {
         }).join('')}
       </div>`;
 
+    // Catalogo attività della commessa (commessa-attivita.js): se c'è, il campo attività
+    // propone le sue voci (datalist) e un nome fuori catalogo resta evidenziato.
+    const attCatalogo = caHaCatalogo(bloccoCommessa.commessa);
+    const attListId = 'pw-att-dl-' + cIdx;
+    const attDatalistHtml = attCatalogo
+      ? '<datalist id="' + attListId + '">' + caNomiTendina(bloccoCommessa.commessa).map(n => '<option value="' + esc(n) + '"></option>').join('') + '</datalist>'
+      : '';
+    const attFuori = a => attCatalogo && a && !caTrova(bloccoCommessa.commessa, a);
+
     const squadreHtml = bloccoCommessa.squadre.map((squadra, sIdx) => {
 
       const operatoriHtml = squadra.operatori.map((op, oIdx) => {
@@ -581,7 +590,9 @@ function pwRender() {
                 data-cidx="${cIdx}" data-sidx="${sIdx}" data-oidx="${oIdx}" data-day="${dKey}" data-idx="${ci}"
                 onclick="pwRemoveCantiereField(this)">✕</button>` : ''}
             </div>
-            <input class="pw-attivita-input pw-write-action" type="text" placeholder="${attivitaPlaceholder}"
+            <input class="pw-attivita-input pw-write-action${attFuori(attivitaList[ci]) ? ' pw-att-fuori' : ''}" type="text" placeholder="${attCatalogo && !isInFerie ? 'attività ▾' : attivitaPlaceholder}"
+              ${attCatalogo ? 'list="' + attListId + '" autocomplete="off"' : ''}
+              ${attFuori(attivitaList[ci]) ? 'title="Attività non nel catalogo della commessa: sceglila dall’elenco"' : ''}
               value="${(attivitaList[ci] || '').replace(/"/g, '&quot;')}"
               data-cidx="${cIdx}" data-sidx="${sIdx}" data-oidx="${oIdx}" data-day="${dKey}" data-idx="${ci}"
               onchange="pwUpdateAttivitaCantiere(this)">`).join('');
@@ -719,6 +730,7 @@ function pwRender() {
             data-cidx="${cIdx}" onclick="pwRemoveCommessa(this)">✕</button>
         </div>
       </div>
+      ${attDatalistHtml}
       ${squadreHtml || `<div class="text-xs text-slate-500 italic px-4 py-3">Nessuna squadra — clicca "+ Squadra"</div>`}
       <div class="pw-op-legenda no-print">
         <div class="pw-op-legenda-item"><span class="op-stato-badge libero">LIBERO</span> disponibile</div>
