@@ -1078,11 +1078,20 @@
   .cptl-tab:hover { background:#f1f5f9; }
   .cptl-tab.oggi { border-color:#5eead4; }
   .cptl-tab.on { background:#0f766e; border-color:#0f766e; color:#fff; font-weight:600; }
-  .cptl-tab-wrap { min-width:880px; background:#fff; border:1px solid #e2e8f0; border-radius:8px; }
-  .cptl-r { display:grid; grid-template-columns:230px minmax(320px,1fr) 46px 46px 70px 54px; gap:0 8px; align-items:center; padding:4px 10px; border-bottom:1px solid #f1f5f9; }
+  .cptl-tab-wrap { min-width:880px; }
+  .cptl-card { background:#fff; border:1px solid #cbd5e1; border-radius:8px; overflow:hidden; }
+  .cptl-blocco { margin-bottom:12px; box-shadow:0 1px 3px rgba(15,23,42,.08); }
+  .cptl-r { display:grid; grid-template-columns:230px minmax(320px,1fr) 46px 46px 70px 54px; gap:0 8px; align-items:center; padding:5px 10px; border-bottom:1px solid #e2e8f0; }
+  .cptl-card > .cptl-r:last-child { border-bottom:0; }
+  .cptl-r.alt { background:#f1f5f9; }
+  .cptl-r.alt .cptl-track { background:#e2e8f0; }
   .cptl-r.warn { background:#fffbeb; }
-  .cptl-head { position:sticky; top:-10px; z-index:2; background:#f8fafc; font-size:11px; color:#64748b; font-weight:600; border-radius:8px 8px 0 0; }
-  .cptl-grp { background:#f1f5f9; border-top:1px solid #e2e8f0; }
+  .cptl-head { position:sticky; top:-10px; z-index:3; background:#f8fafc; font-size:11px; color:#64748b; font-weight:600; border:1px solid #cbd5e1; border-radius:8px; margin-bottom:6px; }
+  .cptl-grp { background:#cbd5e1; border-bottom:1px solid #94a3b8; box-shadow:inset 4px 0 0 #0f766e; }
+  .cptl-grp .cptl-op b { font-size:13.5px; }
+  .cptl-grp .cptl-op small { color:#334155; }
+  .cptl-blocco .cptl-r:not(.cptl-grp) .cptl-op { padding-left:10px; }
+  .cptl-card:not(.cptl-blocco) .cptl-op b { font-size:13px; }
   .cptl-op { min-width:0; font-size:12px; line-height:15px; }
   .cptl-op b, .cptl-op small, .cptl-flag { display:block; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
   .cptl-op small { color:#64748b; font-size:10.5px; }
@@ -1092,12 +1101,15 @@
   .cptl-track { position:relative; background:#f1f5f9; border-radius:5px; }
   .cptl-grid { position:absolute; top:0; bottom:0; border-left:1px dashed #dbe3ec; }
   .cptl-span { position:absolute; top:50%; height:2px; margin-top:-1px; background:#cbd5e1; }
-  .cptl-bar { position:absolute; height:12px; border-radius:3px; min-width:3px; padding:0 3px; overflow:hidden; white-space:nowrap; color:#fff; font-size:9px; line-height:12px; cursor:help; box-shadow:inset 0 0 0 1px rgba(255,255,255,.5); }
+  .cptl-bar { position:absolute; height:12px; border-radius:3px; min-width:3px; padding:0 3px; overflow:hidden; white-space:nowrap; color:#fff; font-size:9px; line-height:12px; cursor:help; box-shadow:inset 0 0 0 1px rgba(255,255,255,.5); text-decoration:none; }
+  a.cptl-bar { cursor:pointer; }
+  a.cptl-bar:hover { z-index:2; filter:brightness(1.12); box-shadow:0 0 0 2px #0f172a; }
+  .cptl-bar.fuori, .cptl-leg i.fuori { outline:2px dashed #b91c1c; outline-offset:-1px; }
   .cptl-now { position:absolute; top:-2px; bottom:-2px; border-left:2px solid #e11d48; }
   .cptl-vuoto { position:absolute; inset:0; display:flex; align-items:center; padding-left:8px; font-size:11px; font-style:italic; color:#94a3b8; }
   .cptl-num { font-size:12px; text-align:right; font-variant-numeric:tabular-nums; }
   .cptl-leg { display:inline-flex; align-items:center; gap:4px; }
-  .cptl-leg i { width:10px; height:10px; border-radius:3px; display:inline-block; }
+  .cptl-leg i { width:10px; height:10px; border-radius:3px; display:inline-block; background:#fff; }
   .cp-oj-bar-live { background-image:repeating-linear-gradient(135deg, rgba(255,255,255,.55) 0 4px, transparent 4px 8px); outline:1px dashed #ea580c; outline-offset:-1px; }
   .cp-oj-row-live .cp-oj-ora { color:#ea580c; }
   .cp-oj-tot-live { color:#ea580c; font-weight:600; }
@@ -1946,7 +1958,7 @@
       </span>
       <button id="btn-presentation" class="px-3 py-1.5 text-sm rounded hover:bg-white/10" style="border:1px solid var(--dark-border-strong);color:var(--dark-text);visibility:visible;">📊 Modalità presentazione</button>
       <div class="text-xs pl-2" style="border-left:1px solid var(--dark-border-strong);color:var(--dark-text-muted);">
-        <span id="app-version" class="font-medium" style="color:var(--accent);">v18.226.0</span> · Michele Marchetti
+        <span id="app-version" class="font-medium" style="color:var(--accent);">v18.227.0</span> · Michele Marchetti
         <span id="sb-role-badge" style="margin-left:8px;padding:1px 8px;border-radius:9999px;background:rgba(255,255,255,.1);color:var(--dark-text);font-weight:600;"></span>
       </div>
     </div>
@@ -2697,8 +2709,8 @@
   <!-- Vista Griglia -->
   <div id="pw-view-griglia">
     <!-- Barra ricerca operatore -->
-    <div id="pw-toolbar-griglia" class="bg-white border border-slate-200 rounded-lg px-4 py-3 mb-3 no-print flex items-center gap-3" style="position:sticky; top:var(--pw-toolbar-top, 64px); z-index:20;">
-      <div class="relative flex-1 max-w-sm">
+    <div id="pw-toolbar-griglia" class="bg-white border border-slate-200 rounded-lg px-4 py-3 mb-3 no-print flex flex-wrap items-center gap-x-3 gap-y-2" style="position:sticky; top:var(--pw-toolbar-top, 64px); z-index:20;">
+      <div class="relative flex-1 min-w-[280px] max-w-md">
         <span class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm pointer-events-none">🔍</span>
         <input id="pw-search-op" type="text"
           placeholder="Cerca operatore o cantiere nella griglia…"
@@ -2706,7 +2718,7 @@
         <button id="pw-search-op-clear"
           class="absolute right-2 top-1/2 -translate-y-1/2 text-slate-300 hover:text-slate-500 text-lg leading-none hidden">×</button>
       </div>
-      <div id="pw-search-op-info" class="text-xs text-slate-400 hidden"></div>
+      <div id="pw-search-op-info" class="text-xs text-slate-400 whitespace-nowrap hidden"></div>
       <button id="pw-strumenti-refresh" data-help-key="pw-strumenti-refresh" class="px-3 py-1.5 text-sm border border-amber-300 bg-amber-50 text-amber-800 rounded hover:bg-amber-100 no-print whitespace-nowrap" title="Carica/aggiorna l'elenco strumenti dal progetto Jira GAR — Click destro per la guida">🔧 Aggiorna strumenti</button>
       <span id="pw-strumenti-status" class="text-xs text-slate-500 no-print"></span>
       <button id="pw-weather-week-btn" class="px-3 py-1.5 text-sm border border-slate-200 bg-slate-50 text-slate-400 rounded no-print whitespace-nowrap" title="Criticità meteo nei cantieri pianificati questa settimana" onclick="pwOpenWeatherWeekModal()">⛈️ Meteo settimana…</button>

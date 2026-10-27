@@ -114,6 +114,9 @@ Limite noto: il progetto Supabase è sul piano **Free**, che non include backup 
 
 ## Changelog
 
+## v18.227.0
+- fix: **Griglia - casella di ricerca leggibile.** La barra sopra la Griglia ora va a capo quando i bottoni non ci stanno: la casella «Cerca operatore o cantiere» resta sempre larga almeno 280px invece di ridursi fino a non mostrare il testo digitato. Nessuna modifica Supabase/Edge Function.
+
 ## v18.226.0
 - feat: **Controllo Produzione - Timeline worklog.** Nuovo bottone «🕘 Timeline worklog» → finestra con tutti gli operatori impiegati nella settimana: per ogni giorno una barra oraria con un segmento per worklog Jira (da quando è stato attivato a quando è stato chiuso), passando il mouse ticket, orario, durata e commento. Accanto prima ora, ultima ora, totale e pause. Vista per giorno (tutti sullo stesso asse) o «Settimana» (una riga per giorno e totale settimanale per operatore). Filtri per commessa, squadra, nome/cantiere, «solo da controllare» e soglia ore; colore per ticket o per commessa. Segnala nessun worklog, sovrapposizioni, worklog senza pianificazione o in ferie, IN PROGRESS dal giorno prima; oggi mostra il lavoro in corso e la linea dell'ora attuale. Un operatore su più commesse lo stesso giorno conta i worklog una volta sola. «📄 Esporta PDF» (A4 orizzontale: barre + elenco worklog). Di norma usa i worklog dell'ultima sincronizzazione; «↻ Rileggi da Jira» li rilegge in sola lettura, senza salvarli. Nessuna modifica Supabase/Edge Function.
 
