@@ -954,6 +954,16 @@
   .op-trigger-geo { font-size: 9px; opacity: .6; margin-left: 4px; white-space: nowrap; flex-shrink: 0; }
   .op-trigger-arrow { font-size: 8px; margin-left: 4px; opacity: .5; flex-shrink: 0; }
 
+  /* ===== BARRA STRUMENTI DELLA GRIGLIA =====
+     Bottoni compatti per stare su una riga con la ricerca. Selettore con id: vince sulle classi
+     Tailwind (px-3 py-1.5 text-sm) che pwUpdateWeatherWidget/pwNvUpdateButton/pwJchkUpdateButton
+     riscrivono in className a ogni render. Se lo schermo è stretto la barra va comunque a capo. */
+  #pw-toolbar-griglia > button {
+    font-size: 12.5px; line-height: 1.25rem; padding: 3px 9px; border-radius: 6px;
+  }
+  #pw-toolbar-griglia > #pw-undo-btn, #pw-toolbar-griglia > #pw-redo-btn { font-size: 15px; padding: 1px 9px; }
+  #pw-toolbar-griglia .pw-tb-sep { width: 1px; height: 20px; background: #e2e8f0; flex-shrink: 0; }
+
   /* ===== RICERCA OPERATORE NELLA GRIGLIA ===== */
   .pw-op-row.search-match {
     background: #fefce8;
@@ -1958,7 +1968,7 @@
       </span>
       <button id="btn-presentation" class="px-3 py-1.5 text-sm rounded hover:bg-white/10" style="border:1px solid var(--dark-border-strong);color:var(--dark-text);visibility:visible;">📊 Modalità presentazione</button>
       <div class="text-xs pl-2" style="border-left:1px solid var(--dark-border-strong);color:var(--dark-text-muted);">
-        <span id="app-version" class="font-medium" style="color:var(--accent);">v18.227.0</span> · Michele Marchetti
+        <span id="app-version" class="font-medium" style="color:var(--accent);">v18.228.0</span> · Michele Marchetti
         <span id="sb-role-badge" style="margin-left:8px;padding:1px 8px;border-radius:9999px;background:rgba(255,255,255,.1);color:var(--dark-text);font-weight:600;"></span>
       </div>
     </div>
@@ -2709,24 +2719,26 @@
   <!-- Vista Griglia -->
   <div id="pw-view-griglia">
     <!-- Barra ricerca operatore -->
-    <div id="pw-toolbar-griglia" class="bg-white border border-slate-200 rounded-lg px-4 py-3 mb-3 no-print flex flex-wrap items-center gap-x-3 gap-y-2" style="position:sticky; top:var(--pw-toolbar-top, 64px); z-index:20;">
-      <div class="relative flex-1 min-w-[280px] max-w-md">
+    <div id="pw-toolbar-griglia" class="bg-white border border-slate-200 rounded-lg px-3 py-2 mb-3 no-print flex flex-wrap items-center gap-x-2 gap-y-2" style="position:sticky; top:var(--pw-toolbar-top, 64px); z-index:20;">
+      <div class="relative flex-1 min-w-[200px] max-w-md">
         <span class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm pointer-events-none">🔍</span>
         <input id="pw-search-op" type="text"
           placeholder="Cerca operatore o cantiere nella griglia…"
-          class="w-full pl-8 pr-8 py-1.5 text-sm border border-slate-200 rounded-lg focus:outline-none focus:border-teal-400 bg-slate-50">
+          class="w-full pl-8 pr-8 py-1 text-[13px] border border-slate-200 rounded-lg focus:outline-none focus:border-teal-400 bg-slate-50">
         <button id="pw-search-op-clear"
           class="absolute right-2 top-1/2 -translate-y-1/2 text-slate-300 hover:text-slate-500 text-lg leading-none hidden">×</button>
       </div>
       <div id="pw-search-op-info" class="text-xs text-slate-400 whitespace-nowrap hidden"></div>
-      <button id="pw-strumenti-refresh" data-help-key="pw-strumenti-refresh" class="px-3 py-1.5 text-sm border border-amber-300 bg-amber-50 text-amber-800 rounded hover:bg-amber-100 no-print whitespace-nowrap" title="Carica/aggiorna l'elenco strumenti dal progetto Jira GAR — Click destro per la guida">🔧 Aggiorna strumenti</button>
-      <span id="pw-strumenti-status" class="text-xs text-slate-500 no-print"></span>
+      <button id="pw-strumenti-refresh" data-help-key="pw-strumenti-refresh" class="px-3 py-1.5 text-sm border border-amber-300 bg-amber-50 text-amber-800 rounded hover:bg-amber-100 no-print whitespace-nowrap" title="Aggiorna strumenti: carica/aggiorna l'elenco strumenti dal progetto Jira GAR — Click destro per la guida">🔧 Strumenti</button>
+      <span id="pw-strumenti-status" class="text-xs text-slate-500 no-print whitespace-nowrap empty:hidden"></span>
       <button id="pw-weather-week-btn" class="px-3 py-1.5 text-sm border border-slate-200 bg-slate-50 text-slate-400 rounded no-print whitespace-nowrap" title="Criticità meteo nei cantieri pianificati questa settimana" onclick="pwOpenWeatherWeekModal()">⛈️ Meteo settimana…</button>
       <button id="pw-nv-btn" class="px-3 py-1.5 text-sm border border-slate-200 bg-slate-50 text-slate-500 rounded no-print whitespace-nowrap hover:bg-slate-100" title="Lavagna di note e variazioni rispetto alla programmazione della settimana" onclick="pwOpenNoteVariazioni()">📝 Note/Variazioni</button>
       <button id="pw-jchk-btn" data-help-key="pw-jchk" class="px-3 py-1.5 text-sm border border-slate-200 bg-slate-50 text-slate-400 rounded no-print whitespace-nowrap hover:bg-slate-100" title="Controlla che ogni cella della settimana abbia il suo sottotask Jira — Click destro per la guida" onclick="pwOpenJiraCheck()">🎫 Sottotask</button>
-      <button id="pw-undo-btn" class="ml-auto px-2.5 py-1.5 text-sm border border-slate-300 rounded hover:bg-slate-50 no-print pw-write-action whitespace-nowrap disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-transparent" title="Niente da annullare" disabled onclick="pwUndo()">↶ Indietro</button>
-      <button id="pw-redo-btn" class="px-2.5 py-1.5 text-sm border border-slate-300 rounded hover:bg-slate-50 no-print pw-write-action whitespace-nowrap disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-transparent" title="Niente da ripristinare" disabled onclick="pwRedo()">↷ Avanti</button>
-      <button id="pw-add-commessa" class="px-3 py-1.5 text-sm bg-teal-600 text-white rounded hover:bg-teal-700 no-print pw-write-action whitespace-nowrap">+ Aggiungi commessa</button>
+      <span class="pw-tb-sep ml-auto"></span>
+      <button id="pw-undo-btn" class="px-2.5 py-1.5 text-sm border border-slate-300 rounded hover:bg-slate-50 no-print pw-write-action whitespace-nowrap disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-transparent" title="Niente da annullare" disabled onclick="pwUndo()" aria-label="Indietro">↶</button>
+      <button id="pw-redo-btn" class="px-2.5 py-1.5 text-sm border border-slate-300 rounded hover:bg-slate-50 no-print pw-write-action whitespace-nowrap disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-transparent" title="Niente da ripristinare" disabled onclick="pwRedo()" aria-label="Avanti">↷</button>
+      <span class="pw-tb-sep"></span>
+      <button id="pw-add-commessa" class="px-3 py-1.5 text-sm bg-teal-600 text-white rounded hover:bg-teal-700 no-print pw-write-action whitespace-nowrap" title="Aggiungi commessa alla settimana">+ Commessa</button>
       <button id="pw-gen-mail" class="px-3 py-1.5 text-sm bg-indigo-600 text-white rounded hover:bg-indigo-700 no-print whitespace-nowrap">📧 Genera mail</button>
       <button id="pw-collapse-all" class="px-3 py-1.5 text-sm border border-slate-300 rounded hover:bg-slate-50 no-print whitespace-nowrap" title="Collassa / Espandi tutto" onclick="pwCollapseAllToggle()">≡ Collassa</button>
     </div>

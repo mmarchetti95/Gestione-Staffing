@@ -114,6 +114,9 @@ Limite noto: il progetto Supabase è sul piano **Free**, che non include backup 
 
 ## Changelog
 
+## v18.228.0
+- fix: **Griglia - barra strumenti su una riga.** Bottoni più compatti (testo sempre leggibile), «🔧 Strumenti» e «+ Commessa» al posto delle etichette lunghe (il nome completo resta nel tooltip), Indietro/Avanti solo con le frecce ↶ ↷ (tooltip con l'azione e Ctrl+Z/Ctrl+Y), separatori fra i gruppi. Ricerca, controlli della settimana, annulla/ripristina e azioni stanno su una riga anche a 1280px; sotto quella larghezza la barra va a capo invece di schiacciare la ricerca. Nessuna modifica Supabase/Edge Function.
+
 ## v18.227.0
 - fix: **Griglia - casella di ricerca leggibile.** La barra sopra la Griglia ora va a capo quando i bottoni non ci stanno: la casella «Cerca operatore o cantiere» resta sempre larga almeno 280px invece di ridursi fino a non mostrare il testo digitato. Nessuna modifica Supabase/Edge Function.
 
