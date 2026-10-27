@@ -49,6 +49,7 @@ JS_FILES = [
     'weekly-clipboard-cantiere.js',
     'weekly-strumenti.js',
     'weekly-jira-subtask.js',
+    'weekly-jira-subtask-db.js',
     'weekly-nav.js',
     'weekly-doppiaweek.js',
     'weekly-collapse-cp.js',

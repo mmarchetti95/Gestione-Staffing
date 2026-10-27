@@ -253,7 +253,7 @@ function _cpaCelleSettimana() {
             cpKey: bc.commessa + '|||' + sqNome + '|||' + nome + '|||' + g,
             ferie: fw[nome] ? pwFerieTipo(fw[nome][g]) : null,
             voci: voci.map(v => {
-              const e = pwJiraSubtaskEntry(bc, v.cantiere, nome, v.attivita);
+              const e = pwJiraSubtaskEntry(bc, v.cantiere, nome, pwJiraAttivitaSottotask(bc, v.cantiere, nome, v.attivita), g);
               return { cantiere: v.cantiere, attivita: v.attivita,
                 subtask: (pwJiraSubtaskIsResolved(e) && e.key) ? { key: e.key, url: e.url || '' } : null };
             }),
@@ -265,8 +265,9 @@ function _cpaCelleSettimana() {
   return { celle, operatori };
 }
 
-/* Sottotask di tutta la Griglia -> cantiere/operatore. Vince la settimana mostrata, poi la
-   più recente: lo stesso sottotask può restare in più settimane (copie di settimana). */
+/* Sottotask di tutta la Griglia -> cantiere/operatore(/giorno, per i giornalieri). Vince la
+   settimana mostrata, poi la più recente: lo stesso sottotask settimanale può restare in più
+   settimane (copie di settimana). */
 function _cpaIndiceSottotask() {
   const out = {}, rank = {};
   Object.keys(pwData || {}).forEach(anno => {
@@ -278,13 +279,13 @@ function _cpaIndiceSottotask() {
       const rk = corr ? Infinity : Number(anno) * 100 + Number(week);
       data.forEach(bc => {
         if (!bc || !bc.commessa) return;
-        Object.keys(bc.jiraSubtask || {}).forEach(mk => {
-          const e = bc.jiraSubtask[mk];
+        const mappa = pwJiraSubtaskMappa(bc, Number(anno), Number(week));
+        Object.values(mappa).forEach(e => {
           if (!pwJiraSubtaskIsResolved(e) || !e.key) return;
           if (rank[e.key] != null && rank[e.key] >= rk) return;
-          const p = mk.split('|||');
           rank[e.key] = rk;
-          out[e.key] = { commessa: bc.commessa, cantiere: p[0], operatore: p[1], attivita: p[2] || '', anno: Number(anno), week: Number(week) };
+          out[e.key] = { commessa: bc.commessa, cantiere: e.cantiere, operatore: e.operatore, attivita: e.attivita || '',
+            giorno: e.giorno, anno: Number(anno), week: Number(week) };
         });
       });
     });

@@ -1,10 +1,12 @@
 /* ==================== GRIGLIA · CONTROLLO SOTTOTASK JIRA ====================
    Bottone "🎫 Sottotask" nella toolbar della Griglia, accanto a Note/Variazioni: controlla
-   tutte le celle della settimana mostrata e dice, per ogni operatore + cantiere + attività,
-   se ha il suo sottotask Jira. Stessa unità di pwJiraSubtaskInit: un sottotask copre
-   operatore/cantiere/attività per tutta la settimana, non il singolo giorno.
-   La base è bc.jiraSubtask (gli indicatori 🎫/⚠️ delle celle), letto in locale a ogni
-   pwRender/aggiornamento badge: per questo il bottone è sempre aggiornato e immediato.
+   tutte le celle della settimana mostrata e dice, per ogni operatore + cantiere + attività +
+   GIORNO, se ha il suo sottotask Jira. Stessa unità di pwJiraSubtaskInit: dalla v18.229.0 un
+   sottotask copre un solo giorno; quelli settimanali creati prima (bc.jiraSubtask) coprono
+   ancora tutti i giorni della loro settimana.
+   La base sono gli indicatori 🎫/⚠️ delle celle (pwJiraSubtaskMappa: tabella pw_jira_subtask
+   più bc.jiraSubtask), letti in locale a ogni pwRender/aggiornamento badge: per questo il
+   bottone è sempre aggiornato e immediato.
    Sopra c'è una verifica su Jira (pwJchkVerificaJira, Edge Function jira-task-status con
    soloSottotask): una chiamata per settimana che dice quali chiavi non esistono più, a chi
    è assegnato ogni sottotask e in che stato è — un sottotask cancellato o riassegnato su
@@ -12,7 +14,7 @@
    mostra una settimana e di nuovo a ogni apertura/"Ricontrolla"; il risultato vive solo
    in memoria (_pwJchk.jira). L'assegnatario si confronta per accountId: le email degli
    operatori diventano accountId lato server (cache di sessione in _pwJchk.acc), mai per
-   nome. Le correzioni toccano solo bc.jiraSubtask e solo su click, mai da sole (una
+   nome. Le correzioni toccano solo gli indicatori e solo su click, mai da sole (una
    chiave non visibile all'utenza Jira o spostata in un altro progetto risulterebbe
    "cancellata" anche se non lo è); su Jira non si scrive niente.
    Anomalie (pwJchkAnalizza):
@@ -26,14 +28,15 @@
      assegnatario è in Griglia sullo stesso cantiere senza sottotask, si offre di spostargli
      l'indicatore;
    - creato: sottotask nello stato CREATED su Jira (non ancora avviato nel workflow);
-   - orfano: indicatore creato/già esistente che nessuna cella usa più (cantiere, attività
-     o operatore cambiati dopo la creazione): su Jira c'è un sottotask che la Griglia non
-     pianifica più;
+   - orfano: indicatore creato/già esistente che nessuna cella usa più (cantiere, attività,
+     operatore o giorno cambiati dopo la creazione): su Jira c'è un sottotask che la Griglia
+     non pianifica più. Tipico con i giornalieri: l'operatore spostato da martedì a mercoledì
+     lascia orfano il sottotask di martedì e scopre il mercoledì;
    - commessa: blocco senza commessa o commessa senza "Codice progetto Jira" — le sue
      celle non si possono controllare una per una.
    Gli operatori di un fornitore esterno (op.fornitore) non hanno sottotask: restano fuori. */
 
-HELP_TEXTS['pw-jchk'] = 'Controlla in un colpo tutte le celle della settimana mostrata: per ogni operatore + cantiere + attività verifica che ci sia il sottotask Jira (indicatore 🎫 in cella).\n\nVerde = tutto a posto. Rosso = assegnazioni senza sottotask, con creazione fallita, con il sottotask cancellato su Jira o riassegnato a un\'altra persona. Ambra = sottotask ancora in stato CREATED, sottotask non più collegati a nessuna cella, o commesse senza codice progetto Jira.\n\nClicca una riga (o un giorno) per andare alla cella. Il controllo è immediato sugli indicatori della Griglia; all\'apertura e con «Ricontrolla» verifica anche su Jira quali sottotask sono stati cancellati, a chi sono assegnati e in che stato sono. Su Jira non viene mai scritto niente.';
+HELP_TEXTS['pw-jchk'] = 'Controlla in un colpo tutte le celle della settimana mostrata: per ogni operatore + cantiere + attività, giorno per giorno, verifica che ci sia il sottotask Jira di quel giorno (indicatore 🎫 in cella). I sottotask settimanali creati prima della v18.229.0 valgono ancora per tutti i giorni della loro settimana.\n\nVerde = tutto a posto. Rosso = assegnazioni senza sottotask, con creazione fallita, con il sottotask cancellato su Jira o riassegnato a un\'altra persona. Ambra = sottotask ancora in stato CREATED, sottotask non più collegati a nessuna cella, o commesse senza codice progetto Jira.\n\nClicca una riga (o un giorno) per andare alla cella. Il controllo è immediato sugli indicatori della Griglia; all\'apertura e con «Ricontrolla» verifica anche su Jira quali sottotask sono stati cancellati, a chi sono assegnati e in che stato sono. Su Jira non viene mai scritto niente.';
 
 const PW_JCHK_GIORNI = ['Lun', 'Mar', 'Mer', 'Gio', 'Ven', 'Sab'];
 const PW_JCHK_TIPI = {
@@ -95,13 +98,16 @@ function _pwJchkEsameJira(e, operatore) {
 
 // Gruppo della Griglia (stesso blocco) dove spostare l'indicatore di un sottotask
 // riassegnato: il nuovo operatore sullo stesso cantiere, stessa attività se c'è, e
-// senza un sottotask suo valido.
-function _pwJchkDestinazione(bc, gruppi, operatore, cantiere, attivita) {
+// senza un sottotask suo valido. Per un sottotask giornaliero (giorno non null) il
+// nuovo operatore deve essere su quel cantiere QUEL giorno.
+function _pwJchkDestinazione(bc, gruppi, operatore, cantiere, attivita, giorno) {
   if (!operatore) return null;
-  const cand = [...gruppi.values()].filter(g => g.operatore === operatore && g.cantiere === cantiere);
+  const conGiorno = giorno !== null && giorno !== undefined;
+  const cand = [...gruppi.values()].filter(g => g.operatore === operatore && g.cantiere === cantiere
+    && (!conGiorno || g.celle.some(c => c.day === giorno)));
   const gr = cand.find(g => g.attivita === attivita) || cand[0];
   if (!gr) return null;
-  const f = pwJiraSubtaskLookup(bc, gr.cantiere, gr.operatore, gr.attivita);
+  const f = pwJiraSubtaskLookup(bc, gr.cantiere, gr.operatore, gr.attivita, conGiorno ? giorno : null);
   const e = f && f.entry;
   if (pwJiraSubtaskIsResolved(e) && !_pwJchkCancellato(e)) return null;
   return gr;
@@ -117,7 +123,7 @@ function pwJchkVerificaJira(forza) {
   if ((cur && !forza) || !_sbClient || !_sbUser) return Promise.resolve();
   const week = pwGetWeekData();
   const keys = [...new Set(week.flatMap(bc =>
-    Object.values((bc && bc.jiraSubtask) || {}).filter(e => pwJiraSubtaskIsResolved(e) && e.key).map(e => e.key)))];
+    Object.values(pwJiraSubtaskMappa(bc)).filter(e => pwJiraSubtaskIsResolved(e) && e.key).map(e => e.key)))];
   const stato = { cancellati: cur ? cur.cancellati : new Set(), info: cur ? cur.info : {}, n: keys.length, ts: cur ? cur.ts : 0, errore: '' };
   _pwJchk.jira[wk] = stato;
   if (!keys.length) { stato.cancellati = new Set(); stato.info = {}; stato.ts = Date.now(); return Promise.resolve(); }
@@ -128,7 +134,7 @@ function pwJchkVerificaJira(forza) {
   week.forEach(bc => {
     if (!bc) return;
     (bc.squadre || []).forEach(sq => (sq.operatori || []).forEach(op => { if (op && !op.fornitore) aggiungi(op.nome); }));
-    Object.keys(bc.jiraSubtask || {}).forEach(mk => aggiungi(mk.split('|||')[1]));
+    Object.values(pwJiraSubtaskMappa(bc)).forEach(e => aggiungi(e.operatore));
   });
   const daRisolvere = [...emails].filter(em => !(em in _pwJchk.acc) || (forza && _pwJchk.acc[em] === null));
   stato.inflight = (async () => {
@@ -162,12 +168,23 @@ function pwJchkVerificaJira(forza) {
   return stato.inflight;
 }
 
+/* Unità del controllo = operatore + cantiere + attività + giorno (una cella-voce). Le celle
+   si raggruppano per operatore + cantiere + attività del sottotask (pwJiraAttivitaSottotask:
+   un giorno senza attività va con l'attività che l'operatore ha lì nel resto della
+   settimana); dentro il gruppo, ogni giorno cerca il suo sottotask (giornaliero, o il
+   settimanale che copre tutta la settimana). Una riga di anomalia per sottotask
+   (cancellato/riassegnato/creato), e una per i giorni senza sottotask o con errore. */
 function pwJchkAnalizza() {
   const out = { voci: 0, ok: 0, fornitori: 0, anomalie: [], cancellati: [] };
-  pwGetWeekData().forEach((bc, cIdx) => {
+  const data = pwGetWeekData();
+  const usatiPerCommessa = new Map(); // commessa -> Set(mapKey) usati da una cella di qualunque suo blocco
+  const visti = new Map();            // commessa -> Set(mapKey) già esaminati (blocchi della stessa commessa condividono i giornalieri)
+  const blocchi = [];                 // { bc, cIdx, gruppi, mappa, offriSposta } per gli orfani
+  const setDi = (m, k) => { if (!m.has(k)) m.set(k, new Set()); return m.get(k); };
+
+  data.forEach((bc, cIdx) => {
     if (!bc) return;
-    const gruppi = new Map();    // operatore|||cantiere|||attività -> gruppo
-    const perOpCant = new Map(); // operatore|||cantiere -> Set(attività), in ordine di comparsa
+    const gruppi = new Map(); // operatore|||cantiere|||attività -> gruppo
     (bc.squadre || []).forEach((sq, sIdx) => (sq.operatori || []).forEach((op, oIdx) => {
       if (!op || !op.nome) return;
       const giorni = op.giorni || {};
@@ -177,7 +194,7 @@ function pwJchkAnalizza() {
           const cantiere = (raw || '').trim();
           if (!cantiere) return;
           if (op.fornitore) { out.fornitori++; return; }
-          const attivita = pwCellAttivitaAt(g, ci);
+          const attivita = pwJiraAttivitaSottotask(bc, cantiere, op.nome, pwCellAttivitaAt(g, ci));
           const k = op.nome + '|||' + cantiere + '|||' + attivita;
           let gr = gruppi.get(k);
           if (!gr) {
@@ -185,100 +202,119 @@ function pwJchkAnalizza() {
             gruppi.set(k, gr);
           }
           gr.celle.push({ sIdx, oIdx, day: Number(dKey), ci });
-          const ko = op.nome + '|||' + cantiere;
-          if (!perOpCant.has(ko)) perOpCant.set(ko, new Set());
-          perOpCant.get(ko).add(attivita);
         });
       });
     }));
-
-    // Come in pwJiraSubtaskInit: se un operatore ha su un cantiere giorni con attività e
-    // giorni senza, quelli senza non fanno un sottotask a sé — li copre quello dell'attività.
-    gruppi.forEach((gr, k) => {
-      if (gr.attivita) return;
-      const altra = [...perOpCant.get(gr.operatore + '|||' + gr.cantiere)].find(Boolean);
-      if (!altra) return;
-      gruppi.get(gr.operatore + '|||' + gr.cantiere + '|||' + altra).celle.push(...gr.celle);
-      gruppi.delete(k);
-    });
-    if (!gruppi.size && !Object.keys(bc.jiraSubtask || {}).length) return;
+    const mappa = pwJiraSubtaskMappa(bc);
+    if (!gruppi.size && !Object.keys(mappa).length) return;
 
     const meta = (bc.commessa && state.commesse_attive_meta && state.commesse_attive_meta[bc.commessa]) || {};
     if (!bc.commessa || !meta.jira_project_code) {
       if (!gruppi.size) return;
-      out.voci += gruppi.size;
+      const celle = [...gruppi.values()].flatMap(gr => gr.celle);
+      out.voci += celle.length;
       out.anomalie.push({
-        tipo: 'commessa', cIdx, sIdx: 0, commessa: bc.commessa || '', n: gruppi.size,
-        celle: [...gruppi.values()].flatMap(gr => gr.celle),
+        tipo: 'commessa', cIdx, sIdx: 0, commessa: bc.commessa || '', n: celle.length, celle,
         messaggio: (bc.commessa ? 'Manca il "Codice progetto Jira" in anagrafica commessa: ' : 'Blocco senza commessa scelta: ')
-          + gruppi.size + (gruppi.size === 1 ? ' assegnazione non controllabile.' : ' assegnazioni non controllabili.'),
+          + celle.length + (celle.length === 1 ? ' giornata non controllabile.' : ' giornate non controllabili.'),
       });
       return;
     }
 
-    Object.keys(bc.jiraSubtask || {}).forEach(mapKey => {
-      const e = bc.jiraSubtask[mapKey];
-      if (pwJiraSubtaskIsResolved(e) && _pwJchkCancellato(e)) out.cancellati.push({ cIdx, mapKey });
+    const vistiQui = setDi(visti, bc.commessa);
+    Object.keys(mappa).forEach(mapKey => {
+      const e = mappa[mapKey];
+      // Un giornaliero è della commessa, un settimanale del blocco: si conta una volta.
+      const id = e._db ? mapKey : cIdx + '#' + mapKey;
+      if (vistiQui.has(id)) return;
+      vistiQui.add(id);
+      if (pwJiraSubtaskIsResolved(e) && _pwJchkCancellato(e)) out.cancellati.push({ cIdx, mapKey, id: e._db ? e.id : null });
     });
 
-    // Sottotask riassegnato a chi in Griglia lavora sullo stesso cantiere senza
-    // sottotask: l'indicatore si può spostare. Il gruppo di destinazione lo dice anche lui.
+    // Sottotask riassegnato a chi in Griglia lavora sullo stesso cantiere (lo stesso giorno,
+    // se giornaliero) senza sottotask: l'indicatore si può spostare. Il gruppo di
+    // destinazione lo dice anche lui.
     const offriSposta = (a, mapKey, e, nuovo) => {
-      const dest = _pwJchkDestinazione(bc, gruppi, nuovo, a.cantiere, a.attivita);
+      const giorno = e._db ? e.giorno : null;
+      const dest = _pwJchkDestinazione(bc, gruppi, nuovo, a.cantiere, a.attivita, giorno);
       if (!dest) return;
-      a.sposta = { da: mapKey, operatore: dest.operatore, cantiere: dest.cantiere, attivita: dest.attivita };
+      a.sposta = { da: mapKey, operatore: dest.operatore, cantiere: dest.cantiere, attivita: dest.attivita, giorno };
       dest.daSpostare = { key: e.key, da: a.operatore };
     };
 
-    const usati = new Set();
+    const usati = setDi(usatiPerCommessa, bc.commessa);
     gruppi.forEach(gr => {
       gr.celle.sort((a, b) => a.day - b.day);
-      out.voci++;
-      const found = pwJiraSubtaskLookup(bc, gr.cantiere, gr.operatore, gr.attivita);
-      if (found) usati.add(found.mapKey);
-      const e = found && found.entry;
       gr.commessa = bc.commessa;
-      if (pwJiraSubtaskIsResolved(e)) {
-        gr.mapKey = found.mapKey;
-        gr.key = e.key || '';
-        gr.url = e.url || '';
+      const perSottotask = new Map(); // mapKey -> { e, celle }
+      const senza = [], errori = [];
+      gr.celle.forEach(c => {
+        out.voci++;
+        const found = pwJiraSubtaskLookup(bc, gr.cantiere, gr.operatore, gr.attivita, c.day);
+        if (found) usati.add(found.mapKey);
+        const e = found && found.entry;
+        if (pwJiraSubtaskIsResolved(e)) {
+          if (!perSottotask.has(found.mapKey)) perSottotask.set(found.mapKey, { e, celle: [] });
+          perSottotask.get(found.mapKey).celle.push(c);
+        } else if (e && e.status === 'error') {
+          errori.push({ c, e });
+        } else {
+          senza.push(c);
+        }
+      });
+
+      perSottotask.forEach(({ e, celle }, mapKey) => {
+        const a = Object.assign({}, gr, { celle, mapKey, key: e.key || '', url: e.url || '', giorno: e._db ? e.giorno : null });
         if (_pwJchkCancellato(e)) {
-          gr.tipo = 'cancellato';
-          out.anomalie.push(gr);
+          a.tipo = 'cancellato';
+          out.anomalie.push(a);
           return;
         }
         // Un sottotask in CREATED c'è: conta fra quelli presenti, ma va segnalato.
         const j = _pwJchkEsameJira(e, gr.operatore);
-        if (!j || j.tipo === 'creato') out.ok++;
+        if (!j || j.tipo === 'creato') out.ok += celle.length;
         if (!j) return;
-        gr.tipo = j.tipo;
-        gr.assignee = j.assignee;
-        gr.nuovo = j.nuovo;
-        gr.status = j.status || '';
-        if (j.tipo === 'riassegnato') offriSposta(gr, found.mapKey, e, j.nuovo);
-        out.anomalie.push(gr);
-        return;
-      }
-      gr.tipo = e && e.status === 'error' ? 'errore' : 'mancante';
-      gr.messaggio = (e && e.message) || '';
+        a.tipo = j.tipo;
+        a.assignee = j.assignee;
+        a.nuovo = j.nuovo;
+        a.status = j.status || '';
+        if (j.tipo === 'riassegnato') offriSposta(a, mapKey, e, j.nuovo);
+        out.anomalie.push(a);
+      });
+      // Giorni in errore e giorni mancanti: due righe distinte. La riga "mancante" è il
+      // gruppo stesso, perché offriSposta di un'altra riga (anche più avanti) vi segna
+      // daSpostare; quella degli errori, se c'è anche l'altra, ne è una copia.
       gr.noEmail = !pwJiraOperatorEmail(gr.operatore);
-      out.anomalie.push(gr);
+      if (errori.length) {
+        const err = { tipo: 'errore', celle: errori.map(x => x.c), messaggio: errori[0].e.message || '' };
+        out.anomalie.push(senza.length ? Object.assign({}, gr, err) : Object.assign(gr, err));
+      }
+      if (senza.length) out.anomalie.push(Object.assign(gr, { tipo: 'mancante', celle: senza, messaggio: '' }));
     });
+    blocchi.push({ bc, cIdx, mappa, offriSposta });
+  });
 
-    // Indicatori creati/già esistenti che nessuna cella usa più. Un errore non più usato
-    // non dice nulla (il sottotask non c'è), quindi non si segnala.
-    Object.keys(bc.jiraSubtask || {}).forEach(mapKey => {
-      const e = bc.jiraSubtask[mapKey];
+  // Indicatori creati/già esistenti che nessuna cella usa più. Un errore non più usato
+  // non dice nulla (il sottotask non c'è), quindi non si segnala. Dopo tutti i blocchi:
+  // un giornaliero può essere usato da un altro blocco della stessa commessa.
+  const segnalati = new Map(); // commessa -> Set(mapKey) giornalieri già segnalati
+  blocchi.forEach(({ bc, cIdx, mappa, offriSposta }) => {
+    const usati = usatiPerCommessa.get(bc.commessa) || new Set();
+    const giaSegnalati = setDi(segnalati, bc.commessa);
+    Object.keys(mappa).forEach(mapKey => {
+      const e = mappa[mapKey];
       if (usati.has(mapKey) || !pwJiraSubtaskIsResolved(e) || _pwJchkCancellato(e)) return;
-      const [cantiere, operatore, attivita] = mapKey.split('|||');
+      if (e._db) { if (giaSegnalati.has(mapKey)) return; giaSegnalati.add(mapKey); }
+      const operatore = e.operatore || '';
+      // Riga dell'operatore in questo blocco, o in un altro della stessa commessa.
       let pos = null;
-      (bc.squadre || []).some((sq, sIdx) => (sq.operatori || []).some((op, oIdx) => {
-        if (op && op.nome === operatore) { pos = { sIdx, oIdx }; return true; }
+      data.some((b, bIdx) => b && (bIdx === cIdx || (e._db && b.commessa === bc.commessa)) && (b.squadre || []).some((sq, sIdx) => (sq.operatori || []).some((op, oIdx) => {
+        if (op && op.nome === operatore) { pos = { cIdx: bIdx, sIdx, oIdx }; return true; }
         return false;
-      }));
+      })));
       const a = {
-        tipo: 'orfano', cIdx, sIdx: pos ? pos.sIdx : 0, commessa: bc.commessa, mapKey,
-        operatore: operatore || '', cantiere: cantiere || '', attivita: attivita || '',
+        tipo: 'orfano', cIdx: pos ? pos.cIdx : cIdx, sIdx: pos ? pos.sIdx : 0, commessa: bc.commessa, mapKey,
+        operatore, cantiere: e.cantiere || '', attivita: e.attivita || '', giorno: e._db ? e.giorno : null,
         key: e.key || '', url: e.url || '', pos, celle: [],
       };
       // Caso tipico: in Griglia l'operatore è stato sostituito e su Jira il sottotask
@@ -296,7 +332,8 @@ function pwJchkAnalizza() {
   out.anomalie.sort((a, b) => (a.cIdx - b.cIdx)
     || (PW_JCHK_ORDINE.indexOf(a.tipo) - PW_JCHK_ORDINE.indexOf(b.tipo))
     || (a.sIdx - b.sIdx)
-    || String(a.operatore || '').localeCompare(String(b.operatore || ''), 'it'));
+    || String(a.operatore || '').localeCompare(String(b.operatore || ''), 'it')
+    || ((a.celle[0] ? a.celle[0].day : (a.giorno || 0)) - (b.celle[0] ? b.celle[0].day : (b.giorno || 0))));
   return out;
 }
 
@@ -329,12 +366,12 @@ function pwJchkUpdateButton(r) {
   } else if (!n) {
     btn.className = BASE + 'border-emerald-300 bg-emerald-50 text-emerald-700 hover:bg-emerald-100';
     btn.textContent = '✅ Sottotask ok';
-    btn.title = 'Tutte le ' + r.voci + ' assegnazioni della settimana hanno il sottotask Jira — Click destro per la guida';
+    btn.title = 'Tutte le ' + r.voci + ' giornate della settimana hanno il sottotask Jira — Click destro per la guida';
   } else {
     const ko = r.anomalie.some(a => PW_JCHK_TIPI[a.tipo].sev === 'ko');
     btn.className = BASE + (ko ? 'border-red-300 bg-red-50 text-red-800 hover:bg-red-100' : 'border-amber-300 bg-amber-50 text-amber-800 hover:bg-amber-100');
     btn.textContent = '🎫 Sottotask · ' + n + (n === 1 ? ' anomalia' : ' anomalie');
-    btn.title = r.ok + '/' + r.voci + ' assegnazioni con sottotask Jira — clicca per il dettaglio, click destro per la guida';
+    btn.title = r.ok + '/' + r.voci + ' giornate con sottotask Jira — clicca per il dettaglio, click destro per la guida';
   }
 }
 
@@ -401,12 +438,12 @@ function _pwJchkRenderModal(accendi) {
     esito = '<div class="pw-jchk-esito pw-jchk-esito-vuoto">Nessun cantiere pianificato in Griglia questa settimana.</div>';
   } else if (!n) {
     esito = '<div class="pw-jchk-esito pw-jchk-esito-ok"><div class="pw-jchk-esito-big">✅ Tutto a posto</div>'
-      + '<div>Tutte le <b>' + r.voci + '</b> assegnazioni (operatore · cantiere · attività) hanno il loro sottotask Jira.</div></div>';
+      + '<div>Tutte le <b>' + r.voci + '</b> giornate (operatore · cantiere · attività · giorno) hanno il loro sottotask Jira.</div></div>';
   } else {
     const ko = r.anomalie.some(a => PW_JCHK_TIPI[a.tipo].sev === 'ko');
     esito = '<div class="pw-jchk-esito ' + (ko ? 'pw-jchk-esito-ko' : 'pw-jchk-esito-warn') + '">'
       + '<div class="pw-jchk-esito-big">' + n + (n === 1 ? ' anomalia' : ' anomalie') + '</div>'
-      + '<div><b>' + r.ok + '</b> su <b>' + r.voci + '</b> assegnazioni hanno il sottotask Jira.</div>'
+      + '<div><b>' + r.ok + '</b> su <b>' + r.voci + '</b> giornate hanno il sottotask Jira.</div>'
       + '<div class="flex flex-wrap gap-1.5 mt-2">' + chips + '</div></div>';
   }
 
@@ -428,7 +465,7 @@ function _pwJchkRenderModal(accendi) {
       + '</div>';
   }).join('');
 
-  const note = ['Controllo sugli indicatori 🎫 salvati in Griglia, più la verifica su Jira di sottotask cancellati, riassegnati o in stato CREATED (su Jira non viene scritto niente). Un sottotask copre operatore + cantiere + attività per tutta la settimana.'];
+  const note = ['Controllo sugli indicatori 🎫 salvati in Griglia, più la verifica su Jira di sottotask cancellati, riassegnati o in stato CREATED (su Jira non viene scritto niente). Un sottotask copre operatore + cantiere + attività per un giorno (quelli settimanali creati prima della v18.229.0 coprono tutta la loro settimana).'];
   if (r.fornitori) note.push(r.fornitori + (r.fornitori === 1 ? ' cella' : ' celle') + ' di fornitori esterni escluse dal controllo.');
 
   const pulisci = r.cancellati.length && sbCanWrite()
@@ -466,6 +503,7 @@ function pwJchkRigaHtml(a, i) {
   }
   const titolo = '<b>' + esc(a.operatore) + '</b> — ' + esc(a.cantiere)
     + (a.attivita ? ' <span class="text-slate-500">· ' + esc(a.attivita) + '</span>' : '')
+    + (a.tipo === 'orfano' && a.giorno !== null && a.giorno !== undefined ? ' <span class="text-slate-500">· ' + esc(pwJsubGiornoLabel(pwAnno, pwWeek, a.giorno)) + '</span>' : '')
     + (a.squadra ? ' <span class="pw-jchk-sq">(' + esc(a.squadra) + ')</span>' : '');
   const link = a.url
     ? '<a href="' + esc(a.url) + '" target="_blank" rel="noopener" onclick="event.stopPropagation()" class="text-blue-700 hover:underline">' + esc(a.key || 'apri') + '</a>'
@@ -486,8 +524,8 @@ function pwJchkRigaHtml(a, i) {
     const det = a.assignee !== undefined
       ? 'Sottotask ' + link + ' non più pianificato da nessuna cella; ' + aChi
       : 'Sottotask ' + link + ' su Jira, ma nessuna cella lo pianifica più'
-        + (a.pos ? ' (cantiere o attività cambiati?)' : ' (operatore non più in questa commessa)');
-    return '<div class="' + cls + '" onclick="pwJchkVai(' + i + ')" title="' + (a.pos ? 'Vai alla riga dell\'operatore' : 'Vai al blocco commessa') + '">'
+        + (a.pos ? (a.giorno !== null && a.giorno !== undefined ? ' (giorno, cantiere o attività cambiati?)' : ' (cantiere o attività cambiati?)') : ' (operatore non più in questa commessa)');
+    return '<div class="' + cls + '" onclick="pwJchkVai(' + i + ')" title="' + (a.pos ? 'Vai alla riga dell\'operatore' + (a.giorno !== null && a.giorno !== undefined ? ' (' + PW_JCHK_GIORNI[a.giorno] + ')' : '') : 'Vai al blocco commessa') + '">'
       + '<span class="pw-jchk-ico">' + t.ico + '</span>'
       + '<div class="min-w-0 flex-1"><div>' + titolo + '</div>'
       + '<div class="pw-jchk-det">' + det + '</div></div>'
@@ -524,7 +562,7 @@ function pwJchkVai(i, k) {
   const a = _pwJchk.ultimo && _pwJchk.ultimo.anomalie[i];
   if (!a) return;
   if (a.tipo === 'commessa' || (a.tipo === 'orfano' && !a.pos)) { pwJchkVaiBlocco(a.cIdx); return; }
-  if (a.tipo === 'orfano') { pwGoToSearchCell(a.cIdx, a.pos.sIdx, a.pos.oIdx, null); return; }
+  if (a.tipo === 'orfano') { pwGoToSearchCell(a.pos.cIdx, a.pos.sIdx, a.pos.oIdx, a.giorno !== null && a.giorno !== undefined ? a.giorno : null); return; }
   const c = a.celle[k || 0];
   if (c) pwGoToSearchCell(a.cIdx, c.sIdx, c.oIdx, c.day);
 }
@@ -541,20 +579,23 @@ function pwJchkVaiBlocco(cIdx) {
   }, 50);
 }
 
-// Orfano o sottotask cancellato su Jira: toglie solo l'indicatore da bc.jiraSubtask.
+// Orfano o sottotask cancellato su Jira: toglie solo l'indicatore (riga della tabella dei
+// giornalieri, o entry settimanale di bc.jiraSubtask).
 async function pwJchkRimuoviIndicatore(i) {
   const a = _pwJchk.ultimo && _pwJchk.ultimo.anomalie[i];
   if (!a || !a.mapKey || (a.tipo !== 'orfano' && a.tipo !== 'cancellato') || !sbGuardWrite()) return;
-  const ok = await showConfirmAsync('Togliere l\'indicatore del sottotask ' + (a.key || '') + ' (' + a.operatore + ' — ' + a.cantiere
+  const quando = a.giorno !== null && a.giorno !== undefined ? ', ' + pwJsubGiornoLabel(pwAnno, pwWeek, a.giorno) : '';
+  const ok = await showConfirmAsync('Togliere l\'indicatore del sottotask ' + (a.key || '') + ' (' + a.operatore + ' — ' + a.cantiere + quando
     + ') dalla Griglia?\n\n' + (a.tipo === 'cancellato'
       ? 'Su Jira è già stato cancellato. Se l\'operatore è ancora pianificato, la cella resterà "senza sottotask".'
       : 'Il sottotask su Jira NON viene cancellato.'), 'Togli indicatore');
-  if (ok) pwJiraSubtaskBadgeRemove(a.cIdx, a.mapKey);
+  if (ok) await pwJiraSubtaskBadgeRemove(a.cIdx, a.mapKey);
   _pwJchkRenderModal(false);
 }
 
 /* Sottotask riassegnato su Jira a un operatore che in Griglia lavora sullo stesso
-   cantiere senza sottotask: l'indicatore passa da a.operatore a lui (un pwSave). */
+   cantiere (lo stesso giorno, se giornaliero) senza sottotask: l'indicatore passa da
+   a.operatore a lui (riga della tabella, o un pwSave per un settimanale). */
 async function pwJchkSposta(i) {
   const a = _pwJchk.ultimo && _pwJchk.ultimo.anomalie[i];
   const sp = a && a.sposta;
@@ -562,13 +603,23 @@ async function pwJchkSposta(i) {
   const ok = await showConfirmAsync('Collegare in Griglia il sottotask ' + (a.key || '') + ' a ' + sp.operatore + ' (' + sp.cantiere
     + (sp.attivita ? ' · ' + sp.attivita : '') + ') invece che a ' + a.operatore + '?\n\nSu Jira è già assegnato a lui: lì non cambia niente.'
     + (a.tipo === 'riassegnato' ? '\n' + a.operatore + ' resterà pianificato senza sottotask: toglilo dalla Griglia se non lavora più qui.' : ''), 'Sposta indicatore');
-  if (ok) {
-    const bc = pwGetWeekData()[a.cIdx];
-    const entry = bc && bc.jiraSubtask && bc.jiraSubtask[sp.da];
+  const bc = ok ? pwGetWeekData()[a.cIdx] : null;
+  const giornaliero = bc && bc.commessa ? pwJsubVociDi(pwAnno, pwWeek, bc.commessa)[sp.da] : null;
+  if (giornaliero) {
+    try {
+      await pwJsubCambiaOperatore(giornaliero, bc.commessa, sp.operatore, sp.attivita);
+      sbLogActivity('Griglia: indicatore sottotask riassegnato su Jira spostato', { anno: pwAnno, week: pwWeek, key: a.key, da: a.operatore, a: sp.operatore, cantiere: sp.cantiere, giorno: sp.giorno });
+    } catch (e) {
+      showAlertModal('Indicatore non spostato: ' + (e.message || String(e)));
+      return;
+    }
+    pwJiraSubtaskApplyBadgesToDom();
+  } else if (bc) {
+    const entry = bc.jiraSubtask && bc.jiraSubtask[sp.da];
     if (entry) {
       delete bc.jiraSubtask[sp.da];
       const dest = pwJiraSubtaskLookup(bc, sp.cantiere, sp.operatore, sp.attivita);
-      if (dest) delete bc.jiraSubtask[dest.mapKey];
+      if (dest && !dest.entry._db) delete bc.jiraSubtask[dest.mapKey];
       bc.jiraSubtask[pwJiraSubtaskMapKey(sp.cantiere, sp.operatore, sp.attivita)] = Object.assign({}, entry, { ts: new Date().toISOString() });
       sbLogActivity('Griglia: indicatore sottotask riassegnato su Jira spostato', { anno: pwAnno, week: pwWeek, key: a.key, da: a.operatore, a: sp.operatore, cantiere: sp.cantiere });
       await pwSave();
@@ -578,9 +629,9 @@ async function pwJchkSposta(i) {
   _pwJchkRenderModal(false);
 }
 
-/* Toglie da bc.jiraSubtask gli indicatori dei sottotask che la verifica ha trovato
-   cancellati su Jira (un solo pwSave). Le celle ancora pianificate restano "senza
-   sottotask", pronte per una nuova creazione. */
+/* Toglie gli indicatori dei sottotask che la verifica ha trovato cancellati su Jira (una
+   delete sulla tabella per i giornalieri, un solo pwSave per i settimanali). Le celle ancora
+   pianificate restano "senza sottotask", pronte per una nuova creazione. */
 async function pwJchkTogliCancellati() {
   const lista = (_pwJchk.ultimo && _pwJchk.ultimo.cancellati) || [];
   if (!lista.length || !sbGuardWrite()) return;
@@ -588,9 +639,17 @@ async function pwJchkTogliCancellati() {
     + ' che su Jira risultano cancellati?\n\nLe celle ancora pianificate resteranno "senza sottotask".', 'Togli indicatori');
   if (ok) {
     const data = pwGetWeekData();
-    lista.forEach(({ cIdx, mapKey }) => { const bc = data[cIdx]; if (bc && bc.jiraSubtask) delete bc.jiraSubtask[mapKey]; });
+    const ids = lista.filter(x => x.id != null).map(x => x.id);
+    const settimanali = lista.filter(x => x.id == null);
+    try {
+      await pwJsubElimina(ids);
+    } catch (e) {
+      showAlertModal('Indicatori non tolti: ' + (e.message || String(e)));
+      return;
+    }
+    settimanali.forEach(({ cIdx, mapKey }) => { const bc = data[cIdx]; if (bc && bc.jiraSubtask) delete bc.jiraSubtask[mapKey]; });
     sbLogActivity('Griglia: tolti indicatori di sottotask cancellati su Jira', { anno: pwAnno, week: pwWeek, n: lista.length });
-    await pwSave();
+    if (settimanali.length) await pwSave();
     pwJiraSubtaskApplyBadgesToDom();
   }
   _pwJchkRenderModal(false);

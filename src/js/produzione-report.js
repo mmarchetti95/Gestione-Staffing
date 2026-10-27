@@ -125,19 +125,18 @@ function cpGetSquadraOpsByDay(commessa, squadra) {
 }
 
 // Attività di ogni sottotask della commessa (chiave Jira → attività), dal legame certo
-// bc.jiraSubtask ("comune|||operatore|||attività"). Un entry legacy senza attività vale solo se
-// l'operatore ha una sola attività su quel comune (stessa regola di pwJiraSubtaskLookup).
+// (pwJiraSubtaskMappa: sottotask giornalieri della tabella e settimanali di bc.jiraSubtask).
+// Un entry settimanale senza attività vale solo se l'operatore ha una sola attività su quel
+// comune (stessa regola di pwJiraSubtaskLookup).
 function cpReportAttivitaPerTicket(commessa) {
   const out = {};
   pwGetWeekData().forEach(bc => {
     if (bc.commessa !== commessa) return;
-    Object.keys(bc.jiraSubtask || {}).forEach(mk => {
-      const e = bc.jiraSubtask[mk];
+    Object.values(pwJiraSubtaskMappa(bc)).forEach(e => {
       if (!e || !e.key) return;
-      const parti = mk.split('|||');
-      let att = parti[2];
+      let att = e.attivita;
       if (att == null) {
-        const atts = pwJiraSubtaskAttivitaDiOperatore(bc, parti[0], parti[1]);
+        const atts = pwJiraSubtaskAttivitaDiOperatore(bc, e.cantiere, e.operatore);
         att = atts.length === 1 ? atts[0] : '';
       }
       if (att) out[e.key] = att;
@@ -146,9 +145,10 @@ function cpReportAttivitaPerTicket(commessa) {
   return out;
 }
 
-// Attività di un ticket del worklog: dal legame bc.jiraSubtask; se il sottotask non è stato
+// Attività di un ticket del worklog: dal legame cella→sottotask; se il sottotask non è stato
 // creato dalla Griglia, dal summary, che per i sottotask creati dall'app è
-// "Attività - Comune - Cognome - Week N" (vedi pwJiraBuildSubtaskItem).
+// "Attività - Comune - Cognome - Gio 29/10/2026" ("… - Week N" prima della v18.229.0, vedi
+// pwJiraBuildSubtaskItem).
 function cpReportAttivitaTicket(t, perTicket, attivitaNote) {
   if (perTicket[t.key]) return perTicket[t.key];
   const sm = String(t.summary || '').trim().toLowerCase();

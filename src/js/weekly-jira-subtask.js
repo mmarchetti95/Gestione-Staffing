@@ -16,7 +16,7 @@
    Edge Function per il contratto e il check di idempotenza per assignee/Task.
 */
 
-HELP_TEXTS['pw-sottotask-jira'] = 'Crea sottotask su Jira per gli operatori pianificati questa settimana su QUESTA commessa (o, se lanciato dal bottone nell\'header di una squadra, solo per quella squadra), sotto l\'Epic Jira configurato in anagrafica commessa: uno per operatore/comune ("[Attività] - [Comune] - [Cognome]").\n\nRichiede di scegliere un Task Jira per ogni comune pianificato, poi permette di selezionare puntualmente quali sottotask proposti creare davvero. Mostra sempre un\'anteprima (dryRun) prima di creare qualsiasi cosa su Jira.\n\nRichiede "Codice progetto Jira" ed "Epic Jira" configurati sulla commessa.';
+HELP_TEXTS['pw-sottotask-jira'] = 'Crea sottotask su Jira per gli operatori pianificati questa settimana su QUESTA commessa (o, se lanciato dal bottone nell\'header di una squadra, solo per quella squadra): uno per operatore, cantiere/attività e GIORNO ("[Attività] - [Comune] - [Cognome] - Gio 29/10/2026"), con data inizio e scadenza nel giorno stesso. Di solito si lancia il giovedì/venerdì per la settimana dopo, e di nuovo durante la settimana per i giorni aggiunti o cambiati: i giorni che hanno già il sottotask non vengono ricreati.\n\nRichiede di scegliere Epic e Task Jira per ogni cantiere/attività, poi permette di selezionare giorno per giorno quali sottotask creare davvero. Mostra sempre un\'anteprima (dryRun) prima di creare qualsiasi cosa su Jira.\n\nGli indicatori 🎫 sono condivisi con i colleghi. Richiede il "Codice progetto Jira" configurato sulla commessa.';
 
 /* ----- Pannello di ricerca condiviso (Epic/Task Jira) -----
    Clone parametrico del pattern "tendina custom" di weekly-strumenti.js
@@ -170,12 +170,27 @@ async function pwJiraFetchTasks(epicKey, search) {
 let _pwJiraWeightRecalc = false;
 let _pwJiraWeightInfo = null;
 
-async function pwJiraCreateSubtasks(items, dryRun, extraFields) {
+// Item per chiamata alla Edge Function: con i sottotask giornalieri una settimana ne ha
+// centinaia, e in una sola chiamata si sforava il tempo massimo. Gli item di uno stesso
+// operatore sono consecutivi, così la ricerca dei suoi sottotask esistenti sotto un Task
+// (una per coppia Task+operatore, lato server) serve a tutti i suoi giorni del blocco.
+const PW_JIRA_CHUNK = 20;
+
+async function _pwJiraInvokeCreate(body) {
+  const { data, error } = await _sbClient.functions.invoke('jira-create-subtask', { body });
+  if (error) throw new Error(await _cpEdgeErr(error, 'jira-create-subtask'));
+  if (data && data.error) throw new Error(data.error);
+  return data || {};
+}
+
+/* onProgress(fatti, totale) opzionale. In anteprima (dryRun) un blocco fallito fa fallire
+   tutto (l'utente riprova); in creazione no: i blocchi già passati hanno creato sottotask
+   veri, quindi un blocco fallito diventa un errore per ciascuno dei suoi item e si va avanti.
+   Il Production Weight si ricalcola alla fine, una chiamata per Task (mode recalcWeights). */
+async function pwJiraCreateSubtasks(items, dryRun, extraFields, onProgress) {
   if (!_sbClient || !_sbUser) throw new Error('Non connesso a Supabase.');
-  // week: usata lato server solo per il controllo anti-duplicati (vedi
-  // pwJiraBuildSubtaskItem) — l'intero batch viene sempre aperto da una
-  // singola cella/week della Griglia, quindi e' un valore di richiesta, non
-  // per-item.
+  // week: usata lato server solo per il controllo anti-duplicati degli item senza
+  // "data" (sottotask settimanali, client precedenti alla v18.229.0).
   // Production Weight: in UI resta in percentuale (50 = 50%), ma il campo Jira
   // e' normalizzato a 1 (0.5 = 50%) — inviare 50 mostrava 5000%. Conversione
   // solo qui, su copie, perche' gli stessi item servono ad anteprima e creazione.
@@ -187,11 +202,53 @@ async function pwJiraCreateSubtasks(items, dryRun, extraFields) {
     return Object.assign({}, item, { productionWeight: Math.round(pct * 100) / 10000 });
   });
   _pwJiraWeightInfo = null;
-  const { data, error } = await _sbClient.functions.invoke('jira-create-subtask', { body: { items: payloadItems, dryRun: !!dryRun, recalcWeights: _pwJiraWeightRecalc, extraFields: extraFields || {}, week: pwWeek } });
-  if (error) throw new Error(await _cpEdgeErr(error, 'jira-create-subtask'));
-  if (data && data.error) throw new Error(data.error);
-  _pwJiraWeightInfo = (data && data.weights) || null;
-  return Array.isArray(data && data.results) ? data.results : [];
+  const results = [];
+  const pesi = {}; // taskKey -> { esistenti, nuovi } (anteprima)
+  for (let i = 0; i < payloadItems.length; i += PW_JIRA_CHUNK) {
+    const chunk = payloadItems.slice(i, i + PW_JIRA_CHUNK);
+    let data;
+    try {
+      data = await _pwJiraInvokeCreate({ items: chunk, dryRun: !!dryRun, recalcWeights: !!(dryRun && _pwJiraWeightRecalc), extraFields: extraFields || {}, week: pwWeek });
+    } catch (e) {
+      if (dryRun) throw e;
+      chunk.forEach(it => results.push({ taskKey: it.taskKey, operatorEmail: it.operatorEmail, status: 'error', message: e.message || String(e) }));
+      if (onProgress) onProgress(results.length, payloadItems.length);
+      continue;
+    }
+    const res = Array.isArray(data.results) ? data.results : [];
+    chunk.forEach((it, k) => results.push(res[k] || { taskKey: it.taskKey, operatorEmail: it.operatorEmail, status: 'error', message: 'Nessuna risposta per questo sottotask' }));
+    Object.entries(data.weights || {}).forEach(([taskKey, w]) => {
+      if (!w || typeof w.esistenti !== 'number') { pesi[taskKey] = pesi[taskKey] || { errore: (w && w.errore) || 'conteggio non disponibile' }; return; }
+      const p = pesi[taskKey] && !pesi[taskKey].errore ? pesi[taskKey] : { esistenti: w.esistenti, nuovi: 0 };
+      p.nuovi += w.nuovi || 0;
+      pesi[taskKey] = p;
+    });
+    if (onProgress) onProgress(results.length, payloadItems.length);
+  }
+
+  if (dryRun && _pwJiraWeightRecalc) {
+    _pwJiraWeightInfo = {};
+    Object.entries(pesi).forEach(([taskKey, p]) => {
+      if (p.errore) { _pwJiraWeightInfo[taskKey] = { errore: p.errore }; return; }
+      const totale = p.esistenti + p.nuovi;
+      _pwJiraWeightInfo[taskKey] = { esistenti: p.esistenti, nuovi: p.nuovi, totale, peso: totale > 0 ? Math.round(10000 / totale) / 10000 : 1 };
+    });
+  } else if (!dryRun && _pwJiraWeightRecalc) {
+    const creatiPerTask = {};
+    results.forEach(r => { if (r.status === 'created' && r.key && r.taskKey) (creatiPerTask[r.taskKey] = creatiPerTask[r.taskKey] || []).push(r.key); });
+    const taskKeys = Object.keys(creatiPerTask);
+    if (taskKeys.length) _pwJiraWeightInfo = {};
+    for (const taskKey of taskKeys) {
+      if (onProgress) onProgress(results.length, payloadItems.length, 'Ricalcolo Production Weight di ' + taskKey + '…');
+      try {
+        const data = await _pwJiraInvokeCreate({ mode: 'recalcWeights', taskKey, createdKeys: creatiPerTask[taskKey] });
+        Object.assign(_pwJiraWeightInfo, data.weights || {});
+      } catch (e) {
+        _pwJiraWeightInfo[taskKey] = { errore: e.message || String(e) };
+      }
+    }
+  }
+  return results;
 }
 
 // Campi extra (Data scadenza, Stima originale, Activity Type, Target
@@ -229,25 +286,30 @@ function pwJiraOperatorEmail(nomeOperatore) {
   return op && op.email && op.email.trim() ? op.email.trim() : '';
 }
 
-function pwJiraBuildSubtaskItem(meta, task, comune, nomeOperatore, attivita) {
+// Sottotask giornaliero (v18.229.0): uno per operatore + cantiere + attività + giorno.
+// Il giorno è nel summary ("… - Gio 29/10/2026") e in "data": lato server
+// (jira-create-subtask) l'anti-duplicati cerca, fra i sottotask dell'operatore sotto il
+// Task, quello di quel giorno (marcatore gg/mm/aaaa o scadenza = giorno). Con i campi
+// presenti sul progetto, inizio e scadenza diventano il giorno stesso (vedi
+// pwJiraSubtaskOpenExtraFieldsModal).
+function pwJiraBuildSubtaskItem(meta, task, comune, nomeOperatore, attivita, giorno) {
   const op = (state.operatori || []).find(o => (o.nome_esteso || o.nome_breve) === nomeOperatore);
   const email = pwJiraOperatorEmail(nomeOperatore);
   if (!email) return null;
   const cognome = op ? pwJiraResolveCognome(op) : '';
-  // Marker "Week N" nel summary: usato lato server (jira-create-subtask) per
-  // distinguere, nel controllo anti-duplicati, un sottotask della stessa week
-  // da uno di una week precedente per lo stesso operatore/Task — un sottotask
-  // e' settimanale e nominativo, quindi assignee+Task da soli non bastano
-  // (vedi anche il campo "week" inviato a parte in pwJiraCreateSubtasks).
-  const summary = [attivita, comune, cognome].filter(Boolean).join(' - ') + ` - Week ${pwWeek}`;
+  const summary = [attivita, comune, cognome].filter(Boolean).join(' - ') + ' - ' + pwJsubGiornoLabel(pwAnno, pwWeek, giorno, true);
   return {
     projectKey: meta.jira_project_code,
     taskKey: task.key,
     operatorEmail: email,
     summary,
+    data: pwJsubDataIso(pwAnno, pwWeek, giorno),
     _comune: comune,
     _operatore: nomeOperatore,
     _attivita: attivita || '',
+    _giorno: Number(giorno),
+    _anno: pwAnno,
+    _week: pwWeek,
     // Target Production del Task padre (vedi jira-list-tasks), ereditato
     // cosi' com'e' senza ricalcolo. Puo' mancare (progetto/Task senza il
     // campo): in tal caso resta undefined e non viene mai inviato alla Edge
@@ -257,12 +319,13 @@ function pwJiraBuildSubtaskItem(meta, task, comune, nomeOperatore, attivita) {
 }
 
 /* ----- Badge persistente in Griglia (stato "sottotask già esistente/creato/errore") -----
-   Il dato vive in bc.jiraSubtask (oggetto sibling di `squadre` sul blocco
-   commessa), chiave "<comune>|||<operatore>|||<attività>" -> {status, key, url,
-   message, ts} (vedi pwJiraSubtaskMapKey): lo stesso operatore può avere due
-   sottotask sullo stesso cantiere nella stessa week, uno per attività, sotto
-   due Task diversi. Senza attività, e per tutti gli entry salvati prima della
-   v18.182.0, la chiave è "<comune>|||<operatore>" (vedi pwJiraSubtaskLookup).
+   Dalla v18.229.0 il sottotask è GIORNALIERO e il legame sta nella tabella
+   pw_jira_subtask (vedi weekly-jira-subtask-db.js), chiave
+   "<comune>|||<operatore>|||<attività>|||<giorno>" -> {status, key, url, message, ts, …}.
+   Gli entry SETTIMANALI salvati prima restano in bc.jiraSubtask (oggetto sibling di
+   `squadre` sul blocco commessa), chiave "<comune>|||<operatore>|||<attività>" (senza
+   attività, e prima della v18.182.0, "<comune>|||<operatore>"): non si scrivono più, ma
+   coprono ancora tutti i giorni della loro settimana (vedi pwJiraSubtaskLookup).
    status 'error' (fallito su Jira: sia in anteprima/dryRun — Step 1 o Step 2
    — sia in creazione reale, Step 3) mostra un badge rosso ⚠️ con il messaggio
    d'errore in tooltip, ma NON viene trattato come "coperto" altrove nel
@@ -274,11 +337,12 @@ function pwJiraBuildSubtaskItem(meta, task, comune, nomeOperatore, attivita) {
       la chiave vecchia non è più referenziata da nessuna cella (vedi
       pwJiraSubtaskApplyBadgesToDom, richiamata da pwUpdateCantiere).
    - copia/incolla di una cella o dell'intera settimana di un operatore
-      (weekly-clipboard-cantiere.js) copia solo {cantieri, attivita}, mai
-      bc.jiraSubtask: il badge non segue mai il copia/incolla su un altro
-      operatore/cantiere. */
-function pwJiraSubtaskMapKey(comune, operatoreNome, attivita) {
+      (weekly-clipboard-cantiere.js) copia solo {cantieri, attivita}, mai il
+      legame: il badge non segue mai il copia/incolla su un altro
+      operatore/cantiere/giorno. */
+function pwJiraSubtaskMapKey(comune, operatoreNome, attivita, giorno) {
   const a = (attivita || '').trim();
+  if (giorno !== undefined && giorno !== null && giorno !== '') return comune + '|||' + operatoreNome + '|||' + a + '|||' + Number(giorno);
   return comune + '|||' + operatoreNome + (a ? '|||' + a : '');
 }
 
@@ -295,13 +359,47 @@ function pwJiraSubtaskAttivitaDiOperatore(bc, comune, operatoreNome) {
   return [...out];
 }
 
-// Entry del sottotask per comune+operatore+attività. Un entry legacy (chiave
-// senza attività, salvato prima della v18.182.0, quando esisteva un solo
-// sottotask per comune+operatore) vale solo se l'operatore ha UNA sola
-// attività su quel comune: con due attività non si sa a quale apparteneva, e
-// attribuirlo a entrambe farebbe saltare la creazione del secondo sottotask.
-function pwJiraSubtaskLookup(bc, comune, operatoreNome, attivita) {
-  const map = (bc && bc.jiraSubtask) || {};
+// Attività del sottotask di una voce: la sua, o — per un giorno senza attività — quella
+// che l'operatore ha sullo stesso cantiere nel resto della settimana (un giorno senza
+// attività non fa un sottotask "senza attività" a sé). Stessa regola in creazione
+// (pwJiraSubtaskInit), badge, controllo sottotask, Controllo Produzione e anomalie.
+function pwJiraAttivitaSottotask(bc, comune, operatoreNome, attivita) {
+  return attivita || pwJiraSubtaskAttivitaDiOperatore(bc, comune, operatoreNome).find(Boolean) || '';
+}
+
+/* Mappa di TUTTI i sottotask di un blocco in una settimana (anno/week: di default quella
+   mostrata): gli entry settimanali di bc.jiraSubtask più quelli giornalieri della tabella,
+   ciascuno con { cantiere, operatore, attivita, giorno } (giorno null = settimanale;
+   attivita null = entry settimanale senza attività, vedi pwJiraSubtaskLookup). Copia nuova
+   a ogni chiamata: per chi scorre i sottotask (controllo, report, anomalie, Mappa). */
+function pwJiraSubtaskMappa(bc, anno, week) {
+  const out = {};
+  if (!bc) return out;
+  Object.keys(bc.jiraSubtask || {}).forEach(mk => {
+    const e = bc.jiraSubtask[mk];
+    if (!e) return;
+    const p = mk.split('|||');
+    out[mk] = Object.assign({}, e, { cantiere: p[0], operatore: p[1] || '', attivita: p.length > 2 ? p[2] : null, giorno: null });
+  });
+  if (bc.commessa) Object.assign(out, pwJsubVociDi(anno == null ? pwAnno : anno, week == null ? pwWeek : week, bc.commessa));
+  return out;
+}
+
+/* Entry del sottotask per comune+operatore+attività(+giorno). Prima il sottotask
+   giornaliero della tabella; poi quello settimanale di bc.jiraSubtask, che copre tutti i
+   giorni della sua settimana. Un entry legacy (chiave senza attività, salvato prima della
+   v18.182.0, quando esisteva un solo sottotask per comune+operatore) vale solo se
+   l'operatore ha UNA sola attività su quel comune: con due attività non si sa a quale
+   apparteneva, e attribuirlo a entrambe farebbe saltare la creazione del secondo.
+   anno/week: di default la settimana mostrata. */
+function pwJiraSubtaskLookup(bc, comune, operatoreNome, attivita, giorno, anno, week) {
+  if (!bc) return null;
+  if (giorno !== undefined && giorno !== null && bc.commessa) {
+    const mk = pwJiraSubtaskMapKey(comune, operatoreNome, attivita, giorno);
+    const e = pwJsubVociDi(anno == null ? pwAnno : anno, week == null ? pwWeek : week, bc.commessa)[mk];
+    if (e) return { entry: e, mapKey: mk };
+  }
+  const map = bc.jiraSubtask || {};
   const mapKey = pwJiraSubtaskMapKey(comune, operatoreNome, attivita);
   if (map[mapKey]) return { entry: map[mapKey], mapKey };
   const legacyKey = comune + '|||' + operatoreNome;
@@ -311,13 +409,13 @@ function pwJiraSubtaskLookup(bc, comune, operatoreNome, attivita) {
   return null;
 }
 
-function pwJiraSubtaskEntry(bc, comune, operatoreNome, attivita) {
-  const found = pwJiraSubtaskLookup(bc, comune, operatoreNome, attivita);
+function pwJiraSubtaskEntry(bc, comune, operatoreNome, attivita, giorno, anno, week) {
+  const found = pwJiraSubtaskLookup(bc, comune, operatoreNome, attivita, giorno, anno, week);
   return found ? found.entry : null;
 }
 
-// Tutti gli entry di un comune+operatore, qualunque attività (per chi, come la
-// Mappa, raccoglie i sottotask di un cantiere senza distinguere l'attività).
+// Tutti gli entry di un comune+operatore, qualunque attività e giorno (per chi, come la
+// Mappa, raccoglie i sottotask di un cantiere). jiraMap = pwJiraSubtaskMappa(...).
 function pwJiraSubtaskEntriesFor(jiraMap, comune, operatoreNome) {
   const prefix = comune + '|||' + operatoreNome;
   return Object.keys(jiraMap || {})
@@ -325,20 +423,28 @@ function pwJiraSubtaskEntriesFor(jiraMap, comune, operatoreNome) {
     .map(k => jiraMap[k]);
 }
 
-function pwJiraSubtaskMarkBadge(cIdx, comune, operatoreNome, attivita, status, key, url, message) {
+/* Salva l'esito di uno o più sottotask giornalieri del blocco cIdx:
+   voci = [{ comune, operatore, attivita, giorno, status, key, url, message, taskKey }].
+   Una sola scrittura sulla tabella; in errore avvisa sopra il flusso aperto (il sottotask
+   su Jira c'è comunque: la prossima verifica lo ritrova come "già esistente"). */
+async function pwJiraSubtaskMarkBadges(cIdx, voci) {
   if (!sbGuardWrite()) return;
-  const bc = pwGetWeekData()[cIdx];
-  if (!bc || !comune || !operatoreNome) return;
-  if (!bc.jiraSubtask) bc.jiraSubtask = {};
-  const mapKey = pwJiraSubtaskMapKey(comune, operatoreNome, attivita);
-  // Un entry legacy dello stesso comune+operatore, se l'attività è una sola,
-  // descrive questo stesso sottotask: lo sostituisce invece di duplicarlo.
-  const legacyKey = comune + '|||' + operatoreNome;
-  if (legacyKey !== mapKey && bc.jiraSubtask[legacyKey] && pwJiraSubtaskAttivitaDiOperatore(bc, comune, operatoreNome).length <= 1) {
-    delete bc.jiraSubtask[legacyKey];
+  // anno/week delle voci (la settimana in cui il flusso è partito), anche se nel
+  // frattempo la Griglia ne mostra un'altra.
+  const v0 = (voci || [])[0] || {};
+  const anno = v0.anno != null ? v0.anno : pwAnno, week = v0.week != null ? v0.week : pwWeek;
+  const bc = ((pwData[anno] || {})[week] || [])[cIdx];
+  if (!bc || !bc.commessa) return;
+  const lista = (voci || []).filter(v => v && v.comune && v.operatore && v.giorno !== undefined && v.giorno !== null)
+    .map(v => Object.assign({}, v, { commessa: bc.commessa, cantiere: v.comune, anno, week }));
+  if (!lista.length) return;
+  try {
+    await pwJsubSalva(lista);
+  } catch (e) {
+    const msg = 'Collegamento ai sottotask Jira non salvato: ' + (e.message || String(e))
+      + '\nI sottotask su Jira non cambiano: rifai la verifica per ricollegarli.';
+    if (document.querySelector('#modal-root .modal-backdrop')) pwJiraFlowAlert(msg); else showAlertModal(msg);
   }
-  bc.jiraSubtask[mapKey] = { status, key: key || '', url: url || '', message: message || '', ts: new Date().toISOString() };
-  pwSave();
   pwJiraSubtaskApplyBadgesToDom();
 }
 
@@ -346,8 +452,11 @@ function pwJiraSubtaskMarkBadge(cIdx, comune, operatoreNome, attivita, status, k
 // non genera mai un item da inviare a Jira, quindi va marcato "a mano" con lo
 // stesso badge rosso ⚠️ usato per gli errori restituiti dalla Edge Function,
 // altrimenti sparisce dalla creazione senza alcuna evidenza in griglia.
-function pwJiraSubtaskMarkMissingEmail(cIdx, comune, operatoreNome, attivita) {
-  pwJiraSubtaskMarkBadge(cIdx, comune, operatoreNome, attivita, 'error', '', '', 'Email non trovata in anagrafica: sottotask non creato.');
+function pwJiraSubtaskMarkMissingEmail(cIdx, comune, operatoreNome, attivita, giorni) {
+  return pwJiraSubtaskMarkBadges(cIdx, (giorni || []).map(g => ({
+    comune, operatore: operatoreNome, attivita, giorno: g, status: 'error',
+    message: 'Email non trovata in anagrafica: sottotask non creato.',
+  })));
 }
 
 // Un entry va considerato "risolto" (sottotask presente su Jira, o già
@@ -360,12 +469,20 @@ function pwJiraSubtaskIsResolved(entry) {
   return !!entry && (entry.status === 'created' || entry.status === 'already_exists');
 }
 
-function pwJiraSubtaskBadgeRemove(cIdx, mapKey) {
+/* Toglie un indicatore: riga della tabella (giornaliero) o entry di bc.jiraSubtask
+   (settimanale, vale per tutti i giorni). Su Jira non cambia niente. */
+async function pwJiraSubtaskBadgeRemove(cIdx, mapKey) {
   if (!sbGuardWrite()) return;
   const bc = pwGetWeekData()[cIdx];
-  if (!bc || !bc.jiraSubtask) return;
-  delete bc.jiraSubtask[mapKey];
-  pwSave();
+  if (!bc) return;
+  const e = bc.commessa ? pwJsubVociDi(pwAnno, pwWeek, bc.commessa)[mapKey] : null;
+  if (e && e.id) {
+    try { await pwJsubElimina([e.id]); } catch (err) { showAlertModal('Indicatore non tolto: ' + (err.message || String(err))); return; }
+  } else {
+    if (!bc.jiraSubtask || !bc.jiraSubtask[mapKey]) return;
+    delete bc.jiraSubtask[mapKey];
+    await pwSave();
+  }
   pwJiraSubtaskApplyBadgesToDom();
 }
 
@@ -380,30 +497,35 @@ function pwJiraSubtaskBadgeRemove(cIdx, mapKey) {
 // includeCreated=true solo dopo la creazione reale (Step 3), dove va marcato
 // anche "created".
 function pwJiraSubtaskApplyResultsToBadges(cIdx, items, results, includeCreated) {
+  const voci = [];
   (results || []).forEach((r, i) => {
     const item = items[i];
     if (!item) return;
     if (r.status === 'already_exists' || r.status === 'error' || (includeCreated && r.status === 'created')) {
-      pwJiraSubtaskMarkBadge(cIdx, item._comune, item._operatore, item._attivita, r.status, r.key, r.url, r.message);
+      voci.push({ anno: item._anno, week: item._week, comune: item._comune, operatore: item._operatore, attivita: item._attivita, giorno: item._giorno,
+        status: r.status, key: r.key, url: r.url, message: r.message, taskKey: item.taskKey });
     }
   });
+  return pwJiraSubtaskMarkBadges(cIdx, voci);
 }
 
-function pwJiraSubtaskBadgeInnerHtml(cIdx, bc, operatoreNome, cantiere, attivita) {
+function pwJiraSubtaskBadgeInnerHtml(cIdx, bc, operatoreNome, cantiere, attivita, giorno) {
   const c = (cantiere || '').trim();
-  if (!c || !operatoreNome || !bc || !bc.jiraSubtask) return '';
-  const found = pwJiraSubtaskLookup(bc, c, operatoreNome, attivita);
+  if (!c || !operatoreNome || !bc) return '';
+  const found = pwJiraSubtaskLookup(bc, c, operatoreNome, pwJiraAttivitaSottotask(bc, c, operatoreNome, attivita), giorno);
   if (!found) return '';
   const { entry, mapKey } = found;
   const isError = entry.status === 'error';
   const label = entry.status === 'created' ? 'creato' : (isError ? 'creazione fallita' : 'già esistente');
-  const title = `Sottotask Jira ${label}${entry.key ? ': ' + entry.key : ''}${isError && entry.message ? ' — ' + entry.message : ''}`;
+  const quando = entry._db ? ' (' + pwJsubGiornoLabel(pwAnno, pwWeek, entry.giorno) + ')' : ' (settimanale)';
+  const title = `Sottotask Jira${quando} ${label}${entry.key ? ': ' + entry.key : ''}${isError && entry.message ? ' — ' + entry.message : ''}`;
   const body = (isError ? '⚠️' : '🎫') + (entry.key ? ' ' + esc(entry.key) : '');
   const linkClass = 'pw-jira-sub-link' + (isError ? ' pw-jira-sub-link-error' : '');
   const linkHtml = entry.url
     ? `<a href="${esc(entry.url)}" target="_blank" rel="noopener" class="${linkClass}" title="${esc(title)}" onclick="event.stopPropagation()">${body}</a>`
     : `<span class="${linkClass}" title="${esc(title)}">${body}</span>`;
-  return `${linkHtml}<button type="button" class="pw-jira-sub-remove" title="Rimuovi indicatore sottotask Jira" onclick="event.stopPropagation();pwJiraSubtaskBadgeRemove(${cIdx},'${jsAttr(mapKey)}')">✕</button>`;
+  const rimuoviTitle = entry._db ? 'Rimuovi indicatore sottotask Jira di questo giorno' : 'Rimuovi indicatore sottotask Jira settimanale (tutti i giorni)';
+  return `${linkHtml}<button type="button" class="pw-jira-sub-remove" title="${rimuoviTitle}" onclick="event.stopPropagation();pwJiraSubtaskBadgeRemove(${cIdx},'${jsAttr(mapKey)}')">✕</button>`;
 }
 
 // Wrapper con data-* usato in pwRender() (weekly-operatore-modal.js): stesso
@@ -411,7 +533,7 @@ function pwJiraSubtaskBadgeInnerHtml(cIdx, bc, operatoreNome, cantiere, attivita
 // weekly-meteo.js), per poter aggiornare il singolo badge senza un pwRender()
 // completo (che farebbe perdere il focus a un input cantiere/attività).
 function pwJiraSubtaskBadgeHtml(cIdx, sIdx, oIdx, dKey, ci, bc, operatoreNome, cantiere, attivita) {
-  return `<span class="pw-jira-sub-slot" data-cidx="${cIdx}" data-sidx="${sIdx}" data-oidx="${oIdx}" data-day="${dKey}" data-idx="${ci}">${pwJiraSubtaskBadgeInnerHtml(cIdx, bc, operatoreNome, cantiere, attivita)}</span>`;
+  return `<span class="pw-jira-sub-slot" data-cidx="${cIdx}" data-sidx="${sIdx}" data-oidx="${oIdx}" data-day="${dKey}" data-idx="${ci}">${pwJiraSubtaskBadgeInnerHtml(cIdx, bc, operatoreNome, cantiere, attivita, Number(dKey))}</span>`;
 }
 
 function pwJiraSubtaskApplyBadgesToDom() {
@@ -423,7 +545,7 @@ function pwJiraSubtaskApplyBadgesToDom() {
     if (!bc || !op) { slot.innerHTML = ''; return; }
     const g = op.giorni && op.giorni[dKey];
     const cantieri = pwCellCantieriRaw(g);
-    slot.innerHTML = pwJiraSubtaskBadgeInnerHtml(cIdx, bc, op.nome, cantieri[ci] || '', pwCellAttivitaAt(g, ci));
+    slot.innerHTML = pwJiraSubtaskBadgeInnerHtml(cIdx, bc, op.nome, cantieri[ci] || '', pwCellAttivitaAt(g, ci), dKey);
   });
   // Bottone/evidenziazione del controllo sottotask (weekly-jira-check.js).
   pwJchkRefresh();
@@ -453,49 +575,42 @@ function pwJiraSubtaskInit(cIdx, sIdx) {
   // commessa, o per la sola squadra scelta se scopedSquadra e' valorizzato):
   // ogni cantiere della cella ha la sua attività (pwCellVoci), e lo stesso
   // comune con due attività diverse diventa due gruppi, ciascuno col suo
-  // Epic/Task — un sottotask per operatore per gruppo. Se un operatore ha su
-  // un comune sia giorni con attività sia giorni senza, quelli senza non fanno
-  // un gruppo a sé (produrrebbero un secondo sottotask "senza attività" per lo
-  // stesso lavoro). Ogni gruppo viene attribuito alla prima squadra in cui
-  // compare il comune, per raggruppare la UI per squadra.
-  const perComuneOp = {}; // comune -> nomeOp -> Set(attività)
+  // Epic/Task. Dentro il gruppo, un sottotask per operatore per GIORNO
+  // (gr.giorni[operatore]). Un giorno senza attività va nel gruppo
+  // dell'attività che l'operatore ha sullo stesso comune nel resto della
+  // settimana (pwJiraAttivitaSottotask), non in un gruppo "senza attività" a
+  // sé. Ogni gruppo viene attribuito alla prima squadra in cui compare il
+  // comune, per raggruppare la UI per squadra.
   const comuneSquadra = {}; // comune -> nome squadra
   const squadreOrder = []; // ordine di comparsa delle squadre che hanno almeno un comune
+  const gruppi = []; // { comune, attivita, squadra, operatori: string[], giorni: { operatore: number[] } }
+  const byKey = {};
   squadreScope.forEach(sq => {
     const sqNome = sq.nome || 'Squadra';
     (sq.operatori || []).forEach(op => {
       if (!op.nome) return;
       const giorni = op.giorni || {};
-      Object.keys(giorni).forEach(dKey => {
+      Object.keys(giorni).filter(d => /^[0-5]$/.test(d)).sort().forEach(dKey => {
         pwCellVoci(giorni[dKey]).forEach(v => {
-          if (!perComuneOp[v.cantiere]) {
-            perComuneOp[v.cantiere] = {};
+          if (!comuneSquadra[v.cantiere]) {
             comuneSquadra[v.cantiere] = sqNome;
             if (!squadreOrder.includes(sqNome)) squadreOrder.push(sqNome);
           }
-          if (!perComuneOp[v.cantiere][op.nome]) perComuneOp[v.cantiere][op.nome] = new Set();
-          perComuneOp[v.cantiere][op.nome].add(v.attivita);
+          const attivita = pwJiraAttivitaSottotask(bc, v.cantiere, op.nome, v.attivita);
+          const k = v.cantiere + '|||' + attivita;
+          if (!byKey[k]) {
+            byKey[k] = { comune: v.cantiere, attivita, squadra: comuneSquadra[v.cantiere], operatori: [], giorni: {} };
+            gruppi.push(byKey[k]);
+          }
+          const gr = byKey[k];
+          if (!gr.giorni[op.nome]) { gr.giorni[op.nome] = []; gr.operatori.push(op.nome); }
+          const g = Number(dKey);
+          if (!gr.giorni[op.nome].includes(g)) gr.giorni[op.nome].push(g);
         });
       });
     });
   });
-
-  const gruppi = []; // { comune, attivita, squadra, operatori: string[] }
-  const byKey = {};
-  Object.keys(perComuneOp).forEach(comune => {
-    Object.keys(perComuneOp[comune]).forEach(nomeOp => {
-      const set = perComuneOp[comune][nomeOp];
-      if (set.size > 1) set.delete('');
-      set.forEach(attivita => {
-        const k = comune + '|||' + attivita;
-        if (!byKey[k]) {
-          byKey[k] = { comune, attivita, squadra: comuneSquadra[comune], operatori: [] };
-          gruppi.push(byKey[k]);
-        }
-        byKey[k].operatori.push(nomeOp);
-      });
-    });
-  });
+  gruppi.forEach(gr => Object.values(gr.giorni).forEach(arr => arr.sort((a, b) => a - b)));
 
   if (gruppi.length === 0) {
     showAlertModal(scopedSquadra ? 'Nessun cantiere pianificato questa settimana per questa squadra.' : 'Nessun cantiere pianificato questa settimana per questa commessa.');
@@ -508,6 +623,26 @@ function pwJiraSubtaskInit(cIdx, sIdx) {
 // Etichetta di un gruppo comune+attività nelle modali Jira.
 function pwJiraGruppoLabel(comune, attivita) {
   return comune + (attivita ? ' · ' + attivita : '');
+}
+
+// Item (uno per operatore per giorno) di un gruppo comune+attività col Task scelto, più
+// gli operatori senza email (nessun item: vanno segnalati, vedi pwJiraOperatorEmail).
+function pwJiraItemsDelGruppo(meta, task, gr) {
+  const items = [];
+  const noEmail = [];
+  gr.operatori.forEach(nomeOp => {
+    if (!pwJiraOperatorEmail(nomeOp)) { noEmail.push(nomeOp); return; }
+    (gr.giorni[nomeOp] || []).forEach(g => {
+      const built = pwJiraBuildSubtaskItem(meta, task, gr.comune, nomeOp, gr.attivita, g);
+      if (built) items.push(built);
+    });
+  });
+  return { items, noEmail };
+}
+
+// "Lun, Mar, Gio" — giorni di un operatore in un gruppo.
+function pwJiraGiorniLabel(giorni) {
+  return (giorni || []).map(g => PW_JSUB_GIORNI[g]).join(', ');
 }
 
 /* ----- Navigazione tra i passi e avvisi che non chiudono il flusso -----
@@ -576,6 +711,7 @@ function pwJiraFlowResultScreen(commessaNome, bodyHtml, onRetry, retryLabel) {
 function pwJiraSubtaskOpenComuniModal(cIdx, commessaNome, meta, gruppi, squadreOrder) {
   const root = document.getElementById('modal-root');
   _pwJiraSteps = []; // nuovo flusso: nessun passo precedente
+  _pwJiraWeightRecalc = false; // le verifiche di questo passo non contano i pesi
 
   // Comuni per cui TUTTI gli operatori hanno già un sottotask (creato o già
   // esistente, vedi bc.jiraSubtask) partono con "salta" pre-selezionato e i
@@ -583,7 +719,7 @@ function pwJiraSubtaskOpenComuniModal(cIdx, commessaNome, meta, gruppi, squadreO
   // Epic/Task per un comune già completamente coperto solo per poi doverlo
   // saltare a mano. Resta comunque deselezionabile per rifare la verifica.
   const bcForBadges = pwGetWeekData()[cIdx];
-  const entryOf = (gr, op) => pwJiraSubtaskEntry(bcForBadges, gr.comune, op, gr.attivita);
+  const entryOf = (gr, op, g) => pwJiraSubtaskEntry(bcForBadges, gr.comune, op, gr.attivita, g);
 
   const bySquadra = {};
   (squadreOrder || []).forEach(sq => { bySquadra[sq] = []; });
@@ -597,7 +733,10 @@ function pwJiraSubtaskOpenComuniModal(cIdx, commessaNome, meta, gruppi, squadreO
   function rowHtml(i) {
     const gr = gruppi[i];
     const operatori = gr.operatori;
-    const doneOperatori = operatori.filter(op => pwJiraSubtaskIsResolved(entryOf(gr, op)));
+    // Unità = operatore + giorno: un sottotask per ciascuna.
+    const coppie = [];
+    operatori.forEach(op => (gr.giorni[op] || []).forEach(g => coppie.push({ op, g })));
+    const doneCoppie = coppie.filter(c => pwJiraSubtaskIsResolved(entryOf(gr, c.op, c.g)));
     // Calcolato subito, indipendentemente da badge pregressi e dalla scelta
     // di Epic/Task, così un operatore senza email in anagrafica (es. appena
     // inserito, mai ancora tentato per questo comune) è visibile fin dalla
@@ -606,11 +745,12 @@ function pwJiraSubtaskOpenComuniModal(cIdx, commessaNome, meta, gruppi, squadreO
     const noEmailOperatori = operatori.filter(op => !pwJiraOperatorEmail(op));
     // Esclude chi è già coperto da noEmailNote sotto, per non duplicare lo
     // stesso operatore in due avvisi rossi separati.
-    const erroredOperatori = operatori.filter(op => { const e = entryOf(gr, op); return e && e.status === 'error'; }).filter(op => !noEmailOperatori.includes(op));
-    const allDone = operatori.length > 0 && doneOperatori.length === operatori.length;
-    const someDone = doneOperatori.length > 0 && !allDone;
-    const operatoriNote = someDone ? ` <span class="text-blue-600">(${doneOperatori.length}/${operatori.length} già con sottotask)</span>` : '';
-    const doneNote = allDone ? '<div class="text-[11px] text-blue-700 mb-1">🎫 Sottotask già presenti per tutti gli operatori — "salta" pre-selezionato, deseleziona per rifare la verifica.</div>' : '';
+    const erroredOperatori = operatori.filter(op => (gr.giorni[op] || []).some(g => { const e = entryOf(gr, op, g); return e && e.status === 'error'; })).filter(op => !noEmailOperatori.includes(op));
+    const allDone = coppie.length > 0 && doneCoppie.length === coppie.length;
+    const someDone = doneCoppie.length > 0 && !allDone;
+    const operatoriNote = someDone ? ` <span class="text-blue-600">(${doneCoppie.length}/${coppie.length} giornate già con sottotask)</span>` : '';
+    const operatoriHtml = operatori.map(op => esc(op) + ' <span class="text-slate-400">(' + esc(pwJiraGiorniLabel(gr.giorni[op])) + ')</span>').join(', ');
+    const doneNote = allDone ? '<div class="text-[11px] text-blue-700 mb-1">🎫 Sottotask già presenti per tutti i giorni di tutti gli operatori — "salta" pre-selezionato, deseleziona per rifare la verifica.</div>' : '';
     const errorNote = erroredOperatori.length ? `<div class="text-[11px] text-red-700 mb-1">⚠️ Creazione fallita per: ${erroredOperatori.map(esc).join(', ')} — ritenta.</div>` : '';
     const noEmailNote = noEmailOperatori.length ? `<div class="text-[11px] text-red-700 mb-1">⚠️ Email mancante in anagrafica, verranno esclusi: ${noEmailOperatori.map(esc).join(', ')}</div>` : '';
     return `<div class="border border-slate-200 rounded p-2 mb-2" data-comune-idx="${i}">
@@ -620,7 +760,7 @@ function pwJiraSubtaskOpenComuniModal(cIdx, commessaNome, meta, gruppi, squadreO
           <input type="checkbox" class="pw-jira-skip-comune" data-idx="${i}"${allDone ? ' checked' : ''}> salta
         </label>
       </div>
-      <div class="text-[11px] text-slate-500 mb-1">Operatori: ${operatori.map(esc).join(', ')}${operatoriNote}</div>
+      <div class="text-[11px] text-slate-500 mb-1">Operatori: ${operatoriHtml}${operatoriNote}</div>
       ${doneNote}
       ${errorNote}
       ${noEmailNote}
@@ -712,17 +852,12 @@ function pwJiraSubtaskOpenComuniModal(cIdx, commessaNome, meta, gruppi, squadreO
     const task = chosenTasks[idx];
     if (!task) { if (statusEl) statusEl.innerHTML = ''; return; }
     const gr = gruppi[idx];
-    const items = [];
-    const noEmail = [];
-    gr.operatori.forEach(nomeOp => {
-      const built = pwJiraBuildSubtaskItem(meta, task, gr.comune, nomeOp, gr.attivita);
-      if (built) items.push(built); else noEmail.push(nomeOp);
-    });
+    const { items, noEmail } = pwJiraItemsDelGruppo(meta, task, gr);
     // Un operatore senza email va segnalato anche quando NON è l'unico del
     // comune (items.length > 0): altrimenti resta escluso senza alcun avviso,
     // visibile solo — se lo si nota — nel piccolo elenco "Esclusi" in fondo
     // all'anteprima finale (vedi Tajar Lico, caso segnalato dall'utente).
-    noEmail.forEach(nomeOp => pwJiraSubtaskMarkMissingEmail(cIdx, gr.comune, nomeOp, gr.attivita));
+    noEmail.forEach(nomeOp => pwJiraSubtaskMarkMissingEmail(cIdx, gr.comune, nomeOp, gr.attivita, gr.giorni[nomeOp]));
     const noEmailHtml = noEmail.length ? `<span class="text-red-700">⚠️ senza email: ${noEmail.map(esc).join(', ')}</span>&nbsp; ` : '';
     if (items.length === 0) {
       if (statusEl) statusEl.innerHTML = noEmailHtml || '<span class="text-amber-600">Nessuna email operatore trovata in anagrafica.</span>';
@@ -843,11 +978,11 @@ function pwJiraSubtaskOpenComuniModal(cIdx, commessaNome, meta, gruppi, squadreO
       const label = pwJiraGruppoLabel(gr.comune, gr.attivita);
       const skipChk = root.querySelector(`.pw-jira-skip-comune[data-idx="${i}"]`);
       if (skipChk && skipChk.checked) { skipped.push(label); return; }
-      const task = chosenTasks[i];
-      gr.operatori.forEach(nomeOp => {
-        const built = pwJiraBuildSubtaskItem(meta, task, gr.comune, nomeOp, gr.attivita);
-        if (built) items.push(built);
-        else { skipped.push(`${label} / ${nomeOp} (email non trovata in anagrafica)`); pwJiraSubtaskMarkMissingEmail(cIdx, gr.comune, nomeOp, gr.attivita); }
+      const built = pwJiraItemsDelGruppo(meta, chosenTasks[i], gr);
+      items.push(...built.items);
+      built.noEmail.forEach(nomeOp => {
+        skipped.push(`${label} / ${nomeOp} (email non trovata in anagrafica)`);
+        pwJiraSubtaskMarkMissingEmail(cIdx, gr.comune, nomeOp, gr.attivita, gr.giorni[nomeOp]);
       });
     });
     if (items.length === 0) { pwJiraFlowAlert('Nessun sottotask da creare' + (skipped.length ? ':\n' + skipped.join('\n') : '.')); return; }
@@ -865,29 +1000,41 @@ function pwJiraSubtaskOpenComuniModal(cIdx, commessaNome, meta, gruppi, squadreO
 function pwJiraSubtaskOpenSelectItemsModal(cIdx, commessaNome, meta, items, skippedComuni) {
   const root = document.getElementById('modal-root');
   const bcForBadges = pwGetWeekData()[cIdx];
-  // Un operatore/comune che ha già un sottotask (creato o già esistente) parte
-  // deselezionato: inutile riproporlo per poi doverlo scartare a mano. Resta
-  // comunque visibile e riselezionabile (es. per rifare la verifica).
-  const rows = items.map((item, i) => {
-    const entry = pwJiraSubtaskEntry(bcForBadges, item._comune || '', item._operatore || '', item._attivita);
-    const already = pwJiraSubtaskIsResolved(entry) ? entry : null;
-    const erroredBefore = entry && entry.status === 'error';
-    let noteHtml = '';
-    if (already) noteHtml = ` <span class="text-blue-600">🎫 già presente${already.key ? ' · ' + esc(already.key) : ''}</span>`;
-    else if (erroredBefore) noteHtml = ` <span class="text-red-700">⚠️ tentativo precedente fallito${entry.message ? ' · ' + esc(entry.message) : ''}</span>`;
-    return `<label data-help-key="pw-jira-seleziona-sottotask" class="flex items-center gap-2 border-b border-slate-100 py-1.5 text-sm cursor-pointer${already ? ' opacity-70' : ''}">
-      <input type="checkbox" class="pw-jira-select-item" data-idx="${i}"${already ? '' : ' checked'}>
-      <div class="min-w-0">
-        <div class="truncate">${esc(pwJiraGruppoLabel(item._comune || '', item._attivita))} — ${esc(item._operatore || '')} <span class="text-[11px] text-slate-400">(${esc(item.taskKey || '')})</span>${noteHtml}</div>
-        <div class="text-[11px] text-slate-400 truncate">${esc(item.summary || '')}</div>
-      </div>
-    </label>`;
+  // Una riga per comune+attività+operatore (stesso Task), con una casella per giorno:
+  // ogni casella è un sottotask. Un giorno che ha già il suo sottotask (creato o già
+  // esistente) parte deselezionato: inutile riproporlo per poi doverlo scartare a mano.
+  // Resta comunque visibile e riselezionabile (es. per rifare la verifica).
+  const righe = [];
+  const perRiga = {};
+  items.forEach((item, i) => {
+    const k = [item._comune, item._attivita, item._operatore, item.taskKey].join('|||');
+    if (!perRiga[k]) { perRiga[k] = { item, idx: [] }; righe.push(perRiga[k]); }
+    perRiga[k].idx.push(i);
+  });
+  let nGia = 0;
+  const rows = righe.map(({ item, idx }) => {
+    const giorni = idx.map(i => {
+      const it = items[i];
+      const entry = pwJiraSubtaskEntry(bcForBadges, it._comune || '', it._operatore || '', it._attivita, it._giorno);
+      const already = pwJiraSubtaskIsResolved(entry) ? entry : null;
+      if (already) nGia++;
+      const errored = !already && entry && entry.status === 'error';
+      const stato = already ? ' 🎫' : (errored ? ' ⚠️' : '');
+      const title = already ? 'Già presente' + (already.key ? ': ' + already.key : '') + (already._db ? '' : ' (sottotask settimanale)')
+        : (errored ? 'Tentativo precedente fallito' + (entry.message ? ': ' + entry.message : '') : it.summary);
+      return `<label data-help-key="pw-jira-seleziona-sottotask" class="pw-jira-day-chip inline-flex items-center gap-1 border rounded px-1.5 py-0.5 text-[11px] cursor-pointer whitespace-nowrap ${already ? 'border-blue-200 bg-blue-50 text-blue-800' : (errored ? 'border-red-200 bg-red-50 text-red-800' : 'border-slate-300 bg-white text-slate-700')}" title="${esc(title)}">
+        <input type="checkbox" class="pw-jira-select-item" data-idx="${i}"${already ? '' : ' checked'}>${esc(pwJsubGiornoLabel(pwAnno, pwWeek, it._giorno))}${stato}</label>`;
+    }).join('');
+    return `<div class="border-b border-slate-100 py-1.5 text-sm">
+      <div class="truncate mb-1">${esc(pwJiraGruppoLabel(item._comune || '', item._attivita))} — ${esc(item._operatore || '')} <span class="text-[11px] text-slate-400">(${esc(item.taskKey || '')})</span></div>
+      <div class="flex flex-wrap gap-1">${giorni}</div>
+    </div>`;
   }).join('');
 
   root.innerHTML = `<div class="modal-backdrop"><div class="bg-white rounded-lg shadow-xl w-full max-w-xl mx-4 my-8 p-5 max-h-[90vh] overflow-y-auto">
     <h3 class="font-semibold text-slate-900 mb-1">Crea sottotask Jira — ${esc(commessaNome)}</h3>
     <div class="flex items-center justify-between mb-2">
-      <p class="text-xs text-slate-500">Seleziona i sottotask da creare (${items.length} totali).</p>
+      <p class="text-xs text-slate-500">Un sottotask per operatore per giorno: seleziona quelli da creare (${items.length} totali${nGia ? ', ' + nGia + ' già presenti' : ''}).</p>
       <div class="flex gap-2">
         <button type="button" id="pw-jira-select-all" class="text-[11px] text-teal-700 hover:underline">Seleziona tutti</button>
         <button type="button" id="pw-jira-select-none" class="text-[11px] text-slate-500 hover:underline">Deseleziona tutti</button>
@@ -915,16 +1062,14 @@ function pwJiraSubtaskOpenSelectItemsModal(cIdx, commessaNome, meta, items, skip
   };
 }
 
-// Stima originale = Data di scadenza - Start date pianificato (in giorni,
-// coerente con la convenzione Jira "1d" = 1 giornata lavorativa). Richiamata
-// sia per il valore iniziale del form sia live quando l'utente cambia una
-// delle due date (vedi listener su duedate/startDatePianificato sotto).
-function pwJiraComputeOriginalEstimate(startIso, dueIso) {
-  const start = new Date(startIso + 'T00:00:00Z');
-  const due = new Date(dueIso + 'T00:00:00Z');
-  if (isNaN(start) || isNaN(due)) return '';
-  const diffDays = Math.round((due - start) / 86400000);
-  return (diffDays > 0 ? diffDays : 1) + 'd';
+// Sottotask giornaliero: inizio e scadenza = il giorno del sottotask, per item (la Edge
+// Function li fa prevalere sui campi condivisi). Solo se il progetto ha quei campi: un
+// campo assente dallo screen farebbe fallire la creazione.
+function pwJiraSubtaskApplyGiorno(items, hasDue, hasStart) {
+  items.forEach(item => {
+    item.duedate = hasDue && item.data ? item.data : undefined;
+    item.startDatePianificato = hasStart && item.data ? item.data : undefined;
+  });
 }
 
 // Production Weight (%) = 100 / N, N = numero di sottotask selezionati in
@@ -1036,22 +1181,24 @@ async function pwJiraSubtaskOpenExtraFieldsModal(cIdx, commessaNome, meta, items
   const activityField = fields.find(f => f.extraKey === 'activityType' && f.allowedValues && f.allowedValues.length) || null;
   const attivitaDistinte = [...new Set(items.map(it => it._attivita || ''))];
 
-  const visibleFields = fields.filter(f => f.extraKey !== 'targetProduction' && f.extraKey !== 'productionWeight' && !(activityField && f.extraKey === 'activityType'));
+  // Sottotask giornaliero: Data scadenza e Start date pianificato sono il giorno del
+  // sottotask (per item, vedi pwJiraSubtaskApplyGiorno), non un valore del form.
+  const hasDue = fields.some(f => f.extraKey === 'duedate');
+  const hasStart = fields.some(f => f.extraKey === 'startDatePianificato');
+  pwJiraSubtaskApplyGiorno(items, hasDue, hasStart);
+  const visibleFields = fields.filter(f => f.extraKey !== 'targetProduction' && f.extraKey !== 'productionWeight'
+    && f.extraKey !== 'duedate' && f.extraKey !== 'startDatePianificato' && !(activityField && f.extraKey === 'activityType'));
+  const fieldsRecap = fields.filter(f => f.extraKey === 'duedate' || f.extraKey === 'startDatePianificato').concat(visibleFields);
 
   if (visibleFields.length === 0 && !hasProductionWeight && !activityField) {
-    pwJiraSubtaskPreview(cIdx, commessaNome, items, skippedComuni, {}, []);
+    pwJiraSubtaskPreview(cIdx, commessaNome, items, skippedComuni, {}, fieldsRecap);
     return;
   }
 
-  const monday = isoWeekToMonday(pwAnno, pwWeek);
-  const saturday = new Date(monday); saturday.setUTCDate(monday.getUTCDate() + 5);
-  const startIso = monday.toISOString().slice(0, 10);
-  const dueIso = saturday.toISOString().slice(0, 10);
   const defaults = {
-    duedate: dueIso,
-    originalEstimate: pwJiraComputeOriginalEstimate(startIso, dueIso),
+    // Un sottotask = una giornata (inizio = scadenza).
+    originalEstimate: '1d',
     activityType: '',
-    startDatePianificato: startIso,
     tempoTeam: (pwJiraExtraMemoryLoad()[meta.jira_project_code] || {}).tempoTeam || '',
   };
 
@@ -1135,6 +1282,7 @@ async function pwJiraSubtaskOpenExtraFieldsModal(cIdx, commessaNome, meta, items
   root.innerHTML = `<div class="modal-backdrop"><div class="bg-white rounded-lg shadow-xl w-full max-w-md mx-4 my-8 p-5 max-h-[90vh] overflow-y-auto">
     <h3 class="font-semibold text-slate-900 mb-1">Crea sottotask Jira — ${esc(commessaNome)}</h3>
     <p class="text-xs text-slate-500 mb-3">Alcuni campi possono essere obbligatori in creazione su questo progetto Jira. Valori di esempio precompilati, modificabili o lasciabili vuoti.</p>
+    ${(hasDue || hasStart) ? '<div class="text-[11px] text-slate-600 bg-slate-50 border border-slate-200 rounded px-2 py-1.5 mb-2">📅 ' + esc(fields.filter(f => f.extraKey === 'duedate' || f.extraKey === 'startDatePianificato').map(f => f.name).join(' e ')) + ': il giorno di ciascun sottotask (un sottotask per operatore per giorno).</div>' : ''}
     <div id="pw-jira-extra-fields">${rowsHtml}</div>
     ${activitySectionHtml}
     ${productionWeightSectionHtml}
@@ -1152,24 +1300,6 @@ async function pwJiraSubtaskOpenExtraFieldsModal(cIdx, commessaNome, meta, items
     weightRecalcBox.addEventListener('change', () => {
       root.querySelectorAll('[data-pw-weight-idx]').forEach(el => { el.disabled = weightRecalcBox.checked; });
     });
-  }
-
-  // Ricalcolo live della Stima originale quando l'utente cambia una delle due
-  // date da cui e' derivata — il valore iniziale precompilato sopra resta
-  // altrimenti disallineato non appena si corregge Data scadenza o Start
-  // date pianificato. Non sovrascrive piu' nulla una volta che l'utente
-  // stesso ha toccato lo scadenza/estimate a mano dopo l'ultimo cambio data.
-  const dueInput = root.querySelector('[data-extra-key="duedate"]');
-  const startInput = root.querySelector('[data-extra-key="startDatePianificato"]');
-  const estimateInput = root.querySelector('[data-extra-key="originalEstimate"]');
-  if (estimateInput && (dueInput || startInput)) {
-    const recomputeEstimate = () => {
-      const due = dueInput ? dueInput.value : dueIso;
-      const start = startInput ? startInput.value : startIso;
-      if (due && start) estimateInput.value = pwJiraComputeOriginalEstimate(start, due);
-    };
-    if (dueInput) dueInput.addEventListener('input', recomputeEstimate);
-    if (startInput) startInput.addEventListener('input', recomputeEstimate);
   }
 
   document.getElementById('pw-jira-extra-continua').onclick = () => {
@@ -1204,7 +1334,7 @@ async function pwJiraSubtaskOpenExtraFieldsModal(cIdx, commessaNome, meta, items
     }
     pwJiraExtraMemorySave(meta.jira_project_code, { tempoTeam: extraFields.tempoTeam, activityType: memoryActivity });
     pwJiraStepPush();
-    pwJiraSubtaskPreview(cIdx, commessaNome, items, skippedComuni, extraFields, visibleFields);
+    pwJiraSubtaskPreview(cIdx, commessaNome, items, skippedComuni, extraFields, fieldsRecap);
   };
 }
 
@@ -1230,10 +1360,13 @@ const PW_JIRA_EXTRA_FIELD_LABELS = {
 // più visibile prima della creazione).
 function pwJiraSubtaskExtraFieldsRecapHtml(extraFields, fields) {
   const keys = Object.keys(extraFields || {});
-  if (keys.length === 0) return '';
+  // Date del sottotask giornaliero: per item (= il giorno), non in extraFields.
+  const dateFields = (fields || []).filter(f => f.extraKey === 'duedate' || f.extraKey === 'startDatePianificato');
+  if (keys.length === 0 && !dateFields.length) return '';
   const byExtraKey = {};
   (fields || []).forEach(f => { byExtraKey[f.extraKey] = f; });
-  const rows = keys.map(key => {
+  const dateRows = dateFields.map(f => `<div class="flex items-baseline justify-between gap-2"><span class="text-slate-500">${esc(f.name)}</span><span class="font-medium text-slate-800">il giorno del sottotask</span></div>`).join('');
+  const rows = dateRows + keys.map(key => {
     const f = byExtraKey[key];
     const label = f ? f.name : (PW_JIRA_EXTRA_FIELD_LABELS[key] || key);
     let value = extraFields[key];
@@ -1303,7 +1436,10 @@ async function pwJiraSubtaskPreview(cIdx, commessaNome, allItems, skippedComuni,
 
   let results;
   try {
-    results = await pwJiraCreateSubtasks(items, true, extraFields);
+    results = await pwJiraCreateSubtasks(items, true, extraFields, (fatti, tot) => {
+      const el = document.getElementById('pw-jira-preview-body');
+      if (el) el.textContent = '⏳ Verifica su Jira in corso… ' + fatti + '/' + tot;
+    });
   } catch (e) {
     pwJiraFlowResultScreen(commessaNome,
       `<div class="text-red-600">Errore durante il controllo su Jira: ${esc(e.message || String(e))}</div>`,
@@ -1348,7 +1484,7 @@ function pwJiraSubtaskRenderPreview(cIdx, commessaNome, items, results, skippedC
     const activityTypeHtml = item._activityTypeLabel ? ` <span class="text-slate-400">· ${esc(item._activityTypeLabel)}</span>` : '';
     return `<div class="flex items-center justify-between gap-2 border-b border-slate-100 py-1.5 text-sm">
       <div class="min-w-0">
-        <div class="truncate">${esc(pwJiraGruppoLabel(item._comune || '', item._attivita))} — ${esc(item._operatore || '')}</div>
+        <div class="truncate">${esc(pwJiraGruppoLabel(item._comune || '', item._attivita))} — ${esc(item._operatore || '')} <span class="text-slate-500">· ${esc(pwJsubGiornoLabel(pwAnno, pwWeek, item._giorno))}</span></div>
         <div class="text-[11px] text-slate-400 truncate">${esc(item.summary || '')}${activityTypeHtml}${weightHtml}</div>
       </div>
       ${statusHtml}
@@ -1387,12 +1523,16 @@ async function pwJiraSubtaskConfirmCreate(cIdx, commessaNome, items, extraFields
   if (!sbGuardWrite()) return;
   const root = document.getElementById('modal-root');
   root.innerHTML = `<div class="modal-backdrop"><div class="bg-white rounded-lg shadow-xl w-full max-w-md mx-4 p-5">
-    <div class="text-sm text-slate-600">⏳ Creazione sottotask su Jira in corso…</div>
+    <div id="pw-jira-create-progress" class="text-sm text-slate-600">⏳ Creazione sottotask su Jira in corso…</div>
+    <div class="text-[11px] text-slate-400 mt-1">Non chiudere la pagina: i sottotask si creano a blocchi.</div>
   </div></div>`;
 
   let results;
   try {
-    results = await pwJiraCreateSubtasks(items, false, extraFields);
+    results = await pwJiraCreateSubtasks(items, false, extraFields, (fatti, tot, nota) => {
+      const el = document.getElementById('pw-jira-create-progress');
+      if (el) el.textContent = '⏳ ' + (nota || ('Creazione sottotask su Jira in corso… ' + fatti + '/' + tot));
+    });
   } catch (e) {
     // La chiamata alla Edge Function è fallita nel suo insieme (es. eccezione
     // non gestita lato server risolvendo l'assignee di un operatore non
@@ -1417,7 +1557,7 @@ async function pwJiraSubtaskConfirmCreate(cIdx, commessaNome, items, extraFields
     return;
   }
 
-  pwJiraSubtaskApplyResultsToBadges(cIdx, items, results, true);
+  await pwJiraSubtaskApplyResultsToBadges(cIdx, items, results, true);
   results.forEach((r, i) => {
     if (items[i] && (r.status === 'created' || r.status === 'already_exists')) items[i]._done = true;
   });
@@ -1436,7 +1576,7 @@ async function pwJiraSubtaskConfirmCreate(cIdx, commessaNome, items, extraFields
   // risultano "già esistenti", quindi si ritentano solo quelli falliti).
   const errorRows = results.map((r, i) => ({ r, item: items[i] || {} })).filter(x => x.r.status === 'error').map(({ r, item }) =>
     `<div class="border-b border-slate-100 py-1.5">
-      <div class="truncate">${esc(pwJiraGruppoLabel(item._comune || '', item._attivita))} — ${esc(item._operatore || r.operatorEmail || '')} <span class="text-[11px] text-slate-400">(${esc(r.taskKey || '')})</span></div>
+      <div class="truncate">${esc(pwJiraGruppoLabel(item._comune || '', item._attivita))} — ${esc(item._operatore || r.operatorEmail || '')} · ${esc(item._giorno != null ? pwJsubGiornoLabel(pwAnno, pwWeek, item._giorno) : '')} <span class="text-[11px] text-slate-400">(${esc(r.taskKey || '')})</span></div>
       <div class="text-[11px] text-red-700 break-words">${esc(r.message || 'Errore sconosciuto')}</div>
     </div>`).join('');
   pwJiraFlowResultScreen(commessaNome,

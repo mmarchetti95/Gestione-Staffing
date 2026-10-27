@@ -3,8 +3,9 @@
 // Edge Function: crea sottotask Jira a partire dalla pianificazione della
 // Griglia settimanale. Per ogni item: risolve l'accountId dell'operatore da
 // email (assegnabile al progetto specifico), verifica se sotto il Task
-// indicato esiste gia' un sottotask assegnato a quell'operatore PER LA STESSA
-// WEEK (idempotenza — vedi findExistingSubtask) e, solo se manca, lo crea.
+// indicato esiste gia' un sottotask assegnato a quell'operatore PER LO STESSO
+// GIORNO (idempotenza — vedi findExistingDailySubtask; per gli item senza
+// "data", la stessa week: findExistingSubtask) e, solo se manca, lo crea.
 // Con dryRun:true fa solo il check di esistenza (usato per l'anteprima prima
 // della conferma utente).
 //
@@ -26,7 +27,9 @@
 //   { "items": [
 //       { "projectKey": "W07R", "taskKey": "W07R-45",
 //         "operatorEmail": "mrossi@eagleprojects.it",
-//         "summary": "Rilievo GPS - Ivrea - Rossi - Week 37",
+//         "summary": "Rilievo GPS - Ivrea - Rossi - Gio 10/09/2026",
+//         "data": "2026-09-10",       // giorno del sottotask (v18.229.0); senza, regola settimanale "Week N"
+//         "duedate": "2026-09-10", "startDatePianificato": "2026-09-10",  // opzionali, per-item
 //         "targetProduction": 12,     // opzionale, ereditato dal Task padre lato client
 //         "productionWeight": 0.5,    // opzionale, per-Task, normalizzato a 1 (0.5 = 50%); il client converte dalla % mostrata in UI
 //         "activityType": "14500" },  // opzionale, per attivita' della Griglia (v18.182.0), prevale su extraFields.activityType
@@ -65,6 +68,22 @@
 // I sottotask del Task si leggono dal campo "subtasks" del Task (non dalla
 // ricerca JQL, il cui indice puo' non vedere ancora un sottotask appena creato).
 //
+// Sottotask GIORNALIERI (v18.229.0): un sottotask per operatore + cantiere +
+// attivita' + giorno. L'item porta "data" ("2026-10-29") e, se il progetto ha i
+// campi, "duedate"/"startDatePianificato" (= data) e "originalEstimate", che
+// prevalgono sugli extraFields condivisi. L'anti-duplicati per un item con
+// "data" non usa piu' "Week N": legge i sottotask dell'operatore sotto il Task
+// (una ricerca per coppia Task+assegnatario, riusata da tutti i giorni dello
+// stesso batch) e cerca quello di quel giorno — vedi findExistingDailySubtask.
+// Un item senza "data" (client meno recenti) segue la regola settimanale.
+//
+// Contratto richiesta — ricalcolo Production Weight separato (v18.229.0):
+//   { "mode": "recalcWeights", "taskKey": "W07R-45", "createdKeys": ["W07R-120", ...] }
+// Contratto risposta: { "weights": { "W07R-45": { totale, peso, aggiornati, errori } } }
+// Il client crea i sottotask a blocchi (una chiamata ogni ~20) senza recalcWeights
+// e ricalcola qui, una volta per Task, alla fine: con i giornalieri un Task ha
+// molti sottotask e riscriverli tutti a ogni blocco sforava i tempi.
+//
 // Contratto richiesta — scoperta campi extra:
 //   { "mode": "fields", "projectKey": "W07R" }
 // Contratto risposta:
@@ -98,6 +117,7 @@ const KNOWN_EXTRA_FIELDS = [
 ];
 
 const TEMPO_TEAM_FIELD = "customfield_10602";
+const START_DATE_FIELD = "customfield_13093";
 
 const CORS_HEADERS = {
   "Access-Control-Allow-Origin": "*",
@@ -191,6 +211,58 @@ async function findExistingSubtask(taskKey: string, accountId: string, week: str
   const data = await res.json();
   const issue = (data.issues || [])[0];
   return issue ? { key: issue.key } : null;
+}
+
+// Sottotask giornaliero: tra i sottotask dell'operatore sotto il Task (i 200 piu'
+// recenti) quello del giorno. Vale il marcatore "gg/mm/aaaa" nel summary, oppure
+// scadenza = giorno con inizio vuoto o uguale. Un sottotask settimanale ("Week N"
+// nel summary, inizio lunedi' e scadenza sabato) non e' MAI quello di un giorno:
+// altrimenti il lunedi' o il sabato risulterebbero gia' coperti.
+// La lista si legge una volta per Task+assegnatario e si riusa per tutti i giorni
+// del batch; i sottotask creati nel frattempo vi si aggiungono (la ricerca JQL
+// potrebbe non vederli ancora).
+type SubtaskInfo = { key: string; summary: string; duedate: string; start: string };
+
+async function listOperatorSubtasks(taskKey: string, accountId: string): Promise<SubtaskInfo[]> {
+  const jql = `parent = "${jqlEscape(taskKey)}" AND assignee = "${jqlEscape(accountId)}" ORDER BY created DESC`;
+  const out: SubtaskInfo[] = [];
+  let nextPageToken: string | undefined;
+  for (let page = 0; page < 2; page++) {
+    const body: Record<string, unknown> = { jql, fields: ["summary", "duedate", START_DATE_FIELD], maxResults: 100 };
+    if (nextPageToken) body.nextPageToken = nextPageToken;
+    const res = await jiraPost(`/rest/api/3/search/jql`, body);
+    if (!res.ok) throw new Error(`Ricerca sottotask esistenti fallita (HTTP ${res.status})`);
+    const data = await res.json();
+    for (const issue of (data.issues || [])) {
+      const f = issue?.fields || {};
+      out.push({
+        key: String(issue.key || ""),
+        summary: String(f.summary || ""),
+        duedate: String(f.duedate || "").slice(0, 10),
+        start: String(f[START_DATE_FIELD] || "").slice(0, 10),
+      });
+    }
+    nextPageToken = data.nextPageToken;
+    if (!nextPageToken || data.isLast) break;
+  }
+  return out;
+}
+
+function isDailySubtaskOf(st: SubtaskInfo, data: string): boolean {
+  if (/\bWeek\s+\d+\b/i.test(st.summary)) return false;
+  const [y, m, d] = data.split("-");
+  if (st.summary.includes(`${d}/${m}/${y}`)) return true;
+  return st.duedate === data && (!st.start || st.start === data);
+}
+
+async function findExistingDailySubtask(
+  taskKey: string, accountId: string, data: string, cache: Map<string, SubtaskInfo[]>,
+): Promise<{ key: string } | null> {
+  const cacheKey = `${taskKey}::${accountId}`;
+  let list = cache.get(cacheKey);
+  if (!list) { list = await listOperatorSubtasks(taskKey, accountId); cache.set(cacheKey, list); }
+  const found = list.find((st) => isDailySubtaskOf(st, data));
+  return found ? { key: found.key } : null;
 }
 
 async function resolveSubtaskIssueTypeId(projectKey: string): Promise<string | null> {
@@ -351,6 +423,41 @@ async function recalcTaskWeights(taskKey: string, createdKeys: string[]): Promis
   return { totale: all.length, peso, aggiornati, errori };
 }
 
+// Date e stima per-item dei sottotask giornalieri (inizio = scadenza = il giorno):
+// prevalgono sui valori condivisi del batch. Il client le manda solo se il
+// progetto ha quei campi (un campo assente dallo screen farebbe fallire la POST).
+function buildItemDateFields(item: any): Record<string, unknown> {
+  const out: Record<string, unknown> = {};
+  if (item?.duedate) out.duedate = String(item.duedate);
+  if (item?.startDatePianificato) out[START_DATE_FIELD] = String(item.startDatePianificato);
+  if (item?.originalEstimate) out.timetracking = { originalEstimate: String(item.originalEstimate) };
+  return out;
+}
+
+// Come recalcTaskWeights ma con piu' PUT in parallelo: con i sottotask giornalieri
+// un Task ne ha centinaia e in sequenza si sforava il tempo massimo della funzione.
+async function recalcTaskWeightsParallel(taskKey: string, createdKeys: string[]): Promise<any> {
+  const keys = await fetchTaskSubtaskKeys(taskKey);
+  if (!keys) return { errore: `Task ${taskKey} non leggibile: Production Weight non ricalcolato` };
+  const all = [...new Set([...keys, ...createdKeys])];
+  const peso = weightFor(all.length);
+  let aggiornati = 0;
+  const errori: { key: string; message: string }[] = [];
+  let next = 0;
+  const worker = async () => {
+    while (next < all.length) {
+      const key = all[next++];
+      const res = await jiraPut(`/rest/api/3/issue/${encodeURIComponent(key)}`, { fields: { [PRODUCTION_WEIGHT_FIELD]: peso } });
+      if (res.ok) { aggiornati++; continue; }
+      let detail = `PUT issue HTTP ${res.status}`;
+      try { const b = await res.json(); if (b) detail += " " + JSON.stringify(b); } catch { /* ignore */ }
+      errori.push({ key, message: detail });
+    }
+  };
+  await Promise.all(Array.from({ length: Math.min(6, all.length) }, worker));
+  return { totale: all.length, peso, aggiornati, errori };
+}
+
 // Activity Type per-item: in Griglia ogni cantiere ha la sua attivita', e lo
 // stesso cantiere con due attivita' diverse genera due sottotask con due
 // Activity Type diversi nello stesso batch. Se presente prevale su
@@ -386,6 +493,17 @@ Deno.serve(async (req: Request) => {
     }
   }
 
+  if (payload?.mode === "recalcWeights") {
+    const taskKey = String(payload?.taskKey || "").trim();
+    if (!taskKey) return json({ error: "taskKey mancante" }, 400);
+    const createdKeys = Array.isArray(payload?.createdKeys) ? payload.createdKeys.map((k: unknown) => String(k)).filter(Boolean) : [];
+    try {
+      return json({ weights: { [taskKey]: await recalcTaskWeightsParallel(taskKey, createdKeys) } });
+    } catch (e) {
+      return json({ weights: { [taskKey]: { errore: String((e as Error)?.message || e) } } });
+    }
+  }
+
   const items: any[] = Array.isArray(payload?.items) ? payload.items : [];
   const dryRun = !!payload?.dryRun;
   const recalcWeights = !!payload?.recalcWeights;
@@ -394,6 +512,7 @@ Deno.serve(async (req: Request) => {
   if (items.length === 0) return json({ error: "Nessun item fornito" }, 400);
 
   const accountIdCache = new Map<string, string | null>();
+  const dailyCache = new Map<string, SubtaskInfo[]>();
   const results: any[] = [];
 
   for (const item of items) {
@@ -414,7 +533,10 @@ Deno.serve(async (req: Request) => {
         continue;
       }
 
-      const existing = await findExistingSubtask(taskKey, accountId, week);
+      const data = /^\d{4}-\d{2}-\d{2}$/.test(String(item?.data || "")) ? String(item.data) : "";
+      const existing = data
+        ? await findExistingDailySubtask(taskKey, accountId, data, dailyCache)
+        : await findExistingSubtask(taskKey, accountId, week);
       if (existing) {
         results.push({
           taskKey, operatorEmail, status: "already_exists",
@@ -436,6 +558,7 @@ Deno.serve(async (req: Request) => {
           summary,
           assignee: { accountId },
           ...extraFieldsPayload,
+          ...buildItemDateFields(item),
           ...buildItemTargetProductionField(item),
           ...buildItemProductionWeightField(item),
           ...buildItemActivityTypeField(item),
@@ -450,6 +573,10 @@ Deno.serve(async (req: Request) => {
       }
 
       const created = await createRes.json();
+      if (data) {
+        const list = dailyCache.get(`${taskKey}::${accountId}`);
+        if (list) list.unshift({ key: created.key, summary, duedate: data, start: data });
+      }
       results.push({
         taskKey, operatorEmail, status: "created",
         key: created.key, url: `${JIRA_BASE_URL}/browse/${created.key}`,

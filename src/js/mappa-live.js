@@ -11,7 +11,9 @@
                                   (comprese le correzioni manuali fatte lì)
      - _meteoCache / _pcCache     meteo Open-Meteo e criticità Protezione Civile
      - controllo_produzione       ore/km reali (query dedicata, vedi mlLoadProduzione)
-     - bc.jiraSubtask             sottotask Jira creati -> stato del Task padre
+     - pwJiraSubtaskMappa         sottotask Jira creati -> stato del Task padre (tabella
+                                  pw_jira_subtask, giornalieri, + bc.jiraSubtask, settimanali;
+                                  il Realtime della tabella chiama mlOnDataChanged)
 
    Conseguenza voluta: quando un altro utente modifica la Griglia, il Realtime su
    staffing_state aggiorna pwData e la mappa si ridisegna da sola (vedi
@@ -358,7 +360,7 @@ function mlBuildItems(scope) {
     blk.blocchi.forEach((bc, cIdx) => {
       if (!bc.commessa) return;
       const color = _mapColor(bc.commessa);
-      const jiraMap = bc.jiraSubtask || {};
+      const jiraMap = pwJiraSubtaskMappa(bc, Number(blk.anno), Number(blk.week));
 
       (bc.squadre || []).forEach((sq, sIdx) => {
         const squadra = sq.nome || 'Squadra';
@@ -695,7 +697,7 @@ async function mlLoadProduzioneRange() {
 }
 
 /* Stato dei Task Jira dei cantieri visibili. Parte dalle chiavi dei sottotask
-   salvate in bc.jiraSubtask e lascia alla Edge Function il salto sottotask->Task
+   (pwJiraSubtaskMappa) e lascia alla Edge Function il salto sottotask->Task
    (campo "parent"): è l'unico legame certo cantiere->Task, vedi il commento in
    supabase/functions/jira-task-status/index.ts. */
 async function mlRefreshTaskStatus(items, force) {
@@ -1966,7 +1968,7 @@ function mlCantieriDiCommessa(nome) {
     Object.keys(perWeek).forEach(week => {
       (perWeek[week] || []).forEach(bc => {
         if (bc.commessa !== nome) return;
-        const jiraMap = bc.jiraSubtask || {};
+        const jiraMap = pwJiraSubtaskMappa(bc, Number(anno), Number(week));
         (bc.squadre || []).forEach(sq => {
           (sq.operatori || []).forEach(op => {
             for (let d = 0; d < 6; d++) {

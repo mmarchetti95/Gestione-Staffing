@@ -733,12 +733,15 @@ async function sbOnLoggedIn() {
   sbFnSubscribe();
   sbApplyReadOnlyBanner();
   sbUpdateUI('syncing', 'Sync: caricamento dati…');
+  // Sottotask Jira giornalieri (tabella pw_jira_subtask) prima del primo render della Griglia.
+  await pwJsubLoad();
   await sbPull();
   sbLogActivity('Login', { email: _sbUser.email });
   sbStartHeartbeat();
   sbSubscribeRealtime();
   pwNvSubscribe();
   pwNvUpdateButton();
+  pwJsubSubscribe();
 }
 
 function sbSubscribeRealtime() {
@@ -770,6 +773,7 @@ async function sbLogout() {
     _sbRealtimeChannel = null;
   }
   pwNvUnsubscribe();
+  pwJsubUnsubscribe();
   sbFnUnsubscribe();
   await sbStopHeartbeat();
   await _sbClient.auth.signOut();
