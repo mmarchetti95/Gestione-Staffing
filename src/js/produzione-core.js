@@ -217,6 +217,7 @@ function pwControlloRender() {
   if (blocks.length === 0) {
     container.innerHTML = '<div class="text-center text-slate-400 py-10 text-sm">Nessun operatore pianificato questa settimana.</div>';
     cpaOnControlloRender();
+    cpTlOnControlloRender();
     return;
   }
 
@@ -340,6 +341,7 @@ function pwControlloRender() {
   // Re-applica ricerca operatore/cantiere se attiva (il DOM è appena stato ricreato)
   if (_cpSearchTerm) cpSearchOp(_cpSearchTerm);
   cpaOnControlloRender();
+  cpTlOnControlloRender();
   cpMeteoRefresh(blocks, dateISOs);
   cpStatoRefresh(false);
   cpStatoStartTimer();

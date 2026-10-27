@@ -1073,6 +1073,31 @@
   .cp-kmj-sum { margin-left:10px; font-size:11px; font-weight:600; border-radius:5px; padding:2px 8px; cursor:pointer; }
   .cp-kmj-sum.pend { background:#fff7ed; color:#c2410c; border:1px solid #fdba74; }
   .cp-kmj-sum.ok { background:#f0fdf4; color:#15803d; border:1px solid #bbf7d0; cursor:default; }
+  /* Timeline worklog (src/js/produzione-timeline.js) */
+  .cptl-tab { font-size:12px; padding:3px 10px; border:1px solid #e2e8f0; border-radius:6px; background:#fff; color:#475569; cursor:pointer; }
+  .cptl-tab:hover { background:#f1f5f9; }
+  .cptl-tab.oggi { border-color:#5eead4; }
+  .cptl-tab.on { background:#0f766e; border-color:#0f766e; color:#fff; font-weight:600; }
+  .cptl-tab-wrap { min-width:880px; background:#fff; border:1px solid #e2e8f0; border-radius:8px; }
+  .cptl-r { display:grid; grid-template-columns:230px minmax(320px,1fr) 46px 46px 70px 54px; gap:0 8px; align-items:center; padding:4px 10px; border-bottom:1px solid #f1f5f9; }
+  .cptl-r.warn { background:#fffbeb; }
+  .cptl-head { position:sticky; top:-10px; z-index:2; background:#f8fafc; font-size:11px; color:#64748b; font-weight:600; border-radius:8px 8px 0 0; }
+  .cptl-grp { background:#f1f5f9; border-top:1px solid #e2e8f0; }
+  .cptl-op { min-width:0; font-size:12px; line-height:15px; }
+  .cptl-op b, .cptl-op small, .cptl-flag { display:block; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .cptl-op small { color:#64748b; font-size:10.5px; }
+  .cptl-flag { color:#b45309; font-size:10.5px; font-weight:600; }
+  .cptl-axis { position:relative; height:14px; }
+  .cptl-axis span { position:absolute; transform:translateX(-50%); font-size:10px; color:#94a3b8; }
+  .cptl-track { position:relative; background:#f1f5f9; border-radius:5px; }
+  .cptl-grid { position:absolute; top:0; bottom:0; border-left:1px dashed #dbe3ec; }
+  .cptl-span { position:absolute; top:50%; height:2px; margin-top:-1px; background:#cbd5e1; }
+  .cptl-bar { position:absolute; height:12px; border-radius:3px; min-width:3px; padding:0 3px; overflow:hidden; white-space:nowrap; color:#fff; font-size:9px; line-height:12px; cursor:help; box-shadow:inset 0 0 0 1px rgba(255,255,255,.5); }
+  .cptl-now { position:absolute; top:-2px; bottom:-2px; border-left:2px solid #e11d48; }
+  .cptl-vuoto { position:absolute; inset:0; display:flex; align-items:center; padding-left:8px; font-size:11px; font-style:italic; color:#94a3b8; }
+  .cptl-num { font-size:12px; text-align:right; font-variant-numeric:tabular-nums; }
+  .cptl-leg { display:inline-flex; align-items:center; gap:4px; }
+  .cptl-leg i { width:10px; height:10px; border-radius:3px; display:inline-block; }
   .cp-oj-bar-live { background-image:repeating-linear-gradient(135deg, rgba(255,255,255,.55) 0 4px, transparent 4px 8px); outline:1px dashed #ea580c; outline-offset:-1px; }
   .cp-oj-row-live .cp-oj-ora { color:#ea580c; }
   .cp-oj-tot-live { color:#ea580c; font-weight:600; }
@@ -1921,7 +1946,7 @@
       </span>
       <button id="btn-presentation" class="px-3 py-1.5 text-sm rounded hover:bg-white/10" style="border:1px solid var(--dark-border-strong);color:var(--dark-text);visibility:visible;">📊 Modalità presentazione</button>
       <div class="text-xs pl-2" style="border-left:1px solid var(--dark-border-strong);color:var(--dark-text-muted);">
-        <span id="app-version" class="font-medium" style="color:var(--accent);">v18.225.0</span> · Michele Marchetti
+        <span id="app-version" class="font-medium" style="color:var(--accent);">v18.226.0</span> · Michele Marchetti
         <span id="sb-role-badge" style="margin-left:8px;padding:1px 8px;border-radius:9999px;background:rgba(255,255,255,.1);color:var(--dark-text);font-weight:600;"></span>
       </div>
     </div>
@@ -2075,6 +2100,12 @@
      .modal-backdrop (100050): conferme e avvisi lanciati da qui devono comparire sopra. -->
 <div id="cpa-modal" class="no-print" style="display:none;position:fixed;inset:0;z-index:99990;background:var(--backdrop);align-items:center;justify-content:center;" onclick="if (event.target === this) cpaChiudi()">
   <div id="cpa-root" style="background:#f8fafc;border-radius:var(--radius-lg);width:1100px;max-width:97vw;height:90vh;box-shadow:var(--shadow-lg);display:flex;flex-direction:column;overflow:hidden;"></div>
+</div>
+
+<!-- Timeline worklog di Controllo Produzione (src/js/produzione-timeline.js). z-index sotto
+     .modal-backdrop (100050): conferme e avvisi lanciati da qui devono comparire sopra. -->
+<div id="cptl-modal" class="no-print" style="display:none;position:fixed;inset:0;z-index:99990;background:var(--backdrop);align-items:center;justify-content:center;" onclick="if (event.target === this) cpTlChiudi()">
+  <div id="cptl-root" style="background:#f8fafc;border-radius:var(--radius-lg);width:1280px;max-width:97vw;height:90vh;box-shadow:var(--shadow-lg);display:flex;flex-direction:column;overflow:hidden;"></div>
 </div>
 
 <!-- Lavagna Note/Variazioni della Griglia (src/js/weekly-note-variazioni.js). z-index sotto
@@ -3062,6 +3093,7 @@
       <div class="flex items-center gap-2">
         <button id="cp-collapse-all" class="px-3 py-1.5 text-sm border border-slate-300 rounded hover:bg-slate-50 no-print" onclick="cpCollapseAllToggle()">≡ Collassa</button>
         <button id="cpa-toggle" onclick="cpaToggle()" class="px-3 py-1.5 text-sm font-medium text-white rounded-lg flex items-center gap-1.5 no-print" style="background:#b45309;" title="Confronta Griglia e ore Jira della settimana e propone correzioni (non scrive su Jira)">🔍 Controllo anomalie</button>
+        <button id="cptl-toggle" onclick="cpTlApri()" class="px-3 py-1.5 text-sm font-medium text-white rounded-lg flex items-center gap-1.5 no-print" style="background:#0f766e;" title="Barra oraria dei worklog Jira di ogni operatore: inizio, fine, pause e totale (click destro per la guida)">🕘 Timeline worklog</button>
         <button id="cp-sync-jira" data-help-key="cp-sync-jira" onclick="pwControlloSyncJira()" class="px-3 py-1.5 text-sm font-medium bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 flex items-center gap-1.5 no-print pw-write-action" title="Click destro per la guida">
           🔄 Sincronizza da Jira
         </button>
