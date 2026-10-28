@@ -16,7 +16,7 @@
    Edge Function per il contratto e il check di idempotenza per assignee/Task.
 */
 
-HELP_TEXTS['pw-sottotask-jira'] = 'Crea sottotask su Jira per gli operatori pianificati questa settimana su QUESTA commessa (o, se lanciato dal bottone nell\'header di una squadra, solo per quella squadra): uno per operatore, cantiere/attività e GIORNO ("[Attività] - [Comune] - [Cognome] - Gio 29/10/2026"), con data inizio e scadenza nel giorno stesso. Di solito si lancia il giovedì/venerdì per la settimana dopo, e di nuovo durante la settimana per i giorni aggiunti o cambiati: i giorni che hanno già il sottotask non vengono ricreati.\n\nRichiede di scegliere Epic e Task Jira per ogni cantiere/attività (se la commessa ha il modello della struttura Jira e il comune ha la sua struttura registrata, vengono proposti da soli e si possono cambiare), poi permette di selezionare giorno per giorno quali sottotask creare davvero. Mostra sempre un\'anteprima (dryRun) prima di creare qualsiasi cosa su Jira.\n\nSe la commessa ha il catalogo «🏷️ Attività e KPI», ogni sottotask riceve il suo KPI_Quantità target: il target giornaliero della squadra diviso chi della squadra è quel giorno sullo stesso cantiere con la stessa attività (da solo prende il target intero). In quel caso il Target Production del Task non viene più copiato. Le attività non produttive (Viaggio, Riposo…) partono senza spunta.\n\nGli indicatori 🎫 sono condivisi con i colleghi. Richiede il "Codice progetto Jira" configurato sulla commessa.';
+HELP_TEXTS['pw-sottotask-jira'] = 'Crea sottotask su Jira per gli operatori pianificati questa settimana su QUESTA commessa (o, se lanciato dal bottone nell\'header di una squadra, solo per quella squadra): uno per operatore, cantiere/attività e GIORNO ("[Attività] - [Comune] - [Cognome] - Gio 29/10/2026"), con data inizio e scadenza nel giorno stesso. Di solito si lancia il giovedì/venerdì per la settimana dopo, e di nuovo durante la settimana per i giorni aggiunti o cambiati: i giorni che hanno già il sottotask non vengono ricreati.\n\nRichiede di scegliere Epic e Task Jira per ogni cantiere/attività, poi permette di selezionare giorno per giorno quali sottotask creare davvero. Mostra sempre un\'anteprima (dryRun) prima di creare qualsiasi cosa su Jira.\n\nSe la commessa ha il catalogo «🏷️ Attività e KPI», ogni sottotask riceve il suo KPI_Quantità target: il target giornaliero della squadra diviso chi della squadra è quel giorno sullo stesso cantiere con la stessa attività (da solo prende il target intero). In quel caso il Target Production del Task non viene più copiato. Le attività non produttive (Viaggio, Riposo…) partono senza spunta.\n\nGli indicatori 🎫 sono condivisi con i colleghi. Richiede il "Codice progetto Jira" configurato sulla commessa.';
 
 /* ----- Pannello di ricerca condiviso (Epic/Task Jira) -----
    Clone parametrico del pattern "tendina custom" di weekly-strumenti.js
@@ -964,31 +964,6 @@ function pwJiraSubtaskOpenComuniModal(cIdx, commessaNome, meta, gruppi, squadreO
   root.querySelectorAll('.pw-jira-squadra-skip-none').forEach(btn => {
     btn.onclick = () => setSquadraSkip(btn.dataset.squadraIdx, false);
   });
-
-  // Epic e Task proposti dalla struttura del comune creata/registrata dall'app
-  // (jira-struttura-comune.js): arrivano dopo l'apertura, e non sostituiscono una scelta
-  // già fatta a mano nel frattempo né un gruppo da saltare.
-  if (jstModelloDi(meta)) {
-    jstProponiPerGruppi(bcForBadges.commessa, meta, gruppi).then(proposte => {
-      proposte.forEach((pr, i) => {
-        const epicTrigger = root.querySelector(`.pw-jira-epic-trigger[data-idx="${i}"]`);
-        const skipChk = root.querySelector(`.pw-jira-skip-comune[data-idx="${i}"]`);
-        if (!pr || !epicTrigger || !epicTrigger.isConnected || (skipChk && skipChk.checked)) return;
-        const statusEl = statusElFor(i);
-        if (pr.senzaStruttura) {
-          if (statusEl && !statusEl.innerHTML) statusEl.innerHTML = '<span class="text-slate-400">🏗️ Nessuna struttura Jira registrata per questo comune (Scheda commessa → Crea strutture comuni).</span>';
-          return;
-        }
-        if (chosenEpics[i] || chosenTasks[i]) return;
-        chosenEpics[i] = pr.epic;
-        chosenTasks[i] = pr.task;
-        epicTrigger.textContent = pr.epic.key + ' · ' + pr.epic.summary;
-        const taskTrigger = taskTriggerFor(i);
-        if (taskTrigger) { taskTrigger.disabled = false; taskTrigger.style.opacity = '1'; taskTrigger.textContent = pr.task.key + ' · ' + pr.task.summary; }
-        pwJiraSubtaskCheckExisting(String(i));
-      });
-    }).catch(() => { /* senza proposta si sceglie a mano come prima */ });
-  }
 
   document.getElementById('pw-jira-continua').onclick = () => {
     const missing = [];

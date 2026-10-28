@@ -4,17 +4,14 @@
    crearla a mano, la commessa indica un MODELLO che esiste davvero in Jira (es. AI029-604
    "MODELLO") e l'Edge Function jira-struttura-comune lo copia per ogni comune, sostituendo
    "MODELLO" nei titoli e copiando i campi del modello. Niente modello = niente servizio.
-   - state.commesse_attive_meta[commessa].jira_modello = { key, project, nodi: [{ key, summary,
-     tipo, livello, parentKey }], attivita: { chiaveTaskModello: [nomi attività Griglia] },
-     letto_il } (dominio core, salvato col "Salva" della scheda commessa). nodi è la copia
-     dell'albero letta da Jira: serve a escludere il modello dalle tendine Epic/Task e a
-     collegare le attività della Griglia ai Task.
+   - state.commesse_attive_meta[commessa].jira_modello = { key, project, base, nodi: [{ key,
+     summary, tipo, livello, parentKey }], letto_il } (dominio core, salvato col "Salva" della
+     scheda commessa). nodi è la copia dell'albero letta da Jira: serve a escludere le issue
+     del modello dalla tendina Epic della creazione sottotask (jstChiaviModello).
    - Le chiavi create (o ritrovate: una struttura fatta a mano viene "adottata") stanno nella
-     tabella jira_struttura_comune, scritta solo dall'Edge Function. È il legame CERTO
-     comune -> Epic/Task: la creazione dei sottotask lo usa per PROPORRE Epic e Task
-     (jstProponiPerGruppi), l'utente può sempre cambiarli. Il confronto comune in Griglia ->
-     riga della tabella è sul nome normalizzato (caNorm) che l'utente stesso ha dato alla
-     creazione; nessun abbinamento per nome con issue Jira non create/registrate qui.
+     tabella jira_struttura_comune, scritta solo dall'Edge Function. Per ora servono solo
+     all'elenco "Strutture già registrate": nella creazione dei sottotask Epic e Task si
+     scelgono a mano come prima (v18.232.0, scelta dell'utente).
    - La creazione richiede sempre l'anteprima (dryRun) e scrive su Jira solo al clic su "Crea". */
 
 const JST_TABLE = 'jira_struttura_comune';
@@ -25,7 +22,7 @@ const _jst = {
   carico: {},   // commessa -> Promise in corso
 };
 
-HELP_TEXTS['#ma-btn-modello'] = 'Imposta il MODELLO della struttura Jira di questa commessa: la chiave della radice di un albero che esiste davvero in Jira (es. AI029-604, l\'Iniziativa "MODELLO" con le sue Epic e i suoi Task). «Leggi da Jira» mostra l\'albero, cosa verrà copiato e permette di collegare ogni Task del modello alle attività della Griglia, così la creazione dei sottotask propone da sola Epic e Task.\n\nNei titoli del modello la parola MODELLO diventa il nome del comune. Le modifiche valgono solo dopo «Salva» della scheda commessa e sono condivise con tutti. Senza modello il servizio «Crea strutture comuni» non è disponibile.';
+HELP_TEXTS['#ma-btn-modello'] = 'Imposta il MODELLO della struttura Jira di questa commessa: la chiave della radice di un albero che esiste davvero in Jira (es. AI029-604, l\'Iniziativa "MODELLO" con le sue Epic e i suoi Task). «Leggi da Jira» mostra l\'albero, gli assegnatari e i campi che verranno copiati.\n\nNei titoli del modello la parola MODELLO diventa il nome del comune. Le modifiche valgono solo dopo «Salva» della scheda commessa e sono condivise con tutti. Senza modello il servizio «Crea strutture comuni» non è disponibile.';
 HELP_TEXTS['#ma-btn-strutture'] = 'Crea su Jira, per uno o più comuni, la stessa struttura del modello della commessa (es. Iniziativa → Epic → Task), senza sottotask: quelli li crea la Griglia giorno per giorno.\n\nPrima mostra sempre un\'anteprima di cosa verrà creato e cosa esiste già. Un comune che ha già la struttura (anche fatta a mano) viene solo completato con le parti mancanti, e le sue chiavi vengono registrate nell\'app. SCRIVE SU JIRA e le issue create non si cancellano da qui.';
 HELP_TEXTS['#jst-leggi'] = 'Legge da Jira l\'albero del modello (radice e tutto quello che ha sotto fino ai Task) e mostra, per ogni issue, quali campi verranno copiati. Non scrive nulla.';
 HELP_TEXTS['#jst-salva'] = 'Conferma il modello nella scheda commessa. Diventa definitivo (e condiviso) solo con «Salva» della scheda.';
@@ -76,51 +73,6 @@ function jstStrutturaDi(commessa, comune) {
   return (idx && idx[caNorm(comune)]) || null;
 }
 
-/* Chiave del Task del modello collegato a un'attività della Griglia (nome, alias o voce di
-   catalogo, stesso confronto tollerante di caTrova). null = nessun collegamento. */
-function jstTaskModelloPerAttivita(commessa, modello, attivita) {
-  if (!modello || !modello.attivita) return null;
-  const voce = caTrova(commessa, attivita);
-  const nomi = [caNorm(attivita)];
-  if (voce && voce.nome) nomi.push(caNorm(voce.nome));
-  const hit = Object.keys(modello.attivita).find(k =>
-    (modello.attivita[k] || []).some(a => nomi.includes(caNorm(a))));
-  return hit || null;
-}
-
-/* Proposta Epic/Task per ogni gruppo comune+attività della creazione sottotask: dalla
-   struttura registrata del comune, il Task collegato all'attività e l'Epic sopra di lui.
-   Il Target Production del Task si legge da Jira (serve alle commesse senza catalogo). */
-async function jstProponiPerGruppi(commessa, meta, gruppi) {
-  const modello = jstModelloDi(meta);
-  if (!modello) return gruppi.map(() => null);
-  await jstCarica(commessa);
-  const padreDi = {};
-  modello.nodi.forEach(n => { padreDi[n.key] = n.parentKey || ''; });
-  const taskCache = {};
-  const out = [];
-  for (const gr of gruppi) {
-    const riga = jstStrutturaDi(commessa, gr.comune);
-    const taskMod = jstTaskModelloPerAttivita(commessa, modello, gr.attivita);
-    const nodoDi = k => riga && (riga.nodi || []).find(n => n.modello === k);
-    const task = taskMod && nodoDi(taskMod);
-    const epic = task && nodoDi(padreDi[taskMod]);
-    if (!riga) { out.push({ senzaStruttura: true }); continue; }
-    if (!task || !epic) { out.push(null); continue; }
-    let targetProduction;
-    try {
-      if (!taskCache[epic.key]) taskCache[epic.key] = await pwJiraFetchTasks(epic.key, '');
-      const t = taskCache[epic.key].find(x => x.key === task.key);
-      if (t) targetProduction = t.targetProduction;
-    } catch (_) { /* la proposta resta valida, senza Target Production */ }
-    out.push({
-      epic: { key: epic.key, summary: epic.summary },
-      task: { key: task.key, summary: task.summary, targetProduction },
-    });
-  }
-  return out;
-}
-
 function _jstProfondita(nodi) {
   const per = {};
   nodi.forEach(n => { per[n.key] = n; });
@@ -136,13 +88,12 @@ function _jstProfondita(nodi) {
 function jstSummaryHtml(modello, modificato) {
   if (!modello) return '<div class="text-[11px] text-slate-400 italic mt-1">Nessun modello: il servizio «Crea strutture comuni» non è disponibile.</div>';
   const nTask = modello.nodi.filter(n => n.livello === 0).length;
-  const collegati = Object.keys(modello.attivita || {}).filter(k => (modello.attivita[k] || []).length).length;
-  return '<div class="text-[11px] text-slate-600 mt-1">Modello <b>' + esc(modello.key) + '</b> · ' + modello.nodi.length + ' issue (' + nTask + ' Task, ' + collegati + ' collegati ad attività)'
+  return '<div class="text-[11px] text-slate-600 mt-1">Modello <b>' + esc(modello.key) + '</b> · ' + modello.nodi.length + ' issue (' + nTask + ' Task)'
     + (modificato ? ' <span class="text-amber-600">— da salvare</span>' : '') + '</div>';
 }
 
 /* ----- Editor del modello (si apre sopra la scheda commessa) -----
-   opts: { commessa, modello, jiraProjectCode, attivita (catalogo in bozza), onSave(modello|null) } */
+   opts: { commessa, modello, jiraProjectCode, onSave(modello|null) } */
 function jstOpenModelloEditor(opts) {
   const root = document.getElementById('modal-root');
   const layer = document.createElement('div');
@@ -152,30 +103,6 @@ function jstOpenModelloEditor(opts) {
   let dettaglio = null; // risposta di "Leggi da Jira" (campi copiati, avvisi)
   let errore = '';
   let lettura = false;
-  const catalogo = (opts.attivita || []).map(a => a.nome).filter(Boolean);
-
-  function leggiMappatura() {
-    if (!modello) return;
-    const att = {};
-    layer.querySelectorAll('[data-jst-task]').forEach(el => {
-      const k = el.dataset.jstTask;
-      const nomi = el.tagName === 'INPUT' && el.type === 'text'
-        ? el.value.split(',').map(s => s.trim()).filter(Boolean)
-        : [...el.querySelectorAll('input[type="checkbox"]:checked')].map(x => x.value);
-      if (nomi.length) att[k] = nomi;
-    });
-    modello.attivita = att;
-  }
-
-  function attivitaHtml(n) {
-    const scelte = (modello.attivita && modello.attivita[n.key]) || [];
-    if (!catalogo.length) {
-      return '<input type="text" data-jst-task="' + esc(n.key) + '" class="mt-1 w-full border border-slate-300 rounded px-2 py-1 text-xs" placeholder="Attività della Griglia, separate da virgola" value="' + esc(scelte.join(', ')) + '">';
-    }
-    return '<div data-jst-task="' + esc(n.key) + '" class="mt-1 flex flex-wrap gap-x-3 gap-y-0.5">' + catalogo.map(nome =>
-      '<label class="text-[11px] text-slate-600 flex items-center gap-1 cursor-pointer"><input type="checkbox" value="' + esc(nome) + '"' + (scelte.some(s => caNorm(s) === caNorm(nome)) ? ' checked' : '') + '>' + esc(nome) + '</label>'
-    ).join('') + '</div>';
-  }
 
   function alberoHtml() {
     if (lettura) return '<div class="text-xs text-slate-400 py-3">⏳ Lettura del modello da Jira…</div>';
@@ -191,7 +118,6 @@ function jstOpenModelloEditor(opts) {
         + '<div class="text-xs"><span class="text-slate-400">[' + esc(n.tipo) + ']</span> <a href="' + esc(_jstUrl(n.key, modello)) + '" target="_blank" class="font-medium text-teal-700 hover:underline">' + esc(n.key) + '</a> · ' + esc(n.summary)
         + (d && d.assegnatario ? ' <span class="text-slate-400">→ ' + esc(d.assegnatario) + '</span>' : '') + '</div>'
         + campi
-        + (n.livello === 0 ? '<div class="text-[10px] text-slate-500 mt-0.5">Attività della Griglia che vanno su questo Task:</div>' + attivitaHtml(n) : '')
         + '</div>';
     }).join('');
     const avvisi = ((dettaglio && dettaglio.avvisi) || []).map(a => '<div class="text-[11px] text-amber-700">⚠️ ' + esc(a) + '</div>').join('');
@@ -223,18 +149,14 @@ function jstOpenModelloEditor(opts) {
   }
 
   async function leggiDaJira() {
-    leggiMappatura();
     const key = layer.querySelector('#jst-key').value.trim().toUpperCase();
     if (!/^[A-Z][A-Z0-9_]*-\d+$/.test(key)) { errore = 'Chiave non valida (es. AI029-604).'; disegnaEditor(); return; }
-    const mappaPrima = (modello && modello.attivita) || {};
     lettura = true; errore = ''; disegnaEditor();
     try {
       const r = await jstInvoke({ mode: 'modello', modelloKey: key });
       dettaglio = r.modello;
       const nodi = dettaglio.nodi.map(n => ({ key: n.key, summary: n.summary, tipo: n.tipo, livello: n.livello, parentKey: n.parentKey }));
-      const att = {};
-      nodi.forEach(n => { if (n.livello === 0 && mappaPrima[n.key]) att[n.key] = mappaPrima[n.key]; });
-      modello = { key: dettaglio.key, project: dettaglio.projectKey, base: dettaglio.base || '', nodi, attivita: att, letto_il: new Date().toISOString() };
+      modello = { key: dettaglio.key, project: dettaglio.projectKey, base: dettaglio.base || '', nodi, letto_il: new Date().toISOString() };
     } catch (e) {
       errore = e.message || String(e);
       dettaglio = null;
@@ -247,15 +169,11 @@ function jstOpenModelloEditor(opts) {
     const key = layer.querySelector('#jst-key').value.trim().toUpperCase();
     if (!key) { opts.onSave(null); chiudi(); return; }
     if (!modello || modello.key !== key) { errore = 'Premi «Leggi da Jira» per controllare il modello ' + key + ' prima di confermarlo.'; disegnaEditor(); return; }
-    leggiMappatura();
     if (opts.jiraProjectCode && modello.project && modello.project.toUpperCase() !== opts.jiraProjectCode.toUpperCase()) {
       errore = 'Il modello è nel progetto ' + modello.project + ', diverso dal Codice progetto Jira della commessa (' + opts.jiraProjectCode + ').';
       disegnaEditor(); return;
     }
-    const doppie = {};
-    Object.keys(modello.attivita || {}).forEach(k => (modello.attivita[k] || []).forEach(a => { (doppie[caNorm(a)] = doppie[caNorm(a)] || []).push(k); }));
-    const conflitti = Object.keys(doppie).filter(a => doppie[a].length > 1);
-    if (conflitti.length) { errore = 'Un\'attività può andare su un solo Task: ' + conflitti.join(', ') + '.'; disegnaEditor(); return; }
+    delete modello.attivita; // collegamento Task -> attività della v18.231.0, non più usato
     opts.onSave(modello);
     chiudi();
   }

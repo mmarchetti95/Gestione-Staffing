@@ -241,7 +241,6 @@ function openCommessaAttivaModal(nome) {
       commessa: nome,
       modello: modDraft,
       jiraProjectCode: document.getElementById('ma-jira-project').value.trim(),
-      attivita: attDraft,
       onSave: mod => {
         modDraft = mod;
         document.getElementById('ma-modello-summary').innerHTML = jstSummaryHtml(modDraft, true);
