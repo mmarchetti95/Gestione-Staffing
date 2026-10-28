@@ -18,6 +18,9 @@
 // colonna "Ore Jira" in Controllo Produzione. Aggiunta retrocompatibile: "hours"
 // resta la somma del ticket nel giorno.
 //
+// v18.230.0: ogni worklog porta anche "id" (l'id Jira del worklog), per correggerlo o
+// eliminarlo dalla Timeline worklog tramite jira-worklog-edit. Aggiunta retrocompatibile.
+//
 // SECRET RICHIESTI (Supabase → Edge Functions → Secrets):
 //   JIRA_BASE_URL   es. https://eagleprojects.atlassian.net   (senza slash finale)
 //   JIRA_EMAIL      email dell'account Atlassian titolare del token
@@ -32,7 +35,7 @@
 //        "fangeluzzi@eagleprojects.it": {
 //           "2026-05-25": { "hours": 8, "tickets": [{"key":"ABC-1","url":"...","hours":8,
 //              "summary":"...", "epic": {...} | null,
-//              "worklogs":[{"started":"2026-05-25T08:00:00.000+0200","seconds":28800,"comment":"..."}]}] }
+//              "worklogs":[{"id":"10234","started":"2026-05-25T08:00:00.000+0200","seconds":28800,"comment":"..."}]}] }
 //        }
 //     },
 //     "errors": { "email@...": "motivo" } }
@@ -151,7 +154,7 @@ async function findIssuesForOperator(
   return await searchIssues(jqlSummary);
 }
 
-type Worklog = { date: string; hours: number; started: string; seconds: number; comment: string };
+type Worklog = { id: string; date: string; hours: number; started: string; seconds: number; comment: string };
 
 // Legge TUTTI i worklog di una issue nel range (indipendentemente dall'autore:
 // i worklog inseriti tramite Tempo Timesheets hanno come author l'app, non la
@@ -179,7 +182,7 @@ async function fetchAllWorklogsForIssue(
       const date = started.slice(0, 10); // YYYY-MM-DD nel fuso del worklog
       if (date < dateFrom || date > dateTo) continue;
       const seconds = Number(wl.timeSpentSeconds) || 0;
-      if (seconds > 0) out.push({ date, hours: seconds / 3600, started, seconds, comment: commentText(wl.comment) });
+      if (seconds > 0) out.push({ id: String(wl.id || ""), date, hours: seconds / 3600, started, seconds, comment: commentText(wl.comment) });
     }
     startAt += logs.length;
     if (logs.length < pageSize || startAt >= (data.total || 0)) break;
@@ -279,17 +282,17 @@ Deno.serve(async (req: Request) => {
       issues.forEach((i) => { summaryByKey[i.key] = i.summary; });
 
       // Aggrega per giorno: { date: { hours, tickets: { key: { hours, worklogs } } } }
-      type TicketDay = { hours: number; worklogs: { started: string; seconds: number; comment: string }[] };
+      type TicketDay = { hours: number; worklogs: { id: string; started: string; seconds: number; comment: string }[] };
       const perDay: Record<string, { hours: number; tickets: Record<string, TicketDay> }> = {};
 
       for (const { key } of issues) {
         const wls = await fetchAllWorklogsForIssue(key, startMs, endMs, startDate, endDate);
-        for (const { date, hours, started, seconds, comment } of wls) {
+        for (const { id, date, hours, started, seconds, comment } of wls) {
           if (!perDay[date]) perDay[date] = { hours: 0, tickets: {} };
           perDay[date].hours += hours;
           const t = perDay[date].tickets[key] || (perDay[date].tickets[key] = { hours: 0, worklogs: [] });
           t.hours += hours;
-          t.worklogs.push({ started, seconds, comment });
+          t.worklogs.push({ id, started, seconds, comment });
         }
       }
 

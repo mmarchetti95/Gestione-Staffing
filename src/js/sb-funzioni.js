@@ -30,6 +30,7 @@ const SB_FN_FUNZIONI = [
   { gruppo: 'Ferie', chiave: 'ferie:import', label: '📥 Importa Excel ferie', sel: '#pw-ferie-import-btn' },
   { gruppo: 'Controllo produzione', chiave: 'controllo:anomalie', label: '🔍 Controllo anomalie', sel: '#cpa-toggle, #cpa-modal' },
   { gruppo: 'Controllo produzione', chiave: 'controllo:timeline', label: '🕘 Timeline worklog', sel: '#cptl-toggle, #cptl-modal' },
+  { gruppo: 'Controllo produzione', chiave: 'controllo:timeline-modifica', label: '✎ Timeline: correggi/aggiungi/elimina worklog Jira', sel: '.cptl-add, #cptl-wl-modal' },
   { gruppo: 'Controllo produzione', chiave: 'controllo:sync-jira', label: '🔄 Sincronizza da Jira', sel: '#cp-sync-jira' },
   { gruppo: 'Controllo produzione', chiave: 'controllo:mysond', label: '📥 Carica MySond', sel: '#cp-mysond-btn' },
   { gruppo: 'Auto-pianifica', chiave: 'autoplan:assistente', label: '✦ Assistente pianificazione', sel: '.apc-toggle, #apc-panel' },

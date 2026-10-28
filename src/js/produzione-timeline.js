@@ -20,9 +20,12 @@
    (state.commesse_attive_meta). Un progetto che non corrisponde a nessuna commessa è "fuori
    dashboard" (iv.fuori): segmento con bordo rosso e avviso sulla riga. Un codice condiviso da
    più commesse (es. SINFI su AI029) si risolve solo se una sola è pianificata quel giorno.
-   Clic su un segmento: apre il ticket su Jira in un'altra scheda (anche nel PDF).
+   Clic su un segmento: apre il ticket su Jira in un'altra scheda (anche nel PDF). Per admin e
+   responsabili, sui worklog con l'id Jira (letti dalla v18.230.0) il clic apre invece l'editor
+   del worklog e «＋» sulla riga ne aggiunge uno: vedi produzione-timeline-worklog.js, l'unico
+   punto che scrive su Jira. Il resto della timeline non scrive nulla, né su Jira né in Supabase.
    Il segmento "in corso" (sottotask IN PROGRESS, solo oggi) viene da cpLavoroInCorso sulle
-   righe del Controllo Produzione già disegnate. Non scrive nulla, né su Jira né in Supabase. */
+   righe del Controllo Produzione già disegnate. */
 
 const CPTL_ORA_DA = 6, CPTL_ORA_A = 20;   // asse minimo, si allarga ai worklog fuori orario
 const CPTL_CORSIA_PX = 15;
@@ -81,6 +84,7 @@ document.addEventListener('keydown', e => {
   if (e.key !== 'Escape' || !_cpTl.aperto) return;
   const mr = document.getElementById('modal-root');
   if (mr && mr.children.length) return;   // c'è una conferma/avviso aperto sopra
+  if (cpTlWlAperto()) { cpTlWlChiudi(); return; }   // prima si chiude l'editor del worklog
   cpTlChiudi();
 });
 
@@ -341,12 +345,18 @@ function _cpTlVista() {
 
 /* ---------- Lettura da Jira (sola lettura, non salvata) ---------- */
 
-async function _cpTlLeggiWorklog(nomi, date) {
-  const emailByNome = {};
+/* Nome operatore -> email in anagrafica (serve a leggere e scrivere i suoi worklog) */
+function _cpTlEmailPerNome() {
+  const m = {};
   (state.operatori || []).forEach(o => {
     const n = o.nome_esteso || o.nome_breve || o.nome;
-    if (n && o.email && o.email.trim()) emailByNome[n] = o.email.trim();
+    if (n && o.email && o.email.trim()) m[n] = o.email.trim();
   });
+  return m;
+}
+
+async function _cpTlLeggiWorklog(nomi, date) {
+  const emailByNome = _cpTlEmailPerNome();
   const avvisi = [];
   const senzaEmail = nomi.filter(n => !emailByNome[n]);
   if (senzaEmail.length) avvisi.push('Senza email in anagrafica, worklog non letti: ' + senzaEmail.join(', ') + '.');
@@ -432,7 +442,8 @@ function _cpTlIntestazione(V) {
       '<div class="min-w-0">' +
         '<div style="font-weight:700;font-size:16px;color:#0f172a;font-family:var(--font-display);">🕘 Timeline worklog</div>' +
         '<div class="text-xs text-slate-500 mt-0.5">Settimana ' + pwWeek + ' · ' + V.d.ddmm[0] + ' – ' + V.d.ddmm[5] + '/' + pwAnno +
-          ' · quando ogni operatore ha attivato e chiuso i worklog Jira, pause e totale del giorno. Passa il mouse su un segmento per i dettagli, clicca per aprire il ticket su Jira.</div>' +
+          ' · quando ogni operatore ha attivato e chiuso i worklog Jira, pause e totale del giorno. Passa il mouse su un segmento per i dettagli, ' +
+          (cpTlWlPuo() ? 'clicca per correggerlo o eliminarlo su Jira; «＋» sulla riga aggiunge un worklog.' : 'clicca per aprire il ticket su Jira.') + '</div>' +
         '<div class="text-[11px] mt-0.5" style="color:' + (V.lettura ? '#0f766e' : '#64748b') + ';">' + esc(_cpTlFonteTesto(V)) + '</div>' +
       '</div>' +
       '<div class="flex-1"></div>' +
@@ -512,13 +523,13 @@ function _cpTlVuotoTesto(x, oggi) {
   return x.iso > oggi ? 'Giorno futuro' : 'Nessun worklog';
 }
 
-function _cpTlTitoloBarra(iv) {
+function _cpTlTitoloBarra(iv, modifica) {
   return iv.t.key + (iv.t.summary ? ' — ' + iv.t.summary : '') + '\n' +
     _cpOjOra(iv.inizio) + '–' + (iv.inCorso ? 'ora' : _cpOjOra(iv.fine)) + ' (' + _cpOjDurata(iv.fine - iv.inizio) + ')' +
     (iv.commessa ? '\n' + iv.commessa : '') +
     (iv.fuori ? '\n⚠ Commessa non in dashboard: ' + iv.fuori.etichetta + ' (nessuna commessa ha il codice progetto Jira ' + iv.fuori.progetto + ')' : '') +
     (iv.commento ? '\n“' + iv.commento + '”' : '') +
-    (iv.t.url ? '\nClic: apre il ticket su Jira' : '');
+    (modifica ? '\nClic: correggi o elimina il worklog su Jira' : iv.t.url ? '\nClic: apre il ticket su Jira' : '');
 }
 
 function _cpTlTrackHtml(x, V) {
@@ -529,11 +540,16 @@ function _cpTlTrackHtml(x, V) {
     h += '<div class="cptl-span" style="left:' + _cpTlPct(x.inizio, V.asse) + ';width:' +
       ((x.fine - x.inizio) / ((V.asse.a - V.asse.da) * 60) * 100).toFixed(3) + '%"></div>';
   }
+  const puo = cpTlWlPuo();
   x.interventi.forEach((iv, i) => {
-    // Con l'URL il segmento è un link: si apre in un'altra scheda (il click destro resta quello del browser)
-    const tag = iv.t.url ? 'a' : 'div';
-    h += '<' + tag + (iv.t.url ? ' href="' + esc(iv.t.url) + '" target="_blank" rel="noopener"' : '') +
-      ' class="cptl-bar' + (iv.inCorso ? ' cp-oj-bar-live' : '') + (iv.fuori ? ' fuori' : '') + '" title="' + esc(_cpTlTitoloBarra(iv)) + '" style="left:' + _cpTlPct(iv.inizio, V.asse) +
+    // Worklog con id (e utente che può scrivere): il clic apre l'editor. Altrimenti, con l'URL il
+    // segmento è un link: si apre in un'altra scheda (il click destro resta quello del browser)
+    const modifica = !!(puo && !iv.inCorso && iv.w && iv.w.id);
+    const tag = modifica ? 'div' : iv.t.url ? 'a' : 'div';
+    h += '<' + tag + (modifica ? ' data-op="' + esc(x.nome) + '" data-g="' + x.g + '" data-k="' + esc(iv.t.key || '') + '" data-wl="' + esc(String(iv.w.id)) +
+        '" data-help-key="cpTlWlApri" onclick="cpTlWlApri(this)"'
+        : iv.t.url ? ' href="' + esc(iv.t.url) + '" target="_blank" rel="noopener"' : '') +
+      ' class="cptl-bar' + (modifica ? ' edit' : '') + (iv.inCorso ? ' cp-oj-bar-live' : '') + (iv.fuori ? ' fuori' : '') + '" title="' + esc(_cpTlTitoloBarra(iv, modifica)) + '" style="left:' + _cpTlPct(iv.inizio, V.asse) +
       ';width:' + ((iv.fine - iv.inizio) / ((V.asse.a - V.asse.da) * 60) * 100).toFixed(3) + '%;top:' + (3 + corsie[i] * CPTL_CORSIA_PX) +
       'px;background-color:' + iv.colore + '">' + esc(iv.t.key || '') + '</' + tag + '>';
   });
@@ -570,8 +586,11 @@ function _cpTlSotto(x, conNome) {
 }
 
 function _cpTlRigaHtml(x, V, conNome, alt) {
+  const piu = cpTlWlPuo() && x.iso <= V.oggi
+    ? '<button type="button" class="cptl-add" data-op="' + esc(x.nome) + '" data-g="' + x.g + '" onclick="cpTlWlNuovo(this)" title="Aggiungi un worklog su Jira per ' +
+      esc(x.nome) + ' (' + esc(x.label) + ')">＋</button>' : '';
   return '<div class="cptl-r' + (alt ? ' alt' : '') + (x.avvisi.length ? ' warn' : '') + '">' +
-    '<div class="cptl-op">' + _cpTlSotto(x, conNome) + '</div>' +
+    '<div class="cptl-op' + (piu ? ' con-add' : '') + '">' + _cpTlSotto(x, conNome) + piu + '</div>' +
     _cpTlTrackHtml(x, V) + _cpTlNumeri(x) + '</div>';
 }
 

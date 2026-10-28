@@ -51,7 +51,7 @@ function cpOreJiraInterventi(tickets, dateISO) {
       if (!p) return;
       const off = Math.round((Date.parse(p.data + 'T00:00:00Z') - base) / 60000);
       const inizio = p.min + (isNaN(off) ? 0 : off);
-      interventi.push({ t, colore, inizio, fine: inizio + (Number(w.seconds) || 0) / 60, commento: w.comment || '' });
+      interventi.push({ t, w, colore, inizio, fine: inizio + (Number(w.seconds) || 0) / 60, commento: w.comment || '' });
     });
   });
   interventi.sort((a, b) => a.inizio - b.inizio || a.fine - b.fine);
