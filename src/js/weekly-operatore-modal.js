@@ -720,6 +720,8 @@ function pwRender() {
         <div class="flex items-center gap-2">
           <button class="text-xs bg-teal-500 hover:bg-teal-400 text-white px-3 py-1 rounded pw-write-action"
             data-cidx="${cIdx}" onclick="pwAddSquadra(this)">+ Squadra</button>
+          ${jstModelloDi((state.commesse_attive_meta || {})[bloccoCommessa.commessa]) ? `<button class="text-xs bg-sky-600 hover:bg-sky-500 text-white px-2 py-1 rounded pw-write-action"
+            data-cidx="${cIdx}" data-help-key="pw-strutture-jira" onclick="pwJstApri(${cIdx})" title="Crea su Jira la struttura (Iniziativa, Epic, Task) dei comuni dal modello della commessa — Click destro per la guida">🏗️ Strutture comuni</button>` : ''}
           <button class="text-xs bg-amber-500 hover:bg-amber-400 text-white px-2 py-1 rounded pw-write-action"
             data-cidx="${cIdx}" data-help-key="pw-sottotask-jira" onclick="pwJiraSubtaskInit(${cIdx})" title="Crea sottotask su Jira per gli operatori pianificati questa settimana — Click destro per la guida">🎫 Sottotask Jira</button>
           <button class="text-xs bg-teal-600 hover:bg-teal-500 text-white px-2 py-1 rounded disabled:opacity-50"

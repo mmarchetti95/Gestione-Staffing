@@ -24,6 +24,7 @@ const _jst = {
 
 HELP_TEXTS['#ma-btn-modello'] = 'Imposta il MODELLO della struttura Jira di questa commessa: la chiave della radice di un albero che esiste davvero in Jira (es. AI029-604, l\'Iniziativa "MODELLO" con le sue Epic e i suoi Task). «Leggi da Jira» mostra l\'albero, gli assegnatari e i campi che verranno copiati.\n\nNei titoli del modello la parola MODELLO diventa il nome del comune. Le modifiche valgono solo dopo «Salva» della scheda commessa e sono condivise con tutti. Senza modello il servizio «Crea strutture comuni» non è disponibile.';
 HELP_TEXTS['#ma-btn-strutture'] = 'Crea su Jira, per uno o più comuni, la stessa struttura del modello della commessa (es. Iniziativa → Epic → Task), senza sottotask: quelli li crea la Griglia giorno per giorno.\n\nPrima mostra sempre un\'anteprima di cosa verrà creato e cosa esiste già. Un comune che ha già la struttura (anche fatta a mano) viene solo completato con le parti mancanti, e le sue chiavi vengono registrate nell\'app. SCRIVE SU JIRA e le issue create non si cancellano da qui.';
+HELP_TEXTS['pw-strutture-jira'] = 'Apre la creazione delle strutture Jira dei comuni per questa commessa, la stessa di «🏗️ Crea strutture comuni» nella scheda commessa della Dashboard: per ogni comune scritto (o suggerito dalla Griglia con «+ Suggerisci dalla Griglia») crea Iniziativa, Epic e Task copiando il modello, senza sottotask (quelli li crea «🎫 Sottotask Jira»).\n\nCompare solo sulle commesse che hanno il modello impostato. Prima mostra sempre un\'anteprima; SCRIVE SU JIRA solo con «Crea», e le issue create non si cancellano da qui.';
 HELP_TEXTS['#jst-leggi'] = 'Legge da Jira l\'albero del modello (radice e tutto quello che ha sotto fino ai Task) e mostra, per ogni issue, quali campi verranno copiati. Non scrive nulla.';
 HELP_TEXTS['#jst-salva'] = 'Conferma il modello nella scheda commessa. Diventa definitivo (e condiviso) solo con «Salva» della scheda.';
 HELP_TEXTS['#jst-rimuovi'] = 'Toglie il modello dalla commessa (dopo «Salva» della scheda): il servizio di creazione strutture si disattiva. Su Jira non cambia nulla e le strutture già registrate restano.';
@@ -451,6 +452,16 @@ function jstOpenCreaModal(commessa, modello) {
   disegnaCrea();
   root.appendChild(layer);
   jstCarica(commessa).then(() => { if (layer.isConnected && !inCorso) disegnaCrea(); }).catch(() => {});
+}
+
+/* Dalla Griglia (v18.235.0): bottone "🏗️ Strutture comuni" nell'header del blocco commessa,
+   presente solo se la commessa ha il modello. Usa il modello salvato (non una bozza). */
+function pwJstApri(cIdx) {
+  const bc = pwGetWeekData()[cIdx];
+  if (!bc || !bc.commessa) return;
+  const modello = jstModelloDi((state.commesse_attive_meta || {})[bc.commessa]);
+  if (!modello) { showAlertModal('La commessa ' + bc.commessa + ' non ha un modello della struttura Jira (Dashboard → Commesse attive → Modifica commessa → «🧩 Modello»).'); return; }
+  jstOpenCreaModal(bc.commessa, modello);
 }
 
 // Avviso dentro una finestra impilata (showAlertModal riscriverebbe #modal-root, chiudendo tutto).

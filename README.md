@@ -114,6 +114,9 @@ Limite noto: il progetto Supabase è sul piano **Free**, che non include backup 
 
 ## Changelog
 
+## v18.235.0
+- feat: **Strutture Jira dei comuni dalla Griglia.** Nell'header di ogni blocco commessa, a sinistra di «🎫 Sottotask Jira», compare il pulsante **«🏗️ Strutture comuni»**, solo per le commesse che hanno il modello della struttura impostato. Apre la stessa finestra «🏗️ Crea strutture comuni» della scheda commessa (anteprima obbligatoria, spunte, date dei Task, «+ Suggerisci dalla Griglia»), senza passare dalla Dashboard; la creazione dalla scheda commessa resta. Nascondibile ai non admin da «🧩 Funzioni». Nessuna modifica Supabase.
+
 ## v18.234.0
 - feat: **Struttura Jira per comune - scegli cosa creare.** Dopo l'«Anteprima» ogni issue «🆕 da creare» ha una spunta (tutte spuntate all'inizio, i comuni con qualcosa da creare si aprono da soli). Spuntando un Task si spuntano anche i livelli sopra che mancano (Epic, Iniziativa); togliendo un livello si tolgono anche quelli sotto. Le issue già presenti non hanno spunta. Il conteggio «🆕 N da creare (M escluse)» e il pulsante «Crea (N comuni)» si aggiornano subito; un comune senza nulla di spuntato e senza struttura esistente non viene inviato. Nell'esito le escluse risultano «saltate · non selezionata». **Edge Function `jira-struttura-comune` ridistribuita** (v3, già deployata: nuovo parametro `escludi`; import di supabase-js da npm invece che da jsr, che in pubblicazione andava in timeout).
 

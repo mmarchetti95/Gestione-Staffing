@@ -1974,7 +1974,7 @@
       </span>
       <button id="btn-presentation" class="px-3 py-1.5 text-sm rounded hover:bg-white/10" style="border:1px solid var(--dark-border-strong);color:var(--dark-text);visibility:visible;">📊 Modalità presentazione</button>
       <div class="text-xs pl-2" style="border-left:1px solid var(--dark-border-strong);color:var(--dark-text-muted);">
-        <span id="app-version" class="font-medium" style="color:var(--accent);">v18.234.0</span> · Michele Marchetti
+        <span id="app-version" class="font-medium" style="color:var(--accent);">v18.235.0</span> · Michele Marchetti
         <span id="sb-role-badge" style="margin-left:8px;padding:1px 8px;border-radius:9999px;background:rgba(255,255,255,.1);color:var(--dark-text);font-weight:600;"></span>
       </div>
     </div>
@@ -4767,6 +4767,7 @@ const SB_FN_FUNZIONI = [
   { gruppo: 'Griglia', chiave: 'griglia:note-variazioni', label: '📝 Note/Variazioni', sel: '#pw-nv-btn' },
   { gruppo: 'Griglia', chiave: 'griglia:controllo-sottotask', label: '🎫 Controllo sottotask', sel: '#pw-jchk-btn' },
   { gruppo: 'Griglia', chiave: 'griglia:sottotask-jira', label: '🎫 Crea sottotask Jira (per commessa)', sel: '[data-help-key="pw-sottotask-jira"]' },
+  { gruppo: 'Griglia', chiave: 'griglia:strutture-jira', label: '🏗️ Crea strutture comuni Jira (per commessa)', sel: '[data-help-key="pw-strutture-jira"]' },
   { gruppo: 'Griglia', chiave: 'griglia:genera-mail', label: '📧 Genera mail', sel: '#pw-gen-mail' },
   { gruppo: 'Ferie', chiave: 'ferie:import', label: '📥 Importa Excel ferie', sel: '#pw-ferie-import-btn' },
   { gruppo: 'Controllo produzione', chiave: 'controllo:anomalie', label: '🔍 Controllo anomalie', sel: '#cpa-toggle, #cpa-modal' },
@@ -15857,6 +15858,8 @@ function pwRender() {
         <div class="flex items-center gap-2">
           <button class="text-xs bg-teal-500 hover:bg-teal-400 text-white px-3 py-1 rounded pw-write-action"
             data-cidx="${cIdx}" onclick="pwAddSquadra(this)">+ Squadra</button>
+          ${jstModelloDi((state.commesse_attive_meta || {})[bloccoCommessa.commessa]) ? `<button class="text-xs bg-sky-600 hover:bg-sky-500 text-white px-2 py-1 rounded pw-write-action"
+            data-cidx="${cIdx}" data-help-key="pw-strutture-jira" onclick="pwJstApri(${cIdx})" title="Crea su Jira la struttura (Iniziativa, Epic, Task) dei comuni dal modello della commessa — Click destro per la guida">🏗️ Strutture comuni</button>` : ''}
           <button class="text-xs bg-amber-500 hover:bg-amber-400 text-white px-2 py-1 rounded pw-write-action"
             data-cidx="${cIdx}" data-help-key="pw-sottotask-jira" onclick="pwJiraSubtaskInit(${cIdx})" title="Crea sottotask su Jira per gli operatori pianificati questa settimana — Click destro per la guida">🎫 Sottotask Jira</button>
           <button class="text-xs bg-teal-600 hover:bg-teal-500 text-white px-2 py-1 rounded disabled:opacity-50"
@@ -18818,6 +18821,7 @@ const _jst = {
 
 HELP_TEXTS['#ma-btn-modello'] = 'Imposta il MODELLO della struttura Jira di questa commessa: la chiave della radice di un albero che esiste davvero in Jira (es. AI029-604, l\'Iniziativa "MODELLO" con le sue Epic e i suoi Task). «Leggi da Jira» mostra l\'albero, gli assegnatari e i campi che verranno copiati.\n\nNei titoli del modello la parola MODELLO diventa il nome del comune. Le modifiche valgono solo dopo «Salva» della scheda commessa e sono condivise con tutti. Senza modello il servizio «Crea strutture comuni» non è disponibile.';
 HELP_TEXTS['#ma-btn-strutture'] = 'Crea su Jira, per uno o più comuni, la stessa struttura del modello della commessa (es. Iniziativa → Epic → Task), senza sottotask: quelli li crea la Griglia giorno per giorno.\n\nPrima mostra sempre un\'anteprima di cosa verrà creato e cosa esiste già. Un comune che ha già la struttura (anche fatta a mano) viene solo completato con le parti mancanti, e le sue chiavi vengono registrate nell\'app. SCRIVE SU JIRA e le issue create non si cancellano da qui.';
+HELP_TEXTS['pw-strutture-jira'] = 'Apre la creazione delle strutture Jira dei comuni per questa commessa, la stessa di «🏗️ Crea strutture comuni» nella scheda commessa della Dashboard: per ogni comune scritto (o suggerito dalla Griglia con «+ Suggerisci dalla Griglia») crea Iniziativa, Epic e Task copiando il modello, senza sottotask (quelli li crea «🎫 Sottotask Jira»).\n\nCompare solo sulle commesse che hanno il modello impostato. Prima mostra sempre un\'anteprima; SCRIVE SU JIRA solo con «Crea», e le issue create non si cancellano da qui.';
 HELP_TEXTS['#jst-leggi'] = 'Legge da Jira l\'albero del modello (radice e tutto quello che ha sotto fino ai Task) e mostra, per ogni issue, quali campi verranno copiati. Non scrive nulla.';
 HELP_TEXTS['#jst-salva'] = 'Conferma il modello nella scheda commessa. Diventa definitivo (e condiviso) solo con «Salva» della scheda.';
 HELP_TEXTS['#jst-rimuovi'] = 'Toglie il modello dalla commessa (dopo «Salva» della scheda): il servizio di creazione strutture si disattiva. Su Jira non cambia nulla e le strutture già registrate restano.';
@@ -19245,6 +19249,16 @@ function jstOpenCreaModal(commessa, modello) {
   disegnaCrea();
   root.appendChild(layer);
   jstCarica(commessa).then(() => { if (layer.isConnected && !inCorso) disegnaCrea(); }).catch(() => {});
+}
+
+/* Dalla Griglia (v18.235.0): bottone "🏗️ Strutture comuni" nell'header del blocco commessa,
+   presente solo se la commessa ha il modello. Usa il modello salvato (non una bozza). */
+function pwJstApri(cIdx) {
+  const bc = pwGetWeekData()[cIdx];
+  if (!bc || !bc.commessa) return;
+  const modello = jstModelloDi((state.commesse_attive_meta || {})[bc.commessa]);
+  if (!modello) { showAlertModal('La commessa ' + bc.commessa + ' non ha un modello della struttura Jira (Dashboard → Commesse attive → Modifica commessa → «🧩 Modello»).'); return; }
+  jstOpenCreaModal(bc.commessa, modello);
 }
 
 // Avviso dentro una finestra impilata (showAlertModal riscriverebbe #modal-root, chiudendo tutto).
