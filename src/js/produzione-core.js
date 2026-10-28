@@ -302,7 +302,7 @@ function pwControlloRender() {
           const ci = jsesc(bl.commessa), si = jsesc(sq.nome), oi = jsesc(op.nome);
           const ca = jsesc(op.cantiere), at = jsesc(op.attivita), dt = jsesc(dates[g]);
 
-          html += `<tr data-comm-idx="${blIdx}" data-sq-idx="${sqKey}" data-operatore="${esc(op.nome)}" data-cantiere="${esc(op.cantiere)}" data-cpk="${esc(k)}">
+          html += `<tr data-comm-idx="${blIdx}" data-sq-idx="${sqKey}" data-operatore="${esc(op.nome)}" data-cantiere="${esc(op.cantiere)}" data-cpk="${esc(k)}" oncontextmenu="return cpTlDaRiga(event, this)">
       <td class="cp-wrap" title="${esc(bl.commessa)}">${esc(bl.commessa)}</td>
       <td class="cp-wrap" title="${esc(sq.nome)}">${esc(sq.nome)}</td>
       <td class="cp-wrap" title="${esc(op.nome)}"><button type="button" class="no-print cp-griglia-btn" title="Apri questo intervento nella Griglia settimanale" onclick="cpApriInGriglia(${op.cIdx},${op.sIdx},${op.oIdx},${g})">🗓️</button><strong>${esc(op.nome)}</strong>${isOperatoreLicenziato(op.nome) ? '<span class="op-ex-tag">ex</span>' : ''}</td>

@@ -63,6 +63,30 @@ function cpTlApri() {
   _cpTlAutoLettura();
 }
 
+/* Click destro su una riga della tabella del Controllo Produzione: apre la timeline sul giorno
+   della riga, filtrata sull'operatore (gli altri filtri si azzerano, così l'intervento si vede).
+   Su campi, link e bottoni con una guida resta il loro click destro. */
+function cpTlDaRiga(ev, tr) {
+  for (let el = ev.target; el && el !== tr; el = el.parentElement) {
+    if (el.matches('input, textarea, select, a[href]') || helpKeyFor(el)) return true;
+  }
+  if (sbFnApplicaNascoste() && sbFnNascosta('controllo:timeline')) return true;
+  const g = Number(String(tr.dataset.cpk || '').split('|||').pop());
+  if (!tr.dataset.operatore || !(g >= 0 && g <= 5)) return true;
+  ev.preventDefault();
+  cpOreJiraHide();
+  const k = _cpaKey(pwAnno, pwWeek);
+  if (_cpTl.settimana !== k && !_cpTl.inCorso) _cpTl.msg = '';
+  _cpTl.settimana = k;
+  _cpTl.giorno = g;
+  _cpTl.commessa = ''; _cpTl.squadra = ''; _cpTl.soloControllo = false;
+  _cpTl.cerca = tr.dataset.operatore;
+  const body = document.getElementById('cptl-body');
+  if (body) body.scrollTop = 0;
+  cpTlApri();
+  return false;
+}
+
 /* Prima apertura della settimana: legge da Jira da sola, così compaiono anche i worklog che
    la sincronizzazione del Controllo Produzione non salva (giorni non pianificati, operatori
    in Griglia senza giorni compilati, ticket di commesse fuori dashboard). Una volta per

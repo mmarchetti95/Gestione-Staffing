@@ -114,6 +114,9 @@ Limite noto: il progetto Supabase è sul piano **Free**, che non include backup 
 
 ## Changelog
 
+## v18.236.0
+- feat: **Click destro su una riga del Controllo Produzione → Timeline worklog.** Apre la «🕘 Timeline worklog» sul giorno della riga, filtrata sull'operatore (gli altri filtri della timeline si azzerano). Su campi, link (Ticket/Epic) e bottoni con una guida resta il loro click destro; se la Timeline è nascosta da «🧩 Funzioni» resta il menu del browser. Nessuna modifica Supabase/Edge Function.
+
 ## v18.235.0
 - feat: **Strutture Jira dei comuni dalla Griglia.** Nell'header di ogni blocco commessa, a sinistra di «🎫 Sottotask Jira», compare il pulsante **«🏗️ Strutture comuni»**, solo per le commesse che hanno il modello della struttura impostato. Apre la stessa finestra «🏗️ Crea strutture comuni» della scheda commessa (anteprima obbligatoria, spunte, date dei Task, «+ Suggerisci dalla Griglia»), senza passare dalla Dashboard; la creazione dalla scheda commessa resta. Nascondibile ai non admin da «🧩 Funzioni». Nessuna modifica Supabase.
 
