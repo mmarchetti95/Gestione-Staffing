@@ -40,11 +40,13 @@
 //
 // Richiesta — un comune (anteprima con dryRun, poi creazione):
 //   { mode: "comune", commessa: "Sinfi", modelloKey: "AI029-604", comune: "Frontone", dryRun: true,
-//     date: { inizio: "2026-11-02", scadenza: "2026-12-31" } }   // date: obbligatorie se il modello ne ha
+//     date: { inizio: "2026-11-02", scadenza: "2026-12-31" },   // date: obbligatorie se il modello ne ha
+//     escludi: ["AI029-713"] }   // v18.234.0: issue del modello da NON creare (tolte la spunta in anteprima);
+//                                // chi sta sotto un'esclusa mancante resta senza padre e viene saltato
 // Risposta: { comune, radiceKey, salvato, nodi: [{ modello, summary, tipo, livello, key?, url?,
 //             stato: "esiste"|"da_creare"|"creato"|"errore"|"saltato", message? }] }
 
-import { createClient } from "jsr:@supabase/supabase-js@2";
+import { createClient } from "npm:@supabase/supabase-js@2";
 
 const JIRA_BASE_URL  = (Deno.env.get("JIRA_BASE_URL")  || "").replace(/\/+$/, "");
 const JIRA_EMAIL     =  Deno.env.get("JIRA_EMAIL")     || "";
@@ -330,7 +332,7 @@ async function creaIssue(projectKey: string, nodo: Nodo, summary: string, parent
   throw new Error("Creazione: Jira continua a rifiutare i campi copiati");
 }
 
-async function strutturaComune(modelloKey: string, comune: string, dryRun: boolean, date: DateScelte) {
+async function strutturaComune(modelloKey: string, comune: string, dryRun: boolean, date: DateScelte, escludi: Set<string>) {
   const { projectKey, nodi } = await leggiModello(modelloKey);
   const chiaviModello = nodi.map((n) => n.key);
   const radice = nodi[0];
@@ -363,6 +365,7 @@ async function strutturaComune(modelloKey: string, comune: string, dryRun: boole
     const gia = mappa.get(nodo.key);
     if (gia) { Object.assign(esito, { stato: "esiste", key: gia, url: url(gia) }); continue; }
     const padreMancante = nodo !== radice && !parentKey;
+    if (escludi.has(nodo.key)) { Object.assign(esito, { stato: "saltato", message: "non selezionata" }); continue; }
     if (dryRun) { esito.stato = "da_creare"; continue; }
     if (padreMancante) { Object.assign(esito, { stato: "saltato", message: "padre non creato" }); continue; }
     try {
@@ -437,12 +440,13 @@ Deno.serve(async (req: Request) => {
     ? { inizio: isoOk(p.date.inizio) ? String(p.date.inizio) : "", scadenza: isoOk(p.date.scadenza) ? String(p.date.scadenza) : "" }
     : null;
   if (date && date.inizio && date.scadenza && date.inizio > date.scadenza) return json({ error: "La data di inizio è dopo la scadenza" }, 400);
+  const escludi = new Set<string>(Array.isArray(p?.escludi) ? p.escludi.map((k: unknown) => String(k).trim().toUpperCase()).filter(Boolean) : []);
   if (!commessa) return json({ error: "Commessa mancante" }, 400);
   if (!comune || comune.length > 120) return json({ error: "Nome del comune non valido" }, 400);
 
   let r;
   try {
-    r = await strutturaComune(modelloKey, comune, dryRun, date);
+    r = await strutturaComune(modelloKey, comune, dryRun, date, escludi);
   } catch (e) {
     return json({ comune, error: String((e as Error)?.message || e) }, 502);
   }

@@ -1974,7 +1974,7 @@
       </span>
       <button id="btn-presentation" class="px-3 py-1.5 text-sm rounded hover:bg-white/10" style="border:1px solid var(--dark-border-strong);color:var(--dark-text);visibility:visible;">📊 Modalità presentazione</button>
       <div class="text-xs pl-2" style="border-left:1px solid var(--dark-border-strong);color:var(--dark-text-muted);">
-        <span id="app-version" class="font-medium" style="color:var(--accent);">v18.233.0</span> · Michele Marchetti
+        <span id="app-version" class="font-medium" style="color:var(--accent);">v18.234.0</span> · Michele Marchetti
         <span id="sb-role-badge" style="margin-left:8px;padding:1px 8px;border-radius:9999px;background:rgba(255,255,255,.1);color:var(--dark-text);font-weight:600;"></span>
       </div>
     </div>
@@ -18824,6 +18824,7 @@ HELP_TEXTS['#jst-rimuovi'] = 'Toglie il modello dalla commessa (dopo «Salva» d
 HELP_TEXTS['#jst-suggerisci'] = 'Aggiunge all\'elenco i cantieri di questa commessa pianificati in Griglia da questa settimana in poi che non hanno ancora una struttura registrata.';
 HELP_TEXTS['#jst-anteprima'] = 'Controlla su Jira, comune per comune, cosa esiste già e cosa verrebbe creato. Non scrive nulla.';
 HELP_TEXTS['#jst-crea'] = 'Crea su Jira le parti mancanti per i comuni dell\'anteprima e registra le chiavi nell\'app (anche per i comuni già completi). Start date pianificato e Data di scadenza scelte qui vanno sulle issue che nel modello le hanno compilate (i Task). SCRIVE SU JIRA: le issue create non si cancellano da qui.';
+HELP_TEXTS['jst-sel'] = 'Spunta = questa issue viene creata con «Crea». Spuntando un Task si spuntano anche i livelli sopra che mancano (Epic, Iniziativa); togliendo un livello si tolgono anche quelli sotto, che non avrebbero un padre. Le issue già presenti su Jira non si toccano.';
 HELP_TEXTS['#jst-inizio'] = 'Start date pianificato delle issue create (i Task, cioè quelle che nel modello hanno la data compilata). Le date del modello non vengono copiate perché sono vecchie.';
 HELP_TEXTS['#jst-scadenza'] = 'Data di scadenza delle issue create (i Task, cioè quelle che nel modello hanno la data compilata). Proposta: la fine della commessa.';
 
@@ -19011,7 +19012,9 @@ function _jstCantieriDallaGriglia(commessa) {
 }
 
 /* ----- Creazione strutture per uno o più comuni (si apre sopra la scheda commessa) -----
-   Anteprima obbligatoria (dryRun) prima di "Crea". */
+   Anteprima obbligatoria (dryRun) prima di "Crea". Nell'anteprima ogni issue da creare ha una
+   spunta (v18.234.0): spuntarne una spunta i livelli sopra mancanti, toglierla toglie quelli
+   sotto. Le escluse vanno all'Edge Function come "escludi" (chiavi del modello). */
 function jstOpenCreaModal(commessa, modello) {
   if (!sbGuardWrite()) return;
   if (!modello) { showAlertModal('Imposta prima il modello della struttura Jira nella scheda commessa.'); return; }
@@ -19019,7 +19022,7 @@ function jstOpenCreaModal(commessa, modello) {
   const layer = document.createElement('div');
   layer.className = 'modal-backdrop';
   const chiudi = () => layer.remove();
-  let anteprima = null;  // [{ comune, esito?, errore? }]
+  let anteprima = null;  // [{ comune, esito?, errore?, escludi: Set(chiave modello) }]
   let fatto = null;      // [{ comune, esito?, errore? }] dopo "Crea"
   let inCorso = '';
   // Date dei Task creati (Start date pianificato / Data di scadenza): quelle del modello sono
@@ -19027,6 +19030,29 @@ function jstOpenCreaModal(commessa, modello) {
   const oggiIso = new Date().toISOString().slice(0, 10);
   const fineCommessa = String(((state.commesse_attive_meta || {})[commessa] || {}).fine || '').slice(0, 10);
   let date = { inizio: oggiIso, scadenza: fineCommessa >= oggiIso ? fineCommessa : '' };
+
+  // Padre (nel modello) di ogni issue del modello.
+  const padreDi = {};
+  modello.nodi.forEach(n => { padreDi[n.key] = n.parentKey || ''; });
+
+  function antenati(k) {
+    const out = [];
+    let p = padreDi[k];
+    while (p && out.length < 10) { out.push(p); p = padreDi[p]; }
+    return out;
+  }
+
+  // Da creare davvero: "da_creare" e non escluse dalla spunta.
+  function selezionate(r) {
+    return ((r.esito && r.esito.nodi) || []).filter(n => n.stato === 'da_creare' && !(r.escludi && r.escludi.has(n.modello)));
+  }
+
+  // Un comune va inviato se crea qualcosa, oppure se la radice esiste già (si registra).
+  function haDaFare(r) {
+    if (r.errore) return false;
+    const radice = (r.esito.nodi || [])[0];
+    return selezionate(r).length > 0 || !!(radice && radice.stato === 'esiste');
+  }
 
   function comuniDalTesto() {
     const visti = {};
@@ -19040,7 +19066,10 @@ function jstOpenCreaModal(commessa, modello) {
     const conta = s => nodi.filter(n => n.stato === s).length;
     const parti = [];
     if (conta('creato')) parti.push('<span class="text-emerald-700">🟢 ' + conta('creato') + ' create</span>');
-    if (conta('da_creare')) parti.push('<span class="text-emerald-700">🆕 ' + conta('da_creare') + ' da creare</span>');
+    if (conta('da_creare')) {
+      const sel = selezionate(r).length, escluse = conta('da_creare') - sel;
+      parti.push('<span class="text-emerald-700">🆕 ' + sel + ' da creare</span>' + (escluse ? ' <span class="text-slate-500">(' + escluse + ' escluse)</span>' : ''));
+    }
     if (conta('esiste')) parti.push('<span class="text-blue-700">🔵 ' + conta('esiste') + ' già presenti</span>');
     if (conta('errore')) parti.push('<span class="text-red-700">⚠️ ' + conta('errore') + ' errori</span>');
     if (conta('saltato')) parti.push('<span class="text-slate-500">' + conta('saltato') + ' saltate</span>');
@@ -19048,25 +19077,62 @@ function jstOpenCreaModal(commessa, modello) {
     return parti.join(' &nbsp;');
   }
 
-  function dettaglioComune(r) {
+  function dettaglioComune(r, ci) {
     if (r.errore) return '';
+    const spunta = n => (n.stato === 'da_creare' && !fatto)
+      ? '<label class="cursor-pointer" data-help-key="jst-sel"><input type="checkbox" class="jst-sel align-middle mr-1" data-ci="' + ci + '" data-mod="' + esc(n.modello) + '"' + (r.escludi && r.escludi.has(n.modello) ? '' : ' checked') + '>'
+      : '';
     const prof = {};
     (r.esito.nodi || []).forEach(n => { prof[n.modello] = n.livello; });
     const maxLiv = Math.max(0, ...(r.esito.nodi || []).map(n => n.livello));
     const icone = { esiste: '🔵', da_creare: '🆕', creato: '🟢', errore: '⚠️', saltato: '⏭️' };
     return (r.esito.avvisi || []).map(a => '<div class="text-[11px] text-amber-700">⚠️ ' + esc(a) + '</div>').join('')
       + (r.esito.nodi || []).map(n => '<div class="text-[11px]" style="margin-left:' + ((maxLiv - n.livello) * 16) + 'px">'
-        + (icone[n.stato] || '') + ' <span class="text-slate-400">[' + esc(n.tipo) + ']</span> '
+        + spunta(n) + (icone[n.stato] || '') + ' <span class="text-slate-400">[' + esc(n.tipo) + ']</span> '
         + (n.key ? '<a href="' + esc(n.url || _jstUrl(n.key, modello)) + '" target="_blank" class="text-teal-700 hover:underline">' + esc(n.key) + '</a> · ' : '')
-        + esc(n.summary)
+        + esc(n.summary) + (n.stato === 'da_creare' && !fatto ? '</label>' : '')
         + (n.message ? ' <span class="' + (n.stato === 'errore' ? 'text-red-700' : 'text-amber-700') + '">— ' + esc(n.message) + '</span>' : '')
         + '</div>').join('');
   }
 
   function risultatiHtml(lista) {
-    return lista.map(r => '<details class="border border-slate-200 rounded px-2 py-1.5 mb-1.5"' + (r.errore || (r.esito.nodi || []).some(n => n.stato === 'errore') ? ' open' : '') + '>'
-      + '<summary class="cursor-pointer text-sm"><b>' + esc(r.comune) + '</b> &nbsp;<span class="text-[11px]">' + statoComune(r) + '</span></summary>'
-      + '<div class="mt-1">' + dettaglioComune(r) + '</div></details>').join('');
+    return lista.map((r, ci) => {
+      // Aperto se c'è da scegliere (anteprima con issue da creare) o qualcosa è andato storto.
+      const aperto = r.errore || (r.esito.nodi || []).some(n => n.stato === 'errore' || (n.stato === 'da_creare' && !fatto));
+      return '<details class="border border-slate-200 rounded px-2 py-1.5 mb-1.5"' + (aperto ? ' open' : '') + '>'
+        + '<summary class="cursor-pointer text-sm"><b>' + esc(r.comune) + '</b> &nbsp;<span class="jst-stato text-[11px]" data-ci="' + ci + '">' + statoComune(r) + '</span></summary>'
+        + '<div class="mt-1">' + dettaglioComune(r, ci) + '</div></details>';
+    }).join('');
+  }
+
+  // Spunta di un'issue: con lei i livelli sopra mancanti; senza, anche quelli sotto.
+  function cambiaSpunta(el) {
+    const ci = Number(el.dataset.ci), k = el.dataset.mod;
+    const r = anteprima && anteprima[ci];
+    if (!r || r.errore) return;
+    if (el.checked) {
+      [k].concat(antenati(k)).forEach(x => r.escludi.delete(x));
+    } else {
+      (r.esito.nodi || []).forEach(n => { if (n.modello === k || antenati(n.modello).includes(k)) r.escludi.add(n.modello); });
+    }
+    layer.querySelectorAll('.jst-sel[data-ci="' + ci + '"]').forEach(c => { c.checked = !r.escludi.has(c.dataset.mod); });
+    const st = layer.querySelector('.jst-stato[data-ci="' + ci + '"]');
+    if (st) st.innerHTML = statoComune(r);
+    aggiornaBtnCrea();
+  }
+
+  function etichettaCrea() {
+    const n = anteprima && !fatto ? anteprima.filter(haDaFare).length : 0;
+    return { n, testo: 'Crea' + (n ? ' (' + n + ' comun' + (n === 1 ? 'e' : 'i') + ')' : '') };
+  }
+
+  function aggiornaBtnCrea() {
+    const b = layer.querySelector('#jst-crea');
+    if (!b) return;
+    const e = etichettaCrea();
+    b.textContent = e.testo;
+    b.disabled = !!inCorso || !e.n;
+    b.style.opacity = b.disabled ? '0.5' : '1';
   }
 
   function registrateHtml() {
@@ -19082,7 +19148,6 @@ function jstOpenCreaModal(commessa, modello) {
     const testo = (layer.querySelector('#jst-comuni') || {}).value || '';
     leggiDate();
     const lista = fatto || anteprima;
-    const daFare = anteprima && !fatto ? anteprima.filter(r => !r.errore).length : 0;
     layer.innerHTML = '<div class="bg-white rounded-lg shadow-xl w-full max-w-2xl mx-4 my-8 p-5 max-h-[90vh] overflow-y-auto">'
       + '<h3 class="font-semibold text-slate-900 mb-1">🏗️ Crea strutture comuni — ' + esc(commessa) + '</h3>'
       + '<p class="text-xs text-slate-500 mb-3">Modello <a href="' + esc(_jstUrl(modello.key, modello)) + '" target="_blank" class="text-teal-700 hover:underline">' + esc(modello.key) + '</a> (' + modello.nodi.length + ' issue, progetto ' + esc(modello.project || '') + '). Un comune per riga: viene creata la stessa struttura, con il nome del comune al posto di MODELLO. I comuni che l\'hanno già vengono solo completati.</p>'
@@ -19100,7 +19165,7 @@ function jstOpenCreaModal(commessa, modello) {
       + '<div class="flex justify-end gap-2 mt-4">'
       + '<button type="button" id="jst-chiudi" class="px-3 py-1.5 text-sm border border-slate-300 rounded">Chiudi</button>'
       + (fatto ? '' : '<button type="button" id="jst-anteprima" class="px-3 py-1.5 text-sm border border-teal-300 text-teal-700 rounded hover:bg-teal-50"' + (inCorso ? ' disabled' : '') + '>Anteprima</button>'
-        + '<button type="button" id="jst-crea" class="px-3 py-1.5 text-sm bg-teal-600 text-white rounded hover:bg-teal-700"' + (inCorso || !daFare ? ' disabled style="opacity:0.5;"' : '') + '>Crea' + (daFare ? ' (' + daFare + ' comun' + (daFare === 1 ? 'e' : 'i') + ')' : '') + '</button>')
+        + '<button type="button" id="jst-crea" class="px-3 py-1.5 text-sm bg-teal-600 text-white rounded hover:bg-teal-700"></button>')
       + '</div></div>';
     layer.querySelector('#jst-chiudi').onclick = chiudi;
     const sugg = layer.querySelector('#jst-suggerisci');
@@ -19111,6 +19176,8 @@ function jstOpenCreaModal(commessa, modello) {
     if (ant) ant.onclick = () => esegui(true);
     const crea = layer.querySelector('#jst-crea');
     if (crea) crea.onclick = () => esegui(false);
+    aggiornaBtnCrea();
+    layer.querySelectorAll('.jst-sel').forEach(c => { c.onchange = () => cambiaSpunta(c); });
   }
 
   function suggerisci() {
@@ -19134,7 +19201,9 @@ function jstOpenCreaModal(commessa, modello) {
     leggiDate();
     if (!dryRun && (!date.inizio || !date.scadenza)) { _jstNota(layer, 'Indica Start date pianificato e Data di scadenza: Jira le vuole per creare i Task.'); return; }
     if (date.inizio && date.scadenza && date.inizio > date.scadenza) { _jstNota(layer, 'La Start date pianificato è dopo la Data di scadenza.'); return; }
-    const comuni = dryRun ? comuniDalTesto() : anteprima.filter(r => !r.errore).map(r => r.comune);
+    // In creazione: i comuni dell'anteprima con qualcosa da fare, ciascuno con le sue esclusioni.
+    const daInviare = dryRun ? null : anteprima.filter(haDaFare);
+    const comuni = dryRun ? comuniDalTesto() : daInviare.map(r => r.comune);
     if (!comuni.length) { _jstNota(layer, 'Scrivi almeno un comune.'); return; }
     if (comuni.length > 40) { _jstNota(layer, 'Al massimo 40 comuni per volta.'); return; }
     const out = new Array(comuni.length);
@@ -19146,8 +19215,10 @@ function jstOpenCreaModal(commessa, modello) {
       while (next < comuni.length) {
         const i = next++;
         try {
-          const esito = await jstInvoke({ mode: 'comune', commessa, modelloKey: modello.key, comune: comuni[i], dryRun, date: { inizio: date.inizio, scadenza: date.scadenza } });
-          out[i] = { comune: comuni[i], esito };
+          const body = { mode: 'comune', commessa, modelloKey: modello.key, comune: comuni[i], dryRun, date: { inizio: date.inizio, scadenza: date.scadenza } };
+          if (!dryRun) body.escludi = [...daInviare[i].escludi];
+          const esito = await jstInvoke(body);
+          out[i] = { comune: comuni[i], esito, escludi: new Set() };
         } catch (e) {
           out[i] = { comune: comuni[i], errore: e.message || String(e) };
         }
