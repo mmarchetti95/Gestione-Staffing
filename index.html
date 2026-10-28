@@ -1974,7 +1974,7 @@
       </span>
       <button id="btn-presentation" class="px-3 py-1.5 text-sm rounded hover:bg-white/10" style="border:1px solid var(--dark-border-strong);color:var(--dark-text);visibility:visible;">📊 Modalità presentazione</button>
       <div class="text-xs pl-2" style="border-left:1px solid var(--dark-border-strong);color:var(--dark-text-muted);">
-        <span id="app-version" class="font-medium" style="color:var(--accent);">v18.232.0</span> · Michele Marchetti
+        <span id="app-version" class="font-medium" style="color:var(--accent);">v18.233.0</span> · Michele Marchetti
         <span id="sb-role-badge" style="margin-left:8px;padding:1px 8px;border-radius:9999px;background:rgba(255,255,255,.1);color:var(--dark-text);font-weight:600;"></span>
       </div>
     </div>
@@ -18823,7 +18823,9 @@ HELP_TEXTS['#jst-salva'] = 'Conferma il modello nella scheda commessa. Diventa d
 HELP_TEXTS['#jst-rimuovi'] = 'Toglie il modello dalla commessa (dopo «Salva» della scheda): il servizio di creazione strutture si disattiva. Su Jira non cambia nulla e le strutture già registrate restano.';
 HELP_TEXTS['#jst-suggerisci'] = 'Aggiunge all\'elenco i cantieri di questa commessa pianificati in Griglia da questa settimana in poi che non hanno ancora una struttura registrata.';
 HELP_TEXTS['#jst-anteprima'] = 'Controlla su Jira, comune per comune, cosa esiste già e cosa verrebbe creato. Non scrive nulla.';
-HELP_TEXTS['#jst-crea'] = 'Crea su Jira le parti mancanti per i comuni dell\'anteprima e registra le chiavi nell\'app (anche per i comuni già completi). SCRIVE SU JIRA: le issue create non si cancellano da qui.';
+HELP_TEXTS['#jst-crea'] = 'Crea su Jira le parti mancanti per i comuni dell\'anteprima e registra le chiavi nell\'app (anche per i comuni già completi). Start date pianificato e Data di scadenza scelte qui vanno sulle issue che nel modello le hanno compilate (i Task). SCRIVE SU JIRA: le issue create non si cancellano da qui.';
+HELP_TEXTS['#jst-inizio'] = 'Start date pianificato delle issue create (i Task, cioè quelle che nel modello hanno la data compilata). Le date del modello non vengono copiate perché sono vecchie.';
+HELP_TEXTS['#jst-scadenza'] = 'Data di scadenza delle issue create (i Task, cioè quelle che nel modello hanno la data compilata). Proposta: la fine della commessa.';
 
 async function jstInvoke(body) {
   if (!_sbClient || !_sbUser) throw new Error('Non connesso a Supabase.');
@@ -18907,7 +18909,9 @@ function jstOpenModelloEditor(opts) {
     ((dettaglio && dettaglio.nodi) || []).forEach(n => { det[n.key] = n; });
     const righe = modello.nodi.map(n => {
       const d = det[n.key];
-      const campi = d ? '<div class="text-[10px] text-slate-500">Copia: ' + (d.campi.length ? esc(d.campi.join(', ')) : '—') + (d.saltati.length ? ' <span class="text-slate-400">· non copiati: ' + esc(d.saltati.join(', ')) + '</span>' : '') + '</div>' : '';
+      const campi = d ? '<div class="text-[10px] text-slate-500">Copia: ' + (d.campi.length ? esc(d.campi.join(', ')) : '—')
+        + ((d.date || []).length ? ' <span class="text-teal-700">· date scelte alla creazione: ' + esc(d.date.join(', ')) + '</span>' : '')
+        + (d.saltati.length ? ' <span class="text-slate-400">· non copiati: ' + esc(d.saltati.join(', ')) + '</span>' : '') + '</div>' : '';
       return '<div class="border-l-2 border-slate-200 pl-2 py-1" style="margin-left:' + (prof[n.key] * 18) + 'px">'
         + '<div class="text-xs"><span class="text-slate-400">[' + esc(n.tipo) + ']</span> <a href="' + esc(_jstUrl(n.key, modello)) + '" target="_blank" class="font-medium text-teal-700 hover:underline">' + esc(n.key) + '</a> · ' + esc(n.summary)
         + (d && d.assegnatario ? ' <span class="text-slate-400">→ ' + esc(d.assegnatario) + '</span>' : '') + '</div>'
@@ -19018,6 +19022,11 @@ function jstOpenCreaModal(commessa, modello) {
   let anteprima = null;  // [{ comune, esito?, errore? }]
   let fatto = null;      // [{ comune, esito?, errore? }] dopo "Crea"
   let inCorso = '';
+  // Date dei Task creati (Start date pianificato / Data di scadenza): quelle del modello sono
+  // vecchie e un validatore Jira le vuole in creazione. Proposta: oggi -> fine commessa.
+  const oggiIso = new Date().toISOString().slice(0, 10);
+  const fineCommessa = String(((state.commesse_attive_meta || {})[commessa] || {}).fine || '').slice(0, 10);
+  let date = { inizio: oggiIso, scadenza: fineCommessa >= oggiIso ? fineCommessa : '' };
 
   function comuniDalTesto() {
     const visti = {};
@@ -19071,6 +19080,7 @@ function jstOpenCreaModal(commessa, modello) {
 
   function disegnaCrea() {
     const testo = (layer.querySelector('#jst-comuni') || {}).value || '';
+    leggiDate();
     const lista = fatto || anteprima;
     const daFare = anteprima && !fatto ? anteprima.filter(r => !r.errore).length : 0;
     layer.innerHTML = '<div class="bg-white rounded-lg shadow-xl w-full max-w-2xl mx-4 my-8 p-5 max-h-[90vh] overflow-y-auto">'
@@ -19079,6 +19089,11 @@ function jstOpenCreaModal(commessa, modello) {
       + '<div class="flex items-center justify-between mb-1"><span class="text-xs text-slate-600">Comuni</span>'
       + '<button type="button" id="jst-suggerisci" class="text-[11px] text-teal-700 hover:underline">+ Suggerisci dalla Griglia</button></div>'
       + '<textarea id="jst-comuni" rows="5" class="w-full border border-slate-300 rounded px-2 py-1.5 text-sm" placeholder="Frontone&#10;Pietrarubbia"' + (inCorso || fatto ? ' disabled' : '') + '>' + esc(testo) + '</textarea>'
+      + '<div class="grid grid-cols-2 gap-2 mt-2">'
+      + '<label class="block text-xs"><span class="text-slate-600">Start date pianificato</span><input type="date" id="jst-inizio" class="mt-0.5 w-full border border-slate-300 rounded px-2 py-1.5 text-sm" value="' + esc(date.inizio) + '"' + (inCorso || fatto ? ' disabled' : '') + '></label>'
+      + '<label class="block text-xs"><span class="text-slate-600">Data di scadenza</span><input type="date" id="jst-scadenza" class="mt-0.5 w-full border border-slate-300 rounded px-2 py-1.5 text-sm" value="' + esc(date.scadenza) + '"' + (inCorso || fatto ? ' disabled' : '') + '></label>'
+      + '</div>'
+      + '<div class="text-[10px] text-slate-400 mt-0.5">Scritte sulle issue create che nel modello hanno queste date compilate (i Task): le date del modello non vengono copiate.</div>'
       + (inCorso ? '<div class="text-xs text-slate-500 my-2">⏳ ' + esc(inCorso) + '</div>' : '')
       + (lista ? '<div class="mt-3">' + (fatto ? '<div class="text-xs font-medium text-slate-700 mb-1">Esito</div>' : '<div class="text-xs font-medium text-slate-700 mb-1">Anteprima (nulla è stato ancora scritto su Jira)</div>') + risultatiHtml(lista) + '</div>' : '')
       + registrateHtml()
@@ -19109,7 +19124,16 @@ function jstOpenCreaModal(commessa, modello) {
     disegnaCrea();
   }
 
+  function leggiDate() {
+    const i = layer.querySelector('#jst-inizio'), f = layer.querySelector('#jst-scadenza');
+    if (i) date.inizio = i.value;
+    if (f) date.scadenza = f.value;
+  }
+
   async function esegui(dryRun) {
+    leggiDate();
+    if (!dryRun && (!date.inizio || !date.scadenza)) { _jstNota(layer, 'Indica Start date pianificato e Data di scadenza: Jira le vuole per creare i Task.'); return; }
+    if (date.inizio && date.scadenza && date.inizio > date.scadenza) { _jstNota(layer, 'La Start date pianificato è dopo la Data di scadenza.'); return; }
     const comuni = dryRun ? comuniDalTesto() : anteprima.filter(r => !r.errore).map(r => r.comune);
     if (!comuni.length) { _jstNota(layer, 'Scrivi almeno un comune.'); return; }
     if (comuni.length > 40) { _jstNota(layer, 'Al massimo 40 comuni per volta.'); return; }
@@ -19122,7 +19146,7 @@ function jstOpenCreaModal(commessa, modello) {
       while (next < comuni.length) {
         const i = next++;
         try {
-          const esito = await jstInvoke({ mode: 'comune', commessa, modelloKey: modello.key, comune: comuni[i], dryRun });
+          const esito = await jstInvoke({ mode: 'comune', commessa, modelloKey: modello.key, comune: comuni[i], dryRun, date: { inizio: date.inizio, scadenza: date.scadenza } });
           out[i] = { comune: comuni[i], esito };
         } catch (e) {
           out[i] = { comune: comuni[i], errore: e.message || String(e) };

@@ -12,12 +12,19 @@
 // - Titolo: "MODELLO" (anche "_MODELLO") diventa il nome del comune.
 // - Campi: si copiano i valori del modello per i campi presenti nella schermata di creazione
 //   di quel tipo di issue (assegnatario, Tempo Team, Target Production, campi a scelta…).
-//   Non si copiano date, stime, stato, sprint, collegamenti all'Epic e i testi che citano
-//   una chiave del modello (sono i campi "padre" riempiti dalle automazioni). Se Jira
-//   rifiuta un campo, si riprova senza e lo si segnala.
+//   Non si copiano stime, stato, sprint, collegamenti all'Epic e i testi che citano una
+//   chiave del modello (sono i campi "padre" riempiti dalle automazioni). Se Jira rifiuta
+//   un campo, si riprova senza e lo si segnala.
+// - Date (v18.233.0): quelle del modello sono vecchie e non si copiano. Dove il modello ha
+//   compilato "Data di scadenza" / "Start date pianificato" (in SINFI i Task: un validatore
+//   Jira li vuole in creazione insieme a Target Production) si scrivono le date scelte
+//   nella finestra di creazione (date: { inizio, scadenza }).
 // - Idempotente: se il comune ha già la radice (stesso tipo, stesso titolo a meno di
 //   maiuscole/accenti) la si completa con le sole parti mancanti, riconosciute per tipo e
-//   titolo sotto lo stesso padre. Così si "adottano" anche le strutture fatte a mano.
+//   titolo sotto lo stesso padre. Il titolo si confronta per pezzi separati da " - " in
+//   qualunque ordine: i comuni fatti a mano prima del modello hanno "Rilievo Auto -
+//   Cividate Camuno" invece di "Cividate Camuno - Rilievo Auto". Così si "adottano" anche
+//   le strutture fatte a mano senza duplicarle.
 // - Senza dryRun, le chiavi (create o ritrovate) vanno nella tabella jira_struttura_comune
 //   (service_role) e l'operazione in activity_log.
 // - Solo admin e responsabile (ruolo letto dall'utente Supabase, non dal client).
@@ -28,10 +35,12 @@
 // Richiesta — lettura del modello (anteprima nella scheda commessa):
 //   { mode: "modello", modelloKey: "AI029-604" }
 // Risposta: { modello: { key, projectKey, base, nodi: [{ key, summary, tipo, tipoId, livello,
-//             parentKey, assegnatario, campi: [nome], saltati: [nome] }], avvisi: [testo] } }
+//             parentKey, assegnatario, campi: [nome], saltati: [nome], date: [nome] }], avvisi: [testo],
+//             date: [nomi dei campi data da chiedere alla creazione] } }
 //
 // Richiesta — un comune (anteprima con dryRun, poi creazione):
-//   { mode: "comune", commessa: "Sinfi", modelloKey: "AI029-604", comune: "Frontone", dryRun: true }
+//   { mode: "comune", commessa: "Sinfi", modelloKey: "AI029-604", comune: "Frontone", dryRun: true,
+//     date: { inizio: "2026-11-02", scadenza: "2026-12-31" } }   // date: obbligatorie se il modello ne ha
 // Risposta: { comune, radiceKey, salvato, nodi: [{ modello, summary, tipo, livello, key?, url?,
 //             stato: "esiste"|"da_creare"|"creato"|"errore"|"saltato", message? }] }
 
@@ -46,6 +55,7 @@ const SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "";
 const TABELLA = "jira_struttura_comune";
 const MAX_NODI = 60;
 const SEGNAPOSTO = /_?MODELLO/g;
+const START_DATE_FIELD = "customfield_13093"; // Start date pianificato
 
 // Campi mai copiati: li decide Jira, la creazione stessa o chi lavora sul comune.
 const CAMPI_ESCLUSI = new Set([
@@ -97,6 +107,12 @@ function jqlEscape(s: string): string {
 function normNome(s: string): string {
   return String(s || "").normalize("NFD").replace(/\p{M}/gu, "")
     .replace(/[_\s]+/g, " ").trim().toLowerCase();
+}
+
+// Titolo come insieme di pezzi separati da "-": "Rilievo Auto - Cividate Camuno" e
+// "Cividate Camuno - Rilievo Auto" sono la stessa issue.
+function chiaveTitolo(s: string): string {
+  return normNome(s).split(/\s*-\s*/).map((x) => x.trim()).filter(Boolean).sort().join("|");
 }
 
 function sostituisci(s: string, comune: string): string {
@@ -224,13 +240,29 @@ function valoreCopia(meta: any, v: any, comune: string): any {
   }
 }
 
-// Campi del modello da passare alla creazione, più i nomi di quelli lasciati fuori.
-function pianoCampi(nodo: Nodo, meta: Map<string, any>, chiaviModello: string[], comune: string) {
+type DateScelte = { inizio: string; scadenza: string } | null;
+
+// Date che il modello ha compilato e che vanno chieste all'utente: fieldId -> "inizio"|"scadenza".
+function campiData(nodo: Nodo, meta: Map<string, any>): Map<string, "inizio" | "scadenza"> {
+  const out = new Map<string, "inizio" | "scadenza">();
+  if (meta.has("duedate") && !vuoto(nodo.fields.duedate)) out.set("duedate", "scadenza");
+  if (meta.has(START_DATE_FIELD) && !vuoto(nodo.fields[START_DATE_FIELD])) out.set(START_DATE_FIELD, "inizio");
+  return out;
+}
+
+// Campi del modello da passare alla creazione (con le date scelte), più i nomi di quelli
+// lasciati fuori e delle date da chiedere.
+function pianoCampi(nodo: Nodo, meta: Map<string, any>, chiaviModello: string[], comune: string, date: DateScelte = null) {
   const campi: Record<string, any> = {};
   const nomi: string[] = [];
   const saltati: string[] = [];
+  const daChiedere: string[] = [];
+  for (const [fieldId, quale] of campiData(nodo, meta)) {
+    daChiedere.push(String(meta.get(fieldId)?.name || fieldId));
+    if (date && date[quale]) campi[fieldId] = date[quale];
+  }
   for (const [fieldId, m] of meta) {
-    if (CAMPI_ESCLUSI.has(fieldId)) continue;
+    if (CAMPI_ESCLUSI.has(fieldId) || fieldId in campi || fieldId === START_DATE_FIELD) continue;
     const v = nodo.fields[fieldId];
     if (vuoto(v)) continue;
     const nome = String(m?.name || fieldId);
@@ -243,7 +275,7 @@ function pianoCampi(nodo: Nodo, meta: Map<string, any>, chiaviModello: string[],
     campi[fieldId] = out;
     nomi.push(nome);
   }
-  return { campi, nomi, saltati };
+  return { campi, nomi, saltati, daChiedere };
 }
 
 /* ---------- Struttura del comune ---------- */
@@ -262,7 +294,7 @@ async function trovaRadice(projectKey: string, radice: Nodo, summary: string): P
   if (radice.parentKey) jql += ` AND parent = "${jqlEscape(radice.parentKey)}"`;
   const trovate = await cerca(jql + " ORDER BY created ASC", ["summary"], 50);
   return trovate
-    .filter((i) => i.key !== radice.key && normNome(i?.fields?.summary) === normNome(summary))
+    .filter((i) => i.key !== radice.key && chiaveTitolo(i?.fields?.summary) === chiaveTitolo(summary))
     .map((i) => String(i.key));
 }
 
@@ -272,7 +304,7 @@ async function figliDi(key: string): Promise<Map<string, string>> {
   const out = new Map<string, string>();
   for (const i of figli) {
     if (i?.fields?.issuetype?.subtask) continue;
-    const k = `${i?.fields?.issuetype?.id}::${normNome(i?.fields?.summary)}`;
+    const k = `${i?.fields?.issuetype?.id}::${chiaveTitolo(i?.fields?.summary)}`;
     if (!out.has(k)) out.set(k, String(i.key));
   }
   return out;
@@ -298,7 +330,7 @@ async function creaIssue(projectKey: string, nodo: Nodo, summary: string, parent
   throw new Error("Creazione: Jira continua a rifiutare i campi copiati");
 }
 
-async function strutturaComune(modelloKey: string, comune: string, dryRun: boolean) {
+async function strutturaComune(modelloKey: string, comune: string, dryRun: boolean, date: DateScelte) {
   const { projectKey, nodi } = await leggiModello(modelloKey);
   const chiaviModello = nodi.map((n) => n.key);
   const radice = nodi[0];
@@ -322,7 +354,7 @@ async function strutturaComune(modelloKey: string, comune: string, dryRun: boole
       parentKey = mappa.get(nodo.parentKey) || "";
       if (parentKey) {
         if (!figliCache.has(parentKey)) figliCache.set(parentKey, await figliDi(parentKey));
-        const trovato = figliCache.get(parentKey)!.get(`${nodo.tipoId}::${normNome(summary)}`);
+        const trovato = figliCache.get(parentKey)!.get(`${nodo.tipoId}::${chiaveTitolo(summary)}`);
         if (trovato) mappa.set(nodo.key, trovato);
       }
     } else {
@@ -335,7 +367,8 @@ async function strutturaComune(modelloKey: string, comune: string, dryRun: boole
     if (padreMancante) { Object.assign(esito, { stato: "saltato", message: "padre non creato" }); continue; }
     try {
       const meta = await campiCreazione(projectKey, nodo.tipoId);
-      const { campi } = pianoCampi(nodo, meta, chiaviModello, comune);
+      const { campi, daChiedere } = pianoCampi(nodo, meta, chiaviModello, comune, date);
+      if (daChiedere.length && !date) throw new Error("Date mancanti: " + daChiedere.join(", "));
       const { key, rifiutati } = await creaIssue(projectKey, nodo, summary, parentKey, campi);
       mappa.set(nodo.key, key);
       Object.assign(esito, { stato: "creato", key, url: url(key) });
@@ -377,17 +410,19 @@ Deno.serve(async (req: Request) => {
       const chiavi = nodi.map((n) => n.key);
       const avvisi: string[] = [];
       const out = [];
+      const dateDaChiedere = new Set<string>();
       for (const n of nodi) {
         const meta = await campiCreazione(projectKey, n.tipoId);
         const piano = pianoCampi(n, meta, chiavi, "MODELLO");
+        piano.daChiedere.forEach((d) => dateDaChiedere.add(d));
         if (!/_?MODELLO/.test(n.summary)) avvisi.push(`${n.key} "${n.summary}": il titolo non contiene "MODELLO", verrà copiato uguale per ogni comune.`);
         out.push({
           key: n.key, summary: n.summary, tipo: n.tipo, tipoId: n.tipoId, livello: n.livello, parentKey: n.parentKey,
-          assegnatario: String(n.fields?.assignee?.displayName || ""), campi: piano.nomi, saltati: piano.saltati,
+          assegnatario: String(n.fields?.assignee?.displayName || ""), campi: piano.nomi, saltati: piano.saltati, date: piano.daChiedere,
         });
       }
       if (nodi.length >= MAX_NODI) avvisi.push(`Il modello ha più di ${MAX_NODI} issue: copiate solo le prime ${MAX_NODI}.`);
-      return json({ modello: { key: modelloKey, projectKey, base: JIRA_BASE_URL, nodi: out, avvisi } });
+      return json({ modello: { key: modelloKey, projectKey, base: JIRA_BASE_URL, nodi: out, avvisi, date: [...dateDaChiedere] } });
     } catch (e) {
       return json({ error: String((e as Error)?.message || e) }, 502);
     }
@@ -397,12 +432,17 @@ Deno.serve(async (req: Request) => {
   const commessa = String(p?.commessa || "").trim();
   const comune = String(p?.comune || "").replace(/\s+/g, " ").trim();
   const dryRun = !!p?.dryRun;
+  const isoOk = (d: unknown) => /^\d{4}-\d{2}-\d{2}$/.test(String(d || ""));
+  const date: DateScelte = p?.date && (isoOk(p.date.inizio) || isoOk(p.date.scadenza))
+    ? { inizio: isoOk(p.date.inizio) ? String(p.date.inizio) : "", scadenza: isoOk(p.date.scadenza) ? String(p.date.scadenza) : "" }
+    : null;
+  if (date && date.inizio && date.scadenza && date.inizio > date.scadenza) return json({ error: "La data di inizio è dopo la scadenza" }, 400);
   if (!commessa) return json({ error: "Commessa mancante" }, 400);
   if (!comune || comune.length > 120) return json({ error: "Nome del comune non valido" }, 400);
 
   let r;
   try {
-    r = await strutturaComune(modelloKey, comune, dryRun);
+    r = await strutturaComune(modelloKey, comune, dryRun, date);
   } catch (e) {
     return json({ comune, error: String((e as Error)?.message || e) }, 502);
   }

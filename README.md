@@ -114,6 +114,9 @@ Limite noto: il progetto Supabase è sul piano **Free**, che non include backup 
 
 ## Changelog
 
+## v18.233.0
+- fix: **Struttura Jira per comune - date dei Task e comuni fatti a mano.** In AI029 un Task si crea solo con Start date pianificato, Data di scadenza e Target Production: la creazione falliva («inserire tempi di lavoro e produzione pianificati») perché le date del modello, vecchie, non vengono copiate. Ora la finestra «🏗️ Crea strutture comuni» chiede **Start date pianificato** (proposta: oggi) e **Data di scadenza** (proposta: fine commessa), scritte sulle issue che nel modello hanno quelle date compilate (i Task); l'editor del modello le mostra come «date scelte alla creazione». Inoltre i comuni creati a mano prima del modello hanno i Task con il nome al contrario («Rilievo Auto - Cividate Camuno» invece di «Cividate Camuno - Rilievo Auto») e non venivano riconosciuti: l'app provava a crearli di nuovo (bloccata solo dall'errore sulle date). Ora i pezzi del titolo separati da « - » si confrontano in qualunque ordine, quindi quei Task risultano «già presenti». **Edge Function `jira-struttura-comune` ridistribuita** (v2, già deployata).
+
 ## v18.232.0
 - change: **Struttura Jira per comune - niente collegamento attività → Task.** Nell'editor «🧩 Modello» della scheda commessa spariscono le caselle «Attività della Griglia che vanno su questo Task» e la creazione dei sottotask dalla Griglia non propone più Epic e Task dalla struttura registrata: per ora il servizio serve solo a creare la struttura, Epic e Task si scelgono a mano come sempre. Le Epic del modello restano escluse dalla tendina. Nessuna modifica Supabase/Edge Function.
 
