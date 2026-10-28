@@ -51,6 +51,7 @@ JS_FILES = [
     'weekly-strumenti.js',
     'weekly-jira-subtask.js',
     'weekly-jira-subtask-db.js',
+    'jira-struttura-comune.js',
     'weekly-nav.js',
     'weekly-doppiaweek.js',
     'weekly-collapse-cp.js',

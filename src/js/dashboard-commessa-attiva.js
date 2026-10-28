@@ -26,6 +26,7 @@ function getCommessaAttivaMeta(nome) {
     documenti: stored.documenti || [],
     fabbisogno_dettagliato: stored.fabbisogno_dettagliato || [],
     attivita: stored.attivita || [],
+    jira_modello: stored.jira_modello || null,
     _risorseAttuali: risorseAttuali,
     _dedotto: !state.commesse_attive_meta[nome],
   };
@@ -39,6 +40,8 @@ function openCommessaAttivaModal(nome) {
   let fabbDraft = fabbisognoClona(m.fabbisogno_dettagliato);
   // Bozza del catalogo attività (vedi commessa-attivita.js), stesso schema del fabbisogno.
   let attDraft = caClona(m.attivita);
+  // Bozza del modello della struttura Jira per comune (vedi jira-struttura-comune.js).
+  let modDraft = m.jira_modello ? JSON.parse(JSON.stringify(m.jira_modello)) : null;
   const root = document.getElementById('modal-root');
   root.innerHTML = `<div class="modal-backdrop"><div class="bg-white rounded-lg shadow-xl w-full max-w-2xl mx-4 my-8 p-5 max-h-[90vh] overflow-y-auto">
     <h3 class="font-semibold text-slate-900 mb-1">Modifica commessa attiva</h3>
@@ -63,6 +66,16 @@ function openCommessaAttivaModal(nome) {
           <button type="button" id="ma-btn-attivita" class="px-2 py-1.5 text-xs bg-teal-50 text-teal-700 border border-teal-200 rounded hover:bg-teal-100 whitespace-nowrap">🏷️ Attività e KPI</button>
         </div>
         <div id="ma-att-summary">${caSummaryHtml(attDraft, false)}</div>
+      </div>
+      <div class="p-2 bg-slate-50 rounded border border-slate-200">
+        <div class="flex items-center justify-between gap-2">
+          <div class="text-xs text-slate-600">Struttura Jira per comune <span class="text-slate-400 font-normal">(copia il modello in Jira: Iniziativa → Epic → Task)</span></div>
+          <div class="flex gap-1">
+            <button type="button" id="ma-btn-modello" class="px-2 py-1.5 text-xs bg-teal-50 text-teal-700 border border-teal-200 rounded hover:bg-teal-100 whitespace-nowrap">🧩 Modello</button>
+            <button type="button" id="ma-btn-strutture" class="px-2 py-1.5 text-xs bg-teal-50 text-teal-700 border border-teal-200 rounded hover:bg-teal-100 whitespace-nowrap">🏗️ Crea strutture comuni</button>
+          </div>
+        </div>
+        <div id="ma-modello-summary">${jstSummaryHtml(modDraft, false)}</div>
       </div>
       <div class="grid grid-cols-2 gap-2">
         <label class="block text-xs"><span class="text-slate-600">Data inizio</span>
@@ -216,6 +229,27 @@ function openCommessaAttivaModal(nome) {
       },
     });
   };
+  const aggiornaBtnStrutture = () => {
+    const b = document.getElementById('ma-btn-strutture');
+    b.disabled = !modDraft;
+    b.style.opacity = modDraft ? '1' : '0.5';
+    b.title = modDraft ? '' : 'Imposta prima il modello';
+  };
+  aggiornaBtnStrutture();
+  document.getElementById('ma-btn-modello').onclick = () => {
+    jstOpenModelloEditor({
+      commessa: nome,
+      modello: modDraft,
+      jiraProjectCode: document.getElementById('ma-jira-project').value.trim(),
+      attivita: attDraft,
+      onSave: mod => {
+        modDraft = mod;
+        document.getElementById('ma-modello-summary').innerHTML = jstSummaryHtml(modDraft, true);
+        aggiornaBtnStrutture();
+      },
+    });
+  };
+  document.getElementById('ma-btn-strutture').onclick = () => jstOpenCreaModal(nome, modDraft);
   document.getElementById('ma-reset').onclick = async () => {
     if (!sbGuardWrite()) return;
     const nDocs = (state.commesse_attive_meta[nome]?.documenti || []).length;
@@ -256,6 +290,7 @@ function openCommessaAttivaModal(nome) {
       risorse_necessarie: risDichiarate,
       fabbisogno_dettagliato: fabbDraft,
       attivita: attDraft,
+      jira_modello: modDraft,
     };
     await saveState('Modifica commessa attiva', {commessa: nome}, true); renderAll(); closeModal();
   };
