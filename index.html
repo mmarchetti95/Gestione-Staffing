@@ -1974,7 +1974,7 @@
       </span>
       <button id="btn-presentation" class="px-3 py-1.5 text-sm rounded hover:bg-white/10" style="border:1px solid var(--dark-border-strong);color:var(--dark-text);visibility:visible;">📊 Modalità presentazione</button>
       <div class="text-xs pl-2" style="border-left:1px solid var(--dark-border-strong);color:var(--dark-text-muted);">
-        <span id="app-version" class="font-medium" style="color:var(--accent);">v18.236.0</span> · Michele Marchetti
+        <span id="app-version" class="font-medium" style="color:var(--accent);">v18.237.0</span> · Michele Marchetti
         <span id="sb-role-badge" style="margin-left:8px;padding:1px 8px;border-radius:9999px;background:rgba(255,255,255,.1);color:var(--dark-text);font-weight:600;"></span>
       </div>
     </div>
@@ -25983,6 +25983,9 @@ function cpTlEsportaPdf() {
      fine e commento, oppure elimina. «＋» sulla riga: nuovo worklog per quell'operatore.
    - Scrive SOLO tramite l'Edge Function jira-worklog-edit (account di servizio Jira, stima del
      ticket invariata, prima/dopo in activity_log lato server), sempre dopo una conferma.
+   - Autore (v18.237.0): se la funzione ha il token Tempo, un worklog aggiunto è intestato
+     all'assegnatario del sottotask e uno corretto che risultava dell'account di servizio passa
+     all'assegnatario; senza token risultano dell'account di servizio (limite delle API Jira).
    - Prima di modificare/eliminare manda "atteso" (started + seconds visti qui): se su Jira il
      worklog è cambiato nel frattempo la funzione non tocca nulla e si rilegge l'operatore.
    - Dopo ogni scrittura rilegge da Jira (sola lettura) i worklog della settimana dell'operatore.
@@ -26246,7 +26249,11 @@ async function _cpTlWlEsegui(body, esito) {
     }
     if (res.errore || !res.ok) { showAlertModal('Jira non ha accettato la modifica.\n\n' + (res.errore || 'Risposta non valida.')); return; }
     cpTlWlChiudi();
-    await _cpTlWlRileggiOperatore(nome, k, d, '✓ ' + esito + ' Per aggiornare «Ore Jira» del Controllo Produzione usa «🔄 Sincronizza da Jira».');
+    const autore = res.dopo && res.dopo.autore ? ' Autore su Jira: ' + res.dopo.autore +
+      (res.prima && res.prima.autore && res.prima.autore !== res.dopo.autore ? ' (prima: ' + res.prima.autore + ')' : '') + '.' : '';
+    if (res.avviso) showAlertModal(res.avviso);
+    await _cpTlWlRileggiOperatore(nome, k, d, '✓ ' + esito + autore + (res.avviso ? ' ⚠ ' + res.avviso : '') +
+      ' Per aggiornare «Ore Jira» del Controllo Produzione usa «🔄 Sincronizza da Jira».');
   } finally {
     W.salvando = false;
     cpTlWlControlla();
@@ -26265,9 +26272,11 @@ async function cpTlWlSalva() {
   if (mod) {
     const prima = W.d.label[W.g] + ' ' + _cpOjOra(W.inizio) + '–' + _cpOjOra(W.fine) + ' (' + _cpOjDurata(W.fine - W.inizio) + ')';
     msg = 'Correggo su Jira il worklog di ' + W.nome + ' su ' + r.key + ':\n\nprima: ' + prima + '\ndopo: ' + dove +
-      (commentoCambiato ? '\n\nAnche il commento viene sostituito.' : '');
+      (commentoCambiato ? '\n\nAnche il commento viene sostituito.' : '') +
+      '\n\nSe era stato inserito dall\'app a nome dell\'account di servizio, passa a nome dell\'assegnatario del sottotask.';
   } else {
-    msg = 'Aggiungo su Jira un worklog su ' + r.key + ' per ' + W.nome + ':\n\n' + dove;
+    msg = 'Aggiungo su Jira un worklog su ' + r.key + ' per ' + W.nome + ':\n\n' + dove +
+      '\n\nRisulterà a nome dell\'assegnatario del sottotask.';
   }
   msg += '\n\nLa stima residua del ticket non cambia.' + (r.avvisi.length ? '\n\n⚠ ' + r.avvisi.join('\n⚠ ') : '');
   if (!await showConfirmAsync(msg, 'Salva su Jira')) return;
@@ -35113,7 +35122,7 @@ HELP_TEXTS['#cptl-toggle'] = 'Apre la «Timeline worklog» della settimana mostr
 HELP_TEXTS['cpTlRileggi'] = 'Rilegge da Jira, in sola lettura, i worklog della settimana di tutti gli operatori in Griglia, anche quelli senza giorni compilati, e ridisegna la timeline. Lo fa da sola la prima volta che apri la settimana; usalo per aggiornare dopo una correzione su Jira. Così vedi anche i worklog dei giorni non pianificati e quelli su commesse che non sono in dashboard.\n\nLa lettura vale solo per questa finestra finché la pagina resta aperta: non aggiorna la colonna «Ore Jira» del Controllo Produzione, per quella serve «🔄 Sincronizza da Jira». Chi non ha l\'email in anagrafica non viene letto. Bisogna essere collegati.';
 HELP_TEXTS['cpTlWlApri'] = 'Apre la correzione di questo worklog Jira: puoi cambiare giorno, ora di inizio, ora di fine e commento, oppure eliminarlo. Serve quando l\'operatore non ha fatto bene le transizioni del sottotask e il worklog creato dall\'automazione ha orari o durata sbagliati.\n\nNiente viene scritto finché non premi «Salva su Jira» e confermi. Solo admin e responsabili; il segmento «in corso» (IN PROGRESS) non si corregge, non è ancora un worklog.';
 HELP_TEXTS['cpTlWlNuovo'] = 'Aggiunge un worklog Jira per questo operatore e questo giorno, per esempio quando il sottotask non è mai passato da IN PROGRESS e il worklog manca. Scegli il ticket (sono proposti i suoi sottotask della Griglia, prima quelli del giorno), inizio, fine e commento.\n\nNiente viene scritto finché non premi «Salva su Jira» e confermi. Se il ticket è assegnato a un altro, l\'app avvisa: il worklog non comparirebbe nella giornata dell\'operatore. Solo admin e responsabili.';
-HELP_TEXTS['cpTlWlSalva'] = 'Scrive su Jira il worklog con il giorno e gli orari indicati (ora italiana), dopo una conferma che mostra prima e dopo. La stima residua del ticket non cambia. Se nel frattempo qualcuno ha modificato lo stesso worklog su Jira, non tocca nulla e rilegge l\'operatore.\n\nPoi rilegge da Jira i worklog della settimana dell\'operatore e ridisegna la timeline. La colonna «Ore Jira» del Controllo Produzione si aggiorna con «🔄 Sincronizza da Jira». Ogni modifica resta nel log attività con chi l\'ha fatta. Su Jira risulta fatta dall\'account di servizio dell\'app.';
+HELP_TEXTS['cpTlWlSalva'] = 'Scrive su Jira il worklog con il giorno e gli orari indicati (ora italiana), dopo una conferma che mostra prima e dopo. La stima residua del ticket non cambia. Se nel frattempo qualcuno ha modificato lo stesso worklog su Jira, non tocca nulla e rilegge l\'operatore.\n\nPoi rilegge da Jira i worklog della settimana dell\'operatore e ridisegna la timeline. La colonna «Ore Jira» del Controllo Produzione si aggiorna con «🔄 Sincronizza da Jira». Ogni modifica resta nel log attività con chi l\'ha fatta.\n\nAutore su Jira: un worklog aggiunto risulta a nome dell\'assegnatario del sottotask; uno corretto tiene il suo autore, tranne quelli inseriti dall\'app a nome dell\'account di servizio, che passano all\'assegnatario (per sistemarne uno basta aprirlo e salvarlo senza cambiare nulla).';
 HELP_TEXTS['cpTlWlElimina'] = 'Elimina questo worklog da Jira, dopo una conferma: le sue ore spariscono dal ticket. Da qui non si può annullare; per rimetterlo bisogna aggiungerlo di nuovo con «＋». L\'eliminazione resta nel log attività con chi l\'ha fatta.';
 HELP_TEXTS['cpTlEsportaPdf'] = 'Scarica un PDF in A4 orizzontale con la vista attuale: il giorno o la settimana scelti, con i filtri applicati. Contiene le barre orarie con inizio, fine, totale e pause di ogni operatore. In fondo c\'è l\'elenco dei worklog con ticket, orari, durata e commento. Nel PDF segmenti e ticket sono cliccabili e aprono Jira; le commesse non in dashboard sono in rosso.\n\nNell\'intestazione indica da dove vengono i worklog e quando sono stati letti. Non invia nulla.';
 HELP_TEXTS['cpTlGiorno'] = 'Sceglie il giorno da mostrare: un operatore per riga, tutti sullo stesso asse orario, così si confrontano facilmente. Il giorno di oggi ha il bordo verde. «Settimana» mostra ogni operatore con una riga per giorno e il totale settimanale.\n\nCambiare giorno non rilegge Jira.';

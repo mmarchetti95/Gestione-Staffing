@@ -7,6 +7,9 @@
      fine e commento, oppure elimina. «＋» sulla riga: nuovo worklog per quell'operatore.
    - Scrive SOLO tramite l'Edge Function jira-worklog-edit (account di servizio Jira, stima del
      ticket invariata, prima/dopo in activity_log lato server), sempre dopo una conferma.
+   - Autore (v18.237.0): se la funzione ha il token Tempo, un worklog aggiunto è intestato
+     all'assegnatario del sottotask e uno corretto che risultava dell'account di servizio passa
+     all'assegnatario; senza token risultano dell'account di servizio (limite delle API Jira).
    - Prima di modificare/eliminare manda "atteso" (started + seconds visti qui): se su Jira il
      worklog è cambiato nel frattempo la funzione non tocca nulla e si rilegge l'operatore.
    - Dopo ogni scrittura rilegge da Jira (sola lettura) i worklog della settimana dell'operatore.
@@ -270,7 +273,11 @@ async function _cpTlWlEsegui(body, esito) {
     }
     if (res.errore || !res.ok) { showAlertModal('Jira non ha accettato la modifica.\n\n' + (res.errore || 'Risposta non valida.')); return; }
     cpTlWlChiudi();
-    await _cpTlWlRileggiOperatore(nome, k, d, '✓ ' + esito + ' Per aggiornare «Ore Jira» del Controllo Produzione usa «🔄 Sincronizza da Jira».');
+    const autore = res.dopo && res.dopo.autore ? ' Autore su Jira: ' + res.dopo.autore +
+      (res.prima && res.prima.autore && res.prima.autore !== res.dopo.autore ? ' (prima: ' + res.prima.autore + ')' : '') + '.' : '';
+    if (res.avviso) showAlertModal(res.avviso);
+    await _cpTlWlRileggiOperatore(nome, k, d, '✓ ' + esito + autore + (res.avviso ? ' ⚠ ' + res.avviso : '') +
+      ' Per aggiornare «Ore Jira» del Controllo Produzione usa «🔄 Sincronizza da Jira».');
   } finally {
     W.salvando = false;
     cpTlWlControlla();
@@ -289,9 +296,11 @@ async function cpTlWlSalva() {
   if (mod) {
     const prima = W.d.label[W.g] + ' ' + _cpOjOra(W.inizio) + '–' + _cpOjOra(W.fine) + ' (' + _cpOjDurata(W.fine - W.inizio) + ')';
     msg = 'Correggo su Jira il worklog di ' + W.nome + ' su ' + r.key + ':\n\nprima: ' + prima + '\ndopo: ' + dove +
-      (commentoCambiato ? '\n\nAnche il commento viene sostituito.' : '');
+      (commentoCambiato ? '\n\nAnche il commento viene sostituito.' : '') +
+      '\n\nSe era stato inserito dall\'app a nome dell\'account di servizio, passa a nome dell\'assegnatario del sottotask.';
   } else {
-    msg = 'Aggiungo su Jira un worklog su ' + r.key + ' per ' + W.nome + ':\n\n' + dove;
+    msg = 'Aggiungo su Jira un worklog su ' + r.key + ' per ' + W.nome + ':\n\n' + dove +
+      '\n\nRisulterà a nome dell\'assegnatario del sottotask.';
   }
   msg += '\n\nLa stima residua del ticket non cambia.' + (r.avvisi.length ? '\n\n⚠ ' + r.avvisi.join('\n⚠ ') : '');
   if (!await showConfirmAsync(msg, 'Salva su Jira')) return;

@@ -17,8 +17,19 @@
 //   codice "assegnatario_diverso" a meno di "forza": jira-sync-worklogs trova i ticket per
 //   assegnatario, quindi il worklog non comparirebbe nella sua giornata.
 // - Ogni scrittura riuscita va in activity_log (prima/dopo), con la service_role.
+// - Autore (v18.237.0): le API Jira non permettono di scegliere l'autore di un worklog (è
+//   sempre l'account che chiama). Con il secret TEMPO_API_TOKEN si passa da Tempo, che accetta
+//   authorAccountId: un worklog aggiunto è intestato all'ASSEGNATARIO del sottotask (in
+//   mancanza, all'operatore); un worklog corretto che risulta dell'account di servizio (cioè
+//   inserito dall'app prima della v18.237.0) viene re-intestato all'assegnatario. Gli altri
+//   worklog corretti tengono il loro autore (PUT Jira come prima). Senza token: tutto via Jira.
+//   Tempo converte l'ora in UTC con il fuso dell'autore: se il worklog letto da Jira non parte
+//   all'ora chiesta (fuso diverso da Roma) la risposta porta un "avviso".
 //
 // SECRET: JIRA_BASE_URL, JIRA_EMAIL, JIRA_API_TOKEN (come le altre jira-*),
+//         TEMPO_API_TOKEN (facoltativo, token Tempo che può registrare ore per altri utenti;
+//           in alternativa in Vault come 'tempo_api_token', letto con tempo_get_api_token()),
+//         TEMPO_API_URL (facoltativo, default https://api.tempo.io),
 //         SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY (automatici).
 //
 // Richiesta (POST, JSON):
@@ -30,13 +41,17 @@
 //     atteso: { started, seconds },             // update / delete, facoltativo
 //     operatore: "Nome Cognome", email: "op@...", // create: controllo assegnatario; log
 //     forza: true }                             // create: salta il controllo assegnatario
-// Risposta: { ok: true, prima?, dopo? } | { error, codice? }
+// Risposta: { ok: true, prima?, dopo?, tempo?, avviso? } | { error, codice? }
+//   (prima/dopo portano anche autore e autoreId; tempo: true se scritto tramite Tempo)
 
-import { createClient } from "jsr:@supabase/supabase-js@2";
+import { createClient } from "npm:@supabase/supabase-js@2";
 
 const JIRA_BASE_URL  = (Deno.env.get("JIRA_BASE_URL")  || "").replace(/\/+$/, "");
 const JIRA_EMAIL     =  Deno.env.get("JIRA_EMAIL")     || "";
 const JIRA_API_TOKEN =  Deno.env.get("JIRA_API_TOKEN") || "";
+// Token Tempo: secret d'ambiente, altrimenti Vault ('tempo_api_token', letto nel handler)
+let TEMPO_API_TOKEN = Deno.env.get("TEMPO_API_TOKEN") || "";
+const TEMPO_API_URL  = (Deno.env.get("TEMPO_API_URL") || "https://api.tempo.io").replace(/\/+$/, "");
 const SUPABASE_URL   =  Deno.env.get("SUPABASE_URL") || "";
 const SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "";
 
@@ -148,10 +163,14 @@ function adfDoc(testo: string): unknown {
   return { type: "doc", version: 1, content: [{ type: "paragraph", content }] };
 }
 
-type Wl = { id: string; started: string; seconds: number; commento: string };
+type Wl = { id: string; started: string; seconds: number; commento: string; autore: string; autoreId: string };
 
 function wlDa(j: any): Wl {
-  return { id: String(j?.id || ""), started: String(j?.started || ""), seconds: Number(j?.timeSpentSeconds) || 0, commento: adfText(j?.comment).trim() };
+  return {
+    id: String(j?.id || ""), started: String(j?.started || ""), seconds: Number(j?.timeSpentSeconds) || 0,
+    commento: adfText(j?.comment).trim(),
+    autore: String(j?.author?.displayName || ""), autoreId: String(j?.author?.accountId || ""),
+  };
 }
 
 async function leggiWorklog(issueKey: string, id: string): Promise<Wl> {
@@ -176,6 +195,68 @@ async function accountIdDi(email: string): Promise<string | null> {
   return (exact || users.find((u: any) => u.active) || users[0])?.accountId || null;
 }
 
+// Account di servizio (JIRA_EMAIL): i worklog che risultano suoi li ha inseriti l'app
+let _mioAccountId: string | null = null;
+async function mioAccountId(): Promise<string> {
+  if (_mioAccountId === null) {
+    const res = await jira("GET", "/rest/api/3/myself");
+    _mioAccountId = res.ok ? String((await res.json())?.accountId || "") : "";
+  }
+  return _mioAccountId;
+}
+
+type Ticket = { id: number; assegnatario: { accountId: string; displayName: string } | null; residuoSec: number | null };
+
+// Id numerico, assegnatario e stima residua del ticket (per Tempo e per il controllo assegnatario)
+async function leggiTicket(issueKey: string): Promise<Ticket> {
+  const res = await jira("GET", `/rest/api/3/issue/${encodeURIComponent(issueKey)}?fields=assignee,timetracking`);
+  if (!res.ok) throw new Error(await jiraErr(res, "Lettura del ticket"));
+  const j = await res.json();
+  const a = j?.fields?.assignee;
+  const r = j?.fields?.timetracking?.remainingEstimateSeconds;
+  return {
+    id: Number(j?.id) || 0,
+    assegnatario: a?.accountId ? { accountId: String(a.accountId), displayName: String(a.displayName || "") } : null,
+    residuoSec: typeof r === "number" ? r : null,
+  };
+}
+
+/* ---------- Tempo (solo con TEMPO_API_TOKEN) ---------- */
+
+async function tempo(method: string, path: string, body?: unknown): Promise<Response> {
+  return fetch(`${TEMPO_API_URL}/4${path}`, {
+    method,
+    headers: { Authorization: `Bearer ${TEMPO_API_TOKEN}`, Accept: "application/json", "Content-Type": "application/json" },
+    body: body === undefined ? undefined : JSON.stringify(body),
+  });
+}
+
+async function tempoErr(res: Response, cosa: string): Promise<string> {
+  let det = "";
+  try {
+    const j = await res.json();
+    det = (Array.isArray(j?.errors) ? j.errors.map((e: any) => e?.message || "") : [j?.message || ""]).filter(Boolean).join(" ");
+  } catch { /* corpo vuoto */ }
+  if (res.status === 401 || res.status === 403) {
+    det = (det ? det + " — " : "") + "il token Tempo non è valido o non può registrare ore per altri utenti";
+  }
+  return `${cosa} (Tempo): HTTP ${res.status}${det ? " · " + det : ""}`;
+}
+
+// Id worklog Jira ↔ Tempo (null se Tempo non lo conosce)
+async function mappaId(verso: "jira-to-tempo" | "tempo-to-jira", id: string | number): Promise<string | null> {
+  const campo = verso === "jira-to-tempo" ? "jiraWorklogIds" : "tempoWorklogIds";
+  const res = await tempo("POST", `/worklogs/${verso}`, { [campo]: [Number(id)] });
+  if (!res.ok) throw new Error(await tempoErr(res, "Conversione id worklog"));
+  const r = (await res.json())?.results?.[0];
+  const v = verso === "jira-to-tempo" ? r?.tempoWorklogId : r?.jiraWorklogId;
+  return v ? String(v) : null;
+}
+
+function oraTempo(min: number): string {
+  return String(Math.floor(min / 60)).padStart(2, "0") + ":" + String(min % 60).padStart(2, "0") + ":00";
+}
+
 /* ---------- Handler ---------- */
 
 Deno.serve(async (req: Request) => {
@@ -194,6 +275,10 @@ Deno.serve(async (req: Request) => {
   if (callerErr || !callerData?.user) return json({ error: "Sessione non valida" }, 401);
   const role = callerData.user.user_metadata?.role || "responsabile";
   if (role !== "admin" && role !== "responsabile") return json({ error: "Solo admin e responsabili possono modificare i worklog" }, 403);
+  if (!TEMPO_API_TOKEN) {
+    const { data: tok } = await admin.rpc("tempo_get_api_token");
+    TEMPO_API_TOKEN = typeof tok === "string" ? tok.trim() : "";
+  }
 
   let p: any;
   try { p = await req.json(); } catch { return json({ error: "JSON non valido" }, 400); }
@@ -205,7 +290,7 @@ Deno.serve(async (req: Request) => {
   if (!/^[A-Z][A-Z0-9_]*-\d+$/.test(issueKey)) return json({ error: "Chiave ticket non valida" }, 400);
   if (action !== "create" && !/^\d+$/.test(worklogId)) return json({ error: "Id worklog non valido" }, 400);
 
-  let nuovo: { started: string; seconds: number; commento?: string } | null = null;
+  let nuovo: { started: string; ms: number; seconds: number; data: string; inizioMin: number; commento?: string } | null = null;
   if (action !== "delete") {
     const data = String(p?.data || "");
     const inizioMin = Number(p?.inizioMin), durataMin = Number(p?.durataMin);
@@ -214,7 +299,7 @@ Deno.serve(async (req: Request) => {
     if (!Number.isInteger(durataMin) || durataMin < 1 || durataMin > 1440) return json({ error: "Durata non valida" }, 400);
     const { started, ms } = startedRoma(data, inizioMin);
     if (ms + durataMin * 60000 > Date.now() + TOLLERANZA_FUTURO_MS) return json({ error: "Il worklog non può finire nel futuro" }, 400);
-    nuovo = { started, seconds: durataMin * 60 };
+    nuovo = { started, ms, seconds: durataMin * 60, data, inizioMin };
     if (p?.commento !== undefined && p?.commento !== null) {
       const c = String(p.commento).trim();
       if (c.length > MAX_COMMENTO) return json({ error: `Commento troppo lungo (max ${MAX_COMMENTO} caratteri)` }, 400);
@@ -223,42 +308,85 @@ Deno.serve(async (req: Request) => {
   }
 
   const base = `/rest/api/3/issue/${encodeURIComponent(issueKey)}/worklog`;
-  let prima: Wl | null = null, dopo: Wl | null = null;
+  let prima: Wl | null = null, dopo: Wl | null = null, viaTempo = false, avviso = "";
+
+  // Scrittura tramite Tempo con l'autore indicato; ritorna il worklog Jira risultante
+  const scriviTempo = async (tk: Ticket, autoreId: string, tempoId: string | null, commento: string | undefined): Promise<Wl> => {
+    const body: Record<string, unknown> = {
+      authorAccountId: autoreId, startDate: nuovo!.data, startTime: oraTempo(nuovo!.inizioMin), timeSpentSeconds: nuovo!.seconds,
+    };
+    if (!tempoId) body.issueId = tk.id;
+    if (commento) body.description = commento;
+    if (tk.residuoSec !== null) body.remainingEstimateSeconds = tk.residuoSec;   // stima residua invariata
+    const res = await tempo(tempoId ? "PUT" : "POST", tempoId ? `/worklogs/${encodeURIComponent(tempoId)}` : "/worklogs", body);
+    if (!res.ok) throw new Error(await tempoErr(res, tempoId ? "Modifica del worklog" : "Creazione del worklog"));
+    const tw = await res.json().catch(() => ({}));
+    viaTempo = true;
+    // Da qui la scrittura è fatta: un errore nella rilettura diventa un avviso, non un errore
+    const scritto: Wl = { id: "", started: nuovo!.started, seconds: nuovo!.seconds, commento: commento || "", autore: "", autoreId };
+    let w: Wl;
+    try {
+      // Cambiando autore Tempo può ricreare il worklog su Jira con un altro id: si rilegge da lì
+      const jid = tw?.tempoWorklogId ? await mappaId("tempo-to-jira", tw.tempoWorklogId) : null;
+      if (!jid) { avviso = "Worklog scritto su Tempo ma non ancora visibile su Jira: rileggi tra poco."; return scritto; }
+      w = await leggiWorklog(issueKey, jid);
+    } catch (e) {
+      avviso = "Worklog scritto su Tempo, ma la rilettura da Jira non è riuscita: " + String((e as Error)?.message || e);
+      return scritto;
+    }
+    if (Math.abs(msDiStarted(w.started) - nuovo!.ms) >= 60000) {
+      avviso = `Su Jira il worklog parte alle ${w.started.slice(11, 16)} invece che alle ${oraTempo(nuovo!.inizioMin).slice(0, 5)}: ` +
+        "Tempo usa il fuso orario del profilo Atlassian dell'autore. Correggi l'orario dalla timeline.";
+    }
+    return w;
+  };
 
   try {
     if (action === "create") {
       const email = String(p?.email || "").trim();
-      if (email && !p?.forza) {
-        const [accId, resIss] = await Promise.all([
-          accountIdDi(email),
-          jira("GET", `/rest/api/3/issue/${encodeURIComponent(issueKey)}?fields=assignee`),
-        ]);
-        if (!resIss.ok) return json({ error: await jiraErr(resIss, "Lettura del ticket") }, 502);
-        const iss = await resIss.json();
-        const ass = iss?.fields?.assignee;
-        if (accId && (!ass || ass.accountId !== accId)) {
-          return json({
-            error: `Il ticket ${issueKey} è assegnato a ${ass?.displayName || "nessuno"}, non all'operatore: il worklog non comparirebbe nella sua giornata.`,
-            codice: "assegnatario_diverso", assegnatario: ass?.displayName || "",
-          }, 409);
-        }
+      const controlla = !!email && !p?.forza;
+      let tk: Ticket | null = null, accOp: string | null = null;
+      if (TEMPO_API_TOKEN || controlla) {
+        [tk, accOp] = await Promise.all([leggiTicket(issueKey), email ? accountIdDi(email) : Promise.resolve(null)]);
       }
-      const body: Record<string, unknown> = { started: nuovo!.started, timeSpentSeconds: nuovo!.seconds };
-      if (nuovo!.commento) body.comment = adfDoc(nuovo!.commento);
-      const res = await jiraScrivi("POST", base, body);
-      if (!res.ok) return json({ error: await jiraErr(res, "Creazione del worklog") }, 502);
-      dopo = wlDa(await res.json());
+      const ass = tk?.assegnatario || null;
+      if (controlla && accOp && (!ass || ass.accountId !== accOp)) {
+        return json({
+          error: `Il ticket ${issueKey} è assegnato a ${ass?.displayName || "nessuno"}, non all'operatore: il worklog non comparirebbe nella sua giornata.`,
+          codice: "assegnatario_diverso", assegnatario: ass?.displayName || "",
+        }, 409);
+      }
+      const autoreId = ass?.accountId || accOp || "";
+      if (TEMPO_API_TOKEN && tk && autoreId) {
+        dopo = await scriviTempo(tk, autoreId, null, nuovo!.commento);
+      } else {
+        const body: Record<string, unknown> = { started: nuovo!.started, timeSpentSeconds: nuovo!.seconds };
+        if (nuovo!.commento) body.comment = adfDoc(nuovo!.commento);
+        const res = await jiraScrivi("POST", base, body);
+        if (!res.ok) return json({ error: await jiraErr(res, "Creazione del worklog") }, 502);
+        dopo = wlDa(await res.json());
+      }
     } else {
       prima = await leggiWorklog(issueKey, worklogId);
       if (cambiato(prima, p?.atteso)) {
         return json({ error: "Il worklog è stato modificato su Jira nel frattempo: rileggi da Jira e riprova.", codice: "cambiato", prima }, 409);
       }
       if (action === "update") {
-        const body: Record<string, unknown> = { started: nuovo!.started, timeSpentSeconds: nuovo!.seconds };
-        if (nuovo!.commento !== undefined) body.comment = adfDoc(nuovo!.commento);
-        const res = await jiraScrivi("PUT", `${base}/${encodeURIComponent(worklogId)}`, body);
-        if (!res.ok) return json({ error: await jiraErr(res, "Modifica del worklog") }, 502);
-        dopo = wlDa(await res.json());
+        // Worklog inserito dall'app a nome dell'account di servizio → re-intestato all'assegnatario
+        let tk: Ticket | null = null, tempoId: string | null = null;
+        if (TEMPO_API_TOKEN && prima.autoreId && prima.autoreId === await mioAccountId()) {
+          tk = await leggiTicket(issueKey);
+          if (tk.assegnatario && tk.assegnatario.accountId !== prima.autoreId) tempoId = await mappaId("jira-to-tempo", worklogId);
+        }
+        if (tk && tempoId) {
+          dopo = await scriviTempo(tk, tk.assegnatario!.accountId, tempoId, nuovo!.commento !== undefined ? nuovo!.commento : prima.commento);
+        } else {
+          const body: Record<string, unknown> = { started: nuovo!.started, timeSpentSeconds: nuovo!.seconds };
+          if (nuovo!.commento !== undefined) body.comment = adfDoc(nuovo!.commento);
+          const res = await jiraScrivi("PUT", `${base}/${encodeURIComponent(worklogId)}`, body);
+          if (!res.ok) return json({ error: await jiraErr(res, "Modifica del worklog") }, 502);
+          dopo = wlDa(await res.json());
+        }
       } else {
         const res = await jiraScrivi("DELETE", `${base}/${encodeURIComponent(worklogId)}`);
         if (!res.ok) return json({ error: await jiraErr(res, "Eliminazione del worklog") }, 502);
@@ -273,9 +401,9 @@ Deno.serve(async (req: Request) => {
     await admin.from("activity_log").insert({
       user_email: callerData.user.email,
       action: `Worklog Jira ${azioni[action]}`,
-      details: { issueKey, worklogId: worklogId || dopo?.id || "", operatore: String(p?.operatore || ""), prima, dopo },
+      details: { issueKey, worklogId: worklogId || dopo?.id || "", operatore: String(p?.operatore || ""), prima, dopo, tempo: viaTempo },
     });
   } catch { /* il log non deve far fallire la modifica già fatta */ }
 
-  return json({ ok: true, prima, dopo });
+  return json({ ok: true, prima, dopo, tempo: viaTempo, avviso: avviso || undefined });
 });
