@@ -34,9 +34,13 @@
      lascia orfano il sottotask di martedì e scopre il mercoledì;
    - commessa: blocco senza commessa o commessa senza "Codice progetto Jira" — le sue
      celle non si possono controllare una per una.
+   Sottotask fatti a mano (v18.239.0): per le giornate mancanti/in errore la verifica cerca
+   anche su Jira i sottotask della settimana dei loro operatori (_pwJchkCercaManuali) e li
+   abbina per progetto + accountId + giorno (+ nome del cantiere fra più candidati); la
+   riga offre «🔗 collega», che scrive la riga in pw_jira_subtask come "already_exists".
    Gli operatori di un fornitore esterno (op.fornitore) non hanno sottotask: restano fuori. */
 
-HELP_TEXTS['pw-jchk'] = 'Controlla in un colpo tutte le celle della settimana mostrata: per ogni operatore + cantiere + attività, giorno per giorno, verifica che ci sia il sottotask Jira di quel giorno (indicatore 🎫 in cella). I sottotask settimanali creati prima della v18.229.0 valgono ancora per tutti i giorni della loro settimana.\n\nVerde = tutto a posto. Rosso = assegnazioni senza sottotask, con creazione fallita, con il sottotask cancellato su Jira o riassegnato a un\'altra persona. Ambra = sottotask ancora in stato CREATED, sottotask non più collegati a nessuna cella, o commesse senza codice progetto Jira.\n\nClicca una riga (o un giorno) per andare alla cella. Il controllo è immediato sugli indicatori della Griglia; all\'apertura e con «Ricontrolla» verifica anche su Jira quali sottotask sono stati cancellati, a chi sono assegnati e in che stato sono. Su Jira non viene mai scritto niente.';
+HELP_TEXTS['pw-jchk'] = 'Controlla in un colpo tutte le celle della settimana mostrata: per ogni operatore + cantiere + attività, giorno per giorno, verifica che ci sia il sottotask Jira di quel giorno (indicatore 🎫 in cella). I sottotask settimanali creati prima della v18.229.0 valgono ancora per tutti i giorni della loro settimana.\n\nVerde = tutto a posto. Rosso = assegnazioni senza sottotask, con creazione fallita, con il sottotask cancellato su Jira o riassegnato a un\'altra persona. Ambra = sottotask ancora in stato CREATED, sottotask non più collegati a nessuna cella, o commesse senza codice progetto Jira.\n\nClicca una riga (o un giorno) per andare alla cella. Il controllo è immediato sugli indicatori della Griglia; all\'apertura e con «Ricontrolla» verifica anche su Jira quali sottotask sono stati cancellati, a chi sono assegnati e in che stato sono, e cerca i sottotask creati a mano su Jira per le giornate che ne sono senza («🔗 collega»). Su Jira non viene mai scritto niente.';
 
 const PW_JCHK_GIORNI = ['Lun', 'Mar', 'Mer', 'Gio', 'Ven', 'Sab'];
 const PW_JCHK_TIPI = {
@@ -124,9 +128,9 @@ function pwJchkVerificaJira(forza) {
   const week = pwGetWeekData();
   const keys = [...new Set(week.flatMap(bc =>
     Object.values(pwJiraSubtaskMappa(bc)).filter(e => pwJiraSubtaskIsResolved(e) && e.key).map(e => e.key)))];
-  const stato = { cancellati: cur ? cur.cancellati : new Set(), info: cur ? cur.info : {}, n: keys.length, ts: cur ? cur.ts : 0, errore: '' };
+  const stato = { cancellati: cur ? cur.cancellati : new Set(), info: cur ? cur.info : {}, n: keys.length, ts: cur ? cur.ts : 0, errore: '',
+    trovati: cur ? cur.trovati : null, erroreCerca: '' };
   _pwJchk.jira[wk] = stato;
-  if (!keys.length) { stato.cancellati = new Set(); stato.info = {}; stato.ts = Date.now(); return Promise.resolve(); }
   // Email da risolvere in accountId: operatori della settimana e dei sottotask (anche
   // orfani). Quelle già risolte restano in cache; le non risolte si ritentano su Ricontrolla.
   const emails = new Set();
@@ -137,6 +141,7 @@ function pwJchkVerificaJira(forza) {
     Object.values(pwJiraSubtaskMappa(bc)).forEach(e => aggiungi(e.operatore));
   });
   const daRisolvere = [...emails].filter(em => !(em in _pwJchk.acc) || (forza && _pwJchk.acc[em] === null));
+  const cerca = _pwJchkRichiestaCerca();
   stato.inflight = (async () => {
     try {
       const trovati = new Set();
@@ -161,11 +166,114 @@ function pwJchkVerificaJira(forza) {
       stato.ts = Date.now();
     } catch (e) {
       stato.errore = e.message || String(e);
-    } finally {
-      delete stato.inflight;
     }
+    try {
+      stato.trovati = cerca.length ? await _pwJchkCercaManuali(cerca) : [];
+    } catch (e) {
+      stato.erroreCerca = e.message || String(e);
+    }
+    delete stato.inflight;
   })();
   return stato.inflight;
+}
+
+/* Sottotask creati a mano su Jira (v18.239.0): la Griglia conosce solo quelli creati
+   dall'app, quindi un sottotask fatto a mano lascia la giornata "senza sottotask". Per le
+   giornate scoperte (mancanti o con creazione fallita) si chiede a jira-task-status
+   ("cerca") i sottotask della settimana dei loro operatori, progetto per progetto;
+   l'abbinamento lo fa _pwJchkAbbinaManuali e il collegamento solo l'utente (pwJchkCollega). */
+function _pwJchkRichiestaCerca() {
+  const perProgetto = new Map(); // progetto -> Set(email)
+  pwJchkAnalizza().anomalie.forEach(a => {
+    if (a.tipo !== 'mancante' && a.tipo !== 'errore') return;
+    const progetto = _pwJchkProgettoDi(a.commessa);
+    const em = pwJiraOperatorEmail(a.operatore).toLowerCase();
+    if (!progetto || !em) return;
+    if (!perProgetto.has(progetto)) perProgetto.set(progetto, new Set());
+    perProgetto.get(progetto).add(em);
+  });
+  const dal = pwJsubDataIso(pwAnno, pwWeek, 0), al = pwJsubDataIso(pwAnno, pwWeek, 5);
+  return [...perProgetto].map(([project, emails]) => ({ project, emails: [...emails], dal, al }));
+}
+
+async function _pwJchkCercaManuali(cerca) {
+  const { data, error } = await _sbClient.functions.invoke('jira-task-status', { body: { subtaskKeys: [], cerca } });
+  if (error) throw new Error(await _cpEdgeErr(error, 'jira-task-status'));
+  if (data && data.error) throw new Error(data.error);
+  Object.assign(_pwJchk.acc, (data && data.accountByEmail) || {});
+  if (!data || !Array.isArray(data.trovati)) throw new Error('Edge Function jira-task-status da aggiornare');
+  return data.trovati;
+}
+
+function _pwJchkProgettoDi(commessa) {
+  const meta = (commessa && state.commesse_attive_meta && state.commesse_attive_meta[commessa]) || {};
+  return String(meta.jira_project_code || '').trim().toUpperCase();
+}
+
+// Sottotask di quel giorno (aaaa-mm-gg): data nel titolo (gg/mm/aaaa, anche con "-" o "."
+// o senza anno) oppure scadenza/inizio = giorno. Stessa idea dell'anti-duplicati di
+// jira-create-subtask; un settimanale ("Week N") non è mai di un giorno.
+function _pwJchkDiGiorno(t, data) {
+  const s = String(t.summary || '');
+  if (/\bWeek\s+\d+\b/i.test(s)) return false;
+  const [y, m, d] = data.split('-');
+  const gg = '0?' + Number(d), mm = '0?' + Number(m);
+  if (new RegExp('(^|\\D)' + gg + '[/.-]' + mm + '(?:[/.-](?:' + y + '|' + y.slice(2) + ')(?!\\d)|(?![/.-]?\\d))').test(s)) return true;
+  const due = t.duedate || '', start = t.start || '';
+  return (due === data && (!start || start === data)) || (!due && start === data);
+}
+
+/* Abbina i sottotask trovati alle giornate scoperte: stesso progetto della commessa,
+   assegnato all'operatore (accountId, mai il nome), di quel giorno, non già collegato a
+   un'altra cella. Fra più candidati vince l'unico che nomina il cantiere (nel titolo suo o
+   del Task padre); se nessuno lo nomina, si abbina solo se quel giorno l'operatore ha una
+   sola giornata scoperta nel progetto e c'è un solo candidato. Mai due giornate sullo
+   stesso sottotask. Esito sulle anomalie: a.suJira = [{ day, key, url, summary, taskKey }]
+   (collegabili), a.dubbi = [{ day, cand: [{key, url}] }] (più candidati, non si sceglie). */
+function _pwJchkAbbinaManuali(anomalie, data) {
+  const v = _pwJchk.jira[_pwJchkWeekKey()];
+  const trovati = (v && v.trovati) || [];
+  if (!trovati.length) return;
+  const collegate = new Set();
+  data.forEach(bc => Object.values(pwJiraSubtaskMappa(bc)).forEach(e => { if (e && e.key) collegate.add(e.key); }));
+  const scoperte = [];
+  anomalie.forEach(a => {
+    if (a.tipo !== 'mancante' && a.tipo !== 'errore') return;
+    const acc = _pwJchkAccountDi(a.operatore), progetto = _pwJchkProgettoDi(a.commessa);
+    if (!acc || !progetto) return;
+    a.celle.forEach(c => scoperte.push({ a, c, acc, progetto, data: pwJsubDataIso(pwAnno, pwWeek, c.day) }));
+  });
+  const perGiorno = {};
+  const kGiorno = s => s.acc + '|' + s.progetto + '|' + s.data;
+  scoperte.forEach(s => { perGiorno[kGiorno(s)] = (perGiorno[kGiorno(s)] || 0) + 1; });
+  const compatto = x => caNorm(x).replace(/ /g, '');
+  // Cantieri di ogni operatore nella settimana: un candidato unico che ne nomina un altro
+  // (es. un doppione fatto a mano del cantiere già coperto) non si abbina per esclusione.
+  const cantieriOp = {};
+  data.forEach(bc => ((bc && bc.squadre) || []).forEach(sq => (sq.operatori || []).forEach(op => {
+    if (!op || !op.nome) return;
+    const set = cantieriOp[op.nome] = cantieriOp[op.nome] || new Set();
+    Object.keys(op.giorni || {}).forEach(d => pwCellVoci(op.giorni[d]).forEach(x => { const n = compatto(x.cantiere); if (n) set.add(n); }));
+  })));
+  const testo = t => compatto((t.summary || '') + ' ' + (t.parentSummary || ''));
+  const usate = new Set();
+  scoperte.forEach(s => {
+    const cand = trovati.filter(t => t.assignee === s.acc && String(t.project || '').toUpperCase() === s.progetto
+      && !collegate.has(t.key) && !usate.has(t.key) && _pwJchkDiGiorno(t, s.data));
+    if (!cand.length) return;
+    const nome = compatto(s.a.cantiere);
+    const nomina = nome ? cand.filter(t => testo(t).includes(nome)) : [];
+    const altri = [...(cantieriOp[s.a.operatore] || [])].filter(n => n !== nome);
+    let scelto = null;
+    if (nomina.length === 1) scelto = nomina[0];
+    else if (!nomina.length && cand.length === 1 && perGiorno[kGiorno(s)] === 1 && !altri.some(n => testo(cand[0]).includes(n))) scelto = cand[0];
+    if (scelto) {
+      usate.add(scelto.key);
+      (s.a.suJira = s.a.suJira || []).push({ day: s.c.day, key: scelto.key, url: scelto.url, summary: scelto.summary, taskKey: scelto.parentKey || '' });
+    } else {
+      (s.a.dubbi = s.a.dubbi || []).push({ day: s.c.day, cand: (nomina.length ? nomina : cand).map(t => ({ key: t.key, url: t.url })) });
+    }
+  });
 }
 
 /* Unità del controllo = operatore + cantiere + attività + giorno (una cella-voce). Le celle
@@ -329,6 +437,7 @@ function pwJchkAnalizza() {
     });
   });
 
+  _pwJchkAbbinaManuali(out.anomalie, data);
   out.anomalie.sort((a, b) => (a.cIdx - b.cIdx)
     || (PW_JCHK_ORDINE.indexOf(a.tipo) - PW_JCHK_ORDINE.indexOf(b.tipo))
     || (a.sIdx - b.sIdx)
@@ -407,12 +516,24 @@ function _pwJchkStatoJiraHtml() {
   const v = _pwJchk.jira[_pwJchkWeekKey()];
   if (!v) return '';
   if (v.inflight) return '<div class="pw-jchk-jira">⏳ Verifica su Jira dei sottotask in corso…</div>';
-  if (v.errore) return '<div class="pw-jchk-jira pw-jchk-jira-err">⚠️ Verifica su Jira non riuscita (' + esc(v.errore) + '): mostrati solo gli indicatori della Griglia.</div>';
-  if (!v.ts || !v.n) return '';
+  const cerca = v.erroreCerca
+    ? '<div class="pw-jchk-jira pw-jchk-jira-err">⚠️ Ricerca su Jira dei sottotask fatti a mano non riuscita (' + esc(v.erroreCerca) + ').</div>'
+    : '';
+  if (v.errore) return '<div class="pw-jchk-jira pw-jchk-jira-err">⚠️ Verifica su Jira non riuscita (' + esc(v.errore) + '): mostrati solo gli indicatori della Griglia.</div>' + cerca;
+  if (!v.ts || !v.n) return cerca;
   const ora = new Date(v.ts).toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' });
   const canc = v.cancellati.size;
   return '<div class="pw-jchk-jira">✓ Verificati su Jira alle ' + ora + ' i ' + v.n + ' sottotask della settimana (esistenza, assegnatario, stato)'
-    + (canc ? ': <b>' + canc + (canc === 1 ? ' cancellato' : ' cancellati') + '</b>' : ', tutti presenti') + '.</div>';
+    + (canc ? ': <b>' + canc + (canc === 1 ? ' cancellato' : ' cancellati') + '</b>' : ', tutti presenti') + '.</div>' + cerca;
+}
+
+// Anomalie (tutte, o solo la i-esima) con sottotask fatti a mano da collegare: [{ a, i }].
+function _pwJchkDaCollegare(r, soloI) {
+  const out = [];
+  r.anomalie.forEach((a, i) => {
+    if ((soloI === undefined || soloI === i) && a.suJira && a.suJira.length) out.push({ a, i });
+  });
+  return out;
 }
 
 // accendi: all'apertura del controllo l'evidenziazione in Griglia si accende da sola se
@@ -472,8 +593,13 @@ function _pwJchkRenderModal(accendi) {
     ? '<button type="button" class="pw-jchk-pulisci" onclick="pwJchkTogliCancellati()">🧹 Togli ' + r.cancellati.length
       + (r.cancellati.length === 1 ? ' indicatore' : ' indicatori') + ' di sottotask cancellati su Jira</button>'
     : '';
+  const nCollega = _pwJchkDaCollegare(r).reduce((s, x) => s + x.a.suJira.length, 0);
+  const collegaTutti = nCollega && sbCanWrite()
+    ? '<button type="button" class="pw-jchk-collega" onclick="pwJchkCollegaTutti()">🔗 Collega ' + nCollega
+      + (nCollega === 1 ? ' sottotask trovato' : ' sottotask trovati') + ' su Jira (fatti a mano)</button>'
+    : '';
 
-  root.innerHTML = '<div class="modal-backdrop"><div id="pw-jchk-modal" class="bg-white rounded-lg shadow-xl w-full max-w-2xl mx-4 my-8 p-5 max-h-[90vh] overflow-y-auto">'
+  root.innerHTML ='<div class="modal-backdrop"><div id="pw-jchk-modal" class="bg-white rounded-lg shadow-xl w-full max-w-2xl mx-4 my-8 p-5 max-h-[90vh] overflow-y-auto">'
     + '<div class="flex items-start justify-between gap-3 mb-3">'
     +   '<div><h3 class="font-semibold text-slate-900">🎫 Controllo sottotask Jira</h3>'
     +   '<div class="text-xs text-slate-500">Week ' + pwWeek + ' · ' + pwAnno + ' · tutte le commesse della Griglia</div></div>'
@@ -483,6 +609,7 @@ function _pwJchkRenderModal(accendi) {
     + esito
     + _pwJchkStatoJiraHtml()
     + pulisci
+    + collegaTutti
     + (blocchi ? '<p class="text-xs text-slate-500 mt-3 mb-2">Clicca una riga per andare alla cella, o un giorno per la cella di quel giorno.</p>' + blocchi : '')
     + '<div class="text-[11px] text-slate-400 mt-3">' + note.map(esc).join('<br>') + '</div>'
     + '<div class="flex justify-end gap-2 mt-4">'
@@ -547,6 +674,17 @@ function pwJchkRigaHtml(a, i) {
     if (a.noEmail) parti.push('📧 email mancante in anagrafica: il sottotask non si può creare');
     if (a.daSpostare) parti.push('🔀 su Jira gli è stato riassegnato ' + a.daSpostare.key + ' di ' + a.daSpostare.da + ': usa «sposta» su quella riga');
     det = parti.map(esc).join(' · ');
+    const linkJira = x => '<a href="' + esc(x.url) + '" target="_blank" rel="noopener" onclick="event.stopPropagation()" class="text-blue-700 hover:underline">' + esc(x.key) + '</a>';
+    if (a.suJira && a.suJira.length) {
+      det += '<div class="pw-jchk-trovati">🔎 Su Jira c\'è già, fatto a mano: '
+        + a.suJira.map(x => PW_JCHK_GIORNI[x.day] + ' → ' + linkJira(x)).join(', ') + '</div>';
+      if (scrive) azione = '<button type="button" class="pw-jchk-azione pw-jchk-azione-ok" onclick="event.stopPropagation();pwJchkCollega(' + i + ')" title="Collega in Griglia i sottotask trovati: su Jira non cambia niente">🔗 collega</button>';
+    }
+    if (a.dubbi && a.dubbi.length) {
+      det += '<div class="pw-jchk-trovati pw-jchk-trovati-dubbi">🔎 Su Jira più sottotask possibili, non collegati: '
+        + a.dubbi.map(x => PW_JCHK_GIORNI[x.day] + ' ' + x.cand.map(linkJira).join(' / ')).join(', ')
+        + ' — metti il nome del cantiere nel titolo su Jira e ricontrolla</div>';
+    }
   }
   const giorni = a.celle.map((c, k) => '<button type="button" class="pw-jchk-giorno" onclick="event.stopPropagation();pwJchkVai(' + i + ',' + k + ')" title="Vai alla cella di ' + PW_JCHK_GIORNI[c.day] + '">' + PW_JCHK_GIORNI[c.day] + '</button>').join('');
   return '<div class="' + cls + '" onclick="pwJchkVai(' + i + ')" title="Vai alla cella">'
@@ -627,6 +765,38 @@ async function pwJchkSposta(i) {
     }
   }
   _pwJchkRenderModal(false);
+}
+
+/* Collega in Griglia i sottotask fatti a mano trovati su Jira (_pwJchkAbbinaManuali): una
+   riga giornaliera per giorno nella tabella pw_jira_subtask, stato "already_exists" come un
+   sottotask che la creazione ha trovato già presente. Su Jira non cambia niente. */
+async function _pwJchkCollega(lista) {
+  if (!lista.length || !sbGuardWrite()) return;
+  const n = lista.reduce((s, x) => s + x.a.suJira.length, 0);
+  const ok = await showConfirmAsync('Collegare in Griglia ' + (n === 1 ? 'il sottotask trovato' : 'i ' + n + ' sottotask trovati')
+    + ' su Jira?\n\n' + lista.map(({ a }) => a.operatore + ' — ' + a.cantiere + ': '
+      + a.suJira.map(x => PW_JCHK_GIORNI[x.day] + ' ' + x.key).join(', ')).join('\n')
+    + '\n\nSu Jira non cambia niente.', 'Collega');
+  if (!ok) return;
+  const perBlocco = new Map(); // cIdx -> voci
+  lista.forEach(({ a }) => {
+    if (!perBlocco.has(a.cIdx)) perBlocco.set(a.cIdx, []);
+    a.suJira.forEach(x => perBlocco.get(a.cIdx).push({
+      comune: a.cantiere, operatore: a.operatore, attivita: a.attivita, giorno: x.day,
+      status: 'already_exists', key: x.key, url: x.url, taskKey: x.taskKey, message: '',
+    }));
+  });
+  for (const [cIdx, voci] of perBlocco) await pwJiraSubtaskMarkBadges(cIdx, voci);
+  sbLogActivity('Griglia: collegati sottotask fatti a mano su Jira', { anno: pwAnno, week: pwWeek, n, chiavi: lista.flatMap(({ a }) => a.suJira.map(x => x.key)) });
+  _pwJchkRenderModal(false);
+}
+
+function pwJchkCollega(i) {
+  return _pwJchk.ultimo ? _pwJchkCollega(_pwJchkDaCollegare(_pwJchk.ultimo, i)) : undefined;
+}
+
+function pwJchkCollegaTutti() {
+  return _pwJchk.ultimo ? _pwJchkCollega(_pwJchkDaCollegare(_pwJchk.ultimo)) : undefined;
 }
 
 /* Toglie gli indicatori dei sottotask che la verifica ha trovato cancellati su Jira (una

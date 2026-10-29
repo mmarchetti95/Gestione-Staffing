@@ -70,6 +70,17 @@
 // email degli operatori in anagrafica e qui diventano accountId con la ricerca
 // utenti (email esatta, oppure l'unico utente trovato). null = email non
 // risolta: il client non confronta quell'operatore.
+//
+// "cerca" (dalla v18.239.0, stesso controllo): sottotask creati a mano su Jira, che la
+// Griglia non conosce perche' non sono passati dalla creazione dell'app. Per ogni progetto
+// restituisce i sottotask assegnati agli operatori indicati (email -> accountId come
+// sopra) con scadenza o "Start date pianificato" nella settimana, o creati da poco (il
+// giorno puo' stare solo nel titolo). L'abbinamento alle giornate lo fa il client; qui
+// nessuna euristica. "subtaskKeys" puo' essere vuoto.
+//   "cerca": [{ "project": "AI029", "emails": ["..."], "dal": "2026-10-26", "al": "2026-10-31" }]   // max 20
+// Risposta in piu':
+//   "trovati": [{ key, url, summary, status, project, assignee (accountId), duedate, start,
+//                 parentKey, parentSummary }]
 
 const JIRA_BASE_URL  = (Deno.env.get("JIRA_BASE_URL")  || "").replace(/\/+$/, "");
 const JIRA_EMAIL     =  Deno.env.get("JIRA_EMAIL")     || "";
@@ -246,6 +257,71 @@ async function jiraSearch(keys: string[], fields: string[]): Promise<any[]> {
   return issues;
 }
 
+const START_DATE_FIELD = "customfield_13093"; // Start date pianificato
+const MAX_CERCA = 20;
+const MAX_TROVATI = 500;
+
+type Cerca = { project: string; emails: string[]; dal: string; al: string };
+
+function giorniPrima(iso: string, n: number): string {
+  const d = new Date(iso + "T00:00:00Z");
+  d.setUTCDate(d.getUTCDate() - n);
+  return d.toISOString().slice(0, 10);
+}
+
+async function jiraSearchJql(jql: string, fields: string[], max: number): Promise<any[]> {
+  const issues: any[] = [];
+  let nextPageToken: string | undefined = undefined;
+  do {
+    const body: Record<string, unknown> = { jql, fields, maxResults: 100 };
+    if (nextPageToken) body.nextPageToken = nextPageToken;
+    const res = await jiraPost(`/rest/api/3/search/jql`, body);
+    if (!res.ok) throw new Error(`search/jql HTTP ${res.status}`);
+    const data = await res.json();
+    issues.push(...(data.issues || []));
+    nextPageToken = data.nextPageToken;
+  } while (nextPageToken && issues.length < max);
+  return issues.slice(0, max);
+}
+
+// Sottotask degli operatori nella settimana, progetto per progetto (vedi "cerca" in testa).
+async function cercaSottotask(richieste: Cerca[], accountByEmail: Record<string, string | null>): Promise<any[]> {
+  const out: any[] = [];
+  const visti = new Set<string>();
+  const fields = ["summary", "status", "assignee", "duedate", START_DATE_FIELD, "parent", "project"];
+  for (const r of richieste) {
+    const acc = [...new Set(r.emails.map((e) => accountByEmail[e]).filter(Boolean))] as string[];
+    if (!acc.length || out.length >= MAX_TROVATI) continue;
+    const base = `project = "${jqlEscape(r.project)}" AND issuetype in subTaskIssueTypes() AND assignee in (${acc.map((a) => `"${jqlEscape(a)}"`).join(",")})`;
+    const periodo = [`(duedate >= "${r.dal}" AND duedate <= "${r.al}")`, `created >= "${giorniPrima(r.dal, 21)}"`];
+    let issues: any[];
+    try {
+      issues = await jiraSearchJql(`${base} AND (${periodo.join(" OR ")} OR (cf[13093] >= "${r.dal}" AND cf[13093] <= "${r.al}")) ORDER BY created DESC`, fields, MAX_TROVATI);
+    } catch {
+      // Progetto senza "Start date pianificato": la JQL che lo cita non passa.
+      issues = await jiraSearchJql(`${base} AND (${periodo.join(" OR ")}) ORDER BY created DESC`, fields, MAX_TROVATI);
+    }
+    for (const iss of issues) {
+      if (!iss?.key || visti.has(iss.key)) continue;
+      visti.add(iss.key);
+      const f = iss.fields || {};
+      out.push({
+        key: iss.key,
+        url: `${JIRA_BASE_URL}/browse/${iss.key}`,
+        summary: f.summary || "",
+        status: f.status?.name || "",
+        project: f.project?.key || r.project,
+        assignee: f.assignee?.accountId ? String(f.assignee.accountId) : "",
+        duedate: String(f.duedate || "").slice(0, 10),
+        start: String(f[START_DATE_FIELD] || "").slice(0, 10),
+        parentKey: f.parent?.key || "",
+        parentSummary: f.parent?.fields?.summary || "",
+      });
+    }
+  }
+  return out;
+}
+
 Deno.serve(async (req: Request) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: CORS_HEADERS });
   if (req.method !== "POST") return json({ error: "Metodo non consentito" }, 405);
@@ -265,12 +341,23 @@ Deno.serve(async (req: Request) => {
     rawKeys.map((k: unknown) => String(k || "").trim()).filter((k: string) => k),
   )] as string[];
 
-  const emails = [...new Set(
-    (Array.isArray(payload?.emails) ? payload.emails : [])
-      .map((e: unknown) => String(e || "").trim().toLowerCase()).filter((e: string) => e.includes("@")),
-  )].slice(0, MAX_EMAILS) as string[];
+  const normEmail = (e: unknown) => String(e || "").trim().toLowerCase();
+  const isoOk = (d: unknown) => /^\d{4}-\d{2}-\d{2}$/.test(String(d || ""));
+  const cerca: Cerca[] = (Array.isArray(payload?.cerca) ? payload.cerca : [])
+    .map((c: any) => ({
+      project: String(c?.project || "").trim().toUpperCase(),
+      emails: [...new Set((Array.isArray(c?.emails) ? c.emails : []).map(normEmail).filter((e: string) => e.includes("@")))] as string[],
+      dal: String(c?.dal || ""), al: String(c?.al || ""),
+    }))
+    .filter((c: Cerca) => /^[A-Z][A-Z0-9_]*$/.test(c.project) && c.emails.length && isoOk(c.dal) && isoOk(c.al))
+    .slice(0, MAX_CERCA);
 
-  if (!subtaskKeys.length) return json({ bySubtask: {}, tasks: {}, subtasks: {}, count: 0 });
+  const emails = [...new Set([
+    ...(Array.isArray(payload?.emails) ? payload.emails : []).map(normEmail).filter((e: string) => e.includes("@")),
+    ...cerca.flatMap((c) => c.emails),
+  ])].slice(0, MAX_EMAILS) as string[];
+
+  if (!subtaskKeys.length && !cerca.length) return json({ bySubtask: {}, tasks: {}, subtasks: {}, count: 0 });
   if (subtaskKeys.length > MAX_SUBTASKS) {
     return json({ error: `Troppi sottotask richiesti (${subtaskKeys.length}, massimo ${MAX_SUBTASKS})` }, 400);
   }
@@ -278,9 +365,10 @@ Deno.serve(async (req: Request) => {
   try {
     // Passo 1: sottotask -> chiave del Task padre, piu' lo stato del sottotask stesso.
     const [subIssues, accountByEmail] = await Promise.all([
-      jiraSearch(subtaskKeys, ["parent", "status", "summary", "assignee"]),
+      subtaskKeys.length ? jiraSearch(subtaskKeys, ["parent", "status", "summary", "assignee"]) : Promise.resolve([]),
       emails.length ? accountIdDaEmail(emails) : Promise.resolve(undefined),
     ]);
+    const trovati = cerca.length ? await cercaSottotask(cerca, accountByEmail || {}) : undefined;
     const bySubtask: Record<string, string> = {};
     const subtasks: Record<string, any> = {};
     subIssues.forEach((iss: any) => {
@@ -319,11 +407,11 @@ Deno.serve(async (req: Request) => {
     // Il polling di Controllo Produzione (ogni 30s) vuole solo lo stato dei
     // sottotask: niente seconda search sui Task padre.
     if (payload?.soloSottotask === true) {
-      return json({ bySubtask, tasks: {}, subtasks, accountByEmail, count: 0 });
+      return json({ bySubtask, tasks: {}, subtasks, accountByEmail, trovati, count: 0 });
     }
 
     const taskKeys = [...new Set(Object.values(bySubtask))];
-    if (!taskKeys.length) return json({ bySubtask, tasks: {}, subtasks, accountByEmail, count: 0 });
+    if (!taskKeys.length) return json({ bySubtask, tasks: {}, subtasks, accountByEmail, trovati, count: 0 });
 
     // Passo 2: dati dei Task padre. "parent" e' richiesto anche qui perche' il
     // padre del Task e' l'Epic (stessa gerarchia via campo parent usata da
@@ -352,7 +440,7 @@ Deno.serve(async (req: Request) => {
       };
     });
 
-    return json({ bySubtask, tasks, subtasks, accountByEmail, count: Object.keys(tasks).length });
+    return json({ bySubtask, tasks, subtasks, accountByEmail, trovati, count: Object.keys(tasks).length });
   } catch (e) {
     return json({ error: String((e as Error)?.message || e) }, 500);
   }

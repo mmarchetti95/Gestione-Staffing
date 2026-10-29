@@ -114,6 +114,10 @@ Limite noto: il progetto Supabase è sul piano **Free**, che non include backup 
 
 ## Changelog
 
+## v18.239.0
+- feat: **Controllo sottotask: «Ricontrolla» trova anche i sottotask creati a mano su Jira.** Per le giornate «senza sottotask» (o con creazione fallita) cerca su Jira, in sola lettura, i sottotask della settimana assegnati a quegli operatori nel progetto della commessa e li abbina per giorno (data nel titolo, es. 30/10/2026 o 30/10, oppure scadenza/inizio = quel giorno); se quel giorno ce n'è più d'uno vale quello che nomina il cantiere nel titolo suo o del Task padre. La riga mostra il sottotask trovato con «🔗 collega», e in alto «🔗 Collega N sottotask trovati»: con conferma, l'indicatore 🎫 viene scritto in Griglia come «già esistente». Più candidati senza il nome del cantiere: elencati, non collegati. Su Jira non si scrive niente.
+- Edge Function **`jira-task-status`** rideployata (nuova richiesta `cerca`, risposta `trovati`).
+
 ## v18.238.0
 - fix: **Crea strutture comuni: albero mostrato con la gerarchia vera e strutture fatte a mano riconosciute anche con spazi diversi.** Nel modello e nell'anteprima ogni Task ora compare sotto la sua Epic (prima l'elenco era per livelli e tutti i Task sembravano figli dell'ultima Epic; su Jira i padri erano già giusti). Nel confronto dei titoli gli spazi dentro un pezzo non contano più: "Orbassano - WalkOut" esistente viene riconosciuta come l'Epic "Walk Out" del modello invece di proporne una nuova.
 - Edge Function **`jira-struttura-comune`** da rideployare.
