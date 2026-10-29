@@ -114,6 +114,10 @@ Limite noto: il progetto Supabase è sul piano **Free**, che non include backup 
 
 ## Changelog
 
+## v18.238.0
+- fix: **Crea strutture comuni: albero mostrato con la gerarchia vera e strutture fatte a mano riconosciute anche con spazi diversi.** Nel modello e nell'anteprima ogni Task ora compare sotto la sua Epic (prima l'elenco era per livelli e tutti i Task sembravano figli dell'ultima Epic; su Jira i padri erano già giusti). Nel confronto dei titoli gli spazi dentro un pezzo non contano più: "Orbassano - WalkOut" esistente viene riconosciuta come l'Epic "Walk Out" del modello invece di proporne una nuova.
+- Edge Function **`jira-struttura-comune`** da rideployare.
+
 ## v18.237.0
 - fix: **Timeline worklog: il worklog aggiunto risulta dell'assegnatario del sottotask, non di chi lo inserisce.** Le API Jira non permettono di scegliere l'autore di un worklog (è sempre l'account che scrive, cioè l'account di servizio `JIRA_EMAIL`), quindi `jira-worklog-edit` ora scrive tramite **Tempo** (`authorAccountId`): un worklog aggiunto è intestato all'assegnatario del sottotask (se manca, all'operatore); correggendo un worklog che risulta dell'account di servizio (quelli inseriti dall'app finora) passa all'assegnatario — per sistemarne uno basta aprirlo e salvarlo senza modifiche. Gli altri worklog corretti tengono il loro autore. Tempo converte l'ora con il fuso del profilo Atlassian dell'autore: se su Jira non parte all'ora chiesta compare un avviso. L'esito mostra l'autore su Jira.
 - Edge Function **`jira-worklog-edit`** da rideployare; token Tempo (con permesso di registrare ore per altri utenti) come secret **`TEMPO_API_TOKEN`** oppure in Vault con nome **`tempo_api_token`**, letto dalla nuova funzione SQL `tempo_get_api_token()` (solo service_role, migrazione `20261028_tempo_api_token.sql`); facoltativo `TEMPO_API_URL`, default `https://api.tempo.io`. Senza token si comporta come prima.

@@ -112,9 +112,10 @@ function normNome(s: string): string {
 }
 
 // Titolo come insieme di pezzi separati da "-": "Rilievo Auto - Cividate Camuno" e
-// "Cividate Camuno - Rilievo Auto" sono la stessa issue.
+// "Cividate Camuno - Rilievo Auto" sono la stessa issue. Gli spazi dentro un pezzo non contano:
+// le strutture fatte a mano scrivono "Orbassano - WalkOut" dove il modello ha "Walk Out".
 function chiaveTitolo(s: string): string {
-  return normNome(s).split(/\s*-\s*/).map((x) => x.trim()).filter(Boolean).sort().join("|");
+  return normNome(s).split(/\s*-\s*/).map((x) => x.replace(/\s+/g, "")).filter(Boolean).sort().join("|");
 }
 
 function sostituisci(s: string, comune: string): string {

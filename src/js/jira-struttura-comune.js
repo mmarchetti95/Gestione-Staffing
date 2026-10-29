@@ -89,6 +89,28 @@ function _jstProfondita(nodi) {
   return prof;
 }
 
+// Nodi in ordine d'albero (ogni padre seguito dai suoi figli). L'Edge Function li dà per livelli
+// (Iniziativa, tutte le Epic, tutti i Task): indentati in quell'ordine, i Task sembravano tutti
+// figli dell'ultima Epic. Solo per disegnare: l'ordine originale serve alla creazione.
+function _jstOrdineAlbero(nodi, chiaveDi, padreDi) {
+  const presenti = {}, figli = {}, radici = [], visti = {}, out = [];
+  nodi.forEach(n => { presenti[chiaveDi(n)] = true; });
+  nodi.forEach(n => {
+    const p = padreDi(n);
+    if (p && presenti[p]) (figli[p] = figli[p] || []).push(n); else radici.push(n);
+  });
+  const visita = n => {
+    const k = chiaveDi(n);
+    if (visti[k]) return;
+    visti[k] = true;
+    out.push(n);
+    (figli[k] || []).forEach(visita);
+  };
+  radici.forEach(visita);
+  nodi.forEach(visita); // eventuali nodi rimasti fuori (non dovrebbe succedere)
+  return out;
+}
+
 function jstSummaryHtml(modello, modificato) {
   if (!modello) return '<div class="text-[11px] text-slate-400 italic mt-1">Nessun modello: il servizio «Crea strutture comuni» non è disponibile.</div>';
   const nTask = modello.nodi.filter(n => n.livello === 0).length;
@@ -115,7 +137,7 @@ function jstOpenModelloEditor(opts) {
     const prof = _jstProfondita(modello.nodi);
     const det = {};
     ((dettaglio && dettaglio.nodi) || []).forEach(n => { det[n.key] = n; });
-    const righe = modello.nodi.map(n => {
+    const righe = _jstOrdineAlbero(modello.nodi, n => n.key, n => n.parentKey).map(n => {
       const d = det[n.key];
       const campi = d ? '<div class="text-[10px] text-slate-500">Copia: ' + (d.campi.length ? esc(d.campi.join(', ')) : '—')
         + ((d.date || []).length ? ' <span class="text-teal-700">· date scelte alla creazione: ' + esc(d.date.join(', ')) + '</span>' : '')
@@ -294,7 +316,7 @@ function jstOpenCreaModal(commessa, modello) {
     const maxLiv = Math.max(0, ...(r.esito.nodi || []).map(n => n.livello));
     const icone = { esiste: '🔵', da_creare: '🆕', creato: '🟢', errore: '⚠️', saltato: '⏭️' };
     return (r.esito.avvisi || []).map(a => '<div class="text-[11px] text-amber-700">⚠️ ' + esc(a) + '</div>').join('')
-      + (r.esito.nodi || []).map(n => '<div class="text-[11px]" style="margin-left:' + ((maxLiv - n.livello) * 16) + 'px">'
+      + _jstOrdineAlbero(r.esito.nodi || [], n => n.modello, n => padreDi[n.modello]).map(n => '<div class="text-[11px]" style="margin-left:' + ((maxLiv - n.livello) * 16) + 'px">'
         + spunta(n) + (icone[n.stato] || '') + ' <span class="text-slate-400">[' + esc(n.tipo) + ']</span> '
         + (n.key ? '<a href="' + esc(n.url || _jstUrl(n.key, modello)) + '" target="_blank" class="text-teal-700 hover:underline">' + esc(n.key) + '</a> · ' : '')
         + esc(n.summary) + (n.stato === 'da_creare' && !fatto ? '</label>' : '')
