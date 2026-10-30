@@ -586,7 +586,7 @@ function pwRender() {
               <input class="pw-cantiere-input pw-write-action" type="text" placeholder="${cantierePlaceholder}"
                 value="${c.replace(/"/g, '&quot;')}"
                 data-cidx="${cIdx}" data-sidx="${sIdx}" data-oidx="${oIdx}" data-day="${dKey}" data-idx="${ci}"
-                onchange="pwUpdateCantiere(this)">${pwJiraSubtaskBadgeHtml(cIdx, sIdx, oIdx, dKey, ci, bloccoCommessa, op.nome, c, attivitaList[ci])}${cantiereList.length > 1 ? `<button type="button" class="pw-cantiere-remove pw-write-action" title="Rimuovi cantiere"
+                onchange="pwUpdateCantiere(this)">${pwRegioneSlotHtml(c)}${pwJiraSubtaskBadgeHtml(cIdx, sIdx, oIdx, dKey, ci, bloccoCommessa, op.nome, c, attivitaList[ci])}${cantiereList.length > 1 ? `<button type="button" class="pw-cantiere-remove pw-write-action" title="Rimuovi cantiere"
                 data-cidx="${cIdx}" data-sidx="${sIdx}" data-oidx="${oIdx}" data-day="${dKey}" data-idx="${ci}"
                 onclick="pwRemoveCantiereField(this)">✕</button>` : ''}
             </div>

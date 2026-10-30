@@ -72,6 +72,7 @@ JS_FILES = [
     'weekly-autoplan.js',
     'weekly-autoplan-chat.js',
     'weekly-meteo.js',
+    'weekly-regione-cantiere.js',
     'weekly-note-variazioni.js',
     'weekly-jira-check.js',
     'weekly-undo.js',

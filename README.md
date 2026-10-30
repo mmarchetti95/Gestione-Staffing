@@ -114,6 +114,9 @@ Limite noto: il progetto Supabase è sul piano **Free**, che non include backup 
 
 ## Changelog
 
+## v18.240.0
+- feat: **Griglia: sigla della regione accanto a ogni cantiere** (es. «PIE», «VDA»; nome intero passando col mouse). Viene dalla stessa localizzazione già usata per meteo e Mappa: un cantiere appena scritto mostra la sigla appena localizzato; se il nome non viene trovato (o è fuori Italia) non compare nulla. Anche le settimane oltre l'orizzonte del meteo vengono localizzate. Nessuna modifica a Supabase.
+
 ## v18.239.0
 - feat: **Controllo sottotask: «Ricontrolla» trova anche i sottotask creati a mano su Jira.** Per le giornate «senza sottotask» (o con creazione fallita) cerca su Jira, in sola lettura, i sottotask della settimana assegnati a quegli operatori nel progetto della commessa e li abbina per giorno (data nel titolo, es. 30/10/2026 o 30/10, oppure scadenza/inizio = quel giorno); se quel giorno ce n'è più d'uno vale quello che nomina il cantiere nel titolo suo o del Task padre. La riga mostra il sottotask trovato con «🔗 collega», e in alto «🔗 Collega N sottotask trovati»: con conferma, l'indicatore 🎫 viene scritto in Griglia come «già esistente». Più candidati senza il nome del cantiere: elencati, non collegati. Su Jira non si scrive niente.
 - Edge Function **`jira-task-status`** rideployata (nuova richiesta `cerca`, risposta `trovati`).

@@ -232,6 +232,9 @@ async function pwRefreshMeteoWeek() {
     pwApplyMeteoBadgesToDom();
   } finally {
     _pwMeteoRefreshing = false;
+    // Sigla regione accanto ai cantieri (weekly-regione-cantiere.js): geocodifica i
+    // cantieri rimasti fuori dal giro meteo.
+    pwRegioniEnsure();
   }
 }
 
@@ -272,6 +275,7 @@ function pwApplyMeteoBadgesToDom() {
     if (!squadra) return;
     slot.innerHTML = pwWeatherBadgeInnerHtml(cIdx, sIdx, squadra, dayIdx, dateISO);
   });
+  pwApplyRegioniToDom();
   pwUpdateWeatherWidget();
 }
 

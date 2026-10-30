@@ -446,7 +446,20 @@
   }
   .pw-cantiere-list { display: flex; flex-direction: column; gap: 1px; }
   .pw-cantiere-row { display: flex; align-items: center; gap: 2px; }
-  .pw-cantiere-row .pw-cantiere-input { flex: 1; }
+  .pw-cantiere-row .pw-cantiere-input { flex: 1; min-width: 0; }
+  .pw-regione-slot { display: inline-flex; align-items: center; flex-shrink: 0; }
+  .pw-regione-slot:empty { display: none; }
+  .pw-regione-badge {
+    font-size: 9px;
+    font-weight: 600;
+    line-height: 1.3;
+    color: #475569;
+    background: #f1f5f9;
+    border-radius: 3px;
+    padding: 0 3px;
+    cursor: default;
+    letter-spacing: .02em;
+  }
   .pw-cantiere-remove {
     flex-shrink: 0;
     font-size: 10px;
@@ -1978,7 +1991,7 @@
       </span>
       <button id="btn-presentation" class="px-3 py-1.5 text-sm rounded hover:bg-white/10" style="border:1px solid var(--dark-border-strong);color:var(--dark-text);visibility:visible;">📊 Modalità presentazione</button>
       <div class="text-xs pl-2" style="border-left:1px solid var(--dark-border-strong);color:var(--dark-text-muted);">
-        <span id="app-version" class="font-medium" style="color:var(--accent);">v18.239.0</span> · Michele Marchetti
+        <span id="app-version" class="font-medium" style="color:var(--accent);">v18.240.0</span> · Michele Marchetti
         <span id="sb-role-badge" style="margin-left:8px;padding:1px 8px;border-radius:9999px;background:rgba(255,255,255,.1);color:var(--dark-text);font-weight:600;"></span>
       </div>
     </div>

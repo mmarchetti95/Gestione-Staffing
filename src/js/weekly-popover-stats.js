@@ -310,6 +310,8 @@ async function pwUpdateCantiere(inp) {
   inp.value = value;
   g.cantieri[idx] = value;
   await pwSave();
+  // Sigla regione del nuovo testo: subito se già geocodificato, altrimenti a fine giro meteo.
+  pwApplyRegioniToDom();
   // Fire-and-forget: aggiorna subito il meteo per il nuovo cantiere, senza un pwRender()
   // completo (perderebbe il focus appena rilasciato dal campo che ha appena scatenato onchange).
   pwRefreshMeteoWeek();

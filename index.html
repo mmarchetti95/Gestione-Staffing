@@ -446,7 +446,20 @@
   }
   .pw-cantiere-list { display: flex; flex-direction: column; gap: 1px; }
   .pw-cantiere-row { display: flex; align-items: center; gap: 2px; }
-  .pw-cantiere-row .pw-cantiere-input { flex: 1; }
+  .pw-cantiere-row .pw-cantiere-input { flex: 1; min-width: 0; }
+  .pw-regione-slot { display: inline-flex; align-items: center; flex-shrink: 0; }
+  .pw-regione-slot:empty { display: none; }
+  .pw-regione-badge {
+    font-size: 9px;
+    font-weight: 600;
+    line-height: 1.3;
+    color: #475569;
+    background: #f1f5f9;
+    border-radius: 3px;
+    padding: 0 3px;
+    cursor: default;
+    letter-spacing: .02em;
+  }
   .pw-cantiere-remove {
     flex-shrink: 0;
     font-size: 10px;
@@ -1978,7 +1991,7 @@
       </span>
       <button id="btn-presentation" class="px-3 py-1.5 text-sm rounded hover:bg-white/10" style="border:1px solid var(--dark-border-strong);color:var(--dark-text);visibility:visible;">📊 Modalità presentazione</button>
       <div class="text-xs pl-2" style="border-left:1px solid var(--dark-border-strong);color:var(--dark-text-muted);">
-        <span id="app-version" class="font-medium" style="color:var(--accent);">v18.239.0</span> · Michele Marchetti
+        <span id="app-version" class="font-medium" style="color:var(--accent);">v18.240.0</span> · Michele Marchetti
         <span id="sb-role-badge" style="margin-left:8px;padding:1px 8px;border-radius:9999px;background:rgba(255,255,255,.1);color:var(--dark-text);font-weight:600;"></span>
       </div>
     </div>
@@ -15728,7 +15741,7 @@ function pwRender() {
               <input class="pw-cantiere-input pw-write-action" type="text" placeholder="${cantierePlaceholder}"
                 value="${c.replace(/"/g, '&quot;')}"
                 data-cidx="${cIdx}" data-sidx="${sIdx}" data-oidx="${oIdx}" data-day="${dKey}" data-idx="${ci}"
-                onchange="pwUpdateCantiere(this)">${pwJiraSubtaskBadgeHtml(cIdx, sIdx, oIdx, dKey, ci, bloccoCommessa, op.nome, c, attivitaList[ci])}${cantiereList.length > 1 ? `<button type="button" class="pw-cantiere-remove pw-write-action" title="Rimuovi cantiere"
+                onchange="pwUpdateCantiere(this)">${pwRegioneSlotHtml(c)}${pwJiraSubtaskBadgeHtml(cIdx, sIdx, oIdx, dKey, ci, bloccoCommessa, op.nome, c, attivitaList[ci])}${cantiereList.length > 1 ? `<button type="button" class="pw-cantiere-remove pw-write-action" title="Rimuovi cantiere"
                 data-cidx="${cIdx}" data-sidx="${sIdx}" data-oidx="${oIdx}" data-day="${dKey}" data-idx="${ci}"
                 onclick="pwRemoveCantiereField(this)">✕</button>` : ''}
             </div>
@@ -16308,6 +16321,8 @@ async function pwUpdateCantiere(inp) {
   inp.value = value;
   g.cantieri[idx] = value;
   await pwSave();
+  // Sigla regione del nuovo testo: subito se già geocodificato, altrimenti a fine giro meteo.
+  pwApplyRegioniToDom();
   // Fire-and-forget: aggiorna subito il meteo per il nuovo cantiere, senza un pwRender()
   // completo (perderebbe il focus appena rilasciato dal campo che ha appena scatenato onchange).
   pwRefreshMeteoWeek();
@@ -33150,6 +33165,9 @@ async function pwRefreshMeteoWeek() {
     pwApplyMeteoBadgesToDom();
   } finally {
     _pwMeteoRefreshing = false;
+    // Sigla regione accanto ai cantieri (weekly-regione-cantiere.js): geocodifica i
+    // cantieri rimasti fuori dal giro meteo.
+    pwRegioniEnsure();
   }
 }
 
@@ -33190,6 +33208,7 @@ function pwApplyMeteoBadgesToDom() {
     if (!squadra) return;
     slot.innerHTML = pwWeatherBadgeInnerHtml(cIdx, sIdx, squadra, dayIdx, dateISO);
   });
+  pwApplyRegioniToDom();
   pwUpdateWeatherWidget();
 }
 
@@ -33597,6 +33616,94 @@ function pwStartMeteoTimer() {
       pwRefreshMeteoWeek();
     }
   }, METEO_TTL_MS);
+}
+/* ==================== REGIONE DEL CANTIERE (Griglia) ====================
+   Sigla della regione accanto a ogni cantiere della Griglia (es. "PIE", nome intero nel
+   tooltip). Nessun dato nuovo: si legge il display_name di Nominatim già in _geoCache
+   (lo stesso usato per meteo e Mappa, via meteoGeoFor che scarta la riga sentinella
+   "[non trovato]"). Un cantiere non ancora geocodificato, non trovato o fuori Italia
+   non mostra nulla. */
+
+const PW_REGIONI = [
+  ['Piemonte', 'PIE'], ["Valle d'Aosta", 'VDA'], ['Lombardia', 'LOM'],
+  ['Trentino-Alto Adige', 'TAA'], ['Veneto', 'VEN'], ['Friuli-Venezia Giulia', 'FVG'],
+  ['Liguria', 'LIG'], ['Emilia-Romagna', 'EMR'], ['Toscana', 'TOS'], ['Umbria', 'UMB'],
+  ['Marche', 'MAR'], ['Lazio', 'LAZ'], ['Abruzzo', 'ABR'], ['Molise', 'MOL'],
+  ['Campania', 'CAM'], ['Puglia', 'PUG'], ['Basilicata', 'BAS'], ['Calabria', 'CAL'],
+  ['Sicilia', 'SIC'], ['Sardegna', 'SAR'],
+];
+
+/* Solo lettere minuscole senza accenti: "Valle d'Aosta / Vallée d'Aoste" e
+   "Trentino-Alto Adige/Südtirol" di Nominatim combaciano coi nomi sopra. */
+function _pwRegNorm(s) {
+  return (s || '').toLowerCase().normalize('NFD').replace(/[^a-z]/g, '');
+}
+
+/* [nome, sigla] della regione di un cantiere, o null. Il display_name è
+   "Comune, Provincia, Regione, CAP, Italia": si scorre dal fondo, così un comune il
+   cui nome comincia come una regione non viene scambiato per essa. */
+function pwRegioneCantiere(cantiere) {
+  if (!cantiere || !cantiere.trim()) return null;
+  const g = meteoGeoFor(cantiere);
+  if (!g || !g.label) return null;
+  const pezzi = g.label.split(',').map(_pwRegNorm).reverse();
+  for (const p of pezzi) {
+    const r = PW_REGIONI.find(x => p.startsWith(_pwRegNorm(x[0])));
+    if (r) return r;
+  }
+  return null;
+}
+
+function pwRegioneInnerHtml(cantiere) {
+  const r = pwRegioneCantiere(cantiere);
+  return r ? '<span class="pw-regione-badge" title="' + esc(r[0]) + '">' + r[1] + '</span>' : '';
+}
+
+/* Slot accanto all'input cantiere: resta in pagina anche vuoto, così
+   pwApplyRegioniToDom lo riempie quando la geocodifica arriva. */
+function pwRegioneSlotHtml(cantiere) {
+  return '<span class="pw-regione-slot">' + pwRegioneInnerHtml(cantiere) + '</span>';
+}
+
+/* Ricalcola le sigle dal testo attuale di ogni input cantiere, senza pwRender()
+   (perderebbe il focus del campo appena modificato). */
+function pwApplyRegioniToDom() {
+  document.querySelectorAll('#pw-grid .pw-regione-slot').forEach(slot => {
+    const inp = slot.parentNode && slot.parentNode.querySelector('.pw-cantiere-input');
+    slot.innerHTML = pwRegioneInnerHtml(inp ? inp.value : '');
+  });
+}
+
+/* Geocodifica i cantieri della settimana che il meteo non ha cercato (settimane oltre
+   l'orizzonte di previsione, cantieri appena scritti). Chiamata in coda a
+   pwRefreshMeteoWeek, così di solito trova già tutto in _geoCache e non interroga
+   Nominatim due volte per lo stesso nome. Una chiamata durante un giro in corso
+   lo fa ripetere a fine giro, sui dati aggiornati. */
+let _pwRegioniGeocoding = false;
+let _pwRegioniAncora = false;
+async function pwRegioniEnsure() {
+  pwApplyRegioniToDom();
+  if (_pwRegioniGeocoding) { _pwRegioniAncora = true; return; }
+  _pwRegioniGeocoding = true;
+  try {
+    do {
+      _pwRegioniAncora = false;
+      if (_geoCacheLoading) { try { await _geoCacheLoading; } catch (_) {} }
+      const nomi = new Set();
+      pwGetWeekData().forEach(bc => (bc.squadre || []).forEach(sq => (sq.operatori || []).forEach(op => {
+        for (let di = 0; di < 6; di++) pwCellCantieri((op.giorni || {})[di]).forEach(c => nomi.add(c));
+      })));
+      for (const c of nomi) {
+        if (c.toLowerCase().trim().replace(/\s+/g, ' ') in _geoCache) continue;
+        await geocodifica(c);
+        pwApplyRegioniToDom();
+        await new Promise(r => setTimeout(r, 1100)); // rate-limit Nominatim
+      }
+    } while (_pwRegioniAncora);
+  } finally {
+    _pwRegioniGeocoding = false;
+  }
+  pwApplyRegioniToDom();
 }
 /* ==================== GRIGLIA · LAVAGNA NOTE / VARIAZIONI ====================
    Bottone "📝 Note/Variazioni" nella toolbar della Griglia, accanto al meteo: apre una
