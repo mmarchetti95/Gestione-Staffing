@@ -208,7 +208,58 @@ function attScadenzeOperatori(giorniPreavviso) {
 
 /* ------------------------------------------------------- righe della matrice ----- */
 
-const _attFiltri = { search: '', tipo: '', stato: '', soloPool: false, ordine: 'nome' };
+/* stati: insieme degli stati scelti con i chip di priorita' (vuoto = nessun filtro).
+   ordine: 'nome' | 'urgenza' | 'validi' | 'col:<label colonna>'; dir 1 = crescente. */
+const _attFiltri = { search: '', tipo: '', stati: new Set(), soloPool: false, ordine: 'nome', dir: 1 };
+
+/* Chip del filtro per priorita', nell'ordine in cui compaiono. 'nessuno' = la riga non ha
+   voci rilevanti: nessun attestato, o (con un tipo scelto) non ha quel tipo. */
+const ATT_STATI_FILTRO = [
+  { stato: 'scaduto',    label: 'Scaduti',            cls: 'ko' },
+  { stato: 'scadenza',   label: 'In scadenza',        cls: 'warn' },
+  { stato: 'valido',     label: 'Validi',             cls: 'ok' },
+  { stato: 'senza-data', label: 'Scadenza non nota',  cls: 'nodate' },
+  { stato: 'nessuno',    label: 'Senza attestati',    cls: '' },
+];
+
+/* Voci che contano per filtri e ordinamento: con un tipo scelto solo la voce principale di
+   quella colonna, altrimenti tutte quelle della riga. */
+function attVociRilevanti(r, colFiltro) {
+  if (colFiltro) {
+    const best = attVocePrincipaleColonna(r.voci, colFiltro);
+    return best ? [best.voce] : [];
+  }
+  return Object.keys(r.voci).map(n => r.voci[n]);
+}
+
+/* Stati presenti fra le voci rilevanti di una riga ('nessuno' se non ce ne sono). */
+function attStatiRiga(r, colFiltro) {
+  const voci = attVociRilevanti(r, colFiltro);
+  if (voci.length === 0) return ['nessuno'];
+  return voci.map(v => attStatoVoce(v));
+}
+
+function attToggleStato(st) {
+  if (_attFiltri.stati.has(st)) _attFiltri.stati.delete(st);
+  else _attFiltri.stati.add(st);
+  renderAttestati();
+}
+
+/* Dalla tendina: riparte sempre in ordine crescente. */
+function attSetOrdine(v) {
+  if (v === 'col') return; // voce segnaposto "ordinato per colonna"
+  _attFiltri.ordine = v;
+  _attFiltri.dir = 1;
+  renderAttestati();
+}
+
+/* Click su un'intestazione: stessa colonna = inverte il verso, altra colonna = crescente. */
+function attOrdinaPer(chiave) {
+  if (!chiave) return;
+  if (_attFiltri.ordine === chiave) _attFiltri.dir = -_attFiltri.dir;
+  else { _attFiltri.ordine = chiave; _attFiltri.dir = 1; }
+  renderAttestati();
+}
 
 /* Unisce pool operatori e registro importato in un'unica lista di righe
    { nome, op, voci, inPool }. Per chi e' nel pool vince sempre op.attestati_dett
@@ -305,32 +356,84 @@ function renderAttestati() {
   const q = (_attFiltri.search || '').trim().toLowerCase();
   const colFiltro = _attFiltri.tipo ? ATTESTATI_COLONNE.find(c => c.label === _attFiltri.tipo) : null;
 
-  const righe = attRigheRegistro().filter(r => {
+  // Prima i filtri "di contorno" (ricerca, pool): i contatori dei chip di priorita' si
+  // calcolano su questo insieme, cosi' dicono quante righe restano cliccandoli.
+  const base = attRigheRegistro().filter(r => {
     if (_attFiltri.soloPool && !r.inPool) return false;
     if (q && !r.nome.toLowerCase().includes(q)) return false;
-    if (colFiltro && !attVocePrincipaleColonna(r.voci, colFiltro)) return false;
-    if (_attFiltri.stato) {
-      const stati = Object.keys(r.voci).map(n => attStatoVoce(r.voci[n]));
-      if (_attFiltri.stato === 'scaduto' && !stati.includes('scaduto')) return false;
-      if (_attFiltri.stato === 'scadenza' && !stati.includes('scadenza')) return false;
-      if (_attFiltri.stato === 'nessuno' && stati.length > 0) return false;
-    }
     return true;
   });
+  const statiDi = new Map(base.map(r => [r, attStatiRiga(r, colFiltro)]));
 
-  // Scadenza piu' vicina della riga, per l'ordinamento "per urgenza"
-  function urgenzaRiga(r) {
-    let best = null;
-    Object.keys(r.voci).forEach(n => {
-      const gg = attGiorniAllaScadenza(r.voci[n].scad);
-      if (gg === null) return;
-      if (best === null || gg < best) best = gg;
-    });
-    return best === null ? 999999 : best;
+  const conteggi = {};
+  ATT_STATI_FILTRO.forEach(f => { conteggi[f.stato] = 0; });
+  base.forEach(r => {
+    const visti = new Set(statiDi.get(r));
+    visti.forEach(st => { if (conteggi[st] !== undefined) conteggi[st]++; });
+  });
+  const chipBox = document.getElementById('att-filter-stati');
+  if (chipBox) {
+    chipBox.innerHTML = ATT_STATI_FILTRO.map(f => {
+      const attivo = _attFiltri.stati.has(f.stato);
+      const label = f.stato === 'nessuno' && colFiltro ? 'Senza ' + colFiltro.label : f.label;
+      const dot = f.cls ? '<span class="att-dot ' + f.cls + '"></span>' : '<span class="att-dot" style="background:#e2e8f0;"></span>';
+      return '<button type="button" class="att-chip' + (attivo ? ' on' : '') + '" onclick="attToggleStato(\'' + f.stato + '\')" ' +
+        'title="Mostra solo chi ha almeno un attestato in questo stato' + (colFiltro ? ' (solo ' + esc(colFiltro.label) + ')' : '') + '. Più chip insieme = uno qualsiasi.">' +
+        dot + esc(label) + ' <span class="att-chip-n">' + conteggi[f.stato] + '</span></button>';
+    }).join('');
   }
 
-  if (_attFiltri.ordine === 'scadenza') righe.sort((a, b) => urgenzaRiga(a) - urgenzaRiga(b) || a.nome.localeCompare(b.nome));
-  else righe.sort((a, b) => a.nome.localeCompare(b.nome));
+  const righe = base.filter(r => {
+    const stati = statiDi.get(r);
+    // Con un tipo scelto, chi non lo possiede compare solo se lo si chiede col chip "Senza ..."
+    if (_attFiltri.stati.size === 0) return !(colFiltro && stati[0] === 'nessuno');
+    return stati.some(st => _attFiltri.stati.has(st));
+  });
+
+  // Valore di ordinamento di una riga; null = va sempre in fondo, in entrambi i versi.
+  const chiaveOrd = _attFiltri.ordine;
+  const colOrd = chiaveOrd.indexOf('col:') === 0 ? ATTESTATI_COLONNE.find(c => c.label === chiaveOrd.slice(4)) : null;
+  function valoreOrd(r) {
+    if (chiaveOrd === 'urgenza') {
+      // scadenza piu' vicina fra le voci rilevanti (con un tipo scelto: solo quella)
+      let best = null;
+      attVociRilevanti(r, colFiltro).forEach(v => {
+        const gg = attGiorniAllaScadenza(v.scad);
+        if (gg !== null && (best === null || gg < best)) best = gg;
+      });
+      return best;
+    }
+    if (chiaveOrd === 'validi') return Object.keys(r.voci).filter(n => attStatoVoce(r.voci[n]) !== 'scaduto').length;
+    if (colOrd) {
+      const b = attVocePrincipaleColonna(r.voci, colOrd);
+      return b && b.voce.scad ? b.voce.scad : null;
+    }
+    return null;
+  }
+  // Senza data ma posseduto sta prima di "non posseduto": entrambi in fondo.
+  function pesoVuoto(r) {
+    if (!colOrd) return 1;
+    return attVocePrincipaleColonna(r.voci, colOrd) ? 1 : 2;
+  }
+  const dir = _attFiltri.dir || 1;
+  if (chiaveOrd === 'nome' || (!colOrd && chiaveOrd !== 'urgenza' && chiaveOrd !== 'validi')) {
+    righe.sort((a, b) => dir * a.nome.localeCompare(b.nome));
+  } else {
+    const val = new Map(righe.map(r => [r, valoreOrd(r)]));
+    righe.sort((a, b) => {
+      const va = val.get(a), vb = val.get(b);
+      if (va === null || vb === null) {
+        if (va !== null) return -1;
+        if (vb !== null) return 1;
+        return (pesoVuoto(a) - pesoVuoto(b)) || a.nome.localeCompare(b.nome);
+      }
+      const c = typeof va === 'number' ? va - vb : (va < vb ? -1 : (va > vb ? 1 : 0));
+      return dir * c || a.nome.localeCompare(b.nome);
+    });
+  }
+
+  const selOrd = document.getElementById('att-filter-ordine');
+  if (selOrd) selOrd.value = (chiaveOrd === 'nome' || chiaveOrd === 'urgenza') ? chiaveOrd : 'col';
 
   const colonne = colFiltro ? [colFiltro] : ATTESTATI_COLONNE;
 
@@ -348,15 +451,23 @@ function renderAttestati() {
     return b && attStatoVoce(b.voce) !== 'scaduto';
   }).length);
 
+  // Intestazioni cliccabili: la chiave va in data-sort (mai interpolata nell'onclick).
+  function freccia(chiave) {
+    if (_attFiltri.ordine !== chiave) return '';
+    return '<span class="att-sort-ind">' + (dir === 1 ? '▲' : '▼') + '</span>';
+  }
+  const tipOrd = ' — clic per ordinare, di nuovo per invertire';
   let html = '<table class="att-matrix"><thead><tr>';
-  html += '<th class="att-nome">Dipendente</th>';
+  html += '<th class="att-nome att-th-sort" data-sort="nome" onclick="attOrdinaPer(this.dataset.sort)" title="Ordina per nome' + tipOrd + '">Dipendente' + freccia('nome') + '</th>';
   colonne.forEach((col, i) => {
     const durata = ATTESTATI_DURATA[col.voci[0]];
-    const tip = col.label + (durata ? ' — validità ' + durata + (durata === 1 ? ' anno' : ' anni') : '');
-    html += '<th title="' + esc(tip) + '"><div class="att-th-lbl">' + esc(col.label) + '</div>' +
+    const tip = col.label + (durata ? ' — validità ' + durata + (durata === 1 ? ' anno' : ' anni') : '') + '. Ordina per data di scadenza' + tipOrd;
+    const chiave = 'col:' + col.label;
+    html += '<th class="att-th-sort" data-sort="' + esc(chiave) + '" onclick="attOrdinaPer(this.dataset.sort)" title="' + esc(tip) + '">' +
+      '<div class="att-th-lbl">' + esc(col.label) + freccia(chiave) + '</div>' +
       '<div class="att-th-sub">' + totali[i] + (durata ? ' · ' + durata + 'a' : '') + '</div></th>';
   });
-  html += '<th title="Attestati non scaduti / totale posseduti">Validi</th></tr></thead><tbody>';
+  html += '<th class="att-th-sort" data-sort="validi" onclick="attOrdinaPer(this.dataset.sort)" title="Attestati non scaduti / totale posseduti' + tipOrd + '">Validi' + freccia('validi') + '</th></tr></thead><tbody>';
 
   righe.forEach(r => {
     const nVal = Object.keys(r.voci).filter(n => attStatoVoce(r.voci[n]) !== 'scaduto').length;
@@ -374,9 +485,16 @@ function renderAttestati() {
           if (r.voci[nomeVar]) sigle += '<span class="att-sigla">' + esc(col.sigle[nomeVar]) + '</span>';
         });
       }
+      // Con un solo tipo mostrato c'e' spazio: data completa e giorni alla scadenza.
+      let data = best.voce.scad ? attDataBreve(best.voce.scad) : '—';
+      if (colFiltro && best.voce.scad) {
+        const gg = attGiorniAllaScadenza(best.voce.scad);
+        data = esc(fmtDate(best.voce.scad)) + (gg === null ? '' :
+          ' <span class="att-gg">' + (gg < 0 ? 'scaduto da ' + Math.abs(gg) + ' gg' : 'tra ' + gg + ' gg') + '</span>');
+      }
       html += '<td title="' + esc(attTooltipVoce(best.nome, best.voce)) + '"><span class="att-cell">' +
         '<span class="att-dot ' + attClasseStato(st) + '"></span>' +
-        '<span>' + (best.voce.scad ? attDataBreve(best.voce.scad) : '—') + '</span>' + sigle + '</span></td>';
+        '<span>' + data + '</span>' + sigle + '</span></td>';
     });
     html += '<td class="att-tot">' + nVal + '/' + nTot + '</td></tr>';
   });

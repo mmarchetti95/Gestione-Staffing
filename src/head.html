@@ -233,6 +233,17 @@
   .att-sigla { font-size: 9px; padding: 0 3px; border-radius: 3px; background: #ede9fe; color: #5b21b6; border: 1px solid #ddd6fe; }
   .att-vuoto { color: #cbd5e1; }
   .att-tot { color: #64748b; font-variant-numeric: tabular-nums; }
+  .att-th-sort { cursor: pointer; user-select: none; }
+  .att-th-sort:hover { color: #0f172a; background: #eef2f7; }
+  .att-sort-ind { margin-left: 3px; font-size: 8px; color: #0d9488; }
+  .att-gg { font-size: 9px; color: #94a3b8; margin-left: 2px; }
+  .att-chip {
+    display: inline-flex; align-items: center; gap: 4px; padding: 2px 8px; border-radius: 999px;
+    font-size: var(--text-2xs); color: #475569; background: #fff; border: 1px solid #cbd5e1; cursor: pointer;
+  }
+  .att-chip:hover { background: #f8fafc; }
+  .att-chip.on { background: #f0fdfa; border-color: #0d9488; color: #115e59; font-weight: 600; }
+  .att-chip-n { color: #94a3b8; font-weight: 400; font-variant-numeric: tabular-nums; }
   .att-fuoripool { font-size: 9px; padding: 0 4px; border-radius: 3px; background: #f1f5f9; color: #64748b; border: 1px solid #e2e8f0; }
   /* ---- Sezione "DPI & scadenze" (riusa .att-matrix, .att-dot, .att-pill) ---- */
   .dpi-taglia { font-size: 9px; padding: 0 3px; border-radius: 3px; background: #fef9c3; color: #854d0e; border: 1px solid #fde68a; }
@@ -1992,7 +2003,7 @@
       </span>
       <button id="btn-presentation" class="px-3 py-1.5 text-sm rounded hover:bg-white/10" style="border:1px solid var(--dark-border-strong);color:var(--dark-text);visibility:visible;">📊 Modalità presentazione</button>
       <div class="text-xs pl-2" style="border-left:1px solid var(--dark-border-strong);color:var(--dark-text-muted);">
-        <span id="app-version" class="font-medium" style="color:var(--accent);">v18.245.0</span> · Michele Marchetti
+        <span id="app-version" class="font-medium" style="color:var(--accent);">v18.246.0</span> · Michele Marchetti
         <span id="sb-role-badge" style="margin-left:8px;padding:1px 8px;border-radius:9999px;background:rgba(255,255,255,.1);color:var(--dark-text);font-weight:600;"></span>
       </div>
     </div>
@@ -2566,15 +2577,10 @@
           <select id="att-filter-tipo" class="text-xs border border-slate-300 rounded px-1.5 py-1.5" onchange="attSetFiltro('tipo', this.value)">
             <option value="">Tutti i tipi</option>
           </select>
-          <select id="att-filter-stato" class="text-xs border border-slate-300 rounded px-1.5 py-1.5" onchange="attSetFiltro('stato', this.value)">
-            <option value="">Tutti gli stati</option>
-            <option value="scaduto">Con almeno uno scaduto</option>
-            <option value="scadenza">Con almeno uno in scadenza</option>
-            <option value="nessuno">Senza alcun attestato</option>
-          </select>
-          <select id="att-filter-ordine" class="text-xs border border-slate-300 rounded px-1.5 py-1.5" onchange="attSetFiltro('ordine', this.value)">
+          <select id="att-filter-ordine" class="text-xs border border-slate-300 rounded px-1.5 py-1.5" onchange="attSetOrdine(this.value)">
             <option value="nome">Ordina per nome</option>
-            <option value="scadenza">Ordina per urgenza</option>
+            <option value="urgenza">Ordina per scadenza più vicina</option>
+            <option value="col" disabled hidden>Ordinato per colonna</option>
           </select>
           <label class="flex items-center gap-1 text-xs text-slate-600 whitespace-nowrap">
             <input type="checkbox" id="att-filter-pool" onchange="attSetFiltro('soloPool', this.checked)"> Solo pool operatori
@@ -2585,6 +2591,10 @@
             <button onclick="document.getElementById('att-import-file').click()" class="text-xs px-2 py-1 bg-teal-50 text-teal-700 rounded border border-teal-200 hover:bg-teal-100 whitespace-nowrap" title="Importa il file &quot;EP - Elenco attestati dei dipendenti&quot;">⬆ Importa Excel</button>
             <input type="file" id="att-import-file" accept=".xlsx" class="hidden" onchange="attImportPick(this)">
           </div>
+        </div>
+        <div class="flex flex-wrap items-center gap-1.5 mb-2">
+          <span class="text-[10px] text-slate-500 uppercase tracking-wide mr-1">Priorità</span>
+          <span id="att-filter-stati" class="flex flex-wrap gap-1.5"></span>
         </div>
         <div id="att-meta" class="text-[10px] text-slate-400 mb-2"></div>
         <div class="att-scroll"><div id="att-matrix"></div></div>
