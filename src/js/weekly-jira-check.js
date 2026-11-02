@@ -38,9 +38,12 @@
    anche su Jira i sottotask della settimana dei loro operatori (_pwJchkCercaManuali) e li
    abbina per progetto + accountId + giorno (+ nome del cantiere fra più candidati); la
    riga offre «🔗 collega», che scrive la riga in pw_jira_subtask come "already_exists".
+   Eliminazione (v18.242.0): le righe "orfano" offrono «🗑️ elimina su Jira» (e il modal
+   «Elimina su Jira N sottotask non più in Griglia»), l'unica scrittura su Jira del controllo:
+   vedi _pwJchkEliminabili / jira-subtask-delete.
    Gli operatori di un fornitore esterno (op.fornitore) non hanno sottotask: restano fuori. */
 
-HELP_TEXTS['pw-jchk'] = 'Controlla in un colpo tutte le celle della settimana mostrata: per ogni operatore + cantiere + attività, giorno per giorno, verifica che ci sia il sottotask Jira di quel giorno (indicatore 🎫 in cella). I sottotask settimanali creati prima della v18.229.0 valgono ancora per tutti i giorni della loro settimana.\n\nVerde = tutto a posto. Rosso = assegnazioni senza sottotask, con creazione fallita, con il sottotask cancellato su Jira o riassegnato a un\'altra persona. Ambra = sottotask ancora in stato CREATED, sottotask non più collegati a nessuna cella, o commesse senza codice progetto Jira.\n\nClicca una riga (o un giorno) per andare alla cella. Il controllo è immediato sugli indicatori della Griglia; all\'apertura e con «Ricontrolla» verifica anche su Jira quali sottotask sono stati cancellati, a chi sono assegnati e in che stato sono, e cerca i sottotask creati a mano su Jira per le giornate che ne sono senza («🔗 collega»). Su Jira non viene mai scritto niente.';
+HELP_TEXTS['pw-jchk'] = 'Controlla in un colpo tutte le celle della settimana mostrata: per ogni operatore + cantiere + attività, giorno per giorno, verifica che ci sia il sottotask Jira di quel giorno (indicatore 🎫 in cella). I sottotask settimanali creati prima della v18.229.0 valgono ancora per tutti i giorni della loro settimana.\n\nVerde = tutto a posto. Rosso = assegnazioni senza sottotask, con creazione fallita, con il sottotask cancellato su Jira o riassegnato a un\'altra persona. Ambra = sottotask ancora in stato CREATED, sottotask non più collegati a nessuna cella, o commesse senza codice progetto Jira.\n\nClicca una riga (o un giorno) per andare alla cella. Il controllo è immediato sugli indicatori della Griglia; all\'apertura e con «Ricontrolla» verifica anche su Jira quali sottotask sono stati cancellati, a chi sono assegnati e in che stato sono, e cerca i sottotask creati a mano su Jira per le giornate che ne sono senza («🔗 collega»). Su Jira si scrive solo con «🗑️ elimina su Jira», che cancella i sottotask non più in Griglia mai iniziati.';
 
 const PW_JCHK_GIORNI = ['Lun', 'Mar', 'Mer', 'Gio', 'Ven', 'Sab'];
 const PW_JCHK_TIPI = {
@@ -61,6 +64,7 @@ const _pwJchk = {
   ultimo: null,     // ultimo risultato mostrato nel modal: gli onclick lo indicizzano per numero
   jira: {},         // 'anno|week' -> { cancellati: Set(chiavi), info: {chiave: {status, assignee}}, n, ts, errore, inflight }
   acc: {},          // email operatore (minuscola) -> accountId Jira | null (non risolta), per la sessione
+  esitoElimina: null, // { testo, ko, inCorso }: ultima eliminazione su Jira, mostrata nel modal
 };
 
 function _pwJchkWeekKey() { return pwAnno + '|' + pwWeek; }
@@ -423,7 +427,7 @@ function pwJchkAnalizza() {
       const a = {
         tipo: 'orfano', cIdx: pos ? pos.cIdx : cIdx, sIdx: pos ? pos.sIdx : 0, commessa: bc.commessa, mapKey,
         operatore, cantiere: e.cantiere || '', attivita: e.attivita || '', giorno: e._db ? e.giorno : null,
-        key: e.key || '', url: e.url || '', pos, celle: [],
+        key: e.key || '', url: e.url || '', pos, celle: [], db: !!e._db, id: e._db ? e.id : null,
       };
       // Caso tipico: in Griglia l'operatore è stato sostituito e su Jira il sottotask
       // riassegnato al sostituto — l'indicatore è rimasto sotto il vecchio nome.
@@ -505,6 +509,7 @@ function pwJchkSetEvidenzia(on) {
 
 function pwOpenJiraCheck() {
   const wk = _pwJchkWeekKey();
+  _pwJchk.esitoElimina = null;
   const verifica = pwJchkVerificaJira(true);
   _pwJchkRenderModal(true);
   verifica.then(() => {
@@ -586,12 +591,16 @@ function _pwJchkRenderModal(accendi) {
       + '</div>';
   }).join('');
 
-  const note = ['Controllo sugli indicatori 🎫 salvati in Griglia, più la verifica su Jira di sottotask cancellati, riassegnati o in stato CREATED (su Jira non viene scritto niente). Un sottotask copre operatore + cantiere + attività per un giorno (quelli settimanali creati prima della v18.229.0 coprono tutta la loro settimana).'];
+  const note = ['Controllo sugli indicatori 🎫 salvati in Griglia, più la verifica su Jira di sottotask cancellati, riassegnati o in stato CREATED (su Jira si scrive solo con «🗑️ elimina su Jira»). Un sottotask copre operatore + cantiere + attività per un giorno (quelli settimanali creati prima della v18.229.0 coprono tutta la loro settimana).'];
   if (r.fornitori) note.push(r.fornitori + (r.fornitori === 1 ? ' cella' : ' celle') + ' di fornitori esterni escluse dal controllo.');
 
   const pulisci = r.cancellati.length && sbCanWrite()
     ? '<button type="button" class="pw-jchk-pulisci" onclick="pwJchkTogliCancellati()">🧹 Togli ' + r.cancellati.length
       + (r.cancellati.length === 1 ? ' indicatore' : ' indicatori') + ' di sottotask cancellati su Jira</button>'
+    : '';
+  const nElimina = sbCanWrite() ? _pwJchkEliminabili(r).length : 0;
+  const eliminaTutti = nElimina > 1
+    ? '<button type="button" class="pw-jchk-pulisci" onclick="pwJchkEliminaOrfani()">🗑️ Elimina su Jira ' + nElimina + ' sottotask non più in Griglia</button>'
     : '';
   const nCollega = _pwJchkDaCollegare(r).reduce((s, x) => s + x.a.suJira.length, 0);
   const collegaTutti = nCollega && sbCanWrite()
@@ -608,7 +617,9 @@ function _pwJchkRenderModal(accendi) {
     + '</div>'
     + esito
     + _pwJchkStatoJiraHtml()
+    + _pwJchkEsitoEliminaHtml()
     + pulisci
+    + eliminaTutti
     + collegaTutti
     + (blocchi ? '<p class="text-xs text-slate-500 mt-3 mb-2">Clicca una riga per andare alla cella, o un giorno per la cella di quel giorno.</p>' + blocchi : '')
     + '<div class="text-[11px] text-slate-400 mt-3">' + note.map(esc).join('<br>') + '</div>'
@@ -648,6 +659,9 @@ function pwJchkRigaHtml(a, i) {
       + (a.nuovo ? '' : ' (non in Griglia questa settimana)')
     : 'su Jira non è più assegnato a nessuno';
   if (a.tipo === 'orfano') {
+    const btnElimina = scrive && _pwJchkEliminabili(_pwJchk.ultimo, i).length
+      ? '<button type="button" class="pw-jchk-azione" onclick="event.stopPropagation();pwJchkEliminaJira(' + i + ')" title="Elimina il sottotask su Jira (solo se mai iniziato e senza ore) e toglie l\'indicatore">🗑️ elimina su Jira</button>'
+      : '';
     const det = a.assignee !== undefined
       ? 'Sottotask ' + link + ' non più pianificato da nessuna cella; ' + aChi
       : 'Sottotask ' + link + ' su Jira, ma nessuna cella lo pianifica più'
@@ -656,7 +670,7 @@ function pwJchkRigaHtml(a, i) {
       + '<span class="pw-jchk-ico">' + t.ico + '</span>'
       + '<div class="min-w-0 flex-1"><div>' + titolo + '</div>'
       + '<div class="pw-jchk-det">' + det + '</div></div>'
-      + (btnSposta || btnRimuovi) + '</div>';
+      + (btnSposta || (btnElimina + btnRimuovi)) + '</div>';
   }
   let det, azione = '';
   if (a.tipo === 'cancellato') {
@@ -823,4 +837,108 @@ async function pwJchkTogliCancellati() {
     pwJiraSubtaskApplyBadgesToDom();
   }
   _pwJchkRenderModal(false);
+}
+
+/* Eliminazione su Jira dei sottotask non più in Griglia (v18.242.0): es. un comune saltato
+   per maltempo, la squadra spostata altrove e i sottotask nuovi già creati. Si offre solo per
+   le righe "orfano" non riassegnate su Jira (un sottotask riassegnato l'ha toccato qualcuno:
+   meglio «sposta») e il cui sottotask nessun'altra cella usa. La Edge Function
+   jira-subtask-delete rilegge ogni sottotask e lo elimina solo se mai iniziato (CREATED / TO
+   DO) e senza ore; gli altri tornano "rifiutato" e restano su Jira e in Griglia. */
+function _pwJchkEliminabili(r, soloI) {
+  if (!r) return [];
+  // Chiavi usate da un indicatore che non è orfano: identità come in pwJchkAnalizza
+  // (giornalieri per commessa, settimanali per blocco).
+  const idOrfani = new Set(r.anomalie.filter(a => a.tipo === 'orfano')
+    .map(a => a.db ? 'd|' + a.commessa + '|' + a.mapKey : 'w|' + a.cIdx + '|' + a.mapKey));
+  const inUso = new Set();
+  pwGetWeekData().forEach((bc, cIdx) => {
+    if (!bc) return;
+    Object.entries(pwJiraSubtaskMappa(bc)).forEach(([mapKey, e]) => {
+      if (!e || !e.key) return;
+      if (!idOrfani.has(e._db ? 'd|' + bc.commessa + '|' + mapKey : 'w|' + cIdx + '|' + mapKey)) inUso.add(e.key);
+    });
+  });
+  const out = [];
+  r.anomalie.forEach((a, i) => {
+    if (soloI !== undefined && soloI !== i) return;
+    if (a.tipo !== 'orfano' || !a.key || a.assignee !== undefined || a.sposta || inUso.has(a.key)) return;
+    out.push({ a, i });
+  });
+  return out;
+}
+
+async function _pwJchkElimina(lista) {
+  if (!lista.length || (_pwJchk.esitoElimina && _pwJchk.esitoElimina.inCorso) || !sbGuardWrite()) return;
+  const anno = pwAnno, week = pwWeek, data = pwGetWeekData(); // la settimana può cambiare durante la chiamata
+  const righe = lista.map(({ a }) => a.key + ' — ' + a.operatore + ', ' + a.cantiere
+    + (a.giorno !== null && a.giorno !== undefined ? ', ' + pwJsubGiornoLabel(anno, week, a.giorno) : ' (settimanale)'));
+  const ok = await showConfirmAsync('Eliminare su Jira ' + (lista.length === 1 ? 'questo sottotask' : 'questi ' + lista.length + ' sottotask')
+    + ' che la Griglia non pianifica più?\n\n' + righe.slice(0, 15).join('\n') + (righe.length > 15 ? '\n… e altri ' + (righe.length - 15) : '')
+    + '\n\nVengono eliminati solo i sottotask mai iniziati (CREATED o TO DO) e senza ore registrate: gli altri restano su Jira.'
+    + ' L\'eliminazione su Jira NON si può annullare.', 'Elimina su Jira');
+  if (!ok) return;
+
+  const keys = [...new Set(lista.map(({ a }) => a.key))];
+  _pwJchk.esitoElimina = { inCorso: true, testo: 'Eliminazione su Jira di ' + keys.length + ' sottotask in corso…' };
+  _pwJchkRenderModal(false);
+  const esiti = {};
+  let erroreChiamata = '';
+  for (let i = 0; i < keys.length; i += 50) {
+    try {
+      const { data, error } = await _sbClient.functions.invoke('jira-subtask-delete', {
+        body: { keys: keys.slice(i, i + 50), contesto: { anno, week } },
+      });
+      if (error) throw new Error(await _cpEdgeErr(error, 'jira-subtask-delete'));
+      if (data && data.error) throw new Error(data.error);
+      ((data && data.risultati) || []).forEach(x => { esiti[x.key] = x; });
+    } catch (e) {
+      erroreChiamata = e.message || String(e);
+      break;
+    }
+  }
+
+  // Indicatori dei sottotask eliminati: delete sulla tabella per i giornalieri, un solo
+  // pwSave per i settimanali (come pwJchkTogliCancellati).
+  const eliminati = lista.filter(({ a }) => esiti[a.key] && esiti[a.key].esito === 'eliminato');
+  if (eliminati.length) {
+    const settimanali = eliminati.filter(({ a }) => !a.db);
+    try {
+      await pwJsubElimina(eliminati.filter(({ a }) => a.db && a.id != null).map(({ a }) => a.id));
+    } catch (e) {
+      erroreChiamata = (erroreChiamata ? erroreChiamata + ' · ' : '') + 'indicatori non tolti: ' + (e.message || String(e));
+    }
+    settimanali.forEach(({ a }) => { const bc = data[a.cIdx]; if (bc && bc.jiraSubtask) delete bc.jiraSubtask[a.mapKey]; });
+    if (settimanali.length) await pwSave();
+    pwJiraSubtaskApplyBadgesToDom();
+  }
+
+  const nonEliminati = keys.filter(k => !esiti[k] || esiti[k].esito !== 'eliminato');
+  let msg = 'Sottotask eliminati su Jira: ' + new Set(eliminati.map(({ a }) => a.key)).size;
+  if (nonEliminati.length) {
+    msg += '\n\nNon eliminati (' + nonEliminati.length + '):\n' + nonEliminati.slice(0, 15).map(k =>
+      k + ': ' + (esiti[k] ? (esiti[k].motivo || esiti[k].esito) : 'non elaborato')).join('\n')
+      + (nonEliminati.length > 15 ? '\n…' : '');
+  }
+  if (erroreChiamata) msg += '\n\n⚠️ ' + erroreChiamata;
+  // Esito dentro il modal del controllo (un avviso lo sostituirebbe); se nel frattempo è
+  // stato chiuso, avviso normale.
+  _pwJchk.esitoElimina = { testo: msg, ko: !!(nonEliminati.length || erroreChiamata) };
+  if (document.getElementById('pw-jchk-modal')) _pwJchkRenderModal(false);
+  else showAlertModal(msg);
+}
+
+function _pwJchkEsitoEliminaHtml() {
+  const x = _pwJchk.esitoElimina;
+  if (!x) return '';
+  return '<div class="pw-jchk-jira' + (x.ko ? ' pw-jchk-jira-err' : '') + '" style="white-space:pre-line">'
+    + (x.inCorso ? '⏳ ' : '🗑️ ') + esc(x.testo) + '</div>';
+}
+
+function pwJchkEliminaJira(i) {
+  return _pwJchk.ultimo ? _pwJchkElimina(_pwJchkEliminabili(_pwJchk.ultimo, i)) : undefined;
+}
+
+function pwJchkEliminaOrfani() {
+  return _pwJchk.ultimo ? _pwJchkElimina(_pwJchkEliminabili(_pwJchk.ultimo)) : undefined;
 }

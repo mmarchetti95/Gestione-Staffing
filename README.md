@@ -114,6 +114,10 @@ Limite noto: il progetto Supabase è sul piano **Free**, che non include backup 
 
 ## Changelog
 
+## v18.242.0
+- feat: **Controllo sottotask: «🗑️ elimina su Jira» per i sottotask non più in Griglia.** Quando a settimana iniziata cambia la Griglia (es. un comune salta per maltempo e la squadra va in un altro) si creano i sottotask nuovi con «🎫 Sottotask Jira» e quelli vecchi compaiono nel controllo come «sottotask non più in Griglia»: ora si possono eliminare su Jira dalla riga, oppure tutti insieme con «🗑️ Elimina su Jira N sottotask non più in Griglia». Con conferma, mai in automatico. Vengono eliminati solo i sottotask mai iniziati (CREATED o TO DO) e senza ore registrate; quelli già avviati o con ore restano su Jira e l'esito dice perché. Dopo l'eliminazione l'indicatore 🎫 sparisce e il Production Weight degli altri sottotask del Task viene ricalcolato. Non si offre per i sottotask riassegnati su Jira a un'altra persona. Riservato ad admin e responsabili, registrato nel log attività, non annullabile.
+- Nuova Edge Function **`jira-subtask-delete`** (serve il permesso «Delete Issues» dell'account di servizio Jira nei progetti).
+
 ## v18.241.0
 - feat: **Sottotask Jira dalla Griglia: appena creati passano da CREATED a TO DO.** Subito dopo la creazione ogni sottotask viene spostato in TO DO con la transizione del workflow. Se per qualche sottotask lo spostamento non riesce, il sottotask resta comunque creato (in CREATED) e il riepilogo finale dice quanti e perché. I sottotask «già esistenti» non vengono toccati.
 - Edge Function **`jira-create-subtask`** rideployata (risultato con `transizione` quando lo spostamento non riesce).
