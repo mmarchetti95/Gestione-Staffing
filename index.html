@@ -2003,7 +2003,7 @@
       </span>
       <button id="btn-presentation" class="px-3 py-1.5 text-sm rounded hover:bg-white/10" style="border:1px solid var(--dark-border-strong);color:var(--dark-text);visibility:visible;">📊 Modalità presentazione</button>
       <div class="text-xs pl-2" style="border-left:1px solid var(--dark-border-strong);color:var(--dark-text-muted);">
-        <span id="app-version" class="font-medium" style="color:var(--accent);">v18.246.0</span> · Michele Marchetti
+        <span id="app-version" class="font-medium" style="color:var(--accent);">v18.247.0</span> · Michele Marchetti
         <span id="sb-role-badge" style="margin-left:8px;padding:1px 8px;border-radius:9999px;background:rgba(255,255,255,.1);color:var(--dark-text);font-weight:600;"></span>
       </div>
     </div>
@@ -21499,10 +21499,11 @@ async function cpSaveKmTicket(commessa, squadra, operatore, giorno, dataGiorno, 
       return;
     }
     _cpData[k].km_by_ticket[ticketKey] = nuovo;
-    cpKmMetaSet(_cpData[k], ticketKey, { fonte: 'manuale' });
+    // Un valore corretto a mano non è più la somma dei report: un report caricato dopo lo sostituisce.
+    cpKmMetaSet(_cpData[k], ticketKey, { fonte: 'manuale', reportUtenze: null });
   } else {
     delete _cpData[k].km_by_ticket[ticketKey];
-    cpKmMetaSet(_cpData[k], ticketKey, { fonte: null });
+    cpKmMetaSet(_cpData[k], ticketKey, { fonte: null, reportUtenze: null });
   }
 
   // Aggiorna lo specchio km_cad (somma) per colorazione griglia/export
@@ -21864,7 +21865,7 @@ async function cpRereadTicket(ev, commessa, squadra, operatore, giorno, dataGior
     if (!_cpData[k].km_last_by_ticket || typeof _cpData[k].km_last_by_ticket !== 'object') _cpData[k].km_last_by_ticket = {};
     _cpData[k].km_by_ticket[ticketKey] = val;
     _cpData[k].km_last_by_ticket[ticketKey] = val; // adottato di nuovo: delta futuro = 0
-    cpKmMetaSet(_cpData[k], ticketKey, { fonte: 'manuale', campoLast: campo });
+    cpKmMetaSet(_cpData[k], ticketKey, { fonte: 'manuale', campoLast: campo, reportUtenze: null });
     _cpData[k].km_cad = cpSumKm(_cpData[k].km_by_ticket);
 
     const record = cpBuildRecord(commessa, squadra, operatore, giorno, cpDataISO(dataGiorno), cantiere, attivita);
@@ -22216,7 +22217,7 @@ function cpReportAttivitaTicket(t, perTicket, attivitaNote) {
   return (sm && attivitaNote.find(a => sm.startsWith(a.toLowerCase() + ' - '))) || '';
 }
 
-HELP_TEXTS['cp-carica-report'] = 'Importa un file CSV/testo con le ore di produzione reale degli operatori di QUESTA squadra e compila "Ore Report Prod." e il Km/Cad del ticket del comune, per i soli giorni trovati nel file.\n\nSe sullo stesso comune la squadra ha sottotask di più attività (es. due rilievi diversi nella stessa settimana), viene chiesta anche l\'attività: il Km/Cad va sul sottotask di quell\'attività e si aggiornano solo gli operatori/giorni che la svolgono.\n\nI valori già presenti per quel ticket vengono sovrascritti. Se il file non copre nessun giorno della settimana, ti viene comunque chiesto se vuoi azzerare le ore per quei giorni.\n\nRiguarda solo "Ore Report Prod."/Km — le "Ore Jira" si aggiornano con "Sincronizza da Jira".';
+HELP_TEXTS['cp-carica-report'] = 'Importa un file CSV/testo con le ore di produzione reale degli operatori di QUESTA squadra e compila "Ore Report Prod." e il Km/Cad del ticket del comune, per i soli giorni trovati nel file.\n\nSe sullo stesso comune la squadra ha sottotask di più attività (es. due rilievi diversi nella stessa settimana), viene chiesta anche l\'attività: il Km/Cad va sul sottotask di quell\'attività e si aggiornano solo gli operatori/giorni che la svolgono.\n\nSi possono caricare più report per la stessa squadra e settimana (es. 2 giorni fatti con l\'utenza di una persona e 3 con quella di un\'altra): ogni report aggiorna solo i giorni che contiene, gli altri restano come sono. Se due utenze diverse hanno dati sullo stesso giorno, ore e Km/Cad si sommano; ricaricare il report della stessa utenza ne sostituisce i valori invece di sommarli.\n\nI giorni senza dati nel file vengono messi a zero solo se ancora vuoti. Se il file non copre nessun giorno della settimana, ti viene comunque chiesto se vuoi azzerare le ore per quei giorni.\n\nRiguarda solo "Ore Report Prod."/Km — le "Ore Jira" si aggiornano con "Sincronizza da Jira".';
 
 // Handler del bottone: apre il selettore file (CSV) per la squadra indicata.
 async function cpCaricaReportSquadra(commessa, squadra) {
@@ -22357,13 +22358,13 @@ async function cpProcessReport(csvText, commessa, squadra) {
     const N = ops.length;
     const dateISO = isoDates[g];
 
-    let source = null;
+    let source = null, utente = null;
     ops.forEach(op => {
       const email = emailByNome[op.nome];
       if (!email) { opsNoEmail.add(op.nome); return; }
       const user = email.split('@')[0].toLowerCase();
       const rec = parsed[`${user}|||${dateISO}`];
-      if (rec && (!source || rec.lenM > source.lenM)) source = rec;
+      if (rec && (!source || rec.lenM > source.lenM)) { source = rec; utente = user; }
     });
 
     let oreVal = 0, kmVal = 0;
@@ -22383,6 +22384,7 @@ async function cpProcessReport(csvText, commessa, squadra) {
         operatore: op.nome, giorno: g, dataISO: dateISO,
         cantiere: op.cantiere, attivita: op.attivita,
         ore: oreVal, km: kmVal, ticketKey: ticket ? ticket.key : null,
+        utente: source ? utente : null,
       });
     });
   }
@@ -22391,6 +22393,27 @@ async function cpProcessReport(csvText, commessa, squadra) {
     showAlertModal(`Nessun operatore della squadra "${squadra}" svolge l'attività "${attSel}" questa settimana.`);
     return;
   }
+  // Più report per la stessa squadra/settimana (utenze diverse): ogni ticket tiene in
+  // km_meta_by_ticket[key].reportUtenze il contributo { km, ore } di ogni utenza caricata.
+  // Ricaricare la stessa utenza ne sostituisce il contributo, un'altra utenza si somma.
+  // Valori di report caricati prima (senza reportUtenze): l'utenza non è nota, si chiede.
+  const cellaDi = u => _cpData[`${commessa}|||${squadra}|||${u.operatore}|||${u.giorno}`] || {};
+  const precedenteSenzaUtenza = u => {
+    const c = cellaDi(u), m = cpKmMeta(c, u.ticketKey);
+    if (m.reportUtenze || (m.fonte !== 'report' && m.fonte !== 'manuale')) return false;
+    const km = c.km_by_ticket && c.km_by_ticket[u.ticketKey];
+    return Number(km) > 0 || Number(c.ore_report) > 0;
+  };
+  const altraUtenza = u => {
+    const ru = cpKmMeta(cellaDi(u), u.ticketKey).reportUtenze;
+    return !!ru && Object.keys(ru).some(x => x !== u.utente);
+  };
+  const conDati = updates.filter(u => u.utente && u.ticketKey);
+  const giorniDi = list => new Set(list.map(u => u.giorno)).size;
+  const giorniSomma = giorniDi(conDati.filter(altraUtenza));
+  const giorniIgnoti = giorniDi(conDati.filter(precedenteSenzaUtenza));
+  let sommaPrecedenti = false;
+
   if (daysWithData === 0) {
     const range = (() => {
       const ds = Object.keys(parsed).map(k => k.split('|||')[1]).sort();
@@ -22406,22 +22429,51 @@ async function cpProcessReport(csvText, commessa, squadra) {
     const ok = await showConfirmAsync(
       `Comune ${etichetta} — squadra "${squadra}": verranno compilati "Ore Report Prod." e il "Km/Cad" del ticket ` + (attSel ? `di quell'attività ` : `di quel comune `) +
       `(${daysWithData} giorni con dati, ${daysZero} a zero` + (noTicket > 0 ? `, ${noTicket} senza ticket` + (attSel ? ` dell'attività` : ` del comune`) : ``) + `). ` +
-      `I valori esistenti per quel ticket saranno sovrascritti. Procedere?`,
+      `Vengono aggiornati solo i giorni presenti nel file` +
+      (giorniSomma > 0 ? `; su ${giorniSomma} giorn${giorniSomma === 1 ? 'o' : 'i'} c'è già il report di un'altra utenza: ore e Km/Cad verranno sommati` : '') +
+      `. Procedere?`,
       'Carica Report');
     if (!ok) return;
+    if (giorniIgnoti > 0) {
+      const scelta = await cpSelectModal(
+        'Report già caricato',
+        `Su ${giorniIgnoti} giorn${giorniIgnoti === 1 ? 'o' : 'i'} c'è già un valore di report caricato prima che l'app tenesse traccia dell'utenza.\n` +
+        `Se era il report di un'altra utenza scegli "Somma"; se era questo stesso report (o uno sbagliato) scegli "Sostituisci".`,
+        [{ value: 'somma', label: 'Somma al valore già presente' }, { value: 'sostituisci', label: 'Sostituisci il valore già presente' }]);
+      if (!scelta) return;
+      sommaPrecedenti = scelta === 'somma';
+    }
   }
+  const azzeraTutto = daysWithData === 0;
 
   // Applica: aggiorna cache locale (ore per cella, km sul ticket del comune) e persisti
   const touched = new Map();
+  let giorniZeroSaltati = 0;
   updates.forEach(u => {
     const k = `${commessa}|||${squadra}|||${u.operatore}|||${u.giorno}`;
     if (!_cpData[k]) _cpData[k] = {};
-    _cpData[k].ore_report = u.ore;
+    const cell = _cpData[k];
+    // Giorno senza dati in questo report: si mette a zero solo una cella ancora vuota, mai
+    // quella già compilata da un altro report (salvo la conferma esplicita "Azzera comunque").
+    if (!u.utente && !azzeraTutto && cell.ore_report != null) { giorniZeroSaltati++; return; }
+    let ore = u.ore, km = u.km, reportUtenze = null;
+    if (u.utente && u.ticketKey) {
+      const prec = precedenteSenzaUtenza(u);
+      reportUtenze = { ...(cpKmMeta(cell, u.ticketKey).reportUtenze || {}) };
+      if (prec && sommaPrecedenti) {
+        reportUtenze['?'] = { km: Number(cell.km_by_ticket[u.ticketKey]) || 0, ore: Number(cell.ore_report) || 0 };
+      }
+      reportUtenze[u.utente] = { km: u.km, ore: u.ore };
+      const vals = Object.values(reportUtenze);
+      km  = Math.round(vals.reduce((t, v) => t + (Number(v.km) || 0), 0) * 1000) / 1000;
+      ore = Math.round(vals.reduce((t, v) => t + (Number(v.ore) || 0), 0) * 100) / 100;
+    }
+    cell.ore_report = ore;
     if (u.ticketKey) {
-      if (!_cpData[k].km_by_ticket || typeof _cpData[k].km_by_ticket !== 'object') _cpData[k].km_by_ticket = {};
-      _cpData[k].km_by_ticket[u.ticketKey] = u.km;
-      cpKmMetaSet(_cpData[k], u.ticketKey, { fonte: 'report' });
-      _cpData[k].km_cad = cpSumKm(_cpData[k].km_by_ticket);
+      if (!cell.km_by_ticket || typeof cell.km_by_ticket !== 'object') cell.km_by_ticket = {};
+      cell.km_by_ticket[u.ticketKey] = km;
+      cpKmMetaSet(cell, u.ticketKey, { fonte: 'report', reportUtenze });
+      cell.km_cad = cpSumKm(cell.km_by_ticket);
     }
     touched.set(k, u);
   });
@@ -22446,6 +22498,12 @@ async function cpProcessReport(csvText, commessa, squadra) {
 
   let msg = `✅ Comune ${etichetta} — squadra "${squadra}": aggiornate ${records.length} celle ` +
             `(${daysWithData} giorni con dati, ${daysZero} a zero).`;
+  if (giorniSomma > 0) {
+    msg += `\n\n➕ Su ${giorniSomma} giorn${giorniSomma === 1 ? 'o' : 'i'} sommato al report di un'altra utenza già caricato.`;
+  }
+  if (giorniZeroSaltati > 0) {
+    msg += `\n\nℹ ${giorniZeroSaltati} operatore/giorno senza dati in questo file lasciati com'erano (già compilati da un altro report).`;
+  }
   // Promemoria: il report aggiorna solo l'app, su Jira i Km/Cad arrivano con Sincronizza.
   const inSospeso = updates.filter(u => u.ticketKey &&
     ['da_aggiornare', 'da_inviare'].includes(cpKmJiraStato(_cpData[`${commessa}|||${squadra}|||${u.operatore}|||${u.giorno}`], u.ticketKey, u.operatore, cpCampoProduzione(commessa)).stato)).length;

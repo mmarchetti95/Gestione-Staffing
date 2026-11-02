@@ -1128,10 +1128,11 @@ async function cpSaveKmTicket(commessa, squadra, operatore, giorno, dataGiorno, 
       return;
     }
     _cpData[k].km_by_ticket[ticketKey] = nuovo;
-    cpKmMetaSet(_cpData[k], ticketKey, { fonte: 'manuale' });
+    // Un valore corretto a mano non è più la somma dei report: un report caricato dopo lo sostituisce.
+    cpKmMetaSet(_cpData[k], ticketKey, { fonte: 'manuale', reportUtenze: null });
   } else {
     delete _cpData[k].km_by_ticket[ticketKey];
-    cpKmMetaSet(_cpData[k], ticketKey, { fonte: null });
+    cpKmMetaSet(_cpData[k], ticketKey, { fonte: null, reportUtenze: null });
   }
 
   // Aggiorna lo specchio km_cad (somma) per colorazione griglia/export
@@ -1493,7 +1494,7 @@ async function cpRereadTicket(ev, commessa, squadra, operatore, giorno, dataGior
     if (!_cpData[k].km_last_by_ticket || typeof _cpData[k].km_last_by_ticket !== 'object') _cpData[k].km_last_by_ticket = {};
     _cpData[k].km_by_ticket[ticketKey] = val;
     _cpData[k].km_last_by_ticket[ticketKey] = val; // adottato di nuovo: delta futuro = 0
-    cpKmMetaSet(_cpData[k], ticketKey, { fonte: 'manuale', campoLast: campo });
+    cpKmMetaSet(_cpData[k], ticketKey, { fonte: 'manuale', campoLast: campo, reportUtenze: null });
     _cpData[k].km_cad = cpSumKm(_cpData[k].km_by_ticket);
 
     const record = cpBuildRecord(commessa, squadra, operatore, giorno, cpDataISO(dataGiorno), cantiere, attivita);

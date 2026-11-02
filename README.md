@@ -114,6 +114,9 @@ Limite noto: il progetto Supabase è sul piano **Free**, che non include backup 
 
 ## Changelog
 
+## v18.247.0
+- fix: **Controllo Produzione: più report per la stessa squadra nella stessa settimana.** Se una squadra lavora qualche giorno con l'utenza di una persona e qualche giorno con quella di un'altra, i due report si possono caricare uno dopo l'altro: ogni report aggiorna solo i giorni che contiene e non azzera più quelli caricati dal report precedente (un giorno senza dati nel file viene messo a zero solo se la cella è ancora vuota; resta il caso «Azzera comunque» quando il file non copre nessun giorno). Se due utenze diverse hanno dati sullo stesso giorno, ore report e Km/Cad si sommano; ricaricare il report della stessa utenza ne sostituisce i valori invece di sommarli. Per i giorni con un report caricato prima di questa versione (utenza non nota) l'app chiede se sommare o sostituire. Il contributo di ogni utenza è salvato in `km_meta_by_ticket[ticket].reportUtenze` (nessuna modifica allo schema Supabase); una correzione manuale del Km/Cad lo azzera.
+
 ## v18.246.0
 - feat: **Attestati & scadenze: filtri per priorità e colonne ordinabili.** Sopra la tabella, al posto della tendina degli stati, una riga di chip «Priorità» con il conteggio: **Scaduti**, **In scadenza**, **Validi**, **Scadenza non nota**, **Senza attestati** (più chip insieme = uno qualsiasi). Con un tipo di attestato scelto i chip valgono solo per quel tipo (es. Preposto + «Scaduti» = solo chi ha il Preposto scaduto; «Senza Preposto» = chi non ce l'ha) e la cella mostra la data di scadenza completa con i giorni («scaduto da 120 gg» / «tra 30 gg»). Clic sull'intestazione di una colonna per ordinare per data di scadenza (di nuovo per invertire; chi non ha la data o l'attestato resta in fondo); ordinabili anche «Dipendente» e «Validi». La tendina «Ordina per scadenza più vicina», con un tipo scelto, considera solo quel tipo. Nessuna modifica a Supabase.
 
