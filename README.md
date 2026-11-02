@@ -114,6 +114,10 @@ Limite noto: il progetto Supabase è sul piano **Free**, che non include backup 
 
 ## Changelog
 
+## v18.241.0
+- feat: **Sottotask Jira dalla Griglia: appena creati passano da CREATED a TO DO.** Subito dopo la creazione ogni sottotask viene spostato in TO DO con la transizione del workflow. Se per qualche sottotask lo spostamento non riesce, il sottotask resta comunque creato (in CREATED) e il riepilogo finale dice quanti e perché. I sottotask «già esistenti» non vengono toccati.
+- Edge Function **`jira-create-subtask`** rideployata (risultato con `transizione` quando lo spostamento non riesce).
+
 ## v18.240.0
 - feat: **Griglia: sigla della regione accanto a ogni cantiere** (es. «PIE», «VDA»; nome intero passando col mouse). Viene dalla stessa localizzazione già usata per meteo e Mappa: un cantiere appena scritto mostra la sigla appena localizzato; se il nome non viene trovato (o è fuori Italia) non compare nulla. Anche le settimane oltre l'orizzonte del meteo vengono localizzate. Nessuna modifica a Supabase.
 

@@ -1636,7 +1636,14 @@ async function pwJiraSubtaskConfirmCreate(cIdx, commessaNome, items, extraFields
   const already = results.filter(r => r.status === 'already_exists');
   const errors = results.filter(r => r.status === 'error');
 
+  // Dalla v18.241.0 la Edge Function porta ogni sottotask creato in TO DO;
+  // "transizione" c'è solo per quelli rimasti nello stato iniziale (CREATED).
+  const nonTodo = created.filter(r => r.transizione);
   let msg = `Sottotask creati: ${created.length}`;
+  if (nonTodo.length) {
+    msg += `\nRimasti in CREATED (non spostati in TO DO): ${nonTodo.length} — ` + nonTodo.slice(0, 5).map(r => r.key).join(', ') + (nonTodo.length > 5 ? '…' : '');
+    msg += `\nMotivo: ${nonTodo[0].transizione}`;
+  }
   if (already.length) msg += `\nGià esistenti (non ricreati): ${already.length}`;
   if (_pwJiraWeightRecalc) msg += pwJiraWeightResultText(_pwJiraWeightInfo);
   if (!errors.length) { showAlertModal(msg); return; }

@@ -1991,7 +1991,7 @@
       </span>
       <button id="btn-presentation" class="px-3 py-1.5 text-sm rounded hover:bg-white/10" style="border:1px solid var(--dark-border-strong);color:var(--dark-text);visibility:visible;">📊 Modalità presentazione</button>
       <div class="text-xs pl-2" style="border-left:1px solid var(--dark-border-strong);color:var(--dark-text-muted);">
-        <span id="app-version" class="font-medium" style="color:var(--accent);">v18.240.0</span> · Michele Marchetti
+        <span id="app-version" class="font-medium" style="color:var(--accent);">v18.241.0</span> · Michele Marchetti
         <span id="sb-role-badge" style="margin-left:8px;padding:1px 8px;border-radius:9999px;background:rgba(255,255,255,.1);color:var(--dark-text);font-weight:600;"></span>
       </div>
     </div>
@@ -18605,7 +18605,14 @@ async function pwJiraSubtaskConfirmCreate(cIdx, commessaNome, items, extraFields
   const already = results.filter(r => r.status === 'already_exists');
   const errors = results.filter(r => r.status === 'error');
 
+  // Dalla v18.241.0 la Edge Function porta ogni sottotask creato in TO DO;
+  // "transizione" c'è solo per quelli rimasti nello stato iniziale (CREATED).
+  const nonTodo = created.filter(r => r.transizione);
   let msg = `Sottotask creati: ${created.length}`;
+  if (nonTodo.length) {
+    msg += `\nRimasti in CREATED (non spostati in TO DO): ${nonTodo.length} — ` + nonTodo.slice(0, 5).map(r => r.key).join(', ') + (nonTodo.length > 5 ? '…' : '');
+    msg += `\nMotivo: ${nonTodo[0].transizione}`;
+  }
   if (already.length) msg += `\nGià esistenti (non ricreati): ${already.length}`;
   if (_pwJiraWeightRecalc) msg += pwJiraWeightResultText(_pwJiraWeightInfo);
   if (!errors.length) { showAlertModal(msg); return; }

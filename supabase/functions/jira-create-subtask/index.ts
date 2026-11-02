@@ -51,7 +51,8 @@
 // Contratto risposta (JSON) — creazione:
 //   { "results": [
 //       { "taskKey", "operatorEmail", "status": "created"|"already_exists"|"would_create"|"error",
-//         "key"?, "url"?, "message"? },
+//         "key"?, "url"?, "message"?,
+//         "transizione"? },   // solo se "created" ma non portato in TO DO: motivo (v18.241.0)
 //       ...
 //     ],
 //     "weights"?: { "<taskKey>": { ... } } }   // solo con recalcWeights
@@ -491,6 +492,42 @@ async function recalcTaskWeightsParallel(taskKey: string, createdKeys: string[])
   return { totale: all.length, peso, aggiornati, errori };
 }
 
+// Stato iniziale (v18.241.0): il workflow crea i sottotask in CREATED; appena
+// creato, ciascuno viene portato in TO DO con la transizione che vi arriva.
+// L'id della transizione si legge dal primo sottotask di ogni progetto e si
+// riusa per gli altri (stesso workflow); se il riuso fallisce si rilegge.
+// Un errore qui non annulla la creazione: torna come "transizione" nel risultato.
+const STATO_TODO = /^(to\s*do|da\s*fare)$/i;
+
+async function findTodoTransitionId(key: string): Promise<string | null> {
+  const res = await jiraGet(`/rest/api/3/issue/${encodeURIComponent(key)}/transitions`);
+  if (!res.ok) throw new Error(`lettura transizioni HTTP ${res.status}`);
+  const data = await res.json();
+  const t = (data.transitions || []).find((t: any) => STATO_TODO.test(String(t?.to?.name || "").trim()));
+  return t ? String(t.id) : null;
+}
+
+async function transitionToTodo(key: string, projectKey: string, cache: Map<string, string | null>): Promise<string | null> {
+  const doPost = (id: string) => jiraPost(`/rest/api/3/issue/${encodeURIComponent(key)}/transitions`, { transition: { id } });
+  try {
+    const cached = cache.get(projectKey);
+    if (cached) {
+      const res = await doPost(cached);
+      if (res.ok) return null;
+    }
+    const id = await findTodoTransitionId(key);
+    cache.set(projectKey, id);
+    if (!id) return "nessuna transizione verso TO DO disponibile: resta nello stato iniziale";
+    const res = await doPost(id);
+    if (res.ok) return null;
+    let detail = `transizione a TO DO HTTP ${res.status}`;
+    try { const b = await res.json(); if (b) detail += " " + JSON.stringify(b); } catch { /* ignore */ }
+    return detail;
+  } catch (e) {
+    return String((e as Error)?.message || e);
+  }
+}
+
 // Activity Type per-item: in Griglia ogni cantiere ha la sua attivita', e lo
 // stesso cantiere con due attivita' diverse genera due sottotask con due
 // Activity Type diversi nello stesso batch. Se presente prevale su
@@ -547,6 +584,7 @@ Deno.serve(async (req: Request) => {
   const accountIdCache = new Map<string, string | null>();
   const dailyCache = new Map<string, SubtaskInfo[]>();
   const kpiFieldCache = new Map<string, string | null>(); // projectKey -> id campo KPI_Quantità target
+  const todoTransitionCache = new Map<string, string | null>(); // projectKey -> id transizione verso TO DO
   const results: any[] = [];
 
   for (const item of items) {
@@ -627,9 +665,11 @@ Deno.serve(async (req: Request) => {
         const list = dailyCache.get(`${taskKey}::${accountId}`);
         if (list) list.unshift({ key: created.key, summary, duedate: data, start: data });
       }
+      const transizione = await transitionToTodo(created.key, projectKey, todoTransitionCache);
       results.push({
         taskKey, operatorEmail, status: "created",
         key: created.key, url: `${JIRA_BASE_URL}/browse/${created.key}`,
+        ...(transizione ? { transizione } : {}),
       });
     } catch (e) {
       results.push({ taskKey, operatorEmail, status: "error", message: String((e as Error)?.message || e) });
