@@ -114,6 +114,10 @@ Limite noto: il progetto Supabase è sul piano **Free**, che non include backup 
 
 ## Changelog
 
+## v18.245.0
+- feat: **Sottotask Jira dalla Griglia: aggiunta allo spazio Jira degli operatori non assegnabili.** Quando nell'anteprima (o nel riepilogo dopo la creazione) alcuni operatori risultano «non assegnabili» perché non sono membri dello spazio Jira della commessa, compare un riquadro con i loro nomi e il pulsante «➕ Aggiungi come «Space User»». Dopo una conferma l'app cerca l'account Jira con l'email dell'anagrafica e lo aggiunge allo spazio con il ruolo «Space User»; poi, dall'anteprima, rifà subito la verifica (chi ora è assegnabile passa a «Da creare»), dal riepilogo riprova subito a creare i sottotask non ancora creati. L'esito persona per persona compare in cima. Chi non ha un account Jira con quell'email va invitato sul sito Jira da un amministratore; se il ruolo non rende assegnabili, l'esito lo dice. Riservato ad admin e responsabili, registrato nel log attività, non annullabile dall'app.
+- Edge Function **`jira-create-subtask`** rideployata: nuovo `mode: "aggiungiUtenti"`, errori di assegnatario con `codice: "non_assegnabile"`. Serve che l'account di servizio Jira possa gestire i membri degli spazi («Administer Projects»). Ruolo configurabile con il secret opzionale `JIRA_RUOLO_SPAZIO` (default «Space User»).
+
 ## v18.244.0
 - feat: **Pool operatori: filtri per seniority e per data di inserimento nel pool.** Due nuove tendine sotto «Provenienza»: **Seniority** (Tutte / Senior / Junior / Non definita) e **Inserimento nel pool** (Qualsiasi data / Ultimi 7, 30, 90 giorni / Con data, più recenti prima / Senza data). Con un periodo scelto le card sono ordinate dalla più recente invece che per nome. Le card degli operatori entrati nel pool negli ultimi 30 giorni mostrano il badge «🆕 dal …». La data di inserimento esiste solo per gli operatori creati con «+ Nuovo» da v18.84.0 in poi: quelli precedenti compaiono solo con «Qualsiasi data» o «Senza data». Nessuna modifica a Supabase.
 

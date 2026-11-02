@@ -265,6 +265,86 @@ async function pwJiraFetchExtraFields(projectKey) {
   return Array.isArray(data && data.fields) ? data.fields : [];
 }
 
+/* ----- Operatori non assegnabili sullo spazio Jira (v18.245.0) -----
+   Un item in errore con codice "non_assegnabile" ha un operatore che non è membro
+   dello spazio Jira della commessa (o non può essere assegnatario). Dall'anteprima e
+   dal riepilogo della creazione si può aggiungerlo con il ruolo «Space User»
+   (jira-create-subtask, mode "aggiungiUtenti"), dopo conferma, e ripetere il passo.
+   Una persona per spazio + email, con i nomi della Griglia che la usano. */
+function pwJiraNonAssegnabili(items, results) {
+  const out = new Map();
+  (results || []).forEach((r, i) => {
+    if (!r || r.status !== 'error' || r.codice !== 'non_assegnabile') return;
+    const item = items[i] || {};
+    const projectKey = r.projectKey || item.projectKey;
+    const email = r.operatorEmail || item.operatorEmail;
+    if (!projectKey || !email) return;
+    const k = projectKey + '|' + email.toLowerCase();
+    if (!out.has(k)) out.set(k, { projectKey, operatorEmail: email, operatore: item._operatore || email });
+  });
+  return [...out.values()];
+}
+
+// Conferma dentro il flusso: si apre sopra la modale corrente (come pwJiraFlowAlert) e
+// «Annulla» la lascia com'era; showConfirmAsync riscrive #modal-root e chiudeva il flusso.
+function pwJiraFlowConfirm(msg, label) {
+  return new Promise(resolve => {
+    const root = document.getElementById('modal-root');
+    if (!root) { resolve(false); return; }
+    const layer = document.createElement('div');
+    layer.className = 'modal-backdrop';
+    layer.innerHTML = '<div class="bg-white rounded-lg shadow-xl w-full max-w-md mx-4 p-5"><div class="mb-4 text-sm">' + esc(msg).replace(/\n/g, '<br>') + '</div><div class="flex justify-end gap-2"><button type="button" data-r="0" class="px-3 py-1.5 text-sm border border-slate-300 rounded hover:bg-slate-50">Annulla</button><button type="button" data-r="1" class="px-3 py-1.5 text-sm bg-teal-600 text-white rounded hover:bg-teal-700">' + esc(label || 'Conferma') + '</button></div></div>';
+    layer.querySelectorAll('button').forEach(b => { b.onclick = () => { layer.remove(); resolve(b.dataset.r === '1'); }; });
+    root.appendChild(layer);
+  });
+}
+
+function pwJiraNonAssegnabiliHtml(lista, btnId, btnLabel) {
+  if (!lista.length) return '';
+  const nomi = lista.map(u => esc(u.operatore) + ' <span class="text-slate-400">(' + esc(u.projectKey) + ')</span>').join(', ');
+  const btn = sbCanWrite()
+    ? '<button type="button" id="' + btnId + '" class="mt-2 px-3 py-1.5 text-sm bg-amber-600 text-white rounded hover:bg-amber-700">' + esc(btnLabel) + '</button>' : '';
+  return '<div class="border border-amber-300 bg-amber-50 rounded p-2 mb-3 text-[12px] text-amber-900">'
+    + '👤 <b>Non assegnabili su Jira:</b> ' + nomi
+    + '<div class="text-[11px] text-amber-800 mt-0.5">Non sono membri dello spazio Jira della commessa (o non possono essere assegnatari): i loro sottotask non si possono creare.</div>'
+    + btn + '</div>';
+}
+
+// Chiede conferma, aggiunge le persone allo spazio e restituisce { ok, html, testo }:
+// ok = almeno una persona ora assegnabile; html/testo = esito da mostrare nel passo
+// successivo. null se l'utente annulla. Un errore della chiamata diventa esito.
+async function pwJiraAggiungiSpazio(lista, commessaNome, onAvvio) {
+  if (!sbGuardWrite()) return null;
+  const elenco = lista.map(u => '• ' + u.operatore + ' (' + u.operatorEmail + ') → ' + u.projectKey).join('\n');
+  const conferma = await pwJiraFlowConfirm('Aggiungere su Jira, con il ruolo «Space User», ' + (lista.length === 1 ? 'questa persona' : 'queste ' + lista.length + ' persone') + '?\n\n' + elenco + '\n\nDiventano membri dello spazio Jira (lo vedono e possono esserne assegnatari). Dall\'app non si può annullare: per toglierle serve un amministratore dello spazio su Jira.', 'Aggiungi');
+  if (!conferma) return null;
+  if (onAvvio) onAvvio();
+  let risultati, ruolo = 'Space User';
+  try {
+    const contesto = { anno: pwAnno, week: pwWeek, commessa: commessaNome };
+    const { data, error } = await _sbClient.functions.invoke('jira-create-subtask', { body: { mode: 'aggiungiUtenti', utenti: lista.map(u => ({ projectKey: u.projectKey, operatorEmail: u.operatorEmail })), contesto } });
+    if (error) throw new Error(await _cpEdgeErr(error, 'jira-create-subtask'));
+    if (data && data.error) throw new Error(data.error);
+    risultati = Array.isArray(data && data.risultati) ? data.risultati : [];
+    if (data && data.ruolo) ruolo = data.ruolo;
+  } catch (e) {
+    const msg = 'Aggiunta su Jira non riuscita: ' + (e.message || String(e));
+    return { ok: false, html: '<div class="border border-red-300 bg-red-50 rounded p-2 mb-3 text-[12px] text-red-800">' + esc(msg) + '</div>', testo: msg };
+  }
+  const nomeDi = r => { const u = lista.find(x => x.projectKey === r.projectKey && x.operatorEmail.toLowerCase() === String(r.operatorEmail || '').toLowerCase()); return u ? u.operatore : r.operatorEmail; };
+  const buoni = risultati.filter(r => (r.esito === 'aggiunto' || r.esito === 'gia_assegnabile') && r.assegnabile !== false);
+  const cattivi = risultati.filter(r => !buoni.includes(r));
+  const righe = [];
+  buoni.forEach(r => righe.push({ ok: true, t: nomeDi(r) + ' → ' + r.projectKey + (r.esito === 'aggiunto' ? ': aggiunto come «' + ruolo + '»' : ': era già assegnabile') }));
+  cattivi.forEach(r => righe.push({ ok: false, t: nomeDi(r) + ' → ' + r.projectKey + ': ' + (r.messaggio || r.esito) }));
+  const html = '<div class="border ' + (cattivi.length ? 'border-amber-300 bg-amber-50' : 'border-emerald-300 bg-emerald-50') + ' rounded p-2 mb-3 text-[12px]">'
+    + '<div class="font-medium mb-0.5">Spazi Jira</div>'
+    + righe.map(x => '<div class="' + (x.ok ? 'text-emerald-800' : 'text-red-700') + '">' + (x.ok ? '✅ ' : '⚠️ ') + esc(x.t) + '</div>').join('')
+    + '</div>';
+  const testo = 'Spazi Jira:\n' + righe.map(x => (x.ok ? '✅ ' : '⚠️ ') + x.t).join('\n');
+  return { ok: buoni.length > 0, html, testo };
+}
+
 /* ----- Costruzione item da griglia ----- */
 // Cognome per il summary del sottotask: usa il nuovo campo dedicato se compilato,
 // altrimenti ricade sull'euristica già usata altrove nel codice (primo token di
@@ -1486,7 +1566,8 @@ function pwJiraWeightResultText(weights) {
 }
 
 /* ----- Step 2: anteprima (dryRun) ----- */
-async function pwJiraSubtaskPreview(cIdx, commessaNome, allItems, skippedComuni, extraFields, fields) {
+// avvisoHtml: esito di un'aggiunta agli spazi Jira appena fatta, mostrato in testa.
+async function pwJiraSubtaskPreview(cIdx, commessaNome, allItems, skippedComuni, extraFields, fields, avvisoHtml) {
   const root = document.getElementById('modal-root');
   // Esclusi gli item già creati in un tentativo precedente di questo flusso
   // (vedi _done in pwJiraSubtaskConfirmCreate): su "Riprova"/"Indietro" non
@@ -1494,11 +1575,12 @@ async function pwJiraSubtaskPreview(cIdx, commessaNome, allItems, skippedComuni,
   // non vedere ancora un sottotask creato pochi secondi prima.
   const items = allItems.filter(it => !it._done);
   if (items.length === 0) {
-    pwJiraFlowResultScreen(commessaNome, '<div class="text-slate-700">Tutti i sottotask selezionati sono già stati creati.</div>');
+    pwJiraFlowResultScreen(commessaNome, (avvisoHtml || '') + '<div class="text-slate-700">Tutti i sottotask selezionati sono già stati creati.</div>');
     return;
   }
   root.innerHTML = `<div class="modal-backdrop"><div class="bg-white rounded-lg shadow-xl w-full max-w-xl mx-4 my-8 p-5 max-h-[90vh] overflow-y-auto">
     <h3 class="font-semibold text-slate-900 mb-3">Crea sottotask Jira — ${esc(commessaNome)}</h3>
+    ${avvisoHtml || ''}
     <div id="pw-jira-preview-body" class="text-sm text-slate-500">⏳ Verifica su Jira in corso…</div>
   </div></div>`;
 
@@ -1510,7 +1592,7 @@ async function pwJiraSubtaskPreview(cIdx, commessaNome, allItems, skippedComuni,
     });
   } catch (e) {
     pwJiraFlowResultScreen(commessaNome,
-      `<div class="text-red-600">Errore durante il controllo su Jira: ${esc(e.message || String(e))}</div>`,
+      (avvisoHtml || '') + `<div class="text-red-600">Errore durante il controllo su Jira: ${esc(e.message || String(e))}</div>`,
       () => pwJiraSubtaskPreview(cIdx, commessaNome, items, skippedComuni, extraFields, fields), 'Riprova la verifica');
     return;
   }
@@ -1524,14 +1606,15 @@ async function pwJiraSubtaskPreview(cIdx, commessaNome, allItems, skippedComuni,
       if (w && typeof w.peso === 'number') item.productionWeight = String(Math.round(w.peso * 10000) / 100);
     });
   }
-  pwJiraSubtaskRenderPreview(cIdx, commessaNome, items, results, skippedComuni, extraFields, fields);
+  pwJiraSubtaskRenderPreview(cIdx, commessaNome, items, results, skippedComuni, extraFields, fields, avvisoHtml);
 }
 
-function pwJiraSubtaskRenderPreview(cIdx, commessaNome, items, results, skippedComuni, extraFields, fields) {
+function pwJiraSubtaskRenderPreview(cIdx, commessaNome, items, results, skippedComuni, extraFields, fields, avvisoHtml) {
   const root = document.getElementById('modal-root');
   const wouldCreate = results.filter(r => r.status === 'would_create').length;
   const extraFieldsRecapHtml = pwJiraSubtaskExtraFieldsRecapHtml(extraFields, fields);
   const weightRecapHtml = pwJiraWeightPreviewHtml(_pwJiraWeightRecalc ? _pwJiraWeightInfo : null);
+  const nonAssegnabili = pwJiraNonAssegnabili(items, results);
 
   const rows = results.map((r, i) => {
     const item = items[i] || {};
@@ -1567,6 +1650,8 @@ function pwJiraSubtaskRenderPreview(cIdx, commessaNome, items, results, skippedC
   root.innerHTML = `<div class="modal-backdrop"><div class="bg-white rounded-lg shadow-xl w-full max-w-xl mx-4 my-8 p-5 max-h-[90vh] overflow-y-auto">
     <h3 class="font-semibold text-slate-900 mb-1">Crea sottotask Jira — ${esc(commessaNome)}</h3>
     <p class="text-xs text-slate-500 mb-3">${wouldCreate} da creare su ${results.length} totali.</p>
+    ${avvisoHtml || ''}
+    ${pwJiraNonAssegnabiliHtml(nonAssegnabili, 'pw-jira-aggiungi-spazio', '➕ Aggiungi come «Space User» e ricontrolla')}
     ${extraFieldsRecapHtml}
     ${weightRecapHtml}
     <div>${rows}</div>
@@ -1582,14 +1667,23 @@ function pwJiraSubtaskRenderPreview(cIdx, commessaNome, items, results, skippedC
   if (wouldCreate > 0) {
     document.getElementById('pw-jira-confirm-create').onclick = () => pwJiraSubtaskConfirmCreate(cIdx, commessaNome, items, extraFields, results, skippedComuni, fields);
   }
+  const btnSpazio = document.getElementById('pw-jira-aggiungi-spazio');
+  if (btnSpazio) btnSpazio.onclick = async () => {
+    const esito = await pwJiraAggiungiSpazio(nonAssegnabili, commessaNome, () => {
+      root.querySelector('.modal-backdrop > div').innerHTML = '<div class="text-sm text-slate-600">⏳ Aggiunta agli spazi Jira in corso…</div>';
+    });
+    if (esito) pwJiraSubtaskPreview(cIdx, commessaNome, items, skippedComuni, extraFields, fields, esito.html);
+  };
 }
 
 /* ----- Step 3: creazione reale + riepilogo -----
    previewResults: i risultati dryRun dello Step 2 (stesso ordine di items),
    usati SOLO come fallback se la chiamata reale fallisce nel suo insieme
    (vedi catch sotto) — non per la marcatura badge del percorso normale, che
-   usa sempre i risultati reali. */
-async function pwJiraSubtaskConfirmCreate(cIdx, commessaNome, items, extraFields, previewResults, skippedComuni, fields) {
+   usa sempre i risultati reali.
+   avviso: { html, testo } dell'aggiunta agli spazi Jira che ha portato a questo
+   tentativo (v18.245.0), mostrato nel riepilogo. */
+async function pwJiraSubtaskConfirmCreate(cIdx, commessaNome, items, extraFields, previewResults, skippedComuni, fields, avviso) {
   if (!sbGuardWrite()) return;
   const root = document.getElementById('modal-root');
   root.innerHTML = `<div class="modal-backdrop"><div class="bg-white rounded-lg shadow-xl w-full max-w-md mx-4 p-5">
@@ -1622,7 +1716,7 @@ async function pwJiraSubtaskConfirmCreate(cIdx, commessaNome, items, extraFields
     // "Riprova" rifà l'anteprima (dryRun): i sottotask eventualmente creati
     // prima dell'errore risultano "già esistenti" e non vengono duplicati.
     pwJiraFlowResultScreen(commessaNome,
-      `<div class="text-red-600">Errore durante la creazione: ${esc(msg)}</div>`,
+      (avviso ? avviso.html : '') + `<div class="text-red-600">Errore durante la creazione: ${esc(msg)}</div>`,
       () => pwJiraSubtaskPreview(cIdx, commessaNome, items, skippedComuni, extraFields, fields), 'Riprova');
     return;
   }
@@ -1646,7 +1740,7 @@ async function pwJiraSubtaskConfirmCreate(cIdx, commessaNome, items, extraFields
   }
   if (already.length) msg += `\nGià esistenti (non ricreati): ${already.length}`;
   if (_pwJiraWeightRecalc) msg += pwJiraWeightResultText(_pwJiraWeightInfo);
-  if (!errors.length) { showAlertModal(msg); return; }
+  if (!errors.length) { showAlertModal((avviso ? avviso.testo + '\n\n' : '') + msg); return; }
 
   // Con errori il flusso resta aperto: "← Indietro" torna ai dati da
   // correggere, "Riprova" rifà l'anteprima (i sottotask appena creati
@@ -1656,9 +1750,28 @@ async function pwJiraSubtaskConfirmCreate(cIdx, commessaNome, items, extraFields
       <div class="truncate">${esc(pwJiraGruppoLabel(item._comune || '', item._attivita))} — ${esc(item._operatore || r.operatorEmail || '')} · ${esc(item._giorno != null ? pwJsubGiornoLabel(pwAnno, pwWeek, item._giorno) : '')} <span class="text-[11px] text-slate-400">(${esc(r.taskKey || '')})</span></div>
       <div class="text-[11px] text-red-700 break-words">${esc(r.message || 'Errore sconosciuto')}</div>
     </div>`).join('');
+  const nonAssegnabili = pwJiraNonAssegnabili(items, results);
   pwJiraFlowResultScreen(commessaNome,
+    (avviso ? avviso.html : '') +
     `<div class="text-slate-700 mb-2 whitespace-pre-line">${esc(msg)}</div>
+     ${pwJiraNonAssegnabiliHtml(nonAssegnabili, 'pw-jira-aggiungi-spazio-crea', '➕ Aggiungi come «Space User» e riprova la creazione')}
      <div class="text-red-700 font-medium mb-1">Errori: ${errors.length}</div>
      <div>${errorRows}</div>`,
     () => pwJiraSubtaskPreview(cIdx, commessaNome, items, skippedComuni, extraFields, fields), 'Riprova i falliti');
+  // Dopo l'aggiunta si ricrea subito (senza ripassare dall'anteprima, già vista per
+  // questi sottotask) tutto ciò che non è stato ancora creato. Se nessuno è diventato
+  // assegnabile, resta l'esito con «Riprova i falliti».
+  const btnSpazio = document.getElementById('pw-jira-aggiungi-spazio-crea');
+  if (btnSpazio) btnSpazio.onclick = async () => {
+    const esito = await pwJiraAggiungiSpazio(nonAssegnabili, commessaNome, () => {
+      root.innerHTML = '<div class="modal-backdrop"><div class="bg-white rounded-lg shadow-xl w-full max-w-md mx-4 p-5"><div class="text-sm text-slate-600">⏳ Aggiunta agli spazi Jira in corso…</div></div></div>';
+    });
+    if (!esito) return;
+    if (!esito.ok) {
+      pwJiraFlowResultScreen(commessaNome, esito.html + '<div class="text-slate-700">Nessuno è diventato assegnabile: i sottotask non sono stati ritentati.</div>',
+        () => pwJiraSubtaskPreview(cIdx, commessaNome, items, skippedComuni, extraFields, fields), 'Riprova i falliti');
+      return;
+    }
+    pwJiraSubtaskConfirmCreate(cIdx, commessaNome, items.filter(it => !it._done), extraFields, null, skippedComuni, fields, esito);
+  };
 }

@@ -52,7 +52,8 @@
 //   { "results": [
 //       { "taskKey", "operatorEmail", "status": "created"|"already_exists"|"would_create"|"error",
 //         "key"?, "url"?, "message"?,
-//         "transizione"? },   // solo se "created" ma non portato in TO DO: motivo (v18.241.0)
+//         "transizione"?,     // solo se "created" ma non portato in TO DO: motivo (v18.241.0)
+//         "codice"?, "projectKey"? },  // "non_assegnabile" (v18.245.0), vedi mode "aggiungiUtenti"
 //       ...
 //     ],
 //     "weights"?: { "<taskKey>": { ... } } }   // solo con recalcWeights
@@ -99,6 +100,22 @@
 // compare come extraKey "kpiTarget". Se il progetto non lo ha, l'item va in errore invece
 // di creare un sottotask senza target.
 //
+// Operatori non assegnabili (v18.245.0): l'errore di un item il cui operatore non e'
+// assegnabile sul progetto porta codice "non_assegnabile" (+ projectKey). Il client
+// propone allora di aggiungerli allo spazio Jira con il ruolo «Space User» e, dopo
+// conferma, chiama:
+//   { "mode": "aggiungiUtenti", "utenti": [{ "projectKey", "operatorEmail" }, ...],
+//     "contesto"?: { anno, week, commessa } }   // solo per il log
+// Risposta: { "ruolo": "Space User", "risultati": [{ projectKey, operatorEmail,
+//   esito: "aggiunto" | "gia_assegnabile" | "non_trovato" | "errore",
+//   assegnabile?: boolean, messaggio? }] }
+// Solo admin e responsabile (ruolo letto dall'utente Supabase). L'account Jira si cerca
+// per email fra tutti gli utenti del sito: chi non ha un account va invitato a mano da
+// un amministratore Jira. Serve che l'account di servizio possa gestire i membri dello
+// spazio («Administer Projects»). Dopo l'aggiunta l'assegnabilita' si ricontrolla: un
+// ruolo che nello schema permessi non da' «Assignable User» non basta, e lo si dice.
+// Le aggiunte riuscite vanno in activity_log (service_role).
+//
 // Tempo Team (customfield_10602) e' un campo del plugin Tempo: i team vivono
 // in Tempo, non in Jira, e createmeta non ne restituisce le voci (per questo
 // il frontend mostrava un campo di testo in cui digitare l'id numerico). Le
@@ -106,10 +123,15 @@
 // progetto, poi di tutta l'istanza) — vedi fetchTempoTeamValues. Un team mai
 // usato su nessun ticket non compare: in quel caso resta il campo di testo.
 
+import { createClient } from "npm:@supabase/supabase-js@2";
+
 const JIRA_BASE_URL      = (Deno.env.get("JIRA_BASE_URL")  || "").replace(/\/+$/, "");
 const JIRA_EMAIL         =  Deno.env.get("JIRA_EMAIL")     || "";
 const JIRA_API_TOKEN     =  Deno.env.get("JIRA_API_TOKEN") || "";
 const SUBTASK_ISSUETYPE  =  Deno.env.get("JIRA_SUBTASK_ISSUETYPE") || "Sottotask";
+const RUOLO_SPAZIO       =  Deno.env.get("JIRA_RUOLO_SPAZIO") || "Space User";
+const SUPABASE_URL       =  Deno.env.get("SUPABASE_URL") || "";
+const SERVICE_ROLE_KEY   =  Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "";
 
 // Campi extra noti che su questa istanza Jira possono essere obbligatori in
 // creazione senza che createmeta lo segnali correttamente (vedi commento in
@@ -209,6 +231,87 @@ async function resolveAssignableAccountId(
   const accountId = chosen?.accountId || null;
   cache.set(cacheKey, accountId);
   return accountId;
+}
+
+/* ----- Aggiunta allo spazio Jira (mode "aggiungiUtenti", v18.245.0) ----- */
+
+// Messaggio leggibile da una risposta Jira d'errore.
+async function jiraErrText(res: Response): Promise<string> {
+  let det = "";
+  try {
+    const j = await res.json();
+    det = [...(j.errorMessages || []), ...Object.values(j.errors || {})].join(" ");
+  } catch { /* corpo vuoto */ }
+  return `HTTP ${res.status}${det ? " · " + det : ""}`;
+}
+
+// Account Jira (persona, non app) con quell'email fra tutti gli utenti del sito. Con
+// l'email nascosta dalla privacy del profilo vale l'unico candidato restituito.
+async function findAccountByEmail(email: string): Promise<{ accountId?: string; errore?: string }> {
+  const res = await jiraGet(`/rest/api/3/user/search?query=${encodeURIComponent(email)}&maxResults=10`);
+  if (!res.ok) return { errore: `ricerca utente Jira fallita: ${await jiraErrText(res)}` };
+  const users = (await res.json() || []).filter((u: any) => u?.accountType === "atlassian");
+  const exact = users.filter((u: any) => String(u.emailAddress || "").toLowerCase() === email.toLowerCase());
+  const pool = exact.length ? exact : users;
+  if (!pool.length) return {};
+  if (pool.length > 1) return { errore: `più account Jira corrispondono a ${email}: aggiungerlo a mano` };
+  if (pool[0].active === false) return { errore: `l'account Jira di ${email} è disattivato` };
+  return { accountId: String(pool[0].accountId) };
+}
+
+// Id del ruolo RUOLO_SPAZIO nel progetto (dalla mappa nome -> URL .../role/<id>).
+async function findRuoloSpazio(projectKey: string): Promise<{ id?: string; errore?: string }> {
+  const res = await jiraGet(`/rest/api/3/project/${encodeURIComponent(projectKey)}/role`);
+  if (!res.ok) return { errore: `lettura dei ruoli di ${projectKey} fallita: ${await jiraErrText(res)}` };
+  const ruoli = await res.json() || {};
+  const nome = Object.keys(ruoli).find((n) => normNome(n) === normNome(RUOLO_SPAZIO));
+  const id = nome ? (String(ruoli[nome]).match(/\/role\/(\d+)\/?$/) || [])[1] : "";
+  if (!id) return { errore: `ruolo «${RUOLO_SPAZIO}» non trovato in ${projectKey} (ruoli: ${Object.keys(ruoli).join(", ") || "nessuno"})` };
+  return { id };
+}
+
+type EsitoAggiunta = {
+  projectKey: string; operatorEmail: string;
+  esito: "aggiunto" | "gia_assegnabile" | "non_trovato" | "errore";
+  assegnabile?: boolean; messaggio?: string;
+};
+
+async function aggiungiAlloSpazio(
+  projectKey: string, email: string, ruoliCache: Map<string, { id?: string; errore?: string }>,
+): Promise<EsitoAggiunta> {
+  const base = { projectKey, operatorEmail: email };
+  if (await resolveAssignableAccountId(email, projectKey, new Map())) {
+    return { ...base, esito: "gia_assegnabile", assegnabile: true };
+  }
+  const acc = await findAccountByEmail(email);
+  if (acc.errore) return { ...base, esito: "errore", messaggio: acc.errore };
+  if (!acc.accountId) {
+    return { ...base, esito: "non_trovato", messaggio: `nessun account Jira con l'email ${email}: va invitato sul sito Jira da un amministratore` };
+  }
+  if (!ruoliCache.has(projectKey)) ruoliCache.set(projectKey, await findRuoloSpazio(projectKey));
+  const ruolo = ruoliCache.get(projectKey)!;
+  if (ruolo.errore) return { ...base, esito: "errore", messaggio: ruolo.errore };
+
+  const res = await jiraPost(`/rest/api/3/project/${encodeURIComponent(projectKey)}/role/${ruolo.id}`, { user: [acc.accountId] });
+  if (!res.ok) {
+    const det = await jiraErrText(res);
+    // "già membro del ruolo": non e' un errore, si va al ricontrollo dell'assegnabilita'.
+    if (!(res.status === 400 && /already|gi[aà]/i.test(det))) {
+      const perm = res.status === 401 || res.status === 403
+        ? ` — l'account di servizio Jira non può gestire i membri di ${projectKey} (serve «Administer Projects»)` : "";
+      return { ...base, esito: "errore", messaggio: `aggiunta al ruolo «${RUOLO_SPAZIO}» fallita: ${det}${perm}` };
+    }
+  }
+  // Il permesso puo' arrivare con un attimo di ritardo: un secondo tentativo.
+  let assegnabile = !!(await resolveAssignableAccountId(email, projectKey, new Map()));
+  if (!assegnabile) {
+    await new Promise((r) => setTimeout(r, 1500));
+    assegnabile = !!(await resolveAssignableAccountId(email, projectKey, new Map()));
+  }
+  return {
+    ...base, esito: "aggiunto", assegnabile,
+    ...(assegnabile ? {} : { messaggio: `aggiunto come «${RUOLO_SPAZIO}» ma non ancora assegnabile su ${projectKey}: verificare che il ruolo dia «Assignable User» nello schema permessi e che l'utente abbia accesso a Jira` }),
+  };
 }
 
 // Un sottotask e' settimanale e nominativo: lo stesso operatore puo' avere un
@@ -563,6 +666,45 @@ Deno.serve(async (req: Request) => {
     }
   }
 
+  if (payload?.mode === "aggiungiUtenti") {
+    if (!SUPABASE_URL || !SERVICE_ROLE_KEY) return json({ error: "Configurazione mancante (SUPABASE_URL / SUPABASE_SERVICE_ROLE_KEY)" }, 500);
+    const admin = createClient(SUPABASE_URL, SERVICE_ROLE_KEY, { auth: { autoRefreshToken: false, persistSession: false } });
+    const { data: callerData, error: callerErr } = await admin.auth.getUser(authz.slice("Bearer ".length));
+    if (callerErr || !callerData?.user) return json({ error: "Sessione non valida" }, 401);
+    const role = callerData.user.user_metadata?.role || "responsabile";
+    if (role !== "admin" && role !== "responsabile") return json({ error: "Solo admin e responsabili possono aggiungere persone agli spazi Jira" }, 403);
+
+    const visti = new Set<string>();
+    const utenti = (Array.isArray(payload?.utenti) ? payload.utenti : [])
+      .map((u: any) => ({ projectKey: String(u?.projectKey || "").trim().toUpperCase(), operatorEmail: String(u?.operatorEmail || "").trim() }))
+      .filter((u: any) => {
+        const k = `${u.projectKey}::${u.operatorEmail.toLowerCase()}`;
+        if (!u.projectKey || !u.operatorEmail || visti.has(k)) return false;
+        visti.add(k);
+        return true;
+      });
+    if (!utenti.length) return json({ error: "Nessuna persona indicata" }, 400);
+    if (utenti.length > 50) return json({ error: "Troppe persone in una richiesta (max 50)" }, 400);
+
+    const ruoliCache = new Map<string, { id?: string; errore?: string }>();
+    const risultati: EsitoAggiunta[] = [];
+    for (const u of utenti) {
+      try { risultati.push(await aggiungiAlloSpazio(u.projectKey, u.operatorEmail, ruoliCache)); }
+      catch (e) { risultati.push({ ...u, esito: "errore", messaggio: String((e as Error)?.message || e) }); }
+    }
+    const aggiunti = risultati.filter((r) => r.esito === "aggiunto");
+    if (aggiunti.length) {
+      try {
+        await admin.from("activity_log").insert({
+          user_email: callerData.user.email,
+          action: aggiunti.length === 1 ? `Utente aggiunto a Jira come ${RUOLO_SPAZIO}` : `Utenti aggiunti a Jira come ${RUOLO_SPAZIO} (${aggiunti.length})`,
+          details: { contesto: payload?.contesto || {}, aggiunti },
+        });
+      } catch { /* il log non deve far fallire l'aggiunta già fatta */ }
+    }
+    return json({ ruolo: RUOLO_SPAZIO, risultati });
+  }
+
   if (payload?.mode === "recalcWeights") {
     const taskKey = String(payload?.taskKey || "").trim();
     if (!taskKey) return json({ error: "taskKey mancante" }, 400);
@@ -601,7 +743,7 @@ Deno.serve(async (req: Request) => {
     try {
       const accountId = await resolveAssignableAccountId(operatorEmail, projectKey, accountIdCache);
       if (!accountId) {
-        results.push({ taskKey, operatorEmail, status: "error", message: `Nessun utente Jira assegnabile su ${projectKey} per ${operatorEmail} (verificare permessi/membership del progetto)` });
+        results.push({ taskKey, operatorEmail, projectKey, status: "error", codice: "non_assegnabile", message: `Nessun utente Jira assegnabile su ${projectKey} per ${operatorEmail} (verificare permessi/membership del progetto)` });
         continue;
       }
 
