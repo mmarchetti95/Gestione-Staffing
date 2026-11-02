@@ -255,7 +255,7 @@ let state = {
   // Voce assente o durata nulla = il DPI non scade da solo, la data va messa a mano.
   dpi_catalogo: {},
   activeTab: 'pipeline',
-  filters: { search:'', skills:new Set(), attestati:new Set(), lowSat:false, regione:'', provincia:'', showEx:false },
+  filters: { search:'', skills:new Set(), attestati:new Set(), lowSat:false, regione:'', provincia:'', showEx:false, seniorita:'', aggiunta:'' },
   searchCommesse: '',
   searchFornitori: '', // filtro testo lista Fornitori, solo stato di vista (non persistito)
   // Registro attestati importato da Excel: archivio grezzo dell'ultimo import, che copre

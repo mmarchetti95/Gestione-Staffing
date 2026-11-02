@@ -64,6 +64,31 @@ function updateAttestatiSummary() {
   sum.textContent = n === 0 ? 'Tutti' : `${n} selezionato/i`;
 }
 
+/* Filtro "Inserimento nel pool" su op.data_aggiunta (YYYY-MM-DD, registrata solo per gli
+   operatori creati da "+ Nuovo" da v18.84.0 in poi): '' = tutti, 'tutti' = solo quelli con
+   data, 'nd' = solo quelli senza, un numero = inseriti negli ultimi N giorni. */
+function opPassaFiltroAggiunta(op, filtro) {
+  if (!filtro) return true;
+  const d = op.data_aggiunta || '';
+  if (filtro === 'nd') return !d;
+  if (!d) return false;
+  if (filtro === 'tutti') return true;
+  return d >= opDataGiorniFa(Number(filtro));
+}
+
+function opDataGiorniFa(n) {
+  const t = new Date();
+  t.setDate(t.getDate() - n);
+  const pad = x => String(x).padStart(2, '0');
+  return t.getFullYear() + '-' + pad(t.getMonth() + 1) + '-' + pad(t.getDate());
+}
+
+/* Badge "🆕" sulle card degli operatori entrati nel pool negli ultimi 30 giorni. */
+function opNuovoBadgeHtml(op) {
+  if (!op.data_aggiunta || op.data_aggiunta < opDataGiorniFa(30)) return '';
+  return '<span class="text-[9px] bg-emerald-50 text-emerald-700 border border-emerald-200 px-1 rounded" title="Aggiunto al pool il ' + esc(fmtDate(op.data_aggiunta)) + '">🆕 dal ' + esc(fmtDate(op.data_aggiunta)) + '</span>';
+}
+
 function checkCoerenzaOperatori() {
   const mc = meseCorrente();
   const nomiPool = new Set(state.operatori.map(o => o.nome_esteso));
@@ -97,6 +122,11 @@ function renderOperatori() {
     if (state.filters.attestati.size > 0 && ![...state.filters.attestati].every(a => (op.attestati||[]).includes(a))) return false;
     if (state.filters.provincia && op.provincia !== state.filters.provincia) return false;
     if (state.filters.regione && !state.filters.provincia && operatoreRegione(op) !== state.filters.regione) return false;
+    if (state.filters.seniorita) {
+      const sen = SENIORITA[op.seniorita] ? op.seniorita : 'nd';
+      if (sen !== state.filters.seniorita) return false;
+    }
+    if (!opPassaFiltroAggiunta(op, state.filters.aggiunta)) return false;
     if (state.filters.lowSat) {
       const s = operatoreSatPeriodo(op, [meseProx]);
       if (s >= 0.5) return false;
@@ -104,8 +134,11 @@ function renderOperatori() {
     return true;
   });
 
-  // ordina sempre alfabeticamente per nome, per una visione più chiara e ordinata
-  ops.sort((a,b) => (a.nome_esteso||'').localeCompare(b.nome_esteso||''));
+  // ordina alfabeticamente per nome, per una visione più chiara e ordinata; con un
+  // filtro sulla data di inserimento i più recenti vanno in cima (a parità di data, per nome)
+  const perAggiunta = state.filters.aggiunta && state.filters.aggiunta !== 'nd';
+  ops.sort((a,b) => (perAggiunta ? (b.data_aggiunta||'').localeCompare(a.data_aggiunta||'') : 0)
+    || (a.nome_esteso||'').localeCompare(b.nome_esteso||''));
 
   const totEx = state.operatori.filter(op => op.licenziato || isOperatoreScaduto(op)).length;
   document.getElementById('op-count').textContent = modoEx ? `(${ops.length} ex colleghi)` : `(${ops.length}/${getOperatoriAttivi().length})`;
@@ -162,6 +195,7 @@ function renderOperatori() {
             ${exBadge}
             ${provBadge}
             ${senioritaBadgeHtml(op.seniorita)}
+            ${opNuovoBadgeHtml(op)}
             ${contrattoBadge}
             ${!modoEx && isSaturo ? '<span class="text-[9px] bg-red-100 text-red-700 px-1 rounded">SATURO</span>' : ''}
             ${op.orphan ? '<span class="text-[9px] bg-slate-100 text-slate-600 px-1 rounded" title="Non presente nel foglio OPERATORI">no skill matrix</span>' : ''}

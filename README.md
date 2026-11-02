@@ -114,6 +114,9 @@ Limite noto: il progetto Supabase è sul piano **Free**, che non include backup 
 
 ## Changelog
 
+## v18.244.0
+- feat: **Pool operatori: filtri per seniority e per data di inserimento nel pool.** Due nuove tendine sotto «Provenienza»: **Seniority** (Tutte / Senior / Junior / Non definita) e **Inserimento nel pool** (Qualsiasi data / Ultimi 7, 30, 90 giorni / Con data, più recenti prima / Senza data). Con un periodo scelto le card sono ordinate dalla più recente invece che per nome. Le card degli operatori entrati nel pool negli ultimi 30 giorni mostrano il badge «🆕 dal …». La data di inserimento esiste solo per gli operatori creati con «+ Nuovo» da v18.84.0 in poi: quelli precedenti compaiono solo con «Qualsiasi data» o «Senza data». Nessuna modifica a Supabase.
+
 ## v18.243.0
 - feat: **Controllo sottotask: «🧹 Bonifica settimana» per le settimane finite.** Regola: chi lavora attiva il suo sottotask su Jira, quindi a settimana finita i sottotask rimasti in CREATED o TO DO senza ore non servono. Il pulsante legge da Jira lo stato dei sottotask e le ore degli operatori e mostra un'anteprima: per ogni sottotask fermo, se quel giorno l'operatore non ha ore su Jira la voce viene tolta dalla cella; se ha ore su un altro sottotask, al posto della voce va il cantiere di quel sottotask (anche di un'altra commessa) e la giornata viene collegata a quel sottotask. Se le ore sono su ticket che la Griglia non conosce, o i worklog dell'operatore non si leggono, il sottotask resta «da verificare» e non viene toccato; quelli in TO DO ma con ore restano su Jira. Con «Applica» (e conferma) i sottotask vengono eliminati su Jira (riletti prima: se nel frattempo avviati o con ore restano) e la Griglia viene corretta solo per quelli eliminati davvero. Le correzioni alla Griglia si annullano con «Indietro», l'eliminazione su Jira no. Riservato ad admin e responsabili, registrato nel log attività. Nessuna modifica a Supabase (usa `jira-subtask-delete`).
 

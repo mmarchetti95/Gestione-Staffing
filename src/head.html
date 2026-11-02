@@ -1992,7 +1992,7 @@
       </span>
       <button id="btn-presentation" class="px-3 py-1.5 text-sm rounded hover:bg-white/10" style="border:1px solid var(--dark-border-strong);color:var(--dark-text);visibility:visible;">📊 Modalità presentazione</button>
       <div class="text-xs pl-2" style="border-left:1px solid var(--dark-border-strong);color:var(--dark-text-muted);">
-        <span id="app-version" class="font-medium" style="color:var(--accent);">v18.243.0</span> · Michele Marchetti
+        <span id="app-version" class="font-medium" style="color:var(--accent);">v18.244.0</span> · Michele Marchetti
         <span id="sb-role-badge" style="margin-left:8px;padding:1px 8px;border-radius:9999px;background:rgba(255,255,255,.1);color:var(--dark-text);font-weight:600;"></span>
       </div>
     </div>
@@ -2477,6 +2477,28 @@
                 </select>
                 <select id="op-filter-provincia" class="flex-1 text-xs border border-slate-300 rounded px-1.5 py-1">
                   <option value="">Tutte le province</option>
+                </select>
+              </div>
+            </div>
+            <div class="flex gap-1">
+              <div class="flex-1">
+                <div class="text-[10px] text-slate-500 uppercase tracking-wider font-medium mb-1">Seniority</div>
+                <select id="op-filter-seniorita" class="w-full text-xs border border-slate-300 rounded px-1.5 py-1">
+                  <option value="">Tutte</option>
+                  <option value="senior">🎖 Senior</option>
+                  <option value="junior">🌱 Junior</option>
+                  <option value="nd">Non definita</option>
+                </select>
+              </div>
+              <div class="flex-1">
+                <div class="text-[10px] text-slate-500 uppercase tracking-wider font-medium mb-1">Inserimento nel pool</div>
+                <select id="op-filter-aggiunta" class="w-full text-xs border border-slate-300 rounded px-1.5 py-1" title="Con un periodo scelto, i più recenti compaiono in cima. La data è registrata solo per gli operatori creati con «+ Nuovo» da v18.84 in poi">
+                  <option value="">Qualsiasi data</option>
+                  <option value="7">Ultimi 7 giorni</option>
+                  <option value="30">Ultimi 30 giorni</option>
+                  <option value="90">Ultimi 90 giorni</option>
+                  <option value="tutti">Con data, più recenti prima</option>
+                  <option value="nd">Senza data</option>
                 </select>
               </div>
             </div>

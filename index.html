@@ -1992,7 +1992,7 @@
       </span>
       <button id="btn-presentation" class="px-3 py-1.5 text-sm rounded hover:bg-white/10" style="border:1px solid var(--dark-border-strong);color:var(--dark-text);visibility:visible;">📊 Modalità presentazione</button>
       <div class="text-xs pl-2" style="border-left:1px solid var(--dark-border-strong);color:var(--dark-text-muted);">
-        <span id="app-version" class="font-medium" style="color:var(--accent);">v18.243.0</span> · Michele Marchetti
+        <span id="app-version" class="font-medium" style="color:var(--accent);">v18.244.0</span> · Michele Marchetti
         <span id="sb-role-badge" style="margin-left:8px;padding:1px 8px;border-radius:9999px;background:rgba(255,255,255,.1);color:var(--dark-text);font-weight:600;"></span>
       </div>
     </div>
@@ -2477,6 +2477,28 @@
                 </select>
                 <select id="op-filter-provincia" class="flex-1 text-xs border border-slate-300 rounded px-1.5 py-1">
                   <option value="">Tutte le province</option>
+                </select>
+              </div>
+            </div>
+            <div class="flex gap-1">
+              <div class="flex-1">
+                <div class="text-[10px] text-slate-500 uppercase tracking-wider font-medium mb-1">Seniority</div>
+                <select id="op-filter-seniorita" class="w-full text-xs border border-slate-300 rounded px-1.5 py-1">
+                  <option value="">Tutte</option>
+                  <option value="senior">🎖 Senior</option>
+                  <option value="junior">🌱 Junior</option>
+                  <option value="nd">Non definita</option>
+                </select>
+              </div>
+              <div class="flex-1">
+                <div class="text-[10px] text-slate-500 uppercase tracking-wider font-medium mb-1">Inserimento nel pool</div>
+                <select id="op-filter-aggiunta" class="w-full text-xs border border-slate-300 rounded px-1.5 py-1" title="Con un periodo scelto, i più recenti compaiono in cima. La data è registrata solo per gli operatori creati con «+ Nuovo» da v18.84 in poi">
+                  <option value="">Qualsiasi data</option>
+                  <option value="7">Ultimi 7 giorni</option>
+                  <option value="30">Ultimi 30 giorni</option>
+                  <option value="90">Ultimi 90 giorni</option>
+                  <option value="tutti">Con data, più recenti prima</option>
+                  <option value="nd">Senza data</option>
                 </select>
               </div>
             </div>
@@ -3635,7 +3657,7 @@ let state = {
   // Voce assente o durata nulla = il DPI non scade da solo, la data va messa a mano.
   dpi_catalogo: {},
   activeTab: 'pipeline',
-  filters: { search:'', skills:new Set(), attestati:new Set(), lowSat:false, regione:'', provincia:'', showEx:false },
+  filters: { search:'', skills:new Set(), attestati:new Set(), lowSat:false, regione:'', provincia:'', showEx:false, seniorita:'', aggiunta:'' },
   searchCommesse: '',
   searchFornitori: '', // filtro testo lista Fornitori, solo stato di vista (non persistito)
   // Registro attestati importato da Excel: archivio grezzo dell'ultimo import, che copre
@@ -5964,6 +5986,31 @@ function updateAttestatiSummary() {
   sum.textContent = n === 0 ? 'Tutti' : `${n} selezionato/i`;
 }
 
+/* Filtro "Inserimento nel pool" su op.data_aggiunta (YYYY-MM-DD, registrata solo per gli
+   operatori creati da "+ Nuovo" da v18.84.0 in poi): '' = tutti, 'tutti' = solo quelli con
+   data, 'nd' = solo quelli senza, un numero = inseriti negli ultimi N giorni. */
+function opPassaFiltroAggiunta(op, filtro) {
+  if (!filtro) return true;
+  const d = op.data_aggiunta || '';
+  if (filtro === 'nd') return !d;
+  if (!d) return false;
+  if (filtro === 'tutti') return true;
+  return d >= opDataGiorniFa(Number(filtro));
+}
+
+function opDataGiorniFa(n) {
+  const t = new Date();
+  t.setDate(t.getDate() - n);
+  const pad = x => String(x).padStart(2, '0');
+  return t.getFullYear() + '-' + pad(t.getMonth() + 1) + '-' + pad(t.getDate());
+}
+
+/* Badge "🆕" sulle card degli operatori entrati nel pool negli ultimi 30 giorni. */
+function opNuovoBadgeHtml(op) {
+  if (!op.data_aggiunta || op.data_aggiunta < opDataGiorniFa(30)) return '';
+  return '<span class="text-[9px] bg-emerald-50 text-emerald-700 border border-emerald-200 px-1 rounded" title="Aggiunto al pool il ' + esc(fmtDate(op.data_aggiunta)) + '">🆕 dal ' + esc(fmtDate(op.data_aggiunta)) + '</span>';
+}
+
 function checkCoerenzaOperatori() {
   const mc = meseCorrente();
   const nomiPool = new Set(state.operatori.map(o => o.nome_esteso));
@@ -5997,6 +6044,11 @@ function renderOperatori() {
     if (state.filters.attestati.size > 0 && ![...state.filters.attestati].every(a => (op.attestati||[]).includes(a))) return false;
     if (state.filters.provincia && op.provincia !== state.filters.provincia) return false;
     if (state.filters.regione && !state.filters.provincia && operatoreRegione(op) !== state.filters.regione) return false;
+    if (state.filters.seniorita) {
+      const sen = SENIORITA[op.seniorita] ? op.seniorita : 'nd';
+      if (sen !== state.filters.seniorita) return false;
+    }
+    if (!opPassaFiltroAggiunta(op, state.filters.aggiunta)) return false;
     if (state.filters.lowSat) {
       const s = operatoreSatPeriodo(op, [meseProx]);
       if (s >= 0.5) return false;
@@ -6004,8 +6056,11 @@ function renderOperatori() {
     return true;
   });
 
-  // ordina sempre alfabeticamente per nome, per una visione più chiara e ordinata
-  ops.sort((a,b) => (a.nome_esteso||'').localeCompare(b.nome_esteso||''));
+  // ordina alfabeticamente per nome, per una visione più chiara e ordinata; con un
+  // filtro sulla data di inserimento i più recenti vanno in cima (a parità di data, per nome)
+  const perAggiunta = state.filters.aggiunta && state.filters.aggiunta !== 'nd';
+  ops.sort((a,b) => (perAggiunta ? (b.data_aggiunta||'').localeCompare(a.data_aggiunta||'') : 0)
+    || (a.nome_esteso||'').localeCompare(b.nome_esteso||''));
 
   const totEx = state.operatori.filter(op => op.licenziato || isOperatoreScaduto(op)).length;
   document.getElementById('op-count').textContent = modoEx ? `(${ops.length} ex colleghi)` : `(${ops.length}/${getOperatoriAttivi().length})`;
@@ -6062,6 +6117,7 @@ function renderOperatori() {
             ${exBadge}
             ${provBadge}
             ${senioritaBadgeHtml(op.seniorita)}
+            ${opNuovoBadgeHtml(op)}
             ${contrattoBadge}
             ${!modoEx && isSaturo ? '<span class="text-[9px] bg-red-100 text-red-700 px-1 rounded">SATURO</span>' : ''}
             ${op.orphan ? '<span class="text-[9px] bg-slate-100 text-slate-600 px-1 rounded" title="Non presente nel foglio OPERATORI">no skill matrix</span>' : ''}
@@ -13102,6 +13158,14 @@ document.addEventListener('DOMContentLoaded', async () => {
   });
   document.getElementById('op-filter-provincia').addEventListener('change', e => {
     state.filters.provincia = e.target.value;
+    renderOperatori();
+  });
+  document.getElementById('op-filter-seniorita').addEventListener('change', e => {
+    state.filters.seniorita = e.target.value;
+    renderOperatori();
+  });
+  document.getElementById('op-filter-aggiunta').addEventListener('change', e => {
+    state.filters.aggiunta = e.target.value;
     renderOperatori();
   });
   document.getElementById('filter-show-ex').addEventListener('change', e => {

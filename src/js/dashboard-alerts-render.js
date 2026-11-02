@@ -134,6 +134,14 @@ document.addEventListener('DOMContentLoaded', async () => {
     state.filters.provincia = e.target.value;
     renderOperatori();
   });
+  document.getElementById('op-filter-seniorita').addEventListener('change', e => {
+    state.filters.seniorita = e.target.value;
+    renderOperatori();
+  });
+  document.getElementById('op-filter-aggiunta').addEventListener('change', e => {
+    state.filters.aggiunta = e.target.value;
+    renderOperatori();
+  });
   document.getElementById('filter-show-ex').addEventListener('change', e => {
     state.filters.showEx = e.target.checked;
     renderOperatori();
