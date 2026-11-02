@@ -75,6 +75,7 @@ JS_FILES = [
     'weekly-regione-cantiere.js',
     'weekly-note-variazioni.js',
     'weekly-jira-check.js',
+    'weekly-jira-bonifica.js',
     'weekly-undo.js',
     'weekly-guida.js',
     'meteo-storico.js',

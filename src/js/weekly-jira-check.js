@@ -624,6 +624,9 @@ function _pwJchkRenderModal(accendi) {
     + (blocchi ? '<p class="text-xs text-slate-500 mt-3 mb-2">Clicca una riga per andare alla cella, o un giorno per la cella di quel giorno.</p>' + blocchi : '')
     + '<div class="text-[11px] text-slate-400 mt-3">' + note.map(esc).join('<br>') + '</div>'
     + '<div class="flex justify-end gap-2 mt-4">'
+    +   (sbCanWrite() && pwJbonDisponibile()
+      ? '<button type="button" onclick="pwJbonApri()" class="px-3 py-1.5 text-sm border border-red-300 text-red-700 bg-red-50 rounded hover:bg-red-100 mr-auto" title="Settimana finita: elimina i sottotask rimasti in CREATED / TO DO senza ore e corregge la Griglia (prima un\'anteprima)">🧹 Bonifica settimana</button>'
+      : '')
     +   '<button type="button" onclick="pwOpenJiraCheck()" class="px-3 py-1.5 text-sm border border-slate-300 rounded hover:bg-slate-50">↻ Ricontrolla</button>'
     +   '<button type="button" onclick="closeModal()" class="px-3 py-1.5 text-sm border border-slate-300 rounded hover:bg-slate-50">Chiudi</button>'
     + '</div>'
