@@ -27,7 +27,7 @@
 //   { "items": [
 //       { "projectKey": "W07R", "taskKey": "W07R-45",
 //         "operatorEmail": "mrossi@eagleprojects.it",
-//         "summary": "Rilievo GPS - Ivrea - Rossi - Gio 10/09/2026",
+//         "summary": "Rilievo GPS - Ivrea - Rossi - Week 37 - Gio 10/09/2026",
 //         "data": "2026-09-10",       // giorno del sottotask (v18.229.0); senza, regola settimanale "Week N"
 //         "duedate": "2026-09-10", "startDatePianificato": "2026-09-10",  // opzionali, per-item
 //         "targetProduction": 12,     // opzionale, ereditato dal Task padre lato client
@@ -336,8 +336,9 @@ async function findExistingSubtask(taskKey: string, accountId: string, week: str
 // Sottotask giornaliero: tra i sottotask dell'operatore sotto il Task (i 200 piu'
 // recenti) quello del giorno. Vale il marcatore "gg/mm/aaaa" nel summary, oppure
 // scadenza = giorno con inizio vuoto o uguale. Un sottotask settimanale ("Week N"
-// nel summary, inizio lunedi' e scadenza sabato) non e' MAI quello di un giorno:
-// altrimenti il lunedi' o il sabato risulterebbero gia' coperti.
+// nel summary senza data, inizio lunedi' e scadenza sabato) non e' MAI quello di un
+// giorno: altrimenti il lunedi' o il sabato risulterebbero gia' coperti. Dalla
+// v18.248.0 anche i giornalieri hanno "Week N" nel summary, ma sempre con la data.
 // La lista si legge una volta per Task+assegnatario e si riusa per tutti i giorni
 // del batch; i sottotask creati nel frattempo vi si aggiungono (la ricerca JQL
 // potrebbe non vederli ancora).
@@ -369,7 +370,7 @@ async function listOperatorSubtasks(taskKey: string, accountId: string): Promise
 }
 
 function isDailySubtaskOf(st: SubtaskInfo, data: string): boolean {
-  if (/\bWeek\s+\d+\b/i.test(st.summary)) return false;
+  if (/\bWeek\s+\d+\b/i.test(st.summary) && !/\d{2}\/\d{2}\/\d{4}/.test(st.summary)) return false;
   const [y, m, d] = data.split("-");
   if (st.summary.includes(`${d}/${m}/${y}`)) return true;
   return st.duedate === data && (!st.start || st.start === data);

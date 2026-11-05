@@ -216,10 +216,11 @@ function _pwJchkProgettoDi(commessa) {
 
 // Sottotask di quel giorno (aaaa-mm-gg): data nel titolo (gg/mm/aaaa, anche con "-" o "."
 // o senza anno) oppure scadenza/inizio = giorno. Stessa idea dell'anti-duplicati di
-// jira-create-subtask; un settimanale ("Week N") non è mai di un giorno.
+// jira-create-subtask; un settimanale ("Week N" senza data nel titolo) non è mai di un giorno.
+// Dalla v18.248.0 anche i giornalieri hanno "Week N", ma sempre con la data.
 function _pwJchkDiGiorno(t, data) {
   const s = String(t.summary || '');
-  if (/\bWeek\s+\d+\b/i.test(s)) return false;
+  if (/\bWeek\s+\d+\b/i.test(s) && !/\d{1,2}[/.-]\d{1,2}[/.-]\d{2,4}/.test(s)) return false;
   const [y, m, d] = data.split('-');
   const gg = '0?' + Number(d), mm = '0?' + Number(m);
   if (new RegExp('(^|\\D)' + gg + '[/.-]' + mm + '(?:[/.-](?:' + y + '|' + y.slice(2) + ')(?!\\d)|(?![/.-]?\\d))').test(s)) return true;

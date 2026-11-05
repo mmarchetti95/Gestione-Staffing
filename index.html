@@ -2003,7 +2003,7 @@
       </span>
       <button id="btn-presentation" class="px-3 py-1.5 text-sm rounded hover:bg-white/10" style="border:1px solid var(--dark-border-strong);color:var(--dark-text);visibility:visible;">📊 Modalità presentazione</button>
       <div class="text-xs pl-2" style="border-left:1px solid var(--dark-border-strong);color:var(--dark-text-muted);">
-        <span id="app-version" class="font-medium" style="color:var(--accent);">v18.247.0</span> · Michele Marchetti
+        <span id="app-version" class="font-medium" style="color:var(--accent);">v18.248.0</span> · Michele Marchetti
         <span id="sb-role-badge" style="margin-left:8px;padding:1px 8px;border-radius:9999px;background:rgba(255,255,255,.1);color:var(--dark-text);font-weight:600;"></span>
       </div>
     </div>
@@ -17178,7 +17178,7 @@ document.addEventListener('DOMContentLoaded', async () => {
    Edge Function per il contratto e il check di idempotenza per assignee/Task.
 */
 
-HELP_TEXTS['pw-sottotask-jira'] = 'Crea sottotask su Jira per gli operatori pianificati questa settimana su QUESTA commessa (o, se lanciato dal bottone nell\'header di una squadra, solo per quella squadra): uno per operatore, cantiere/attività e GIORNO ("[Attività] - [Comune] - [Cognome] - Gio 29/10/2026"), con data inizio e scadenza nel giorno stesso. Di solito si lancia il giovedì/venerdì per la settimana dopo, e di nuovo durante la settimana per i giorni aggiunti o cambiati: i giorni che hanno già il sottotask non vengono ricreati.\n\nRichiede di scegliere Epic e Task Jira per ogni cantiere/attività, poi permette di selezionare giorno per giorno quali sottotask creare davvero. Mostra sempre un\'anteprima (dryRun) prima di creare qualsiasi cosa su Jira.\n\nSe la commessa ha il catalogo «🏷️ Attività e KPI», ogni sottotask riceve il suo KPI_Quantità target: il target giornaliero della squadra diviso chi della squadra è quel giorno sullo stesso cantiere con la stessa attività (da solo prende il target intero). In quel caso il Target Production del Task non viene più copiato. Le attività non produttive (Viaggio, Riposo…) partono senza spunta.\n\nGli indicatori 🎫 sono condivisi con i colleghi. Richiede il "Codice progetto Jira" configurato sulla commessa.';
+HELP_TEXTS['pw-sottotask-jira'] = 'Crea sottotask su Jira per gli operatori pianificati questa settimana su QUESTA commessa (o, se lanciato dal bottone nell\'header di una squadra, solo per quella squadra): uno per operatore, cantiere/attività e GIORNO ("[Attività] - [Comune] - [Cognome] - Week 44 - Gio 29/10/2026"), con data inizio e scadenza nel giorno stesso. Di solito si lancia il giovedì/venerdì per la settimana dopo, e di nuovo durante la settimana per i giorni aggiunti o cambiati: i giorni che hanno già il sottotask non vengono ricreati.\n\nRichiede di scegliere Epic e Task Jira per ogni cantiere/attività, poi permette di selezionare giorno per giorno quali sottotask creare davvero. Mostra sempre un\'anteprima (dryRun) prima di creare qualsiasi cosa su Jira.\n\nSe la commessa ha il catalogo «🏷️ Attività e KPI», ogni sottotask riceve il suo KPI_Quantità target: il target giornaliero della squadra diviso chi della squadra è quel giorno sullo stesso cantiere con la stessa attività (da solo prende il target intero). In quel caso il Target Production del Task non viene più copiato. Le attività non produttive (Viaggio, Riposo…) partono senza spunta.\n\nGli indicatori 🎫 sono condivisi con i colleghi. Richiede il "Codice progetto Jira" configurato sulla commessa.';
 
 /* ----- Pannello di ricerca condiviso (Epic/Task Jira) -----
    Clone parametrico del pattern "tendina custom" di weekly-strumenti.js
@@ -17529,7 +17529,7 @@ function pwJiraOperatorEmail(nomeOperatore) {
 }
 
 // Sottotask giornaliero (v18.229.0): uno per operatore + cantiere + attività + giorno.
-// Il giorno è nel summary ("… - Gio 29/10/2026") e in "data": lato server
+// Il giorno è nel summary ("… - Week 44 - Gio 29/10/2026"; la week dalla v18.248.0) e in "data": lato server
 // (jira-create-subtask) l'anti-duplicati cerca, fra i sottotask dell'operatore sotto il
 // Task, quello di quel giorno (marcatore gg/mm/aaaa o scadenza = giorno). Con i campi
 // presenti sul progetto, inizio e scadenza diventano il giorno stesso (vedi
@@ -17539,7 +17539,7 @@ function pwJiraBuildSubtaskItem(meta, task, comune, nomeOperatore, attivita, gio
   const email = pwJiraOperatorEmail(nomeOperatore);
   if (!email) return null;
   const cognome = op ? pwJiraResolveCognome(op) : '';
-  const summary = [attivita, comune, cognome].filter(Boolean).join(' - ') + ' - ' + pwJsubGiornoLabel(pwAnno, pwWeek, giorno, true);
+  const summary = [attivita, comune, cognome].filter(Boolean).join(' - ') + ' - Week ' + pwWeek + ' - ' + pwJsubGiornoLabel(pwAnno, pwWeek, giorno, true);
   return {
     projectKey: meta.jira_project_code,
     taskKey: task.key,
@@ -22209,7 +22209,8 @@ function cpReportAttivitaPerTicket(commessa) {
 
 // Attività di un ticket del worklog: dal legame cella→sottotask; se il sottotask non è stato
 // creato dalla Griglia, dal summary, che per i sottotask creati dall'app è
-// "Attività - Comune - Cognome - Gio 29/10/2026" ("… - Week N" prima della v18.229.0, vedi
+// "Attività - Comune - Cognome - Week 44 - Gio 29/10/2026" (senza week fra la v18.229.0 e la
+// v18.248.0, "… - Week N" senza giorno prima della v18.229.0, vedi
 // pwJiraBuildSubtaskItem).
 function cpReportAttivitaTicket(t, perTicket, attivitaNote) {
   if (perTicket[t.key]) return perTicket[t.key];
@@ -34580,10 +34581,11 @@ function _pwJchkProgettoDi(commessa) {
 
 // Sottotask di quel giorno (aaaa-mm-gg): data nel titolo (gg/mm/aaaa, anche con "-" o "."
 // o senza anno) oppure scadenza/inizio = giorno. Stessa idea dell'anti-duplicati di
-// jira-create-subtask; un settimanale ("Week N") non è mai di un giorno.
+// jira-create-subtask; un settimanale ("Week N" senza data nel titolo) non è mai di un giorno.
+// Dalla v18.248.0 anche i giornalieri hanno "Week N", ma sempre con la data.
 function _pwJchkDiGiorno(t, data) {
   const s = String(t.summary || '');
-  if (/\bWeek\s+\d+\b/i.test(s)) return false;
+  if (/\bWeek\s+\d+\b/i.test(s) && !/\d{1,2}[/.-]\d{1,2}[/.-]\d{2,4}/.test(s)) return false;
   const [y, m, d] = data.split('-');
   const gg = '0?' + Number(d), mm = '0?' + Number(m);
   if (new RegExp('(^|\\D)' + gg + '[/.-]' + mm + '(?:[/.-](?:' + y + '|' + y.slice(2) + ')(?!\\d)|(?![/.-]?\\d))').test(s)) return true;
@@ -36175,7 +36177,7 @@ HELP_TEXTS['#pw-jira-extra-continua'] = 'Conferma i valori dei campi aggiuntivi 
 // Crea sottotask
 HELP_TEXTS['#pw-jira-aggiungi-spazio'] = 'SCRIVE SU JIRA. Compare quando alcuni operatori non si possono assegnare sullo spazio Jira della commessa (non ne sono membri, o non possono essere assegnatari). Dopo una conferma li aggiunge allo spazio con il ruolo «Space User», cercando l\'account Jira con l\'email dell\'anagrafica, e rifà subito l\'anteprima: chi ora è assegnabile passa a «Da creare». In cima si vede l\'esito persona per persona.\n\nChi non ha un account Jira con quell\'email va invitato sul sito Jira da un amministratore. Serve che l\'account di servizio Jira possa gestire i membri dello spazio. Riservato ad admin e responsabili, registrato nel log attività. Dall\'app non si può annullare: per togliere qualcuno serve un amministratore dello spazio su Jira.';
 HELP_TEXTS['#pw-jira-aggiungi-spazio-crea'] = 'SCRIVE SU JIRA. Come nell\'anteprima: dopo una conferma aggiunge allo spazio Jira con il ruolo «Space User» gli operatori che non si potevano assegnare, poi riprova subito a creare i sottotask non ancora creati (senza ripassare dall\'anteprima). Se nessuno diventa assegnabile non ritenta nulla e mostra il motivo.\n\nRiservato ad admin e responsabili, registrato nel log attività. Né l\'aggiunta né i sottotask creati si annullano dall\'app.';
-HELP_TEXTS['#pw-jira-confirm-create'] = 'SCRIVE SU JIRA. Crea davvero i sottotask «da creare» dell\'anteprima, sotto i Task scelti. Ognuno è assegnato all\'operatore tramite la sua email, con titolo «[Attività] - [Comune] - [Cognome] - Gio 29/10/2026», data inizio e scadenza nel giorno del sottotask e i campi aggiuntivi compilati: Stima originale, Activity Type, Target Production ereditato dal Task, Production Weight, Start date pianificato, Tempo Team.\n\nSe «Ricalcola su tutti» è spuntato, riscrive su Jira anche il Production Weight dei sottotask già esistenti dello stesso Task. Non duplica un sottotask già presente per lo stesso operatore, Task e settimana.\n\nGli indicatori 🎫 vengono salvati in Griglia (pianificazione condivisa). Dall\'app non si può annullare: un sottotask creato per errore va cancellato a mano su Jira. Disattivato per i ruoli in sola lettura.';
+HELP_TEXTS['#pw-jira-confirm-create'] = 'SCRIVE SU JIRA. Crea davvero i sottotask «da creare» dell\'anteprima, sotto i Task scelti. Ognuno è assegnato all\'operatore tramite la sua email, con titolo «[Attività] - [Comune] - [Cognome] - Week 44 - Gio 29/10/2026», data inizio e scadenza nel giorno del sottotask e i campi aggiuntivi compilati: Stima originale, Activity Type, Target Production ereditato dal Task, Production Weight, Start date pianificato, Tempo Team.\n\nSe «Ricalcola su tutti» è spuntato, riscrive su Jira anche il Production Weight dei sottotask già esistenti dello stesso Task. Non duplica un sottotask già presente per lo stesso operatore, Task e settimana.\n\nGli indicatori 🎫 vengono salvati in Griglia (pianificazione condivisa). Dall\'app non si può annullare: un sottotask creato per errore va cancellato a mano su Jira. Disattivato per i ruoli in sola lettura.';
 // Commessa
 HELP_TEXTS['cpToggleComm'] = 'Apre o chiude tutte le righe di questa commessa nel Controllo Produzione. Solo visualizzazione: vale per questa settimana finché non ricarichi la pagina e non modifica dati.';
 // Squadra

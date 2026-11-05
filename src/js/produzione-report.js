@@ -147,7 +147,8 @@ function cpReportAttivitaPerTicket(commessa) {
 
 // Attività di un ticket del worklog: dal legame cella→sottotask; se il sottotask non è stato
 // creato dalla Griglia, dal summary, che per i sottotask creati dall'app è
-// "Attività - Comune - Cognome - Gio 29/10/2026" ("… - Week N" prima della v18.229.0, vedi
+// "Attività - Comune - Cognome - Week 44 - Gio 29/10/2026" (senza week fra la v18.229.0 e la
+// v18.248.0, "… - Week N" senza giorno prima della v18.229.0, vedi
 // pwJiraBuildSubtaskItem).
 function cpReportAttivitaTicket(t, perTicket, attivitaNote) {
   if (perTicket[t.key]) return perTicket[t.key];

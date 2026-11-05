@@ -16,7 +16,7 @@
    Edge Function per il contratto e il check di idempotenza per assignee/Task.
 */
 
-HELP_TEXTS['pw-sottotask-jira'] = 'Crea sottotask su Jira per gli operatori pianificati questa settimana su QUESTA commessa (o, se lanciato dal bottone nell\'header di una squadra, solo per quella squadra): uno per operatore, cantiere/attività e GIORNO ("[Attività] - [Comune] - [Cognome] - Gio 29/10/2026"), con data inizio e scadenza nel giorno stesso. Di solito si lancia il giovedì/venerdì per la settimana dopo, e di nuovo durante la settimana per i giorni aggiunti o cambiati: i giorni che hanno già il sottotask non vengono ricreati.\n\nRichiede di scegliere Epic e Task Jira per ogni cantiere/attività, poi permette di selezionare giorno per giorno quali sottotask creare davvero. Mostra sempre un\'anteprima (dryRun) prima di creare qualsiasi cosa su Jira.\n\nSe la commessa ha il catalogo «🏷️ Attività e KPI», ogni sottotask riceve il suo KPI_Quantità target: il target giornaliero della squadra diviso chi della squadra è quel giorno sullo stesso cantiere con la stessa attività (da solo prende il target intero). In quel caso il Target Production del Task non viene più copiato. Le attività non produttive (Viaggio, Riposo…) partono senza spunta.\n\nGli indicatori 🎫 sono condivisi con i colleghi. Richiede il "Codice progetto Jira" configurato sulla commessa.';
+HELP_TEXTS['pw-sottotask-jira'] = 'Crea sottotask su Jira per gli operatori pianificati questa settimana su QUESTA commessa (o, se lanciato dal bottone nell\'header di una squadra, solo per quella squadra): uno per operatore, cantiere/attività e GIORNO ("[Attività] - [Comune] - [Cognome] - Week 44 - Gio 29/10/2026"), con data inizio e scadenza nel giorno stesso. Di solito si lancia il giovedì/venerdì per la settimana dopo, e di nuovo durante la settimana per i giorni aggiunti o cambiati: i giorni che hanno già il sottotask non vengono ricreati.\n\nRichiede di scegliere Epic e Task Jira per ogni cantiere/attività, poi permette di selezionare giorno per giorno quali sottotask creare davvero. Mostra sempre un\'anteprima (dryRun) prima di creare qualsiasi cosa su Jira.\n\nSe la commessa ha il catalogo «🏷️ Attività e KPI», ogni sottotask riceve il suo KPI_Quantità target: il target giornaliero della squadra diviso chi della squadra è quel giorno sullo stesso cantiere con la stessa attività (da solo prende il target intero). In quel caso il Target Production del Task non viene più copiato. Le attività non produttive (Viaggio, Riposo…) partono senza spunta.\n\nGli indicatori 🎫 sono condivisi con i colleghi. Richiede il "Codice progetto Jira" configurato sulla commessa.';
 
 /* ----- Pannello di ricerca condiviso (Epic/Task Jira) -----
    Clone parametrico del pattern "tendina custom" di weekly-strumenti.js
@@ -367,7 +367,7 @@ function pwJiraOperatorEmail(nomeOperatore) {
 }
 
 // Sottotask giornaliero (v18.229.0): uno per operatore + cantiere + attività + giorno.
-// Il giorno è nel summary ("… - Gio 29/10/2026") e in "data": lato server
+// Il giorno è nel summary ("… - Week 44 - Gio 29/10/2026"; la week dalla v18.248.0) e in "data": lato server
 // (jira-create-subtask) l'anti-duplicati cerca, fra i sottotask dell'operatore sotto il
 // Task, quello di quel giorno (marcatore gg/mm/aaaa o scadenza = giorno). Con i campi
 // presenti sul progetto, inizio e scadenza diventano il giorno stesso (vedi
@@ -377,7 +377,7 @@ function pwJiraBuildSubtaskItem(meta, task, comune, nomeOperatore, attivita, gio
   const email = pwJiraOperatorEmail(nomeOperatore);
   if (!email) return null;
   const cognome = op ? pwJiraResolveCognome(op) : '';
-  const summary = [attivita, comune, cognome].filter(Boolean).join(' - ') + ' - ' + pwJsubGiornoLabel(pwAnno, pwWeek, giorno, true);
+  const summary = [attivita, comune, cognome].filter(Boolean).join(' - ') + ' - Week ' + pwWeek + ' - ' + pwJsubGiornoLabel(pwAnno, pwWeek, giorno, true);
   return {
     projectKey: meta.jira_project_code,
     taskKey: task.key,
