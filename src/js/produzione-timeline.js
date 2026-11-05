@@ -12,9 +12,13 @@
      più commesse lo stesso giorno ha più righe, e a ogni riga la sincronizzazione dà TUTTI i
      worklog della giornata: qui si uniscono per ticket, senza contarli due volte;
    - letti da jira-sync-worklogs (sola lettura) per tutti gli operatori in Griglia, anche
-     quelli senza giorni compilati: in automatico alla prima apertura di ogni settimana
-     (_cpTl.autoLette) e con "↻ Rileggi da Jira". Tenuti solo in memoria (_cpTl.letture),
-     non aggiornano controllo_produzione. Finché la lettura non finisce si vedono i salvati.
+     quelli senza giorni compilati: in automatico all'apertura della settimana se non ci sono
+     o hanno più di CPTL_LETTURA_VECCHIA_MIN minuti (_cpTl.autoLette) e con "↻ Rileggi da
+     Jira". Tenuti solo in memoria (_cpTl.letture), non aggiornano controllo_produzione.
+     Finché la lettura non finisce si vedono i salvati.
+   La scelta è per operatore (v18.250.0): chi è stato letto da Jira (lettura.verificati) usa
+   la lettura, gli altri i salvati. Così dopo una correzione si rilegge solo l'operatore
+   corretto anche se la settimana non è mai stata letta tutta (lettura "parziale", ts null).
    Commessa di un ticket: dal sottotask creato in Griglia (certo), altrimenti dal prefisso del
    ticket confrontato con il "Codice progetto Jira" delle commesse in dashboard
    (state.commesse_attive_meta). Un progetto che non corrisponde a nessuna commessa è "fuori
@@ -34,6 +38,7 @@ const CPTL_SETTIMANA = -1;                // _cpTl.giorno: tutta la settimana
 const CPTL_GRIGIO = '#94a3b8';
 const CPTL_COLORI_COMMESSA = CP_OJ_COLORI.concat(['#14b8a6', '#a855f7', '#f97316', '#22c55e', '#3b82f6', '#e11d48']);
 const CPTL_FUORI = '__fuori__';           // valore del filtro commessa "fuori dashboard"
+const CPTL_LETTURA_VECCHIA_MIN = 30;      // all'apertura si rilegge da sola una lettura più vecchia
 
 let _cpTl = {
   aperto: false,
@@ -43,8 +48,11 @@ let _cpTl = {
   colore: 'ticket',           // 'ticket' | 'commessa'
   soglia: 0,                  // ore: segnala i giorni passati sotto soglia (0 = no)
   soloControllo: false,
-  letture: {},                // 'anno|week' -> { worklog, verificati, avvisi, ts } letti da Jira
-  autoLette: new Set(),       // settimane già lette in automatico in questa sessione
+  letture: {},                // 'anno|week' -> { worklog, verificati, avvisi, ts, tsOp } letti da Jira
+                              //   ts: lettura di tutta la settimana (null = solo alcuni operatori)
+                              //   tsOp: nome -> riletto da solo dopo, a seguito di una correzione
+  autoLette: {},              // 'anno|week' -> ms dell'ultima lettura automatica
+  coda: [],                   // operatori corretti durante un'altra lettura, da rileggere dopo
   inCorso: false,
   msg: '',
 };
@@ -87,15 +95,18 @@ function cpTlDaRiga(ev, tr) {
   return false;
 }
 
-/* Prima apertura della settimana: legge da Jira da sola, così compaiono anche i worklog che
+/* All'apertura della settimana legge da Jira da sola, così compaiono anche i worklog che
    la sincronizzazione del Controllo Produzione non salva (giorni non pianificati, operatori
-   in Griglia senza giorni compilati, ticket di commesse fuori dashboard). Una volta per
-   settimana e sessione: dopo si aggiorna con "↻ Rileggi da Jira". */
+   in Griglia senza giorni compilati, ticket di commesse fuori dashboard). Rilegge tutta la
+   settimana se non è mai stata letta tutta o se la lettura ha più di CPTL_LETTURA_VECCHIA_MIN
+   minuti: le riletture di un solo operatore dopo una correzione non contano. Al massimo un
+   tentativo automatico ogni CPTL_LETTURA_VECCHIA_MIN minuti per settimana, anche se fallisce. */
 function _cpTlAutoLettura() {
-  const k = _cpaKey(pwAnno, pwWeek);
-  if (!_cpTl.aperto || _cpTl.inCorso || _cpTl.letture[k] || _cpTl.autoLette.has(k)) return;
+  const k = _cpaKey(pwAnno, pwWeek), lett = _cpTl.letture[k];
+  const limite = Date.now() - CPTL_LETTURA_VECCHIA_MIN * 60000;
+  if (!_cpTl.aperto || _cpTl.inCorso || (lett && lett.ts && lett.ts.getTime() > limite) || (_cpTl.autoLette[k] || 0) > limite) return;
   if (!_sbClient || !_sbUser || !_cpaCelleSettimana().operatori.size) return;
-  _cpTl.autoLette.add(k);
+  _cpTl.autoLette[k] = Date.now();
   cpTlRileggi();
 }
 
@@ -167,6 +178,7 @@ function _cpTlInCorso(nome, g, iso) {
 /* Operatore/giorno -> { celle (pianificate), ferie, tickets, sincronizzato } */
 function _cpTlRaccogli(d) {
   const lett = _cpTl.letture[_cpaKey(pwAnno, pwWeek)] || null;
+  const daJira = new Set(lett ? lett.verificati : []);
   const ops = {};
   const giorno = (nome, g) => {
     const o = ops[nome] || (ops[nome] = {});
@@ -176,7 +188,7 @@ function _cpTlRaccogli(d) {
     const x = giorno(c.operatore, c.giorno);
     if (c.ferie) { x.ferie = c.ferie; return; }
     x.celle.push(c);
-    if (lett) return;
+    if (daJira.has(c.operatore)) return;
     const s = _cpData[c.cpKey];
     if (!s || s.ore_jira == null || s.ore_jira === '' || isNaN(parseFloat(s.ore_jira))) return;
     x.sincronizzato = true;
@@ -419,6 +431,7 @@ async function cpTlRileggi() {
   try {
     const r = await _cpTlLeggiWorklog(nomi, d);
     r.ts = new Date();
+    r.tsOp = {};
     _cpTl.letture[k] = r;
     _cpTl.msg = r.avvisi.length ? '⚠ ' + r.avvisi.join(' ') : '';
   } catch (e) {
@@ -426,6 +439,7 @@ async function cpTlRileggi() {
   } finally {
     _cpTl.inCorso = false;
     cpTlRender();
+    _cpTlWlCoda();        // operatori corretti mentre leggeva: la lettura può essere di prima
     _cpTlAutoLettura();   // se nel frattempo si è passati a un'altra settimana
   }
 }
@@ -452,11 +466,24 @@ function cpTlRender() {
   }
 }
 
+/* Da dove vengono i worklog: lettura di tutta la settimana (con l'ora di chi è stato riletto
+   dopo una correzione), solo alcuni operatori riletti, oppure null = l'ultima sincronizzazione.
+   quando(ts) formatta l'ora della lettura completa (intestazione o PDF). */
+function _cpTlFonteLettura(lett, quando) {
+  if (!lett) return null;
+  const hhmm = ts => ts.toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' });
+  const nomi = Object.keys(lett.tsOp || {});
+  const riletti = nomi.slice(0, 3).map(n => n + ' alle ' + hhmm(lett.tsOp[n])).join(', ') +
+    (nomi.length > 3 ? ' e altri ' + (nomi.length - 3) : '');
+  if (lett.ts) return 'Worklog letti da Jira ' + quando(lett.ts) + (nomi.length ? ' · riletti dopo una correzione: ' + riletti : '');
+  return nomi.length ? 'Letti da Jira solo ' + riletti + ', gli altri dall\'ultima sincronizzazione del Controllo Produzione' : null;
+}
+
 function _cpTlFonteTesto(V) {
-  if (_cpTl.inCorso && !V.lettura) return 'Intanto vedi i worklog dell\'ultima sincronizzazione del Controllo Produzione';
-  if (V.lettura) return 'Worklog letti da Jira alle ' + V.lettura.ts.toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' }) +
-    ' (solo in questa finestra, non aggiornano il Controllo Produzione)';
-  return 'Worklog dell\'ultima sincronizzazione del Controllo Produzione: per vederli aggiornati usa «↻ Rileggi da Jira»';
+  const fonte = _cpTlFonteLettura(V.lettura, ts => 'alle ' + ts.toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' }));
+  if (_cpTl.inCorso && !(V.lettura && V.lettura.ts)) return fonte || 'Intanto vedi i worklog dell\'ultima sincronizzazione del Controllo Produzione';
+  if (V.lettura && V.lettura.ts) return fonte + ' (solo in questa finestra, non aggiornano il Controllo Produzione)';
+  return (fonte || 'Worklog dell\'ultima sincronizzazione del Controllo Produzione') + ': per vederli aggiornati usa «↻ Rileggi da Jira»';
 }
 
 function _cpTlIntestazione(V) {
@@ -468,7 +495,7 @@ function _cpTlIntestazione(V) {
         '<div class="text-xs text-slate-500 mt-0.5">Settimana ' + pwWeek + ' · ' + V.d.ddmm[0] + ' – ' + V.d.ddmm[5] + '/' + pwAnno +
           ' · quando ogni operatore ha attivato e chiuso i worklog Jira, pause e totale del giorno. Passa il mouse su un segmento per i dettagli, ' +
           (cpTlWlPuo() ? 'clicca per correggerlo o eliminarlo su Jira; «＋» sulla riga aggiunge un worklog.' : 'clicca per aprire il ticket su Jira.') + '</div>' +
-        '<div class="text-[11px] mt-0.5" style="color:' + (V.lettura ? '#0f766e' : '#64748b') + ';">' + esc(_cpTlFonteTesto(V)) + '</div>' +
+        '<div class="text-[11px] mt-0.5" style="color:' + (V.lettura && V.lettura.ts ? '#0f766e' : '#64748b') + ';">' + esc(_cpTlFonteTesto(V)) + '</div>' +
       '</div>' +
       '<div class="flex-1"></div>' +
       '<button type="button" onclick="cpTlRileggi()" class="text-xs px-3 py-1 rounded font-semibold text-white" style="background:#0f766e;' +
@@ -702,7 +729,7 @@ function cpTlEsportaPdf() {
   ].filter(Boolean);
   doc.setFontSize(7.5); doc.setTextColor(100, 116, 139);
   doc.text(T((filtri.length ? 'Filtri: ' + filtri.join(', ') + ' · ' : '') +
-    (V.lettura ? 'Worklog letti da Jira il ' + oraTs(V.lettura.ts) : 'Worklog dell\'ultima sincronizzazione del Controllo Produzione') +
+    (_cpTlFonteLettura(V.lettura, ts => 'il ' + oraTs(ts)) || 'Worklog dell\'ultima sincronizzazione del Controllo Produzione') +
     ' · generato il ' + oraTs(new Date()) + ((_sbUser && _sbUser.email) ? ' da ' + _sbUser.email : '')), M, 24);
 
   const asse = y => {

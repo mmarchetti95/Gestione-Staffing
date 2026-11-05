@@ -114,6 +114,9 @@ Limite noto: il progetto Supabase è sul piano **Free**, che non include backup 
 
 ## Changelog
 
+## v18.250.0
+- perf: **Timeline worklog: dopo una correzione si rilegge solo l'operatore corretto.** Prima, se la settimana non era ancora stata letta tutta da Jira (lettura automatica non finita o fallita), correggere, aggiungere o eliminare un worklog rileggeva tutti gli operatori in Griglia. Ora la timeline sceglie la fonte **per operatore**: chi è stato letto da Jira usa la lettura, gli altri restano sull'ultima sincronizzazione del Controllo Produzione (anche chi dà errore in una lettura completa, che prima spariva). Sotto il titolo compare l'ora di ogni rilettura singola («Worklog letti da Jira alle 10:00 · riletti dopo una correzione: Rossi alle 10:30»), anche nel PDF. Una correzione salvata mentre è in corso un'altra lettura viene riletta appena quella finisce. **Rilettura automatica dei dati vecchi**: aprendo la timeline si rilegge da sola tutta la settimana anche quando l'ultima lettura completa ha più di 30 minuti (prima solo la prima volta per sessione); «↻ Rileggi da Jira» rilegge sempre tutti. Nessuna modifica a Supabase.
+
 ## v18.249.0
 - feat: **Sottotask Jira: cantieri da creare separati da quelli già completi.** Nella scelta di Epic e Task i cantieri sono divisi in due sezioni apribili e chiudibili: **🟢 Da creare** (aperta, in cima: i cantieri a cui manca almeno un sottotask) e **🔵 Già completi** (chiusa: sottotask già presenti per ogni operatore e giorno, «salta» già spuntato). Dentro ogni sezione restano i gruppi per squadra con «salta tutti»/«includi tutti»; «Espandi tutto»/«Comprimi tutto» valgono anche per le sezioni. Nessuna modifica a Supabase.
 

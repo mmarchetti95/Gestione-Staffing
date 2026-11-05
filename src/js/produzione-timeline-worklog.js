@@ -12,7 +12,8 @@
      all'assegnatario; senza token risultano dell'account di servizio (limite delle API Jira).
    - Prima di modificare/eliminare manda "atteso" (started + seconds visti qui): se su Jira il
      worklog è cambiato nel frattempo la funzione non tocca nulla e si rilegge l'operatore.
-   - Dopo ogni scrittura rilegge da Jira (sola lettura) i worklog della settimana dell'operatore.
+   - Dopo ogni scrittura rilegge da Jira (sola lettura) i worklog della settimana del solo
+     operatore, anche se la settimana non era mai stata letta tutta (v18.250.0).
      Non aggiorna controllo_produzione: la colonna «Ore Jira» si aggiorna con «🔄 Sincronizza
      da Jira», come per ogni correzione fatta direttamente su Jira.
    Modal #cptl-wl-modal (z-index 99995: sopra la timeline, sotto conferme e avvisi). */
@@ -228,12 +229,14 @@ async function _cpTlWlInvoca(body) {
   return { errore: (j && j.error) || await _cpEdgeErr(error, CPTL_WL_FN), codice: j && j.codice };
 }
 
-/* Rilegge da Jira (sola lettura) la settimana dell'operatore e aggiorna la timeline */
+/* Rilegge da Jira (sola lettura) la settimana del SOLO operatore corretto e aggiorna la
+   timeline. Se la settimana non è mai stata letta tutta crea una lettura parziale (ts null):
+   gli altri operatori restano sui dati salvati. Se è in corso un'altra lettura lo mette in
+   coda (_cpTl.coda): quella lettura può aver letto l'operatore prima della correzione. */
 async function _cpTlWlRileggiOperatore(nome, k, d, esito) {
-  const lett = _cpTl.letture[k];
-  if (!lett || _cpTl.inCorso) {
-    _cpTl.msg = esito;
-    if (!lett && k === _cpaKey(pwAnno, pwWeek)) { await cpTlRileggi(); _cpTl.msg = esito + (_cpTl.msg ? ' ' + _cpTl.msg : ''); }
+  if (_cpTl.inCorso) {
+    if (!_cpTl.coda.some(p => p.nome === nome && p.k === k)) _cpTl.coda.push({ nome, k, d, esito });
+    _cpTl.msg = esito + ' Rileggo ' + nome + ' appena finisce la lettura in corso.';
     cpTlRender();
     return;
   }
@@ -242,8 +245,10 @@ async function _cpTlWlRileggiOperatore(nome, k, d, esito) {
   try {
     const r = await _cpTlLeggiWorklog([nome], d);
     if (r.verificati.includes(nome)) {
+      const lett = _cpTl.letture[k] || (_cpTl.letture[k] = { worklog: {}, verificati: [], avvisi: [], ts: null, tsOp: {} });
       lett.worklog[nome] = r.worklog[nome] || {};
       if (!lett.verificati.includes(nome)) lett.verificati.push(nome);
+      lett.tsOp[nome] = new Date();
     } else avviso = ' ⚠ ' + r.avvisi.join(' ');
   } catch (e) {
     avviso = ' ⚠ Rilettura non riuscita: ' + (e && e.message ? e.message : e) + '. Usa «↻ Rileggi da Jira».';
@@ -251,7 +256,15 @@ async function _cpTlWlRileggiOperatore(nome, k, d, esito) {
     _cpTl.inCorso = false;
     _cpTl.msg = esito + avviso;
     cpTlRender();
+    _cpTlWlCoda();
+    if (k !== _cpaKey(pwAnno, pwWeek)) _cpTlAutoLettura();   // si è passati a un'altra settimana
   }
+}
+
+/* Rilegge il prossimo operatore in coda (uno alla volta: ogni rilettura richiama la successiva) */
+function _cpTlWlCoda() {
+  const p = _cpTl.coda.shift();
+  if (p) _cpTlWlRileggiOperatore(p.nome, p.k, p.d, p.esito);
 }
 
 async function _cpTlWlEsegui(body, esito) {
