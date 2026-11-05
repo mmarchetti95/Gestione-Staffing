@@ -114,6 +114,9 @@ Limite noto: il progetto Supabase è sul piano **Free**, che non include backup 
 
 ## Changelog
 
+## v18.249.0
+- feat: **Sottotask Jira: cantieri da creare separati da quelli già completi.** Nella scelta di Epic e Task i cantieri sono divisi in due sezioni apribili e chiudibili: **🟢 Da creare** (aperta, in cima: i cantieri a cui manca almeno un sottotask) e **🔵 Già completi** (chiusa: sottotask già presenti per ogni operatore e giorno, «salta» già spuntato). Dentro ogni sezione restano i gruppi per squadra con «salta tutti»/«includi tutti»; «Espandi tutto»/«Comprimi tutto» valgono anche per le sezioni. Nessuna modifica a Supabase.
+
 ## v18.248.0
 - feat: **Sottotask Jira: la week nel titolo.** I sottotask giornalieri creati da «🎫 Sottotask Jira» hanno ora anche il riferimento alla settimana: «Attività - Comune - Cognome - Week 45 - Lun 02/11/2026». L'anti-duplicati e il controllo «🎫 Sottotask» riconoscono i nuovi titoli come giornalieri (un titolo con «Week N» ma senza data resta un vecchio sottotask settimanale). I sottotask della week 45 creati prima di questa versione sono stati rinominati su Jira. **Edge Function `jira-create-subtask` da ridistribuire** (altrimenti ricreerebbe i giorni già coperti dai titoli nuovi).
 

@@ -399,6 +399,7 @@ HELP_TEXTS['pw-jira-task'] = 'Apre l\'elenco con ricerca dei Task sotto l\'Epic 
 // salta
 HELP_TEXTS['pw-jira-salta-comune'] = 'Esclude questo cantiere (con questa attività) dalla creazione dei sottotask: non serve scegliere Epic e Task.\n\nÈ già spuntato quando tutti gli operatori del cantiere hanno già il loro sottotask. Togli la spunta per rifare la verifica. Non scrive niente.';
 // Squadra
+HELP_TEXTS['pw-jira-sezione-toggle'] = 'Apre o chiude la sezione. In «Da creare» ci sono i cantieri a cui manca almeno un sottotask (aperta); in «Già completi» quelli che hanno già il sottotask per ogni operatore e giorno, con «salta» già spuntato (chiusa: aprila per controllarli o per rifare la verifica). Solo visualizzazione.';
 HELP_TEXTS['pw-jira-squadra-toggle'] = 'Apre o chiude l\'elenco dei cantieri di questa squadra nella creazione sottotask. Solo visualizzazione.';
 // salta tutti
 HELP_TEXTS['pw-jira-salta-tutti'] = 'Spunta «salta» su tutti i cantieri di questa squadra: nessun sottotask verrà proposto per loro. Non scrive niente.';

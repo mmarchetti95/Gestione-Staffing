@@ -810,6 +810,16 @@ function pwJiraSubtaskOpenComuniModal(cIdx, commessaNome, meta, gruppi, squadreO
   });
   const squadreNames = (squadreOrder && squadreOrder.length) ? squadreOrder : Object.keys(bySquadra);
 
+  // Gruppo con il sottotask per tutti gli operatori e tutti i giorni: va nella sezione
+  // «Già completi» (chiusa), così in cima restano solo i cantieri da fare (v18.249.0).
+  function gruppoCompleto(i) {
+    const gr = gruppi[i];
+    const coppie = [];
+    gr.operatori.forEach(op => (gr.giorni[op] || []).forEach(g => coppie.push({ op, g })));
+    return coppie.length > 0 && coppie.every(c => pwJiraSubtaskIsResolved(entryOf(gr, c.op, c.g)));
+  }
+  const completo = gruppi.map((gr, i) => gruppoCompleto(i));
+
   function rowHtml(i) {
     const gr = gruppi[i];
     const operatori = gr.operatori;
@@ -852,24 +862,49 @@ function pwJiraSubtaskOpenComuniModal(cIdx, commessaNome, meta, gruppi, squadreO
     </div>`;
   }
 
-  const groupsHtml = squadreNames.map((sqNome, gi) => {
-    const list = bySquadra[sqNome] || [];
-    if (!list.length) return '';
-    const rows = list.map(i => rowHtml(i)).join('');
-    return `<div class="pw-jira-squadra-group border border-slate-200 rounded mb-2 overflow-hidden">
+  const cantieriLabel = n => n + ' cantier' + (n === 1 ? 'e' : 'i');
+
+  // Gruppi per squadra di una sezione; data-squadra-idx = "<sezione>-<squadra>", unico
+  // fra le due sezioni (la stessa squadra può comparire in entrambe).
+  function squadreHtml(sez, filtro) {
+    return squadreNames.map((sqNome, gi) => {
+      const list = (bySquadra[sqNome] || []).filter(filtro);
+      if (!list.length) return '';
+      const sid = sez + '-' + gi;
+      const rows = list.map(i => rowHtml(i)).join('');
+      return `<div class="pw-jira-squadra-group border border-slate-200 rounded mb-2 overflow-hidden">
       <div class="w-full flex items-center justify-between gap-2 px-2.5 py-2 bg-slate-50 hover:bg-slate-100">
-        <button type="button" data-help-key="pw-jira-squadra-toggle" class="pw-jira-squadra-toggle flex items-center gap-1.5 text-sm font-medium text-slate-700 flex-1 min-w-0 text-left" data-squadra-idx="${gi}">
+        <button type="button" data-help-key="pw-jira-squadra-toggle" class="pw-jira-squadra-toggle flex items-center gap-1.5 text-sm font-medium text-slate-700 flex-1 min-w-0 text-left" data-squadra-idx="${sid}">
           <span class="pw-jira-squadra-arrow text-slate-400 shrink-0">▾</span>
-          <span class="truncate">${esc(sqNome)} <span class="text-slate-400 font-normal">(${list.length} cantier${list.length === 1 ? 'e' : 'i'})</span></span>
+          <span class="truncate">${esc(sqNome)} <span class="text-slate-400 font-normal">(${cantieriLabel(list.length)})</span></span>
         </button>
         <div class="flex gap-2 shrink-0 text-[11px]">
-          <button type="button" data-help-key="pw-jira-salta-tutti" class="pw-jira-squadra-skip-all text-slate-500 hover:underline whitespace-nowrap" data-squadra-idx="${gi}">salta tutti</button>
-          <button type="button" data-help-key="pw-jira-includi-tutti" class="pw-jira-squadra-skip-none text-teal-700 hover:underline whitespace-nowrap" data-squadra-idx="${gi}">includi tutti</button>
+          <button type="button" data-help-key="pw-jira-salta-tutti" class="pw-jira-squadra-skip-all text-slate-500 hover:underline whitespace-nowrap" data-squadra-idx="${sid}">salta tutti</button>
+          <button type="button" data-help-key="pw-jira-includi-tutti" class="pw-jira-squadra-skip-none text-teal-700 hover:underline whitespace-nowrap" data-squadra-idx="${sid}">includi tutti</button>
         </div>
       </div>
-      <div class="pw-jira-squadra-body px-2.5 pt-2 pb-1" data-squadra-idx="${gi}">${rows}</div>
+      <div class="pw-jira-squadra-body px-2.5 pt-2 pb-1" data-squadra-idx="${sid}">${rows}</div>
     </div>`;
-  }).join('');
+    }).join('');
+  }
+
+  // Due sezioni: «Da creare» aperta in cima, «Già completi» chiusa sotto.
+  function sezioneHtml(sez, titolo, n, aperta, corpo, coloreTitolo) {
+    return `<div class="pw-jira-sezione mb-3" data-sezione="${sez}">
+      <button type="button" data-help-key="pw-jira-sezione-toggle" class="pw-jira-sezione-toggle w-full flex items-center gap-1.5 text-left text-sm font-semibold ${coloreTitolo} border-b border-slate-200 pb-1 mb-2" data-sezione="${sez}">
+        <span class="pw-jira-sezione-arrow text-slate-400 shrink-0">${aperta ? '▾' : '▸'}</span>
+        <span>${titolo} <span class="font-normal text-slate-400">(${cantieriLabel(n)})</span></span>
+      </button>
+      <div class="pw-jira-sezione-body" data-sezione="${sez}"${aperta ? '' : ' style="display:none;"'}>${corpo}</div>
+    </div>`;
+  }
+  const nDaFare = completo.filter(c => !c).length;
+  const nCompleti = gruppi.length - nDaFare;
+  const groupsHtml =
+    sezioneHtml('dafare', '🟢 Da creare', nDaFare, true,
+      nDaFare ? squadreHtml('dafare', i => !completo[i]) : '<div class="text-xs text-slate-500 px-1 pb-2">Tutti i cantieri hanno già i sottotask per ogni operatore e giorno.</div>',
+      'text-emerald-800') +
+    (nCompleti ? sezioneHtml('completi', '🔵 Già completi', nCompleti, false, squadreHtml('completi', i => completo[i]), 'text-blue-800') : '');
 
   root.innerHTML = `<div class="modal-backdrop"><div class="bg-white rounded-lg shadow-xl w-full max-w-xl mx-4 my-8 p-5 max-h-[90vh] overflow-y-auto">
     <h3 class="font-semibold text-slate-900 mb-1">Crea sottotask Jira — ${esc(commessaNome)}</h3>
@@ -897,13 +932,23 @@ function pwJiraSubtaskOpenComuniModal(cIdx, commessaNome, meta, gruppi, squadreO
       if (arrow) arrow.textContent = collapsed ? '▾' : '▸';
     };
   });
+  root.querySelectorAll('.pw-jira-sezione-toggle').forEach(btn => {
+    btn.onclick = () => {
+      const body = root.querySelector(`.pw-jira-sezione-body[data-sezione="${btn.dataset.sezione}"]`);
+      const arrow = btn.querySelector('.pw-jira-sezione-arrow');
+      const collapsed = body.style.display === 'none';
+      body.style.display = collapsed ? '' : 'none';
+      if (arrow) arrow.textContent = collapsed ? '▾' : '▸';
+    };
+  });
+  // Espandi/Comprimi tutto valgono anche per le due sezioni.
   document.getElementById('pw-jira-expand-all').onclick = () => {
-    root.querySelectorAll('.pw-jira-squadra-body').forEach(b => { b.style.display = ''; });
-    root.querySelectorAll('.pw-jira-squadra-arrow').forEach(a => { a.textContent = '▾'; });
+    root.querySelectorAll('.pw-jira-squadra-body, .pw-jira-sezione-body').forEach(b => { b.style.display = ''; });
+    root.querySelectorAll('.pw-jira-squadra-arrow, .pw-jira-sezione-arrow').forEach(a => { a.textContent = '▾'; });
   };
   document.getElementById('pw-jira-collapse-all').onclick = () => {
-    root.querySelectorAll('.pw-jira-squadra-body').forEach(b => { b.style.display = 'none'; });
-    root.querySelectorAll('.pw-jira-squadra-arrow').forEach(a => { a.textContent = '▸'; });
+    root.querySelectorAll('.pw-jira-squadra-body, .pw-jira-sezione-body').forEach(b => { b.style.display = 'none'; });
+    root.querySelectorAll('.pw-jira-squadra-arrow, .pw-jira-sezione-arrow').forEach(a => { a.textContent = '▸'; });
   };
 
   const chosenEpics = {}; // idx -> {key, summary}
