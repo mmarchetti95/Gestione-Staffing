@@ -220,11 +220,7 @@ async function cpProcessReport(csvText, commessa, squadra) {
   }
 
   // Mappa nome operatore -> email (stessa logica del sync Jira)
-  const emailByNome = {};
-  (state.operatori || []).forEach(o => {
-    const n = o.nome_esteso || o.nome_breve || o.nome;
-    if (n && o.email && o.email.trim()) emailByNome[n] = o.email.trim();
-  });
+  const emailByNome = opEmailMappa();
 
   // Comuni (Epic) disponibili nei ticket della squadra questa settimana
   const comuneSet = new Set();

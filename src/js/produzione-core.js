@@ -717,12 +717,8 @@ async function pwControlloSyncJira(scopeCommessa, scopeSquadra, btnEl) {
     }
     const startDate = isoDates[0], endDate = isoDates[5];
 
-    // Mappa nome operatore -> email
-    const emailByNome = {};
-    (state.operatori || []).forEach(o => {
-      const n = o.nome_esteso || o.nome_breve || o.nome;
-      if (n && o.email && o.email.trim()) emailByNome[n] = o.email.trim();
-    });
+    // Mappa nome operatore -> email (pool e dipendenti fornitore)
+    const emailByNome = opEmailMappa();
 
     // Raccogli le celle pianificate (stessa logica di inclusione del render)
     const data = pwGetWeekData();
@@ -765,6 +761,11 @@ async function pwControlloSyncJira(scopeCommessa, scopeSquadra, btnEl) {
       if (status) status.textContent = '';
       return;
     }
+
+    // Prima i worklog dei dipendenti fornitore (copiati dal collega Eagle, v18.251.0), così
+    // le Ore Jira lette subito dopo li comprendono. Un errore lì non ferma la sincronizzazione.
+    const fornMsg = await cpFornWlPrimaDellaSync(anno, week, status);
+    if (status) status.textContent = `⏳ Sincronizzazione${scopeLabel} in corso…`;
 
     // Chiamata Edge Function
     const { data: fnData, error } = await _sbClient.functions.invoke('jira-sync-worklogs', {
@@ -982,6 +983,7 @@ async function pwControlloSyncJira(scopeCommessa, scopeSquadra, btnEl) {
       msg += `\n\n⚠ ${errKeys.length} error${errKeys.length>1?'i':'e'} Jira: ` +
              errKeys.map(e => `${e} (${errs[e]})`).join('; ') + '.';
     }
+    if (fornMsg) msg += `\n\n🏢 ${fornMsg}`;
     msg += kmReadMsg;
     msg += kmMsg;
     if (nonVerificati > 0) {
@@ -1285,7 +1287,7 @@ async function cpSetCampoProduzione(commessa, sel) {
 }
 
 function cpOperatoreHaEmail(nome) {
-  return (state.operatori || []).some(o => (o.nome_esteso || o.nome_breve || o.nome) === nome && o.email && o.email.trim());
+  return !!opEmailDi(nome);
 }
 
 const CP_KMJ_STATI = {

@@ -270,7 +270,7 @@ async function cpMysondImportFile(file) {
   const mancanti = new Set();
   if (copreSettimana) {
     pwGetWeekData().forEach(bc => (bc.squadre || []).forEach(sq => (sq.operatori || []).forEach(op => {
-      if (op.nome && !op.fornitore && !operatoriFile.has(op.nome)
+      if (op.nome && !pwRigaFornitore(op) && !operatoriFile.has(op.nome)
           && Object.values(op.giorni || {}).some(gd => pwCellCantieri(gd || {}).length)) mancanti.add(op.nome);
     })));
   }

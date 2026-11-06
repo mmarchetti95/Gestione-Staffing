@@ -918,6 +918,10 @@ function openLicenziaModal(id) {
           '<span class="text-lg leading-none mt-0.5">\u{1F6AA}</span>' +
           '<div><div class="text-sm font-semibold text-slate-800">Segna come Ex Collega</div><div class="text-[11px] text-slate-500 mt-0.5">Rimosso dai nuovi incarichi \u00b7 Lo storico viene preservato con badge <span class=\'font-semibold text-red-500\'>ex</span></div></div>' +
         '</button>' +
+        '<button id="lic-forn" class="flex items-start gap-3 text-left px-3 py-2.5 border border-slate-200 rounded-md hover:bg-indigo-50 hover:border-indigo-300 transition-colors">' +
+          '<span class="text-lg leading-none mt-0.5">\u{1F3E2}</span>' +
+          '<div><div class="text-sm font-semibold text-slate-800">Sposta in un fornitore</div><div class="text-[11px] text-slate-500 mt-0.5">Diventa dipendente di un fornitore esterno · Griglia e sottotask Jira lo riconoscono ancora</div></div>' +
+        '</button>' +
         '<button id="lic-del" class="flex items-start gap-3 text-left px-3 py-2.5 border border-slate-200 rounded-md hover:bg-red-50 hover:border-red-300 transition-colors">' +
           '<span class="text-lg leading-none mt-0.5">\u{1F5D1}</span>' +
           '<div><div class="text-sm font-semibold text-red-700">Elimina definitivamente</div><div class="text-[11px] text-slate-500 mt-0.5">Rimozione completa dal sistema (es. utenti di test)</div></div>' +
@@ -927,6 +931,7 @@ function openLicenziaModal(id) {
     '</div>' +
   '</div>';
   document.getElementById('lic-ex').onclick = () => { closeModal(); licenziaOperatore(id); };
+  document.getElementById('lic-forn').onclick = () => { closeModal(); apriSpostaInFornitore(id); };
   document.getElementById('lic-del').onclick = () => { closeModal(); deleteOperatore(id); };
   document.getElementById('lic-cancel').onclick = () => closeModal();
 }

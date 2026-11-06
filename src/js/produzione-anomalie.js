@@ -294,11 +294,7 @@ function _cpaIndiceSottotask() {
 }
 
 async function _cpaLeggiWorklog(nomi, date, avvisi, silenzioso) {
-  const emailByNome = {};
-  (state.operatori || []).forEach(o => {
-    const n = o.nome_esteso || o.nome_breve || o.nome;
-    if (n && o.email && o.email.trim()) emailByNome[n] = o.email.trim();
-  });
+  const emailByNome = opEmailMappa();
   const conEmail = nomi.filter(n => emailByNome[n]);
   const senzaEmail = nomi.filter(n => !emailByNome[n]);
   if (senzaEmail.length) avvisi.push('Senza email in anagrafica, worklog non controllati: ' + senzaEmail.join(', ') + '.');

@@ -60,6 +60,7 @@ async function _pwJbonPiano() {
     if (!bc || !bc.commessa) return;
     Object.values(pwJiraSubtaskMappa(bc)).forEach(e => {
       if (!pwJiraSubtaskIsResolved(e) || !e.key || gruppi.has(e.key) || v.cancellati.has(e.key)) return;
+      if (fornitoreDiNome(e.operatore)) return;   // sottotask fornitore: stato e ore seguono il collega Eagle
       const st = v.info[e.key] && v.info[e.key].status;
       if (!PW_JBON_STATI.test(String(st || '').trim())) return;
       gruppi.set(e.key, { key: e.key, url: e.url || '', operatore: e.operatore || '', cantiere: e.cantiere || '',
@@ -70,7 +71,7 @@ async function _pwJbonPiano() {
     if (!bc || !bc.commessa) return;
     (bc.squadre || []).forEach(sq => (sq.operatori || []).forEach(op => {
       const nome = (op.nome || '').trim();
-      if (!nome || op.fornitore) return;
+      if (!nome || pwRigaFornitore(op)) return;
       for (let g = 0; g < 6; g++) {
         pwCellVoci((op.giorni || {})[g]).forEach(x => {
           const e = pwJiraSubtaskEntry(bc, x.cantiere, nome, pwJiraAttivitaSottotask(bc, x.cantiere, nome, x.attivita), g);

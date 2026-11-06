@@ -6,9 +6,52 @@
 // weekly-strumenti.js) ma restano fuori da KPI, gap risorse & raccomandazioni
 // assunzione, coerenza attestati e mappatura email Jira, che lavorano solo sul
 // pool interno.
+// Dalla v18.251.0 la lista si sincronizza su Supabase (chiave core 'fornitori', prima
+// restava solo nel browser) e un dipendente può avere l'email Jira: con l'email ha i
+// sottotask come gli interni e i worklog copiati dal collega Eagle in squadra
+// (produzione-fornitori-worklog.js). «🏢 Sposta in un fornitore» nella gestione
+// dell'operatore lo toglie dal pool tenendo nome, email, provincia e skill.
 
 function fornGenId(prefix) {
   return prefix + '_' + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2, 8);
+}
+
+// Fornitore e dipendente di un nome della Griglia (null se è del pool interno o sconosciuto).
+function fornitoreDiNome(nome) {
+  if (!nome) return null;
+  for (const f of (state.fornitori || [])) {
+    const d = (f.dipendenti || []).find(d => d.nome_esteso === nome);
+    if (d) return { fornitore: f, dipendente: d };
+  }
+  return null;
+}
+
+// Riga della Griglia di un dipendente fornitore: col flag op.fornitore (scelto dalla
+// tendina) o perché il nome è fra i dipendenti (es. operatore spostato dal pool).
+function pwRigaFornitore(op) {
+  return !!(op && (op.fornitore || fornitoreDiNome(op.nome)));
+}
+
+// Email Jira di un nome della Griglia: pool interno, poi dipendenti dei fornitori. '' se non c'è.
+function opEmailDi(nome) {
+  if (!nome) return '';
+  const op = (state.operatori || []).find(o => (o.nome_esteso || o.nome_breve || o.nome) === nome);
+  if (op) return op.email && op.email.trim() ? op.email.trim() : '';
+  const fd = fornitoreDiNome(nome);
+  return fd && fd.dipendente.email && fd.dipendente.email.trim() ? fd.dipendente.email.trim() : '';
+}
+
+// nome -> email di tutti quelli che ce l'hanno (pool interno + dipendenti fornitore).
+function opEmailMappa() {
+  const m = {};
+  (state.fornitori || []).forEach(f => (f.dipendenti || []).forEach(d => {
+    if (d.nome_esteso && d.email && d.email.trim()) m[d.nome_esteso] = d.email.trim();
+  }));
+  (state.operatori || []).forEach(o => {
+    const n = o.nome_esteso || o.nome_breve || o.nome;
+    if (n && o.email && o.email.trim()) m[n] = o.email.trim();
+  });
+  return m;
 }
 
 function renderFornitori() {
@@ -99,6 +142,8 @@ function renderFornitoreDipendenteRow(fid, d) {
       </select>
       <button class="del-forn-dip text-red-400 hover:text-red-600 text-xs px-1" data-fid="${esc(fid)}" data-did="${esc(d.id)}" title="Rimuovi dipendente">✕</button>
     </div>
+    <input class="forn-dip-field w-full text-xs border border-slate-300 rounded px-1.5 py-0.5" data-fid="${esc(fid)}" data-did="${esc(d.id)}" data-field="email" type="email"
+      placeholder="Email Jira (facoltativa: con l'email ha i sottotask e i worklog copiati dal collega Eagle)" value="${esc(d.email||'')}">
     <div class="flex flex-wrap gap-1">${skillChips}</div>
   </div>`;
 }
@@ -240,4 +285,95 @@ async function updateFornitoreStrumentoField(fid, sid, field, value) {
   if (s[field] === v) return;
   s[field] = v;
   await saveState();
+}
+
+/* ----- Sposta un operatore del pool in un fornitore (v18.251.0) -----
+   Per chi in realtà lavora per un fornitore esterno: esce dal pool (KPI, gap risorse,
+   attestati, staffing futuro azzerato come in deleteOperatore) e diventa dipendente del
+   fornitore con lo STESSO nome, così Griglia, sottotask Jira (pw_jira_subtask) e storico del
+   Controllo Produzione continuano a riconoscerlo. Email, provincia, skill e cognome passano
+   al dipendente; nelle righe della Griglia dalla settimana corrente in poi si scrive
+   op.fornitore (badge 🏢). Le settimane passate restano com'erano. */
+function apriSpostaInFornitore(opId) {
+  const op = (state.operatori || []).find(o => o.id === opId);
+  if (!op) return;
+  if (!(state.fornitori || []).length) {
+    showAlertModal('Non ci sono fornitori: crealo prima in Dashboard → Fornitori («+ Nuovo fornitore»).');
+    return;
+  }
+  const opzioni = state.fornitori.slice().sort((a, b) => (a.nome || '').localeCompare(b.nome || ''))
+    .map(f => '<option value="' + esc(f.id) + '">' + esc(f.nome || '(senza nome)') + '</option>').join('');
+  const root = document.getElementById('modal-root');
+  root.innerHTML = '<div class="modal-backdrop">' +
+    '<div class="bg-white rounded-lg shadow-xl w-full max-w-sm mx-4 p-5">' +
+      '<div class="text-sm font-semibold text-slate-900 mb-1">🏢 Sposta in un fornitore</div>' +
+      '<div class="text-xs text-slate-500 mb-3"><span class="font-semibold text-slate-800">' + esc(op.nome_esteso || '') + '</span> esce dal pool operatori e diventa dipendente del fornitore, con lo stesso nome, email, provincia e skill.</div>' +
+      '<select id="spf-forn" class="w-full text-sm border border-slate-300 rounded px-2 py-1.5 mb-3">' + opzioni + '</select>' +
+      '<div class="text-[11px] text-slate-500 bg-slate-50 border border-slate-200 rounded p-2 mb-3">' +
+        '✓ Griglia, sottotask Jira e Controllo Produzione lo riconoscono ancora (stesso nome).<br>' +
+        (op.email ? '✓ Con l\'email ' + esc(op.email) + ' avrà i sottotask e i worklog copiati dal collega Eagle in squadra.<br>' : '⚠ Senza email non avrà sottotask Jira.<br>') +
+        '✗ Esce da KPI, gap risorse e attestati; le allocazioni future dello staffing vengono azzerate.' +
+      '</div>' +
+      '<div class="flex justify-end gap-2">' +
+        '<button id="spf-annulla" class="text-sm text-slate-500 hover:text-slate-700 px-3 py-1.5">Annulla</button>' +
+        '<button id="spf-ok" class="text-sm bg-teal-600 hover:bg-teal-700 text-white rounded px-3 py-1.5">Sposta</button>' +
+      '</div>' +
+    '</div>' +
+  '</div>';
+  document.getElementById('spf-annulla').onclick = () => closeModal();
+  document.getElementById('spf-ok').onclick = () => {
+    const fid = document.getElementById('spf-forn').value;
+    closeModal();
+    spostaOperatoreInFornitore(opId, fid);
+  };
+}
+
+async function spostaOperatoreInFornitore(opId, fid) {
+  if (!sbGuardWrite()) return;
+  const op = (state.operatori || []).find(o => o.id === opId);
+  const f = (state.fornitori || []).find(f => f.id === fid);
+  if (!op || !f) return;
+  const nome = op.nome_esteso;
+  f.dipendenti = f.dipendenti || [];
+  let d = f.dipendenti.find(x => x.nome_esteso === nome);
+  if (!d) {
+    d = { id: fornGenId('dip'), nome_esteso: nome, skills: [], provincia: '', telefono: '', note: '' };
+    f.dipendenti.push(d);
+  }
+  d.email = (op.email || '').trim() || d.email || '';
+  d.provincia = op.provincia || d.provincia || '';
+  d.skills = [...new Set([...(d.skills || []), ...(op.skills || [])])];
+  if (op.nome) d.nome = op.nome;
+  if (op.cognome) d.cognome = op.cognome;
+  d.da_pool = { id: op.id, il: new Date().toISOString().slice(0, 10) };
+
+  // Stessa pulizia di deleteOperatore: staffing futuro azzerato, passato tenuto
+  const mc = meseCorrente();
+  state.staffing = state.staffing.map(r => {
+    if (r.risorsa !== nome) return r;
+    return { ...r, mesi: r.mesi.map((v, i) => i < mc ? v : 0) };
+  }).filter(r => r.risorsa !== nome || r.mesi.some(v => (Number(v) || 0) > 0));
+  state.operatori = state.operatori.filter(o => o.id !== opId);
+  state.assegnazioni = state.assegnazioni.filter(a => a.operatore_id !== opId);
+  ricalcolaAllocOperatori();
+  await saveState('Operatore spostato in un fornitore', { operatore: nome, fornitore: f.nome }, true);
+
+  // Badge fornitore sulle righe della Griglia dalla settimana corrente in poi
+  const oggi = isoWeekYear(new Date());
+  const da = oggi.year * 100 + oggi.week;
+  let righe = 0;
+  Object.keys(pwData || {}).forEach(anno => {
+    if (!/^\d+$/.test(anno)) return;
+    Object.keys(pwData[anno] || {}).forEach(week => {
+      const data = pwData[anno][week];
+      if (!Array.isArray(data) || Number(anno) * 100 + Number(week) < da) return;
+      data.forEach(bc => (bc.squadre || []).forEach(sq => (sq.operatori || []).forEach(o => {
+        if (o && o.nome === nome && o.fornitore !== f.nome) { o.fornitore = f.nome; righe++; }
+      })));
+    });
+  });
+  if (righe) await pwSave();
+
+  renderAll();
+  showAlertModal(nome + ' è ora dipendente di «' + f.nome + '»' + (righe ? ' (' + righe + (righe === 1 ? ' riga' : ' righe') + ' della Griglia aggiornate).' : '.'));
 }

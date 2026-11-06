@@ -381,14 +381,9 @@ function _cpTlVista() {
 
 /* ---------- Lettura da Jira (sola lettura, non salvata) ---------- */
 
-/* Nome operatore -> email in anagrafica (serve a leggere e scrivere i suoi worklog) */
+/* Nome operatore -> email in anagrafica, pool e dipendenti fornitore (serve a leggere e scrivere i suoi worklog) */
 function _cpTlEmailPerNome() {
-  const m = {};
-  (state.operatori || []).forEach(o => {
-    const n = o.nome_esteso || o.nome_breve || o.nome;
-    if (n && o.email && o.email.trim()) m[n] = o.email.trim();
-  });
-  return m;
+  return opEmailMappa();
 }
 
 async function _cpTlLeggiWorklog(nomi, date) {

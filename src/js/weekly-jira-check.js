@@ -81,11 +81,17 @@ function _pwJchkAccountDi(operatore) {
   return (em && _pwJchk.acc[em]) || '';
 }
 
+// Dipendente fornitore senza email: niente sottotask, fuori dal controllo. Con l'email
+// (v18.251.0) ha i sottotask come gli interni e si controlla.
+function _pwJchkFornSenzaJira(op) {
+  return pwRigaFornitore(op) && !opEmailDi(op.nome);
+}
+
 // Operatore in anagrafica con quell'accountId (tra le email già risolte), o ''.
 function _pwJchkOperatoreDi(accountId) {
   if (!accountId) return '';
-  const op = (state.operatori || []).find(o => o.email && _pwJchk.acc[o.email.trim().toLowerCase()] === accountId);
-  return op ? (op.nome_esteso || op.nome_breve || '') : '';
+  const m = opEmailMappa();
+  return Object.keys(m).find(n => _pwJchk.acc[m[n].toLowerCase()] === accountId) || '';
 }
 
 /* Cosa dice Jira di un sottotask presente: null se nulla da segnalare (o non ancora
@@ -141,7 +147,7 @@ function pwJchkVerificaJira(forza) {
   const aggiungi = nome => { const em = nome ? pwJiraOperatorEmail(nome).toLowerCase() : ''; if (em) emails.add(em); };
   week.forEach(bc => {
     if (!bc) return;
-    (bc.squadre || []).forEach(sq => (sq.operatori || []).forEach(op => { if (op && !op.fornitore) aggiungi(op.nome); }));
+    (bc.squadre || []).forEach(sq => (sq.operatori || []).forEach(op => { if (op && !_pwJchkFornSenzaJira(op)) aggiungi(op.nome); }));
     Object.values(pwJiraSubtaskMappa(bc)).forEach(e => aggiungi(e.operatore));
   });
   const daRisolvere = [...emails].filter(em => !(em in _pwJchk.acc) || (forza && _pwJchk.acc[em] === null));
@@ -306,7 +312,7 @@ function pwJchkAnalizza() {
         pwCellCantieriRaw(g).forEach((raw, ci) => {
           const cantiere = (raw || '').trim();
           if (!cantiere) return;
-          if (op.fornitore) { out.fornitori++; return; }
+          if (_pwJchkFornSenzaJira(op)) { out.fornitori++; return; }
           const attivita = pwJiraAttivitaSottotask(bc, cantiere, op.nome, pwCellAttivitaAt(g, ci));
           const k = op.nome + '|||' + cantiere + '|||' + attivita;
           let gr = gruppi.get(k);

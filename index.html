@@ -2003,7 +2003,7 @@
       </span>
       <button id="btn-presentation" class="px-3 py-1.5 text-sm rounded hover:bg-white/10" style="border:1px solid var(--dark-border-strong);color:var(--dark-text);visibility:visible;">📊 Modalità presentazione</button>
       <div class="text-xs pl-2" style="border-left:1px solid var(--dark-border-strong);color:var(--dark-text-muted);">
-        <span id="app-version" class="font-medium" style="color:var(--accent);">v18.250.0</span> · Michele Marchetti
+        <span id="app-version" class="font-medium" style="color:var(--accent);">v18.251.0</span> · Michele Marchetti
         <span id="sb-role-badge" style="margin-left:8px;padding:1px 8px;border-radius:9999px;background:rgba(255,255,255,.1);color:var(--dark-text);font-weight:600;"></span>
       </div>
     </div>
@@ -2163,6 +2163,10 @@
      .modal-backdrop (100050): conferme e avvisi lanciati da qui devono comparire sopra. -->
 <div id="cptl-modal" class="no-print" style="display:none;position:fixed;inset:0;z-index:99990;background:var(--backdrop);align-items:center;justify-content:center;" onclick="if (event.target === this) cpTlChiudi()">
   <div id="cptl-root" style="background:#f8fafc;border-radius:var(--radius-lg);width:1280px;max-width:97vw;height:90vh;box-shadow:var(--shadow-lg);display:flex;flex-direction:column;overflow:hidden;"></div>
+</div>
+<!-- Worklog fornitori di Controllo Produzione (src/js/produzione-fornitori-worklog.js). z-index sotto .modal-backdrop -->
+<div id="cpfw-modal" class="no-print" style="display:none;position:fixed;inset:0;z-index:99990;background:var(--backdrop);align-items:center;justify-content:center;" onclick="if (event.target === this) cpFornWlChiudi()">
+  <div id="cpfw-root" style="background:#fff;border-radius:var(--radius-lg);width:1100px;max-width:97vw;max-height:90vh;box-shadow:var(--shadow-lg);display:flex;flex-direction:column;overflow:hidden;"></div>
 </div>
 <!-- Editor worklog Jira della Timeline (sopra #cptl-modal, sotto .modal-backdrop) -->
 <div id="cptl-wl-modal" class="no-print" style="display:none;position:fixed;inset:0;z-index:99995;background:var(--backdrop);align-items:center;justify-content:center;" onclick="if (event.target === this) cpTlWlChiudi()">
@@ -3178,6 +3182,7 @@
         <button id="cp-collapse-all" class="px-3 py-1.5 text-sm border border-slate-300 rounded hover:bg-slate-50 no-print" onclick="cpCollapseAllToggle()">≡ Collassa</button>
         <button id="cpa-toggle" onclick="cpaToggle()" class="px-3 py-1.5 text-sm font-medium text-white rounded-lg flex items-center gap-1.5 no-print" style="background:#b45309;" title="Confronta Griglia e ore Jira della settimana e propone correzioni (non scrive su Jira)">🔍 Controllo anomalie</button>
         <button id="cptl-toggle" onclick="cpTlApri()" class="px-3 py-1.5 text-sm font-medium text-white rounded-lg flex items-center gap-1.5 no-print" style="background:#0f766e;" title="Barra oraria dei worklog Jira di ogni operatore: inizio, fine, pause e totale (click destro per la guida; click destro su una riga della tabella apre la timeline di quell'operatore e giorno)">🕘 Timeline worklog</button>
+        <button id="cpfw-toggle" onclick="cpFornWlApri()" class="px-3 py-1.5 text-sm font-medium text-white rounded-lg flex items-center gap-1.5 no-print" style="background:#4338ca;" title="Worklog dei dipendenti dei fornitori, copiati dal collega Eagle in squadra (click destro per la guida)">🏢 Worklog fornitori</button>
         <button id="cp-sync-jira" data-help-key="cp-sync-jira" onclick="pwControlloSyncJira()" class="px-3 py-1.5 text-sm font-medium bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 flex items-center gap-1.5 no-print pw-write-action" title="Click destro per la guida">
           🔄 Sincronizza da Jira
         </button>
@@ -4558,7 +4563,8 @@ async function sbPull() {
       const snap = rows[SB_ROW_CORE].payload;
       const keys = ['commesse_pipeline','operatori','assegnazioni','commesse_attive_extra',
                     'staffing_modificato','commesse_chiuse','commesse_attive_meta','commesse_escluse',
-                    'attestati_registro','dpi_disponibili','dpi_catalogo','limitazioni_registro','limitazioni_catalogo'];
+                    'attestati_registro','dpi_disponibili','dpi_catalogo','limitazioni_registro','limitazioni_catalogo',
+                    'fornitori'];
       keys.forEach(k => { if (snap[k] !== undefined) sbSetLocal(k, snap[k]); });
       await loadState();
       renderAll();
@@ -4634,7 +4640,8 @@ async function sbPush() {
     if (_sbDirty.core) {
       const keys = ['commesse_pipeline','operatori','assegnazioni','commesse_attive_extra',
                     'staffing_modificato','commesse_chiuse','commesse_attive_meta','commesse_escluse',
-                    'attestati_registro','dpi_disponibili','dpi_catalogo','limitazioni_registro','limitazioni_catalogo'];
+                    'attestati_registro','dpi_disponibili','dpi_catalogo','limitazioni_registro','limitazioni_catalogo',
+                    'fornitori'];
       const snap = { _savedAt: new Date().toISOString(), _version: '18', _savedBy: _sbUser.email };
       for (const k of keys) { try { snap[k] = await sget(k); } catch{} }
       domains.push({ id: SB_ROW_CORE, payload: snap, key: 'core' });
@@ -4823,6 +4830,7 @@ const SB_FN_FUNZIONI = [
   { gruppo: 'Controllo produzione', chiave: 'controllo:anomalie', label: '🔍 Controllo anomalie', sel: '#cpa-toggle, #cpa-modal' },
   { gruppo: 'Controllo produzione', chiave: 'controllo:timeline', label: '🕘 Timeline worklog', sel: '#cptl-toggle, #cptl-modal' },
   { gruppo: 'Controllo produzione', chiave: 'controllo:timeline-modifica', label: '✎ Timeline: correggi/aggiungi/elimina worklog Jira', sel: '.cptl-add, #cptl-wl-modal' },
+  { gruppo: 'Controllo produzione', chiave: 'controllo:fornitori-worklog', label: '🏢 Worklog fornitori', sel: '#cpfw-toggle, #cpfw-modal' },
   { gruppo: 'Controllo produzione', chiave: 'controllo:sync-jira', label: '🔄 Sincronizza da Jira', sel: '#cp-sync-jira' },
   { gruppo: 'Controllo produzione', chiave: 'controllo:mysond', label: '📥 Carica MySond', sel: '#cp-mysond-btn' },
   { gruppo: 'Auto-pianifica', chiave: 'autoplan:assistente', label: '✦ Assistente pianificazione', sel: '.apc-toggle, #apc-panel' },
@@ -8530,9 +8538,52 @@ function renderCommesseAttive() {
 // weekly-strumenti.js) ma restano fuori da KPI, gap risorse & raccomandazioni
 // assunzione, coerenza attestati e mappatura email Jira, che lavorano solo sul
 // pool interno.
+// Dalla v18.251.0 la lista si sincronizza su Supabase (chiave core 'fornitori', prima
+// restava solo nel browser) e un dipendente può avere l'email Jira: con l'email ha i
+// sottotask come gli interni e i worklog copiati dal collega Eagle in squadra
+// (produzione-fornitori-worklog.js). «🏢 Sposta in un fornitore» nella gestione
+// dell'operatore lo toglie dal pool tenendo nome, email, provincia e skill.
 
 function fornGenId(prefix) {
   return prefix + '_' + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2, 8);
+}
+
+// Fornitore e dipendente di un nome della Griglia (null se è del pool interno o sconosciuto).
+function fornitoreDiNome(nome) {
+  if (!nome) return null;
+  for (const f of (state.fornitori || [])) {
+    const d = (f.dipendenti || []).find(d => d.nome_esteso === nome);
+    if (d) return { fornitore: f, dipendente: d };
+  }
+  return null;
+}
+
+// Riga della Griglia di un dipendente fornitore: col flag op.fornitore (scelto dalla
+// tendina) o perché il nome è fra i dipendenti (es. operatore spostato dal pool).
+function pwRigaFornitore(op) {
+  return !!(op && (op.fornitore || fornitoreDiNome(op.nome)));
+}
+
+// Email Jira di un nome della Griglia: pool interno, poi dipendenti dei fornitori. '' se non c'è.
+function opEmailDi(nome) {
+  if (!nome) return '';
+  const op = (state.operatori || []).find(o => (o.nome_esteso || o.nome_breve || o.nome) === nome);
+  if (op) return op.email && op.email.trim() ? op.email.trim() : '';
+  const fd = fornitoreDiNome(nome);
+  return fd && fd.dipendente.email && fd.dipendente.email.trim() ? fd.dipendente.email.trim() : '';
+}
+
+// nome -> email di tutti quelli che ce l'hanno (pool interno + dipendenti fornitore).
+function opEmailMappa() {
+  const m = {};
+  (state.fornitori || []).forEach(f => (f.dipendenti || []).forEach(d => {
+    if (d.nome_esteso && d.email && d.email.trim()) m[d.nome_esteso] = d.email.trim();
+  }));
+  (state.operatori || []).forEach(o => {
+    const n = o.nome_esteso || o.nome_breve || o.nome;
+    if (n && o.email && o.email.trim()) m[n] = o.email.trim();
+  });
+  return m;
 }
 
 function renderFornitori() {
@@ -8623,6 +8674,8 @@ function renderFornitoreDipendenteRow(fid, d) {
       </select>
       <button class="del-forn-dip text-red-400 hover:text-red-600 text-xs px-1" data-fid="${esc(fid)}" data-did="${esc(d.id)}" title="Rimuovi dipendente">✕</button>
     </div>
+    <input class="forn-dip-field w-full text-xs border border-slate-300 rounded px-1.5 py-0.5" data-fid="${esc(fid)}" data-did="${esc(d.id)}" data-field="email" type="email"
+      placeholder="Email Jira (facoltativa: con l'email ha i sottotask e i worklog copiati dal collega Eagle)" value="${esc(d.email||'')}">
     <div class="flex flex-wrap gap-1">${skillChips}</div>
   </div>`;
 }
@@ -8764,6 +8817,97 @@ async function updateFornitoreStrumentoField(fid, sid, field, value) {
   if (s[field] === v) return;
   s[field] = v;
   await saveState();
+}
+
+/* ----- Sposta un operatore del pool in un fornitore (v18.251.0) -----
+   Per chi in realtà lavora per un fornitore esterno: esce dal pool (KPI, gap risorse,
+   attestati, staffing futuro azzerato come in deleteOperatore) e diventa dipendente del
+   fornitore con lo STESSO nome, così Griglia, sottotask Jira (pw_jira_subtask) e storico del
+   Controllo Produzione continuano a riconoscerlo. Email, provincia, skill e cognome passano
+   al dipendente; nelle righe della Griglia dalla settimana corrente in poi si scrive
+   op.fornitore (badge 🏢). Le settimane passate restano com'erano. */
+function apriSpostaInFornitore(opId) {
+  const op = (state.operatori || []).find(o => o.id === opId);
+  if (!op) return;
+  if (!(state.fornitori || []).length) {
+    showAlertModal('Non ci sono fornitori: crealo prima in Dashboard → Fornitori («+ Nuovo fornitore»).');
+    return;
+  }
+  const opzioni = state.fornitori.slice().sort((a, b) => (a.nome || '').localeCompare(b.nome || ''))
+    .map(f => '<option value="' + esc(f.id) + '">' + esc(f.nome || '(senza nome)') + '</option>').join('');
+  const root = document.getElementById('modal-root');
+  root.innerHTML = '<div class="modal-backdrop">' +
+    '<div class="bg-white rounded-lg shadow-xl w-full max-w-sm mx-4 p-5">' +
+      '<div class="text-sm font-semibold text-slate-900 mb-1">🏢 Sposta in un fornitore</div>' +
+      '<div class="text-xs text-slate-500 mb-3"><span class="font-semibold text-slate-800">' + esc(op.nome_esteso || '') + '</span> esce dal pool operatori e diventa dipendente del fornitore, con lo stesso nome, email, provincia e skill.</div>' +
+      '<select id="spf-forn" class="w-full text-sm border border-slate-300 rounded px-2 py-1.5 mb-3">' + opzioni + '</select>' +
+      '<div class="text-[11px] text-slate-500 bg-slate-50 border border-slate-200 rounded p-2 mb-3">' +
+        '✓ Griglia, sottotask Jira e Controllo Produzione lo riconoscono ancora (stesso nome).<br>' +
+        (op.email ? '✓ Con l\'email ' + esc(op.email) + ' avrà i sottotask e i worklog copiati dal collega Eagle in squadra.<br>' : '⚠ Senza email non avrà sottotask Jira.<br>') +
+        '✗ Esce da KPI, gap risorse e attestati; le allocazioni future dello staffing vengono azzerate.' +
+      '</div>' +
+      '<div class="flex justify-end gap-2">' +
+        '<button id="spf-annulla" class="text-sm text-slate-500 hover:text-slate-700 px-3 py-1.5">Annulla</button>' +
+        '<button id="spf-ok" class="text-sm bg-teal-600 hover:bg-teal-700 text-white rounded px-3 py-1.5">Sposta</button>' +
+      '</div>' +
+    '</div>' +
+  '</div>';
+  document.getElementById('spf-annulla').onclick = () => closeModal();
+  document.getElementById('spf-ok').onclick = () => {
+    const fid = document.getElementById('spf-forn').value;
+    closeModal();
+    spostaOperatoreInFornitore(opId, fid);
+  };
+}
+
+async function spostaOperatoreInFornitore(opId, fid) {
+  if (!sbGuardWrite()) return;
+  const op = (state.operatori || []).find(o => o.id === opId);
+  const f = (state.fornitori || []).find(f => f.id === fid);
+  if (!op || !f) return;
+  const nome = op.nome_esteso;
+  f.dipendenti = f.dipendenti || [];
+  let d = f.dipendenti.find(x => x.nome_esteso === nome);
+  if (!d) {
+    d = { id: fornGenId('dip'), nome_esteso: nome, skills: [], provincia: '', telefono: '', note: '' };
+    f.dipendenti.push(d);
+  }
+  d.email = (op.email || '').trim() || d.email || '';
+  d.provincia = op.provincia || d.provincia || '';
+  d.skills = [...new Set([...(d.skills || []), ...(op.skills || [])])];
+  if (op.nome) d.nome = op.nome;
+  if (op.cognome) d.cognome = op.cognome;
+  d.da_pool = { id: op.id, il: new Date().toISOString().slice(0, 10) };
+
+  // Stessa pulizia di deleteOperatore: staffing futuro azzerato, passato tenuto
+  const mc = meseCorrente();
+  state.staffing = state.staffing.map(r => {
+    if (r.risorsa !== nome) return r;
+    return { ...r, mesi: r.mesi.map((v, i) => i < mc ? v : 0) };
+  }).filter(r => r.risorsa !== nome || r.mesi.some(v => (Number(v) || 0) > 0));
+  state.operatori = state.operatori.filter(o => o.id !== opId);
+  state.assegnazioni = state.assegnazioni.filter(a => a.operatore_id !== opId);
+  ricalcolaAllocOperatori();
+  await saveState('Operatore spostato in un fornitore', { operatore: nome, fornitore: f.nome }, true);
+
+  // Badge fornitore sulle righe della Griglia dalla settimana corrente in poi
+  const oggi = isoWeekYear(new Date());
+  const da = oggi.year * 100 + oggi.week;
+  let righe = 0;
+  Object.keys(pwData || {}).forEach(anno => {
+    if (!/^\d+$/.test(anno)) return;
+    Object.keys(pwData[anno] || {}).forEach(week => {
+      const data = pwData[anno][week];
+      if (!Array.isArray(data) || Number(anno) * 100 + Number(week) < da) return;
+      data.forEach(bc => (bc.squadre || []).forEach(sq => (sq.operatori || []).forEach(o => {
+        if (o && o.nome === nome && o.fornitore !== f.nome) { o.fornitore = f.nome; righe++; }
+      })));
+    });
+  });
+  if (righe) await pwSave();
+
+  renderAll();
+  showAlertModal(nome + ' è ora dipendente di «' + f.nome + '»' + (righe ? ' (' + righe + (righe === 1 ? ' riga' : ' righe') + ' della Griglia aggiornate).' : '.'));
 }
 /* ===================== ASSEGNAZIONI ===================== */
 async function assegnaOperatore(commessaId, operatoreId) {
@@ -10445,6 +10589,10 @@ function openLicenziaModal(id) {
           '<span class="text-lg leading-none mt-0.5">\u{1F6AA}</span>' +
           '<div><div class="text-sm font-semibold text-slate-800">Segna come Ex Collega</div><div class="text-[11px] text-slate-500 mt-0.5">Rimosso dai nuovi incarichi \u00b7 Lo storico viene preservato con badge <span class=\'font-semibold text-red-500\'>ex</span></div></div>' +
         '</button>' +
+        '<button id="lic-forn" class="flex items-start gap-3 text-left px-3 py-2.5 border border-slate-200 rounded-md hover:bg-indigo-50 hover:border-indigo-300 transition-colors">' +
+          '<span class="text-lg leading-none mt-0.5">\u{1F3E2}</span>' +
+          '<div><div class="text-sm font-semibold text-slate-800">Sposta in un fornitore</div><div class="text-[11px] text-slate-500 mt-0.5">Diventa dipendente di un fornitore esterno · Griglia e sottotask Jira lo riconoscono ancora</div></div>' +
+        '</button>' +
         '<button id="lic-del" class="flex items-start gap-3 text-left px-3 py-2.5 border border-slate-200 rounded-md hover:bg-red-50 hover:border-red-300 transition-colors">' +
           '<span class="text-lg leading-none mt-0.5">\u{1F5D1}</span>' +
           '<div><div class="text-sm font-semibold text-red-700">Elimina definitivamente</div><div class="text-[11px] text-slate-500 mt-0.5">Rimozione completa dal sistema (es. utenti di test)</div></div>' +
@@ -10454,6 +10602,7 @@ function openLicenziaModal(id) {
     '</div>' +
   '</div>';
   document.getElementById('lic-ex').onclick = () => { closeModal(); licenziaOperatore(id); };
+  document.getElementById('lic-forn').onclick = () => { closeModal(); apriSpostaInFornitore(id); };
   document.getElementById('lic-del').onclick = () => { closeModal(); deleteOperatore(id); };
   document.getElementById('lic-cancel').onclick = () => closeModal();
 }
@@ -17523,9 +17672,9 @@ function pwJiraResolveCognome(op) {
 // Jira, quindi nessun status 'error' dalla Edge Function per lui — va perciò
 // intercettato qui, lato client, per non escluderlo silenziosamente (vedi
 // pwJiraSubtaskMarkMissingEmail e i punti che la chiamano).
+// Dalla v18.251.0 anche i dipendenti fornitore con email (opEmailDi).
 function pwJiraOperatorEmail(nomeOperatore) {
-  const op = (state.operatori || []).find(o => (o.nome_esteso || o.nome_breve) === nomeOperatore);
-  return op && op.email && op.email.trim() ? op.email.trim() : '';
+  return opEmailDi(nomeOperatore);
 }
 
 // Sottotask giornaliero (v18.229.0): uno per operatore + cantiere + attività + giorno.
@@ -17535,7 +17684,8 @@ function pwJiraOperatorEmail(nomeOperatore) {
 // presenti sul progetto, inizio e scadenza diventano il giorno stesso (vedi
 // pwJiraSubtaskOpenExtraFieldsModal).
 function pwJiraBuildSubtaskItem(meta, task, comune, nomeOperatore, attivita, giorno) {
-  const op = (state.operatori || []).find(o => (o.nome_esteso || o.nome_breve) === nomeOperatore);
+  const fd = fornitoreDiNome(nomeOperatore);
+  const op = (state.operatori || []).find(o => (o.nome_esteso || o.nome_breve) === nomeOperatore) || (fd && fd.dipendente);
   const email = pwJiraOperatorEmail(nomeOperatore);
   if (!email) return null;
   const cognome = op ? pwJiraResolveCognome(op) : '';
@@ -21133,12 +21283,8 @@ async function pwControlloSyncJira(scopeCommessa, scopeSquadra, btnEl) {
     }
     const startDate = isoDates[0], endDate = isoDates[5];
 
-    // Mappa nome operatore -> email
-    const emailByNome = {};
-    (state.operatori || []).forEach(o => {
-      const n = o.nome_esteso || o.nome_breve || o.nome;
-      if (n && o.email && o.email.trim()) emailByNome[n] = o.email.trim();
-    });
+    // Mappa nome operatore -> email (pool e dipendenti fornitore)
+    const emailByNome = opEmailMappa();
 
     // Raccogli le celle pianificate (stessa logica di inclusione del render)
     const data = pwGetWeekData();
@@ -21181,6 +21327,11 @@ async function pwControlloSyncJira(scopeCommessa, scopeSquadra, btnEl) {
       if (status) status.textContent = '';
       return;
     }
+
+    // Prima i worklog dei dipendenti fornitore (copiati dal collega Eagle, v18.251.0), così
+    // le Ore Jira lette subito dopo li comprendono. Un errore lì non ferma la sincronizzazione.
+    const fornMsg = await cpFornWlPrimaDellaSync(anno, week, status);
+    if (status) status.textContent = `⏳ Sincronizzazione${scopeLabel} in corso…`;
 
     // Chiamata Edge Function
     const { data: fnData, error } = await _sbClient.functions.invoke('jira-sync-worklogs', {
@@ -21398,6 +21549,7 @@ async function pwControlloSyncJira(scopeCommessa, scopeSquadra, btnEl) {
       msg += `\n\n⚠ ${errKeys.length} error${errKeys.length>1?'i':'e'} Jira: ` +
              errKeys.map(e => `${e} (${errs[e]})`).join('; ') + '.';
     }
+    if (fornMsg) msg += `\n\n🏢 ${fornMsg}`;
     msg += kmReadMsg;
     msg += kmMsg;
     if (nonVerificati > 0) {
@@ -21701,7 +21853,7 @@ async function cpSetCampoProduzione(commessa, sel) {
 }
 
 function cpOperatoreHaEmail(nome) {
-  return (state.operatori || []).some(o => (o.nome_esteso || o.nome_breve || o.nome) === nome && o.email && o.email.trim());
+  return !!opEmailDi(nome);
 }
 
 const CP_KMJ_STATI = {
@@ -22327,11 +22479,7 @@ async function cpProcessReport(csvText, commessa, squadra) {
   }
 
   // Mappa nome operatore -> email (stessa logica del sync Jira)
-  const emailByNome = {};
-  (state.operatori || []).forEach(o => {
-    const n = o.nome_esteso || o.nome_breve || o.nome;
-    if (n && o.email && o.email.trim()) emailByNome[n] = o.email.trim();
-  });
+  const emailByNome = opEmailMappa();
 
   // Comuni (Epic) disponibili nei ticket della squadra questa settimana
   const comuneSet = new Set();
@@ -23092,7 +23240,7 @@ async function cpMysondImportFile(file) {
   const mancanti = new Set();
   if (copreSettimana) {
     pwGetWeekData().forEach(bc => (bc.squadre || []).forEach(sq => (sq.operatori || []).forEach(op => {
-      if (op.nome && !op.fornitore && !operatoriFile.has(op.nome)
+      if (op.nome && !pwRigaFornitore(op) && !operatoriFile.has(op.nome)
           && Object.values(op.giorni || {}).some(gd => pwCellCantieri(gd || {}).length)) mancanti.add(op.nome);
     })));
   }
@@ -24111,11 +24259,7 @@ function _cpaIndiceSottotask() {
 }
 
 async function _cpaLeggiWorklog(nomi, date, avvisi, silenzioso) {
-  const emailByNome = {};
-  (state.operatori || []).forEach(o => {
-    const n = o.nome_esteso || o.nome_breve || o.nome;
-    if (n && o.email && o.email.trim()) emailByNome[n] = o.email.trim();
-  });
+  const emailByNome = opEmailMappa();
   const conEmail = nomi.filter(n => emailByNome[n]);
   const senzaEmail = nomi.filter(n => !emailByNome[n]);
   if (senzaEmail.length) avvisi.push('Senza email in anagrafica, worklog non controllati: ' + senzaEmail.join(', ') + '.');
@@ -25936,14 +26080,9 @@ function _cpTlVista() {
 
 /* ---------- Lettura da Jira (sola lettura, non salvata) ---------- */
 
-/* Nome operatore -> email in anagrafica (serve a leggere e scrivere i suoi worklog) */
+/* Nome operatore -> email in anagrafica, pool e dipendenti fornitore (serve a leggere e scrivere i suoi worklog) */
 function _cpTlEmailPerNome() {
-  const m = {};
-  (state.operatori || []).forEach(o => {
-    const n = o.nome_esteso || o.nome_breve || o.nome;
-    if (n && o.email && o.email.trim()) m[n] = o.email.trim();
-  });
-  return m;
+  return opEmailMappa();
 }
 
 async function _cpTlLeggiWorklog(nomi, date) {
@@ -26800,6 +26939,202 @@ async function cpTlWlElimina() {
     action: 'delete', issueKey: W.t.key, worklogId: String(W.w.id), operatore: W.nome,
     atteso: { started: W.w.started, seconds: W.w.seconds },
   }, 'Worklog di ' + W.nome + ' su ' + W.t.key + ' (' + dove + ') eliminato da Jira.');
+}
+/* ===== WORKLOG FORNITORI (cpFornWl*, v18.251.0) =====
+   I dipendenti dei fornitori con email (dashboard-fornitori.js) hanno i sottotask giornalieri
+   ma non usano Jira. La Edge Function jira-fornitori-worklog porta ogni loro sottotask nello
+   stato del sottotask del collega interno della stessa squadra (stesso giorno, commessa e
+   cantiere) e ne copia i worklog, intestati all'assegnatario. Gira da sola (cron ogni 15
+   minuti, lun–sab) e prima di ogni «🔄 Sincronizza da Jira» sulla settimana sincronizzata.
+   Questo modal («🏢 Worklog fornitori» in Controllo Produzione) mostra l'ultimo giro, permette
+   di scegliere a mano il collega da cui copiare (fornitori_worklog_sorgente) e di lanciare un
+   giro sulla settimana mostrata (anteprima senza scritture, o allinea). I worklog dei
+   sottotask fornitore sono gestiti dalla funzione: quelli che non sono copie si eliminano. */
+
+const CPFW_FN = 'jira-fornitori-worklog';
+const _cpFornWl = { aperto: false, esito: null, ts: '', da: '', anteprima: false, inCorso: false, msg: '', errore: '', scelte: {} };
+
+// La settimana ha in Griglia dipendenti fornitore con email?
+function cpFornWlSettimanaHa(anno, week) {
+  const data = (pwData[anno] || {})[week];
+  if (!Array.isArray(data)) return false;
+  return data.some(bc => ((bc && bc.squadre) || []).some(sq => (sq.operatori || []).some(op =>
+    op && op.nome && fornitoreDiNome(op.nome) && opEmailDi(op.nome))));
+}
+
+async function cpFornWlEsegui(anno, week, dryRun) {
+  const { data, error } = await _sbClient.functions.invoke(CPFW_FN, { body: { anno, week, dryRun: !!dryRun, origine: 'app' } });
+  if (error) throw new Error(await _cpEdgeErr(error, CPFW_FN));
+  if (data && data.error) throw new Error(data.error);
+  return data || {};
+}
+
+/* Prima di «Sincronizza da Jira»: allinea i sottotask fornitore della settimana, così le Ore
+   Jira lette subito dopo comprendono le copie. Ritorna un avviso per il riepilogo ('' se tutto ok). */
+async function cpFornWlPrimaDellaSync(anno, week, status) {
+  if (!cpFornWlSettimanaHa(anno, week)) return '';
+  if (status) status.textContent = '⏳ Copio i worklog dei fornitori dal collega Eagle…';
+  try {
+    const r = await cpFornWlEsegui(anno, week, false);
+    if (r.occupato) return 'Worklog fornitori: un giro di copia era già in corso, le copie arriveranno a breve.';
+    _cpFornWl.esito = r;
+    _cpFornWl.anteprima = false;
+    _cpFornWl.ts = new Date().toISOString();
+    _cpFornWl.da = (_sbUser && _sbUser.email) || '';
+    const err = (r.coppie || []).filter(c => c.errore).length;
+    return err ? 'Worklog fornitori: ' + err + (err === 1 ? ' sottotask con errore' : ' sottotask con errori') + ' (vedi «🏢 Worklog fornitori»).' : '';
+  } catch (e) {
+    return 'Copia dei worklog fornitori non riuscita: ' + (e.message || e);
+  }
+}
+
+async function cpFornWlApri() {
+  _cpFornWl.aperto = true;
+  _cpFornWl.errore = '';
+  document.getElementById('cpfw-modal').style.display = 'flex';
+  _cpFornWlRender();
+  try {
+    const [st, sc] = await Promise.all([
+      _sbClient.from('fornitori_worklog_stato').select('ultimo_avvio,ultimo_da,ultimo_esito').eq('id', 1).maybeSingle(),
+      _sbClient.from('fornitori_worklog_sorgente').select('target_key,sorgente'),
+    ]);
+    if (st.error) throw st.error;
+    _cpFornWl.scelte = {};
+    ((sc && sc.data) || []).forEach(r => { _cpFornWl.scelte[r.target_key] = r.sorgente; });
+    const s = st.data;
+    // L'ultimo giro salvato (cron o un collega) sostituisce quello in memoria solo se più recente
+    if (s && s.ultimo_esito && (!_cpFornWl.ts || _cpFornWl.anteprima || new Date(s.ultimo_avvio) > new Date(_cpFornWl.ts))) {
+      _cpFornWl.esito = s.ultimo_esito;
+      _cpFornWl.ts = s.ultimo_avvio;
+      _cpFornWl.da = s.ultimo_da || '';
+      _cpFornWl.anteprima = false;
+    }
+  } catch (e) {
+    _cpFornWl.errore = 'Lettura dell\'ultimo giro non riuscita: ' + (e.message || e);
+  }
+  if (_cpFornWl.aperto) _cpFornWlRender();
+}
+
+function cpFornWlChiudi() {
+  _cpFornWl.aperto = false;
+  document.getElementById('cpfw-modal').style.display = 'none';
+}
+
+async function cpFornWlAvvia(dryRun) {
+  if (!dryRun && !sbGuardWrite()) return;
+  if (_cpFornWl.inCorso) return;
+  if (!dryRun && !await showConfirmAsync('Allineo su Jira i sottotask dei fornitori della settimana ' + pwWeek + '/' + pwAnno
+      + ' (fino a oggi): stato come il sottotask del collega Eagle, worklog copiati uguali ai suoi. Sui sottotask dei fornitori '
+      + 'i worklog che non sono copie vengono eliminati. Procedere?', 'Allinea')) return;
+  _cpFornWl.inCorso = true;
+  _cpFornWl.errore = '';
+  _cpFornWl.msg = dryRun ? '⏳ Calcolo l\'anteprima (nessuna scrittura su Jira)…' : '⏳ Allineo i sottotask dei fornitori…';
+  _cpFornWlRender();
+  try {
+    const r = await cpFornWlEsegui(pwAnno, pwWeek, dryRun);
+    if (r.occupato) {
+      _cpFornWl.errore = 'Un altro giro di copia è in corso (cron o un collega): riprova tra un minuto.';
+    } else {
+      _cpFornWl.esito = r;
+      _cpFornWl.anteprima = !!dryRun;
+      _cpFornWl.ts = new Date().toISOString();
+      _cpFornWl.da = (_sbUser && _sbUser.email) || '';
+      if (!dryRun) sbLogActivity('Worklog fornitori: allineamento manuale', { anno: pwAnno, week: pwWeek });
+    }
+  } catch (e) {
+    _cpFornWl.errore = e.message || String(e);
+  }
+  _cpFornWl.inCorso = false;
+  _cpFornWl.msg = '';
+  if (_cpFornWl.aperto) _cpFornWlRender();
+}
+
+// Scelta a mano del collega da cui copiare ('' = automatica). Vale dal prossimo giro.
+async function cpFornWlScegli(sel) {
+  if (!sbGuardWrite()) { _cpFornWlRender(); return; }
+  const key = sel.dataset.key, nome = sel.value;
+  const q = nome
+    ? _sbClient.from('fornitori_worklog_sorgente').upsert({ target_key: key, sorgente: nome, updated_at: new Date().toISOString(), updated_by: (_sbUser && _sbUser.email) || '' })
+    : _sbClient.from('fornitori_worklog_sorgente').delete().eq('target_key', key);
+  const { error } = await q;
+  if (error) { showAlertModal('Scelta non salvata: ' + error.message); _cpFornWlRender(); return; }
+  if (nome) _cpFornWl.scelte[key] = nome; else delete _cpFornWl.scelte[key];
+  _cpFornWlRender();
+}
+
+function _cpFornWlStatoHtml(c) {
+  const s = c.stato;
+  if (!s) return '<span style="color:#94a3b8;">—</span>';
+  if (s.errore) return '<span style="color:#b91c1c;">' + esc(s.prima) + ' ⚠ ' + esc(s.errore) + '</span>';
+  if (!s.passi || !s.passi.length) return '<span style="color:#475569;">' + esc(s.dopo || s.prima || '') + '</span>';
+  return '<span style="color:#4338ca;">' + esc(s.passi.join(' · ')) + '</span>';
+}
+
+function _cpFornWlWorklogHtml(c) {
+  const p = [];
+  if (c.creati) p.push('<span style="color:#047857;">+' + c.creati + ' copiat' + (c.creati === 1 ? 'o' : 'i') + '</span>');
+  if (c.aggiornati) p.push('<span style="color:#4338ca;">~' + c.aggiornati + ' aggiornat' + (c.aggiornati === 1 ? 'o' : 'i') + '</span>');
+  if (c.eliminati) p.push('<span style="color:#b45309;">−' + c.eliminati + ' eliminat' + (c.eliminati === 1 ? 'o' : 'i') + '</span>');
+  return p.join(' ') || (c.sourceKey && !c.errore ? '<span style="color:#475569;">allineati</span>' : '');
+}
+
+function _cpFornWlLink(key) {
+  const url = cpStatoUrlFor(key);
+  return url ? '<a href="' + esc(url) + '" target="_blank" rel="noopener" style="color:#4338ca;">' + esc(key) + '</a>' : esc(key);
+}
+
+function _cpFornWlRender() {
+  const root = document.getElementById('cpfw-root');
+  if (!root || !_cpFornWl.aperto) return;
+  const r = _cpFornWl.esito;
+  const coppie = (r && r.coppie) || [];
+  const quando = _cpFornWl.ts ? new Date(_cpFornWl.ts).toLocaleString('it-IT', { dateStyle: 'short', timeStyle: 'short' }) : '';
+  const testata = r
+    ? (_cpFornWl.anteprima ? '👁 Anteprima (nulla è stato scritto su Jira)' : 'Ultimo giro')
+      + (quando ? ' · ' + esc(quando) : '') + (_cpFornWl.da ? ' · ' + esc(_cpFornWl.da === 'cron' ? 'automatico' : _cpFornWl.da) : '')
+      + (r.dal ? ' · giorni ' + esc(r.dal) + ' → ' + esc(r.al) : '')
+    : 'Nessun giro ancora registrato.';
+  const righe = coppie.map(c => {
+    const scelta = _cpFornWl.scelte[c.targetKey] || '';
+    const opz = ['<option value="">auto' + (c.scelta === 'auto' && c.sorgente ? ' (' + esc(c.sorgente) + ')' : '') + '</option>']
+      .concat((c.candidati || []).map(n => '<option value="' + esc(n) + '"' + (n === scelta ? ' selected' : '') + '>' + esc(n) + '</option>'));
+    const sorg = (c.candidati || []).length
+      ? '<select data-key="' + esc(c.targetKey) + '" onchange="cpFornWlScegli(this)" data-help-key="cpfw-sorgente" style="font-size:12px;border:1px solid #cbd5e1;border-radius:6px;padding:2px 4px;max-width:190px;">' + opz.join('') + '</select>'
+        + (c.sourceKey ? '<div style="font-size:11px;color:#64748b;">da ' + _cpFornWlLink(c.sourceKey) + '</div>' : '')
+      : '<span style="color:#b45309;">' + esc(c.nota || 'nessun collega') + '</span>';
+    const nota = c.errore ? '<span style="color:#b91c1c;">⚠ ' + esc(c.errore) + '</span>' : (c.candidati && c.candidati.length && c.nota ? esc(c.nota) : '');
+    return '<tr style="border-top:1px solid #e2e8f0;vertical-align:top;">'
+      + '<td style="padding:6px 8px;white-space:nowrap;">' + esc(pwJsubGiornoLabel(c.anno, c.week, c.giorno)) + '</td>'
+      + '<td style="padding:6px 8px;"><div style="font-weight:600;">' + esc(c.operatore) + '</div><div style="font-size:11px;color:#64748b;">🏢 ' + esc(c.fornitore) + '</div></td>'
+      + '<td style="padding:6px 8px;">' + esc(c.cantiere) + (c.attivita ? '<div style="font-size:11px;color:#64748b;">' + esc(c.attivita) + '</div>' : '') + '</td>'
+      + '<td style="padding:6px 8px;">' + _cpFornWlLink(c.targetKey) + '</td>'
+      + '<td style="padding:6px 8px;">' + sorg + '</td>'
+      + '<td style="padding:6px 8px;">' + _cpFornWlStatoHtml(c) + '</td>'
+      + '<td style="padding:6px 8px;">' + _cpFornWlWorklogHtml(c) + (nota ? '<div style="font-size:11px;">' + nota + '</div>' : '') + '</td>'
+      + '</tr>';
+  }).join('');
+  const avvisi = ((r && r.avvisi) || []).map(a => '<div>⚠ ' + esc(a) + '</div>').join('');
+  const btn = 'padding:6px 12px;font-size:13px;border-radius:8px;cursor:pointer;';
+  root.innerHTML =
+    '<div style="padding:14px 18px;border-bottom:1px solid #e2e8f0;display:flex;align-items:center;gap:10px;flex-wrap:wrap;">'
+    + '<div style="font-weight:700;font-size:16px;color:#0f172a;font-family:var(--font-display);">🏢 Worklog fornitori</div>'
+    + '<div style="font-size:12px;color:#64748b;flex:1;min-width:200px;">' + testata + '</div>'
+    + '<button id="cpfw-anteprima" onclick="cpFornWlAvvia(true)" style="' + btn + 'border:1px solid #cbd5e1;background:#fff;"' + (_cpFornWl.inCorso ? ' disabled' : '') + '>👁 Anteprima week ' + pwWeek + '</button>'
+    + '<button id="cpfw-allinea" onclick="cpFornWlAvvia(false)" class="pw-write-action" style="' + btn + 'border:none;background:#4338ca;color:#fff;"' + (_cpFornWl.inCorso ? ' disabled' : '') + '>▶ Allinea week ' + pwWeek + '</button>'
+    + '<button onclick="cpFornWlChiudi()" style="' + btn + 'border:1px solid #cbd5e1;background:#fff;">✕</button>'
+    + '</div>'
+    + '<div style="padding:10px 18px;font-size:12px;color:#475569;background:#eef2ff;">Ogni sottotask di un dipendente fornitore segue il collega interno della stessa squadra, stesso cantiere e giorno: '
+    + 'stesso stato (passando da IN PROGRESS) e stessi worklog, intestati al dipendente. Gira da solo ogni 15 minuti (lun–sab) e prima di «🔄 Sincronizza da Jira».</div>'
+    + (_cpFornWl.msg ? '<div style="padding:8px 18px;font-size:13px;color:#4338ca;">' + esc(_cpFornWl.msg) + '</div>' : '')
+    + (_cpFornWl.errore ? '<div style="padding:8px 18px;font-size:13px;color:#b91c1c;">⚠ ' + esc(_cpFornWl.errore) + '</div>' : '')
+    + (avvisi ? '<div style="padding:8px 18px;font-size:12px;color:#b45309;">' + avvisi + '</div>' : '')
+    + '<div style="overflow:auto;flex:1;padding:0 10px 12px;">'
+    + (coppie.length
+      ? '<table style="width:100%;border-collapse:collapse;font-size:13px;"><thead><tr style="text-align:left;color:#64748b;font-size:11px;text-transform:uppercase;">'
+        + '<th style="padding:8px;">Giorno</th><th style="padding:8px;">Dipendente</th><th style="padding:8px;">Cantiere</th><th style="padding:8px;">Sottotask</th>'
+        + '<th style="padding:8px;">Copia da</th><th style="padding:8px;">Stato</th><th style="padding:8px;">Worklog</th></tr></thead><tbody>' + righe + '</tbody></table>'
+      : '<div style="padding:24px;text-align:center;color:#94a3b8;font-size:13px;">' + (r ? 'Nessun sottotask di dipendenti fornitore nel periodo.' : '') + '</div>')
+    + '</div>';
 }
 /* ==================== MAPPA LEAFLET + NOMINATIM ==================== */
 const MAP_COLORS = ['#0d9488','#6366f1','#f59e0b','#ef4444','#10b981','#8b5cf6','#ec4899','#0ea5e9','#f97316','#84cc16'];
@@ -34531,11 +34866,17 @@ function _pwJchkAccountDi(operatore) {
   return (em && _pwJchk.acc[em]) || '';
 }
 
+// Dipendente fornitore senza email: niente sottotask, fuori dal controllo. Con l'email
+// (v18.251.0) ha i sottotask come gli interni e si controlla.
+function _pwJchkFornSenzaJira(op) {
+  return pwRigaFornitore(op) && !opEmailDi(op.nome);
+}
+
 // Operatore in anagrafica con quell'accountId (tra le email già risolte), o ''.
 function _pwJchkOperatoreDi(accountId) {
   if (!accountId) return '';
-  const op = (state.operatori || []).find(o => o.email && _pwJchk.acc[o.email.trim().toLowerCase()] === accountId);
-  return op ? (op.nome_esteso || op.nome_breve || '') : '';
+  const m = opEmailMappa();
+  return Object.keys(m).find(n => _pwJchk.acc[m[n].toLowerCase()] === accountId) || '';
 }
 
 /* Cosa dice Jira di un sottotask presente: null se nulla da segnalare (o non ancora
@@ -34591,7 +34932,7 @@ function pwJchkVerificaJira(forza) {
   const aggiungi = nome => { const em = nome ? pwJiraOperatorEmail(nome).toLowerCase() : ''; if (em) emails.add(em); };
   week.forEach(bc => {
     if (!bc) return;
-    (bc.squadre || []).forEach(sq => (sq.operatori || []).forEach(op => { if (op && !op.fornitore) aggiungi(op.nome); }));
+    (bc.squadre || []).forEach(sq => (sq.operatori || []).forEach(op => { if (op && !_pwJchkFornSenzaJira(op)) aggiungi(op.nome); }));
     Object.values(pwJiraSubtaskMappa(bc)).forEach(e => aggiungi(e.operatore));
   });
   const daRisolvere = [...emails].filter(em => !(em in _pwJchk.acc) || (forza && _pwJchk.acc[em] === null));
@@ -34756,7 +35097,7 @@ function pwJchkAnalizza() {
         pwCellCantieriRaw(g).forEach((raw, ci) => {
           const cantiere = (raw || '').trim();
           if (!cantiere) return;
-          if (op.fornitore) { out.fornitori++; return; }
+          if (_pwJchkFornSenzaJira(op)) { out.fornitori++; return; }
           const attivita = pwJiraAttivitaSottotask(bc, cantiere, op.nome, pwCellAttivitaAt(g, ci));
           const k = op.nome + '|||' + cantiere + '|||' + attivita;
           let gr = gruppi.get(k);
@@ -35458,6 +35799,7 @@ async function _pwJbonPiano() {
     if (!bc || !bc.commessa) return;
     Object.values(pwJiraSubtaskMappa(bc)).forEach(e => {
       if (!pwJiraSubtaskIsResolved(e) || !e.key || gruppi.has(e.key) || v.cancellati.has(e.key)) return;
+      if (fornitoreDiNome(e.operatore)) return;   // sottotask fornitore: stato e ore seguono il collega Eagle
       const st = v.info[e.key] && v.info[e.key].status;
       if (!PW_JBON_STATI.test(String(st || '').trim())) return;
       gruppi.set(e.key, { key: e.key, url: e.url || '', operatore: e.operatore || '', cantiere: e.cantiere || '',
@@ -35468,7 +35810,7 @@ async function _pwJbonPiano() {
     if (!bc || !bc.commessa) return;
     (bc.squadre || []).forEach(sq => (sq.operatori || []).forEach(op => {
       const nome = (op.nome || '').trim();
-      if (!nome || op.fornitore) return;
+      if (!nome || pwRigaFornitore(op)) return;
       for (let g = 0; g < 6; g++) {
         pwCellVoci((op.giorni || {})[g]).forEach(x => {
           const e = pwJiraSubtaskEntry(bc, x.cantiere, nome, pwJiraAttivitaSottotask(bc, x.cantiere, nome, x.attivita), g);
@@ -36421,6 +36763,14 @@ HELP_TEXTS['ap-opz-maxkm'] = 'Spostamento massimo, in km, da un cantiere all\'al
 HELP_TEXTS['ap-includi'] = 'Se è spuntata, la riga entra nel calcolo della bozza e nell\'applicazione alla Griglia; togli la spunta per tenerla in lista senza pianificarla.\n\nLa bozza già calcolata va ricalcolata.';
 // Priorità
 HELP_TEXTS['ap-priorita'] = 'Priorità del cantiere: P1 è il più urgente. Il calcolo assegna prima i cantieri a priorità più alta e, a parità, quelli con la scadenza più vicina.\n\nLa bozza già calcolata va ricalcolata. La Griglia non viene toccata.';
+
+// Worklog fornitori (src/js/produzione-fornitori-worklog.js, v18.251.0)
+HELP_TEXTS['#cpfw-toggle'] = 'Apre «Worklog fornitori». I dipendenti dei fornitori con email in anagrafica (Dashboard → Fornitori) hanno i loro sottotask giornalieri ma non usano Jira: ogni loro sottotask segue quello del collega interno della stessa squadra, sullo stesso cantiere e nello stesso giorno. Prende lo stesso stato, passando da IN PROGRESS perché TO DO → DONE diretto non esiste, e gli stessi worklog (inizio, durata, commento), intestati al dipendente.\n\nSuccede da solo ogni 15 minuti (lunedì–sabato) e prima di ogni «🔄 Sincronizza da Jira». Qui vedi l\'ultimo giro: per ogni sottotask, da chi si copia, cosa è cambiato nello stato e nei worklog, eventuali errori.\n\nSui sottotask dei fornitori i worklog che non sono copie (per esempio quello che l\'automazione Jira crea quando il sottotask esce da IN PROGRESS) vengono eliminati.';
+HELP_TEXTS['#cpfw-anteprima'] = 'Calcola cosa farebbe un giro sulla settimana mostrata (fino a oggi), senza scrivere niente su Jira: stato da cambiare, worklog da copiare, aggiornare o eliminare.';
+HELP_TEXTS['#cpfw-allinea'] = 'Fa subito un giro sulla settimana mostrata (fino a oggi), dopo una conferma. SCRIVE SU JIRA: cambia lo stato dei sottotask dei fornitori, copia i worklog del collega, aggiorna le copie se l\'originale è cambiato ed elimina gli altri worklog di quei sottotask. Un worklog eliminato su Jira non si recupera con «Indietro». Serve il ruolo admin o responsabile.';
+HELP_TEXTS['cpfw-sorgente'] = 'Il collega interno da cui copiare stato e worklog per questo sottotask. «auto» sceglie chi ha la stessa attività, poi il primo della squadra. Una scelta a mano vale dal prossimo giro, ed è condivisa con i colleghi. Le copie fatte dal collega precedente vengono tolte e rifatte dal nuovo. Serve il ruolo admin o responsabile.';
+HELP_TEXTS['cp-sync-jira'] += '\n\nPrima di leggere, allinea i sottotask dei dipendenti fornitore della settimana (stato e worklog copiati dal collega Eagle, vedi «🏢 Worklog fornitori»).';
+HELP_TEXTS['pwControlloSyncJira'] += '\n\nPrima di leggere, allinea i sottotask dei dipendenti fornitore di tutta la settimana (vedi «🏢 Worklog fornitori»).';
 /* ==================== STORICO METEO (giorni passati, meteo osservato) ====================
    Le previsioni (weekly-meteo.js) coprono solo da oggi in avanti e vivono nella cache del
    browser: passata la giornata il meteo non restava da nessuna parte. Qui, per ogni

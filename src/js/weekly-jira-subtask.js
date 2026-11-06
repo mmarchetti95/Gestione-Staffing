@@ -361,9 +361,9 @@ function pwJiraResolveCognome(op) {
 // Jira, quindi nessun status 'error' dalla Edge Function per lui — va perciò
 // intercettato qui, lato client, per non escluderlo silenziosamente (vedi
 // pwJiraSubtaskMarkMissingEmail e i punti che la chiamano).
+// Dalla v18.251.0 anche i dipendenti fornitore con email (opEmailDi).
 function pwJiraOperatorEmail(nomeOperatore) {
-  const op = (state.operatori || []).find(o => (o.nome_esteso || o.nome_breve) === nomeOperatore);
-  return op && op.email && op.email.trim() ? op.email.trim() : '';
+  return opEmailDi(nomeOperatore);
 }
 
 // Sottotask giornaliero (v18.229.0): uno per operatore + cantiere + attività + giorno.
@@ -373,7 +373,8 @@ function pwJiraOperatorEmail(nomeOperatore) {
 // presenti sul progetto, inizio e scadenza diventano il giorno stesso (vedi
 // pwJiraSubtaskOpenExtraFieldsModal).
 function pwJiraBuildSubtaskItem(meta, task, comune, nomeOperatore, attivita, giorno) {
-  const op = (state.operatori || []).find(o => (o.nome_esteso || o.nome_breve) === nomeOperatore);
+  const fd = fornitoreDiNome(nomeOperatore);
+  const op = (state.operatori || []).find(o => (o.nome_esteso || o.nome_breve) === nomeOperatore) || (fd && fd.dipendente);
   const email = pwJiraOperatorEmail(nomeOperatore);
   if (!email) return null;
   const cognome = op ? pwJiraResolveCognome(op) : '';
