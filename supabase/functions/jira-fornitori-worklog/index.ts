@@ -142,6 +142,19 @@ async function leggiTicket(key: string): Promise<Ticket> {
   };
 }
 
+// Account di servizio (JIRA_EMAIL). Un'automazione Jira assegna il sottotask a chi lo porta in
+// IN PROGRESS: le transizioni fatte da qui lo darebbero a questo account (visto il 9/11/2026).
+let _mioAccountId: Promise<string> | null = null;
+function mioAccountId(): Promise<string> {
+  if (!_mioAccountId) _mioAccountId = jira("GET", "/rest/api/3/myself").then(async (r) => r.ok ? String((await r.json())?.accountId || "") : "");
+  return _mioAccountId;
+}
+
+async function assegna(key: string, accountId: string): Promise<void> {
+  const res = await jira("PUT", `/rest/api/3/issue/${encodeURIComponent(key)}/assignee`, { accountId });
+  if (!res.ok) throw new Error(await jiraErr(res, `Riassegnazione di ${key}`));
+}
+
 const _accountId = new Map<string, Promise<string>>();
 function accountIdDi(email: string): Promise<string> {
   const k = email.toLowerCase();
@@ -216,7 +229,7 @@ async function transizioneConCampi(key: string, sourceKey: string, t: any): Prom
   return jira("POST", `/rest/api/3/issue/${encodeURIComponent(key)}/transitions`, { transition: { id: t.id }, fields });
 }
 
-async function allineaStato(key: string, sourceKey: string, attuale: string, voluto: string, dryRun: boolean): Promise<EsitoStato> {
+async function allineaStato(key: string, sourceKey: string, assegnatario: string, attuale: string, voluto: string, dryRun: boolean): Promise<EsitoStato> {
   const out: EsitoStato = { prima: attuale, dopo: attuale, passi: [], uscitoDaInProgress: false };
   if (!voluto || stessoStato(attuale, voluto)) return out;
   if (dryRun) { out.passi.push(`${attuale} → ${voluto}`); return out; }
@@ -245,6 +258,12 @@ async function allineaStato(key: string, sourceKey: string, attuale: string, vol
     if (rango(cur) === IN_PROGRESS) out.uscitoDaInProgress = true;
     out.passi.push(`${cur} → ${verso(t)}`);
     cur = verso(t);
+    // L'automazione può aver cambiato l'assegnatario (a chi fa la transizione): si rimette
+    const ra = await jira("GET", `/rest/api/3/issue/${encodeURIComponent(key)}?fields=assignee`);
+    const ora = ra.ok ? String((await ra.json())?.fields?.assignee?.accountId || "") : assegnatario;
+    if (assegnatario && ora !== assegnatario) {
+      try { await assegna(key, assegnatario); } catch (e) { out.errore = String((e as Error)?.message || e); break; }
+    }
   }
   out.dopo = cur;
   return out;
@@ -304,7 +323,17 @@ async function creaCopia(key: string, tk: Ticket, s: Wl): Promise<{ id: string; 
   return { id: String((await res.json())?.id || ""), nota };
 }
 
+// Con Tempo si elimina da Tempo (che toglie anche il worklog Jira): eliminato solo da Jira,
+// Tempo lo conta ancora per un po' nel limite giornaliero e rifiuta la copia che lo sostituisce.
 async function eliminaWl(key: string, id: string): Promise<void> {
+  if (TEMPO_API_TOKEN) {
+    const m = await tempo("POST", "/worklogs/jira-to-tempo", { jiraWorklogIds: [Number(id)] });
+    const tid = m.ok ? (await m.json())?.results?.[0]?.tempoWorklogId : null;
+    if (tid) {
+      const r = await tempo("DELETE", `/worklogs/${encodeURIComponent(String(tid))}`);
+      if (r.ok || r.status === 404) return;
+    }
+  }
   const res = await jiraScriviWl("DELETE", `/rest/api/3/issue/${encodeURIComponent(key)}/worklog/${encodeURIComponent(id)}`);
   if (!res.ok && res.status !== 404) throw new Error(await jiraErr(res, `Eliminazione del worklog ${id} su ${key}`));
 }
@@ -480,13 +509,20 @@ Deno.serve(async (req: Request) => {
       if (!c.sourceKey) return;
       if (Date.now() - t0 > BUDGET_MS) { c.nota = "rimandata al prossimo giro (tempo esaurito)"; return; }
       try {
-        const [src, tgt, accFornitore] = await Promise.all([leggiTicket(c.sourceKey), leggiTicket(c.targetKey), accountIdDi(c.email)]);
+        const [src, tgt, accFornitore, io] = await Promise.all([leggiTicket(c.sourceKey), leggiTicket(c.targetKey), accountIdDi(c.email), mioAccountId()]);
+        if (accFornitore && tgt.assegnatario !== accFornitore && (!tgt.assegnatario || tgt.assegnatario === io)) {
+          // Assegnato all'account di servizio (automazione su una transizione fatta da qui) o a
+          // nessuno: torna al dipendente
+          if (!dryRun) await assegna(c.targetKey, accFornitore);
+          c.nota = `riassegnato a ${c.operatore} (era ${tgt.assegnatarioNome || "senza assegnatario"})`;
+          tgt.assegnatario = accFornitore;
+        }
         if (!accFornitore || tgt.assegnatario !== accFornitore) {
           c.errore = `il sottotask è assegnato a ${tgt.assegnatarioNome || "nessuno"}, non a ${c.operatore}: non lo tocco`;
           return;
         }
         // 1. stato
-        c.stato = await allineaStato(c.targetKey, c.sourceKey, tgt.stato, src.stato, dryRun);
+        c.stato = await allineaStato(c.targetKey, c.sourceKey, accFornitore, tgt.stato, src.stato, dryRun);
         if (c.stato.uscitoDaInProgress) await attendi(ATTESA_AUTOMAZIONE_MS);
         // 2. worklog: prima il piano, poi si elimina e solo dopo si crea (Tempo rifiuta le copie
         //    che, sommate ai worklog ancora da togliere, superano il limite giornaliero di ore)
@@ -566,7 +602,7 @@ Deno.serve(async (req: Request) => {
               if (x.sostituisce) c.aggiornati--; else c.creati--;
             }
           }
-          if (note.size) c.nota = [...note].join(" · ");
+          if (note.size) c.nota = [c.nota, ...note].filter(Boolean).join(" · ");
           if (errori.length) c.errore = errori.join(" · ");
         }
       } catch (e) {
