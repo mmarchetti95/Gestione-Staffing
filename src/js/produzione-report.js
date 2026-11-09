@@ -100,7 +100,6 @@ function cpParseReportCsv(text) {
 // (stessa logica di inclusione del render: cantiere assegnato e non in ferie).
 function cpGetSquadraOpsByDay(commessa, squadra) {
   const data = pwGetWeekData();
-  const fw = pwGetFerieWeek();
   const perDay = {};
   data.forEach(bc => {
     if (bc.commessa !== commessa) return;
@@ -114,7 +113,7 @@ function cpGetSquadraOpsByDay(commessa, squadra) {
           const opG = op.giorni && op.giorni[g] ? op.giorni[g] : {};
           const cantieri = pwCellCantieri(opG);
           if (cantieri.length === 0) return;
-          if (fw[op.nome] && pwFerieTipo(fw[op.nome][g])) return;
+          if (pwFerieTipoGiornata(op.nome, g)) return;
           ops.push({ nome: op.nome, cantiere: cantieri.join(', '), attivita: opG.attivita || '', attivitaElenco: pwCellAttivitaElenco(opG) });
         });
         if (ops.length > 0) perDay[g] = ops;
@@ -579,8 +578,8 @@ function pwControlloExportPDF() {
           const opG = op.giorni && op.giorni[g] ? op.giorni[g] : {};
           const cant = pwCellCantieri(opG).join(', ');
           if (cant) anyCantiereByDay[g].add(op.nome);
-          const isFerie = fw[op.nome] && !!pwFerieTipo(fw[op.nome][g]);
-          if (!cant || isFerie) return; // righa normale solo se cantiere e non ferie/non disponibile
+          const isFerie = !!pwFerieTipoGiornata(op.nome, g);
+          if (!cant || isFerie) return; // righa normale solo se cantiere e non ferie/non disponibile (giornata intera)
           const k = `${bc.commessa}|||${sqNome}|||${op.nome}|||${g}`;
           const saved = _cpData[k] || {};
           const tickets = Array.isArray(saved.jira_tickets) ? saved.jira_tickets : [];

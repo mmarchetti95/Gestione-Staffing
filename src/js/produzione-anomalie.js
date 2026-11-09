@@ -235,7 +235,6 @@ function _cpaOggiISO() {
 /* Griglia della settimana -> celle operatore/giorno per il motore */
 function _cpaCelleSettimana() {
   const data = pwGetWeekData();
-  const fw = pwGetFerieWeek();
   const celle = [], operatori = new Set();
   data.forEach(bc => {
     if (!bc.commessa) return;
@@ -251,7 +250,7 @@ function _cpaCelleSettimana() {
           celle.push({
             commessa: bc.commessa, squadra: sqNome, operatore: nome, giorno: g,
             cpKey: bc.commessa + '|||' + sqNome + '|||' + nome + '|||' + g,
-            ferie: fw[nome] ? pwFerieTipo(fw[nome][g]) : null,
+            ferie: pwFerieTipoGiornata(nome, g),
             voci: voci.map(v => {
               const e = pwJiraSubtaskEntry(bc, v.cantiere, nome, pwJiraAttivitaSottotask(bc, v.cantiere, nome, v.attivita), g);
               return { cantiere: v.cantiere, attivita: v.attivita,
@@ -398,14 +397,13 @@ function _cpaRicalcola() {
   const B = _cpa.base;
   if (!B || _cpa.anno !== pwAnno || _cpa.week !== pwWeek) return;
   const { celle } = _cpaCelleSettimana();
-  const fw = pwGetFerieWeek();
   const pref = _cpaPref();
   const mysond = _cpaMysondSettimana();
   const r = cpaRileva({
     anno: pwAnno, week: pwWeek, giorniLabel: B.date.label, giorniValutabili: B.giorniValutabili,
     celle, worklog: B.worklog, verificati: B.verificati, epicDiSottotask: B.epicDiSottotask,
     sottotaskIndex: _cpaIndiceSottotask(), mysond,
-    ferieDi: (op, g) => (fw[op] ? pwFerieTipo(fw[op][g]) : null),
+    ferieDi: (op, g) => pwFerieTipoGiornata(op, g),
     meteoDi: _cpaMeteoDi(B.date.iso),
     soglie: { diffOreSquadra: Number(pref.diffOreSquadra) || CPA_SOGLIE_DEFAULT.diffOreSquadra,
       diffOreMysond: Number(pref.diffOreMysond) || CPA_SOGLIE_DEFAULT.diffOreMysond },
@@ -594,7 +592,7 @@ async function cpaAzione(el) {
 
   const data = pwGetWeekData();
   const fw = pwGetFerieWeek();
-  const assente = fw[az.operatore] ? pwFerieTipo(fw[az.operatore][az.giorno]) : null;
+  const assente = pwFerieTipoGiornata(az.operatore, az.giorno); // un permesso di poche ore non viene tolto
   const occupato = data.some(bc => (bc.squadre || []).some(sq => (sq.operatori || []).some(o =>
     (o.nome || '').trim() === az.operatore && pwCellCantieri((o.giorni || {})[az.giorno]).length)));
   if (occupato && !assente) { showAlertModal('Nel frattempo ' + az.operatore + ' risulta già pianificato ' + giorno + ': nessuna modifica. Rilancia il controllo.'); return; }

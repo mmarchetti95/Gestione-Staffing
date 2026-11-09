@@ -2003,7 +2003,7 @@
       </span>
       <button id="btn-presentation" class="px-3 py-1.5 text-sm rounded hover:bg-white/10" style="border:1px solid var(--dark-border-strong);color:var(--dark-text);visibility:visible;">📊 Modalità presentazione</button>
       <div class="text-xs pl-2" style="border-left:1px solid var(--dark-border-strong);color:var(--dark-text-muted);">
-        <span id="app-version" class="font-medium" style="color:var(--accent);">v18.251.0</span> · Michele Marchetti
+        <span id="app-version" class="font-medium" style="color:var(--accent);">v18.252.0</span> · Michele Marchetti
         <span id="sb-role-badge" style="margin-left:8px;padding:1px 8px;border-radius:9999px;background:rgba(255,255,255,.1);color:var(--dark-text);font-weight:600;"></span>
       </div>
     </div>
@@ -14531,6 +14531,29 @@ function pwGetFerieWeek() {
   return pwFerie[pwAnno][pwWeek];
 }
 
+/* Assenze di poche ore (settimana aperta). L'import ferie da Excel segna 'ferie' il giorno
+   intero anche per un permesso di 2h: le ore vere stanno solo in pwFerieDettagli. */
+const PW_FERIE_ORE_GIORNATA = 8;
+
+// Totale ore di assenza importate per operatore/giorno (0 = nessun dettaglio). Non crea oggetti.
+function pwFerieOreGiorno(nome, g) {
+  const dw = pwFerieDettagli[pwAnno] && pwFerieDettagli[pwAnno][pwWeek];
+  const dett = dw && dw[nome] && dw[nome][g];
+  return Array.isArray(dett) ? dett.reduce((s, d) => s + (Number(d.ore) || 0), 0) : 0;
+}
+
+/* Tipo di assenza solo se toglie l'operatore per TUTTA la giornata: 'ferie' con dettaglio
+   importato inferiore a PW_FERIE_ORE_GIORNATA è un permesso parziale (quel giorno ha
+   lavorato) → null. Flag manuale senza dettaglio e 'non_disponibile' restano giornata intera.
+   Usato da Controllo Produzione per decidere se la cella pianificata va controllata. */
+function pwFerieTipoGiornata(nome, g) {
+  const fw = pwFerie[pwAnno] && pwFerie[pwAnno][pwWeek];
+  const tipo = fw && fw[nome] ? pwFerieTipo(fw[nome][g]) : null;
+  if (tipo !== 'ferie') return tipo;
+  const ore = pwFerieOreGiorno(nome, g);
+  return (ore > 0 && ore < PW_FERIE_ORE_GIORNATA) ? null : tipo;
+}
+
 /* Restituisce true se l'operatore è in ferie/non disponibile almeno un giorno della settimana corrente */
 function pwIsInFerie(nomeOp) {
   const fw = pwGetFerieWeek();
@@ -20623,6 +20646,16 @@ function _collapseSets(area) {
 }
 let _cpLoading = false;
 
+/* Etichetta "🏖 2h" accanto all'operatore quando quel giorno ha un permesso di poche ore
+   (la riga resta in Controllo Produzione, vedi pwFerieTipoGiornata). Vuota altrimenti. */
+function cpPermessoTag(nome, g) {
+  const ore = pwFerieOreGiorno(nome, g);
+  if (!(ore > 0) || pwFerieTipoGiornata(nome, g)) return '';
+  const dett = ((pwFerieDettagli[pwAnno] || {})[pwWeek] || {})[nome] || {};
+  const tip = 'Assenza parziale: ' + (dett[g] || []).map(d => (d.descrizione || '—') + (d.ore ? ' (' + d.ore + 'h)' : '')).join(' · ');
+  return '<span title="' + esc(tip) + '" style="margin-left:4px;padding:0 4px;border-radius:4px;font-size:10px;background:#fef3c7;color:#b45309;white-space:nowrap;">🏖 ' + esc(String(ore)) + 'h</span>';
+}
+
 // Somma i valori di una mappa {ticket: km}. Ritorna null se vuota.
 function cpSumKm(map) {
   if (!map || typeof map !== 'object') return null;
@@ -20769,8 +20802,7 @@ function pwControlloRender() {
           const opG = op.giorni && op.giorni[g] ? op.giorni[g] : {};
           const cantieri = pwCellCantieri(opG);
           if (cantieri.length === 0) return;
-          const fw = pwGetFerieWeek();
-          if (fw[op.nome] && pwFerieTipo(fw[op.nome][g])) return;
+          if (pwFerieTipoGiornata(op.nome, g)) return; // un permesso di poche ore non toglie la riga
           ops.push({ nome: op.nome, cantiere: cantieri.join(', '), cantieri, voci: pwCellVoci(opG), attivita: opG.attivita || '', cIdx, sIdx, oIdx });
         });
         if (ops.length > 0) giorni.push({ giornoIdx: g, ops });
@@ -20871,7 +20903,7 @@ function pwControlloRender() {
           html += `<tr data-comm-idx="${blIdx}" data-sq-idx="${sqKey}" data-operatore="${esc(op.nome)}" data-cantiere="${esc(op.cantiere)}" data-cpk="${esc(k)}" oncontextmenu="return cpTlDaRiga(event, this)">
       <td class="cp-wrap" title="${esc(bl.commessa)}">${esc(bl.commessa)}</td>
       <td class="cp-wrap" title="${esc(sq.nome)}">${esc(sq.nome)}</td>
-      <td class="cp-wrap" title="${esc(op.nome)}"><button type="button" class="no-print cp-griglia-btn" title="Apri questo intervento nella Griglia settimanale" onclick="cpApriInGriglia(${op.cIdx},${op.sIdx},${op.oIdx},${g})">🗓️</button><strong>${esc(op.nome)}</strong>${isOperatoreLicenziato(op.nome) ? '<span class="op-ex-tag">ex</span>' : ''}</td>
+      <td class="cp-wrap" title="${esc(op.nome)}"><button type="button" class="no-print cp-griglia-btn" title="Apri questo intervento nella Griglia settimanale" onclick="cpApriInGriglia(${op.cIdx},${op.sIdx},${op.oIdx},${g})">🗓️</button><strong>${esc(op.nome)}</strong>${isOperatoreLicenziato(op.nome) ? '<span class="op-ex-tag">ex</span>' : ''}${cpPermessoTag(op.nome, g)}</td>
       <td data-help-key="cp-verificato" style="text-align:center"><input type="checkbox" class="pw-write-action" ${verificato ? 'checked' : ''} title="Verificato" style="width:16px;height:16px;cursor:pointer;" onchange="pwControlloSaveCell('${ci}','${si}','${oi}',${g},'${dt}','${ca}','${at}','verificato',this.checked)"></td>
       <td>${DAY_NAMES[g]}</td>
       <td>${dates[g]}</td>
@@ -21288,7 +21320,6 @@ async function pwControlloSyncJira(scopeCommessa, scopeSquadra, btnEl) {
 
     // Raccogli le celle pianificate (stessa logica di inclusione del render)
     const data = pwGetWeekData();
-    const fw = pwGetFerieWeek();
     const cells = [];
     data.forEach(bc => {
       if (!bc.commessa) return;
@@ -21302,7 +21333,7 @@ async function pwControlloSyncJira(scopeCommessa, scopeSquadra, btnEl) {
             const opG = op.giorni && op.giorni[g] ? op.giorni[g] : {};
             const cantieri = pwCellCantieri(opG);
             if (cantieri.length === 0) return;
-            if (fw[op.nome] && pwFerieTipo(fw[op.nome][g])) return;
+            if (pwFerieTipoGiornata(op.nome, g)) return;
             cells.push({
               commessa: bc.commessa, squadra: sqNome, operatore: op.nome, giorno: g,
               dataISO: isoDates[g], cantiere: cantieri.join(', '), attivita: opG.attivita || '',
@@ -22359,7 +22390,6 @@ function cpParseReportCsv(text) {
 // (stessa logica di inclusione del render: cantiere assegnato e non in ferie).
 function cpGetSquadraOpsByDay(commessa, squadra) {
   const data = pwGetWeekData();
-  const fw = pwGetFerieWeek();
   const perDay = {};
   data.forEach(bc => {
     if (bc.commessa !== commessa) return;
@@ -22373,7 +22403,7 @@ function cpGetSquadraOpsByDay(commessa, squadra) {
           const opG = op.giorni && op.giorni[g] ? op.giorni[g] : {};
           const cantieri = pwCellCantieri(opG);
           if (cantieri.length === 0) return;
-          if (fw[op.nome] && pwFerieTipo(fw[op.nome][g])) return;
+          if (pwFerieTipoGiornata(op.nome, g)) return;
           ops.push({ nome: op.nome, cantiere: cantieri.join(', '), attivita: opG.attivita || '', attivitaElenco: pwCellAttivitaElenco(opG) });
         });
         if (ops.length > 0) perDay[g] = ops;
@@ -22838,8 +22868,8 @@ function pwControlloExportPDF() {
           const opG = op.giorni && op.giorni[g] ? op.giorni[g] : {};
           const cant = pwCellCantieri(opG).join(', ');
           if (cant) anyCantiereByDay[g].add(op.nome);
-          const isFerie = fw[op.nome] && !!pwFerieTipo(fw[op.nome][g]);
-          if (!cant || isFerie) return; // righa normale solo se cantiere e non ferie/non disponibile
+          const isFerie = !!pwFerieTipoGiornata(op.nome, g);
+          if (!cant || isFerie) return; // righa normale solo se cantiere e non ferie/non disponibile (giornata intera)
           const k = `${bc.commessa}|||${sqNome}|||${op.nome}|||${g}`;
           const saved = _cpData[k] || {};
           const tickets = Array.isArray(saved.jira_tickets) ? saved.jira_tickets : [];
@@ -24200,7 +24230,6 @@ function _cpaOggiISO() {
 /* Griglia della settimana -> celle operatore/giorno per il motore */
 function _cpaCelleSettimana() {
   const data = pwGetWeekData();
-  const fw = pwGetFerieWeek();
   const celle = [], operatori = new Set();
   data.forEach(bc => {
     if (!bc.commessa) return;
@@ -24216,7 +24245,7 @@ function _cpaCelleSettimana() {
           celle.push({
             commessa: bc.commessa, squadra: sqNome, operatore: nome, giorno: g,
             cpKey: bc.commessa + '|||' + sqNome + '|||' + nome + '|||' + g,
-            ferie: fw[nome] ? pwFerieTipo(fw[nome][g]) : null,
+            ferie: pwFerieTipoGiornata(nome, g),
             voci: voci.map(v => {
               const e = pwJiraSubtaskEntry(bc, v.cantiere, nome, pwJiraAttivitaSottotask(bc, v.cantiere, nome, v.attivita), g);
               return { cantiere: v.cantiere, attivita: v.attivita,
@@ -24363,14 +24392,13 @@ function _cpaRicalcola() {
   const B = _cpa.base;
   if (!B || _cpa.anno !== pwAnno || _cpa.week !== pwWeek) return;
   const { celle } = _cpaCelleSettimana();
-  const fw = pwGetFerieWeek();
   const pref = _cpaPref();
   const mysond = _cpaMysondSettimana();
   const r = cpaRileva({
     anno: pwAnno, week: pwWeek, giorniLabel: B.date.label, giorniValutabili: B.giorniValutabili,
     celle, worklog: B.worklog, verificati: B.verificati, epicDiSottotask: B.epicDiSottotask,
     sottotaskIndex: _cpaIndiceSottotask(), mysond,
-    ferieDi: (op, g) => (fw[op] ? pwFerieTipo(fw[op][g]) : null),
+    ferieDi: (op, g) => pwFerieTipoGiornata(op, g),
     meteoDi: _cpaMeteoDi(B.date.iso),
     soglie: { diffOreSquadra: Number(pref.diffOreSquadra) || CPA_SOGLIE_DEFAULT.diffOreSquadra,
       diffOreMysond: Number(pref.diffOreMysond) || CPA_SOGLIE_DEFAULT.diffOreMysond },
@@ -24559,7 +24587,7 @@ async function cpaAzione(el) {
 
   const data = pwGetWeekData();
   const fw = pwGetFerieWeek();
-  const assente = fw[az.operatore] ? pwFerieTipo(fw[az.operatore][az.giorno]) : null;
+  const assente = pwFerieTipoGiornata(az.operatore, az.giorno); // un permesso di poche ore non viene tolto
   const occupato = data.some(bc => (bc.squadre || []).some(sq => (sq.operatori || []).some(o =>
     (o.nome || '').trim() === az.operatore && pwCellCantieri((o.giorni || {})[az.giorno]).length)));
   if (occupato && !assente) { showAlertModal('Nel frattempo ' + az.operatore + ' risulta già pianificato ' + giorno + ': nessuna modifica. Rilancia il controllo.'); return; }

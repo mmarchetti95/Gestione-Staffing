@@ -57,6 +57,16 @@ function _collapseSets(area) {
 }
 let _cpLoading = false;
 
+/* Etichetta "🏖 2h" accanto all'operatore quando quel giorno ha un permesso di poche ore
+   (la riga resta in Controllo Produzione, vedi pwFerieTipoGiornata). Vuota altrimenti. */
+function cpPermessoTag(nome, g) {
+  const ore = pwFerieOreGiorno(nome, g);
+  if (!(ore > 0) || pwFerieTipoGiornata(nome, g)) return '';
+  const dett = ((pwFerieDettagli[pwAnno] || {})[pwWeek] || {})[nome] || {};
+  const tip = 'Assenza parziale: ' + (dett[g] || []).map(d => (d.descrizione || '—') + (d.ore ? ' (' + d.ore + 'h)' : '')).join(' · ');
+  return '<span title="' + esc(tip) + '" style="margin-left:4px;padding:0 4px;border-radius:4px;font-size:10px;background:#fef3c7;color:#b45309;white-space:nowrap;">🏖 ' + esc(String(ore)) + 'h</span>';
+}
+
 // Somma i valori di una mappa {ticket: km}. Ritorna null se vuota.
 function cpSumKm(map) {
   if (!map || typeof map !== 'object') return null;
@@ -203,8 +213,7 @@ function pwControlloRender() {
           const opG = op.giorni && op.giorni[g] ? op.giorni[g] : {};
           const cantieri = pwCellCantieri(opG);
           if (cantieri.length === 0) return;
-          const fw = pwGetFerieWeek();
-          if (fw[op.nome] && pwFerieTipo(fw[op.nome][g])) return;
+          if (pwFerieTipoGiornata(op.nome, g)) return; // un permesso di poche ore non toglie la riga
           ops.push({ nome: op.nome, cantiere: cantieri.join(', '), cantieri, voci: pwCellVoci(opG), attivita: opG.attivita || '', cIdx, sIdx, oIdx });
         });
         if (ops.length > 0) giorni.push({ giornoIdx: g, ops });
@@ -305,7 +314,7 @@ function pwControlloRender() {
           html += `<tr data-comm-idx="${blIdx}" data-sq-idx="${sqKey}" data-operatore="${esc(op.nome)}" data-cantiere="${esc(op.cantiere)}" data-cpk="${esc(k)}" oncontextmenu="return cpTlDaRiga(event, this)">
       <td class="cp-wrap" title="${esc(bl.commessa)}">${esc(bl.commessa)}</td>
       <td class="cp-wrap" title="${esc(sq.nome)}">${esc(sq.nome)}</td>
-      <td class="cp-wrap" title="${esc(op.nome)}"><button type="button" class="no-print cp-griglia-btn" title="Apri questo intervento nella Griglia settimanale" onclick="cpApriInGriglia(${op.cIdx},${op.sIdx},${op.oIdx},${g})">🗓️</button><strong>${esc(op.nome)}</strong>${isOperatoreLicenziato(op.nome) ? '<span class="op-ex-tag">ex</span>' : ''}</td>
+      <td class="cp-wrap" title="${esc(op.nome)}"><button type="button" class="no-print cp-griglia-btn" title="Apri questo intervento nella Griglia settimanale" onclick="cpApriInGriglia(${op.cIdx},${op.sIdx},${op.oIdx},${g})">🗓️</button><strong>${esc(op.nome)}</strong>${isOperatoreLicenziato(op.nome) ? '<span class="op-ex-tag">ex</span>' : ''}${cpPermessoTag(op.nome, g)}</td>
       <td data-help-key="cp-verificato" style="text-align:center"><input type="checkbox" class="pw-write-action" ${verificato ? 'checked' : ''} title="Verificato" style="width:16px;height:16px;cursor:pointer;" onchange="pwControlloSaveCell('${ci}','${si}','${oi}',${g},'${dt}','${ca}','${at}','verificato',this.checked)"></td>
       <td>${DAY_NAMES[g]}</td>
       <td>${dates[g]}</td>
@@ -722,7 +731,6 @@ async function pwControlloSyncJira(scopeCommessa, scopeSquadra, btnEl) {
 
     // Raccogli le celle pianificate (stessa logica di inclusione del render)
     const data = pwGetWeekData();
-    const fw = pwGetFerieWeek();
     const cells = [];
     data.forEach(bc => {
       if (!bc.commessa) return;
@@ -736,7 +744,7 @@ async function pwControlloSyncJira(scopeCommessa, scopeSquadra, btnEl) {
             const opG = op.giorni && op.giorni[g] ? op.giorni[g] : {};
             const cantieri = pwCellCantieri(opG);
             if (cantieri.length === 0) return;
-            if (fw[op.nome] && pwFerieTipo(fw[op.nome][g])) return;
+            if (pwFerieTipoGiornata(op.nome, g)) return;
             cells.push({
               commessa: bc.commessa, squadra: sqNome, operatore: op.nome, giorno: g,
               dataISO: isoDates[g], cantiere: cantieri.join(', '), attivita: opG.attivita || '',

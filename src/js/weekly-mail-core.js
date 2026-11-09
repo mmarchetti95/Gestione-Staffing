@@ -964,6 +964,29 @@ function pwGetFerieWeek() {
   return pwFerie[pwAnno][pwWeek];
 }
 
+/* Assenze di poche ore (settimana aperta). L'import ferie da Excel segna 'ferie' il giorno
+   intero anche per un permesso di 2h: le ore vere stanno solo in pwFerieDettagli. */
+const PW_FERIE_ORE_GIORNATA = 8;
+
+// Totale ore di assenza importate per operatore/giorno (0 = nessun dettaglio). Non crea oggetti.
+function pwFerieOreGiorno(nome, g) {
+  const dw = pwFerieDettagli[pwAnno] && pwFerieDettagli[pwAnno][pwWeek];
+  const dett = dw && dw[nome] && dw[nome][g];
+  return Array.isArray(dett) ? dett.reduce((s, d) => s + (Number(d.ore) || 0), 0) : 0;
+}
+
+/* Tipo di assenza solo se toglie l'operatore per TUTTA la giornata: 'ferie' con dettaglio
+   importato inferiore a PW_FERIE_ORE_GIORNATA è un permesso parziale (quel giorno ha
+   lavorato) → null. Flag manuale senza dettaglio e 'non_disponibile' restano giornata intera.
+   Usato da Controllo Produzione per decidere se la cella pianificata va controllata. */
+function pwFerieTipoGiornata(nome, g) {
+  const fw = pwFerie[pwAnno] && pwFerie[pwAnno][pwWeek];
+  const tipo = fw && fw[nome] ? pwFerieTipo(fw[nome][g]) : null;
+  if (tipo !== 'ferie') return tipo;
+  const ore = pwFerieOreGiorno(nome, g);
+  return (ore > 0 && ore < PW_FERIE_ORE_GIORNATA) ? null : tipo;
+}
+
 /* Restituisce true se l'operatore è in ferie/non disponibile almeno un giorno della settimana corrente */
 function pwIsInFerie(nomeOp) {
   const fw = pwGetFerieWeek();

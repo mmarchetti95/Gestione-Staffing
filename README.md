@@ -114,6 +114,9 @@ Limite noto: il progetto Supabase è sul piano **Free**, che non include backup 
 
 ## Changelog
 
+## v18.252.0
+- fix: **Permessi di poche ore in Controllo Produzione.** L'import ferie da Excel segna il giorno come «ferie» anche per un permesso di 2 h, e Controllo Produzione toglieva la riga dell'operatore per tutto il giorno: non si vedeva e non gli si poteva imputare il report. Ora la riga resta se le ore di assenza importate sono meno di una giornata (8 h), con l'etichetta «🏖 2h» accanto al nome (passa il mouse per la descrizione). Restano escluse le ferie di giornata intera, quelle segnate a mano senza ore e i «non disponibile». Stessa regola per «🔄 Sincronizza da Jira», report PDF, Controllo anomalie e Timeline worklog; aggiungendo una cella da Controllo anomalie il permesso parziale non viene più tolto da Ferie.
+
 ## v18.251.0
 - fix: **Fornitori salvati su Supabase.** La lista dei fornitori (Dashboard → Fornitori) restava solo nel browser di chi la compilava: ora si sincronizza con i colleghi come il resto della Dashboard (chiave `fornitori` nella riga core).
 - feat: **Spostare un operatore in un fornitore.** Nel 🗑 della scheda operatore («Gestisci operatore») c'è «🏢 Sposta in un fornitore»: l'operatore esce dal pool (KPI, gap risorse, attestati; staffing futuro azzerato come nell'eliminazione) e diventa dipendente del fornitore con lo **stesso nome**, email, provincia, skill e cognome, così Griglia, sottotask Jira e storico del Controllo Produzione lo riconoscono ancora. Dalla settimana corrente in poi le sue righe in Griglia prendono il badge 🏢. Il dipendente fornitore ha ora il campo **email**.
