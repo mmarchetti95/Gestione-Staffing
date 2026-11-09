@@ -250,6 +250,8 @@ async function allineaStato(key: string, sourceKey: string, assegnatario: string
       } else if (rA > IN_PROGRESS && rV <= IN_PROGRESS) {
         t = trans.find((x) => rango(verso(x)) === IN_PROGRESS);   // indietro: si riapre da IN PROGRESS
       }
+      // Nessun passo in avanti (es. IN PENDING → DONE non c'è): si ripassa da IN PROGRESS
+      if (!t && rA !== IN_PROGRESS) t = trans.find((x) => rango(verso(x)) === IN_PROGRESS);
     }
     if (!t) { out.errore = `nessuna transizione da «${cur}» verso «${voluto}»`; break; }
     let r2 = await jira("POST", `/rest/api/3/issue/${encodeURIComponent(key)}/transitions`, { transition: { id: t.id } });
@@ -336,6 +338,27 @@ async function eliminaWl(key: string, id: string): Promise<void> {
   }
   const res = await jiraScriviWl("DELETE", `/rest/api/3/issue/${encodeURIComponent(key)}/worklog/${encodeURIComponent(id)}`);
   if (!res.ok && res.status !== 404) throw new Error(await jiraErr(res, `Eliminazione del worklog ${id} su ${key}`));
+}
+
+// Worklog che Tempo ha ancora ma Jira non più (eliminati da Jira e non arrivati a Tempo, visto
+// il 9/11/2026): contano nel limite giornaliero di Tempo e fanno rifiutare le copie. Solo sui
+// sottotask dei fornitori, che sono gestiti da qui. Ritorna quanti ne ha tolti.
+async function pulisciFantasmiTempo(tk: Ticket, jiraIds: Set<string>): Promise<number> {
+  if (!TEMPO_API_TOKEN || !tk.id) return 0;
+  const res = await tempo("GET", `/worklogs/issue/${tk.id}?limit=1000`);
+  if (!res.ok) return 0;
+  const ids = ((await res.json())?.results || []).map((w: any) => Number(w?.tempoWorklogId)).filter(Boolean);
+  if (!ids.length) return 0;
+  const m = await tempo("POST", "/worklogs/tempo-to-jira", { tempoWorklogIds: ids });
+  if (!m.ok) return 0;
+  let n = 0;
+  for (const r of ((await m.json())?.results || [])) {
+    const jid = r?.jiraWorklogId ? String(r.jiraWorklogId) : "";
+    if (!r?.tempoWorklogId || (jid && jiraIds.has(jid))) continue;
+    const d = await tempo("DELETE", `/worklogs/${encodeURIComponent(String(r.tempoWorklogId))}`);
+    if (d.ok) n++;
+  }
+  return n;
 }
 
 /* ---------- Date ---------- */
@@ -587,6 +610,11 @@ Deno.serve(async (req: Request) => {
           if (righeVia.length) await admin.from("fornitori_worklog_copie").delete().in("id", righeVia);
           for (const id of elimina) await eliminaWl(c.targetKey, id);
           const errori: string[] = [], note = new Set<string>();
+          if (crea.length) {
+            const restano = new Set(tgtWl.map((w) => w.id).filter((id) => !elimina.includes(id)));
+            const fantasmi = await pulisciFantasmiTempo(tgt, restano);
+            if (fantasmi) note.add(`${fantasmi} worklog rimasti solo su Tempo eliminati`);
+          }
           for (const x of crea) {
             try {
               const r = await creaCopia(c.targetKey, tgt, x.s);
