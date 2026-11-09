@@ -229,10 +229,31 @@ async function transizioneConCampi(key: string, sourceKey: string, t: any): Prom
   return jira("POST", `/rest/api/3/issue/${encodeURIComponent(key)}/transitions`, { transition: { id: t.id }, fields });
 }
 
+// La produzione del sottotask è compilata (> 0)? Il validatore verso DONE la vuole (visto il
+// 9/11/2026: con 0 rifiuta ancora «Inserire: Actual Production»).
+async function produzioneCompilata(key: string): Promise<boolean> {
+  const em = await jira("GET", `/rest/api/3/issue/${encodeURIComponent(key)}/editmeta`);
+  if (!em.ok) return true;   // non si sa: si prova la transizione
+  const prod = Object.entries((await em.json())?.fields || {}).filter(([, f]: any) => CAMPO_PRODUZIONE.test(String(f?.name || ""))).map(([id]) => id);
+  if (!prod.length) return true;
+  const r = await jira("GET", `/rest/api/3/issue/${encodeURIComponent(key)}?fields=${prod.map(encodeURIComponent).join(",")}`);
+  if (!r.ok) return true;
+  const val = (await r.json())?.fields || {};
+  return prod.some((id) => Number(val[id]) > 0);
+}
+
+const MSG_PRODUZIONE = "per DONE Jira chiede l'Actual Production: resta in IN PENDING finché non la scrive il Controllo Produzione (Km/Cad del dipendente)";
+
 async function allineaStato(key: string, sourceKey: string, assegnatario: string, attuale: string, voluto: string, dryRun: boolean): Promise<EsitoStato> {
   const out: EsitoStato = { prima: attuale, dopo: attuale, passi: [], uscitoDaInProgress: false };
   if (!voluto || stessoStato(attuale, voluto)) return out;
   if (dryRun) { out.passi.push(`${attuale} → ${voluto}`); return out; }
+  // Già parcheggiato in IN PENDING senza produzione: niente giro da IN PROGRESS che fallirebbe
+  // (e lascerebbe un worklog dell'automazione a ogni tentativo)
+  if (rango(attuale) === 3 && rango(voluto) === 4 && !(await produzioneCompilata(key))) {
+    out.errore = MSG_PRODUZIONE;
+    return out;
+  }
   let cur = attuale;
   for (let i = 0; i < 5 && !stessoStato(cur, voluto); i++) {
     const res = await jira("GET", `/rest/api/3/issue/${encodeURIComponent(key)}/transitions`);
@@ -256,7 +277,19 @@ async function allineaStato(key: string, sourceKey: string, assegnatario: string
     if (!t) { out.errore = `nessuna transizione da «${cur}» verso «${voluto}»`; break; }
     let r2 = await jira("POST", `/rest/api/3/issue/${encodeURIComponent(key)}/transitions`, { transition: { id: t.id } });
     if (r2.status === 400) r2 = await transizioneConCampi(key, sourceKey, t);   // campi obbligatori sullo schermo
-    if (!r2.ok) { out.errore = await jiraErr(r2, `Transizione a ${verso(t)}`); break; }
+    if (!r2.ok) {
+      out.errore = await jiraErr(r2, `Transizione a ${verso(t)}`);
+      if (!CAMPO_PRODUZIONE.test(out.errore)) break;
+      // DONE rifiutato per la produzione mancante: non si resta IN PROGRESS (risulterebbe al
+      // lavoro), si parcheggia in IN PENDING
+      out.errore = MSG_PRODUZIONE;
+      const p = rango(cur) === IN_PROGRESS ? trans.find((x) => rango(verso(x)) === 3) : null;
+      if (!p) break;
+      const r3 = await jira("POST", `/rest/api/3/issue/${encodeURIComponent(key)}/transitions`, { transition: { id: p.id } });
+      if (!r3.ok) break;
+      t = p;
+      i = 5;   // ultimo passo
+    }
     if (rango(cur) === IN_PROGRESS) out.uscitoDaInProgress = true;
     out.passi.push(`${cur} → ${verso(t)}`);
     cur = verso(t);
