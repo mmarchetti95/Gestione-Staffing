@@ -168,7 +168,55 @@ function stessoStato(a: string, b: string): boolean { return String(a || "").tri
 
 type EsitoStato = { prima: string; dopo: string; passi: string[]; uscitoDaInProgress: boolean; errore?: string };
 
-async function allineaStato(key: string, attuale: string, voluto: string, dryRun: boolean): Promise<EsitoStato> {
+// Campi di produzione: se una transizione li chiede (es. «Inserire: Actual Production» verso
+// DONE) si scrive 0, mai il valore del collega: lo conterebbe due volte sul Task. Il valore
+// vero lo scrive poi il Controllo Produzione (jira-update-production, modello a delta).
+const CAMPO_PRODUZIONE = /actual\s*production|kpi.?quantit/i;
+
+function valoreCampo(v: any): any {
+  if (Array.isArray(v)) return v.map(valoreCampo);
+  if (v && typeof v === "object") {
+    if (v.accountId) return { accountId: v.accountId };
+    if (v.id) return { id: v.id };
+  }
+  return v;
+}
+
+// Transizione con i campi obbligatori del suo schermo: produzione a 0, gli altri copiati dal sorgente.
+async function transizioneConCampi(key: string, sourceKey: string, t: any): Promise<Response> {
+  const res = await jira("GET", `/rest/api/3/issue/${encodeURIComponent(key)}/transitions?transitionId=${encodeURIComponent(t.id)}&expand=transitions.fields`);
+  if (!res.ok) return res;
+  const tr = ((await res.json())?.transitions || []).find((x: any) => String(x.id) === String(t.id));
+  const richiesti = Object.entries(tr?.fields || {}).filter(([, f]: any) => f?.required && !f?.hasDefaultValue);
+  if (!richiesti.length) {
+    // Nessun campo sullo schermo: la richiesta viene da un validatore sul ticket. I campi di
+    // produzione modificabili ancora vuoti si portano a 0, poi si riprova.
+    const em = await jira("GET", `/rest/api/3/issue/${encodeURIComponent(key)}/editmeta`);
+    const prod = em.ok ? Object.entries((await em.json())?.fields || {}).filter(([, f]: any) => CAMPO_PRODUZIONE.test(String(f?.name || ""))).map(([id]) => id) : [];
+    if (prod.length) {
+      const r = await jira("GET", `/rest/api/3/issue/${encodeURIComponent(key)}?fields=${prod.map(encodeURIComponent).join(",")}`);
+      const val = r.ok ? (await r.json())?.fields || {} : {};
+      const vuoti: Record<string, unknown> = {};
+      prod.forEach((id) => { if (val[id] === null || val[id] === undefined) vuoti[id] = 0; });
+      if (Object.keys(vuoti).length) await jira("PUT", `/rest/api/3/issue/${encodeURIComponent(key)}?notifyUsers=false`, { fields: vuoti });
+    }
+    return jira("POST", `/rest/api/3/issue/${encodeURIComponent(key)}/transitions`, { transition: { id: t.id } });
+  }
+  const daCopiare = richiesti.filter(([, f]: any) => !CAMPO_PRODUZIONE.test(String(f?.name || ""))).map(([id]) => id);
+  let src: any = {};
+  if (daCopiare.length) {
+    const r = await jira("GET", `/rest/api/3/issue/${encodeURIComponent(sourceKey)}?fields=${daCopiare.map(encodeURIComponent).join(",")}`);
+    if (r.ok) src = (await r.json())?.fields || {};
+  }
+  const fields: Record<string, unknown> = {};
+  richiesti.forEach(([id, f]: any) => {
+    if (CAMPO_PRODUZIONE.test(String(f?.name || ""))) fields[id] = 0;
+    else if (src[id] !== null && src[id] !== undefined) fields[id] = valoreCampo(src[id]);
+  });
+  return jira("POST", `/rest/api/3/issue/${encodeURIComponent(key)}/transitions`, { transition: { id: t.id }, fields });
+}
+
+async function allineaStato(key: string, sourceKey: string, attuale: string, voluto: string, dryRun: boolean): Promise<EsitoStato> {
   const out: EsitoStato = { prima: attuale, dopo: attuale, passi: [], uscitoDaInProgress: false };
   if (!voluto || stessoStato(attuale, voluto)) return out;
   if (dryRun) { out.passi.push(`${attuale} → ${voluto}`); return out; }
@@ -191,7 +239,8 @@ async function allineaStato(key: string, attuale: string, voluto: string, dryRun
       }
     }
     if (!t) { out.errore = `nessuna transizione da «${cur}» verso «${voluto}»`; break; }
-    const r2 = await jira("POST", `/rest/api/3/issue/${encodeURIComponent(key)}/transitions`, { transition: { id: t.id } });
+    let r2 = await jira("POST", `/rest/api/3/issue/${encodeURIComponent(key)}/transitions`, { transition: { id: t.id } });
+    if (r2.status === 400) r2 = await transizioneConCampi(key, sourceKey, t);   // campi obbligatori sullo schermo
     if (!r2.ok) { out.errore = await jiraErr(r2, `Transizione a ${verso(t)}`); break; }
     if (rango(cur) === IN_PROGRESS) out.uscitoDaInProgress = true;
     out.passi.push(`${cur} → ${verso(t)}`);
@@ -221,9 +270,12 @@ function partiRoma(ms: number): { data: string; ora: string } {
   return { data: `${p.year}-${p.month}-${p.day}`, ora: `${p.hour}:${p.minute}:${p.second}` };
 }
 
-// Crea la copia di un worklog sul sottotask del fornitore; ritorna l'id Jira (o "" se Tempo
-// non l'ha ancora riportato su Jira: il giro dopo la riconosce dal contenuto).
-async function creaCopia(key: string, tk: Ticket, s: Wl): Promise<string> {
+// Crea la copia di un worklog sul sottotask del fornitore; id = id Jira (o "" se Tempo non l'ha
+// ancora riportato su Jira: il giro dopo la riconosce dal contenuto). Se Tempo non può
+// intestarla al dipendente (403: niente permesso di registrare ore sul progetto) la scrive
+// Jira, a nome dell'account di servizio, e lo segnala in nota: resta comunque sul suo sottotask.
+async function creaCopia(key: string, tk: Ticket, s: Wl): Promise<{ id: string; nota?: string }> {
+  let nota: string | undefined;
   if (TEMPO_API_TOKEN && tk.assegnatario) {
     const { data, ora } = partiRoma(s.ms);
     const body: Record<string, unknown> = {
@@ -232,23 +284,24 @@ async function creaCopia(key: string, tk: Ticket, s: Wl): Promise<string> {
     if (s.commento) body.description = s.commento;
     if (tk.residuoSec !== null) body.remainingEstimateSeconds = tk.residuoSec;
     const res = await tempo("POST", "/worklogs", body);
-    if (!res.ok) {
-      let det = "";
-      try { const j = await res.json(); det = (j?.errors || []).map((e: any) => e?.message || "").join(" ") || j?.message || ""; } catch { /* */ }
-      throw new Error(`Copia del worklog su ${key} (Tempo): HTTP ${res.status}${det ? " · " + det : ""}`);
+    if (res.ok) {
+      const tw = await res.json().catch(() => ({}));
+      if (!tw?.tempoWorklogId) return { id: "" };
+      const m = await tempo("POST", "/worklogs/tempo-to-jira", { tempoWorklogIds: [Number(tw.tempoWorklogId)] });
+      if (!m.ok) return { id: "" };
+      const jid = (await m.json())?.results?.[0]?.jiraWorklogId;
+      return { id: jid ? String(jid) : "" };
     }
-    const tw = await res.json().catch(() => ({}));
-    if (!tw?.tempoWorklogId) return "";
-    const m = await tempo("POST", "/worklogs/tempo-to-jira", { tempoWorklogIds: [Number(tw.tempoWorklogId)] });
-    if (!m.ok) return "";
-    const jid = (await m.json())?.results?.[0]?.jiraWorklogId;
-    return jid ? String(jid) : "";
+    let det = "";
+    try { const j = await res.json(); det = (j?.errors || []).map((e: any) => e?.message || "").join(" ") || j?.message || ""; } catch { /* */ }
+    if (res.status !== 403) throw new Error(`Copia del worklog su ${key} (Tempo): HTTP ${res.status}${det ? " · " + det : ""}`);
+    nota = `Tempo non può intestare le ore a ${tk.assegnatarioNome || "l'assegnatario"} (${det || "permesso negato"}): copia scritta a nome dell'account di servizio`;
   }
   const body: Record<string, unknown> = { started: s.started, timeSpentSeconds: s.seconds };
   if (s.commento) body.comment = adfDoc(s.commento);
   const res = await jiraScriviWl("POST", `/rest/api/3/issue/${encodeURIComponent(key)}/worklog`, body);
   if (!res.ok) throw new Error(await jiraErr(res, `Copia del worklog su ${key}`));
-  return String((await res.json())?.id || "");
+  return { id: String((await res.json())?.id || ""), nota };
 }
 
 async function eliminaWl(key: string, id: string): Promise<void> {
@@ -433,16 +486,21 @@ Deno.serve(async (req: Request) => {
           return;
         }
         // 1. stato
-        c.stato = await allineaStato(c.targetKey, tgt.stato, src.stato, dryRun);
+        c.stato = await allineaStato(c.targetKey, c.sourceKey, tgt.stato, src.stato, dryRun);
         if (c.stato.uscitoDaInProgress) await attendi(ATTESA_AUTOMAZIONE_MS);
-        // 2. worklog
+        // 2. worklog: prima il piano, poi si elimina e solo dopo si crea (Tempo rifiuta le copie
+        //    che, sommate ai worklog ancora da togliere, superano il limite giornaliero di ore)
         const [srcWl, tgtWl] = await Promise.all([leggiWorklogs(c.sourceKey), leggiWorklogs(c.targetKey)]);
         const srcById = new Map(srcWl.map((w) => [w.id, w]));
         const tgtById = new Map(tgtWl.map((w) => [w.id, w]));
-        const usati = new Set<string>();
+        const usati = new Set<string>();   // worklog del fornitore già assegnati a una voce del piano
         const simile = (w: Wl, ms: number, sec: number) => !usati.has(w.id) && Math.abs(w.ms - ms) < 60000 && w.seconds === sec;
         const copiati = new Set<string>();
         const ora = () => new Date().toISOString();
+        const elimina: string[] = [];                                          // worklog del fornitore da togliere
+        const crea: { s: Wl; rigaId: number | null; sostituisce: boolean }[] = [];
+        const adotta: { rigaId: number | null; s: Wl | null; id: string }[] = []; // copie presenti da (ri)registrare
+        const righeVia: number[] = [];
 
         for (const r of (copieDi.get(c.targetKey) || [])) {
           const s = srcById.get(String(r.source_worklog_id));
@@ -454,54 +512,62 @@ Deno.serve(async (req: Request) => {
             const ms0 = msDiStarted(r.source_started);
             t = tgtWl.find((w) => simile(w, ms0, r.source_seconds))
               || tgtWl.find((w) => !usati.has(w.id) && w.seconds === r.source_seconds && Math.abs(w.ms - ms0) < 14 * 3600000);
-            if (t && !dryRun) await admin.from("fornitori_worklog_copie").update({ target_worklog_id: t.id, updated_at: ora() }).eq("id", r.id);
+            if (t) adotta.push({ rigaId: r.id, s: null, id: t.id });
           }
+          if (t) usati.add(t.id);
           if (!s || r.source_key !== c.sourceKey) {
             // originale sparito (o sorgente cambiata): via la copia
-            if (t) { usati.add(t.id); if (!dryRun) await eliminaWl(c.targetKey, t.id); c.eliminati++; }
-            if (!dryRun) await admin.from("fornitori_worklog_copie").delete().eq("id", r.id);
+            if (t) { elimina.push(t.id); c.eliminati++; }
+            righeVia.push(r.id);
             continue;
           }
           copiati.add(s.id);
           const cambiato = s.ms !== msDiStarted(r.source_started) || s.seconds !== r.source_seconds || s.commento !== (r.source_commento || "");
-          if (t && !cambiato) { usati.add(t.id); continue; }
-          if (t) { usati.add(t.id); if (!dryRun) await eliminaWl(c.targetKey, t.id); }
-          const nuovoId = dryRun ? "" : await creaCopia(c.targetKey, tgt, s);
-          if (nuovoId) usati.add(nuovoId);
-          if (!dryRun) {
-            await admin.from("fornitori_worklog_copie").update({
-              target_worklog_id: nuovoId || null, source_started: s.started, source_seconds: s.seconds,
-              source_commento: s.commento, sorgente: c.sorgente, updated_at: ora(),
-            }).eq("id", r.id);
-          }
-          if (t) c.aggiornati++; else c.creati++;
+          if (t && !cambiato) continue;
+          if (t) elimina.push(t.id);
+          crea.push({ s, rigaId: r.id, sostituisce: !!t });
         }
-
         for (const s of srcWl) {
           if (copiati.has(s.id)) continue;
           // Copia già presente ma non registrata (es. giro interrotto): si adotta
           const gia = tgtWl.find((w) => simile(w, s.ms, s.seconds));
-          let idCopia = "";
-          if (gia) { usati.add(gia.id); idCopia = gia.id; }
-          else {
-            idCopia = dryRun ? "" : await creaCopia(c.targetKey, tgt, s);
-            if (idCopia) usati.add(idCopia);
-            c.creati++;
-          }
-          if (!dryRun) {
-            await admin.from("fornitori_worklog_copie").upsert({
-              target_key: c.targetKey, target_worklog_id: idCopia || null, source_key: c.sourceKey, source_worklog_id: s.id,
-              source_started: s.started, source_seconds: s.seconds, source_commento: s.commento,
-              operatore: c.operatore, sorgente: c.sorgente, updated_at: ora(),
-            }, { onConflict: "target_key,source_worklog_id" });
-          }
+          if (gia) { usati.add(gia.id); adotta.push({ rigaId: null, s, id: gia.id }); }
+          else crea.push({ s, rigaId: null, sostituisce: false });
         }
-
         // Ogni altro worklog sul sottotask del fornitore (automazione all'uscita da IN PROGRESS, a mano) si toglie
-        for (const w of tgtWl) {
-          if (usati.has(w.id)) continue;
-          if (!dryRun) await eliminaWl(c.targetKey, w.id);
-          c.eliminati++;
+        for (const w of tgtWl) if (!usati.has(w.id)) { elimina.push(w.id); c.eliminati++; }
+        crea.forEach((x) => { if (x.sostituisce) c.aggiornati++; else c.creati++; });
+
+        if (!dryRun) {
+          const riga = (s: Wl, idCopia: string) => ({
+            target_key: c.targetKey, target_worklog_id: idCopia || null, source_key: c.sourceKey, source_worklog_id: s.id,
+            source_started: s.started, source_seconds: s.seconds, source_commento: s.commento,
+            operatore: c.operatore, sorgente: c.sorgente, updated_at: ora(),
+          });
+          for (const a of adotta) {
+            if (a.rigaId !== null) await admin.from("fornitori_worklog_copie").update({ target_worklog_id: a.id, updated_at: ora() }).eq("id", a.rigaId);
+            else await admin.from("fornitori_worklog_copie").upsert(riga(a.s!, a.id), { onConflict: "target_key,source_worklog_id" });
+          }
+          if (righeVia.length) await admin.from("fornitori_worklog_copie").delete().in("id", righeVia);
+          for (const id of elimina) await eliminaWl(c.targetKey, id);
+          const errori: string[] = [], note = new Set<string>();
+          for (const x of crea) {
+            try {
+              const r = await creaCopia(c.targetKey, tgt, x.s);
+              if (r.nota) note.add(r.nota);
+              if (x.rigaId !== null) {
+                const { target_key: _k, source_worklog_id: _w, ...agg } = riga(x.s, r.id);
+                await admin.from("fornitori_worklog_copie").update(agg).eq("id", x.rigaId);
+              } else {
+                await admin.from("fornitori_worklog_copie").upsert(riga(x.s, r.id), { onConflict: "target_key,source_worklog_id" });
+              }
+            } catch (e) {
+              errori.push(String((e as Error)?.message || e));
+              if (x.sostituisce) c.aggiornati--; else c.creati--;
+            }
+          }
+          if (note.size) c.nota = [...note].join(" · ");
+          if (errori.length) c.errore = errori.join(" · ");
         }
       } catch (e) {
         c.errore = String((e as Error)?.message || e);
