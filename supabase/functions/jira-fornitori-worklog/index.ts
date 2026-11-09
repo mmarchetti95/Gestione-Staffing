@@ -184,7 +184,7 @@ type EsitoStato = { prima: string; dopo: string; passi: string[]; uscitoDaInProg
 // Campi di produzione: se una transizione li chiede (es. «Inserire: Actual Production» verso
 // DONE) si scrive 0, mai il valore del collega: lo conterebbe due volte sul Task. Il valore
 // vero lo scrive poi il Controllo Produzione (jira-update-production, modello a delta).
-const CAMPO_PRODUZIONE = /actual\s*production|kpi.?quantit/i;
+const CAMPO_PRODUZIONE = /actual\s*production|kpi.?quantit\S*\s*lavorat/i;   // non «KPI_Quantità target»
 
 function valoreCampo(v: any): any {
   if (Array.isArray(v)) return v.map(valoreCampo);
@@ -231,15 +231,15 @@ async function transizioneConCampi(key: string, sourceKey: string, t: any): Prom
 
 // La produzione del sottotask è compilata (> 0)? Il validatore verso DONE la vuole (visto il
 // 9/11/2026: con 0 rifiuta ancora «Inserire: Actual Production»).
+// Il campo si cerca per nome fra tutti quelli del ticket (expand=names): non è sullo schermo di
+// modifica del sottotask, quindi editmeta non lo mostra.
 async function produzioneCompilata(key: string): Promise<boolean> {
-  const em = await jira("GET", `/rest/api/3/issue/${encodeURIComponent(key)}/editmeta`);
-  if (!em.ok) return true;   // non si sa: si prova la transizione
-  const prod = Object.entries((await em.json())?.fields || {}).filter(([, f]: any) => CAMPO_PRODUZIONE.test(String(f?.name || ""))).map(([id]) => id);
+  const r = await jira("GET", `/rest/api/3/issue/${encodeURIComponent(key)}?fields=*all&expand=names`);
+  if (!r.ok) return true;   // non si sa: si prova la transizione
+  const j = await r.json();
+  const prod = Object.entries(j?.names || {}).filter(([, n]) => CAMPO_PRODUZIONE.test(String(n || ""))).map(([id]) => id);
   if (!prod.length) return true;
-  const r = await jira("GET", `/rest/api/3/issue/${encodeURIComponent(key)}?fields=${prod.map(encodeURIComponent).join(",")}`);
-  if (!r.ok) return true;
-  const val = (await r.json())?.fields || {};
-  return prod.some((id) => Number(val[id]) > 0);
+  return prod.some((id) => Number(j?.fields?.[id]) > 0);
 }
 
 const MSG_PRODUZIONE = "per DONE Jira chiede l'Actual Production: resta in IN PENDING finché non la scrive il Controllo Produzione (Km/Cad del dipendente)";
