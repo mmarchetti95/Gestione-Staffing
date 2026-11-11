@@ -874,7 +874,7 @@ async function sbPull() {
       const keys = ['commesse_pipeline','operatori','assegnazioni','commesse_attive_extra',
                     'staffing_modificato','commesse_chiuse','commesse_attive_meta','commesse_escluse',
                     'attestati_registro','dpi_disponibili','dpi_catalogo','limitazioni_registro','limitazioni_catalogo',
-                    'fornitori'];
+                    'fornitori','wo_tipi'];
       keys.forEach(k => { if (snap[k] !== undefined) sbSetLocal(k, snap[k]); });
       await loadState();
       renderAll();
@@ -951,7 +951,7 @@ async function sbPush() {
       const keys = ['commesse_pipeline','operatori','assegnazioni','commesse_attive_extra',
                     'staffing_modificato','commesse_chiuse','commesse_attive_meta','commesse_escluse',
                     'attestati_registro','dpi_disponibili','dpi_catalogo','limitazioni_registro','limitazioni_catalogo',
-                    'fornitori'];
+                    'fornitori','wo_tipi'];
       const snap = { _savedAt: new Date().toISOString(), _version: '18', _savedBy: _sbUser.email };
       for (const k of keys) { try { snap[k] = await sget(k); } catch{} }
       domains.push({ id: SB_ROW_CORE, payload: snap, key: 'core' });

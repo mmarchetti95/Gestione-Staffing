@@ -38,6 +38,7 @@ JS_FILES = [
     'dashboard-gantt.js',
     'dashboard-commessa-attiva.js',
     'commessa-attivita.js',
+    'operatori-tipi-wo.js',
     'dashboard-dpi-admin.js',
     'dashboard-staffing-celle.js',
     'dashboard-dettaglio-mese.js',

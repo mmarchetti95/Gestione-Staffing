@@ -2112,7 +2112,7 @@
       </span>
       <button id="btn-presentation" class="px-3 py-1.5 text-sm rounded hover:bg-white/10" style="border:1px solid var(--dark-border-strong);color:var(--dark-text);visibility:visible;">📊 Modalità presentazione</button>
       <div class="text-xs pl-2" style="border-left:1px solid var(--dark-border-strong);color:var(--dark-text-muted);">
-        <span id="app-version" class="font-medium" style="color:var(--accent);">v18.255.0</span> · Michele Marchetti
+        <span id="app-version" class="font-medium" style="color:var(--accent);">v18.256.0</span> · Michele Marchetti
         <span id="sb-role-badge" style="margin-left:8px;padding:1px 8px;border-radius:9999px;background:rgba(255,255,255,.1);color:var(--dark-text);font-weight:600;"></span>
       </div>
     </div>
@@ -2618,6 +2618,9 @@
                   <option value="senior">🎖 Senior</option>
                   <option value="junior">🌱 Junior</option>
                   <option value="nd">Non definita</option>
+                </select>
+                <select id="op-filter-wo" class="w-full text-xs border border-slate-300 rounded px-1.5 py-1 mt-1" title="Con un tipo di WO scelto, il filtro Seniority guarda il livello per quel tipo (se non impostato vale la seniority generale). Con «Tutte» restano gli operatori con un livello proprio per quel tipo.">
+                  <option value="">Seniority generale</option>
                 </select>
               </div>
               <div class="flex-1">
@@ -3567,6 +3570,14 @@
 /* ===================== DATI INIZIALI DAL FILE EXCEL ===================== */
 const INITIAL_DATA = {"pipeline": [], "operatori": [], "staffing": [], "commesse_attive": [], "giorni_lavorativi": [20, 20, 22, 21, 20, 21, 23, 21, 22, 22, 21, 21], "saturazione_baseline": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], "riconciliazione": [], "attestati_disponibili": ["RSPP", "ASPP", "Preposto", "RLS", "Primo soccorso", "Defibrillatore BLS-D", "Antincendio", "Ambienti confinati", "Lavori in quota", "Segnaletica stradale - Preposto", "Segnaletica stradale - Addetto", "PES-PAV-PEI", "ENEL 1A", "ENEL 1B", "ENEL 2A", "ENEL 2B"]};
 const SKILLS = ['DRONE', 'LIXEL', 'WO', 'LASER - STATICO', 'ROBOT', 'GRD', 'GPS', 'MMS', 'ALTRO'];
+/* Tipi di WO su cui si dà una seniority per operatore (vedi operatori-tipi-wo.js). Elenco
+   di partenza: quello vero è state.wo_tipi (dominio core, modificabile da «⚙️ Tipi WO»).
+   parole = parole chiave che, nel nome di un'attività di Griglia, indicano quel tipo. */
+const WO_TIPI_DEFAULT = [
+  { nome: 'WO I.P', parole: ['ip', 'i p', 'illuminazione'] },
+  { nome: 'WO Fognatura', parole: ['fognatura', 'fognature', 'fognaria', 'fognario', 'fogna'] },
+  { nome: 'WO Acquedotto', parole: ['acquedotto', 'acquedotti', 'idrica', 'idrico', 'idriche', 'idrici'] },
+];
 let ATTESTATI = INITIAL_DATA.attestati_disponibili || [];
 const MESI = ['Gen','Feb','Mar','Apr','Mag','Giu','Lug','Ago','Set','Ott','Nov','Dic'];
 const MESI_LONG = ['Gennaio','Febbraio','Marzo','Aprile','Maggio','Giugno','Luglio','Agosto','Settembre','Ottobre','Novembre','Dicembre'];
@@ -3821,7 +3832,7 @@ let state = {
   // Voce assente o durata nulla = il DPI non scade da solo, la data va messa a mano.
   dpi_catalogo: {},
   activeTab: 'pipeline',
-  filters: { search:'', skills:new Set(), attestati:new Set(), lowSat:false, regione:'', provincia:'', showEx:false, seniorita:'', aggiunta:'' },
+  filters: { search:'', skills:new Set(), attestati:new Set(), lowSat:false, regione:'', provincia:'', showEx:false, seniorita:'', wo_tipo:'', aggiunta:'' },
   searchCommesse: '',
   searchFornitori: '', // filtro testo lista Fornitori, solo stato di vista (non persistito)
   // Registro attestati importato da Excel: archivio grezzo dell'ultimo import, che copre
@@ -3832,6 +3843,7 @@ let state = {
   // Catalogo "tipo limitazione": stesso ruolo di dpi_disponibili ma per le idoneita'
   // mediche. Vedi dashboard-limitazioni.js.
   limitazioni_catalogo: LIMITAZIONI_TIPI_DEFAULT.slice(),
+  wo_tipi: JSON.parse(JSON.stringify(WO_TIPI_DEFAULT)),
   // Registro limitazioni importato da Excel: stessa logica di attestati_registro (copre
   // anche chi non e' nel pool operatori). Fonte autorevole per chi e' nel pool resta
   // op.limitazioni_dett, che puo' contenere correzioni manuali dalla scheda operatore.
@@ -4714,7 +4726,7 @@ async function sbPull() {
       const keys = ['commesse_pipeline','operatori','assegnazioni','commesse_attive_extra',
                     'staffing_modificato','commesse_chiuse','commesse_attive_meta','commesse_escluse',
                     'attestati_registro','dpi_disponibili','dpi_catalogo','limitazioni_registro','limitazioni_catalogo',
-                    'fornitori'];
+                    'fornitori','wo_tipi'];
       keys.forEach(k => { if (snap[k] !== undefined) sbSetLocal(k, snap[k]); });
       await loadState();
       renderAll();
@@ -4791,7 +4803,7 @@ async function sbPush() {
       const keys = ['commesse_pipeline','operatori','assegnazioni','commesse_attive_extra',
                     'staffing_modificato','commesse_chiuse','commesse_attive_meta','commesse_escluse',
                     'attestati_registro','dpi_disponibili','dpi_catalogo','limitazioni_registro','limitazioni_catalogo',
-                    'fornitori'];
+                    'fornitori','wo_tipi'];
       const snap = { _savedAt: new Date().toISOString(), _version: '18', _savedBy: _sbUser.email };
       for (const k of keys) { try { snap[k] = await sget(k); } catch{} }
       domains.push({ id: SB_ROW_CORE, payload: snap, key: 'core' });
@@ -5149,8 +5161,8 @@ async function sget(k) {
 }
 
 async function loadState() {
-  const keys = ['commesse_pipeline','operatori','assegnazioni','commesse_attive_extra','staffing_modificato','commesse_chiuse','commesse_attive_meta','commesse_escluse','attestati_registro','dpi_disponibili','dpi_catalogo','limitazioni_registro','limitazioni_catalogo','fornitori'];
-  const [p, o, a, ce, sm, cc, cam, cesc, areg, ddisp, dcat, lreg, lcat, forn] = await Promise.all(keys.map(sget));
+  const keys = ['commesse_pipeline','operatori','assegnazioni','commesse_attive_extra','staffing_modificato','commesse_chiuse','commesse_attive_meta','commesse_escluse','attestati_registro','dpi_disponibili','dpi_catalogo','limitazioni_registro','limitazioni_catalogo','fornitori','wo_tipi'];
+  const [p, o, a, ce, sm, cc, cam, cesc, areg, ddisp, dcat, lreg, lcat, forn, wot] = await Promise.all(keys.map(sget));
   state.pipeline = p || JSON.parse(JSON.stringify(INITIAL_DATA.pipeline));
   state.operatori = o || JSON.parse(JSON.stringify(INITIAL_DATA.operatori));
   state.commesse_chiuse = cc || INITIAL_DATA._chiuse || [];
@@ -5185,6 +5197,8 @@ async function loadState() {
   // di proposito e' un valore legittimo, non deve far tornare il seed.
   state.limitazioni_catalogo = Array.isArray(lcat) ? lcat : LIMITAZIONI_TIPI_DEFAULT.slice();
   state.fornitori = Array.isArray(forn) ? forn : (INITIAL_DATA.fornitori || []);
+  // Tipi di WO per la seniority per tipo (v18.256.0): mai salvati = elenco di partenza.
+  state.wo_tipi = Array.isArray(wot) ? wot : JSON.parse(JSON.stringify(WO_TIPI_DEFAULT));
   ricalcolaAllocOperatori();
 
   // Seed email operatori una-tantum (solo su quelli ancora senza email).
@@ -5213,6 +5227,7 @@ async function saveState(logAction, logDetails, immediate) {
     sset('limitazioni_registro', state.limitazioni_registro),
     sset('limitazioni_catalogo', state.limitazioni_catalogo),
     sset('fornitori', state.fornitori),
+    sset('wo_tipi', state.wo_tipi),
   ]);
   // Log attività se specificata
   if (logAction) sbLogActivity(logAction, logDetails || {});
@@ -5228,7 +5243,7 @@ async function saveState(logAction, logDetails, immediate) {
 async function resetAll() {
   if (!await showConfirmAsync('Reset completo: tutte le modifiche manuali andranno perse. Procedere?', 'Reset')) return;
   if (hasStorage) {
-    for (const k of ['commesse_pipeline','operatori','assegnazioni','commesse_attive_extra','staffing_modificato','commesse_chiuse','commesse_attive_meta','commesse_escluse','attestati_registro','dpi_disponibili','dpi_catalogo','fornitori']) {
+    for (const k of ['commesse_pipeline','operatori','assegnazioni','commesse_attive_extra','staffing_modificato','commesse_chiuse','commesse_attive_meta','commesse_escluse','attestati_registro','dpi_disponibili','dpi_catalogo','fornitori','wo_tipi']) {
       try { await window.storage.delete(k); } catch{}
     }
   } else {
@@ -5521,6 +5536,7 @@ const DB_UNDO_CHIAVI = {
   limitazioni_registro:  { campo: 'limitazioni_registro', nome: 'Limitazioni' },
   limitazioni_catalogo:  { campo: 'limitazioni_catalogo', nome: 'Limitazioni' },
   fornitori:             { campo: 'fornitori',            nome: 'Fornitori' },
+  wo_tipi:               { campo: 'wo_tipi',              nome: 'Tipi WO' },
 };
 
 // alloc_mensile/saturazione degli operatori sono derivati dallo staffing (ricalcolati in
@@ -6204,6 +6220,7 @@ function checkCoerenzaOperatori() {
 
 function renderOperatori() {
   const list = document.getElementById('op-list');
+  woFiltroPoolSync();
   const mese0 = meseCorrente();
   const meseProx = Math.min(11, mese0+1);
 
@@ -6214,10 +6231,7 @@ function renderOperatori() {
     if (state.filters.attestati.size > 0 && ![...state.filters.attestati].every(a => (op.attestati||[]).includes(a))) return false;
     if (state.filters.provincia && op.provincia !== state.filters.provincia) return false;
     if (state.filters.regione && !state.filters.provincia && operatoreRegione(op) !== state.filters.regione) return false;
-    if (state.filters.seniorita) {
-      const sen = SENIORITA[op.seniorita] ? op.seniorita : 'nd';
-      if (sen !== state.filters.seniorita) return false;
-    }
+    if (!woPassaFiltroPool(op, state.filters.seniorita, state.filters.wo_tipo)) return false;
     if (!opPassaFiltroAggiunta(op, state.filters.aggiunta)) return false;
     if (state.filters.lowSat) {
       const s = operatoreSatPeriodo(op, [meseProx]);
@@ -6257,7 +6271,7 @@ function renderOperatori() {
       ? `Contratto a termine scaduto il ${fmtDate(op.data_fine_rapporto)}`
       : (op.licenziato ? 'Segnato manualmente come ex collega' : '');
     const exBadge = modoEx ? `<span class="op-ex-tag" title="${esc(exReason)}">ex</span>` : '';
-    const skillBadges = op.skills.map(s => `<span class="skill-badge">${s}</span>`).join('');
+    const skillBadges = op.skills.map(s => `<span class="skill-badge">${s}</span>`).join('') + woBadgesHtml(op);
     // Il badge attestato porta il colore dello stato di scadenza (verde/ambra/rosso) e nel
     // tooltip data corso + data scadenza; resta viola neutro se la scadenza non e' nota.
     const attBadges = attBadgesHtml(op);
@@ -10263,7 +10277,7 @@ function openOperatoreModal(id) {
           <label class="block text-xs"><span class="text-slate-500">Data fine</span><input id="mo-data-fine" type="date" class="mt-0.5 w-full border border-slate-300 rounded px-2 py-1.5 text-sm" value="${op.data_fine_rapporto||''}"></label>
         </div>
       </div>
-      <label class="block text-xs"><span class="text-slate-600">Seniority <span class="text-slate-400 font-normal">(Auto-pianifica evita due junior insieme sullo stesso cantiere)</span></span>
+      <label class="block text-xs"><span class="text-slate-600">Seniority generale <span class="text-slate-400 font-normal">(vale per tutte le attività; con la skill WO si può cambiare per tipo di WO più sotto. Auto-pianifica evita due junior insieme sullo stesso cantiere)</span></span>
         <select id="mo-seniorita" class="mt-0.5 w-full border border-slate-300 rounded px-2 py-1.5 text-sm">
           <option value="">— non definita —</option>
           ${Object.keys(SENIORITA).map(k => `<option value="${k}" ${op.seniorita===k?'selected':''}>${SENIORITA[k]}</option>`).join('')}
@@ -10275,6 +10289,7 @@ function openOperatoreModal(id) {
           ${SKILLS.map(s => `<label class="flex items-center gap-1 text-xs hover:bg-white rounded px-1 cursor-pointer"><input type="checkbox" class="mo-skill" value="${s}" ${op.skills.includes(s)?'checked':''}>${s}</label>`).join('')}
         </div>
       </div>
+      ${woSezioneModaleHtml(op)}
       <div>
         <div class="flex items-center justify-between mb-1">
           <div class="text-xs text-slate-600 font-medium">Attestati e certificazioni posseduti</div>
@@ -10367,6 +10382,7 @@ function openOperatoreModal(id) {
   });
 
   dpiBindModaleOperatore();
+  woBindModale();
 
   // Righe limitazioni: costruite via JS (non SSR nella stringa del modal) cosi'
   // aggiunta/rimozione condividono la stessa funzione sia all'apertura sia al click
@@ -10443,8 +10459,9 @@ function openOperatoreModal(id) {
     const dataInizioRapporto = contrattoTipo === 'determinato' ? dataInizio : '';
     const dataFineRapporto = contrattoTipo === 'determinato' ? dataFine : '';
     const seniorita = document.getElementById('mo-seniorita')?.value || '';
-    if (id) { Object.assign(op, { nome_esteso: nomeEsteso, nome, cognome, email, regione, provincia, comune_residenza: comuneResidenza, seniorita, contratto_tipo: contrattoTipo, data_inizio_rapporto: dataInizioRapporto, data_fine_rapporto: dataFineRapporto, skills, attestati, attestati_dett: attestatiDett, dpi: letturaDpi.dpi, dpi_dett: letturaDpi.dett, limitazioni_dett: limitazioniDett }); await saveState('Modifica operatore', {operatore: nomeEsteso}, true); }
-    else { state.operatori.push({ ...op, nome_esteso: nomeEsteso, nome_breve: nomeEsteso, nome, cognome, email, regione, provincia, comune_residenza: comuneResidenza, seniorita, contratto_tipo: contrattoTipo, data_inizio_rapporto: dataInizioRapporto, data_fine_rapporto: dataFineRapporto, skills, attestati, attestati_dett: attestatiDett, dpi: letturaDpi.dpi, dpi_dett: letturaDpi.dett, limitazioni_dett: limitazioniDett }); await saveState('Nuovo operatore', {operatore: nomeEsteso}, true); }
+    const senioritaWo = woLeggiModale();
+    if (id) { Object.assign(op, { nome_esteso: nomeEsteso, nome, cognome, email, regione, provincia, comune_residenza: comuneResidenza, seniorita, seniorita_wo: senioritaWo, contratto_tipo: contrattoTipo, data_inizio_rapporto: dataInizioRapporto, data_fine_rapporto: dataFineRapporto, skills, attestati, attestati_dett: attestatiDett, dpi: letturaDpi.dpi, dpi_dett: letturaDpi.dett, limitazioni_dett: limitazioniDett }); await saveState('Modifica operatore', {operatore: nomeEsteso}, true); }
+    else { state.operatori.push({ ...op, nome_esteso: nomeEsteso, nome_breve: nomeEsteso, nome, cognome, email, regione, provincia, comune_residenza: comuneResidenza, seniorita, seniorita_wo: senioritaWo, contratto_tipo: contrattoTipo, data_inizio_rapporto: dataInizioRapporto, data_fine_rapporto: dataFineRapporto, skills, attestati, attestati_dett: attestatiDett, dpi: letturaDpi.dpi, dpi_dett: letturaDpi.dett, limitazioni_dett: limitazioniDett }); await saveState('Nuovo operatore', {operatore: nomeEsteso}, true); }
     renderAll(); closeModal();
   };
 }
@@ -10619,9 +10636,12 @@ function opSeniorita(nome) {
   const op = (state.operatori || []).find(o => (o.nome_esteso || o.nome_breve) === nome);
   return op && SENIORITA[op.seniorita] ? op.seniorita : '';
 }
-function senioritaBadgeHtml(seniorita) {
-  if (seniorita === 'senior') return '<span class="text-[9px] bg-indigo-50 text-indigo-700 border border-indigo-200 px-1 rounded" title="Senior">🎖 Senior</span>';
-  if (seniorita === 'junior') return '<span class="text-[9px] bg-lime-50 text-lime-700 border border-lime-200 px-1 rounded" title="Junior: da affiancare a un senior">🌱 Junior</span>';
+// tipo (facoltativo) = tipo di WO a cui è riferito il livello (operatori-tipi-wo.js)
+function senioritaBadgeHtml(seniorita, tipo) {
+  const suff = tipo ? ' · ' + esc(tipo) : '';
+  const tTipo = tipo ? ' su ' + esc(tipo) : '';
+  if (seniorita === 'senior') return '<span class="text-[9px] bg-indigo-50 text-indigo-700 border border-indigo-200 px-1 rounded" title="Senior' + tTipo + '">🎖 Senior' + suff + '</span>';
+  if (seniorita === 'junior') return '<span class="text-[9px] bg-lime-50 text-lime-700 border border-lime-200 px-1 rounded" title="Junior' + tTipo + ': da affiancare a un senior">🌱 Junior' + suff + '</span>';
   return '';
 }
 
@@ -12226,7 +12246,9 @@ function renderConfrontoBox(commessaNome, meseSel) {
    - alias: nomi scritti a mano prima del catalogo ("Rielivo Wo Ip"…). Lo storico di pwData
      non viene riscritto: gli alias lo ricollegano alla voce giusta (caTrova).
    - activity_type: Activity Type Jira proposto nella creazione dei sottotask (prima era
-     ricordato solo nel browser, vedi pwJiraActivityTypeGuess). */
+     ricordato solo nel browser, vedi pwJiraActivityTypeGuess).
+   - wo_tipo: tipo di WO dell'attività per la seniority per tipo (operatori-tipi-wo.js);
+     '' = automatico, dalle parole chiave del tipo nel nome. */
 
 HELP_TEXTS['#ma-btn-attivita'] = 'Apre il catalogo delle attività di questa commessa: nome, se è produttiva, KPI_Quantità target giornaliero per squadra, unità, Activity Type Jira e nomi vecchi (alias).\n\nCon il catalogo, in Griglia il campo attività diventa una tendina con queste voci (più Viaggio, Riposo compensativo e le altre voci di servizio) e un nome fuori catalogo viene rifiutato; i nomi già scritti nelle settimane passate non vengono toccati, gli alias li ricollegano alla voce giusta. «Importa dalla Griglia» propone i nomi già usati.\n\nLe modifiche valgono solo dopo «Salva» della scheda commessa e sono condivise con tutti.';
 
@@ -12323,6 +12345,7 @@ function caClona(lista) {
     unita: a.unita || '',
     activity_type: a.activity_type && a.activity_type.id ? { id: String(a.activity_type.id), label: a.activity_type.label || '' } : null,
     alias: [...(a.alias || [])],
+    wo_tipo: a.wo_tipo || '',
   }));
 }
 
@@ -12359,6 +12382,8 @@ function caOpenEditor(opts) {
       a.kpi_target = k === '' || !isFinite(Number(k)) ? null : Number(k);
       a.unita = row.querySelector('.ca-unita').value.trim();
       a.alias = row.querySelector('.ca-alias').value.split(',').map(s => s.trim()).filter(Boolean);
+      const wo = row.querySelector('.ca-wo');
+      if (wo) a.wo_tipo = wo.value;
       const sel = row.querySelector('.ca-at');
       if (sel) {
         const v = (activityValues || []).find(x => String(x.id) === sel.value);
@@ -12376,14 +12401,26 @@ function caOpenEditor(opts) {
       activityValues.map(v => '<option value="' + esc(String(v.id)) + '"' + (String(v.id) === cur ? ' selected' : '') + '>' + esc(v.value) + '</option>').join('') + '</select>';
   }
 
+  // Tipo di WO: '' = automatico (dal nome); un tipo tolto dall'elenco resta visibile finché
+  // non si sceglie altro.
+  function woTipoSelectHtml(a) {
+    const auto = woTipoDaTesto(a.nome);
+    const tipi = woTipi().map(t => t.nome);
+    if (a.wo_tipo && !tipi.includes(a.wo_tipo)) tipi.push(a.wo_tipo);
+    return '<select class="ca-wo w-full border border-slate-300 rounded px-1 py-1 text-xs" title="Tipo di WO per la seniority per tipo degli operatori">' +
+      '<option value="">' + esc(auto ? 'auto: ' + auto : 'auto: nessuno') + '</option>' +
+      tipi.map(t => '<option value="' + esc(t) + '"' + (a.wo_tipo === t ? ' selected' : '') + '>' + esc(t) + '</option>').join('') + '</select>';
+  }
+
   function righeHtml() {
     if (!lista.length) return '<div class="text-xs text-slate-400 italic py-2">Nessuna attività: aggiungile a mano o importale dai nomi usati in Griglia.</div>';
-    return lista.map((a, i) => '<div data-ca-idx="' + i + '" class="grid gap-1 items-center py-1 border-b border-slate-100" style="grid-template-columns: minmax(0,2fr) 52px 70px 60px minmax(0,1.5fr) minmax(0,2fr) 22px;">' +
+    return lista.map((a, i) => '<div data-ca-idx="' + i + '" class="grid gap-1 items-center py-1 border-b border-slate-100" style="grid-template-columns: minmax(0,2fr) 52px 70px 60px minmax(0,1.5fr) minmax(0,1.3fr) minmax(0,2fr) 22px;">' +
       '<input class="ca-nome border border-slate-300 rounded px-1.5 py-1 text-xs" value="' + esc(a.nome) + '" placeholder="Es: Rilievo IP">' +
       '<label class="flex justify-center"><input type="checkbox" class="ca-prod"' + (a.produttiva !== false ? ' checked' : '') + '></label>' +
       '<input class="ca-kpi border border-slate-300 rounded px-1.5 py-1 text-xs text-right" inputmode="decimal" value="' + (a.kpi_target === null ? '' : esc(String(a.kpi_target).replace('.', ','))) + '" placeholder="—">' +
       '<input class="ca-unita border border-slate-300 rounded px-1.5 py-1 text-xs" value="' + esc(a.unita) + '" placeholder="km">' +
       '<div>' + activityHtml(a) + '</div>' +
+      '<div>' + woTipoSelectHtml(a) + '</div>' +
       '<input class="ca-alias border border-slate-300 rounded px-1.5 py-1 text-xs" value="' + esc((a.alias || []).join(', ')) + '" placeholder="nomi vecchi, separati da virgola">' +
       '<button type="button" class="ca-del text-slate-400 hover:text-red-600 text-sm" data-del="' + i + '" title="Togli">✕</button>' +
       '</div>').join('');
@@ -12420,7 +12457,7 @@ function caOpenEditor(opts) {
       const nuove = [];
       layer.querySelectorAll('.ca-imp').forEach(sel => {
         const nome = sel.dataset.nome;
-        if (sel.value === '__nuova__') nuove.push({ nome, produttiva: true, kpi_target: null, unita: '', activity_type: null, alias: [] });
+        if (sel.value === '__nuova__') nuove.push({ nome, produttiva: true, kpi_target: null, unita: '', activity_type: null, alias: [], wo_tipo: '' });
         else if (sel.value !== '' && lista[Number(sel.value)]) lista[Number(sel.value)].alias.push(nome);
       });
       lista = lista.concat(nuove);
@@ -12433,8 +12470,8 @@ function caOpenEditor(opts) {
     '<p class="text-xs text-slate-500 mb-3">Le attività di questa commessa diventano la tendina del campo attività in Griglia. ' +
     '<b>KPI target</b> = KPI_Quantità target <b>giornaliero per squadra</b>: nel sottotask di ogni operatore va diviso per chi della sua squadra è quel giorno sullo stesso cantiere con la stessa attività. ' +
     'Le voci di servizio (' + esc(CA_ATTIVITA_SERVIZIO.join(', ')) + ') ci sono sempre e non sono produttive.</p>' +
-    '<div class="grid gap-1 text-[10px] text-slate-500 uppercase font-medium border-b border-slate-200 pb-1" style="grid-template-columns: minmax(0,2fr) 52px 70px 60px minmax(0,1.5fr) minmax(0,2fr) 22px;">' +
-    '<span>Attività</span><span class="text-center">Produttiva</span><span class="text-right">KPI/sq/gg</span><span>Unità</span><span>Activity Type</span><span>Nomi vecchi (alias)</span><span></span></div>' +
+    '<div class="grid gap-1 text-[10px] text-slate-500 uppercase font-medium border-b border-slate-200 pb-1" style="grid-template-columns: minmax(0,2fr) 52px 70px 60px minmax(0,1.5fr) minmax(0,1.3fr) minmax(0,2fr) 22px;">' +
+    '<span>Attività</span><span class="text-center">Produttiva</span><span class="text-right">KPI/sq/gg</span><span>Unità</span><span>Activity Type</span><span title="Per la seniority per tipo di WO degli operatori">Tipo WO</span><span>Nomi vecchi (alias)</span><span></span></div>' +
     '<div id="ca-righe"></div>' +
     '<button type="button" id="ca-add" class="mt-2 text-xs px-2 py-1 bg-slate-100 text-slate-700 border border-slate-300 rounded hover:bg-slate-200">+ Attività</button>' +
     '<div class="mt-4 pt-3 border-t border-slate-200"><div class="text-xs font-medium text-slate-600 mb-1">Importa dalla Griglia</div><div id="ca-import"></div></div>' +
@@ -12445,7 +12482,7 @@ function caOpenEditor(opts) {
   root.appendChild(layer);
   render();
 
-  layer.querySelector('#ca-add').onclick = () => { leggi(); lista.push({ nome: '', produttiva: true, kpi_target: null, unita: '', activity_type: null, alias: [] }); render(); };
+  layer.querySelector('#ca-add').onclick = () => { leggi(); lista.push({ nome: '', produttiva: true, kpi_target: null, unita: '', activity_type: null, alias: [], wo_tipo: '' }); render(); };
   layer.querySelector('#ca-annulla').onclick = chiudi;
   layer.querySelector('#ca-ok').onclick = () => {
     leggi();
@@ -12471,6 +12508,349 @@ function caOpenEditor(opts) {
     }).catch(() => { activityStato = 'ok'; activityValues = null; })
       .then(() => { if (layer.isConnected) { leggi(); render(); } });
   }
+}
+/* ===================== OPERATORI · SENIORITY PER TIPO DI WO ===================== */
+/* Un operatore può essere senior su un tipo di WO (es. WO Fognatura) e junior su un altro
+   (es. WO I.P). Since v18.256.0.
+   - Elenco dei tipi: state.wo_tipi = [{ nome, parole: [] }] (dominio core, condiviso),
+     modificabile da «⚙️ Tipi WO» nella scheda operatore. Partenza: WO_TIPI_DEFAULT.
+   - Livello sull'operatore: op.seniorita_wo = { 'WO Fognatura': 'senior', 'WO I.P': 'junior' }.
+     Un tipo senza livello eredita la seniority generale (op.seniorita).
+   - Tipo di una voce di Griglia: dall'attività. Prima il campo wo_tipo della voce del
+     catalogo attività della commessa (caTrova), poi il nome del tipo o le sue parole chiave
+     nel testo; due tipi trovati insieme = nessun tipo (non si tira a indovinare).
+   Chi legge la seniority "per un'attività" passa da opSenioritaPer(nome, tipo), mai da
+   op.seniorita_wo direttamente. */
+
+function woTipi() {
+  return Array.isArray(state.wo_tipi) ? state.wo_tipi : WO_TIPI_DEFAULT;
+}
+function woTipoValido(nome) {
+  return !!nome && woTipi().some(t => t.nome === nome);
+}
+
+// Testo normalizzato con spazi ai lati: "WO - I.P." -> " wo i p ", così le parole chiave
+// si confrontano a parola intera (" ip " non trova "zip").
+function woNorm(s) {
+  const n = String(s || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '')
+    .replace(/[^a-z0-9]+/g, ' ').trim();
+  return n ? ' ' + n + ' ' : '';
+}
+
+// Tipo di WO citato in un testo libero ('' = nessuno o più di uno).
+function woTipoDaTesto(testo) {
+  const n = woNorm(testo);
+  if (!n) return '';
+  const perNome = woTipi().filter(t => woNorm(t.nome) && n.includes(woNorm(t.nome)));
+  if (perNome.length === 1) return perNome[0].nome;
+  const perParole = woTipi().filter(t => (t.parole || []).some(p => woNorm(p) && n.includes(woNorm(p))));
+  return perParole.length === 1 ? perParole[0].nome : '';
+}
+
+// Tipo di WO di un'attività di Griglia per una commessa ('' = non è un tipo di WO noto).
+function woTipoDiAttivita(commessa, attivita) {
+  if (!attivita) return '';
+  const voce = commessa && typeof caTrova === 'function' ? caTrova(commessa, attivita) : null;
+  if (voce && voce.servizio) return '';
+  if (voce && woTipoValido(voce.wo_tipo)) return voce.wo_tipo;
+  return (voce ? woTipoDaTesto(voce.nome) : '') || woTipoDaTesto(attivita);
+}
+
+// Tipo più frequente fra più attività ('' se nessuna è un tipo di WO; a pari merito il
+// primo dell'elenco dei tipi).
+function woTipoPrevalente(commessa, attivitaElenco) {
+  const conta = {};
+  (attivitaElenco || []).forEach(a => {
+    const t = woTipoDiAttivita(commessa, a);
+    if (t) conta[t] = (conta[t] || 0) + 1;
+  });
+  let best = '', bestN = 0;
+  woTipi().forEach(t => { if ((conta[t.nome] || 0) > bestN) { best = t.nome; bestN = conta[t.nome]; } });
+  return best;
+}
+
+function woOperatore(nome) {
+  if (!nome) return null;
+  return (state.operatori || []).find(o => (o.nome_esteso || o.nome_breve) === nome) || null;
+}
+
+// Livello scritto per quel tipo sull'operatore ('' = non impostato).
+function opSenioritaWo(op, tipo) {
+  const s = op && tipo && op.seniorita_wo ? op.seniorita_wo[tipo] : '';
+  return SENIORITA[s] ? s : '';
+}
+
+// Seniority di un operatore per un tipo di WO: il livello del tipo se impostato, altrimenti
+// la seniority generale. tipo '' = seniority generale.
+function opSenioritaPer(nome, tipo) {
+  const s = tipo ? opSenioritaWo(woOperatore(nome), tipo) : '';
+  return s || opSeniorita(nome);
+}
+
+// Badge della seniority riferita a un tipo: con il nome del tipo solo se il livello è
+// proprio di quel tipo (se è ereditato dalla generale, badge normale).
+function woSenioritaBadgeHtml(nome, tipo) {
+  const specifico = tipo ? opSenioritaWo(woOperatore(nome), tipo) : '';
+  return specifico ? senioritaBadgeHtml(specifico, tipo) : senioritaBadgeHtml(opSeniorita(nome));
+}
+
+// Chip compatti per la card del Pool operatori: "WO Fognatura 🎖".
+function woBadgesHtml(op) {
+  const sw = (op && op.seniorita_wo) || {};
+  return woTipi().filter(t => SENIORITA[sw[t.nome]]).map(t => {
+    const sen = sw[t.nome] === 'senior';
+    return '<span class="text-[9px] ' + (sen ? 'bg-indigo-50 text-indigo-700 border-indigo-200' : 'bg-lime-50 text-lime-700 border-lime-200') +
+      ' border px-1 rounded" title="' + esc(t.nome + ': ' + SENIORITA[sw[t.nome]]) + '">' + esc(t.nome) + ' ' + (sen ? '🎖' : '🌱') + '</span>';
+  }).join('');
+}
+
+// Tutti i livelli di un operatore (generale + per tipo), senza ripetizioni.
+function woLivelliOperatore(nome) {
+  const op = woOperatore(nome);
+  const out = new Set();
+  if (op && SENIORITA[op.seniorita]) out.add(op.seniorita);
+  Object.values((op && op.seniorita_wo) || {}).forEach(v => { if (SENIORITA[v]) out.add(v); });
+  return [...out];
+}
+
+// Chip della finestra di scelta operatore in Griglia: seniority generale (detta «generale»
+// se ci sono anche livelli per tipo) + un chip per ogni tipo di WO con un livello proprio;
+// il tipo della squadra (tipoEvid) è contornato.
+function woChipOperatoreHtml(nome, tipoEvid) {
+  const op = woOperatore(nome);
+  if (!op) return '';
+  const sw = op.seniorita_wo || {};
+  const tipi = woTipi().filter(t => SENIORITA[sw[t.nome]]);
+  let html = '';
+  if (SENIORITA[op.seniorita]) {
+    const sen = op.seniorita === 'senior';
+    html += '<span class="text-[9px] ' + (sen ? 'bg-indigo-50 text-indigo-700 border-indigo-200' : 'bg-lime-50 text-lime-700 border-lime-200') +
+      ' border px-1 rounded" title="Seniority generale: vale dove non c\'è un livello per tipo">' + (sen ? '🎖 ' : '🌱 ') + SENIORITA[op.seniorita] +
+      (tipi.length ? ' generale' : '') + '</span>';
+  }
+  tipi.forEach(t => {
+    const sen = sw[t.nome] === 'senior';
+    const evid = t.nome === tipoEvid;
+    html += '<span class="text-[9px] ' + (sen ? 'bg-indigo-50 text-indigo-700 border-indigo-200' : 'bg-lime-50 text-lime-700 border-lime-200') +
+      ' border px-1 rounded' + (evid ? ' font-bold ring-1 ring-indigo-400' : '') + '" title="' +
+      esc(SENIORITA[sw[t.nome]] + ' su ' + t.nome + (evid ? ' (tipo delle attività della squadra)' : '')) + '">' +
+      (sen ? '🎖 ' : '🌱 ') + esc(t.nome) + '</span>';
+  });
+  return html;
+}
+
+/* ---- Scheda operatore: riquadro «Seniority per tipo di WO» ----
+   Ogni tipo mostra il livello che vale davvero: «come generale: Junior» finché non se ne
+   sceglie uno proprio (riga evidenziata). Il riquadro si vede solo con la skill WO spuntata
+   (o se l'operatore ha già dei livelli per tipo); nascosto, i valori restano e si salvano. */
+
+function woEtichettaGenerale(generale) {
+  return 'come generale: ' + (SENIORITA[generale] ? SENIORITA[generale] : 'non definita');
+}
+
+function woRigheModaleHtml(valori, generale) {
+  const tipi = woTipi();
+  if (!tipi.length) return '<div class="text-[10px] text-slate-400 italic">Nessun tipo di WO definito: aggiungili da «⚙️ Tipi WO».</div>';
+  return tipi.map(t => {
+    const v = (valori || {})[t.nome] || '';
+    const proprio = !!SENIORITA[v];
+    return '<label class="mo-wo-riga flex items-center justify-between gap-2 text-xs rounded px-2 py-1 border ' +
+      (proprio ? 'bg-indigo-100 border-indigo-300 font-medium' : 'bg-white border-indigo-100') + '">' +
+      '<span class="truncate" title="' + esc(t.nome) + '">' + esc(t.nome) + '</span>' +
+      '<select class="mo-wo border border-slate-300 rounded px-1 py-0.5 text-xs" data-tipo="' + esc(t.nome) + '">' +
+      '<option value="">' + esc(woEtichettaGenerale(generale)) + '</option>' +
+      Object.keys(SENIORITA).map(k => '<option value="' + k + '"' + (v === k ? ' selected' : '') + '>' + (k === 'senior' ? '🎖 ' : '🌱 ') + SENIORITA[k] + '</option>').join('') +
+      '</select></label>';
+  }).join('');
+}
+
+function woSezioneModaleHtml(op) {
+  const visibile = (op.skills || []).includes('WO') || Object.keys(op.seniorita_wo || {}).length > 0;
+  return '<div id="mo-wo-sezione"' + (visibile ? '' : ' class="hidden"') + '>' +
+    '<div class="flex items-center justify-between mb-1">' +
+    '<div class="text-xs text-slate-600 font-medium">Seniority per tipo di WO</div>' +
+    '<button type="button" id="mo-wo-tipi" class="text-[10px] px-2 py-0.5 bg-slate-100 text-slate-700 rounded border border-slate-300 hover:bg-slate-200">⚙️ Tipi WO</button>' +
+    '</div>' +
+    '<div class="text-[10px] text-slate-500 mb-1">Da cambiare solo dove l\'operatore è più o meno esperto rispetto alla seniority generale. ' +
+    'In Griglia, sui cantieri con un\'attività di quel tipo, vale questo livello al posto di quello generale.</div>' +
+    '<div id="mo-wo-righe" class="grid grid-cols-2 gap-1 p-2 bg-indigo-50 rounded border border-indigo-200">' + woRigheModaleHtml(op.seniorita_wo, op.seniorita) + '</div>' +
+    '</div>';
+}
+
+function woLeggiModale() {
+  const out = {};
+  document.querySelectorAll('#mo-wo-righe .mo-wo').forEach(sel => {
+    if (SENIORITA[sel.value]) out[sel.dataset.tipo] = sel.value;
+  });
+  return out;
+}
+
+function woGeneraleModale() {
+  return (document.getElementById('mo-seniorita') || {}).value || '';
+}
+
+// Aggiorna etichette ed evidenziazione senza ridisegnare (le scelte restano).
+function woAggiornaRigheModale() {
+  const generale = woGeneraleModale();
+  document.querySelectorAll('#mo-wo-righe .mo-wo').forEach(sel => {
+    if (sel.options[0]) sel.options[0].textContent = woEtichettaGenerale(generale);
+    const riga = sel.closest('.mo-wo-riga');
+    if (!riga) return;
+    const proprio = !!SENIORITA[sel.value];
+    riga.classList.toggle('bg-indigo-100', proprio);
+    riga.classList.toggle('border-indigo-300', proprio);
+    riga.classList.toggle('font-medium', proprio);
+    riga.classList.toggle('bg-white', !proprio);
+    riga.classList.toggle('border-indigo-100', !proprio);
+  });
+}
+
+// Collega il riquadro: seniority generale e skill WO aggiornano etichette e visibilità;
+// «⚙️ Tipi WO» ridisegna dopo il salvataggio dell'elenco tenendo le scelte non ancora
+// salvate (rinominate se il tipo ha cambiato nome).
+function woBindModale() {
+  const gen = document.getElementById('mo-seniorita');
+  if (gen) gen.addEventListener('change', woAggiornaRigheModale);
+  const box = document.getElementById('mo-wo-righe');
+  if (box) box.addEventListener('change', woAggiornaRigheModale);
+  const skillWo = document.querySelector('.mo-skill[value="WO"]');
+  const sez = document.getElementById('mo-wo-sezione');
+  if (skillWo && sez) skillWo.addEventListener('change', () => {
+    if (skillWo.checked) sez.classList.remove('hidden');
+    else if (!Object.keys(woLeggiModale()).length) sez.classList.add('hidden');
+  });
+  const btn = document.getElementById('mo-wo-tipi');
+  if (!btn) return;
+  btn.onclick = () => woOpenEditor(rinomina => {
+    const correnti = woLeggiModale();
+    const nuovi = {};
+    Object.keys(correnti).forEach(k => {
+      const n = Object.prototype.hasOwnProperty.call(rinomina, k) ? rinomina[k] : k;
+      if (n && woTipoValido(n)) nuovi[n] = correnti[k];
+    });
+    const righe = document.getElementById('mo-wo-righe');
+    if (righe) righe.innerHTML = woRigheModaleHtml(nuovi, woGeneraleModale());
+  });
+}
+
+/* ---- Editor dell'elenco dei tipi (sopra la scheda operatore) ----
+   Salva subito (saveState): rinominare un tipo rinomina il livello su tutti gli operatori
+   e sulle voci del catalogo attività che lo indicano; togliere un tipo toglie i livelli.
+   onSalvato(rinomina) riceve { vecchioNome: nuovoNome | '' (tolto) }. */
+function woOpenEditor(onSalvato) {
+  let lista = woTipi().map(t => ({ orig: t.nome, nome: t.nome, parole: (t.parole || []).join(', ') }));
+  const root = document.getElementById('modal-root');
+  const layer = document.createElement('div');
+  layer.className = 'modal-backdrop';
+  const chiudi = () => layer.remove();
+
+  function woEdLeggi() {
+    layer.querySelectorAll('[data-wo-idx]').forEach(row => {
+      const t = lista[Number(row.dataset.woIdx)];
+      if (!t) return;
+      t.nome = row.querySelector('.wo-nome').value.trim();
+      t.parole = row.querySelector('.wo-parole').value;
+    });
+  }
+  function woEdRender() {
+    layer.querySelector('#wo-righe').innerHTML = lista.length ? lista.map((t, i) =>
+      '<div data-wo-idx="' + i + '" class="grid gap-1 items-center py-1 border-b border-slate-100" style="grid-template-columns: minmax(0,1fr) minmax(0,2fr) 22px;">' +
+      '<input class="wo-nome border border-slate-300 rounded px-1.5 py-1 text-xs" value="' + esc(t.nome) + '" placeholder="Es: WO Gas">' +
+      '<input class="wo-parole border border-slate-300 rounded px-1.5 py-1 text-xs" value="' + esc(t.parole) + '" placeholder="parole chiave nel nome dell\'attività, separate da virgola">' +
+      '<button type="button" class="wo-del text-slate-400 hover:text-red-600 text-sm" data-del="' + i + '" title="Togli">✕</button>' +
+      '</div>').join('')
+      : '<div class="text-xs text-slate-400 italic py-2">Nessun tipo di WO.</div>';
+    layer.querySelectorAll('.wo-del').forEach(b => b.onclick = () => { woEdLeggi(); lista.splice(Number(b.dataset.del), 1); woEdRender(); });
+  }
+
+  layer.innerHTML = '<div class="bg-white rounded-lg shadow-xl w-full max-w-2xl mx-4 my-8 p-5 max-h-[90vh] overflow-y-auto">' +
+    '<h3 class="font-semibold text-slate-900 mb-1">Tipi di WO</h3>' +
+    '<p class="text-xs text-slate-500 mb-3">Per ogni tipo si può dare a un operatore una seniority diversa da quella generale. ' +
+    'In Griglia il tipo si ricava dall\'attività del cantiere: dal campo «Tipo WO» del catalogo attività della commessa, altrimenti dal nome del tipo o dalle <b>parole chiave</b> trovate nel nome dell\'attività (a parola intera, maiuscole e accenti non contano). ' +
+    'Rinominare un tipo lo rinomina anche sugli operatori; toglierlo cancella i livelli dati per quel tipo.</p>' +
+    '<div class="grid gap-1 text-[10px] text-slate-500 uppercase font-medium border-b border-slate-200 pb-1" style="grid-template-columns: minmax(0,1fr) minmax(0,2fr) 22px;"><span>Tipo</span><span>Parole chiave</span><span></span></div>' +
+    '<div id="wo-righe"></div>' +
+    '<button type="button" id="wo-add" class="mt-2 text-xs px-2 py-1 bg-slate-100 text-slate-700 border border-slate-300 rounded hover:bg-slate-200">+ Tipo</button>' +
+    '<div class="flex justify-end gap-2 mt-4">' +
+    '<button type="button" id="wo-annulla" class="px-3 py-1.5 text-sm border border-slate-300 rounded">Annulla</button>' +
+    '<button type="button" id="wo-ok" class="px-3 py-1.5 text-sm bg-teal-600 text-white rounded hover:bg-teal-700">Salva</button>' +
+    '</div></div>';
+  root.appendChild(layer);
+  woEdRender();
+
+  layer.querySelector('#wo-add').onclick = () => { woEdLeggi(); lista.push({ orig: '', nome: '', parole: '' }); woEdRender(); };
+  layer.querySelector('#wo-annulla').onclick = chiudi;
+  layer.querySelector('#wo-ok').onclick = async () => {
+    if (!sbGuardWrite()) return;
+    woEdLeggi();
+    const pulita = lista.filter(t => t.nome);
+    const visti = new Set();
+    for (const t of pulita) {
+      const k = t.nome.toLowerCase();
+      if (visti.has(k)) { showAlertModal('Il tipo «' + t.nome + '» compare due volte.'); return; }
+      visti.add(k);
+    }
+    const rinomina = {};
+    woTipi().forEach(t => {
+      const nuovo = pulita.find(x => x.orig === t.nome);
+      rinomina[t.nome] = nuovo ? nuovo.nome : '';
+    });
+    const tolti = Object.keys(rinomina).filter(k => !rinomina[k]);
+    if (tolti.length) {
+      const nOp = (state.operatori || []).filter(o => o.seniorita_wo && tolti.some(k => o.seniorita_wo[k])).length;
+      if (nOp && !await showConfirmAsync('Togli ' + tolti.join(', ') + ': si cancellano i livelli dati a ' + nOp + ' operatori per ' + (tolti.length > 1 ? 'questi tipi' : 'questo tipo') + '. Procedere?', 'Togli')) return;
+    }
+    state.wo_tipi = pulita.map(t => ({
+      nome: t.nome,
+      parole: String(t.parole || '').split(',').map(s => s.trim()).filter(Boolean),
+    }));
+    const mappa = k => Object.prototype.hasOwnProperty.call(rinomina, k) ? rinomina[k] : (woTipoValido(k) ? k : '');
+    (state.operatori || []).forEach(o => {
+      if (!o.seniorita_wo) return;
+      const nuovo = {};
+      Object.keys(o.seniorita_wo).forEach(k => { const n = mappa(k); if (n && SENIORITA[o.seniorita_wo[k]]) nuovo[n] = o.seniorita_wo[k]; });
+      o.seniorita_wo = nuovo;
+    });
+    Object.values(state.commesse_attive_meta || {}).forEach(meta => {
+      (meta && Array.isArray(meta.attivita) ? meta.attivita : []).forEach(a => {
+        if (a.wo_tipo) a.wo_tipo = mappa(a.wo_tipo);
+      });
+    });
+    await saveState('Tipi WO modificati', { tipi: state.wo_tipi.map(t => t.nome).join(', ') }, true);
+    chiudi();
+    if (typeof onSalvato === 'function') onSalvato(rinomina);
+    if (typeof renderOperatori === 'function') renderOperatori();
+  };
+}
+
+/* ---- Filtro «Tipo WO» del Pool operatori ---- */
+
+// Riallinea le opzioni della tendina all'elenco corrente (che può cambiare da un pull).
+function woFiltroPoolSync() {
+  const sel = document.getElementById('op-filter-wo');
+  if (!sel) return;
+  const tipi = woTipi().map(t => t.nome);
+  if (state.filters.wo_tipo && !tipi.includes(state.filters.wo_tipo)) state.filters.wo_tipo = '';
+  const firma = tipi.join('|');
+  if (sel.dataset.firma !== firma) {
+    sel.innerHTML = '<option value="">Seniority generale</option>' + tipi.map(t => '<option value="' + esc(t) + '">' + esc(t) + '</option>').join('');
+    sel.dataset.firma = firma;
+  }
+  sel.value = state.filters.wo_tipo || '';
+}
+
+// Filtro del Pool: con un tipo scelto il filtro Seniority guarda il livello per quel tipo
+// (ereditato dalla generale se non impostato); con il solo tipo restano gli operatori che
+// hanno un livello proprio per quel tipo.
+function woPassaFiltroPool(op, filtroSen, tipo) {
+  if (!tipo) {
+    if (!filtroSen) return true;
+    const sen = SENIORITA[op.seniorita] ? op.seniorita : 'nd';
+    return sen === filtroSen;
+  }
+  if (!filtroSen) return !!opSenioritaWo(op, tipo);
+  const sen = opSenioritaWo(op, tipo) || (SENIORITA[op.seniorita] ? op.seniorita : '') || 'nd';
+  return sen === filtroSen;
 }
 /* ===================== DPI: CATALOGO, ASSEGNAZIONI E SCADENZE ===================== */
 /* Mappa i DPI consegnati agli operatori con data di assegnazione e data di scadenza
@@ -13591,6 +13971,10 @@ document.addEventListener('DOMContentLoaded', async () => {
   });
   document.getElementById('op-filter-seniorita').addEventListener('change', e => {
     state.filters.seniorita = e.target.value;
+    renderOperatori();
+  });
+  document.getElementById('op-filter-wo').addEventListener('change', e => {
+    state.filters.wo_tipo = e.target.value;
     renderOperatori();
   });
   document.getElementById('op-filter-aggiunta').addEventListener('change', e => {
@@ -15796,6 +16180,15 @@ function pwOpenOpModal(cidx, sidx, oidx) {
   selSeniorita.onchange = () => { filtroSeniorita = selSeniorita.value; buildList(search.value); };
   geoRow.appendChild(selSeniorita);
 
+  // Seniority per tipo di WO (operatori-tipi-wo.js): tutte le seniority dell'operatore sono
+  // chip accanto al nome; il tipo prevalente fra le attività della squadra nella settimana
+  // decide solo l'ordine «in cima i senior» ed è evidenziato nei chip.
+  const attivitaSquadra = [];
+  ((bc.squadre[sidx] || {}).operatori || []).forEach(o => {
+    Object.values(o.giorni || {}).forEach(g => { if (g) pwCellVoci(g).forEach(v => { if (v.attivita) attivitaSquadra.push(v.attivita); }); });
+  });
+  const tipoSen = woTipoPrevalente(commessa, attivitaSquadra);
+
   // Doppia week della settimana aperta: W1 = il blocco inizia questa settimana, W2 = è
   // iniziato la precedente (rientro gio). Flag puro come il badge in Griglia; un W1 non
   // ancora impiegato in Griglia ha dato solo la disponibilità, quindi è "da collocare".
@@ -15830,13 +16223,20 @@ function pwOpenOpModal(cidx, sidx, oidx) {
   // seconda scelta è indifferente (junior o senior) e l'ordine resta quello normale.
   const altriSquadra = ((bc.squadre[sidx] || {}).operatori || [])
     .filter((o, i) => i !== oidx && o.nome && !o.fornitore).map(o => o.nome);
-  const serveSenior = !altriSquadra.some(n => opSeniorita(n) === 'senior');
+  let serveSenior = false;
   const senioritaHint = document.createElement('div');
   senioritaHint.style.cssText = 'padding:0 16px 8px;font-size:12.5px;color:#4338ca;';
-  senioritaHint.textContent = !serveSenior ? ''
-    : altriSquadra.length ? "🎖 In cima i senior: in squadra non c'è ancora un senior (" + altriSquadra.join(', ') + ')'
-    : '🎖 In cima i senior: è il primo operatore della squadra';
-  if (senioritaHint.textContent) modal.appendChild(senioritaHint);
+  modal.appendChild(senioritaHint);
+  function aggiornaServeSenior() {
+    serveSenior = !altriSquadra.some(n => opSenioritaPer(n, tipoSen) === 'senior');
+    const su = tipoSen ? ' su ' + tipoSen : '';
+    senioritaHint.textContent = !serveSenior ? ''
+      : altriSquadra.length ? '🎖 In cima i senior' + su + ": in squadra non c'è ancora un senior" + su + ' (' + altriSquadra.join(', ') + ')'
+      : '🎖 In cima i senior' + su + ': è il primo operatore della squadra';
+    if (senioritaHint.textContent && tipoSen) senioritaHint.textContent += ' · tipo ricavato dalle attività della squadra';
+    senioritaHint.style.display = senioritaHint.textContent ? '' : 'none';
+  }
+  aggiornaServeSenior();
 
   // Filtro skill (chip multi-selezione, AND come nel filtro Pool operatori) e
   // filtro attestati (checkbox in un pannello a comparsa, stessa logica AND) —
@@ -15913,8 +16313,9 @@ function pwOpenOpModal(cidx, sidx, oidx) {
 
   function passaFiltroSeniorita(nome) {
     if (!filtroSeniorita) return true;
-    const sen = opSeniorita(nome);
-    return filtroSeniorita === 'nd' ? !sen : sen === filtroSeniorita;
+    // Generale o su un qualsiasi tipo di WO: «Senior» mostra chi ha almeno un chip 🎖.
+    const livelli = woLivelliOperatore(nome);
+    return filtroSeniorita === 'nd' ? !livelli.length : livelli.includes(filtroSeniorita);
   }
 
   function buildList(filter) {
@@ -15953,7 +16354,7 @@ function pwOpenOpModal(cidx, sidx, oidx) {
       if (stato === 'ferie') return 3;
       return 4; // non_disponibile
     };
-    const senRango = nome => (serveSenior && opSeniorita(nome) === 'senior') ? 0 : 1;
+    const senRango = nome => (serveSenior && opSenioritaPer(nome, tipoSen) === 'senior') ? 0 : 1;
     const ordinati = [...filtrati].sort((a, b) => {
       const dRango = rangoDi(a) - rangoDi(b);
       if (dRango !== 0) return dRango;
@@ -15980,7 +16381,7 @@ function pwOpenOpModal(cidx, sidx, oidx) {
       const provInfo = provinciaInfo(opByNome[nome]?.provincia);
       const geoLabel = provInfo ? provInfo.nome : operatoreRegione(opByNome[nome]);
       const fornNome = fornOfNome[nome] || '';
-      const senBadge = fornNome ? '' : senioritaBadgeHtml(opSeniorita(nome));
+      const senBadge = fornNome ? '' : woChipOperatoreHtml(nome, tipoSen);
       const dwFase = dwFaseDi(nome);
       const dwBadge = !dwFase ? ''
         : '<span style="background:' + (dwFase === 'W1' ? '#6366f1' : '#818cf8') + ';color:#fff;border-radius:3px;padding:0 5px;" title="' +
@@ -16080,7 +16481,10 @@ function pwSquadraCognomi(squadra) {
 // Giorni in cui, dentro la squadra, due o più operatori stanno sullo stesso cantiere e
 // sono tutti junior (nessun senior ad affiancarli). Seniority non definita = non conta
 // come junior, per non segnalare squadre di cui non si sa nulla.
-function pwSquadraSoloJunior(squadra) {
+// La seniority di ciascuno è quella per il tipo di WO della SUA attività su quel cantiere
+// (operatori-tipi-wo.js): senior su Fognatura e junior su I.P conta come junior su un
+// cantiere I.P.
+function pwSquadraSoloJunior(squadra, commessa) {
   const giorniLbl = ['Lun', 'Mar', 'Mer', 'Gio', 'Ven', 'Sab'];
   const out = [];
   for (let d = 0; d < 6; d++) {
@@ -16089,14 +16493,27 @@ function pwSquadraSoloJunior(squadra) {
       if (!o.nome || o.fornitore) return;
       const g = (o.giorni || {})[d];
       if (!g) return;
-      new Set(pwCellCantieri(g).map(c => c.trim().toLowerCase())).forEach(k => {
-        (perCantiere[k] = perCantiere[k] || []).push(o.nome);
+      const visti = new Set();
+      pwCellVoci(g).forEach(v => {
+        const k = v.cantiere.toLowerCase();
+        if (visti.has(k)) return;
+        visti.add(k);
+        (perCantiere[k] = perCantiere[k] || []).push({ nome: o.nome, tipo: woTipoDiAttivita(commessa, v.attivita) });
       });
     });
-    const coppie = Object.values(perCantiere).filter(nomi => nomi.length >= 2 && nomi.every(n => opSeniorita(n) === 'junior'));
-    if (coppie.length) out.push(giorniLbl[d] + ' (' + coppie.map(n => n.join(' + ')).join('; ') + ')');
+    const coppie = Object.values(perCantiere).filter(m => m.length >= 2 && m.every(x => opSenioritaPer(x.nome, x.tipo) === 'junior'));
+    if (coppie.length) out.push(giorniLbl[d] + ' (' + coppie.map(m => m.map(x => x.nome + (x.tipo ? ' [' + x.tipo + ']' : '')).join(' + ')).join('; ') + ')');
   }
   return out;
+}
+
+// Badge seniority sotto il nome in Griglia: riferito al tipo di WO prevalente fra le
+// attività dell'operatore nella settimana, se per quel tipo ha un livello proprio.
+function pwSenioritaRigaHtml(op, commessa) {
+  const att = [];
+  Object.values(op.giorni || {}).forEach(g => { if (g) pwCellVoci(g).forEach(v => { if (v.attivita) att.push(v.attivita); }); });
+  const html = woSenioritaBadgeHtml(op.nome, woTipoPrevalente(commessa, att));
+  return html ? '<div>' + html + '</div>' : '';
 }
 
 // Cerca un nome tra i dipendenti di tutti i fornitori (dipendenti esterni non
@@ -16310,7 +16727,7 @@ function pwRender() {
             ${pwRenderOpDropdown(cIdx, sIdx, oIdx, op.nome, op.fornitore)}
             ${badgeHtml ? `<div>${badgeHtml}</div>` : ''}
             ${dwBadge ? `<div>${dwBadge}</div>` : ''}
-            ${op.nome && !op.fornitore && opSeniorita(op.nome) ? '<div>' + senioritaBadgeHtml(opSeniorita(op.nome)) + '</div>' : ''}
+            ${op.nome && !op.fornitore ? pwSenioritaRigaHtml(op, bloccoCommessa.commessa) : ''}
             <button class="text-[9px] text-red-400 hover:text-red-600 text-left pw-write-action"
               data-cidx="${cIdx}" data-sidx="${sIdx}" data-oidx="${oIdx}"
               onclick="pwRemoveOp(this)">✕ rimuovi</button>
@@ -16323,7 +16740,7 @@ function pwRender() {
       const cognomiHtml = cognomiSquadra.length
         ? `<span class="pw-sq-cognomi" title="Operatori: ${esc(cognomiSquadra.join(', '))}">: ${esc(cognomiSquadra.join(', '))}</span>`
         : '';
-      const soloJunior = pwSquadraSoloJunior(squadra);
+      const soloJunior = pwSquadraSoloJunior(squadra, bloccoCommessa.commessa);
       const soloJuniorHtml = soloJunior.length
         ? '<span class="text-[10px] bg-red-50 text-red-700 border border-red-200 px-1.5 rounded" title="' + esc('Junior insieme senza un senior sullo stesso cantiere: ' + soloJunior.join(' · ')) + '">⚠️ solo junior</span>'
         : '';
@@ -30668,6 +31085,8 @@ function _apViolaPrecedenze(ordine, precedenze) {
      giorni: [0..5] indici utili,            giorniISO: {d: 'YYYY-MM-DD'},
      operatori: [{ nome, skills:Set, attestatiValidi(nome, iso)->bool, fineRapporto,
                    seniorita: 'senior'|'junior'|'' (facoltativa, '' = nessun vincolo),
+                   senioritaWo: { tipoWo: 'senior'|'junior' } (facoltativa: livello per tipo di WO,
+                     vince su seniorita per le righe di quel tipo),
                    base: {lat,lng}|null, commessaSettimana: string|null, staffing:Set(commesse) }],
      disp: { nome: { d: 'libero'|'ferie'|'dw'|'occupato' } },
      posizione: { nome: { d: {lat,lng,label} } },   // dove è già (celle esistenti)
@@ -30676,7 +31095,8 @@ function _apViolaPrecedenze(ordine, precedenze) {
      precedenze: [[primaId, dopoId]],                // facoltativo
      modello, pesi
    }
-   righe = [{ id, cantiere, commessa, attivita, famiglia, geo:{lat,lng}|null, giorni, nOp,
+   righe = [{ id, cantiere, commessa, attivita, famiglia, tipoWo (facoltativo, '' = nessuno),
+              geo:{lat,lng}|null, giorni, nOp,
               priorita, scadenzaGiorno (indice o null), dalGiorno, giorniEsclusi:[indici],
               skills:[], attestati:[], preferiti:[], esclusi:[],
               compagni:[] (facoltativo: chi resta già sul cantiere, righe "sostituto") }]
@@ -30868,9 +31288,16 @@ function _apGreedy(ctx, pesi, ordinate) {
 
   /* Seniority: una squadra di 2+ persone fatta di soli junior va evitata (senior+junior o
      senior+senior sì). Contano anche i compagni già sul cantiere (righe "sostituto").
-     Seniority non definita = nessun vincolo: la squadra non risulta "di soli junior". */
-  const soloJunior = nomi => nomi.length >= 2 &&
-    nomi.every(n => opByNome[n] && opByNome[n].seniorita === 'junior');
+     Seniority non definita = nessun vincolo: la squadra non risulta "di soli junior".
+     Il livello è quello per il tipo di WO della riga (r.tipoWo) se l'operatore ne ha uno,
+     altrimenti la seniority generale. */
+  const livello = (n, r) => {
+    const o = opByNome[n];
+    if (!o) return '';
+    const s = r && r.tipoWo && o.senioritaWo ? o.senioritaWo[r.tipoWo] : '';
+    return s || o.seniorita || '';
+  };
+  const soloJunior = (nomi, r) => nomi.length >= 2 && nomi.every(n => livello(n, r) === 'junior');
 
   /* Sceglie N operatori per la riga r nel giorno d: il migliore da solo, poi via via chi
      aggiunge più punteggio (individuale + affinità con i già scelti), completando se
@@ -30899,7 +31326,7 @@ function _apGreedy(ctx, pesi, ordinate) {
         scelti.forEach(x => { tot += affinita(v.o.nome, x.o.nome); });
         const nuoveSkill = skillReq.filter(sk => !coperte.has(sk) && v.o.skills.has(sk)).length;
         tot += nuoveSkill * 80;
-        if (chiude && soloJunior(giaScelti.concat([v.o.nome]))) tot -= pesi.soloJunior;
+        if (chiude && soloJunior(giaScelti.concat([v.o.nome]), r)) tot -= pesi.soloJunior;
         if (tot > bestTot || (tot === bestTot && best && v.o.nome < best.o.nome)) { bestTot = tot; best = v; }
       });
       if (!best) break;
@@ -30908,7 +31335,7 @@ function _apGreedy(ctx, pesi, ordinate) {
     }
     if (scelti.length < r.nOp) return null;
     const skillMancanti = skillReq.filter(sk => !coperte.has(sk));
-    const junior = soloJunior(compagni.concat(scelti.map(v => v.o.nome)));
+    const junior = soloJunior(compagni.concat(scelti.map(v => v.o.nome)), r);
     const punti = scelti.reduce((a, v) => a + v.s, 0) - (junior ? pesi.soloJunior : 0);
     return { scelti, skillMancanti, punti, viaggio: scelti.some(v => v.viaggio), soloJunior: junior };
   };
@@ -31747,6 +32174,7 @@ function apBuildContesto(opts) {
       attestatiValidi: _apAttestatiValidi(op),
       fineRapporto: op.contratto_tipo === 'determinato' ? (op.data_fine_rapporto || null) : null,
       seniorita: SENIORITA[op.seniorita] ? op.seniorita : '',
+      senioritaWo: Object.fromEntries(Object.entries(op.seniorita_wo || {}).filter(([, v]) => SENIORITA[v])),
       base,
       commessaSettimana: commessaSettimana[nome] || null,
       staffing: staffing[nome] || new Set(),
@@ -31977,6 +32405,7 @@ async function apCalcola(opts) {
         commessa: r.commessa,
         attivita: r.attivita,
         famiglia: stima.famiglia,
+        tipoWo: woTipoDiAttivita(r.commessa, r.attivita),
         geo: geo ? { lat: geo.lat, lng: geo.lng } : null,
         giorni: stima.giorni,
         stimaFonte: stima.fonte,
@@ -32324,6 +32753,7 @@ async function apCalcolaRiparazione(opts) {
       const geo = meteoGeoFor(r.cantiere);
       return Object.assign({}, r, {
         famiglia: apTrovaFamiglia(_ap.modello, r.attivita),
+        tipoWo: woTipoDiAttivita(r.commessa, r.attivita),
         geo: geo ? { lat: geo.lat, lng: geo.lng } : null,
         skills: meta.skills || [],
         attestati: meta.attestati_richiesti || [],

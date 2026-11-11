@@ -28,6 +28,7 @@ const DB_UNDO_CHIAVI = {
   limitazioni_registro:  { campo: 'limitazioni_registro', nome: 'Limitazioni' },
   limitazioni_catalogo:  { campo: 'limitazioni_catalogo', nome: 'Limitazioni' },
   fornitori:             { campo: 'fornitori',            nome: 'Fornitori' },
+  wo_tipi:               { campo: 'wo_tipi',              nome: 'Tipi WO' },
 };
 
 // alloc_mensile/saturazione degli operatori sono derivati dallo staffing (ricalcolati in

@@ -501,6 +501,7 @@ function apBuildContesto(opts) {
       attestatiValidi: _apAttestatiValidi(op),
       fineRapporto: op.contratto_tipo === 'determinato' ? (op.data_fine_rapporto || null) : null,
       seniorita: SENIORITA[op.seniorita] ? op.seniorita : '',
+      senioritaWo: Object.fromEntries(Object.entries(op.seniorita_wo || {}).filter(([, v]) => SENIORITA[v])),
       base,
       commessaSettimana: commessaSettimana[nome] || null,
       staffing: staffing[nome] || new Set(),
@@ -731,6 +732,7 @@ async function apCalcola(opts) {
         commessa: r.commessa,
         attivita: r.attivita,
         famiglia: stima.famiglia,
+        tipoWo: woTipoDiAttivita(r.commessa, r.attivita),
         geo: geo ? { lat: geo.lat, lng: geo.lng } : null,
         giorni: stima.giorni,
         stimaFonte: stima.fonte,
@@ -1078,6 +1080,7 @@ async function apCalcolaRiparazione(opts) {
       const geo = meteoGeoFor(r.cantiere);
       return Object.assign({}, r, {
         famiglia: apTrovaFamiglia(_ap.modello, r.attivita),
+        tipoWo: woTipoDiAttivita(r.commessa, r.attivita),
         geo: geo ? { lat: geo.lat, lng: geo.lng } : null,
         skills: meta.skills || [],
         attestati: meta.attestati_richiesti || [],

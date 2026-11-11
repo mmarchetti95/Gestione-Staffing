@@ -1,6 +1,14 @@
 /* ===================== DATI INIZIALI DAL FILE EXCEL ===================== */
 const INITIAL_DATA = {"pipeline": [], "operatori": [], "staffing": [], "commesse_attive": [], "giorni_lavorativi": [20, 20, 22, 21, 20, 21, 23, 21, 22, 22, 21, 21], "saturazione_baseline": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], "riconciliazione": [], "attestati_disponibili": ["RSPP", "ASPP", "Preposto", "RLS", "Primo soccorso", "Defibrillatore BLS-D", "Antincendio", "Ambienti confinati", "Lavori in quota", "Segnaletica stradale - Preposto", "Segnaletica stradale - Addetto", "PES-PAV-PEI", "ENEL 1A", "ENEL 1B", "ENEL 2A", "ENEL 2B"]};
 const SKILLS = ['DRONE', 'LIXEL', 'WO', 'LASER - STATICO', 'ROBOT', 'GRD', 'GPS', 'MMS', 'ALTRO'];
+/* Tipi di WO su cui si dà una seniority per operatore (vedi operatori-tipi-wo.js). Elenco
+   di partenza: quello vero è state.wo_tipi (dominio core, modificabile da «⚙️ Tipi WO»).
+   parole = parole chiave che, nel nome di un'attività di Griglia, indicano quel tipo. */
+const WO_TIPI_DEFAULT = [
+  { nome: 'WO I.P', parole: ['ip', 'i p', 'illuminazione'] },
+  { nome: 'WO Fognatura', parole: ['fognatura', 'fognature', 'fognaria', 'fognario', 'fogna'] },
+  { nome: 'WO Acquedotto', parole: ['acquedotto', 'acquedotti', 'idrica', 'idrico', 'idriche', 'idrici'] },
+];
 let ATTESTATI = INITIAL_DATA.attestati_disponibili || [];
 const MESI = ['Gen','Feb','Mar','Apr','Mag','Giu','Lug','Ago','Set','Ott','Nov','Dic'];
 const MESI_LONG = ['Gennaio','Febbraio','Marzo','Aprile','Maggio','Giugno','Luglio','Agosto','Settembre','Ottobre','Novembre','Dicembre'];
@@ -255,7 +263,7 @@ let state = {
   // Voce assente o durata nulla = il DPI non scade da solo, la data va messa a mano.
   dpi_catalogo: {},
   activeTab: 'pipeline',
-  filters: { search:'', skills:new Set(), attestati:new Set(), lowSat:false, regione:'', provincia:'', showEx:false, seniorita:'', aggiunta:'' },
+  filters: { search:'', skills:new Set(), attestati:new Set(), lowSat:false, regione:'', provincia:'', showEx:false, seniorita:'', wo_tipo:'', aggiunta:'' },
   searchCommesse: '',
   searchFornitori: '', // filtro testo lista Fornitori, solo stato di vista (non persistito)
   // Registro attestati importato da Excel: archivio grezzo dell'ultimo import, che copre
@@ -266,6 +274,7 @@ let state = {
   // Catalogo "tipo limitazione": stesso ruolo di dpi_disponibili ma per le idoneita'
   // mediche. Vedi dashboard-limitazioni.js.
   limitazioni_catalogo: LIMITAZIONI_TIPI_DEFAULT.slice(),
+  wo_tipi: JSON.parse(JSON.stringify(WO_TIPI_DEFAULT)),
   // Registro limitazioni importato da Excel: stessa logica di attestati_registro (copre
   // anche chi non e' nel pool operatori). Fonte autorevole per chi e' nel pool resta
   // op.limitazioni_dett, che puo' contenere correzioni manuali dalla scheda operatore.

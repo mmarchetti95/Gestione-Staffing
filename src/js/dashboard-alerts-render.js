@@ -138,6 +138,10 @@ document.addEventListener('DOMContentLoaded', async () => {
     state.filters.seniorita = e.target.value;
     renderOperatori();
   });
+  document.getElementById('op-filter-wo').addEventListener('change', e => {
+    state.filters.wo_tipo = e.target.value;
+    renderOperatori();
+  });
   document.getElementById('op-filter-aggiunta').addEventListener('change', e => {
     state.filters.aggiunta = e.target.value;
     renderOperatori();

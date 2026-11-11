@@ -14,8 +14,8 @@ async function sget(k) {
 }
 
 async function loadState() {
-  const keys = ['commesse_pipeline','operatori','assegnazioni','commesse_attive_extra','staffing_modificato','commesse_chiuse','commesse_attive_meta','commesse_escluse','attestati_registro','dpi_disponibili','dpi_catalogo','limitazioni_registro','limitazioni_catalogo','fornitori'];
-  const [p, o, a, ce, sm, cc, cam, cesc, areg, ddisp, dcat, lreg, lcat, forn] = await Promise.all(keys.map(sget));
+  const keys = ['commesse_pipeline','operatori','assegnazioni','commesse_attive_extra','staffing_modificato','commesse_chiuse','commesse_attive_meta','commesse_escluse','attestati_registro','dpi_disponibili','dpi_catalogo','limitazioni_registro','limitazioni_catalogo','fornitori','wo_tipi'];
+  const [p, o, a, ce, sm, cc, cam, cesc, areg, ddisp, dcat, lreg, lcat, forn, wot] = await Promise.all(keys.map(sget));
   state.pipeline = p || JSON.parse(JSON.stringify(INITIAL_DATA.pipeline));
   state.operatori = o || JSON.parse(JSON.stringify(INITIAL_DATA.operatori));
   state.commesse_chiuse = cc || INITIAL_DATA._chiuse || [];
@@ -50,6 +50,8 @@ async function loadState() {
   // di proposito e' un valore legittimo, non deve far tornare il seed.
   state.limitazioni_catalogo = Array.isArray(lcat) ? lcat : LIMITAZIONI_TIPI_DEFAULT.slice();
   state.fornitori = Array.isArray(forn) ? forn : (INITIAL_DATA.fornitori || []);
+  // Tipi di WO per la seniority per tipo (v18.256.0): mai salvati = elenco di partenza.
+  state.wo_tipi = Array.isArray(wot) ? wot : JSON.parse(JSON.stringify(WO_TIPI_DEFAULT));
   ricalcolaAllocOperatori();
 
   // Seed email operatori una-tantum (solo su quelli ancora senza email).
@@ -78,6 +80,7 @@ async function saveState(logAction, logDetails, immediate) {
     sset('limitazioni_registro', state.limitazioni_registro),
     sset('limitazioni_catalogo', state.limitazioni_catalogo),
     sset('fornitori', state.fornitori),
+    sset('wo_tipi', state.wo_tipi),
   ]);
   // Log attività se specificata
   if (logAction) sbLogActivity(logAction, logDetails || {});
@@ -93,7 +96,7 @@ async function saveState(logAction, logDetails, immediate) {
 async function resetAll() {
   if (!await showConfirmAsync('Reset completo: tutte le modifiche manuali andranno perse. Procedere?', 'Reset')) return;
   if (hasStorage) {
-    for (const k of ['commesse_pipeline','operatori','assegnazioni','commesse_attive_extra','staffing_modificato','commesse_chiuse','commesse_attive_meta','commesse_escluse','attestati_registro','dpi_disponibili','dpi_catalogo','fornitori']) {
+    for (const k of ['commesse_pipeline','operatori','assegnazioni','commesse_attive_extra','staffing_modificato','commesse_chiuse','commesse_attive_meta','commesse_escluse','attestati_registro','dpi_disponibili','dpi_catalogo','fornitori','wo_tipi']) {
       try { await window.storage.delete(k); } catch{}
     }
   } else {

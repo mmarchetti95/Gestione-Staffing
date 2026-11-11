@@ -286,6 +286,8 @@ function _apViolaPrecedenze(ordine, precedenze) {
      giorni: [0..5] indici utili,            giorniISO: {d: 'YYYY-MM-DD'},
      operatori: [{ nome, skills:Set, attestatiValidi(nome, iso)->bool, fineRapporto,
                    seniorita: 'senior'|'junior'|'' (facoltativa, '' = nessun vincolo),
+                   senioritaWo: { tipoWo: 'senior'|'junior' } (facoltativa: livello per tipo di WO,
+                     vince su seniorita per le righe di quel tipo),
                    base: {lat,lng}|null, commessaSettimana: string|null, staffing:Set(commesse) }],
      disp: { nome: { d: 'libero'|'ferie'|'dw'|'occupato' } },
      posizione: { nome: { d: {lat,lng,label} } },   // dove è già (celle esistenti)
@@ -294,7 +296,8 @@ function _apViolaPrecedenze(ordine, precedenze) {
      precedenze: [[primaId, dopoId]],                // facoltativo
      modello, pesi
    }
-   righe = [{ id, cantiere, commessa, attivita, famiglia, geo:{lat,lng}|null, giorni, nOp,
+   righe = [{ id, cantiere, commessa, attivita, famiglia, tipoWo (facoltativo, '' = nessuno),
+              geo:{lat,lng}|null, giorni, nOp,
               priorita, scadenzaGiorno (indice o null), dalGiorno, giorniEsclusi:[indici],
               skills:[], attestati:[], preferiti:[], esclusi:[],
               compagni:[] (facoltativo: chi resta già sul cantiere, righe "sostituto") }]
@@ -486,9 +489,16 @@ function _apGreedy(ctx, pesi, ordinate) {
 
   /* Seniority: una squadra di 2+ persone fatta di soli junior va evitata (senior+junior o
      senior+senior sì). Contano anche i compagni già sul cantiere (righe "sostituto").
-     Seniority non definita = nessun vincolo: la squadra non risulta "di soli junior". */
-  const soloJunior = nomi => nomi.length >= 2 &&
-    nomi.every(n => opByNome[n] && opByNome[n].seniorita === 'junior');
+     Seniority non definita = nessun vincolo: la squadra non risulta "di soli junior".
+     Il livello è quello per il tipo di WO della riga (r.tipoWo) se l'operatore ne ha uno,
+     altrimenti la seniority generale. */
+  const livello = (n, r) => {
+    const o = opByNome[n];
+    if (!o) return '';
+    const s = r && r.tipoWo && o.senioritaWo ? o.senioritaWo[r.tipoWo] : '';
+    return s || o.seniorita || '';
+  };
+  const soloJunior = (nomi, r) => nomi.length >= 2 && nomi.every(n => livello(n, r) === 'junior');
 
   /* Sceglie N operatori per la riga r nel giorno d: il migliore da solo, poi via via chi
      aggiunge più punteggio (individuale + affinità con i già scelti), completando se
@@ -517,7 +527,7 @@ function _apGreedy(ctx, pesi, ordinate) {
         scelti.forEach(x => { tot += affinita(v.o.nome, x.o.nome); });
         const nuoveSkill = skillReq.filter(sk => !coperte.has(sk) && v.o.skills.has(sk)).length;
         tot += nuoveSkill * 80;
-        if (chiude && soloJunior(giaScelti.concat([v.o.nome]))) tot -= pesi.soloJunior;
+        if (chiude && soloJunior(giaScelti.concat([v.o.nome]), r)) tot -= pesi.soloJunior;
         if (tot > bestTot || (tot === bestTot && best && v.o.nome < best.o.nome)) { bestTot = tot; best = v; }
       });
       if (!best) break;
@@ -526,7 +536,7 @@ function _apGreedy(ctx, pesi, ordinate) {
     }
     if (scelti.length < r.nOp) return null;
     const skillMancanti = skillReq.filter(sk => !coperte.has(sk));
-    const junior = soloJunior(compagni.concat(scelti.map(v => v.o.nome)));
+    const junior = soloJunior(compagni.concat(scelti.map(v => v.o.nome)), r);
     const punti = scelti.reduce((a, v) => a + v.s, 0) - (junior ? pesi.soloJunior : 0);
     return { scelti, skillMancanti, punti, viaggio: scelti.some(v => v.viaggio), soloJunior: junior };
   };

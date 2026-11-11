@@ -112,6 +112,7 @@ function checkCoerenzaOperatori() {
 
 function renderOperatori() {
   const list = document.getElementById('op-list');
+  woFiltroPoolSync();
   const mese0 = meseCorrente();
   const meseProx = Math.min(11, mese0+1);
 
@@ -122,10 +123,7 @@ function renderOperatori() {
     if (state.filters.attestati.size > 0 && ![...state.filters.attestati].every(a => (op.attestati||[]).includes(a))) return false;
     if (state.filters.provincia && op.provincia !== state.filters.provincia) return false;
     if (state.filters.regione && !state.filters.provincia && operatoreRegione(op) !== state.filters.regione) return false;
-    if (state.filters.seniorita) {
-      const sen = SENIORITA[op.seniorita] ? op.seniorita : 'nd';
-      if (sen !== state.filters.seniorita) return false;
-    }
+    if (!woPassaFiltroPool(op, state.filters.seniorita, state.filters.wo_tipo)) return false;
     if (!opPassaFiltroAggiunta(op, state.filters.aggiunta)) return false;
     if (state.filters.lowSat) {
       const s = operatoreSatPeriodo(op, [meseProx]);
@@ -165,7 +163,7 @@ function renderOperatori() {
       ? `Contratto a termine scaduto il ${fmtDate(op.data_fine_rapporto)}`
       : (op.licenziato ? 'Segnato manualmente come ex collega' : '');
     const exBadge = modoEx ? `<span class="op-ex-tag" title="${esc(exReason)}">ex</span>` : '';
-    const skillBadges = op.skills.map(s => `<span class="skill-badge">${s}</span>`).join('');
+    const skillBadges = op.skills.map(s => `<span class="skill-badge">${s}</span>`).join('') + woBadgesHtml(op);
     // Il badge attestato porta il colore dello stato di scadenza (verde/ambra/rosso) e nel
     // tooltip data corso + data scadenza; resta viola neutro se la scadenza non e' nota.
     const attBadges = attBadgesHtml(op);

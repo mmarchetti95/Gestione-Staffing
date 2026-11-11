@@ -10,7 +10,9 @@
    - alias: nomi scritti a mano prima del catalogo ("Rielivo Wo Ip"…). Lo storico di pwData
      non viene riscritto: gli alias lo ricollegano alla voce giusta (caTrova).
    - activity_type: Activity Type Jira proposto nella creazione dei sottotask (prima era
-     ricordato solo nel browser, vedi pwJiraActivityTypeGuess). */
+     ricordato solo nel browser, vedi pwJiraActivityTypeGuess).
+   - wo_tipo: tipo di WO dell'attività per la seniority per tipo (operatori-tipi-wo.js);
+     '' = automatico, dalle parole chiave del tipo nel nome. */
 
 HELP_TEXTS['#ma-btn-attivita'] = 'Apre il catalogo delle attività di questa commessa: nome, se è produttiva, KPI_Quantità target giornaliero per squadra, unità, Activity Type Jira e nomi vecchi (alias).\n\nCon il catalogo, in Griglia il campo attività diventa una tendina con queste voci (più Viaggio, Riposo compensativo e le altre voci di servizio) e un nome fuori catalogo viene rifiutato; i nomi già scritti nelle settimane passate non vengono toccati, gli alias li ricollegano alla voce giusta. «Importa dalla Griglia» propone i nomi già usati.\n\nLe modifiche valgono solo dopo «Salva» della scheda commessa e sono condivise con tutti.';
 
@@ -107,6 +109,7 @@ function caClona(lista) {
     unita: a.unita || '',
     activity_type: a.activity_type && a.activity_type.id ? { id: String(a.activity_type.id), label: a.activity_type.label || '' } : null,
     alias: [...(a.alias || [])],
+    wo_tipo: a.wo_tipo || '',
   }));
 }
 
@@ -143,6 +146,8 @@ function caOpenEditor(opts) {
       a.kpi_target = k === '' || !isFinite(Number(k)) ? null : Number(k);
       a.unita = row.querySelector('.ca-unita').value.trim();
       a.alias = row.querySelector('.ca-alias').value.split(',').map(s => s.trim()).filter(Boolean);
+      const wo = row.querySelector('.ca-wo');
+      if (wo) a.wo_tipo = wo.value;
       const sel = row.querySelector('.ca-at');
       if (sel) {
         const v = (activityValues || []).find(x => String(x.id) === sel.value);
@@ -160,14 +165,26 @@ function caOpenEditor(opts) {
       activityValues.map(v => '<option value="' + esc(String(v.id)) + '"' + (String(v.id) === cur ? ' selected' : '') + '>' + esc(v.value) + '</option>').join('') + '</select>';
   }
 
+  // Tipo di WO: '' = automatico (dal nome); un tipo tolto dall'elenco resta visibile finché
+  // non si sceglie altro.
+  function woTipoSelectHtml(a) {
+    const auto = woTipoDaTesto(a.nome);
+    const tipi = woTipi().map(t => t.nome);
+    if (a.wo_tipo && !tipi.includes(a.wo_tipo)) tipi.push(a.wo_tipo);
+    return '<select class="ca-wo w-full border border-slate-300 rounded px-1 py-1 text-xs" title="Tipo di WO per la seniority per tipo degli operatori">' +
+      '<option value="">' + esc(auto ? 'auto: ' + auto : 'auto: nessuno') + '</option>' +
+      tipi.map(t => '<option value="' + esc(t) + '"' + (a.wo_tipo === t ? ' selected' : '') + '>' + esc(t) + '</option>').join('') + '</select>';
+  }
+
   function righeHtml() {
     if (!lista.length) return '<div class="text-xs text-slate-400 italic py-2">Nessuna attività: aggiungile a mano o importale dai nomi usati in Griglia.</div>';
-    return lista.map((a, i) => '<div data-ca-idx="' + i + '" class="grid gap-1 items-center py-1 border-b border-slate-100" style="grid-template-columns: minmax(0,2fr) 52px 70px 60px minmax(0,1.5fr) minmax(0,2fr) 22px;">' +
+    return lista.map((a, i) => '<div data-ca-idx="' + i + '" class="grid gap-1 items-center py-1 border-b border-slate-100" style="grid-template-columns: minmax(0,2fr) 52px 70px 60px minmax(0,1.5fr) minmax(0,1.3fr) minmax(0,2fr) 22px;">' +
       '<input class="ca-nome border border-slate-300 rounded px-1.5 py-1 text-xs" value="' + esc(a.nome) + '" placeholder="Es: Rilievo IP">' +
       '<label class="flex justify-center"><input type="checkbox" class="ca-prod"' + (a.produttiva !== false ? ' checked' : '') + '></label>' +
       '<input class="ca-kpi border border-slate-300 rounded px-1.5 py-1 text-xs text-right" inputmode="decimal" value="' + (a.kpi_target === null ? '' : esc(String(a.kpi_target).replace('.', ','))) + '" placeholder="—">' +
       '<input class="ca-unita border border-slate-300 rounded px-1.5 py-1 text-xs" value="' + esc(a.unita) + '" placeholder="km">' +
       '<div>' + activityHtml(a) + '</div>' +
+      '<div>' + woTipoSelectHtml(a) + '</div>' +
       '<input class="ca-alias border border-slate-300 rounded px-1.5 py-1 text-xs" value="' + esc((a.alias || []).join(', ')) + '" placeholder="nomi vecchi, separati da virgola">' +
       '<button type="button" class="ca-del text-slate-400 hover:text-red-600 text-sm" data-del="' + i + '" title="Togli">✕</button>' +
       '</div>').join('');
@@ -204,7 +221,7 @@ function caOpenEditor(opts) {
       const nuove = [];
       layer.querySelectorAll('.ca-imp').forEach(sel => {
         const nome = sel.dataset.nome;
-        if (sel.value === '__nuova__') nuove.push({ nome, produttiva: true, kpi_target: null, unita: '', activity_type: null, alias: [] });
+        if (sel.value === '__nuova__') nuove.push({ nome, produttiva: true, kpi_target: null, unita: '', activity_type: null, alias: [], wo_tipo: '' });
         else if (sel.value !== '' && lista[Number(sel.value)]) lista[Number(sel.value)].alias.push(nome);
       });
       lista = lista.concat(nuove);
@@ -217,8 +234,8 @@ function caOpenEditor(opts) {
     '<p class="text-xs text-slate-500 mb-3">Le attività di questa commessa diventano la tendina del campo attività in Griglia. ' +
     '<b>KPI target</b> = KPI_Quantità target <b>giornaliero per squadra</b>: nel sottotask di ogni operatore va diviso per chi della sua squadra è quel giorno sullo stesso cantiere con la stessa attività. ' +
     'Le voci di servizio (' + esc(CA_ATTIVITA_SERVIZIO.join(', ')) + ') ci sono sempre e non sono produttive.</p>' +
-    '<div class="grid gap-1 text-[10px] text-slate-500 uppercase font-medium border-b border-slate-200 pb-1" style="grid-template-columns: minmax(0,2fr) 52px 70px 60px minmax(0,1.5fr) minmax(0,2fr) 22px;">' +
-    '<span>Attività</span><span class="text-center">Produttiva</span><span class="text-right">KPI/sq/gg</span><span>Unità</span><span>Activity Type</span><span>Nomi vecchi (alias)</span><span></span></div>' +
+    '<div class="grid gap-1 text-[10px] text-slate-500 uppercase font-medium border-b border-slate-200 pb-1" style="grid-template-columns: minmax(0,2fr) 52px 70px 60px minmax(0,1.5fr) minmax(0,1.3fr) minmax(0,2fr) 22px;">' +
+    '<span>Attività</span><span class="text-center">Produttiva</span><span class="text-right">KPI/sq/gg</span><span>Unità</span><span>Activity Type</span><span title="Per la seniority per tipo di WO degli operatori">Tipo WO</span><span>Nomi vecchi (alias)</span><span></span></div>' +
     '<div id="ca-righe"></div>' +
     '<button type="button" id="ca-add" class="mt-2 text-xs px-2 py-1 bg-slate-100 text-slate-700 border border-slate-300 rounded hover:bg-slate-200">+ Attività</button>' +
     '<div class="mt-4 pt-3 border-t border-slate-200"><div class="text-xs font-medium text-slate-600 mb-1">Importa dalla Griglia</div><div id="ca-import"></div></div>' +
@@ -229,7 +246,7 @@ function caOpenEditor(opts) {
   root.appendChild(layer);
   render();
 
-  layer.querySelector('#ca-add').onclick = () => { leggi(); lista.push({ nome: '', produttiva: true, kpi_target: null, unita: '', activity_type: null, alias: [] }); render(); };
+  layer.querySelector('#ca-add').onclick = () => { leggi(); lista.push({ nome: '', produttiva: true, kpi_target: null, unita: '', activity_type: null, alias: [], wo_tipo: '' }); render(); };
   layer.querySelector('#ca-annulla').onclick = chiudi;
   layer.querySelector('#ca-ok').onclick = () => {
     leggi();

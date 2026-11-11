@@ -123,6 +123,15 @@ function pwOpenOpModal(cidx, sidx, oidx) {
   selSeniorita.onchange = () => { filtroSeniorita = selSeniorita.value; buildList(search.value); };
   geoRow.appendChild(selSeniorita);
 
+  // Seniority per tipo di WO (operatori-tipi-wo.js): tutte le seniority dell'operatore sono
+  // chip accanto al nome; il tipo prevalente fra le attività della squadra nella settimana
+  // decide solo l'ordine «in cima i senior» ed è evidenziato nei chip.
+  const attivitaSquadra = [];
+  ((bc.squadre[sidx] || {}).operatori || []).forEach(o => {
+    Object.values(o.giorni || {}).forEach(g => { if (g) pwCellVoci(g).forEach(v => { if (v.attivita) attivitaSquadra.push(v.attivita); }); });
+  });
+  const tipoSen = woTipoPrevalente(commessa, attivitaSquadra);
+
   // Doppia week della settimana aperta: W1 = il blocco inizia questa settimana, W2 = è
   // iniziato la precedente (rientro gio). Flag puro come il badge in Griglia; un W1 non
   // ancora impiegato in Griglia ha dato solo la disponibilità, quindi è "da collocare".
@@ -157,13 +166,20 @@ function pwOpenOpModal(cidx, sidx, oidx) {
   // seconda scelta è indifferente (junior o senior) e l'ordine resta quello normale.
   const altriSquadra = ((bc.squadre[sidx] || {}).operatori || [])
     .filter((o, i) => i !== oidx && o.nome && !o.fornitore).map(o => o.nome);
-  const serveSenior = !altriSquadra.some(n => opSeniorita(n) === 'senior');
+  let serveSenior = false;
   const senioritaHint = document.createElement('div');
   senioritaHint.style.cssText = 'padding:0 16px 8px;font-size:12.5px;color:#4338ca;';
-  senioritaHint.textContent = !serveSenior ? ''
-    : altriSquadra.length ? "🎖 In cima i senior: in squadra non c'è ancora un senior (" + altriSquadra.join(', ') + ')'
-    : '🎖 In cima i senior: è il primo operatore della squadra';
-  if (senioritaHint.textContent) modal.appendChild(senioritaHint);
+  modal.appendChild(senioritaHint);
+  function aggiornaServeSenior() {
+    serveSenior = !altriSquadra.some(n => opSenioritaPer(n, tipoSen) === 'senior');
+    const su = tipoSen ? ' su ' + tipoSen : '';
+    senioritaHint.textContent = !serveSenior ? ''
+      : altriSquadra.length ? '🎖 In cima i senior' + su + ": in squadra non c'è ancora un senior" + su + ' (' + altriSquadra.join(', ') + ')'
+      : '🎖 In cima i senior' + su + ': è il primo operatore della squadra';
+    if (senioritaHint.textContent && tipoSen) senioritaHint.textContent += ' · tipo ricavato dalle attività della squadra';
+    senioritaHint.style.display = senioritaHint.textContent ? '' : 'none';
+  }
+  aggiornaServeSenior();
 
   // Filtro skill (chip multi-selezione, AND come nel filtro Pool operatori) e
   // filtro attestati (checkbox in un pannello a comparsa, stessa logica AND) —
@@ -240,8 +256,9 @@ function pwOpenOpModal(cidx, sidx, oidx) {
 
   function passaFiltroSeniorita(nome) {
     if (!filtroSeniorita) return true;
-    const sen = opSeniorita(nome);
-    return filtroSeniorita === 'nd' ? !sen : sen === filtroSeniorita;
+    // Generale o su un qualsiasi tipo di WO: «Senior» mostra chi ha almeno un chip 🎖.
+    const livelli = woLivelliOperatore(nome);
+    return filtroSeniorita === 'nd' ? !livelli.length : livelli.includes(filtroSeniorita);
   }
 
   function buildList(filter) {
@@ -280,7 +297,7 @@ function pwOpenOpModal(cidx, sidx, oidx) {
       if (stato === 'ferie') return 3;
       return 4; // non_disponibile
     };
-    const senRango = nome => (serveSenior && opSeniorita(nome) === 'senior') ? 0 : 1;
+    const senRango = nome => (serveSenior && opSenioritaPer(nome, tipoSen) === 'senior') ? 0 : 1;
     const ordinati = [...filtrati].sort((a, b) => {
       const dRango = rangoDi(a) - rangoDi(b);
       if (dRango !== 0) return dRango;
@@ -307,7 +324,7 @@ function pwOpenOpModal(cidx, sidx, oidx) {
       const provInfo = provinciaInfo(opByNome[nome]?.provincia);
       const geoLabel = provInfo ? provInfo.nome : operatoreRegione(opByNome[nome]);
       const fornNome = fornOfNome[nome] || '';
-      const senBadge = fornNome ? '' : senioritaBadgeHtml(opSeniorita(nome));
+      const senBadge = fornNome ? '' : woChipOperatoreHtml(nome, tipoSen);
       const dwFase = dwFaseDi(nome);
       const dwBadge = !dwFase ? ''
         : '<span style="background:' + (dwFase === 'W1' ? '#6366f1' : '#818cf8') + ';color:#fff;border-radius:3px;padding:0 5px;" title="' +
@@ -407,7 +424,10 @@ function pwSquadraCognomi(squadra) {
 // Giorni in cui, dentro la squadra, due o più operatori stanno sullo stesso cantiere e
 // sono tutti junior (nessun senior ad affiancarli). Seniority non definita = non conta
 // come junior, per non segnalare squadre di cui non si sa nulla.
-function pwSquadraSoloJunior(squadra) {
+// La seniority di ciascuno è quella per il tipo di WO della SUA attività su quel cantiere
+// (operatori-tipi-wo.js): senior su Fognatura e junior su I.P conta come junior su un
+// cantiere I.P.
+function pwSquadraSoloJunior(squadra, commessa) {
   const giorniLbl = ['Lun', 'Mar', 'Mer', 'Gio', 'Ven', 'Sab'];
   const out = [];
   for (let d = 0; d < 6; d++) {
@@ -416,14 +436,27 @@ function pwSquadraSoloJunior(squadra) {
       if (!o.nome || o.fornitore) return;
       const g = (o.giorni || {})[d];
       if (!g) return;
-      new Set(pwCellCantieri(g).map(c => c.trim().toLowerCase())).forEach(k => {
-        (perCantiere[k] = perCantiere[k] || []).push(o.nome);
+      const visti = new Set();
+      pwCellVoci(g).forEach(v => {
+        const k = v.cantiere.toLowerCase();
+        if (visti.has(k)) return;
+        visti.add(k);
+        (perCantiere[k] = perCantiere[k] || []).push({ nome: o.nome, tipo: woTipoDiAttivita(commessa, v.attivita) });
       });
     });
-    const coppie = Object.values(perCantiere).filter(nomi => nomi.length >= 2 && nomi.every(n => opSeniorita(n) === 'junior'));
-    if (coppie.length) out.push(giorniLbl[d] + ' (' + coppie.map(n => n.join(' + ')).join('; ') + ')');
+    const coppie = Object.values(perCantiere).filter(m => m.length >= 2 && m.every(x => opSenioritaPer(x.nome, x.tipo) === 'junior'));
+    if (coppie.length) out.push(giorniLbl[d] + ' (' + coppie.map(m => m.map(x => x.nome + (x.tipo ? ' [' + x.tipo + ']' : '')).join(' + ')).join('; ') + ')');
   }
   return out;
+}
+
+// Badge seniority sotto il nome in Griglia: riferito al tipo di WO prevalente fra le
+// attività dell'operatore nella settimana, se per quel tipo ha un livello proprio.
+function pwSenioritaRigaHtml(op, commessa) {
+  const att = [];
+  Object.values(op.giorni || {}).forEach(g => { if (g) pwCellVoci(g).forEach(v => { if (v.attivita) att.push(v.attivita); }); });
+  const html = woSenioritaBadgeHtml(op.nome, woTipoPrevalente(commessa, att));
+  return html ? '<div>' + html + '</div>' : '';
 }
 
 // Cerca un nome tra i dipendenti di tutti i fornitori (dipendenti esterni non
@@ -637,7 +670,7 @@ function pwRender() {
             ${pwRenderOpDropdown(cIdx, sIdx, oIdx, op.nome, op.fornitore)}
             ${badgeHtml ? `<div>${badgeHtml}</div>` : ''}
             ${dwBadge ? `<div>${dwBadge}</div>` : ''}
-            ${op.nome && !op.fornitore && opSeniorita(op.nome) ? '<div>' + senioritaBadgeHtml(opSeniorita(op.nome)) + '</div>' : ''}
+            ${op.nome && !op.fornitore ? pwSenioritaRigaHtml(op, bloccoCommessa.commessa) : ''}
             <button class="text-[9px] text-red-400 hover:text-red-600 text-left pw-write-action"
               data-cidx="${cIdx}" data-sidx="${sIdx}" data-oidx="${oIdx}"
               onclick="pwRemoveOp(this)">✕ rimuovi</button>
@@ -650,7 +683,7 @@ function pwRender() {
       const cognomiHtml = cognomiSquadra.length
         ? `<span class="pw-sq-cognomi" title="Operatori: ${esc(cognomiSquadra.join(', '))}">: ${esc(cognomiSquadra.join(', '))}</span>`
         : '';
-      const soloJunior = pwSquadraSoloJunior(squadra);
+      const soloJunior = pwSquadraSoloJunior(squadra, bloccoCommessa.commessa);
       const soloJuniorHtml = soloJunior.length
         ? '<span class="text-[10px] bg-red-50 text-red-700 border border-red-200 px-1.5 rounded" title="' + esc('Junior insieme senza un senior sullo stesso cantiere: ' + soloJunior.join(' · ')) + '">⚠️ solo junior</span>'
         : '';

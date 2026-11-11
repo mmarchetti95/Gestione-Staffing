@@ -440,7 +440,7 @@ function openOperatoreModal(id) {
           <label class="block text-xs"><span class="text-slate-500">Data fine</span><input id="mo-data-fine" type="date" class="mt-0.5 w-full border border-slate-300 rounded px-2 py-1.5 text-sm" value="${op.data_fine_rapporto||''}"></label>
         </div>
       </div>
-      <label class="block text-xs"><span class="text-slate-600">Seniority <span class="text-slate-400 font-normal">(Auto-pianifica evita due junior insieme sullo stesso cantiere)</span></span>
+      <label class="block text-xs"><span class="text-slate-600">Seniority generale <span class="text-slate-400 font-normal">(vale per tutte le attività; con la skill WO si può cambiare per tipo di WO più sotto. Auto-pianifica evita due junior insieme sullo stesso cantiere)</span></span>
         <select id="mo-seniorita" class="mt-0.5 w-full border border-slate-300 rounded px-2 py-1.5 text-sm">
           <option value="">— non definita —</option>
           ${Object.keys(SENIORITA).map(k => `<option value="${k}" ${op.seniorita===k?'selected':''}>${SENIORITA[k]}</option>`).join('')}
@@ -452,6 +452,7 @@ function openOperatoreModal(id) {
           ${SKILLS.map(s => `<label class="flex items-center gap-1 text-xs hover:bg-white rounded px-1 cursor-pointer"><input type="checkbox" class="mo-skill" value="${s}" ${op.skills.includes(s)?'checked':''}>${s}</label>`).join('')}
         </div>
       </div>
+      ${woSezioneModaleHtml(op)}
       <div>
         <div class="flex items-center justify-between mb-1">
           <div class="text-xs text-slate-600 font-medium">Attestati e certificazioni posseduti</div>
@@ -544,6 +545,7 @@ function openOperatoreModal(id) {
   });
 
   dpiBindModaleOperatore();
+  woBindModale();
 
   // Righe limitazioni: costruite via JS (non SSR nella stringa del modal) cosi'
   // aggiunta/rimozione condividono la stessa funzione sia all'apertura sia al click
@@ -620,8 +622,9 @@ function openOperatoreModal(id) {
     const dataInizioRapporto = contrattoTipo === 'determinato' ? dataInizio : '';
     const dataFineRapporto = contrattoTipo === 'determinato' ? dataFine : '';
     const seniorita = document.getElementById('mo-seniorita')?.value || '';
-    if (id) { Object.assign(op, { nome_esteso: nomeEsteso, nome, cognome, email, regione, provincia, comune_residenza: comuneResidenza, seniorita, contratto_tipo: contrattoTipo, data_inizio_rapporto: dataInizioRapporto, data_fine_rapporto: dataFineRapporto, skills, attestati, attestati_dett: attestatiDett, dpi: letturaDpi.dpi, dpi_dett: letturaDpi.dett, limitazioni_dett: limitazioniDett }); await saveState('Modifica operatore', {operatore: nomeEsteso}, true); }
-    else { state.operatori.push({ ...op, nome_esteso: nomeEsteso, nome_breve: nomeEsteso, nome, cognome, email, regione, provincia, comune_residenza: comuneResidenza, seniorita, contratto_tipo: contrattoTipo, data_inizio_rapporto: dataInizioRapporto, data_fine_rapporto: dataFineRapporto, skills, attestati, attestati_dett: attestatiDett, dpi: letturaDpi.dpi, dpi_dett: letturaDpi.dett, limitazioni_dett: limitazioniDett }); await saveState('Nuovo operatore', {operatore: nomeEsteso}, true); }
+    const senioritaWo = woLeggiModale();
+    if (id) { Object.assign(op, { nome_esteso: nomeEsteso, nome, cognome, email, regione, provincia, comune_residenza: comuneResidenza, seniorita, seniorita_wo: senioritaWo, contratto_tipo: contrattoTipo, data_inizio_rapporto: dataInizioRapporto, data_fine_rapporto: dataFineRapporto, skills, attestati, attestati_dett: attestatiDett, dpi: letturaDpi.dpi, dpi_dett: letturaDpi.dett, limitazioni_dett: limitazioniDett }); await saveState('Modifica operatore', {operatore: nomeEsteso}, true); }
+    else { state.operatori.push({ ...op, nome_esteso: nomeEsteso, nome_breve: nomeEsteso, nome, cognome, email, regione, provincia, comune_residenza: comuneResidenza, seniorita, seniorita_wo: senioritaWo, contratto_tipo: contrattoTipo, data_inizio_rapporto: dataInizioRapporto, data_fine_rapporto: dataFineRapporto, skills, attestati, attestati_dett: attestatiDett, dpi: letturaDpi.dpi, dpi_dett: letturaDpi.dett, limitazioni_dett: limitazioniDett }); await saveState('Nuovo operatore', {operatore: nomeEsteso}, true); }
     renderAll(); closeModal();
   };
 }
@@ -796,9 +799,12 @@ function opSeniorita(nome) {
   const op = (state.operatori || []).find(o => (o.nome_esteso || o.nome_breve) === nome);
   return op && SENIORITA[op.seniorita] ? op.seniorita : '';
 }
-function senioritaBadgeHtml(seniorita) {
-  if (seniorita === 'senior') return '<span class="text-[9px] bg-indigo-50 text-indigo-700 border border-indigo-200 px-1 rounded" title="Senior">🎖 Senior</span>';
-  if (seniorita === 'junior') return '<span class="text-[9px] bg-lime-50 text-lime-700 border border-lime-200 px-1 rounded" title="Junior: da affiancare a un senior">🌱 Junior</span>';
+// tipo (facoltativo) = tipo di WO a cui è riferito il livello (operatori-tipi-wo.js)
+function senioritaBadgeHtml(seniorita, tipo) {
+  const suff = tipo ? ' · ' + esc(tipo) : '';
+  const tTipo = tipo ? ' su ' + esc(tipo) : '';
+  if (seniorita === 'senior') return '<span class="text-[9px] bg-indigo-50 text-indigo-700 border border-indigo-200 px-1 rounded" title="Senior' + tTipo + '">🎖 Senior' + suff + '</span>';
+  if (seniorita === 'junior') return '<span class="text-[9px] bg-lime-50 text-lime-700 border border-lime-200 px-1 rounded" title="Junior' + tTipo + ': da affiancare a un senior">🌱 Junior' + suff + '</span>';
   return '';
 }
 
