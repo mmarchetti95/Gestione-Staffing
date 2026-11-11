@@ -1160,6 +1160,8 @@
   .cp-oj-tot-live { color:#ea580c; font-weight:600; }
   .cp-oj-live { font-size:10px; font-weight:700; color:#ea580c; white-space:nowrap; line-height:12px; }
   .cp-oj-live.vecchio, .cp-stato-da.vecchio { color:#b45309; }
+  .cp-gs-btn { border:1px solid #cbd5e1; background:#fff; border-radius:4px; cursor:pointer; font-size:11px; line-height:14px; padding:0 3px; color:#0f766e; opacity:.75; }
+  .cp-gs-btn:hover { opacity:1; }
   .cp-stato-da { margin-left:4px; font-size:10px; font-weight:600; color:#64748b; white-space:nowrap; font-variant-numeric:tabular-nums; }
   .cp-tr-commessa td { background:#e2e8f0 !important; font-weight:700; color:#334155; font-size:11px; text-transform:uppercase; letter-spacing:.04em; }
   .cp-tr-squadra  td { background:#f1f5f9 !important; font-weight:600; color:#475569; font-size:11px; }
@@ -2003,7 +2005,7 @@
       </span>
       <button id="btn-presentation" class="px-3 py-1.5 text-sm rounded hover:bg-white/10" style="border:1px solid var(--dark-border-strong);color:var(--dark-text);visibility:visible;">📊 Modalità presentazione</button>
       <div class="text-xs pl-2" style="border-left:1px solid var(--dark-border-strong);color:var(--dark-text-muted);">
-        <span id="app-version" class="font-medium" style="color:var(--accent);">v18.252.0</span> · Michele Marchetti
+        <span id="app-version" class="font-medium" style="color:var(--accent);">v18.254.0</span> · Michele Marchetti
         <span id="sb-role-badge" style="margin-left:8px;padding:1px 8px;border-radius:9999px;background:rgba(255,255,255,.1);color:var(--dark-text);font-weight:600;"></span>
       </div>
     </div>
@@ -2171,6 +2173,12 @@
 <!-- Editor worklog Jira della Timeline (sopra #cptl-modal, sotto .modal-backdrop) -->
 <div id="cptl-wl-modal" class="no-print" style="display:none;position:fixed;inset:0;z-index:99995;background:var(--backdrop);align-items:center;justify-content:center;" onclick="if (event.target === this) cpTlWlChiudi()">
   <div id="cptl-wl-root" style="background:#fff;border-radius:var(--radius-lg);width:540px;max-width:94vw;max-height:90vh;overflow:auto;box-shadow:var(--shadow-lg);"></div>
+</div>
+
+<!-- Sistema stato e ore di un sottotask dal badge Stato di Controllo Produzione
+     (src/js/produzione-stato-giornata.js). z-index sotto .modal-backdrop: le conferme compaiono sopra. -->
+<div id="cpgs-modal" class="no-print" style="display:none;position:fixed;inset:0;z-index:99995;background:var(--backdrop);align-items:center;justify-content:center;" onclick="if (event.target === this) cpGsChiudi()">
+  <div id="cpgs-root" style="background:#fff;border-radius:var(--radius-lg);width:640px;max-width:94vw;max-height:90vh;overflow:auto;box-shadow:var(--shadow-lg);"></div>
 </div>
 
 <!-- Lavagna Note/Variazioni della Griglia (src/js/weekly-note-variazioni.js). z-index sotto

@@ -538,8 +538,13 @@ function cpStatoCellHtml(keys, dateISO) {
     const prefisso = x.fonte === 'griglia' ? '<span style="color:' + (url ? '#2563eb' : '#64748b') + ';font-size:10px;margin-right:3px">' + esc(x.key) + '</span>' : '';
     const stile = 'height:24px;display:flex;align-items:center;justify-content:center;white-space:nowrap;text-decoration:none';
     const badge = '<span style="display:inline-block;max-width:90px;overflow:hidden;text-overflow:ellipsis;background:' + bg + ';color:#fff;border-radius:9px;padding:1px 7px;font-size:10px;font-weight:600;line-height:16px">' + esc(lbl) + '</span>';
-    if (!url) return '<div style="' + stile + '" title="' + esc(ttl + '\n' + fonte) + '">' + prefisso + badge + daHtml + '</div>';
-    return '<a href="' + esc(url) + '" target="_blank" rel="noopener" style="' + stile + ';cursor:pointer" title="' + esc(ttl + '\n' + fonte + '\nClic per aprire su Jira') + '">' + prefisso + badge + daHtml + '</a>';
+    // «✎» Sistema stato e ore del sottotask (produzione-stato-giornata.js), fuori dal link
+    const sistema = cpGsBtnHtml(x.key, dateISO, t);
+    if (sistema) ttl += '\n✎ accanto: sistema stato e ore senza aprire Jira';
+    const cella = !url
+      ? '<div style="' + stile + '" title="' + esc(ttl + '\n' + fonte) + '">' + prefisso + badge + daHtml + '</div>'
+      : '<a href="' + esc(url) + '" target="_blank" rel="noopener" style="' + stile + ';cursor:pointer" title="' + esc(ttl + '\n' + fonte + '\nClic per aprire su Jira') + '">' + prefisso + badge + daHtml + '</a>';
+    return sistema ? '<div style="display:flex;align-items:center;justify-content:center;height:24px;gap:2px">' + cella + sistema + '</div>' : cella;
   }).join('');
 }
 
