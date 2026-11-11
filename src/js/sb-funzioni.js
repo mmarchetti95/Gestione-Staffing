@@ -19,6 +19,7 @@ const SB_FN_FUNZIONI = [
   { gruppo: 'Pianificazione settimanale', chiave: 'weekly:ricerca-squadre', label: '🔍 Ricerca Squadre', sel: '#pw-tab-ricerca-squadre' },
   { gruppo: 'Pianificazione settimanale', chiave: 'weekly:autoplan', label: '🤖 Auto-pianifica', sel: '#pw-tab-autoplan' },
   { gruppo: 'Pianificazione settimanale', chiave: 'weekly:controllo', label: '📊 Controllo produzione', sel: '#pw-tab-controllo' },
+  { gruppo: 'Pianificazione settimanale', chiave: 'weekly:avanzamento', label: '📍 Avanzamento comuni', sel: '#pw-tab-avanzamento' },
   { gruppo: 'Pianificazione settimanale', chiave: 'weekly:meteo-storico', label: '🌦️ Storico meteo', sel: '#pw-tab-meteo-storico' },
   { gruppo: 'Pianificazione settimanale', chiave: 'weekly:doppia', label: '🔁 Doppia Week', sel: '#pw-tab-doppia' },
   { gruppo: 'Griglia', chiave: 'griglia:strumenti', label: '🔧 Aggiorna strumenti Jira', sel: '#pw-strumenti-refresh, #pw-strumenti-status' },

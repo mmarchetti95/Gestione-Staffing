@@ -166,9 +166,9 @@ document.addEventListener('DOMContentLoaded', async () => {
   if (gSort) gSort.addEventListener('change', e => { _ganttCfg.sort = e.target.value; renderGantt(); });
 
   const _dashTabBtns = '#pw-tab-griglia, #pw-tab-ferie, #pw-tab-mappa, #pw-tab-spostamenti, #pw-tab-controllo, #pw-tab-doppia';
-  document.querySelectorAll(`.tab-btn:not(#pw-tab-griglia):not(#pw-tab-ferie):not(#pw-tab-mappa):not(#pw-tab-spostamenti):not(#pw-tab-controllo):not(#pw-tab-doppia):not(#pw-tab-meteo-storico)`).forEach(b => {
+  document.querySelectorAll(`.tab-btn:not(#pw-tab-griglia):not(#pw-tab-ferie):not(#pw-tab-mappa):not(#pw-tab-spostamenti):not(#pw-tab-controllo):not(#pw-tab-doppia):not(#pw-tab-meteo-storico):not(#pw-tab-avanzamento)`).forEach(b => {
     b.onclick = () => {
-      document.querySelectorAll(`.tab-btn:not(#pw-tab-griglia):not(#pw-tab-ferie):not(#pw-tab-mappa):not(#pw-tab-spostamenti):not(#pw-tab-controllo):not(#pw-tab-doppia):not(#pw-tab-meteo-storico)`).forEach(x => x.classList.remove('active'));
+      document.querySelectorAll(`.tab-btn:not(#pw-tab-griglia):not(#pw-tab-ferie):not(#pw-tab-mappa):not(#pw-tab-spostamenti):not(#pw-tab-controllo):not(#pw-tab-doppia):not(#pw-tab-meteo-storico):not(#pw-tab-avanzamento)`).forEach(x => x.classList.remove('active'));
       b.classList.add('active');
       state.activeTab = b.dataset.tab;
       renderCommesse();
@@ -242,6 +242,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   document.getElementById('pw-tab-controllo').onclick = () => pwSwitchTab('controllo');
   document.getElementById('pw-tab-doppia').onclick = () => pwSwitchTab('doppia');
   document.getElementById('pw-tab-meteo-storico').onclick = () => pwSwitchTab('meteo-storico');
+  document.getElementById('pw-tab-avanzamento').onclick = () => pwSwitchTab('avanzamento');
 
   // Carica rubrica geocoding
   _geoCacheLoad();

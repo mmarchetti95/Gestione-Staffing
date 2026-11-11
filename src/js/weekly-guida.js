@@ -29,6 +29,31 @@ HELP_TEXTS['#pw-tab-ricerca-squadre'] = 'Apre la Ricerca Squadre. Indichi uno o 
 HELP_TEXTS['#pw-tab-autoplan'] = 'Apre Auto-pianifica. Da un elenco di cantieri con priorità calcola una bozza di Griglia per la settimana selezionata. L\'elenco può essere incollato, preso da un file Excel/CSV, inserito a mano o ripreso dalla settimana precedente. Puoi farti aiutare dall\'assistente in chat, se vuoi.\n\nLa bozza resta solo in questo browser finché non la applichi. In Griglia arriva solo ciò che confermi esplicitamente, senza sovrascrivere le celle già compilate, e l\'applicazione si può annullare.';
 // 📊 Controllo produzione
 HELP_TEXTS['#pw-tab-controllo'] = 'Apre il Controllo produzione della settimana selezionata. Per ogni operatore e giorno pianificato in Griglia mostra insieme le ore registrate su Jira, le ore del report di produzione, le ore MySond e i Km/Cad.\n\nI dati sono condivisi con i colleghi. All\'apertura vengono letti i valori già salvati: per aggiornare le ore da Jira serve «Sincronizza da Jira».';
+// 📍 Avanzamento comuni
+HELP_TEXTS['#pw-tab-avanzamento'] = 'Apre l\'Avanzamento comuni: scegli una commessa e un comune e vedi a che punto è. L\'elenco ha una riga per comune e attività, filtrabile e ordinabile; il dettaglio di un comune ha un riquadro per attività con produzione, ore, progressivo settimana per settimana e percentuale: sulle commesse a KPI è la resa della KPI_Quantità lavorata sul KPI_Quantità target dei giorni lavorati, sulle altre l\'Actual Production sul Target Production del Task Jira.\n\nÈ indipendente dalla settimana selezionata in alto. È solo una vista: non modifica né la Griglia né Jira. I numeri sono quelli salvati in Controllo produzione, quindi una settimana mai sincronizzata da Jira non conta.';
+HELP_TEXTS['#av-commessa-btn'] = 'Apre la scelta della commessa di cui vedere i comuni. L\'elenco mostra tutti i comuni pianificati in Griglia per la commessa, in ogni settimana.\n\nLa scelta resta memorizzata solo in questo browser.';
+HELP_TEXTS['#av-periodo-btn'] = 'Sceglie il periodo a cui si riferiscono i numeri: tutto, ultimi 7 o 30 giorni, una settimana della commessa, oppure un intervallo di date.\n\nOre, produzione, giorni e resa contano solo i giorni del periodo. L\'avanzamento sul Target Production del Task è invece il totale fino alla fine del periodo (a che punto erano a quella data). La scelta resta solo in questo browser.';
+HELP_TEXTS['#av-per-prev'] = 'Passa alla settimana precedente (visibile solo quando il periodo è una settimana).';
+HELP_TEXTS['#av-per-next'] = 'Passa alla settimana successiva (visibile solo quando il periodo è una settimana).';
+HELP_TEXTS['#av-f-att-btn'] = 'Mostra solo un\'attività, per confrontare tra loro i comuni sulla stessa attività.';
+HELP_TEXTS['#av-f-stato-btn'] = 'Mostra solo le attività il cui Task Jira è nello stato scelto. «Senza stato Jira» = attività senza sottotask Jira o con Task non ancora letto.';
+HELP_TEXTS['#av-f-mostra-btn'] = 'Mostra solo le attività con lavoro nel periodo, quelle con giorni in programma in Griglia da oggi in poi, oppure quelle senza lavoro nel periodo.';
+HELP_TEXTS['av-pick-opt'] = 'Sceglie questa voce e chiude la finestra.';
+HELP_TEXTS['av-pick-x'] = 'Chiude la finestra senza cambiare niente (anche con Esc o cliccando fuori).';
+HELP_TEXTS['av-per-applica'] = 'Usa come periodo l\'intervallo di date indicato (basta anche una sola delle due date).';
+HELP_TEXTS['av-prev'] = 'Apre il comune precedente nell\'elenco, con gli stessi filtri e lo stesso ordinamento.';
+HELP_TEXTS['av-next'] = 'Apre il comune successivo nell\'elenco, con gli stessi filtri e lo stesso ordinamento.';
+HELP_TEXTS['av-salta'] = 'Scorre fino al riquadro di questa attività.';
+HELP_TEXTS['#av-refresh'] = 'Rilegge da Supabase la produzione e le ore salvate in Controllo produzione per la commessa, e rilegge da Jira stato e Target Production dei Task del comune mostrato.\n\nSola lettura: non scrive niente, né sulla Griglia né su Jira. Le ore Jira nuove arrivano qui solo dopo «Sincronizza da Jira» in Controllo produzione.';
+HELP_TEXTS['av-comune'] = 'Apre il dettaglio di questo comune: un riquadro per ogni attività, con Task Jira, avanzamento, produzione, ore, giorni e il progressivo settimana per settimana.\n\nNell\'elenco ogni comune ha una riga di intestazione (totali del comune nel periodo) e sotto una riga per attività: attività diverse hanno unità e target diversi e non si sommano.';
+HELP_TEXTS['av-sort'] = 'Ordina l\'elenco per questa colonna; un secondo clic inverte l\'ordine. I comuni restano raggruppati: un comune sale se una delle sue attività sale.\n\nL\'ordinamento resta memorizzato solo in questo browser.';
+HELP_TEXTS['#av-q'] = 'Filtra l\'elenco per nome del comune (maiuscole e accenti non contano).';
+HELP_TEXTS['#av-f-clear'] = 'Toglie i filtri dell\'elenco (ricerca, attività, stato, mostra). Il periodo resta quello scelto.';
+HELP_TEXTS['#av-export-lista'] = 'Scarica un file Excel con le righe dell\'elenco così come sono filtrate e ordinate.\n\nIl file resta sul tuo computer; non si modifica niente.';
+HELP_TEXTS['av-back'] = 'Torna all\'elenco dei comuni, con i filtri e l\'ordinamento di prima.';
+HELP_TEXTS['av-export'] = 'Scarica un file Excel del comune con tre fogli: riepilogo per attività, progressivo per settimana di ogni attività e dettaglio per giorno/operatore/ticket.\n\nIl file resta sul tuo computer; non si modifica niente.';
+HELP_TEXTS['av-week'] = 'Apre o chiude i giorni di questa settimana per questa attività: operatore, ticket Jira, ore e produzione. In giallo i giorni pianificati senza ore, in grigio quelli in programma.';
+HELP_TEXTS['av-cp'] = 'Apre questa settimana nel Controllo produzione, dove si possono sincronizzare le ore da Jira e correggere i Km/Cad.\n\nCambia la settimana selezionata in alto.';
 // 🌦️ Storico meteo
 HELP_TEXTS['#pw-tab-meteo-storico'] = 'Mostra, per ogni cantiere pianificato in Griglia, il meteo realmente osservato nei giorni già passati e il bollettino della Protezione Civile di quel giorno. Puoi filtrare per periodo e fare ricerche.\n\nIl periodo è indipendente dalla settimana selezionata in alto. Lo storico viene recuperato e salvato in automatico in un archivio comune. I dati degli ultimi 7 giorni sono provvisori e si consolidano da soli.';
 // 🔁 Doppia Week

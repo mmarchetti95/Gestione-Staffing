@@ -1,16 +1,16 @@
 # Graph Report - Gestione-Staffing  (2026-10-19)
 
 ## Corpus Check
-- 71 files · ~430,931 words
+- 71 files · ~431,675 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
-- 1665 nodes · 3119 edges · 110 communities (72 shown, 38 thin omitted)
+- 1667 nodes · 3126 edges · 110 communities (72 shown, 38 thin omitted)
 - Extraction: 98% EXTRACTED · 2% INFERRED · 0% AMBIGUOUS · INFERRED: 56 edges (avg confidence: 0.73)
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `d2daa6ba`
+- Built from commit: `6cc87603`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -127,8 +127,8 @@
 ## God Nodes (most connected - your core abstractions)
 1. `mlRender()` - 31 edges
 2. `apRender()` - 31 edges
-3. `pwGeneraMail()` - 20 edges
-4. `esc()` - 19 edges
+3. `esc()` - 21 edges
+4. `pwGeneraMail()` - 20 edges
 5. `pwJiraSubtaskOpenComuniModal()` - 17 edges
 6. `_apSalvaLocale()` - 17 edges
 7. `Dashboard Staffing Eagleprojects` - 17 edges
@@ -193,7 +193,7 @@ Nodes (41): commessaRegione(), _geoCache, _geoCacheSaveSingle(), geocodifica(), 
 
 ### Community 7 - "dashboard-crud-helpers.js"
 Cohesion: 0.08
-Nodes (36): closeModal(), cpSelectModal(), deleteCommessa(), deleteOperatore(), esc(), getOperatoriAttivi(), HELP_TEXTS, isOperatoreLicenziato() (+28 more)
+Nodes (38): closeModal(), cpSelectModal(), deleteCommessa(), deleteOperatore(), esc(), fabbisognoClona(), fabbisognoSummaryHtml(), getOperatoriAttivi() (+30 more)
 
 ### Community 8 - "weekly-meteo.js"
 Cohesion: 0.11
@@ -448,7 +448,7 @@ Nodes (20): PW_JCHK_GIORNI, PW_JCHK_ORDINE, PW_JCHK_TIPI, _pwJchk, pwJchkAnalizz
   README.md · relation: conceptually_related_to
 
 ## Knowledge Gaps
-- **282 isolated node(s):** `CPA_GIORNI`, `_cpa`, `CPA_GRAVITA_STILE`, `_cpData`, `_collapseByWeek` (+277 more)
+- **282 isolated node(s):** `_CONFRONTO_STATO_BADGE`, `HELP_TEXTS`, `SENIORITA`, `Msg`, `Step` (+277 more)
   These have ≤1 connection - possible missing edges or undocumented components.
 - **38 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
 
@@ -458,14 +458,14 @@ _Questions this graph is uniquely positioned to answer:_
 - **What is the exact relationship between `Stack tecnico (Tailwind, Chart.js, Leaflet.js, Supabase, GitHub Pages)` and `v18.58.0 removed unused sortablejs/chart.js CDN references`?**
   _Edge tagged AMBIGUOUS (relation: conceptually_related_to) - confidence is low._
 - **Why does `esc()` connect `dashboard-crud-helpers.js` to `meteo-storico.js`, `produzione-anomalie.js`, `weekly-jira-subtask.js`, `weekly-jira-check.js`?**
-  _High betweenness centrality (0.021) - this node is a cross-community bridge._
+  _High betweenness centrality (0.017) - this node is a cross-community bridge._
 - **Why does `msOperatoriHtml()` connect `meteo-storico.js` to `dashboard-crud-helpers.js`?**
-  _High betweenness centrality (0.013) - this node is a cross-community bridge._
+  _High betweenness centrality (0.010) - this node is a cross-community bridge._
 - **Why does `pwJiraSubtaskRenderPreview()` connect `weekly-jira-subtask.js` to `dashboard-crud-helpers.js`?**
-  _High betweenness centrality (0.007) - this node is a cross-community bridge._
+  _High betweenness centrality (0.006) - this node is a cross-community bridge._
 - **Are the 9 inferred relationships involving `esc()` (e.g. with `msOperatoriHtml()` and `cpaRender()`) actually correct?**
   _`esc()` has 9 INFERRED edges - model-reasoned connections that need verification._
-- **What connects `CPA_GIORNI`, `_cpa`, `CPA_GRAVITA_STILE` to the rest of the system?**
+- **What connects `_CONFRONTO_STATO_BADGE`, `HELP_TEXTS`, `SENIORITA` to the rest of the system?**
   _282 weakly-connected nodes found - possible documentation gaps or missing edges._
 - **Should `meteo-storico.js` be split into smaller, more focused modules?**
   _Cohesion score 0.0645045045045045 - nodes in this community are weakly interconnected._

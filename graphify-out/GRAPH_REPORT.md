@@ -1,16 +1,16 @@
-# Graph Report - Gestione-Staffing  (2026-10-19)
+# Graph Report - Gestione-Staffing  (2026-11-11)
 
 ## Corpus Check
-- 71 files · ~431,675 words
+- 104 files · ~640,229 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
-- 1667 nodes · 3126 edges · 110 communities (72 shown, 38 thin omitted)
-- Extraction: 98% EXTRACTED · 2% INFERRED · 0% AMBIGUOUS · INFERRED: 56 edges (avg confidence: 0.73)
+- 2284 nodes · 4452 edges · 131 communities (93 shown, 38 thin omitted)
+- Extraction: 98% EXTRACTED · 2% INFERRED · 0% AMBIGUOUS · INFERRED: 83 edges (avg confidence: 0.66)
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `6cc87603`
+- Built from commit: `a3e28b6c`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -123,18 +123,38 @@
 - weekly-note-variazioni.js
 - weekly-ferie-massiva.js
 - weekly-jira-check.js
+- undoCreaCronologia
+- sb-funzioni.js
+- jira-sync-worklogs/index.ts
+- produzione-orari-jira.js
+- dashboard-undo.js
+- weekly-undo.js
+- jira-fornitori-worklog/index.ts
+- produzione-anomalie-pdf.js
+- produzione-timeline.js
+- produzione-timeline-worklog.js
+- jira-worklog-edit/index.ts
+- jstOpenCreaModal
+- jira-struttura-comune/index.ts
+- commessa-attivita.js
+- weekly-jira-subtask-db.js
+- weekly-regione-cantiere.js
+- jira-subtask-delete/index.ts
+- weekly-jira-bonifica.js
+- produzione-fornitori-worklog.js
+- produzione-stato-giornata.js
 
 ## God Nodes (most connected - your core abstractions)
 1. `mlRender()` - 31 edges
 2. `apRender()` - 31 edges
-3. `esc()` - 21 edges
-4. `pwGeneraMail()` - 20 edges
-5. `pwJiraSubtaskOpenComuniModal()` - 17 edges
-6. `_apSalvaLocale()` - 17 edges
-7. `Dashboard Staffing Eagleprojects` - 17 edges
-8. `_apNorm()` - 16 edges
-9. `pwMapRenderCantieri()` - 14 edges
-10. `apcRender()` - 14 edges
+3. `cpaRender()` - 24 edges
+4. `esc()` - 22 edges
+5. `pwGeneraMail()` - 20 edges
+6. `pwJiraSubtaskOpenComuniModal()` - 20 edges
+7. `_cpaS()` - 18 edges
+8. `jstOpenCreaModal()` - 18 edges
+9. `renderAttestati()` - 18 edges
+10. `_apSalvaLocale()` - 17 edges
 
 ## Surprising Connections (you probably didn't know these)
 - `Creative North Star: The Site Foreman's Whiteboard` --semantically_similar_to--> `Principle: information density over whitespace`  [INFERRED] [semantically similar]
@@ -161,7 +181,7 @@
 - **Modal layering under the .modal-backdrop ceiling** — src_head_modal_backdrop, src_head_modal_root, src_head_sb_admin_modals, src_head_ai_assistant_widget, src_head_ml_drawer_css, claude_modal_zindex_ceiling [INFERRED 0.85]
 - **Stack cartografico e geocoding** — readme_geo_cache, readme_nominatim, readme_carto_voyager_tiles, readme_satellite_default, readme_sentinella_non_trovato [INFERRED 0.85]
 
-## Communities (110 total, 38 thin omitted)
+## Communities (131 total, 38 thin omitted)
 
 ### Community 0 - "meteo-storico.js"
 Cohesion: 0.06
@@ -177,11 +197,11 @@ Nodes (59): admin-users Edge Function (service_role, create/list/delete users), 
 
 ### Community 3 - "weekly-mail-core.js"
 Cohesion: 0.07
-Nodes (57): formatDate(), isoWeekToMonday(), isoWeekYear(), pwCellAttivitaAt(), pwCellAttivitaElenco(), pwCellAttivitaRaw(), pwCellCantieri(), pwCellCantieriRaw() (+49 more)
+Nodes (59): formatDate(), isoWeekToMonday(), isoWeekYear(), pwCellAttivitaAt(), pwCellAttivitaElenco(), pwCellAttivitaRaw(), pwCellCantieri(), pwCellCantieriRaw() (+51 more)
 
 ### Community 4 - "weekly-jira-subtask.js"
-Cohesion: 0.08
-Nodes (53): PW_JIRA_EXTRA_FIELD_LABELS, _pwExtraFieldsByKey, pwExtraFieldSelectOpen(), pwExtraFieldSelectPick(), pwJiraActivityTypeGuess(), pwJiraBackButtonHtml(), pwJiraBuildSubtaskItem(), pwJiraComputeOriginalEstimate() (+45 more)
+Cohesion: 0.07
+Nodes (64): PW_JIRA_EXTRA_FIELD_LABELS, _pwExtraFieldsByKey, pwExtraFieldSelectOpen(), pwExtraFieldSelectPick(), pwJiraActivityTypeGuess(), pwJiraAggiungiSpazio(), pwJiraAttivitaSottotask(), pwJiraBackButtonHtml() (+56 more)
 
 ### Community 5 - "weekly-ricerca-squadre.js"
 Cohesion: 0.10
@@ -192,16 +212,16 @@ Cohesion: 0.09
 Nodes (41): commessaRegione(), _geoCache, _geoCacheSaveSingle(), geocodifica(), MAP_COLORS, _mapCollapsedCommesse, _mapCollapsedRegioniOp, _mapColor() (+33 more)
 
 ### Community 7 - "dashboard-crud-helpers.js"
-Cohesion: 0.08
-Nodes (38): closeModal(), cpSelectModal(), deleteCommessa(), deleteOperatore(), esc(), fabbisognoClona(), fabbisognoSummaryHtml(), getOperatoriAttivi() (+30 more)
+Cohesion: 0.05
+Nodes (55): closeHelpGuide(), closeModal(), cpSelectModal(), deleteCommessa(), deleteOperatore(), esc(), fabbisognoClona(), fabbisognoSummaryHtml() (+47 more)
 
 ### Community 8 - "weekly-meteo.js"
 Cohesion: 0.11
 Nodes (33): METEO_FASCE, METEO_ICONS, _meteoCache, _meteoCacheSave(), meteoGeoFor(), meteoPosKey(), _pcCache, _pcCacheSave() (+25 more)
 
 ### Community 9 - "dashboard-attestati.js"
-Cohesion: 0.12
-Nodes (33): attBadgeHtml(), attBadgesHtml(), attClasseStato(), attDataBreve(), attEtichettaMancanza(), attExcelData(), _attFiltri, attFoglio() (+25 more)
+Cohesion: 0.10
+Nodes (40): ATT_STATI_FILTRO, attBadgeHtml(), attBadgesHtml(), attClasseStato(), attDataBreve(), attEtichettaMancanza(), attExcelData(), _attFiltri (+32 more)
 
 ### Community 10 - "ai-assistant.js"
 Cohesion: 0.08
@@ -216,16 +236,16 @@ Cohesion: 0.11
 Nodes (17): pwAddSquadra(), pwAddStrumento(), pwFornStrFromKey(), pwFornStrKey(), pwRemoveSquadra(), pwRemoveStrumento(), pwRinumeraSquadreDefault(), pwSetSqStrumentiJira() (+9 more)
 
 ### Community 13 - "weekly-spostamenti.js"
-Cohesion: 0.17
-Nodes (26): _pwSpost, _pwSpost2opt(), _pwSpostBuildOrder(), pwSpostCalcola(), pwSpostClear(), _pwSpostCoordString(), _pwSpostCost(), pwSpostDrawMap() (+18 more)
+Cohesion: 0.13
+Nodes (34): PW_SPOST_GEO_COMUNI, PW_SPOST_GEO_FRAZIONI, _pwSpost, _pwSpost2opt(), _pwSpostBuildOrder(), pwSpostCalcola(), pwSpostClear(), _pwSpostCoordString() (+26 more)
 
 ### Community 14 - "new-project"
 Cohesion: 0.08
 Nodes (22): Base (sempre incluso), Go (indicatore: go.mod), Java (indicatori: pom.xml, build.gradle), .NET (indicatori: *.csproj, *.sln), Node (indicatore: package.json), Python (indicatori: requirements.txt, pyproject.toml, Pipfile), Rust (indicatore: Cargo.toml), Template .gitignore per stack (+14 more)
 
 ### Community 15 - "produzione-core.js"
-Cohesion: 0.13
-Nodes (30): _collapseByWeek, cpApplyMeteoToDom(), cpApplyStatoToDom(), cpBuildRecord(), _cpData, cpDataISO(), _cpEdgeErr(), cpJiraFlagClick() (+22 more)
+Cohesion: 0.09
+Nodes (55): _collapseByWeek, _collapseSets(), CP_KMJ_IN_SOSPESO, CP_KMJ_STATI, cpApplyMeteoToDom(), cpApplyStatoToDom(), cpBuildRecord(), cpBuildRecordDa() (+47 more)
 
 ### Community 16 - "config.js"
 Cohesion: 0.12
@@ -244,20 +264,20 @@ Cohesion: 0.18
 Nodes (16): exportLimitazioniXlsx(), limBadgeOpCard(), limDescrizioneRegistro(), _limFiltri, limFoglio(), limImportFile(), limImportParseWorkbook(), limImportPick() (+8 more)
 
 ### Community 20 - "jira-create-subtask/index.ts"
-Cohesion: 0.17
-Nodes (19): collectTempoTeams(), CORS_HEADERS, fetchKnownExtraFields(), fetchTaskSubtaskKeys(), fetchTempoTeamValues(), findExistingSubtask(), JIRA_BASE_URL, jiraAuthHeader() (+11 more)
+Cohesion: 0.12
+Nodes (34): aggiungiAlloSpazio(), collectTempoTeams(), CORS_HEADERS, EsitoAggiunta, fetchKnownExtraFields(), fetchSubtaskCreateFields(), fetchTaskSubtaskKeys(), fetchTempoTeamValues() (+26 more)
 
 ### Community 21 - "dashboard-operatori.js"
-Cohesion: 0.19
-Nodes (14): aggiornaGgOpVistaCommessa(), apriVistaOperatore(), checkCoerenzaOperatori(), EMAIL_SEED, renderAttestatiFilters(), renderEmailOperatori(), renderOperatori(), renderProvinciaFilterOptions() (+6 more)
+Cohesion: 0.17
+Nodes (17): aggiornaGgOpVistaCommessa(), apriVistaOperatore(), checkCoerenzaOperatori(), EMAIL_SEED, opDataGiorniFa(), opNuovoBadgeHtml(), opPassaFiltroAggiunta(), renderAttestatiFilters() (+9 more)
 
 ### Community 22 - "New-Project Skill"
 Cohesion: 0.14
 Nodes (16): checkpoint, Gotchas, Resume flow, Save flow, Single-Use Checkpoint Design, Storage, Gitignore Base Block, Gitignore Node Block (+8 more)
 
 ### Community 23 - "dashboard-fornitori.js"
-Cohesion: 0.29
-Nodes (16): addFornitore(), addFornitoreDipendente(), addFornitoreStrumento(), deleteFornitore(), fornGenId(), removeFornitoreDipendente(), removeFornitoreStrumento(), renderFornitoreCard() (+8 more)
+Cohesion: 0.20
+Nodes (21): addFornitore(), addFornitoreDipendente(), addFornitoreStrumento(), apriSpostaInFornitore(), deleteFornitore(), fornGenId(), fornitoreDiNome(), opEmailDi() (+13 more)
 
 ### Community 24 - "weekly-operatore-modal.js"
 Cohesion: 0.19
@@ -276,8 +296,8 @@ Cohesion: 0.15
 Nodes (14): Mappa screen (ml*, mappa-live.js), mlOnDataChanged, pwData[anno][week], pwFerie[anno][week], sbPull (Realtime auto-pull), staffing_state table, state.operatori[], state.pipeline / commesse_attive / commesse_attive_meta (+6 more)
 
 ### Community 28 - "weekly-popover-stats.js"
-Cohesion: 0.22
-Nodes (10): pwAddCantiereField(), pwCantiereCellOf(), pwOpenSearchResultsModal(), pwRemoveCantiereField(), _pwSearchMatches, pwSearchOp(), pwTitleCase(), pwToggleStatPopover() (+2 more)
+Cohesion: 0.19
+Nodes (12): pwAddCantiereField(), pwCantiereCellOf(), pwGoToSearchCell(), pwOpenSearchResultsModal(), pwRemoveCantiereField(), _pwSearchMatches, pwSearchOp(), pwStatGoToCell() (+4 more)
 
 ### Community 29 - "Categorical Color System (colori categorici)"
 Cohesion: 0.19
@@ -304,8 +324,8 @@ Cohesion: 0.33
 Nodes (10): cpApplyCollapse(), cpCollapseAllToggle(), cpGoToFirstMatch(), cpSearchOp(), cpToggleComm(), cpToggleSq(), pwApplyCollapseState(), pwCollapseAllToggle() (+2 more)
 
 ### Community 35 - "produzione-report.js"
-Cohesion: 0.33
-Nodes (8): cpCaricaReportSquadra(), cpGetSquadraOpsByDay(), cpHmToMin(), cpOreJiraRGB(), cpParseReportCsv(), cpProcessReport(), cpSplitCsvLine(), pwControlloExportPDF()
+Cohesion: 0.29
+Nodes (10): cpCaricaReportSquadra(), cpGetSquadraOpsByDay(), cpHmToMin(), cpOreJiraRGB(), cpParseReportCsv(), cpProcessReport(), cpReportAttivitaPerTicket(), cpReportAttivitaTicket() (+2 more)
 
 ### Community 36 - "weekly-clipboard-cantiere.js"
 Cohesion: 0.40
@@ -324,8 +344,8 @@ Cohesion: 0.36
 Nodes (6): anagImportFile(), anagImportParseWorkbook(), anagImportPick(), anagImportShowConfirm(), anagNormComune(), anagNormProvincia()
 
 ### Community 40 - "jira-task-status/index.ts"
-Cohesion: 0.36
-Nodes (8): chunked(), CORS_HEADERS, JIRA_BASE_URL, jiraAuthHeader(), jiraPost(), jiraSearch(), jqlEscape(), json()
+Cohesion: 0.22
+Nodes (17): accountIdDaEmail(), Cerca, cercaSottotask(), changelogBulk(), changelogPerIssue(), changelogStato(), chunked(), CORS_HEADERS (+9 more)
 
 ### Community 41 - "scripts/smoke_test.py"
 Cohesion: 0.32
@@ -344,8 +364,8 @@ Cohesion: 0.25
 Nodes (9): mlEnter(), mlGoToday(), mlInit(), mlJiraCacheLoad(), mlRangeLoad(), mlStartAutoRefresh(), mlStopAutoRefresh(), mlTodayRef() (+1 more)
 
 ### Community 45 - "weekly-doppiaweek.js"
-Cohesion: 0.25
-Nodes (13): PW_MESI_IT, pwDoppiaWeekExportPDF(), pwDoppiaWeekRender(), _pwDwFiltroLabel(), pwDwMonth, pwDwMonthNav(), pwDwOperatori(), pwDwProvenienza() (+5 more)
+Cohesion: 0.24
+Nodes (14): PW_MESI_IT, pwDoppiaWeekExportPDF(), pwDoppiaWeekRender(), _pwDwFiltroLabel(), pwDwMonth, pwDwMonthNav(), pwDwOperatori(), pwDwProvenienza() (+6 more)
 
 ### Community 46 - "weekly-nav.js"
 Cohesion: 0.39
@@ -420,16 +440,16 @@ Cohesion: 0.11
 Nodes (25): CPA_CANALE, CPA_SOLL_FONTE, _cpaEmailByNome(), _cpaGiorniLabel(), _cpaRegistroConta(), _cpaRegistroHtml(), _cpaRegistroRighe(), _cpaRegistroStato() (+17 more)
 
 ### Community 104 - "produzione-anomalie-core.js"
-Cohesion: 0.21
-Nodes (14): CPA_GRAVITA_ORD, CPA_SOGLIE_DEFAULT, CPA_TIPI, _cpaCantieriCella(), _cpaControllaKm(), _cpaControllaWorklog(), _cpaFmt(), _cpaId() (+6 more)
+Cohesion: 0.13
+Nodes (33): CPA_GRAVITA_ORD, CPA_METEO_CODICI, CPA_METEO_FASCIA, CPA_PC_RANK, CPA_SOGLIE_DEFAULT, CPA_TIPI, _cpaAnnotaMeteo(), _cpaCantieriCella() (+25 more)
 
 ### Community 105 - "jira-update-production/index.ts"
-Cohesion: 0.35
-Nodes (9): addDeltaToField(), CORS_HEADERS, fetchJiraFields(), getFieldValue(), JIRA_BASE_URL, jiraAuthHeader(), jiraGet(), jiraPut() (+1 more)
+Cohesion: 0.32
+Nodes (11): addDeltaToField(), CORS_HEADERS, fetchJiraFields(), findFieldId(), getFieldValue(), JIRA_BASE_URL, jiraAuthHeader(), jiraGet() (+3 more)
 
 ### Community 106 - "produzione-anomalie.js"
-Cohesion: 0.15
-Nodes (26): _cpa, CPA_GIORNI, CPA_GRAVITA_STILE, cpaAvvia(), cpaAzione(), _cpaCelleSettimana(), cpaCopia(), _cpaDateSettimana() (+18 more)
+Cohesion: 0.07
+Nodes (73): _cpa, CPA_CERTEZZA, CPA_GIORNI, CPA_GIORNI_LUNGHI, CPA_GRAVITA, CPA_METEO_STILE, CPA_SOGLIE_ORE, _cpaAllinea() (+65 more)
 
 ### Community 107 - "weekly-note-variazioni.js"
 Cohesion: 0.27
@@ -440,15 +460,95 @@ Cohesion: 0.13
 Nodes (20): PW_FERIE_TIPO_LABEL, pwFerieBulkBarRender(), _pwFerieBulkGiorni, pwFerieBulkToggleGiorno(), pwFerieCognomeNome(), _pwFerieHaAssenze(), _pwFerieLabel, pwFerieOperatoriOrdinati() (+12 more)
 
 ### Community 109 - "weekly-jira-check.js"
-Cohesion: 0.20
-Nodes (20): PW_JCHK_GIORNI, PW_JCHK_ORDINE, PW_JCHK_TIPI, _pwJchk, pwJchkAnalizza(), pwJchkApplyHighlight(), _pwJchkCancellato(), pwJchkRefresh() (+12 more)
+Cohesion: 0.12
+Nodes (39): PW_JCHK_GIORNI, PW_JCHK_ORDINE, PW_JCHK_TIPI, _pwJchk, _pwJchkAbbinaManuali(), _pwJchkAccountDi(), pwJchkAnalizza(), pwJchkApplyHighlight() (+31 more)
+
+### Community 110 - "undoCreaCronologia"
+Cohesion: 0.26
+Nodes (12): undoCreaCronologia(), applica(), applicaPasso(), diff(), flush(), inCoda(), ora(), rebase() (+4 more)
+
+### Community 111 - "sb-funzioni.js"
+Cohesion: 0.26
+Nodes (13): SB_FN_FUNZIONI, _sbFn, sbFnApplicaNascoste(), sbFnApply(), sbFnLoad(), sbFnNascosta(), sbFnPaginaVisibile(), sbFnRender() (+5 more)
+
+### Community 112 - "jira-sync-worklogs/index.ts"
+Cohesion: 0.19
+Nodes (18): adfText(), commentText(), CORS_HEADERS, EpicInfo, fetchAllWorklogsForIssue(), findIssuesForOperator(), IssueRef, JIRA_BASE_URL (+10 more)
+
+### Community 113 - "produzione-orari-jira.js"
+Cohesion: 0.32
+Nodes (10): CP_OJ_COLORI, _cpOjDurata(), _cpOjElenco(), _cpOjOra(), _cpOjParti(), _cpOjRiga(), _cpOjTimeline(), cpOreJiraInterventi() (+2 more)
+
+### Community 114 - "dashboard-undo.js"
+Cohesion: 0.23
+Nodes (8): DB_UNDO_CHIAVI, _dbUndo, _dbUndoAppiattisci(), _dbUndoConId(), _dbUndoLabel(), _dbUndoPulisci(), _dbUndoRicostruisci(), _dbUndoSnapshot()
+
+### Community 115 - "weekly-undo.js"
+Cohesion: 0.24
+Nodes (7): PW_UNDO_DOMINI, _pwUndo, _pwUndoJson(), _pwUndoLabel(), _pwUndoScrivi(), _pwUndoSettimane(), _pwUndoSnapshot()
+
+### Community 116 - "jira-fornitori-worklog/index.ts"
+Cohesion: 0.10
+Nodes (39): _accountId, accountIdDi(), adfDoc(), adfText(), allineaStato(), assegna(), cantieriCella(), Coppia (+31 more)
+
+### Community 117 - "produzione-anomalie-pdf.js"
+Cohesion: 0.24
+Nodes (8): CPA_PDF_COLONNE, CPA_PDF_GRAVITA, cpaEsportaPdf(), _cpaPdfCorrezione(), _cpaPdfH(), _cpaPdfSoglia(), _cpaPdfTicket(), _cpaPdfTxt()
+
+### Community 119 - "produzione-timeline.js"
+Cohesion: 0.09
+Nodes (49): _cpTl, CPTL_COLORI_COMMESSA, CPTL_SOGLIE, cpTlApri(), _cpTlAsseHtml(), _cpTlAutoLettura(), _cpTlBarra(), _cpTlCalcola() (+41 more)
+
+### Community 120 - "produzione-timeline-worklog.js"
+Cohesion: 0.23
+Nodes (18): _cpTlWl, cpTlWlApri(), cpTlWlChiudi(), _cpTlWlCoda(), cpTlWlControlla(), cpTlWlElimina(), _cpTlWlEsegui(), _cpTlWlHHMM() (+10 more)
+
+### Community 121 - "jira-worklog-edit/index.ts"
+Cohesion: 0.10
+Nodes (38): accountIdDi(), adfText(), attendi(), cambiato(), CORS_HEADERS, Elim, eliminaDaTempo(), eliminaWl() (+30 more)
+
+### Community 122 - "jstOpenCreaModal"
+Cohesion: 0.12
+Nodes (33): _jst, _jstCantieriDallaGriglia(), jstCarica(), jstChiaviModello(), jstInvoke(), jstModelloDi(), _jstNota(), jstOpenCreaModal() (+25 more)
+
+### Community 123 - "jira-struttura-comune/index.ts"
+Cohesion: 0.16
+Nodes (28): adfSostituisci(), CAMPI_ESCLUSI, campiCreazione(), campiData(), cerca(), chiaveTitolo(), CORS_HEADERS, creaIssue() (+20 more)
+
+### Community 124 - "commessa-attivita.js"
+Cohesion: 0.19
+Nodes (18): CA_ATTIVITA_SERVIZIO, caCatalogo(), caClona(), caFmtNum(), caHaCatalogo(), caKpiTargetVoce(), caNomiTendina(), caNomiUsatiInGriglia() (+10 more)
+
+### Community 125 - "weekly-jira-subtask-db.js"
+Cohesion: 0.24
+Nodes (15): PW_JSUB_GIORNI, _pwJsub, _pwJsubAggiornaVista(), _pwJsubApplica(), pwJsubCambiaOperatore(), pwJsubDataIso(), pwJsubElimina(), _pwJsubEntry() (+7 more)
+
+### Community 126 - "weekly-regione-cantiere.js"
+Cohesion: 0.43
+Nodes (7): PW_REGIONI, pwApplyRegioniToDom(), pwRegioneCantiere(), pwRegioneInnerHtml(), pwRegioneSlotHtml(), pwRegioniEnsure(), _pwRegNorm()
+
+### Community 127 - "jira-subtask-delete/index.ts"
+Cohesion: 0.32
+Nodes (11): CORS_HEADERS, esamina(), Esito, jira(), JIRA_BASE_URL, jiraErr(), json(), Prima (+3 more)
+
+### Community 128 - "weekly-jira-bonifica.js"
+Cohesion: 0.35
+Nodes (11): _pwJbon, pwJbonApplica(), pwJbonApri(), pwJbonDisponibile(), _pwJbonEffettoHtml(), _pwJbonGiorno(), _pwJbonGruppoHtml(), _pwJbonLink() (+3 more)
+
+### Community 129 - "produzione-fornitori-worklog.js"
+Cohesion: 0.27
+Nodes (11): _cpFornWl, cpFornWlApri(), cpFornWlAvvia(), cpFornWlEsegui(), _cpFornWlLink(), cpFornWlPrimaDellaSync(), _cpFornWlRender(), cpFornWlScegli() (+3 more)
+
+### Community 130 - "produzione-stato-giornata.js"
+Cohesion: 0.23
+Nodes (19): _cpGs, CPGS_RANGO, cpGsAggiungi(), cpGsApplica(), cpGsApri(), cpGsBtnHtml(), cpGsCampo(), _cpGsCarica() (+11 more)
 
 ## Ambiguous Edges - Review These
 - `Stack tecnico (Tailwind, Chart.js, Leaflet.js, Supabase, GitHub Pages)` → `v18.58.0 removed unused sortablejs/chart.js CDN references`  [AMBIGUOUS]
   README.md · relation: conceptually_related_to
 
 ## Knowledge Gaps
-- **282 isolated node(s):** `_CONFRONTO_STATO_BADGE`, `HELP_TEXTS`, `SENIORITA`, `Msg`, `Step` (+277 more)
+- **359 isolated node(s):** `_cpData`, `_collapseByWeek`, `_cpMeteoCaricate`, `_cpStatoTicket`, `CP_KMJ_STATI` (+354 more)
   These have ≤1 connection - possible missing edges or undocumented components.
 - **38 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
 
@@ -457,15 +557,15 @@ _Questions this graph is uniquely positioned to answer:_
 
 - **What is the exact relationship between `Stack tecnico (Tailwind, Chart.js, Leaflet.js, Supabase, GitHub Pages)` and `v18.58.0 removed unused sortablejs/chart.js CDN references`?**
   _Edge tagged AMBIGUOUS (relation: conceptually_related_to) - confidence is low._
-- **Why does `esc()` connect `dashboard-crud-helpers.js` to `meteo-storico.js`, `produzione-anomalie.js`, `weekly-jira-subtask.js`, `weekly-jira-check.js`?**
-  _High betweenness centrality (0.017) - this node is a cross-community bridge._
+- **Why does `esc()` connect `dashboard-crud-helpers.js` to `meteo-storico.js`, `weekly-jira-bonifica.js`, `produzione-stato-giornata.js`, `weekly-jira-subtask.js`, `weekly-jira-check.js`?**
+  _High betweenness centrality (0.004) - this node is a cross-community bridge._
 - **Why does `msOperatoriHtml()` connect `meteo-storico.js` to `dashboard-crud-helpers.js`?**
-  _High betweenness centrality (0.010) - this node is a cross-community bridge._
-- **Why does `pwJiraSubtaskRenderPreview()` connect `weekly-jira-subtask.js` to `dashboard-crud-helpers.js`?**
-  _High betweenness centrality (0.006) - this node is a cross-community bridge._
-- **Are the 9 inferred relationships involving `esc()` (e.g. with `msOperatoriHtml()` and `cpaRender()`) actually correct?**
-  _`esc()` has 9 INFERRED edges - model-reasoned connections that need verification._
-- **What connects `_CONFRONTO_STATO_BADGE`, `HELP_TEXTS`, `SENIORITA` to the rest of the system?**
-  _282 weakly-connected nodes found - possible documentation gaps or missing edges._
+  _High betweenness centrality (0.003) - this node is a cross-community bridge._
+- **Why does `apBuildContesto()` connect `weekly-autoplan.js` to `weekly-meteo.js`?**
+  _High betweenness centrality (0.002) - this node is a cross-community bridge._
+- **Are the 10 inferred relationships involving `esc()` (e.g. with `msOperatoriHtml()` and `cpMysondImportFile()`) actually correct?**
+  _`esc()` has 10 INFERRED edges - model-reasoned connections that need verification._
+- **What connects `_cpData`, `_collapseByWeek`, `_cpMeteoCaricate` to the rest of the system?**
+  _359 weakly-connected nodes found - possible documentation gaps or missing edges._
 - **Should `meteo-storico.js` be split into smaller, more focused modules?**
   _Cohesion score 0.0645045045045045 - nodes in this community are weakly interconnected._

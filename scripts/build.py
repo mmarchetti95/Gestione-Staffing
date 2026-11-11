@@ -82,6 +82,7 @@ JS_FILES = [
     'weekly-guida.js',
     'meteo-storico.js',
     'mappa-live.js',
+    'avanzamento-comuni.js',
     'ai-assistant.js',
 ]
 
