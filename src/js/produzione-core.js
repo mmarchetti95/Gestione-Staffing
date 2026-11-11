@@ -255,7 +255,7 @@ function pwControlloRender() {
       sq.giorni.forEach((gBlock, gIdx) => {
         const g   = gBlock.giornoIdx;
         const sep = gIdx > 0 ? ' cp-day-sep' : '';
-        html += `<tr class="cp-tr-day${sep}" data-comm-idx="${blIdx}" data-sq-idx="${sqKey}"><td colspan="19">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;📅 ${DAY_NAMES[g]} ${dates[g]}</td></tr>`;
+        html += `<tr class="cp-tr-day${sep}" data-comm-idx="${blIdx}" data-sq-idx="${sqKey}" data-giorno="${g}" data-lbl="${DAY_NAMES[g]} ${dates[g]}"><td colspan="19">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;📅 ${DAY_NAMES[g]} ${dates[g]}</td></tr>`;
 
         gBlock.ops.forEach(op => {
           const k     = `${bl.commessa}|||${sq.nome}|||${op.nome}|||${g}`;
@@ -1340,6 +1340,7 @@ function cpKmJiraRefreshDom() {
     b.textContent = d.lbl;
     b.title = cpKmJiraTitolo(st, b.dataset.tk);
     b.dataset.stato = st.stato;
+    b.dataset.haKm = (st.km != null || st.last != null) ? '1' : '';
     const tr = b.closest('tr'), sq = tr && tr.dataset.sqIdx;
     if (sq == null) return;
     const c = perSquadra[sq] || (perSquadra[sq] = { ok: 0, da_verificare: 0, da_aggiornare: 0, da_inviare: 0, senza_email: 0 });
@@ -1352,14 +1353,26 @@ function cpKmJiraRefreshDom() {
     inp.classList.toggle('cp-km-inv', stato === 'da_inviare' || stato === 'senza_email');
     inp.classList.toggle('cp-km-ver', stato === 'da_verificare');
   });
+  const giorniSq = cpKmJiraGiorniMancanti();
   document.querySelectorAll('.cp-table .cp-kmj-sum').forEach(el => {
     const c = perSquadra[el.dataset.sqIdx];
     const pend = c ? c.da_verificare + c.da_aggiornare + c.da_inviare + c.senza_email : 0;
     if (!c || (!pend && !c.ok)) { el.innerHTML = ''; el.className = 'cp-kmj-sum no-print'; el.title = ''; return; }
-    if (!pend) {
+    const manc = giorniSq[el.dataset.sqIdx] || [];
+    const mancTxt = manc.length ? 'ancora da sincronizzare: ' + manc.map(d => d.lbl + (d.parziale ? ' (in parte)' : '')).join(', ') : '';
+    const mancTitle = manc.length
+      ? '\n\nGiorni pianificati ancora senza KM su Jira:\n' + manc.map(d => '• ' + d.lbl + ' — ' + d.dettaglio).join('\n')
+      : '';
+    if (!pend && !manc.length) {
       el.className = 'cp-kmj-sum no-print ok';
       el.textContent = '✓ KM verificati e allineati su Jira';
       el.title = 'Tutti i Km/Cad di questa squadra vengono da un report o sono stati confermati, e sono già su Jira (' + c.ok + ' ticket)';
+      return;
+    }
+    if (!pend) {
+      el.className = 'cp-kmj-sum no-print parz';
+      el.textContent = '✓ KM allineati su Jira · ' + mancTxt;
+      el.title = 'I Km/Cad presenti (' + c.ok + ' ticket) sono verificati e già su Jira, ma la settimana non è completa.' + mancTitle + '\n\nClic qui per andare al primo giorno da sincronizzare.';
       return;
     }
     const parti = [];
@@ -1369,19 +1382,63 @@ function cpKmJiraRefreshDom() {
     if (c.da_inviare) parti.push(c.da_inviare + ' da inviare');
     if (c.senza_email) parti.push(c.senza_email + ' senza email');
     el.className = 'cp-kmj-sum no-print pend';
-    el.textContent = 'KM su Jira: ' + parti.join(' · ');
-    el.title = 'Km/Cad di questa squadra non ancora verificati o non ancora su Jira.\n«Da verificare» = letti da Jira (valore dell\'operatore): carica il report o confermali. Gli altri si inviano con 🔄 Sincronizza squadra.\nClic qui per andare al primo in sospeso.';
+    el.textContent = 'KM su Jira: ' + parti.join(' · ') + (mancTxt ? ' · ' + mancTxt : '');
+    el.title = 'Km/Cad di questa squadra non ancora verificati o non ancora su Jira.\n«Da verificare» = letti da Jira (valore dell\'operatore): carica il report o confermali. Gli altri si inviano con 🔄 Sincronizza squadra.' + mancTitle + '\n\nClic qui per andare al primo in sospeso.';
   });
 }
 
-/* Clic sul riepilogo della squadra: apre la squadra se chiusa e va alla prima riga in sospeso. */
+/* Giorni pianificati di ogni squadra ancora senza KM su Jira: righe operatore in cui nessun ticket ha un
+   Km/Cad (né un valore già inviato). Serve a non dire «allineati» quando il report copre solo i primi
+   giorni della settimana. Segna le righe scoperte con data-km-senza (per il clic sul riepilogo).
+   Va chiamata dopo aver aggiornato data-ha-km sui badge. → { sqKey: [{ g, lbl, parziale, dettaglio }] } */
+function cpKmJiraGiorniMancanti() {
+  const lbl = {};
+  document.querySelectorAll('.cp-table tr.cp-tr-day[data-giorno]').forEach(tr => {
+    lbl[tr.dataset.sqIdx + '|' + tr.dataset.giorno] = tr.dataset.lbl || '';
+  });
+  const giorni = {};   // sqKey → g → { righe, senza: [{ nome, motivo }] }
+  document.querySelectorAll('.cp-table tr[data-cpk]').forEach(tr => {
+    const sq = tr.dataset.sqIdx;
+    if (sq == null) return;
+    const g = String(tr.dataset.cpk || '').split('|||')[3];
+    const badges = tr.querySelectorAll('.cp-kmj');
+    const coperto = [...badges].some(b => b.dataset.haKm === '1');
+    if (coperto) delete tr.dataset.kmSenza; else tr.dataset.kmSenza = '1';
+    const perG = giorni[sq] || (giorni[sq] = {});
+    const d = perG[g] || (perG[g] = { righe: 0, senza: [] });
+    d.righe++;
+    if (!coperto) d.senza.push({ nome: tr.dataset.operatore || '', motivo: badges.length ? 'km' : 'ticket' });
+  });
+  const MOTIVI = { ticket: 'nessun ticket letto da Jira', km: 'ticket senza Km/Cad (report non caricato)' };
+  const out = {};
+  Object.keys(giorni).forEach(sq => {
+    out[sq] = Object.keys(giorni[sq]).map(Number).sort((a, b) => a - b)
+      .filter(g => giorni[sq][g].senza.length)
+      .map(g => {
+        const d = giorni[sq][g];
+        const parziale = d.senza.length < d.righe;
+        const perMotivo = {};
+        d.senza.forEach(x => (perMotivo[x.motivo] || (perMotivo[x.motivo] = [])).push(x.nome));
+        const motivi = Object.keys(perMotivo);
+        const dettaglio = (!parziale && motivi.length === 1)
+          ? (d.righe > 1 ? 'tutti: ' : perMotivo[motivi[0]][0] + ': ') + MOTIVI[motivi[0]]
+          : motivi.map(m => perMotivo[m].join(', ') + ': ' + MOTIVI[m]).join(' · ');
+        return { g, lbl: lbl[sq + '|' + g] || ('giorno ' + (g + 1)), parziale, dettaglio };
+      });
+  });
+  return out;
+}
+
+/* Clic sul riepilogo della squadra: apre la squadra se chiusa e va alla prima riga in sospeso,
+   altrimenti alla prima riga di un giorno ancora senza KM. */
 function cpKmJiraVaiPrimo(sqKey) {
   const b = [...document.querySelectorAll('.cp-table .cp-kmj')].find(x => {
     const tr = x.closest('tr');
     return tr && tr.dataset.sqIdx === String(sqKey) && CP_KMJ_IN_SOSPESO.includes(x.dataset.stato);
   });
-  if (!b) return;
-  const tr = b.closest('tr');
+  const tr = b ? b.closest('tr')
+    : [...document.querySelectorAll('.cp-table tr[data-cpk][data-km-senza="1"]')].find(x => x.dataset.sqIdx === String(sqKey));
+  if (!tr) return;
   if (_collapseSets('cp').comm.has(tr.dataset.commIdx)) cpToggleComm(Number(tr.dataset.commIdx));
   if (_collapseSets('cp').sq.has(String(sqKey))) cpToggleSq(String(sqKey));
   tr.scrollIntoView({ behavior: 'smooth', block: 'center' });
