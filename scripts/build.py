@@ -80,6 +80,7 @@ JS_FILES = [
     'weekly-note-variazioni.js',
     'weekly-jira-check.js',
     'weekly-jira-bonifica.js',
+    'weekly-chiusura.js',
     'weekly-undo.js',
     'weekly-guida.js',
     'meteo-storico.js',

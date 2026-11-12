@@ -1018,6 +1018,8 @@
   .cp-griglia-btn:hover { opacity:1; }
   #cp-torna-btn { position:fixed; left:20px; bottom:20px; z-index:4400; background:#4f46e5; color:#fff; border:none; border-radius:8px; padding:8px 14px; font-size:13px; font-weight:600; cursor:pointer; box-shadow:0 4px 14px rgba(0,0,0,.25); }
   #cp-torna-btn:hover { background:#4338ca; }
+  #chs-torna-btn { position:fixed; left:20px; bottom:64px; z-index:4400; background:#0f172a; color:#fff; border:none; border-radius:8px; padding:8px 14px; font-size:13px; font-weight:600; cursor:pointer; box-shadow:0 4px 14px rgba(0,0,0,.25); }
+  #chs-torna-btn:hover { background:#1e293b; }
   .cp-table tr.cp-search-match td {
     background: #fefce8 !important;
   }
@@ -2113,7 +2115,7 @@
       </span>
       <button id="btn-presentation" class="px-3 py-1.5 text-sm rounded hover:bg-white/10" style="border:1px solid var(--dark-border-strong);color:var(--dark-text);visibility:visible;">📊 Modalità presentazione</button>
       <div class="text-xs pl-2" style="border-left:1px solid var(--dark-border-strong);color:var(--dark-text-muted);">
-        <span id="app-version" class="font-medium" style="color:var(--accent);">v18.258.0</span> · Michele Marchetti
+        <span id="app-version" class="font-medium" style="color:var(--accent);">v18.259.0</span> · Michele Marchetti
         <span id="sb-role-badge" style="margin-left:8px;padding:1px 8px;border-radius:9999px;background:rgba(255,255,255,.1);color:var(--dark-text);font-weight:600;"></span>
       </div>
     </div>
@@ -2261,6 +2263,12 @@
       </table>
     </div>
   </div>
+</div>
+
+<!-- Chiusura settimana guidata (src/js/weekly-chiusura.js). z-index sotto i modal degli strumenti
+     che apre e sotto .modal-backdrop (100050): conferme e avvisi devono comparire sopra. -->
+<div id="chs-modal" class="no-print" style="display:none;position:fixed;inset:0;z-index:99980;background:var(--backdrop);align-items:center;justify-content:center;" onclick="if (event.target === this) chsChiudi()">
+  <div id="chs-root" style="background:#f8fafc;border-radius:var(--radius-lg);width:860px;max-width:97vw;max-height:90vh;box-shadow:var(--shadow-lg);display:flex;flex-direction:column;overflow:hidden;"></div>
 </div>
 
 <!-- Controllo anomalie di Controllo Produzione (src/js/produzione-anomalie.js). z-index sotto
@@ -2924,6 +2932,7 @@
       <button id="pw-weather-week-btn" class="px-3 py-1.5 text-sm border border-slate-200 bg-slate-50 text-slate-400 rounded no-print whitespace-nowrap" title="Criticità meteo nei cantieri pianificati questa settimana" onclick="pwOpenWeatherWeekModal()">⛈️ Meteo settimana…</button>
       <button id="pw-nv-btn" class="px-3 py-1.5 text-sm border border-slate-200 bg-slate-50 text-slate-500 rounded no-print whitespace-nowrap hover:bg-slate-100" title="Lavagna di note e variazioni rispetto alla programmazione della settimana" onclick="pwOpenNoteVariazioni()">📝 Note/Variazioni</button>
       <button id="pw-jchk-btn" data-help-key="pw-jchk" class="px-3 py-1.5 text-sm border border-slate-200 bg-slate-50 text-slate-400 rounded no-print whitespace-nowrap hover:bg-slate-100" title="Controlla che ogni cella della settimana abbia il suo sottotask Jira — Click destro per la guida" onclick="pwOpenJiraCheck()">🎫 Sottotask</button>
+      <button id="pw-chs-btn" class="px-3 py-1.5 text-sm border border-slate-300 bg-white text-slate-700 rounded no-print whitespace-nowrap hover:bg-slate-50" title="Passi guidati per chiudere la settimana mostrata — Click destro per la guida" onclick="chsApri()">🏁 Chiusura settimana</button>
       <span class="pw-tb-sep ml-auto"></span>
       <button id="pw-undo-btn" class="px-2.5 py-1.5 text-sm border border-slate-300 rounded hover:bg-slate-50 no-print pw-write-action whitespace-nowrap disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-transparent" title="Niente da annullare" disabled onclick="pwUndo()" aria-label="Indietro">↶</button>
       <button id="pw-redo-btn" class="px-2.5 py-1.5 text-sm border border-slate-300 rounded hover:bg-slate-50 no-print pw-write-action whitespace-nowrap disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-transparent" title="Niente da ripristinare" disabled onclick="pwRedo()" aria-label="Avanti">↷</button>
@@ -3339,6 +3348,7 @@
       <div id="cp-search-op-info" class="text-xs text-slate-400 hidden"></div>
       <div class="flex items-center gap-2">
         <button id="cp-collapse-all" class="px-3 py-1.5 text-sm border border-slate-300 rounded hover:bg-slate-50 no-print" onclick="cpCollapseAllToggle()">≡ Collassa</button>
+        <button id="cp-chs-btn" onclick="chsApri()" class="px-3 py-1.5 text-sm font-medium border border-slate-300 bg-white text-slate-700 rounded-lg flex items-center gap-1.5 no-print hover:bg-slate-50" title="Passi guidati per chiudere la settimana mostrata — Click destro per la guida">🏁 Chiusura settimana</button>
         <button id="cpa-toggle" onclick="cpaToggle()" class="px-3 py-1.5 text-sm font-medium text-white rounded-lg flex items-center gap-1.5 no-print" style="background:#b45309;" title="Confronta Griglia e ore Jira della settimana e propone correzioni (non scrive su Jira)">🔍 Controllo anomalie</button>
         <button id="cptl-toggle" onclick="cpTlApri()" class="px-3 py-1.5 text-sm font-medium text-white rounded-lg flex items-center gap-1.5 no-print" style="background:#0f766e;" title="Barra oraria dei worklog Jira di ogni operatore: inizio, fine, pause e totale (click destro per la guida; click destro su una riga della tabella apre la timeline di quell'operatore e giorno)">🕘 Timeline worklog</button>
         <button id="cpfw-toggle" onclick="cpFornWlApri()" class="px-3 py-1.5 text-sm font-medium text-white rounded-lg flex items-center gap-1.5 no-print" style="background:#4338ca;" title="Worklog dei dipendenti dei fornitori, copiati dal collega Eagle in squadra (click destro per la guida)">🏢 Worklog fornitori</button>

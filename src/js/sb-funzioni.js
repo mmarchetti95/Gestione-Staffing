@@ -28,6 +28,7 @@ const SB_FN_FUNZIONI = [
   { gruppo: 'Griglia', chiave: 'griglia:controllo-sottotask', label: '🎫 Controllo sottotask', sel: '#pw-jchk-btn' },
   { gruppo: 'Griglia', chiave: 'griglia:sottotask-jira', label: '🎫 Crea sottotask Jira (per commessa)', sel: '[data-help-key="pw-sottotask-jira"]' },
   { gruppo: 'Griglia', chiave: 'griglia:strutture-jira', label: '🏗️ Crea strutture comuni Jira (per commessa)', sel: '[data-help-key="pw-strutture-jira"]' },
+  { gruppo: 'Griglia', chiave: 'griglia:chiusura-settimana', label: '🏁 Chiusura settimana', sel: '#pw-chs-btn, #cp-chs-btn, #chs-modal, #chs-torna-btn' },
   { gruppo: 'Griglia', chiave: 'griglia:genera-mail', label: '📧 Genera mail', sel: '#pw-gen-mail' },
   { gruppo: 'Ferie', chiave: 'ferie:import', label: '📥 Importa Excel ferie', sel: '#pw-ferie-import-btn' },
   { gruppo: 'Controllo produzione', chiave: 'controllo:anomalie', label: '🔍 Controllo anomalie', sel: '#cpa-toggle, #cpa-modal' },

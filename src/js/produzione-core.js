@@ -227,6 +227,7 @@ function pwControlloRender() {
     container.innerHTML = '<div class="text-center text-slate-400 py-10 text-sm">Nessun operatore pianificato questa settimana.</div>';
     cpaOnControlloRender();
     cpTlOnControlloRender();
+    chsAggiorna();
     return;
   }
 
@@ -351,6 +352,7 @@ function pwControlloRender() {
   if (_cpSearchTerm) cpSearchOp(_cpSearchTerm);
   cpaOnControlloRender();
   cpTlOnControlloRender();
+  chsAggiorna();
   cpMeteoRefresh(blocks, dateISOs);
   cpStatoRefresh(false);
   cpStatoStartTimer();

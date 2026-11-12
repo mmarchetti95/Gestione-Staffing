@@ -76,7 +76,7 @@ function _pwUndoLabel(changes) {
   const nomi = [];
   changes.forEach(c => {
     let n = PW_UNDO_DOMINI[c.info.dom].nome;
-    if (c.info.dom === 'data' && !/^\d+$/.test(c.info.p[0])) n = 'Note';
+    if (c.info.dom === 'data' && !/^\d+$/.test(c.info.p[0])) n = c.info.p[0] === 'chiusureSettimana' ? 'Chiusura settimana' : 'Note';
     if (nomi.indexOf(n) < 0) nomi.push(n);
   });
   const sett = _pwUndoSettimane(changes);

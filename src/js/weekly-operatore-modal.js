@@ -564,6 +564,7 @@ function pwRender() {
     pwRenderStats();
     if (_pwActiveTab === 'ferie') pwFerieRender();
     pwJchkRefresh();
+    chsAggiorna();
     return;
   }
 
@@ -794,6 +795,7 @@ function pwRender() {
   pwRefreshMeteoWeek();
   pwNvUpdateButton();
   pwJchkRefresh();
+  chsAggiorna();
 }
 
 /* ----- Statistiche settimana ----- */
