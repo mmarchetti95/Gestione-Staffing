@@ -255,7 +255,7 @@ function pwControlloRender() {
       sq.giorni.forEach((gBlock, gIdx) => {
         const g   = gBlock.giornoIdx;
         const sep = gIdx > 0 ? ' cp-day-sep' : '';
-        html += `<tr class="cp-tr-day${sep}" data-comm-idx="${blIdx}" data-sq-idx="${sqKey}" data-giorno="${g}" data-lbl="${DAY_NAMES[g]} ${dates[g]}"><td colspan="19">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;📅 ${DAY_NAMES[g]} ${dates[g]}</td></tr>`;
+        html += `<tr class="cp-tr-day${sep}" data-comm-idx="${blIdx}" data-sq-idx="${sqKey}" data-giorno="${g}" data-lbl="${DAY_NAMES[g]} ${dates[g]}"><td colspan="19">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;📅 ${DAY_NAMES[g]} ${dates[g]}${cpCwBtnHtml(bl.commessa, sq.nome, g, gBlock.ops.length, dateISOs[g])}</td></tr>`;
 
         gBlock.ops.forEach(op => {
           const k     = `${bl.commessa}|||${sq.nome}|||${op.nome}|||${g}`;
@@ -696,7 +696,11 @@ HELP_TEXTS['cp-sync-jira'] = 'Aggiorna le colonne "Ore Jira" e "Ticket/Epic" di 
 // scopeCommessa/scopeSquadra: se entrambi valorizzati, la sync (worklog + KM) si limita
 // a quella squadra invece che a tutta la settimana. btnEl: bottone da disabilitare durante
 // la sync (default il bottone globale in header, per compatibilità con la chiamata senza argomenti).
-async function pwControlloSyncJira(scopeCommessa, scopeSquadra, btnEl) {
+// opts (v18.258.0, da «⧉ Copia worklog»): senzaConferma salta la domanda iniziale (l'utente ha
+// appena confermato la copia), prefisso va in testa al riepilogo finale e agli errori.
+async function pwControlloSyncJira(scopeCommessa, scopeSquadra, btnEl, opts) {
+  opts = opts || {};
+  const prefisso = opts.prefisso ? opts.prefisso + '\n\n— 🔄 Sincronizzazione —\n' : '';
   cpStatoRefresh(true);
   if (!sbGuardWrite()) return;
   if (!_sbClient || !_sbUser) { showAlertModal('Sincronizzazione non disponibile in modalità offline.'); return; }
@@ -705,7 +709,7 @@ async function pwControlloSyncJira(scopeCommessa, scopeSquadra, btnEl) {
   const scopeLabel = scoped ? ` della squadra "${scopeSquadra}" (commessa "${scopeCommessa}")` : ' di questa settimana';
 
   // (Decisione A) conferma sovrascrittura
-  const ok = await showConfirmAsync(
+  const ok = opts.senzaConferma || await showConfirmAsync(
     `I valori "Ore Jira" e "Ticket"${scopeLabel} verranno sovrascritti con i dati reali da Jira. Procedere?`,
     'Sincronizza da Jira');
   if (!ok) return;
@@ -770,7 +774,7 @@ async function pwControlloSyncJira(scopeCommessa, scopeSquadra, btnEl) {
     const noEmailOps = [...new Set(cells.filter(c => !c.email).map(c => c.operatore))];
 
     if (emails.length === 0) {
-      showAlertModal(`Nessun operatore con email assegnata${scopeLabel}. Assegna le email dalla tab "Email/operatore".`);
+      showAlertModal(prefisso + `Nessun operatore con email assegnata${scopeLabel}. Assegna le email dalla tab "Email/operatore".`);
       if (status) status.textContent = '';
       return;
     }
@@ -1003,11 +1007,11 @@ async function pwControlloSyncJira(scopeCommessa, scopeSquadra, btnEl) {
       msg += `\n\n👁 ${nonVerificati} Km/Cad letti da Jira e non ancora verificati: non inviati. Carica il report o confermali (clic su "👁 Verifica").`;
     }
     if (status) status.textContent = `${updated} record sincronizzati`;
-    showAlertModal(msg);
+    showAlertModal(prefisso + msg);
   } catch (e) {
     console.error('pwControlloSyncJira error:', e);
     if (status) status.textContent = '⚠ Errore sincronizzazione';
-    showAlertModal('Errore durante la sincronizzazione: ' + (e.message || e));
+    showAlertModal(prefisso + 'Errore durante la sincronizzazione: ' + (e.message || e));
   } finally {
     if (btn) { btn.disabled = false; btn.style.opacity = '1'; }
   }
