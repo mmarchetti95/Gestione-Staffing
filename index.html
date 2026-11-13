@@ -791,6 +791,24 @@
   .pw-ferie-row.search-hit .pw-ferie-op-cell { background: #fef9c3; }
   .pw-ferie-row.search-current { outline: 2px solid #facc15; outline-offset: -2px; }
   .pw-ferie-row.search-current .pw-ferie-op-cell { background: #fde047; color: #713f12; }
+  /* Sezione separata dei dipendenti dei fornitori (pwFerieRender): titolo + un
+     sotto-titolo per fornitore; le righe sotto sono identiche a quelle del pool. */
+  .pw-ferie-section {
+    display: flex; align-items: center; gap: 8px;
+    margin-top: 14px; padding: 8px 12px;
+    background: #f1f5f9; color: #334155;
+    border-top: 2px solid #94a3b8; border-bottom: 1px solid #cbd5e1;
+    font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .04em;
+  }
+  .pw-ferie-section-n {
+    font-size: 10px; font-weight: 700; padding: 1px 7px; border-radius: 9999px;
+    background: #e2e8f0; color: #475569;
+  }
+  .pw-ferie-subsection {
+    padding: 4px 12px; background: #f8fafc; color: #64748b;
+    border-bottom: 1px solid #e2e8f0;
+    font-size: 10px; font-weight: 600;
+  }
   .pw-ferie-day-chip {
     font-size: 11px; font-weight: 600; padding: 2px 7px; border-radius: 9999px;
     border: 1px solid #cbd5e1; background: #fff; color: #94a3b8; cursor: pointer;
@@ -2115,7 +2133,7 @@
       </span>
       <button id="btn-presentation" class="px-3 py-1.5 text-sm rounded hover:bg-white/10" style="border:1px solid var(--dark-border-strong);color:var(--dark-text);visibility:visible;">📊 Modalità presentazione</button>
       <div class="text-xs pl-2" style="border-left:1px solid var(--dark-border-strong);color:var(--dark-text-muted);">
-        <span id="app-version" class="font-medium" style="color:var(--accent);">v18.260.0</span> · Michele Marchetti
+        <span id="app-version" class="font-medium" style="color:var(--accent);">v18.261.0</span> · Michele Marchetti
         <span id="sb-role-badge" style="margin-left:8px;padding:1px 8px;border-radius:9999px;background:rgba(255,255,255,.1);color:var(--dark-text);font-weight:600;"></span>
       </div>
     </div>
@@ -15201,8 +15219,7 @@ function pwFerieRender() {
 
   // Ordinamento, selezione e ricerca: weekly-ferie-massiva.js
   pwFerieSelCheckWeek();
-  const ops = pwFerieOperatoriOrdinati(fw);
-  const allOps = ops.map(o => o.nome);
+  const gruppi = pwFerieOperatoriOrdinati(fw);
   const sortEl = document.getElementById('pw-ferie-sort');
   if (sortEl) sortEl.value = pwFerieSortMode();
   const cols = `200px repeat(6, 1fr) 130px`;
@@ -15222,14 +15239,15 @@ function pwFerieRender() {
     <div class="pw-ferie-day-header text-[10px] text-rose-700 uppercase font-bold">Settimana</div>
   </div>`;
 
-  // Righe operatori
+  // Righe operatori: prima il pool interno, poi la sezione separata dei dipendenti dei
+  // fornitori (un sotto-titolo per fornitore). Stesse celle, stesso salvataggio per nome.
   const dw = pwGetFerieDettagliWeek();
-  ops.forEach(({ nome, label }) => {
+  const rigaHtml = ({ nome, label }) => {
     const row = (fw[nome] || {});
     const allSet = [0,1,2,3,4,5].every(i => !!row[i]);
     const dettRow = dw[nome] || {};
     const sel = _pwFerieSel.has(nome);
-    html += `<div class="pw-ferie-row${sel ? ' selezionata' : ''}" data-op="${esc(nome)}" style="grid-template-columns:${cols};">
+    return `<div class="pw-ferie-row${sel ? ' selezionata' : ''}" data-op="${esc(nome)}" style="grid-template-columns:${cols};">
       <label class="pw-ferie-op-cell" title="${esc(nome)} — Maiusc+click per selezionare un intervallo">
         <input type="checkbox" class="pw-ferie-sel-cb no-print" data-op="${esc(nome)}" ${sel ? 'checked' : ''} onclick="pwFerieSelClick(event, this)">${esc(label)}</label>
       ${days.map((d, i) => {
@@ -15258,20 +15276,38 @@ function pwFerieRender() {
         </button>
       </div>
     </div>`;
-  });
+  };
+  gruppi.interni.forEach(o => { html += rigaHtml(o); });
+
+  if (gruppi.fornitori.length) {
+    html += '<div class="pw-ferie-section">🏢 Operatori dei fornitori' +
+      '<span class="pw-ferie-section-n">' + gruppi.fornitori.length + '</span></div>';
+    let fornCorrente = null;
+    gruppi.fornitori.forEach(o => {
+      if (o.fornitore !== fornCorrente) {
+        fornCorrente = o.fornitore;
+        html += '<div class="pw-ferie-subsection">' + esc(o.fornitore) + '</div>';
+      }
+      html += rigaHtml(o);
+    });
+  }
 
   gridEl.innerHTML = html;
   pwFerieSelSync();
   pwFerieSearchApply(false);
 
   // Riepilogo disponibili
-  pwFerieSummaryRender(allOps, days, DAY_NAMES, today);
+  pwFerieSummaryRender(days, DAY_NAMES, today);
 }
 
-function pwFerieSummaryRender(allOps, days, DAY_NAMES, today) {
+// Riepilogo "disponibili per giorno": conta il pool interno come prima; i dipendenti dei
+// fornitori (sezione separata) hanno una riga a parte sotto, solo se ce ne sono.
+function pwFerieSummaryRender(days, DAY_NAMES, today) {
   const fw = pwGetFerieWeek();
   const sumEl = document.getElementById('pw-ferie-summary');
   if (!sumEl) return;
+  const allOps = _pwFerieNomiInterni;
+  const fornOps = _pwFerieNomiFornitori;
 
   const cols = `repeat(6, 1fr)`;
   let html = `<div style="display:grid;grid-template-columns:${cols};gap:8px;">`;
@@ -15288,11 +15324,13 @@ function pwFerieSummaryRender(allOps, days, DAY_NAMES, today) {
       <div style="font-size:22px;font-weight:800;color:${disponibili === 0 ? '#ef4444' : '#10b981'};">${disponibili}</div>
       <div style="font-size:9px;color:#64748b;">disponibili</div>
       ${inFerie.length > 0 ? `<div style="font-size:9px;color:#be123c;margin-top:4px;border-top:1px solid #fecdd3;padding-top:4px;">${inFerie.length} assente/i</div>` : ''}
+      ${fornOps.length ? '<div style="font-size:9px;color:#475569;margin-top:4px;border-top:1px dashed #cbd5e1;padding-top:4px;" title="Dipendenti dei fornitori disponibili / totale">🏢 ' +
+        fornOps.filter(nome => !pwFerieTipo((fw[nome] || {})[i])).length + '/' + fornOps.length + ' fornitori</div>' : ''}
     </div>`;
   });
   html += '</div>';
 
-  if (allOps.length === 0) {
+  if (allOps.length === 0 && fornOps.length === 0) {
     sumEl.innerHTML = '<div class="text-xs text-slate-400 italic">Nessun operatore presente.</div>';
     return;
   }
@@ -15329,14 +15367,13 @@ async function pwToggleFeria(cb) {
     if (badgeEl) badgeEl.remove();
   }
   await pwFerieSave();
-  // Aggiorna summary senza re-render completo
-  const allOps = getOperatoriAttivi().map(o => o.nome_esteso || o.nome).filter(Boolean).sort();
+  // Aggiorna summary senza re-render completo (nomi delle due sezioni dall'ultimo render)
   const monday = isoWeekToMonday(pwAnno, pwWeek);
   const days = [];
   for (let i = 0; i < 6; i++) {
     const d = new Date(monday); d.setUTCDate(monday.getUTCDate() + i); days.push(d);
   }
-  pwFerieSummaryRender(allOps, days, ['Lun','Mar','Mer','Gio','Ven','Sab'], new Date().toISOString().slice(0,10));
+  pwFerieSummaryRender(days, ['Lun','Mar','Mer','Gio','Ven','Sab'], new Date().toISOString().slice(0,10));
 }
 
 // Applica o rimuove le ferie a tutta la settimana (6 giorni) per un operatore.
@@ -15864,25 +15901,57 @@ function _pwFerieHaAssenze(fw, nome) {
   return [0, 1, 2, 3, 4, 5].some(i => !!pwFerieTipo(r[i]));
 }
 
-// Operatori attivi nell'ordine scelto: [{ nome, label }]. Aggiorna anche _pwFerieOrdine e
-// _pwFerieLabel, usati da selezione a intervallo e ricerca.
+// Dipendenti dei fornitori (state.fornitori, dashboard-fornitori.js) da mostrare nella
+// sezione separata: [{ nome, label, fornitore }]. Un nome già fra gli operatori attivi del
+// pool resta solo nella sezione interna (come in Griglia, l'identità interna vince); un
+// nome presente in più fornitori compare una volta sola, col primo fornitore.
+// Le assenze si salvano per nome in pwFerie come per gli interni, quindi Griglia, scelta
+// operatore, Auto-pianifica, mail e Controllo Produzione le leggono senza altro.
+function pwFerieDipendentiFornitori() {
+  const interni = new Set(getOperatoriAttivi().map(o => o.nome_esteso || o.nome).filter(Boolean));
+  const visti = new Set();
+  const out = [];
+  (state.fornitori || []).forEach(f => (f.dipendenti || []).forEach(d => {
+    const nome = (d.nome_esteso || '').trim() ? d.nome_esteso : '';
+    if (!nome || interni.has(nome) || visti.has(nome)) return;
+    visti.add(nome);
+    out.push({ nome, label: pwFerieCognomeNome(d), fornitore: (f.nome || '').trim() || 'Fornitore' });
+  }));
+  return out;
+}
+
+// Nomi mostrati nelle due sezioni (per il riepilogo disponibili), aggiornati da
+// pwFerieOperatoriOrdinati.
+let _pwFerieNomiInterni = [];
+let _pwFerieNomiFornitori = [];
+
+// Operatori nell'ordine scelto: { interni: [{ nome, label }], fornitori: [{ nome, label,
+// fornitore }] } — i fornitori raggruppati per fornitore (A→Z), ordinati dentro il gruppo.
+// Aggiorna anche _pwFerieOrdine (interni poi fornitori, come a schermo) e _pwFerieLabel,
+// usati da selezione a intervallo e ricerca.
 function pwFerieOperatoriOrdinati(fw) {
   const mode = pwFerieSortMode();
-  const ops = getOperatoriAttivi()
-    .map(o => ({ nome: o.nome_esteso || o.nome, label: pwFerieCognomeNome(o) }))
-    .filter(o => o.nome);
-  ops.sort((a, b) => {
+  const cmp = (a, b) => {
     if (mode === 'assenti') {
       const d = Number(_pwFerieHaAssenze(fw, b.nome)) - Number(_pwFerieHaAssenze(fw, a.nome));
       if (d) return d;
     }
     const c = a.label.localeCompare(b.label, 'it', { sensitivity: 'base' });
     return mode === 'za' ? -c : c;
-  });
-  _pwFerieOrdine = ops.map(o => o.nome);
+  };
+  const interni = getOperatoriAttivi()
+    .map(o => ({ nome: o.nome_esteso || o.nome, label: pwFerieCognomeNome(o) }))
+    .filter(o => o.nome)
+    .sort(cmp);
+  const fornitori = pwFerieDipendentiFornitori().sort((a, b) =>
+    a.fornitore.localeCompare(b.fornitore, 'it', { sensitivity: 'base' }) || cmp(a, b));
+  const tutti = interni.concat(fornitori);
+  _pwFerieOrdine = tutti.map(o => o.nome);
   _pwFerieLabel = {};
-  ops.forEach(o => { _pwFerieLabel[o.nome] = o.label; });
-  return ops;
+  tutti.forEach(o => { _pwFerieLabel[o.nome] = o.label; });
+  _pwFerieNomiInterni = interni.map(o => o.nome);
+  _pwFerieNomiFornitori = fornitori.map(o => o.nome);
+  return { interni, fornitori };
 }
 
 // Chiamata all'inizio di pwFerieRender: azzera la selezione se è cambiata la settimana.

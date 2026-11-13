@@ -114,6 +114,9 @@ Limite noto: il progetto Supabase è sul piano **Free**, che non include backup 
 
 ## Changelog
 
+## v18.261.0
+- feat: **Ferie & Permessi anche per gli operatori dei fornitori.** Sotto il pool interno, la tab Ferie ha una sezione separata «🏢 Operatori dei fornitori», con un sotto-titolo per ogni fornitore e i suoi dipendenti (dall'anagrafica Fornitori). Si segnano Ferie o Non disponibile come per gli interni (spunta, click destro, «Tutta la Settimana», selezione e modifica massiva, ricerca). L'assenza vale ovunque come per gli interni: cella «🏖 ferie»/«🚫 non disponibile» in Griglia, «NON DISP.» nella scelta operatore, mail, Controllo Produzione e Controllo anomalie (Auto-pianifica e Ricerca squadre lavorano solo sul pool interno, come prima). Un nome che è anche nel pool interno compare solo lì. Il riepilogo «Operatori disponibili per giorno» conta ancora solo il pool interno, con sotto una riga «🏢 disponibili/totale fornitori». L'import ferie da Excel non li tocca (non sono nell'export aziendale). Nessuna modifica a Supabase o alle Edge Function.
+
 ## v18.260.0
 - fix: **Mail pianificazione, niente cognomi accanto al nome della squadra.** La riga «🟡 Squadra …» della mail generata riporta solo il nome della squadra: gli operatori sono già elencati subito sotto nella riga «👷», quindi i cognomi erano ripetuti. Nel modal «Genera mail» l'intestazione delle note per squadra resta con i cognomi. Nessuna modifica a Supabase o alle Edge Function.
 

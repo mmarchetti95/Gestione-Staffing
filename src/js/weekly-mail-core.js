@@ -1078,8 +1078,7 @@ function pwFerieRender() {
 
   // Ordinamento, selezione e ricerca: weekly-ferie-massiva.js
   pwFerieSelCheckWeek();
-  const ops = pwFerieOperatoriOrdinati(fw);
-  const allOps = ops.map(o => o.nome);
+  const gruppi = pwFerieOperatoriOrdinati(fw);
   const sortEl = document.getElementById('pw-ferie-sort');
   if (sortEl) sortEl.value = pwFerieSortMode();
   const cols = `200px repeat(6, 1fr) 130px`;
@@ -1099,14 +1098,15 @@ function pwFerieRender() {
     <div class="pw-ferie-day-header text-[10px] text-rose-700 uppercase font-bold">Settimana</div>
   </div>`;
 
-  // Righe operatori
+  // Righe operatori: prima il pool interno, poi la sezione separata dei dipendenti dei
+  // fornitori (un sotto-titolo per fornitore). Stesse celle, stesso salvataggio per nome.
   const dw = pwGetFerieDettagliWeek();
-  ops.forEach(({ nome, label }) => {
+  const rigaHtml = ({ nome, label }) => {
     const row = (fw[nome] || {});
     const allSet = [0,1,2,3,4,5].every(i => !!row[i]);
     const dettRow = dw[nome] || {};
     const sel = _pwFerieSel.has(nome);
-    html += `<div class="pw-ferie-row${sel ? ' selezionata' : ''}" data-op="${esc(nome)}" style="grid-template-columns:${cols};">
+    return `<div class="pw-ferie-row${sel ? ' selezionata' : ''}" data-op="${esc(nome)}" style="grid-template-columns:${cols};">
       <label class="pw-ferie-op-cell" title="${esc(nome)} — Maiusc+click per selezionare un intervallo">
         <input type="checkbox" class="pw-ferie-sel-cb no-print" data-op="${esc(nome)}" ${sel ? 'checked' : ''} onclick="pwFerieSelClick(event, this)">${esc(label)}</label>
       ${days.map((d, i) => {
@@ -1135,20 +1135,38 @@ function pwFerieRender() {
         </button>
       </div>
     </div>`;
-  });
+  };
+  gruppi.interni.forEach(o => { html += rigaHtml(o); });
+
+  if (gruppi.fornitori.length) {
+    html += '<div class="pw-ferie-section">🏢 Operatori dei fornitori' +
+      '<span class="pw-ferie-section-n">' + gruppi.fornitori.length + '</span></div>';
+    let fornCorrente = null;
+    gruppi.fornitori.forEach(o => {
+      if (o.fornitore !== fornCorrente) {
+        fornCorrente = o.fornitore;
+        html += '<div class="pw-ferie-subsection">' + esc(o.fornitore) + '</div>';
+      }
+      html += rigaHtml(o);
+    });
+  }
 
   gridEl.innerHTML = html;
   pwFerieSelSync();
   pwFerieSearchApply(false);
 
   // Riepilogo disponibili
-  pwFerieSummaryRender(allOps, days, DAY_NAMES, today);
+  pwFerieSummaryRender(days, DAY_NAMES, today);
 }
 
-function pwFerieSummaryRender(allOps, days, DAY_NAMES, today) {
+// Riepilogo "disponibili per giorno": conta il pool interno come prima; i dipendenti dei
+// fornitori (sezione separata) hanno una riga a parte sotto, solo se ce ne sono.
+function pwFerieSummaryRender(days, DAY_NAMES, today) {
   const fw = pwGetFerieWeek();
   const sumEl = document.getElementById('pw-ferie-summary');
   if (!sumEl) return;
+  const allOps = _pwFerieNomiInterni;
+  const fornOps = _pwFerieNomiFornitori;
 
   const cols = `repeat(6, 1fr)`;
   let html = `<div style="display:grid;grid-template-columns:${cols};gap:8px;">`;
@@ -1165,11 +1183,13 @@ function pwFerieSummaryRender(allOps, days, DAY_NAMES, today) {
       <div style="font-size:22px;font-weight:800;color:${disponibili === 0 ? '#ef4444' : '#10b981'};">${disponibili}</div>
       <div style="font-size:9px;color:#64748b;">disponibili</div>
       ${inFerie.length > 0 ? `<div style="font-size:9px;color:#be123c;margin-top:4px;border-top:1px solid #fecdd3;padding-top:4px;">${inFerie.length} assente/i</div>` : ''}
+      ${fornOps.length ? '<div style="font-size:9px;color:#475569;margin-top:4px;border-top:1px dashed #cbd5e1;padding-top:4px;" title="Dipendenti dei fornitori disponibili / totale">🏢 ' +
+        fornOps.filter(nome => !pwFerieTipo((fw[nome] || {})[i])).length + '/' + fornOps.length + ' fornitori</div>' : ''}
     </div>`;
   });
   html += '</div>';
 
-  if (allOps.length === 0) {
+  if (allOps.length === 0 && fornOps.length === 0) {
     sumEl.innerHTML = '<div class="text-xs text-slate-400 italic">Nessun operatore presente.</div>';
     return;
   }
@@ -1206,14 +1226,13 @@ async function pwToggleFeria(cb) {
     if (badgeEl) badgeEl.remove();
   }
   await pwFerieSave();
-  // Aggiorna summary senza re-render completo
-  const allOps = getOperatoriAttivi().map(o => o.nome_esteso || o.nome).filter(Boolean).sort();
+  // Aggiorna summary senza re-render completo (nomi delle due sezioni dall'ultimo render)
   const monday = isoWeekToMonday(pwAnno, pwWeek);
   const days = [];
   for (let i = 0; i < 6; i++) {
     const d = new Date(monday); d.setUTCDate(monday.getUTCDate() + i); days.push(d);
   }
-  pwFerieSummaryRender(allOps, days, ['Lun','Mar','Mer','Gio','Ven','Sab'], new Date().toISOString().slice(0,10));
+  pwFerieSummaryRender(days, ['Lun','Mar','Mer','Gio','Ven','Sab'], new Date().toISOString().slice(0,10));
 }
 
 // Applica o rimuove le ferie a tutta la settimana (6 giorni) per un operatore.

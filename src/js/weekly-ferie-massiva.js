@@ -51,25 +51,57 @@ function _pwFerieHaAssenze(fw, nome) {
   return [0, 1, 2, 3, 4, 5].some(i => !!pwFerieTipo(r[i]));
 }
 
-// Operatori attivi nell'ordine scelto: [{ nome, label }]. Aggiorna anche _pwFerieOrdine e
-// _pwFerieLabel, usati da selezione a intervallo e ricerca.
+// Dipendenti dei fornitori (state.fornitori, dashboard-fornitori.js) da mostrare nella
+// sezione separata: [{ nome, label, fornitore }]. Un nome già fra gli operatori attivi del
+// pool resta solo nella sezione interna (come in Griglia, l'identità interna vince); un
+// nome presente in più fornitori compare una volta sola, col primo fornitore.
+// Le assenze si salvano per nome in pwFerie come per gli interni, quindi Griglia, scelta
+// operatore, Auto-pianifica, mail e Controllo Produzione le leggono senza altro.
+function pwFerieDipendentiFornitori() {
+  const interni = new Set(getOperatoriAttivi().map(o => o.nome_esteso || o.nome).filter(Boolean));
+  const visti = new Set();
+  const out = [];
+  (state.fornitori || []).forEach(f => (f.dipendenti || []).forEach(d => {
+    const nome = (d.nome_esteso || '').trim() ? d.nome_esteso : '';
+    if (!nome || interni.has(nome) || visti.has(nome)) return;
+    visti.add(nome);
+    out.push({ nome, label: pwFerieCognomeNome(d), fornitore: (f.nome || '').trim() || 'Fornitore' });
+  }));
+  return out;
+}
+
+// Nomi mostrati nelle due sezioni (per il riepilogo disponibili), aggiornati da
+// pwFerieOperatoriOrdinati.
+let _pwFerieNomiInterni = [];
+let _pwFerieNomiFornitori = [];
+
+// Operatori nell'ordine scelto: { interni: [{ nome, label }], fornitori: [{ nome, label,
+// fornitore }] } — i fornitori raggruppati per fornitore (A→Z), ordinati dentro il gruppo.
+// Aggiorna anche _pwFerieOrdine (interni poi fornitori, come a schermo) e _pwFerieLabel,
+// usati da selezione a intervallo e ricerca.
 function pwFerieOperatoriOrdinati(fw) {
   const mode = pwFerieSortMode();
-  const ops = getOperatoriAttivi()
-    .map(o => ({ nome: o.nome_esteso || o.nome, label: pwFerieCognomeNome(o) }))
-    .filter(o => o.nome);
-  ops.sort((a, b) => {
+  const cmp = (a, b) => {
     if (mode === 'assenti') {
       const d = Number(_pwFerieHaAssenze(fw, b.nome)) - Number(_pwFerieHaAssenze(fw, a.nome));
       if (d) return d;
     }
     const c = a.label.localeCompare(b.label, 'it', { sensitivity: 'base' });
     return mode === 'za' ? -c : c;
-  });
-  _pwFerieOrdine = ops.map(o => o.nome);
+  };
+  const interni = getOperatoriAttivi()
+    .map(o => ({ nome: o.nome_esteso || o.nome, label: pwFerieCognomeNome(o) }))
+    .filter(o => o.nome)
+    .sort(cmp);
+  const fornitori = pwFerieDipendentiFornitori().sort((a, b) =>
+    a.fornitore.localeCompare(b.fornitore, 'it', { sensitivity: 'base' }) || cmp(a, b));
+  const tutti = interni.concat(fornitori);
+  _pwFerieOrdine = tutti.map(o => o.nome);
   _pwFerieLabel = {};
-  ops.forEach(o => { _pwFerieLabel[o.nome] = o.label; });
-  return ops;
+  tutti.forEach(o => { _pwFerieLabel[o.nome] = o.label; });
+  _pwFerieNomiInterni = interni.map(o => o.nome);
+  _pwFerieNomiFornitori = fornitori.map(o => o.nome);
+  return { interni, fornitori };
 }
 
 // Chiamata all'inizio di pwFerieRender: azzera la selezione se è cambiata la settimana.
