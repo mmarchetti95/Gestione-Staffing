@@ -238,3 +238,44 @@ function pwSwitchTab(tab) {
   }
 }
 
+// Ridisegno del tab aperto dopo un sync arrivato da un collega (sbPull). Prima si
+// richiamava pwSwitchTab, che in Controllo Produzione svuotava la tabella («Caricamento
+// dati…») e rileggeva tutto, e ovunque ricreava i campi mentre ci si stava scrivendo:
+// ogni salvataggio di un altro utente dava uno "sfarfallio" a tutti gli altri.
+let _pwSyncRimandato = false;
+function pwRidisegnaDopoSync() {
+  const weeklyEl = document.getElementById('screen-weekly');
+  if (!weeklyEl || weeklyEl.classList.contains('hidden')) return;
+  // Campo in scrittura nella Pianificazione: il ridisegno lo ricreerebbe perdendo testo e
+  // cursore. Si rimanda a quando il campo perde il focus (il suo onchange, che scatta
+  // prima del blur, ha già salvato il valore); passando a un altro campo si rimanda ancora.
+  const att = document.activeElement;
+  if (att && weeklyEl.contains(att) && att.matches('input, textarea, select, [contenteditable="true"]')) {
+    if (!_pwSyncRimandato) {
+      _pwSyncRimandato = true;
+      att.addEventListener('blur', () => {
+        setTimeout(() => { _pwSyncRimandato = false; pwRidisegnaDopoSync(); }, 0);
+      }, { once: true });
+    }
+    return;
+  }
+  const tab = _pwActiveTab;
+  const y = window.scrollY;
+  if (tab === 'griglia') {
+    pwRender();
+  } else if (tab === 'controllo') {
+    pwRenderStats();
+    pwControlloLoad({ silenzioso: true });
+  } else if (tab === 'ferie') {
+    pwRenderStats();
+    pwFerieRender();
+  } else if (tab === 'doppia') {
+    pwRenderStats();
+    pwDoppiaWeekRender();
+  } else {
+    pwSwitchTab(tab);
+    return;
+  }
+  window.scrollTo(0, y);
+}
+

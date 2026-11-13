@@ -757,8 +757,7 @@ function sbSubscribeRealtime() {
           const changedRow = payload.new;
           if (changedRow && changedRow.payload && changedRow.payload._savedBy === _sbUser?.email) return;
           console.log('Realtime: aggiornamento da altro utente, pull…');
-          sbUpdateUI('syncing', 'Sync: aggiornamento ricevuto…');
-          sbPull();
+          sbPullDaRealtime();
         }
       )
       .subscribe((status) => {
@@ -831,8 +830,19 @@ async function sbChangePwd() {
   }
 }
 
+// Un salvataggio di un collega può toccare più righe in pochi ms (es. Griglia + Ferie):
+// gli eventi Realtime vengono raccolti in un solo pull invece di uno per riga.
+let _sbPullTimer = null;
+// Un evento arrivato mentre un pull è già in corso non va perso: si rifà il pull alla fine.
+let _sbPullAncora = false;
+let _sbPrimoPullFatto = false;
+function sbPullDaRealtime() {
+  clearTimeout(_sbPullTimer);
+  _sbPullTimer = setTimeout(() => sbPull(), 400);
+}
+
 async function sbPull() {
-  if (_sbSyncing) return;
+  if (_sbSyncing) { _sbPullAncora = true; return; }
   _sbSyncing = true;
   sbUpdateUI('syncing', 'Sync: caricamento…');
   try {
@@ -868,8 +878,16 @@ async function sbPull() {
     await dbUndoFlush();
     await pwUndoFlush();
 
+    // Si applica (e si ridisegna) solo il dominio cambiato sul server dall'ultimo sync:
+    // prima ogni salvataggio di un collega ridisegnava Dashboard e tab aperto per intero,
+    // anche se aveva toccato solo un'altra parte (es. le Ferie mentre si guarda la Griglia).
+    // Primo pull (_sbRemoteTs null) e migrazione: tutto.
+    const cambiato = id => !!(rows[id] && (needsMigration || !_sbRemoteTs[id] || !rows[id].updated_at || rows[id].updated_at !== _sbRemoteTs[id]));
+    const cambioCore = cambiato(SB_ROW_CORE);
+    const cambioPw = cambiato(SB_ROW_PLANNING) || cambiato(SB_ROW_FERIE) || cambiato(SB_ROW_DW);
+
     // Applica core
-    if (rows[SB_ROW_CORE] && rows[SB_ROW_CORE].payload) {
+    if (cambioCore && rows[SB_ROW_CORE].payload) {
       const snap = rows[SB_ROW_CORE].payload;
       const keys = ['commesse_pipeline','operatori','assegnazioni','commesse_attive_extra',
                     'staffing_modificato','commesse_chiuse','commesse_attive_meta','commesse_escluse',
@@ -884,22 +902,22 @@ async function sbPull() {
     // refresh/apertura della Pianificazione Settimanale — senza questo sbSetLocal, quella
     // rilettura sovrascriverebbe silenziosamente i dati appena scaricati con l'ultima copia
     // locale obsoleta, "perdendo" le modifiche di un altro utente dopo un refresh).
-    if (rows[SB_ROW_PLANNING] && rows[SB_ROW_PLANNING].payload && rows[SB_ROW_PLANNING].payload.pw_data) {
+    if (cambiato(SB_ROW_PLANNING) && rows[SB_ROW_PLANNING].payload && rows[SB_ROW_PLANNING].payload.pw_data) {
       pwData = rows[SB_ROW_PLANNING].payload.pw_data;
       sbSetLocal('pw_data', pwData);
     }
     // Applica ferie (stesso motivo: pwFerieLoad() rilegge pw_ferie dal local storage)
-    if (rows[SB_ROW_FERIE] && rows[SB_ROW_FERIE].payload && rows[SB_ROW_FERIE].payload.pw_ferie) {
+    if (cambiato(SB_ROW_FERIE) && rows[SB_ROW_FERIE].payload && rows[SB_ROW_FERIE].payload.pw_ferie) {
       pwFerie = rows[SB_ROW_FERIE].payload.pw_ferie;
       sbSetLocal('pw_ferie', pwFerie);
     }
-    if (rows[SB_ROW_FERIE] && rows[SB_ROW_FERIE].payload && rows[SB_ROW_FERIE].payload.pw_ferie_dettagli) {
+    if (cambiato(SB_ROW_FERIE) && rows[SB_ROW_FERIE].payload && rows[SB_ROW_FERIE].payload.pw_ferie_dettagli) {
       pwFerieDettagli = rows[SB_ROW_FERIE].payload.pw_ferie_dettagli;
       sbSetLocal('pw_ferie_dettagli', pwFerieDettagli);
     }
     // Applica doppia week (stesso motivo di planning/ferie: senza sbSetLocal, un reload
     // prima che sbPull() finisca mostrerebbe doppia-week vuota invece dell'ultima copia nota)
-    if (rows[SB_ROW_DW] && rows[SB_ROW_DW].payload && rows[SB_ROW_DW].payload.pw_doppia_week) {
+    if (cambiato(SB_ROW_DW) && rows[SB_ROW_DW].payload && rows[SB_ROW_DW].payload.pw_doppia_week) {
       pwDoppiaWeek = rows[SB_ROW_DW].payload.pw_doppia_week;
       sbSetLocal('pw_doppia_week', pwDoppiaWeek);
     }
@@ -910,15 +928,23 @@ async function sbPull() {
       if (rows[id] && rows[id].updated_at) _sbRemoteTs[id] = rows[id].updated_at;
     });
 
+    // Ridisegno "morbido" del tab aperto (scroll e campo in scrittura preservati, nessun
+    // «Caricamento…» intermedio): vedi pwRidisegnaDopoSync in weekly-nav.js.
+    // Il primo pull dopo il login attiva il tab come prima (selettori, header, classi).
     const weeklyEl = document.getElementById('screen-weekly');
-    if (weeklyEl && !weeklyEl.classList.contains('hidden')) {
-      pwSwitchTab(typeof _pwActiveTab !== 'undefined' ? _pwActiveTab : 'griglia');
+    if (!_sbPrimoPullFatto) {
+      if (weeklyEl && !weeklyEl.classList.contains('hidden')) {
+        pwSwitchTab(typeof _pwActiveTab !== 'undefined' ? _pwActiveTab : 'griglia');
+      }
+    } else if (cambioPw || cambioCore) {
+      pwRidisegnaDopoSync();
     }
+    _sbPrimoPullFatto = true;
     // Lo screen Mappa legge pwData: va ridisegnato anche lui dopo un pull, altrimenti
     // resterebbe fermo alla pianificazione precedente finché non si cambia giorno.
-    if (typeof mlOnDataChanged === 'function') mlOnDataChanged();
+    if ((cambioPw || cambioCore) && typeof mlOnDataChanged === 'function') mlOnDataChanged();
     // Il modal Genera mail, se aperto, riporta nel nuovo pwData le note scritte nel frattempo.
-    if (typeof pwMailOnDataChanged === 'function') pwMailOnDataChanged();
+    if (cambioPw && typeof pwMailOnDataChanged === 'function') pwMailOnDataChanged();
 
     const ora = new Date().toLocaleTimeString('it-IT', { hour:'2-digit', minute:'2-digit' });
     sbUpdateUI('ok', 'Sync: aggiornato ✓', 'Ultimo sync: ' + ora);
@@ -934,6 +960,7 @@ async function sbPull() {
     sbUpdateUI('error', 'Sync: errore — ' + e.message);
   }
   _sbSyncing = false;
+  if (_sbPullAncora) { _sbPullAncora = false; sbPull(); }
 }
 
 async function sbSync() { await sbPull(); }

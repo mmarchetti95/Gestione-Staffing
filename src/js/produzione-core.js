@@ -143,15 +143,20 @@ function cpBuildRecordDa(cell, anno, week, commessa, squadra, operatore, giorno,
   };
 }
 
-async function pwControlloLoad() {
+// opts.silenzioso (ricarica dopo un sync di un collega, pwRidisegnaDopoSync): la tabella
+// resta visibile durante la lettura e lo scroll interno resta dov'era.
+async function pwControlloLoad(opts) {
+  const silenzioso = !!(opts && opts.silenzioso);
   const container = document.getElementById('cp-table-container');
   const status    = document.getElementById('cp-status');
   if (!container) return;
   if (_cpLoading) return;
   _cpLoading = true;
 
-  container.innerHTML = '<div class="text-center text-slate-400 py-10 text-sm">⏳ Caricamento dati...</div>';
-  if (status) status.textContent = '';
+  if (!silenzioso) {
+    container.innerHTML = '<div class="text-center text-slate-400 py-10 text-sm">⏳ Caricamento dati...</div>';
+    if (status) status.textContent = '';
+  }
 
   try {
     if (_sbClient && _sbUser) {
@@ -180,7 +185,14 @@ async function pwControlloLoad() {
   }
 
   _cpLoading = false;
+  // Il campo in cui si scriveva durante la lettura verrebbe ricreato: si aspetta il blur.
+  if (silenzioso && container.contains(document.activeElement) && document.activeElement.matches('input, textarea, select')) {
+    pwRidisegnaDopoSync();
+    return;
+  }
+  const scrollPrima = container.scrollTop;
   pwControlloRender();
+  if (silenzioso) container.scrollTop = scrollPrima;
 }
 
 function pwControlloRender() {
