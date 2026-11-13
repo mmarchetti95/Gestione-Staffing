@@ -304,9 +304,8 @@ function pwGeneraMail() {
         const haNomi = (sq.operatori || []).some(o => o.nome && o.nome.trim());
         if (haNomi && !operatori.length && !noteSq && !strumentiSq) return;
 
-        const cognomiSq = pwSquadraCognomi({ operatori });
-        const cognomiSuffix = cognomiSq.length ? `: ${cognomiSq.join(', ')}` : '';
-        testo += `\n🟡 ${nomeSquadra}${cognomiSuffix}\n`;
+        // Solo il nome della squadra: gli operatori seguono subito nella riga 👷.
+        testo += `\n🟡 ${nomeSquadra}\n`;
 
         if (operatori.length > 0) {
           testo += `👷 ${operatori.map(o => o.nome + dwLabel(o.nome)).join(' · ')}\n`;
