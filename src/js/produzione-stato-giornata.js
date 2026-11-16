@@ -4,7 +4,9 @@
      1. mai attivato (TO DO) e lavoro finito  → chiudere e mettere le ore vere;
      2. attivato in ritardo                   → anticipare l'inizio (tratto mancante prima);
      3. finito ma lasciato IN PROGRESS         → chiudere con l'ora di fine vera;
-     4. messo in pausa e non riattivato        → aggiungere il tratto dopo la pausa.
+     4. messo in pausa e non riattivato        → aggiungere il tratto dopo la pausa;
+     5. sta lavorando ma non l'ha attivato     → portarlo IN PROGRESS (da TO DO o IN PENDING,
+                                                 v18.264.0): da lì Jira conta il tempo da solo.
    La finestra mostra stato e worklog del sottotask (letti da Jira all'apertura, azione
    "giornata" di jira-worklog-edit) e propone i tratti di lavoro del giorno in base allo stato.
    «Applica su Jira», dopo una conferma:
@@ -30,7 +32,7 @@ let _cpGs = {
   statoDa: null,             // { data, min, oggi, testo } dalla colonna Stato (solo se stesso stato)
   tratti: [],                // { id|null, orig: Wl|null, inizio, fine, commento, elimina, proposto }
   altri: [],                 // worklog del sottotask in altri giorni: { w, p }
-  voluto: '',                // '' (invariato) | 'IN PENDING' | 'DONE'
+  voluto: '',                // '' (invariato) | 'IN PROGRESS' | 'IN PENDING' | 'DONE'
   salvando: false,
 };
 
@@ -40,6 +42,14 @@ function cpGsPuo() {
 }
 
 function _cpGsRango(stato) { return CPGS_RANGO.findIndex(r => r.test(String(stato || '').trim())); }
+
+/* Stato finale ammesso da quello attuale: in avanti, più IN PENDING → IN PROGRESS (ripresa dopo
+   la pausa, transizione normale del flusso). Un DONE non si riapre. Stessa regola nell'Edge Function. */
+function _cpGsAmmesso(rAttuale, voluto) {
+  const rV = _cpGsRango(voluto);
+  if (rAttuale < 0 || rV < CPGS_IN_PROGRESS || rAttuale === CPGS_DONE) return false;
+  return rV > rAttuale || (rV === CPGS_IN_PROGRESS && rAttuale === CPGS_IN_PENDING);
+}
 
 /* Pulsante accanto al badge (cpStatoCellHtml); t = stato già letto dalla colonna */
 function cpGsBtnHtml(key, dateISO, t) {
@@ -124,10 +134,12 @@ function _cpGsSituazione() {
       'creerebbe da solo (fino al momento della chiusura) viene eliminato e restano le ore scritte qui. Se l\'ha attivato in ritardo, anticipa l\'inizio.';
   }
   if (r >= 0 && r < CPGS_IN_PROGRESS) {
-    return 'Non è mai stato attivato (<b>' + esc(G.info.stato) + '</b>). Se l\'operatore ha lavorato, scrivi le ore e chiudilo.';
+    return 'Non è mai stato attivato (<b>' + esc(G.info.stato) + '</b>). Se l\'operatore ha lavorato, scrivi le ore e chiudilo. ' +
+      'Se sta lavorando adesso, portalo IN PROGRESS: Jira conterà il tempo da adesso fino a quando lo sposta; le ore già fatte scrivile qui.';
   }
   if (r === CPGS_IN_PENDING) {
-    return 'È <b>IN PENDING' + esc(da) + '</b> (in pausa). Se l\'operatore ha ripreso a lavorare senza riattivarlo, aggiungi il tratto mancante con «＋ Aggiungi tratto».';
+    return 'È <b>IN PENDING' + esc(da) + '</b> (in pausa). Se l\'operatore ha ripreso a lavorare senza riattivarlo, aggiungi il tratto mancante con «＋ Aggiungi tratto», ' +
+      'oppure, se sta ancora lavorando, rimettilo IN PROGRESS (le ore fatte finora scrivile qui).';
   }
   if (r === CPGS_DONE) return 'È già <b>DONE</b>: puoi correggere le ore (es. attivato in ritardo: anticipa l\'inizio).';
   return 'Stato <b>' + esc(G.info.stato) + '</b> non previsto dal flusso dei sottotask: puoi solo correggere le ore.';
@@ -163,10 +175,11 @@ function _cpGsRender() {
     (urlJira ? ' <a href="' + esc(urlJira) + '" target="_blank" rel="noopener" class="text-xs text-teal-700 underline whitespace-nowrap">Apri su Jira ↗</a>' : '') +
     (info.assegnatario ? '<div class="text-[11px] text-slate-500">Assegnato a ' + esc(info.assegnatario.nome) + '</div>' : '<div class="text-[11px] text-amber-700">Non assegnato</div>') + '</div>';
 
-  // Stato finale: solo in avanti (da qui non si riapre)
+  // Stato finale: in avanti, più IN PENDING → IN PROGRESS (un DONE da qui non si riapre)
   let opz = '<option value=""' + (G.voluto === '' ? ' selected' : '') + '>Lascia «' + esc(info.stato) + '»</option>';
-  if (r >= 0 && r < CPGS_IN_PENDING) opz += '<option value="IN PENDING"' + (G.voluto === 'IN PENDING' ? ' selected' : '') + '>IN PENDING (in pausa)</option>';
-  if (r >= 0 && r < CPGS_DONE) opz += '<option value="DONE"' + (G.voluto === 'DONE' ? ' selected' : '') + '>DONE (finito)</option>';
+  [['IN PROGRESS', 'IN PROGRESS (al lavoro)'], ['IN PENDING', 'IN PENDING (in pausa)'], ['DONE', 'DONE (finito)']].forEach(([v, testo]) => {
+    if (_cpGsAmmesso(r, v)) opz += '<option value="' + v + '"' + (G.voluto === v ? ' selected' : '') + '>' + testo + '</option>';
+  });
 
   const righe = G.tratti.map((t, i) => {
     const barrato = t.elimina ? 'text-decoration:line-through;opacity:.5;' : '';
@@ -235,7 +248,7 @@ function _cpGsVerifica() {
   const G = _cpGs, out = { errori: [], avvisi: [], crea: [], modifica: [], elimina: [], stato: '' };
   if (!G.info) return out;
   const r = _cpGsRango(G.info.stato), ora = cpOraRoma();
-  if (G.voluto && _cpGsRango(G.voluto) > r) out.stato = G.voluto;
+  if (G.voluto && _cpGsAmmesso(r, G.voluto)) out.stato = G.voluto;
   const vivi = [];
   G.tratti.forEach((t, i) => {
     if (t.elimina) { out.elimina.push(t); return; }
@@ -274,8 +287,12 @@ function _cpGsVerifica() {
   if (out.stato && r === CPGS_IN_PROGRESS && !vivi.length) {
     out.avvisi.push('Nessun tratto: il tempo passato in IN PROGRESS non resterà registrato (il worklog dell\'automazione viene eliminato).');
   }
-  if (out.stato && r < CPGS_IN_PROGRESS && !vivi.length) out.avvisi.push('Nessuna ora: il sottotask si chiude senza worklog.');
+  if (out.stato && out.stato !== 'IN PROGRESS' && r < CPGS_IN_PROGRESS && !vivi.length) out.avvisi.push('Nessuna ora: il sottotask si chiude senza worklog.');
   if (out.stato === 'DONE') out.avvisi.push('Per DONE Jira vuole l\'Actual Production: se manca, il sottotask si ferma in IN PENDING.');
+  if (out.stato === 'IN PROGRESS') {
+    out.avvisi.push('Da IN PROGRESS Jira registra da solo il tempo da adesso a quando l\'operatore lo sposta: le ore fatte prima vanno scritte qui come tratti.');
+    if (ora && G.iso !== ora.data) out.avvisi.push('La riga è di ' + G.label + ', non di oggi: il tempo che conterà Jira parte da adesso, non da quel giorno.');
+  }
   return out;
 }
 

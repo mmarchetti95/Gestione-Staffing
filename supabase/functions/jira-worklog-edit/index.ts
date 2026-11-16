@@ -36,7 +36,8 @@
 //         SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY (automatici).
 //
 // - Sistema giornata (v18.254.0, dal badge Stato del Controllo Produzione):
-//   "giornata" legge stato, assegnatario e worklog del sottotask; "stato" lo porta in IN PENDING
+//   "giornata" legge stato, assegnatario e worklog del sottotask; "stato" lo porta in IN PROGRESS
+//   (v18.264.0: da CREATED/TO DO, o da IN PENDING per la ripresa dopo la pausa), IN PENDING
 //   o DONE con i passaggi intermedi (TO DO → DONE diretto non esiste, IN PENDING → DONE passa da
 //   IN PROGRESS), rimette l'assegnatario dopo ogni transizione (un'automazione Jira assegna il
 //   sottotask a chi lo porta in IN PROGRESS) ed elimina i worklog che l'automazione Jira crea
@@ -46,7 +47,7 @@
 // Richiesta (POST, JSON):
 //   { action: "giornata", issueKey }
 //     → { ok, key, summary, stato, categoria, assegnatario: {accountId, nome} | null, worklogs: Wl[] }
-//   { action: "stato", issueKey, voluto: "IN PENDING" | "DONE", atteso: { stato }, operatore }
+//   { action: "stato", issueKey, voluto: "IN PROGRESS" | "IN PENDING" | "DONE", atteso: { stato }, operatore }
 //     → { ok, prima, dopo, passi: string[], rimossi: Wl[], avviso? }  (409 codice "cambiato" se
 //       lo stato su Jira non è più "atteso.stato")
 //   { action: "create" | "update" | "delete",
@@ -347,7 +348,7 @@ async function produzioneCompilata(issueKey: string): Promise<boolean> {
 
 type EsitoStato = { prima: string; dopo: string; passi: string[]; usciteDaInProgress: number; errore?: string; avviso?: string };
 
-// Porta il sottotask da "attuale" a "voluto" (IN PENDING o DONE) un passo alla volta, rimettendo
+// Porta il sottotask da "attuale" a "voluto" (IN PROGRESS, IN PENDING o DONE) un passo alla volta, rimettendo
 // l'assegnatario dopo ogni transizione. Stessa logica di allineaStato in jira-fornitori-worklog.
 async function transita(issueKey: string, attuale: string, voluto: string, assegnatario: string): Promise<EsitoStato> {
   const out: EsitoStato = { prima: attuale, dopo: attuale, passi: [], usciteDaInProgress: 0 };
@@ -542,10 +543,10 @@ Deno.serve(async (req: Request) => {
     }
   }
 
-  // Sistema giornata: cambio di stato (IN PENDING / DONE) + pulizia dei worklog dell'automazione
+  // Sistema giornata: cambio di stato (IN PROGRESS / IN PENDING / DONE) + pulizia dei worklog dell'automazione
   if (action === "stato") {
     const voluto = String(p?.voluto || "").trim();
-    if (rango(voluto) !== IN_PENDING && rango(voluto) !== DONE) return json({ error: "Stato richiesto non valido (IN PENDING o DONE)" }, 400);
+    if (rango(voluto) < IN_PROGRESS) return json({ error: "Stato richiesto non valido (IN PROGRESS, IN PENDING o DONE)" }, 400);
     let esito: EsitoStato = { prima: "", dopo: "", passi: [], usciteDaInProgress: 0 };
     let rimossi: Wl[] = [];
     const avvisi: string[] = [];
@@ -555,7 +556,11 @@ Deno.serve(async (req: Request) => {
         return json({ error: `Su Jira ${issueKey} è passato a «${st.stato}» nel frattempo: riapri la finestra e riprova.`, codice: "cambiato", stato: st.stato }, 409);
       }
       if (rango(st.stato) < 0) return json({ error: `Stato «${st.stato}» non previsto dal flusso dei sottotask` }, 400);
-      if (rango(st.stato) > rango(voluto)) return json({ error: `${issueKey} è già «${st.stato}»: da qui non si riapre` }, 400);
+      // In avanti, più IN PENDING → IN PROGRESS (ripresa dopo la pausa); un DONE non si riapre
+      const ripresa = rango(st.stato) === IN_PENDING && rango(voluto) === IN_PROGRESS;
+      if (rango(st.stato) > rango(voluto) && !ripresa) {
+        return json({ error: `${issueKey} è già «${st.stato}»: da qui non si riapre` }, 400);
+      }
       const primaIds = new Set((await leggiWorklogTutti(issueKey)).map((w) => w.id));
       esito = await transita(issueKey, st.stato, voluto, st.assegnatario?.accountId || "");
       if (esito.avviso) avvisi.push(esito.avviso);
