@@ -407,9 +407,10 @@ function _chsStatoKm() {
   const c = { ok: 0, nessuna: 0, da_verificare: 0, da_aggiornare: 0, da_inviare: 0, senza_email: 0 };
   const senzaKm = [];
   let conTicket = 0;
+  const ctxTk = cpCtxTicketCommessa();   // solo i ticket della commessa della riga (v18.270.0)
   giornate.forEach(x => {
     const cell = _chs.righe[x.k];
-    const tks = (cell && Array.isArray(cell.jira_tickets)) ? cell.jira_tickets.filter(t => t && t.key) : [];
+    const tks = cell ? cpTicketsPropri(cell.jira_tickets, x.commessa, x.operatore, x.giorno, ctxTk).filter(t => t.key) : [];
     if (!tks.length) return;   // senza ticket: lo dicono «Ore lette da Jira» e il Controllo anomalie
     conTicket++;
     let coperto = false;

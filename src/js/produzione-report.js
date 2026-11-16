@@ -221,13 +221,17 @@ async function cpProcessReport(csvText, commessa, squadra) {
   // Mappa nome operatore -> email (stessa logica del sync Jira)
   const emailByNome = opEmailMappa();
 
-  // Comuni (Epic) disponibili nei ticket della squadra questa settimana
+  // Comuni (Epic) disponibili nei ticket della squadra questa settimana. Solo i ticket di questa
+  // commessa: quelli di un'altra commessa lavorata lo stesso giorno stanno sulla sua riga (v18.270.0).
+  const ctxTk = cpCtxTicketCommessa();
+  const ticketsCella = (op, g) => {
+    const k = `${commessa}|||${squadra}|||${op.nome}|||${g}`;
+    return cpTicketsPropri(_cpData[k] && _cpData[k].jira_tickets, commessa, op.nome, g, ctxTk);
+  };
   const comuneSet = new Set();
   for (const g of days) {
     for (const op of opsByDay[g]) {
-      const k = `${commessa}|||${squadra}|||${op.nome}|||${g}`;
-      const tks = (_cpData[k] && Array.isArray(_cpData[k].jira_tickets)) ? _cpData[k].jira_tickets : [];
-      tks.forEach(t => { if (t.epic && t.epic.name) comuneSet.add(t.epic.name); });
+      ticketsCella(op, g).forEach(t => { if (t.epic && t.epic.name) comuneSet.add(t.epic.name); });
     }
   }
   const comuni = [...comuneSet].sort();
@@ -249,10 +253,6 @@ async function cpProcessReport(csvText, commessa, squadra) {
   const attPerTicket = cpReportAttivitaPerTicket(commessa);
   const attNote = [...new Set(days.flatMap(g => opsByDay[g].flatMap(op => op.attivitaElenco || [])))]
     .sort((a, b) => b.length - a.length);   // la più lunga prima: "Rilievo GPS 3D" non va confusa con "Rilievo GPS"
-  const ticketsCella = (op, g) => {
-    const k = `${commessa}|||${squadra}|||${op.nome}|||${g}`;
-    return (_cpData[k] && Array.isArray(_cpData[k].jira_tickets)) ? _cpData[k].jira_tickets : [];
-  };
   const attivitaSet = new Set();
   for (const g of days) {
     for (const op of opsByDay[g]) {
@@ -506,6 +506,7 @@ function pwControlloExport() {
   const wsData = [headers];
 
   // Stesso ordine del render: commessa → squadra → giorno → operatori
+  const ctxTk = cpCtxTicketCommessa();
   data.forEach(bc => {
     if (!bc.commessa) return;
     (bc.squadre || []).forEach(sq => {
@@ -516,14 +517,14 @@ function pwControlloExport() {
           const opG   = op.giorni && op.giorni[g] ? op.giorni[g] : {};
           const k     = `${bc.commessa}|||${sqNome}|||${op.nome}|||${g}`;
           const saved = _cpData[k] || {};
-          const jVal  = saved.ore_jira   != null ? saved.ore_jira   : '';
+          // Solo ticket e ore di questa commessa (un'altra commessa lavorata lo stesso giorno ha la sua riga).
+          const tkSep = cpTicketsRiga(saved.jira_tickets, bc.commessa, op.nome, g, ctxTk);
+          const jVal  = saved.ore_jira   != null ? cpOreJiraRiga(saved.ore_jira, tkSep.altri) : '';
           const rVal  = saved.ore_report != null ? saved.ore_report : '';
           const jNum  = parseFloat(String(jVal)), rNum = parseFloat(String(rVal));
           const delta = (!isNaN(jNum) && !isNaN(rNum)) ? jNum - rNum : '';
-          const ticketStr = Array.isArray(saved.jira_tickets)
-            ? saved.jira_tickets.map(t => t.key).join(', ') : '';
-          const epicStr = Array.isArray(saved.jira_tickets)
-            ? [...new Set(saved.jira_tickets.filter(t => t.epic && t.epic.name).map(t => t.epic.name))].join(', ') : '';
+          const ticketStr = tkSep.propri.map(t => t.key).join(', ');
+          const epicStr = [...new Set(tkSep.propri.filter(t => t.epic && t.epic.name).map(t => t.epic.name))].join(', ');
           wsData.push([
             bc.commessa, sqNome, op.nome,
             saved.verificato === true ? 'Sì' : '',
@@ -604,6 +605,7 @@ function pwControlloExportPDF() {
   const anyCantiereByDay = [new Set(), new Set(), new Set(), new Set(), new Set(), new Set()];
 
   // FASE 1: righe normali + traccia chi ha un cantiere quel giorno
+  const ctxTk = cpCtxTicketCommessa();
   data.forEach(bc => {
     if (!bc.commessa) return;
     (bc.squadre || []).forEach(sq => {
@@ -618,14 +620,18 @@ function pwControlloExportPDF() {
           if (!cant || isFerie) return; // righa normale solo se cantiere e non ferie/non disponibile (giornata intera)
           const k = `${bc.commessa}|||${sqNome}|||${op.nome}|||${g}`;
           const saved = _cpData[k] || {};
-          const tickets = Array.isArray(saved.jira_tickets) ? saved.jira_tickets : [];
+          // Solo ticket e ore di questa commessa; il colore delle Ore Jira resta sul totale del giorno.
+          const tkSep = cpTicketsRiga(saved.jira_tickets, bc.commessa, op.nome, g, ctxTk);
+          const tickets = tkSep.propri;
           const ticketStr = tickets.length ? tickets.map(t => t.key).join('\n') : '—';
           const epicStr = tickets.length
             ? ([...new Set(tickets.filter(t => t.epic && t.epic.name).map(t => t.epic.name))].join('\n') || '—')
             : '—';
+          const oreRiga = cpOreJiraRiga(saved.ore_jira, tkSep.altri);
           rowsByDay[g].push({
             operatore: op.nome,
             cantiere:  cant,
+            oreTxt:    (saved.ore_jira != null && oreRiga !== saved.ore_jira) ? oreRiga + ' (di ' + saved.ore_jira + ' nel giorno)' : '',
             oreJira:   saved.ore_jira != null ? saved.ore_jira : null,
             oreReport: saved.ore_report != null ? saved.ore_report : null,
             ticketStr, epicStr,
@@ -703,7 +709,7 @@ function pwControlloExportPDF() {
       body: rows.map(r => [
         r.operatore,
         r.cantiere || '—',
-        (r.oreJira != null ? String(r.oreJira) : '—'),
+        (r.oreJira != null ? (r.oreTxt || String(r.oreJira)) : '—'),
         (r.oreReport != null ? String(r.oreReport) : '—'),
         r.ticketStr,
         r.epicStr,

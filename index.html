@@ -2138,7 +2138,7 @@
       </span>
       <button id="btn-presentation" class="px-3 py-1.5 text-sm rounded hover:bg-white/10" style="border:1px solid var(--dark-border-strong);color:var(--dark-text);visibility:visible;">📊 Modalità presentazione</button>
       <div class="text-xs pl-2" style="border-left:1px solid var(--dark-border-strong);color:var(--dark-text-muted);">
-        <span id="app-version" class="font-medium" style="color:var(--accent);">v18.269.0</span> · Michele Marchetti
+        <span id="app-version" class="font-medium" style="color:var(--accent);">v18.270.0</span> · Michele Marchetti
         <span id="sb-role-badge" style="margin-left:8px;padding:1px 8px;border-radius:9999px;background:rgba(255,255,255,.1);color:var(--dark-text);font-weight:600;"></span>
       </div>
     </div>
@@ -21588,6 +21588,7 @@ function pwControlloRender() {
     </tr></thead><tbody>`;
 
   let ri = 0;
+  const ctxTk = cpCtxTicketCommessa();
 
   blocks.forEach((bl, blIdx) => {
     html += `<tr class="cp-tr-commessa" data-comm-idx="${blIdx}"><td colspan="19"><span class="cp-carr" style="cursor:pointer;user-select:none;margin-right:5px;font-size:11px;display:inline-block;width:10px;text-align:center;" onclick="cpToggleComm(${blIdx})">▼</span>📁 ${esc(bl.commessa)}${cpCampoSelectHtml(bl.commessa)}</td></tr>`;
@@ -21606,12 +21607,15 @@ function pwControlloRender() {
           const rVal  = saved.ore_report != null ? saved.ore_report : '';
           const kVal  = saved.km_cad     != null ? saved.km_cad     : '';
           const nVal  = saved.note || '';
-          const tickets = Array.isArray(saved.jira_tickets) ? saved.jira_tickets : [];
+          // Solo i ticket di questa commessa; quelli di un'altra commessa (stesso giorno) in grigio in fondo.
+          const tkSep = cpTicketsRiga(saved.jira_tickets, bl.commessa, op.nome, g, ctxTk);
+          const tickets = tkSep.propri, altriTk = tkSep.altri;
           const byTicket     = (saved.km_by_ticket      && typeof saved.km_by_ticket      === 'object') ? saved.km_by_ticket      : {};
           const lastByTicket = (saved.km_last_by_ticket && typeof saved.km_last_by_ticket === 'object') ? saved.km_last_by_ticket : {};
-          const ticketHtml = tickets.length === 0
+          const altriHtml = altriTk.map(a => `<a href="${esc(a.t.url||'')}" target="_blank" rel="noopener" title="${esc("Ticket di un'altra commessa: " + a.commessa + (a.t.hours != null ? ' — ' + a.t.hours + 'h' : '') + "\nSi controlla (Km/Cad, stato) sulla riga di quella commessa.")}" style="display:block;height:24px;line-height:24px;color:#94a3b8;text-decoration:none;font-size:10px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">↪ ${esc(a.t.key||'')}</a>`).join('');
+          const ticketHtml = (tickets.length === 0 && altriTk.length === 0)
             ? '<span style="color:#cbd5e1">—</span>'
-            : tickets.map(t => `<a href="${esc(t.url||'')}" target="_blank" rel="noopener" title="${esc(t.key||'')}${t.hours!=null?(' — '+t.hours+'h'):''}" style="display:block;height:24px;line-height:24px;color:#2563eb;text-decoration:none;font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">• ${esc(t.key||'')}</a>`).join('');
+            : tickets.map(t => `<a href="${esc(t.url||'')}" target="_blank" rel="noopener" title="${esc(t.key||'')}${t.hours!=null?(' — '+t.hours+'h'):''}" style="display:block;height:24px;line-height:24px;color:#2563eb;text-decoration:none;font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">• ${esc(t.key||'')}</a>`).join('') + altriHtml;
           // Epic distinti fra i ticket del giorno (dedup per key)
           const epicMap = {};
           tickets.forEach(t => { if (t.epic && t.epic.key) epicMap[t.epic.key] = t.epic; });
@@ -21634,12 +21638,17 @@ function pwControlloRender() {
                 const reloadBtn = wrote ? `<button type="button" class="no-print pw-write-action" title="Rileggi il valore attuale da Jira (sovrascrive il Km/Cad locale di questo ticket)" style="border:none;background:transparent;cursor:pointer;font-size:12px;line-height:1;padding:0;margin-left:3px;" onclick="cpRereadTicket(event,'${jsesc(bl.commessa)}','${jsesc(sq.nome)}','${jsesc(op.nome)}',${g},'${jsesc(dates[g])}','${jsesc(op.cantiere)}','${jsesc(op.attivita)}','${jsesc(t.key||'')}')">🔄</button>` : '';
                 return `<div style="height:24px;display:flex;align-items:center;justify-content:center;"><button type="button" class="cp-kmj" data-cpk="${esc(k)}" data-tk="${esc(t.key||'')}" data-operatore="${esc(op.nome)}" onclick="cpJiraFlagTicketClick(event,'${jsesc(bl.commessa)}','${jsesc(sq.nome)}','${jsesc(op.nome)}',${g},'${jsesc(t.key||'')}')"></button>${reloadBtn}</div>`;
               }).join('');
+          // Ore Jira: quelle di questa commessa (totale del giorno meno i ticket delle altre), col
+          // totale sotto. Il colore della cella resta sul totale: dice se l'operatore ha registrato la giornata.
+          const jRiga = cpOreJiraRiga(jVal, altriTk);
           const jDisplay = (jVal === '' || jVal == null)
             ? '<span style="color:#cbd5e1">—</span>'
-            : esc(String(jVal));
+            : esc(String(jRiga)) + (jRiga !== jVal
+              ? '<div style="font-size:9px;font-weight:400;color:#64748b;line-height:1.1;white-space:nowrap">di ' + esc(String(jVal)) + ' nel giorno</div>'
+              : '');
           const verificato = saved.verificato === true;
 
-          const jNum = parseFloat(String(jVal)), rNum = parseFloat(String(rVal));
+          const jNum = parseFloat(String(jRiga)), rNum = parseFloat(String(rVal));
           let deltaHtml;
           if (!isNaN(jNum) && !isNaN(rNum)) {
             const dv  = jNum - rNum;
@@ -21664,7 +21673,7 @@ function pwControlloRender() {
       <td class="cp-wrap" style="color:#64748b" title="${esc(op.attivita)}">${esc(op.attivita)}</td>
       <td class="cp-stato" data-keys="${esc(JSON.stringify(statoKeys))}" data-date="${dateISOs[g]}" style="vertical-align:top;padding-top:4px;text-align:center">${cpStatoCellHtml(statoKeys, dateISOs[g])}</td>
       <td class="cp-meteo" data-cantieri="${esc(JSON.stringify(op.cantieri))}" data-date="${dateISOs[g]}" style="text-align:center">${cpMeteoCellHtml(op.cantieri, dateISOs[g])}</td>
-      <td class="cp-oj-cell" style="${cpOreJiraStyle(jVal, g)}" data-date="${dateISOs[g]}" data-giorno="${esc(DAY_NAMES[g] + ' ' + dates[g])}" onmouseenter="cpOreJiraShow(this)" onmouseleave="cpOreJiraHide()"><span id="cp-j-${ri}" data-jval="${esc(String(jVal))}">${jDisplay}</span><div class="cp-oj-live-slot"></div></td>
+      <td class="cp-oj-cell" style="${cpOreJiraStyle(jVal, g)}" data-date="${dateISOs[g]}" data-giorno="${esc(DAY_NAMES[g] + ' ' + dates[g])}" onmouseenter="cpOreJiraShow(this)" onmouseleave="cpOreJiraHide()"><span id="cp-j-${ri}" data-jval="${esc(String(jRiga))}">${jDisplay}</span><div class="cp-oj-live-slot"></div></td>
       <td class="cp-mysond" style="text-align:center">${cpMysondCellHtml(op.nome, g, jVal, op.cantieri)}</td>
       <td style="vertical-align:top;padding-top:4px;">${ticketHtml}</td>
       <td style="vertical-align:top;padding-top:4px;">${epicHtml}</td>
@@ -21774,6 +21783,63 @@ const CP_STATO_POLL_MS = 30000;
 const CP_STATO_CHUNK = 400;                 // la Edge Function accetta al massimo 500 chiavi
 const _cpStatoTicket = {};                  // chiave → { key, summary, status, statusCategory, url, statoDa?, statoDaAutore? } | null (non trovato)
 let _cpStatoBusy = false, _cpStatoPending = false, _cpStatoTimer = null;
+
+/* ----- Ticket di un'altra commessa sulla riga (v18.270.0) -----
+   jira-sync-worklogs restituisce TUTTI i worklog del giorno dell'operatore e la sync li salva su
+   ogni sua riga di quel giorno: una squadra che lo stesso giorno lavora su due commesse avrebbe su
+   entrambe le righe gli stessi ticket, ore ed Epic. jira_tickets salvato resta intero (Ore Jira
+   come totale del giorno, MySond, infografica, Timeline e Avanzamento leggono il giorno completo);
+   per Ticket/Epic/Stato/Km/Cad/Δ Ore la riga usa solo i ticket della propria commessa. Un ticket
+   è "di un'altra commessa" solo se attribuito con certezza a una commessa diversa della dashboard,
+   con la stessa regola della Timeline (_cpTlCommessaTicket: sottotask di Griglia, poi codice
+   progetto Jira, codice condiviso → commessa pianificata quel giorno); un ticket non riconosciuto
+   resta sulla riga, come prima. Il contesto si calcola una volta per render/sync. */
+function cpCtxTicketCommessa() {
+  const pian = {};
+  pwGetWeekData().forEach(bc => {
+    if (!bc || !bc.commessa) return;
+    (bc.squadre || []).forEach(sq => (sq.operatori || []).forEach(op => {
+      const n = (op.nome || '').trim();
+      if (!n) return;
+      for (let g = 0; g < 6; g++) {
+        const opG = op.giorni && op.giorni[g];
+        if (!opG || !pwCellCantieri(opG).length) continue;
+        const a = pian[n + '|||' + g] || (pian[n + '|||' + g] = []);
+        if (!a.includes(bc.commessa)) a.push(bc.commessa);
+      }
+    }));
+  });
+  return { indice: _cpaIndiceSottotask(), progetti: _cpTlProgetti(), pian };
+}
+
+/* { propri, altri: [{ t, commessa }] } dei ticket di una riga commessa/operatore/giorno. */
+function cpTicketsRiga(tickets, commessa, operatore, giorno, ctx) {
+  const propri = [], altri = [];
+  (Array.isArray(tickets) ? tickets : []).forEach(t => {
+    if (!t) return;
+    if (!t.key || !ctx) { propri.push(t); return; }
+    const x = { commesse: ctx.pian[String(operatore || '').trim() + '|||' + giorno] || [] };
+    const r = _cpTlCommessaTicket(t, x, ctx);
+    if (r.commessa && r.commessa !== commessa) altri.push({ t, commessa: r.commessa });
+    else propri.push(t);
+  });
+  return { propri, altri };
+}
+
+/* Ore Jira della sola commessa della riga: totale salvato meno le ore dei ticket delle altre
+   commesse. Se qualcuno di quei ticket non ha le ore (righe vecchie) resta il totale. */
+function cpOreJiraRiga(jVal, altri) {
+  if (jVal === '' || jVal == null || !altri || !altri.length) return jVal;
+  const tot = Number(jVal);
+  if (!isFinite(tot) || altri.some(a => a.t.hours == null || !isFinite(Number(a.t.hours)))) return jVal;
+  const altre = altri.reduce((s, a) => s + Number(a.t.hours), 0);
+  return Math.max(0, Math.round((tot - altre) * 100) / 100);
+}
+
+/* Solo i ticket della commessa della riga (per chi non ha bisogno degli altri). */
+function cpTicketsPropri(tickets, commessa, operatore, giorno, ctx) {
+  return cpTicketsRiga(tickets, commessa, operatore, giorno, ctx).propri;
+}
 
 function cpStatoKeysRiga(bc, op, tickets, giorno) {
   const keys = [];
@@ -22164,13 +22230,17 @@ async function pwControlloSyncJira(scopeCommessa, scopeSquadra, btnEl, opts) {
     // Per ogni ticket della cella che non ha ancora un valore locale, leggo l'Actual
     // Production dal ticket e lo adotto (byTicket = lastByTicket = valore letto), così
     // non verrà risommato ma potrà essere sostituito da un report successivo.
+    // Solo i ticket della commessa della riga: lo stesso ticket salvato anche sulla riga di
+    // un'altra commessa dello stesso giorno non va letto né inviato due volte (v18.270.0).
+    const ctxTk = cpCtxTicketCommessa();
+    const tkRiga = c => cpTicketsPropri(celle[c.k].jira_tickets, c.commessa, c.operatore, c.giorno, ctxTk);
     let kmReadMsg = '';
     const readSet = new Set();
     const readCellByKey = [];
     cells.forEach(c => {
       if (!c.email) return;
       const cell = celle[c.k];
-      const tks = Array.isArray(cell.jira_tickets) ? cell.jira_tickets : [];
+      const tks = tkRiga(c);
       const byTicket = (cell.km_by_ticket && typeof cell.km_by_ticket === 'object') ? cell.km_by_ticket : {};
       tks.forEach(t => {
         if (!t.key) return;
@@ -22240,9 +22310,9 @@ async function pwControlloSyncJira(scopeCommessa, scopeSquadra, btnEl, opts) {
     cells.forEach(c => {
       if (!c.email) return;
       const cell = celle[c.k];
-      const tks = Array.isArray(cell.jira_tickets) ? cell.jira_tickets : [];
+      const tks = tkRiga(c);
       const byTicket = (cell.km_by_ticket && typeof cell.km_by_ticket === 'object') ? cell.km_by_ticket : {};
-      const ticketKeys = new Set(tks.map(t => t.key).filter(Boolean));
+      const ticketKeys = new Set(tks.map(t => t && t.key).filter(Boolean));
       const campo = cpCampoProduzione(c.commessa);
       Object.keys(byTicket).forEach(issueKey => {
         if (!ticketKeys.has(issueKey)) return; // ignora km orfani (ticket non più presente)
@@ -23371,13 +23441,17 @@ async function cpProcessReport(csvText, commessa, squadra) {
   // Mappa nome operatore -> email (stessa logica del sync Jira)
   const emailByNome = opEmailMappa();
 
-  // Comuni (Epic) disponibili nei ticket della squadra questa settimana
+  // Comuni (Epic) disponibili nei ticket della squadra questa settimana. Solo i ticket di questa
+  // commessa: quelli di un'altra commessa lavorata lo stesso giorno stanno sulla sua riga (v18.270.0).
+  const ctxTk = cpCtxTicketCommessa();
+  const ticketsCella = (op, g) => {
+    const k = `${commessa}|||${squadra}|||${op.nome}|||${g}`;
+    return cpTicketsPropri(_cpData[k] && _cpData[k].jira_tickets, commessa, op.nome, g, ctxTk);
+  };
   const comuneSet = new Set();
   for (const g of days) {
     for (const op of opsByDay[g]) {
-      const k = `${commessa}|||${squadra}|||${op.nome}|||${g}`;
-      const tks = (_cpData[k] && Array.isArray(_cpData[k].jira_tickets)) ? _cpData[k].jira_tickets : [];
-      tks.forEach(t => { if (t.epic && t.epic.name) comuneSet.add(t.epic.name); });
+      ticketsCella(op, g).forEach(t => { if (t.epic && t.epic.name) comuneSet.add(t.epic.name); });
     }
   }
   const comuni = [...comuneSet].sort();
@@ -23399,10 +23473,6 @@ async function cpProcessReport(csvText, commessa, squadra) {
   const attPerTicket = cpReportAttivitaPerTicket(commessa);
   const attNote = [...new Set(days.flatMap(g => opsByDay[g].flatMap(op => op.attivitaElenco || [])))]
     .sort((a, b) => b.length - a.length);   // la più lunga prima: "Rilievo GPS 3D" non va confusa con "Rilievo GPS"
-  const ticketsCella = (op, g) => {
-    const k = `${commessa}|||${squadra}|||${op.nome}|||${g}`;
-    return (_cpData[k] && Array.isArray(_cpData[k].jira_tickets)) ? _cpData[k].jira_tickets : [];
-  };
   const attivitaSet = new Set();
   for (const g of days) {
     for (const op of opsByDay[g]) {
@@ -23656,6 +23726,7 @@ function pwControlloExport() {
   const wsData = [headers];
 
   // Stesso ordine del render: commessa → squadra → giorno → operatori
+  const ctxTk = cpCtxTicketCommessa();
   data.forEach(bc => {
     if (!bc.commessa) return;
     (bc.squadre || []).forEach(sq => {
@@ -23666,14 +23737,14 @@ function pwControlloExport() {
           const opG   = op.giorni && op.giorni[g] ? op.giorni[g] : {};
           const k     = `${bc.commessa}|||${sqNome}|||${op.nome}|||${g}`;
           const saved = _cpData[k] || {};
-          const jVal  = saved.ore_jira   != null ? saved.ore_jira   : '';
+          // Solo ticket e ore di questa commessa (un'altra commessa lavorata lo stesso giorno ha la sua riga).
+          const tkSep = cpTicketsRiga(saved.jira_tickets, bc.commessa, op.nome, g, ctxTk);
+          const jVal  = saved.ore_jira   != null ? cpOreJiraRiga(saved.ore_jira, tkSep.altri) : '';
           const rVal  = saved.ore_report != null ? saved.ore_report : '';
           const jNum  = parseFloat(String(jVal)), rNum = parseFloat(String(rVal));
           const delta = (!isNaN(jNum) && !isNaN(rNum)) ? jNum - rNum : '';
-          const ticketStr = Array.isArray(saved.jira_tickets)
-            ? saved.jira_tickets.map(t => t.key).join(', ') : '';
-          const epicStr = Array.isArray(saved.jira_tickets)
-            ? [...new Set(saved.jira_tickets.filter(t => t.epic && t.epic.name).map(t => t.epic.name))].join(', ') : '';
+          const ticketStr = tkSep.propri.map(t => t.key).join(', ');
+          const epicStr = [...new Set(tkSep.propri.filter(t => t.epic && t.epic.name).map(t => t.epic.name))].join(', ');
           wsData.push([
             bc.commessa, sqNome, op.nome,
             saved.verificato === true ? 'Sì' : '',
@@ -23754,6 +23825,7 @@ function pwControlloExportPDF() {
   const anyCantiereByDay = [new Set(), new Set(), new Set(), new Set(), new Set(), new Set()];
 
   // FASE 1: righe normali + traccia chi ha un cantiere quel giorno
+  const ctxTk = cpCtxTicketCommessa();
   data.forEach(bc => {
     if (!bc.commessa) return;
     (bc.squadre || []).forEach(sq => {
@@ -23768,14 +23840,18 @@ function pwControlloExportPDF() {
           if (!cant || isFerie) return; // righa normale solo se cantiere e non ferie/non disponibile (giornata intera)
           const k = `${bc.commessa}|||${sqNome}|||${op.nome}|||${g}`;
           const saved = _cpData[k] || {};
-          const tickets = Array.isArray(saved.jira_tickets) ? saved.jira_tickets : [];
+          // Solo ticket e ore di questa commessa; il colore delle Ore Jira resta sul totale del giorno.
+          const tkSep = cpTicketsRiga(saved.jira_tickets, bc.commessa, op.nome, g, ctxTk);
+          const tickets = tkSep.propri;
           const ticketStr = tickets.length ? tickets.map(t => t.key).join('\n') : '—';
           const epicStr = tickets.length
             ? ([...new Set(tickets.filter(t => t.epic && t.epic.name).map(t => t.epic.name))].join('\n') || '—')
             : '—';
+          const oreRiga = cpOreJiraRiga(saved.ore_jira, tkSep.altri);
           rowsByDay[g].push({
             operatore: op.nome,
             cantiere:  cant,
+            oreTxt:    (saved.ore_jira != null && oreRiga !== saved.ore_jira) ? oreRiga + ' (di ' + saved.ore_jira + ' nel giorno)' : '',
             oreJira:   saved.ore_jira != null ? saved.ore_jira : null,
             oreReport: saved.ore_report != null ? saved.ore_report : null,
             ticketStr, epicStr,
@@ -23853,7 +23929,7 @@ function pwControlloExportPDF() {
       body: rows.map(r => [
         r.operatore,
         r.cantiere || '—',
-        (r.oreJira != null ? String(r.oreJira) : '—'),
+        (r.oreJira != null ? (r.oreTxt || String(r.oreJira)) : '—'),
         (r.oreReport != null ? String(r.oreReport) : '—'),
         r.ticketStr,
         r.epicStr,
@@ -24653,8 +24729,8 @@ function _cpaControllaMysond(input, out, perOpGiorno, wl, ore) {
 /* ---------- 6) Più di 8 ore segnate in MySond ---------- */
 
 /* Somma di TUTTE le voci MySond del giorno (lavoro, viaggio, non lavorate): è quello che
-   l'operatore ha segnato. Non serve Jira: si valuta ogni operatore con ore MySond nella
-   settimana, anche chi non è in Griglia (squadra vuota). Le ore Jira, se lette, si
+   l'operatore ha segnato. Non serve Jira. Solo chi quel giorno è in Griglia (cella non
+   in ferie): chi non c'è non interessa a chi pianifica. Le ore Jira, se lette, si
    mostrano solo per confronto. */
 function _cpaControllaMysondOltre(input, out) {
   if (!input.mysond) return;
@@ -24668,11 +24744,11 @@ function _cpaControllaMysondOltre(input, out) {
   Object.keys(input.mysond).forEach(op => {
     for (let g = 0; g < 6; g++) {
       const rec = (input.mysond[op] || {})[g];
-      if (!rec) continue;
+      const celle = perOpGiorno[op + '|||' + g] || [];
+      if (!rec || !celle.length) continue;
       const m = cpaMysondRipartisci(rec);
       if (!(m.totale > S.oreMaxMysond + 1e-9)) continue;
       const oltre = Math.round((m.totale - S.oreMaxMysond) * 100) / 100;
-      const celle = perOpGiorno[op + '|||' + g] || [];
       const squadre = [...new Set(celle.map(c => c.commessa + '|||' + c.squadra))];
       const cantieri = [...new Set(celle.flatMap(_cpaCantieriCella))];
       const d = input.worklog ? ((input.worklog[op] || {})[g] || null) : null;
@@ -26596,7 +26672,7 @@ function _cpaPdfSoglia(tipo) {
   const p = _cpaPref();
   if (tipo === 'ore_squadra') return 'Scarto minimo segnalato: ' + _cpaPdfH(Number(p.diffOreSquadra)) + '.';
   if (tipo === 'mysond_diverso') return 'Scarto minimo segnalato: ' + _cpaPdfH(Number(p.diffOreMysond)) + '.';
-  if (tipo === 'mysond_oltre_giornata') return 'Raggruppate per squadra della Griglia quel giorno, con ogni inserimento MySond della giornata.';
+  if (tipo === 'mysond_oltre_giornata') return 'Una tabella per squadra della Griglia; per ogni operatore e giorno il totale e, sotto, ogni inserimento MySond. Viaggio e ore non lavorate in grigio.';
   return '';
 }
 
@@ -38809,9 +38885,10 @@ function _chsStatoKm() {
   const c = { ok: 0, nessuna: 0, da_verificare: 0, da_aggiornare: 0, da_inviare: 0, senza_email: 0 };
   const senzaKm = [];
   let conTicket = 0;
+  const ctxTk = cpCtxTicketCommessa();   // solo i ticket della commessa della riga (v18.270.0)
   giornate.forEach(x => {
     const cell = _chs.righe[x.k];
-    const tks = (cell && Array.isArray(cell.jira_tickets)) ? cell.jira_tickets.filter(t => t && t.key) : [];
+    const tks = cell ? cpTicketsPropri(cell.jira_tickets, x.commessa, x.operatore, x.giorno, ctxTk).filter(t => t.key) : [];
     if (!tks.length) return;   // senza ticket: lo dicono «Ore lette da Jira» e il Controllo anomalie
     conTicket++;
     let coperto = false;
