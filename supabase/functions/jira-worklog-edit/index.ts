@@ -43,6 +43,7 @@
 //   sottotask a chi lo porta in IN PROGRESS) ed elimina i worklog che l'automazione Jira crea
 //   all'uscita da IN PROGRESS: le ore vere le scrive poi il client con create/update/delete.
 //   DONE senza Actual Production (> 0) Jira lo rifiuta: il sottotask si ferma in IN PENDING.
+//   v18.268.0: il controllo guarda solo l'Actual Production (un KPI_Quantità lavorata > 0 non basta).
 //
 // Richiesta (POST, JSON):
 //   { action: "giornata", issueKey }
@@ -313,8 +314,11 @@ function rango(nome: string): number { return ORDINE.findIndex((r) => r.test(Str
 function stessoStato(a: string, b: string): boolean { return String(a || "").trim().toLowerCase() === String(b || "").trim().toLowerCase(); }
 
 const CAMPO_PRODUZIONE = /actual\s*production|kpi.?quantit\S*\s*lavorat/i;   // non «KPI_Quantità target»
+// Il validatore verso DONE controlla l'ACTUAL PRODUCTION, anche sulle commesse che tengono la
+// produzione su KPI_Quantità lavorata (v18.268.0): un KPI > 0 non basta per chiudere.
+const CAMPO_DONE = /^\s*actual\s*production\s*$/i;
 const MSG_PRODUZIONE = "Jira chiede l'Actual Production per DONE: il sottotask resta in IN PENDING. " +
-  "Scrivi il Km/Cad della riga e usa «🔄 Sincronizza», poi chiudilo di nuovo.";
+  "Riapri «✎» su questo sottotask, scegli DONE e scrivi l'Actual Production (di default 1) nel campo che compare.";
 const ATTESA_AUTOMAZIONE_MIN_MS = 10000;   // dopo l'ultima uscita da IN PROGRESS, prima di cercare i worklog nuovi
 const ATTESA_AUTOMAZIONE_MAX_MS = 20000;
 const PASSO_ATTESA_MS = 2500;
@@ -335,13 +339,13 @@ async function leggiStato(issueKey: string): Promise<StatoTicket> {
   };
 }
 
-// La produzione del sottotask è compilata (> 0)? Il validatore verso DONE la vuole. Il campo si
+// L'Actual Production del sottotask è compilata (> 0)? Il validatore verso DONE la vuole. Il campo si
 // cerca per nome fra tutti quelli del ticket (non è sullo schermo di modifica del sottotask).
 async function produzioneCompilata(issueKey: string): Promise<boolean> {
   const r = await jira("GET", `/rest/api/3/issue/${encodeURIComponent(issueKey)}?fields=*all&expand=names`);
   if (!r.ok) return true;   // non si sa: si prova la transizione
   const j = await r.json();
-  const prod = Object.entries(j?.names || {}).filter(([, n]) => CAMPO_PRODUZIONE.test(String(n || ""))).map(([id]) => id);
+  const prod = Object.entries(j?.names || {}).filter(([, n]) => CAMPO_DONE.test(String(n || ""))).map(([id]) => id);
   if (!prod.length) return true;
   return prod.some((id) => Number(j?.fields?.[id]) > 0);
 }

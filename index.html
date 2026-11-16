@@ -2138,7 +2138,7 @@
       </span>
       <button id="btn-presentation" class="px-3 py-1.5 text-sm rounded hover:bg-white/10" style="border:1px solid var(--dark-border-strong);color:var(--dark-text);visibility:visible;">📊 Modalità presentazione</button>
       <div class="text-xs pl-2" style="border-left:1px solid var(--dark-border-strong);color:var(--dark-text-muted);">
-        <span id="app-version" class="font-medium" style="color:var(--accent);">v18.267.0</span> · Michele Marchetti
+        <span id="app-version" class="font-medium" style="color:var(--accent);">v18.268.0</span> · Michele Marchetti
         <span id="sb-role-badge" style="margin-left:8px;padding:1px 8px;border-radius:9999px;background:rgba(255,255,255,.1);color:var(--dark-text);font-weight:600;"></span>
       </div>
     </div>
@@ -28016,14 +28016,22 @@ async function _cpGsCarica() {
 }
 
 /* ---------- Produzione (per DONE) ----------
-   Jira chiude in DONE solo con la produzione del sottotask > 0 (Actual Production, o KPI_Quantità
-   lavorata per le commesse col campo nuovo). Se manca, la finestra propone di scriverla prima del
-   cambio di stato (default: il Km/Cad già in Controllo Produzione per questo ticket, altrimenti 1),
-   con lo stesso canale e modello a delta di «Sincronizza» (jira-update-production, Task padre
-   allineato). Il valore va anche nella riga del Controllo Produzione: 1 come segnaposto letto da
-   Jira (fonte 'jira', «👁 da verificare», il report lo sostituisce), un altro valore come manuale. */
+   Jira chiude in DONE solo con l'ACTUAL PRODUCTION del sottotask > 0: è quello il campo che blocca
+   la transizione, anche sulle commesse che tengono la produzione su KPI_Quantità lavorata (v18.268.0).
+   Se manca, la finestra propone di scriverla prima del cambio di stato, con lo stesso canale di
+   «Sincronizza» (jira-update-production, delta, Task padre allineato).
+   - Commessa su Actual Production: default il Km/Cad già in Controllo Produzione per questo ticket,
+     altrimenti 1; il valore va anche nella riga (1 = segnaposto letto da Jira, fonte 'jira',
+     «👁 da verificare», il report lo sostituisce; un altro valore = manuale).
+   - Commessa su KPI_Quantità lavorata: default 1, solo su Jira. La riga non si tocca: il suo storico
+     a delta è sul KPI, e segnarci l'Actual Production farebbe riscrivere tutto il valore al
+     prossimo «Sincronizza». */
+
+function _cpGsCampoCommessa() { return cpCampoProduzione(_cpGs.riga ? _cpGs.riga.commessa : ''); }
+function _cpGsProdInRiga() { return _cpGsCampoCommessa() === CP_CAMPO_AP; }
 
 function _cpGsKmLocale() {
+  if (!_cpGsProdInRiga()) return null;   // il Km/Cad della riga è KPI_Quantità lavorata, non Actual Production
   const R = _cpGs.riga, cell = R && _cpData[R.cpk];
   const v = cell && cell.km_by_ticket ? Number(cell.km_by_ticket[_cpGs.key]) : NaN;
   return isFinite(v) && v > 0 ? v : null;
@@ -28034,7 +28042,7 @@ async function _cpGsLeggiProd() {
   G.prod = { caricando: true, t0: Date.now() };
   _cpGsRender();
   try { await cpCampoProdLoad(); } catch (_) { /* resta il campo di default */ }
-  const campo = cpCampoProduzione(G.riga ? G.riga.commessa : '');
+  const campo = CP_CAMPO_AP;   // il campo che il validatore verso DONE controlla
   const r = await _cpCwInvocaProd({ reads: [{ issueKey: key, campo }] });
   if (!G.aperto || G.key !== key) return;
   if (r.errore) G.prod = { errore: r.errore, campo };
@@ -28056,14 +28064,15 @@ function _cpGsProdHtml() {
       '<button type="button" onclick="_cpGsLeggiProd()" class="underline">riprova a leggerla</button>.');
   }
   if (P.valore > 0) return box('background:#f0fdf4;color:#166534;', '✓ Produzione su Jira: <b>' + esc(String(P.valore)) + '</b> («' + esc(P.campo) + '»): si può chiudere in DONE.');
-  const loc = _cpGsKmLocale();
+  const loc = _cpGsKmLocale(), inRiga = _cpGsProdInRiga();
   return box('background:#fffbeb;color:#92400e;',
-    'Su Jira manca la produzione («' + esc(P.campo) + '»): senza, Jira non lo chiude in DONE e si ferma in IN PENDING.' +
+    'Su Jira manca l\'<b>' + esc(P.campo) + '</b>: senza, Jira non lo chiude in DONE e si ferma in IN PENDING.' +
     (loc ? ' In Controllo Produzione c\'è già <b>' + esc(String(loc)) + '</b> per questo ticket.' : '') +
+    (inRiga ? '' : ' La produzione di questa commessa resta su «' + esc(_cpGsCampoCommessa()) + '»: qui si scrive solo l\'' + esc(P.campo) + ' per poterlo chiudere.') +
     '<div class="flex flex-wrap items-center gap-2 mt-2" style="color:#334155;"><span class="font-semibold">Scrivi su Jira prima di chiuderlo:</span>' +
     '<input type="number" step="0.1" min="0" class="border border-slate-300 rounded px-2 py-1 text-sm bg-white" style="width:90px" ' +
     'value="' + esc(G.prodValore) + '" oninput="cpGsProd(this)">' +
-    '<span class="text-[11px] text-slate-500">vuoto = non scriverla' + (loc ? '' : '; 1 resta «👁 da verificare» e il report la sostituisce') + '</span></div>');
+    '<span class="text-[11px] text-slate-500">vuoto = non scriverla' + (loc || !inRiga ? '' : '; 1 resta «👁 da verificare» e il report la sostituisce') + '</span></div>');
 }
 
 function cpGsProd(el) { _cpGs.prodValore = el.value; cpGsControlla(); }
@@ -28088,6 +28097,8 @@ async function _cpGsScriviProd(val) {
     return { ok: false, testo: 'Produzione non scritta: ' + (w.errore || (w.errors && w.errors[key]) || 'risposta non valida') };
   }
   const testo = 'Produzione ' + val + ' su «' + (ris.campo || P.campo) + '»';
+  // Commessa su KPI_Quantità lavorata: l'Actual Production serve solo a sbloccare DONE, la riga non si tocca
+  if (!_cpGsProdInRiga()) return { ok: true, testo: testo + ' (solo per chiuderlo: la produzione della commessa resta su «' + _cpGsCampoCommessa() + '»)' };
   // Riga del Controllo Produzione: solo se la tabella mostra ancora la settimana aperta
   if (!R || R.anno !== pwAnno || R.week !== pwWeek) return { ok: true, testo: testo + ' (non segnata in Controllo Produzione: riga non trovata)' };
   const cell = _cpData[R.cpk] || (_cpData[R.cpk] = {});
@@ -28972,17 +28983,21 @@ async function _cpCwProduzioneMinima(key) {
   const commessa = v ? v.commessa : C.commessa;
   const cella = v ? v.cella : { squadra: C.squadra, cantiere: '', attivita: '' };
   const ck = commessa + '|||' + cella.squadra + '|||' + nome + '|||' + C.g;
-  const loc = _cpData[ck] && _cpData[ck].km_by_ticket ? _cpData[ck].km_by_ticket[key] : null;
-  if (loc != null) return { esito: 'locale', testo: 'in Controllo Produzione c\'è già un Km/Cad (' + loc + ') per ' + key + ': lo invia «Sincronizza squadra», poi chiudilo con «✎» se è rimasto IN PENDING' };
   await cpCampoProdLoad();
-  const campo = cpCampoProduzione(commessa);
+  // Il validatore verso DONE controlla l'Actual Production, anche sulle commesse che tengono la
+  // produzione su KPI_Quantità lavorata (v18.268.0): lì si scrive solo su Jira, la riga non si tocca
+  // (il suo storico a delta è sul KPI e «Sincronizza» non scrive l'Actual Production).
+  const campo = CP_CAMPO_AP, inRiga = cpCampoProduzione(commessa) === CP_CAMPO_AP;
+  const loc = inRiga && _cpData[ck] && _cpData[ck].km_by_ticket ? _cpData[ck].km_by_ticket[key] : null;
+  if (loc != null) return { esito: 'locale', testo: 'in Controllo Produzione c\'è già un Km/Cad (' + loc + ') per ' + key + ': lo invia «Sincronizza squadra», poi chiudilo con «✎» se è rimasto IN PENDING' };
   const r = await _cpCwInvocaProd({ reads: [{ issueKey: key, campo }] });
   if (r.errore) return { esito: 'errore', testo: 'produzione non letta: ' + r.errore };
   const val = Number((r.values || {})[key]);
-  if (isFinite(val) && val > 0) return { esito: 'gia', testo: 'produzione già su Jira (' + val + ')' };
+  if (isFinite(val) && val > 0) return { esito: 'gia', testo: 'Actual Production già su Jira (' + val + ')' };
   const w = await _cpCwInvocaProd({ updates: [{ issueKey: key, add: 1, campo }] });
   const ris = w.results && w.results[key];
   if (w.errore || !ris || !ris.ok) return { esito: 'errore', testo: 'produzione non scritta: ' + (w.errore || (w.errors && w.errors[key]) || 'risposta non valida') };
+  if (!inRiga) return { esito: 'scritto', testo: 'Actual Production messa a 1 per poterlo chiudere (la produzione della commessa resta su «' + cpCampoProduzione(commessa) + '»)' };
   const cell = _cpData[ck] || (_cpData[ck] = {});
   if (!cell.km_by_ticket || typeof cell.km_by_ticket !== 'object') cell.km_by_ticket = {};
   if (!cell.km_last_by_ticket || typeof cell.km_last_by_ticket !== 'object') cell.km_last_by_ticket = {};
@@ -39568,7 +39583,7 @@ HELP_TEXTS['cpGsAggiungi'] = 'Aggiunge un tratto di lavoro (inizio e fine) per q
 HELP_TEXTS['cpGsElimina'] = 'Segna questo worklog da eliminare su Jira (clic di nuovo per tenerlo). Viene eliminato solo con «Applica su Jira».';
 HELP_TEXTS['cpGsTogli'] = 'Toglie questo tratto nuovo dalla finestra: non è ancora su Jira.';
 HELP_TEXTS['cpGsVoluto'] = 'Stato in cui portare il sottotask: IN PROGRESS (al lavoro), IN PENDING (in pausa) o DONE (finito), oppure lasciarlo com\'è. Si va in avanti, più il ritorno da IN PENDING a IN PROGRESS (ripresa dopo la pausa); un DONE da qui non si riapre. Da IN PROGRESS Jira registra da solo il tempo da adesso a quando l\'operatore lo sposta: le ore fatte prima scrivile come tratti. Per DONE Jira vuole l\'Actual Production: se manca, sotto compare il campo per scriverla (di default 1), altrimenti si ferma in IN PENDING.';
-HELP_TEXTS['_cpGsLeggiProd'] = 'Rilegge da Jira la produzione del sottotask (Actual Production, o KPI_Quantità lavorata per le commesse col campo nuovo), per sapere se si può chiudere in DONE. Solo lettura.';
+HELP_TEXTS['_cpGsLeggiProd'] = 'Rilegge da Jira l\'Actual Production del sottotask, il campo che Jira vuole maggiore di 0 per chiuderlo in DONE (anche sulle commesse che tengono la produzione su KPI_Quantità lavorata). Solo lettura.';
 HELP_TEXTS['cpTlWlSalva'] = 'Scrive su Jira il worklog con il giorno e gli orari indicati (ora italiana), dopo una conferma che mostra prima e dopo. La stima residua del ticket non cambia. Se nel frattempo qualcuno ha modificato lo stesso worklog su Jira, non tocca nulla e rilegge l\'operatore.\n\nPoi rilegge da Jira i worklog della settimana dell\'operatore e ridisegna la timeline. La colonna «Ore Jira» del Controllo Produzione si aggiorna con «🔄 Sincronizza da Jira». Ogni modifica resta nel log attività con chi l\'ha fatta.\n\nAutore su Jira: un worklog aggiunto risulta a nome dell\'assegnatario del sottotask; uno corretto tiene il suo autore, tranne quelli inseriti dall\'app a nome dell\'account di servizio, che passano all\'assegnatario (per sistemarne uno basta aprirlo e salvarlo senza cambiare nulla).';
 HELP_TEXTS['cpTlWlElimina'] = 'Elimina questo worklog da Jira, dopo una conferma: le sue ore spariscono dal ticket. Da qui non si può annullare; per rimetterlo bisogna aggiungerlo di nuovo con «＋». L\'eliminazione resta nel log attività con chi l\'ha fatta.';
 HELP_TEXTS['cpTlEsportaPdf'] = 'Scarica un PDF in A4 orizzontale con la vista attuale: il giorno o la settimana scelti, con i filtri applicati. Contiene le barre orarie con inizio, fine, totale e pause di ogni operatore. In fondo c\'è l\'elenco dei worklog con ticket, orari, durata e commento. Nel PDF segmenti e ticket sono cliccabili e aprono Jira; le commesse non in dashboard sono in rosso.\n\nNell\'intestazione indica da dove vengono i worklog e quando sono stati letti. Non invia nulla.';

@@ -141,14 +141,22 @@ async function _cpGsCarica() {
 }
 
 /* ---------- Produzione (per DONE) ----------
-   Jira chiude in DONE solo con la produzione del sottotask > 0 (Actual Production, o KPI_Quantità
-   lavorata per le commesse col campo nuovo). Se manca, la finestra propone di scriverla prima del
-   cambio di stato (default: il Km/Cad già in Controllo Produzione per questo ticket, altrimenti 1),
-   con lo stesso canale e modello a delta di «Sincronizza» (jira-update-production, Task padre
-   allineato). Il valore va anche nella riga del Controllo Produzione: 1 come segnaposto letto da
-   Jira (fonte 'jira', «👁 da verificare», il report lo sostituisce), un altro valore come manuale. */
+   Jira chiude in DONE solo con l'ACTUAL PRODUCTION del sottotask > 0: è quello il campo che blocca
+   la transizione, anche sulle commesse che tengono la produzione su KPI_Quantità lavorata (v18.268.0).
+   Se manca, la finestra propone di scriverla prima del cambio di stato, con lo stesso canale di
+   «Sincronizza» (jira-update-production, delta, Task padre allineato).
+   - Commessa su Actual Production: default il Km/Cad già in Controllo Produzione per questo ticket,
+     altrimenti 1; il valore va anche nella riga (1 = segnaposto letto da Jira, fonte 'jira',
+     «👁 da verificare», il report lo sostituisce; un altro valore = manuale).
+   - Commessa su KPI_Quantità lavorata: default 1, solo su Jira. La riga non si tocca: il suo storico
+     a delta è sul KPI, e segnarci l'Actual Production farebbe riscrivere tutto il valore al
+     prossimo «Sincronizza». */
+
+function _cpGsCampoCommessa() { return cpCampoProduzione(_cpGs.riga ? _cpGs.riga.commessa : ''); }
+function _cpGsProdInRiga() { return _cpGsCampoCommessa() === CP_CAMPO_AP; }
 
 function _cpGsKmLocale() {
+  if (!_cpGsProdInRiga()) return null;   // il Km/Cad della riga è KPI_Quantità lavorata, non Actual Production
   const R = _cpGs.riga, cell = R && _cpData[R.cpk];
   const v = cell && cell.km_by_ticket ? Number(cell.km_by_ticket[_cpGs.key]) : NaN;
   return isFinite(v) && v > 0 ? v : null;
@@ -159,7 +167,7 @@ async function _cpGsLeggiProd() {
   G.prod = { caricando: true, t0: Date.now() };
   _cpGsRender();
   try { await cpCampoProdLoad(); } catch (_) { /* resta il campo di default */ }
-  const campo = cpCampoProduzione(G.riga ? G.riga.commessa : '');
+  const campo = CP_CAMPO_AP;   // il campo che il validatore verso DONE controlla
   const r = await _cpCwInvocaProd({ reads: [{ issueKey: key, campo }] });
   if (!G.aperto || G.key !== key) return;
   if (r.errore) G.prod = { errore: r.errore, campo };
@@ -181,14 +189,15 @@ function _cpGsProdHtml() {
       '<button type="button" onclick="_cpGsLeggiProd()" class="underline">riprova a leggerla</button>.');
   }
   if (P.valore > 0) return box('background:#f0fdf4;color:#166534;', '✓ Produzione su Jira: <b>' + esc(String(P.valore)) + '</b> («' + esc(P.campo) + '»): si può chiudere in DONE.');
-  const loc = _cpGsKmLocale();
+  const loc = _cpGsKmLocale(), inRiga = _cpGsProdInRiga();
   return box('background:#fffbeb;color:#92400e;',
-    'Su Jira manca la produzione («' + esc(P.campo) + '»): senza, Jira non lo chiude in DONE e si ferma in IN PENDING.' +
+    'Su Jira manca l\'<b>' + esc(P.campo) + '</b>: senza, Jira non lo chiude in DONE e si ferma in IN PENDING.' +
     (loc ? ' In Controllo Produzione c\'è già <b>' + esc(String(loc)) + '</b> per questo ticket.' : '') +
+    (inRiga ? '' : ' La produzione di questa commessa resta su «' + esc(_cpGsCampoCommessa()) + '»: qui si scrive solo l\'' + esc(P.campo) + ' per poterlo chiudere.') +
     '<div class="flex flex-wrap items-center gap-2 mt-2" style="color:#334155;"><span class="font-semibold">Scrivi su Jira prima di chiuderlo:</span>' +
     '<input type="number" step="0.1" min="0" class="border border-slate-300 rounded px-2 py-1 text-sm bg-white" style="width:90px" ' +
     'value="' + esc(G.prodValore) + '" oninput="cpGsProd(this)">' +
-    '<span class="text-[11px] text-slate-500">vuoto = non scriverla' + (loc ? '' : '; 1 resta «👁 da verificare» e il report la sostituisce') + '</span></div>');
+    '<span class="text-[11px] text-slate-500">vuoto = non scriverla' + (loc || !inRiga ? '' : '; 1 resta «👁 da verificare» e il report la sostituisce') + '</span></div>');
 }
 
 function cpGsProd(el) { _cpGs.prodValore = el.value; cpGsControlla(); }
@@ -213,6 +222,8 @@ async function _cpGsScriviProd(val) {
     return { ok: false, testo: 'Produzione non scritta: ' + (w.errore || (w.errors && w.errors[key]) || 'risposta non valida') };
   }
   const testo = 'Produzione ' + val + ' su «' + (ris.campo || P.campo) + '»';
+  // Commessa su KPI_Quantità lavorata: l'Actual Production serve solo a sbloccare DONE, la riga non si tocca
+  if (!_cpGsProdInRiga()) return { ok: true, testo: testo + ' (solo per chiuderlo: la produzione della commessa resta su «' + _cpGsCampoCommessa() + '»)' };
   // Riga del Controllo Produzione: solo se la tabella mostra ancora la settimana aperta
   if (!R || R.anno !== pwAnno || R.week !== pwWeek) return { ok: true, testo: testo + ' (non segnata in Controllo Produzione: riga non trovata)' };
   const cell = _cpData[R.cpk] || (_cpData[R.cpk] = {});

@@ -511,17 +511,21 @@ async function _cpCwProduzioneMinima(key) {
   const commessa = v ? v.commessa : C.commessa;
   const cella = v ? v.cella : { squadra: C.squadra, cantiere: '', attivita: '' };
   const ck = commessa + '|||' + cella.squadra + '|||' + nome + '|||' + C.g;
-  const loc = _cpData[ck] && _cpData[ck].km_by_ticket ? _cpData[ck].km_by_ticket[key] : null;
-  if (loc != null) return { esito: 'locale', testo: 'in Controllo Produzione c\'è già un Km/Cad (' + loc + ') per ' + key + ': lo invia «Sincronizza squadra», poi chiudilo con «✎» se è rimasto IN PENDING' };
   await cpCampoProdLoad();
-  const campo = cpCampoProduzione(commessa);
+  // Il validatore verso DONE controlla l'Actual Production, anche sulle commesse che tengono la
+  // produzione su KPI_Quantità lavorata (v18.268.0): lì si scrive solo su Jira, la riga non si tocca
+  // (il suo storico a delta è sul KPI e «Sincronizza» non scrive l'Actual Production).
+  const campo = CP_CAMPO_AP, inRiga = cpCampoProduzione(commessa) === CP_CAMPO_AP;
+  const loc = inRiga && _cpData[ck] && _cpData[ck].km_by_ticket ? _cpData[ck].km_by_ticket[key] : null;
+  if (loc != null) return { esito: 'locale', testo: 'in Controllo Produzione c\'è già un Km/Cad (' + loc + ') per ' + key + ': lo invia «Sincronizza squadra», poi chiudilo con «✎» se è rimasto IN PENDING' };
   const r = await _cpCwInvocaProd({ reads: [{ issueKey: key, campo }] });
   if (r.errore) return { esito: 'errore', testo: 'produzione non letta: ' + r.errore };
   const val = Number((r.values || {})[key]);
-  if (isFinite(val) && val > 0) return { esito: 'gia', testo: 'produzione già su Jira (' + val + ')' };
+  if (isFinite(val) && val > 0) return { esito: 'gia', testo: 'Actual Production già su Jira (' + val + ')' };
   const w = await _cpCwInvocaProd({ updates: [{ issueKey: key, add: 1, campo }] });
   const ris = w.results && w.results[key];
   if (w.errore || !ris || !ris.ok) return { esito: 'errore', testo: 'produzione non scritta: ' + (w.errore || (w.errors && w.errors[key]) || 'risposta non valida') };
+  if (!inRiga) return { esito: 'scritto', testo: 'Actual Production messa a 1 per poterlo chiudere (la produzione della commessa resta su «' + cpCampoProduzione(commessa) + '»)' };
   const cell = _cpData[ck] || (_cpData[ck] = {});
   if (!cell.km_by_ticket || typeof cell.km_by_ticket !== 'object') cell.km_by_ticket = {};
   if (!cell.km_last_by_ticket || typeof cell.km_last_by_ticket !== 'object') cell.km_last_by_ticket = {};
