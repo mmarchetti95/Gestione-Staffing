@@ -114,6 +114,9 @@ Limite noto: il progetto Supabase è sul piano **Free**, che non include backup 
 
 ## Changelog
 
+## v18.269.0
+- feat: **Controllo anomalie: giorni con più di 8 ore in MySond.** Nuova linguetta «⏰ Più di 8 h in MySond»: segnala ogni giorno in cui un operatore ha segnato in MySond più di 8 ore in tutto (somma di tutte le voci, su tutte le commesse, viaggio e ore non lavorate compresi), anche chi quel giorno non è in Griglia. La scheda mostra le singole voci MySond e, accanto, le ore Jira del giorno. Priorità «da verificare» da 2 ore oltre le 8. «📄 Esporta PDF» su questa linguetta (o su «Tutte») raggruppa le giornate per squadra della Griglia, chi non era in Griglia in fondo, con una riga per ogni inserimento MySond (commessa, voce, attività, descrizione, ore); «📋 Copia elenco» riporta le stesse voci. Serve aver caricato le ore MySond della settimana. Nessuna modifica a Supabase o alle Edge Function.
+
 ## v18.268.0
 - fix: **Per chiudere in DONE si scrive l'Actual Production, anche sulle commesse col KPI.** Il campo che blocca il passaggio in DONE è l'Actual Production, anche sulle commesse che tengono la produzione su «KPI_Quantità lavorata» (SINFI). Il «✎ Sistema sottotask» e la «⧉ Copia worklog» ora leggono e scrivono sempre l'Actual Production per sbloccare DONE (prima, sulle commesse col KPI, scrivevano il KPI e il sottotask restava in IN PENDING). Sulle commesse col KPI quel valore resta solo su Jira (sul Task padre l'Actual Production sale dello stesso valore, come con «Sincronizza»): la riga del Controllo Produzione non si tocca, la produzione vera continua ad andare su «KPI_Quantità lavorata» con «Sincronizza». Sulle commesse con Actual Production non cambia nulla. **Edge Function `jira-worklog-edit` aggiornata**: prima di DONE controlla solo l'Actual Production (un KPI già compilato non basta più a farle tentare la chiusura), e se manca il messaggio rimanda al campo del «✎». Nessuna modifica allo schema Supabase.
 

@@ -2138,7 +2138,7 @@
       </span>
       <button id="btn-presentation" class="px-3 py-1.5 text-sm rounded hover:bg-white/10" style="border:1px solid var(--dark-border-strong);color:var(--dark-text);visibility:visible;">📊 Modalità presentazione</button>
       <div class="text-xs pl-2" style="border-left:1px solid var(--dark-border-strong);color:var(--dark-text-muted);">
-        <span id="app-version" class="font-medium" style="color:var(--accent);">v18.268.0</span> · Michele Marchetti
+        <span id="app-version" class="font-medium" style="color:var(--accent);">v18.269.0</span> · Michele Marchetti
         <span id="sb-role-badge" style="margin-left:8px;padding:1px 8px;border-radius:9999px;background:rgba(255,255,255,.1);color:var(--dark-text);font-weight:600;"></span>
       </div>
     </div>
@@ -24252,6 +24252,8 @@ const CPA_TIPI = {
     descrizione: 'Operatori della stessa squadra, nello stesso giorno, con ore Jira diverse.' },
   mysond_diverso:               { icona: '🧾', etichetta: 'Jira diverso da MySond',
     descrizione: 'Ore Jira del giorno diverse dalle ore lavorate in MySond. Viaggio e ore non lavorate non vanno su Jira: Jira è in regola fra le ore di lavoro senza viaggio e quelle con il viaggio.' },
+  mysond_oltre_giornata:        { icona: '⏰', etichetta: 'Più di 8 h in MySond',
+    descrizione: 'Giorni in cui l\'operatore ha segnato in MySond più di 8 ore in tutto (lavoro, viaggio e ore non lavorate di tutte le commesse), con le singole voci inserite.' },
   ore_scoperte_maltempo:        { icona: '🌧', etichetta: 'Ore scoperte con maltempo',
     descrizione: 'Giornate pianificate con meno ore Jira di una giornata piena e probabile maltempo sul cantiere nelle ore di lavoro (pioggia osservata ora per ora, allerta Protezione Civile). Sulle altre anomalie con meno ore il maltempo compare come segnalazione aggiuntiva.' },
 };
@@ -24262,6 +24264,8 @@ const CPA_SOGLIE_DEFAULT = {
   diffOreAlta: 3,       // scarto da cui la gravità passa a "media"
   diffOreMysond: 0.5,   // scarto (h) fra Jira e MySond oltre cui segnalare
   oreGiornata: 8,       // giornata piena attesa su Jira, per le ore scoperte
+  oreMaxMysond: 8,      // ore MySond del giorno oltre cui segnalare (somma di tutte le voci)
+  diffOreMysondAlta: 2, // ore oltre il massimo da cui la gravità passa a "media"
 };
 
 /* Fascia di lavoro per il maltempo: ore di inizio degli slot orari 8..16 (8:00-17:00) */
@@ -24646,6 +24650,56 @@ function _cpaControllaMysond(input, out, perOpGiorno, wl, ore) {
   });
 }
 
+/* ---------- 6) Più di 8 ore segnate in MySond ---------- */
+
+/* Somma di TUTTE le voci MySond del giorno (lavoro, viaggio, non lavorate): è quello che
+   l'operatore ha segnato. Non serve Jira: si valuta ogni operatore con ore MySond nella
+   settimana, anche chi non è in Griglia (squadra vuota). Le ore Jira, se lette, si
+   mostrano solo per confronto. */
+function _cpaControllaMysondOltre(input, out) {
+  if (!input.mysond) return;
+  const S = input.soglie;
+  const perOpGiorno = {};
+  (input.celle || []).forEach(c => {
+    if (c.ferie) return;
+    const k = c.operatore + '|||' + c.giorno;
+    (perOpGiorno[k] = perOpGiorno[k] || []).push(c);
+  });
+  Object.keys(input.mysond).forEach(op => {
+    for (let g = 0; g < 6; g++) {
+      const rec = (input.mysond[op] || {})[g];
+      if (!rec) continue;
+      const m = cpaMysondRipartisci(rec);
+      if (!(m.totale > S.oreMaxMysond + 1e-9)) continue;
+      const oltre = Math.round((m.totale - S.oreMaxMysond) * 100) / 100;
+      const celle = perOpGiorno[op + '|||' + g] || [];
+      const squadre = [...new Set(celle.map(c => c.commessa + '|||' + c.squadra))];
+      const cantieri = [...new Set(celle.flatMap(_cpaCantieriCella))];
+      const d = input.worklog ? ((input.worklog[op] || {})[g] || null) : null;
+      const verificato = !!input.worklog && (input.verificati || []).includes(op);
+      out.push({
+        id: _cpaId('mysond_oltre_giornata', input, [op, g]),
+        tipo: 'mysond_oltre_giornata',
+        gravita: oltre >= S.diffOreMysondAlta - 1e-9 ? 'media' : 'bassa',
+        commessa: celle.length ? celle[0].commessa : '', squadra: celle.length ? celle[0].squadra : '',
+        operatore: op, giorno: g, cpKey: celle.length ? celle[0].cpKey : null, cantiere: cantieri.join(', '),
+        titolo: op + ' ha segnato ' + _cpaFmt(m.totale) + ' h in MySond (+' + _cpaFmt(oltre) + ' h oltre le ' + _cpaFmt(S.oreMaxMysond) + ')',
+        dettaglio: 'MySond: ' + m.voci.length + (m.voci.length === 1 ? ' inserimento' : ' inserimenti') + ', ' + _cpaFmt(m.lavoro) + ' h di lavoro' +
+          (m.viaggio > 0 ? ', ' + _cpaFmt(m.viaggio) + ' h di viaggio' : '') +
+          (m.nonLavorate > 0 ? ', ' + _cpaFmt(m.nonLavorate) + ' h non lavorate' : '') + '.' +
+          (verificato ? ' Jira: ' + _cpaFmt(d ? (_cpaNum(d.hours) || 0) : 0) + ' h.' : ''),
+        correzione: 'Verificare con ' + op + ' gli inserimenti MySond del giorno: ore duplicate, voce sul giorno sbagliato o straordinario da giustificare.',
+        confronto: { mysond: m, soglia: S.oreMaxMysond, oltre, squadre: squadre.map(k => { const p = k.split('|||'); return { commessa: p[0], squadra: p[1] }; }),
+          oreJira: verificato ? (d ? (_cpaNum(d.hours) || 0) : 0) : null,
+          jira: verificato && d ? _cpaTicketJira(input, d.tickets) : [],
+          griglia: celle.flatMap(c => (c.voci || []).map(v => ({ commessa: c.commessa, squadra: c.squadra, cantiere: v.cantiere, attivita: v.attivita || '', subtask: v.subtask }))) },
+        azione: null,
+        link: [],
+      });
+    }
+  });
+}
+
 /* ---------- Maltempo nelle ore scoperte ---------- */
 
 /* Open-Meteo dà la pioggia "dell'ora precedente": il valore delle 10:00 è quella caduta
@@ -24807,6 +24861,7 @@ function cpaRileva(input) {
     const coperti = _cpaAnnotaMeteo(inp, out, nonVerificabili);
     _cpaControllaMaltempo(inp, out, perOpGiorno, wl, ore, coperti, nonVerificabili);
   }
+  _cpaControllaMysondOltre(inp, out);
   const ordTipo = Object.keys(CPA_TIPI);
   out.sort((a, b) =>
     (a.giorno - b.giorno) ||
@@ -24883,6 +24938,8 @@ function cpaTestoCorrezioni(anomalie, giorniLabel, intestazione) {
     lista.forEach(a => {
       righe.push('- ' + (giorniLabel[a.giorno] || '') + ' · ' + [a.commessa, a.squadra].filter(Boolean).join(' / ') + ' · ' + a.titolo);
       righe.push('  ' + a.dettaglio);
+      if (a.tipo === 'mysond_oltre_giornata') a.confronto.mysond.voci.forEach(v => righe.push('    · ' + _cpaFmt(v.ore) + ' h ' +
+        [v.commessa, v.voce, v.attivita, v.descrizione].filter(Boolean).join(' · ') + (v.tipo === 'viaggio' ? ' (viaggio)' : v.tipo === 'non_lavorate' ? ' (non lavorate)' : '')));
       righe.push('  ' + a.correzione);
       if (a.meteo && a.meteo.testo && a.tipo !== 'ore_scoperte_maltempo') righe.push('  ' + a.meteo.testo);
     });
@@ -25681,6 +25738,14 @@ function _cpaCorpo(a, r) {
         (C.jira || []).map(t => _cpaTicketJ(t, false)).join(''),
       '🧾 In MySond');
   }
+  if (a.tipo === 'mysond_oltre_giornata') {
+    const tot = '<div class="text-sm font-semibold mb-1" style="color:#b91c1c;">' + _cpaH(C.mysond.totale) + ' segnate in tutto' +
+      ' <span class="text-xs font-normal text-slate-500">(+' + _cpaH(C.oltre) + ' oltre le ' + _cpaH(C.soglia) + ')</span></div>';
+    const jira = C.oreJira == null
+      ? '<div class="text-xs text-slate-400">Ore Jira non lette per questo operatore.</div>'
+      : '<div class="text-sm font-semibold text-slate-800 mb-1">' + _cpaH(C.oreJira) + ' registrate</div>' + (C.jira || []).map(t => _cpaTicketJ(t, false)).join('');
+    return _cpaConfronto(tot + _cpaMysondColonna(C), jira, '🧾 In MySond');
+  }
   if (a.tipo === 'ore_scoperte_maltempo') {
     return _cpaConfronto(
       (C.griglia || []).map(v => _cpaVoceG(v)).join(''),
@@ -25746,7 +25811,8 @@ function _cpaSchedaHtml(a, r, ignorata) {
   const G = CPA_GRAVITA[a.gravita] || CPA_GRAVITA.bassa;
   const dove = a.tipo === 'worklog_senza_pianificazione' ? '' : [a.commessa, a.squadra, a.cantiere].filter(Boolean).map(_cpaS).join(' · ');
   const inRic = _cpa.ricontrollo === a.id;
-  let bottoni = ignorata ? '' : '<button type="button" onclick="cpaRicontrollaVoce(this)" class="text-xs px-2 py-0.5 border rounded bg-white hover:bg-amber-50" style="border-color:#fcd34d;color:#b45309;' +
+  /* Le ore MySond non vengono da Jira: rileggere Jira non cambia l'esito (si ricarica con 📥 Carica MySond) */
+  let bottoni = (ignorata || a.tipo === 'mysond_oltre_giornata') ? '' : '<button type="button" onclick="cpaRicontrollaVoce(this)" class="text-xs px-2 py-0.5 border rounded bg-white hover:bg-amber-50" style="border-color:#fcd34d;color:#b45309;' +
     (_cpa.ricontrollo && !inRic ? 'opacity:.5;' : '') + '"' + (_cpa.ricontrollo ? ' disabled' : '') +
     ' title="Rilegge da Jira solo le ore di ' + _cpaS(_cpaOperatoriDi(a).join(', ')) + ' e ricalcola (dopo una correzione fatta su Jira)">' +
     (inRic ? '⏳ Ricontrollo…' : '↻ Ricontrolla') + '</button>';
@@ -25870,7 +25936,7 @@ function _cpaListaHtml(r, attive, ign) {
   const note = [
     r.nOperatori + ' operatori controllati su Jira, ' + valutati + '.',
     nv.epicSenzaSottotask ? nv.epicSenzaSottotask + ' giornate con ore ma senza sottotask in Griglia: Epic non confrontabile.' : '',
-    r.mysondCaricato ? '' : 'Ore MySond non caricate per questa settimana: confronto Jira/MySond non fatto (📥 Carica MySond nel Controllo Produzione).',
+    r.mysondCaricato ? '' : 'Ore MySond non caricate per questa settimana: confronto Jira/MySond e giornate oltre le 8 h non controllati (📥 Carica MySond nel Controllo Produzione).',
     nv.meteoMancante ? nv.meteoMancante + ' giornate con ore scoperte senza dati meteo (cantiere non localizzato o storico meteo ancora in recupero): maltempo non valutato.' : '',
   ].concat(r.avvisi).filter(Boolean);
   let html = '';
@@ -26530,7 +26596,80 @@ function _cpaPdfSoglia(tipo) {
   const p = _cpaPref();
   if (tipo === 'ore_squadra') return 'Scarto minimo segnalato: ' + _cpaPdfH(Number(p.diffOreSquadra)) + '.';
   if (tipo === 'mysond_diverso') return 'Scarto minimo segnalato: ' + _cpaPdfH(Number(p.diffOreMysond)) + '.';
+  if (tipo === 'mysond_oltre_giornata') return 'Raggruppate per squadra della Griglia quel giorno, con ogni inserimento MySond della giornata.';
   return '';
+}
+
+/* "Più di 8 h in MySond": non una riga per anomalia ma un blocco per squadra (commessa /
+   squadra della Griglia quel giorno; chi non era in Griglia va in fondo) e, per ogni
+   operatore+giorno, una riga per inserimento MySond. Giorno, operatore, totale e Jira
+   occupano tutte le righe dei suoi inserimenti (rowSpan). Restituisce la nuova y. */
+const CPA_PDF_MS_TIPO = { viaggio: ' [viaggio]', non_lavorate: ' [non lavorate]', lavoro: '' };
+
+function _cpaPdfSezioneOltre(doc, voci, r, y, M, pageH) {
+  const SENZA = '';   // chi quel giorno non è in Griglia: blocco in fondo
+  const gruppi = {};
+  voci.forEach(a => {
+    const sq = ((a.confronto || {}).squadre || [])[0];
+    const k = sq ? sq.commessa + '|||' + sq.squadra : SENZA;
+    (gruppi[k] = gruppi[k] || []).push(a);
+  });
+  Object.keys(gruppi).sort((x, z) => ((x === SENZA) - (z === SENZA)) || x.localeCompare(z)).forEach(k => {
+    const lista = gruppi[k].sort((x, z) => (x.giorno - z.giorno) || x.operatore.localeCompare(z.operatore));
+    const nomeGruppo = k === SENZA ? 'Non in Griglia quel giorno' : k.split('|||').filter(Boolean).join(' / ');
+    if (y > pageH - 35) { doc.addPage(); y = 15; }
+    doc.setFont(undefined, 'bold'); doc.setFontSize(10); doc.setTextColor(15, 118, 110);
+    doc.text(_cpaPdfTxt(nomeGruppo + ' (' + lista.length + (lista.length === 1 ? ' giornata' : ' giornate') + ')'), M, y);
+    y += 2;
+
+    const body = [], grav = [];
+    lista.forEach(a => {
+      const C = a.confronto;
+      const ms = C.mysond.voci.slice().sort((x, z) => (x.tipo === 'lavoro' ? 0 : 1) - (z.tipo === 'lavoro' ? 0 : 1) || z.ore - x.ore);
+      const righe = ms.length ? ms : [{ commessa: '', voce: '(senza dettaglio)', attivita: '', descrizione: '', ore: C.mysond.totale, tipo: 'lavoro' }];
+      const n = righe.length;
+      const altre = (C.squadre || []).slice(1).map(x => x.commessa + ' / ' + x.squadra);
+      const span = v => ({ content: _cpaPdfTxt(v), rowSpan: n });
+      righe.forEach((v, i) => {
+        const celle = [_cpaPdfTxt(v.commessa), _cpaPdfTxt(v.voce), _cpaPdfTxt((v.attivita || '') + CPA_PDF_MS_TIPO[v.tipo]),
+          _cpaPdfTxt(v.descrizione), _cpaPdfTxt(_cpaPdfH(v.ore))];
+        if (i === 0) {
+          body.push([
+            span(r.giorniLabel[a.giorno] || ''),
+            span(a.operatore + (a.cantiere ? '\n' + a.cantiere : '') + (altre.length ? '\nanche in ' + altre.join(', ') : '')),
+            span(_cpaPdfH(C.mysond.totale) + '\n(+' + _cpaPdfH(C.oltre) + ')'),
+          ].concat(celle, [span(C.oreJira == null ? 'non lette' : _cpaPdfH(C.oreJira))]));
+          grav.push(a.gravita);
+        } else {
+          body.push(celle);
+          grav.push(null);
+        }
+      });
+    });
+
+    doc.autoTable({
+      startY: y,
+      head: [['Giorno', 'Operatore / cantiere', 'Totale MySond', 'Commessa MySond', 'Voce', 'Attività', 'Descrizione', 'Ore', 'Jira']],
+      body,
+      styles: { font: 'helvetica', fontSize: 7.6, cellPadding: { top: 1.4, bottom: 1.4, left: 2.4, right: 1.6 }, overflow: 'linebreak', valign: 'top', lineColor: [226, 232, 240], lineWidth: 0.1 },
+      headStyles: { fillColor: [180, 83, 9], textColor: 255, fontStyle: 'bold' },
+      columnStyles: {
+        0: { cellWidth: 18, fontStyle: 'bold' }, 1: { cellWidth: 36 }, 2: { cellWidth: 20, fontStyle: 'bold', textColor: [185, 28, 28] },
+        3: { cellWidth: 38 }, 4: { cellWidth: 38 }, 5: { cellWidth: 36 }, 6: { cellWidth: 'auto' },
+        7: { cellWidth: 13, halign: 'right', fontStyle: 'bold' }, 8: { cellWidth: 17 },
+      },
+      margin: { left: M, right: M, bottom: 14 },
+      didDrawCell: h => {
+        if (h.section !== 'body' || h.column.index !== 0) return;
+        const g = CPA_PDF_GRAVITA[grav[h.row.index]];
+        if (!g) return;
+        doc.setFillColor(g[0], g[1], g[2]);
+        doc.rect(h.cell.x, h.cell.y, 1.1, h.cell.height, 'F');
+      },
+    });
+    y = doc.lastAutoTable.finalY + 7;
+  });
+  return y + 2;
 }
 
 function cpaEsportaPdf() {
@@ -26583,6 +26722,8 @@ function cpaEsportaPdf() {
     const desc = doc.splitTextToSize(_cpaPdfTxt(T.descrizione + ' ' + _cpaPdfSoglia(tipo)), pageW - 2 * M);
     doc.text(desc, M, y);
     y += desc.length * 3.6 + 1;
+
+    if (tipo === 'mysond_oltre_giornata') { y = _cpaPdfSezioneOltre(doc, voci, r, y + 2, M, pageH); return; }
 
     const colonne = CPA_PDF_COLONNE[tipo];
     const head = ['Giorno'].concat(colonne.map(c => c[0]), ['Correzione proposta']);
@@ -39555,6 +39696,8 @@ HELP_TEXTS['cpaFiltro:epic_diverso'] = 'Controlla se in un giorno l\'operatore h
 HELP_TEXTS['cpaFiltro:ore_squadra'] = 'Confronta le ore Jira del giorno tra gli operatori della stessa commessa e squadra. Segnala chi ha almeno lo «scarto minimo» in meno del collega con più ore: la soglia si regola nella barra sotto ed è 1 h se non la cambi. Non vengono confrontati chi ha zero ore (è già tra i «Pianificati senza worklog») e chi quel giorno è su più squadre.\n\nSe l\'operatore ha davvero lavorato meno, ad esempio per un permesso, non c\'è nulla da correggere. Gli operatori segnalati entrano in «✉️ Prepara solleciti».';
 // 🧾 Jira diverso da MySond
 HELP_TEXTS['cpaFiltro:mysond_diverso'] = 'Confronta il totale delle ore Jira del giorno con le ore MySond. Viaggio e ore non lavorate di norma non vanno su Jira. Per questo Jira è in regola se sta tra le ore di lavoro senza viaggio e quelle con il viaggio, con una tolleranza pari allo «scarto minimo» (0,5 h se non lo cambi).\n\nFunziona solo se le ore MySond della settimana sono caricate con «📥 Carica MySond» in Controllo Produzione; altrimenti il confronto non viene fatto. Quando Jira ha meno ore, l\'operatore entra in «✉️ Prepara solleciti».';
+// ⏰ Più di 8 h in MySond
+HELP_TEXTS['cpaFiltro:mysond_oltre_giornata'] = 'Segnala i giorni in cui un operatore ha segnato in MySond più di 8 ore in tutto: somma di tutte le voci del giorno, su tutte le commesse, viaggio e ore non lavorate compresi. Ogni scheda mostra le singole voci inserite e, se lette, le ore Jira dello stesso giorno. Vale anche per chi quel giorno non è in Griglia.\n\nFunziona solo se le ore MySond della settimana sono caricate con «📥 Carica MySond» in Controllo Produzione. Il controllo non corregge nulla: le ore vanno verificate con l\'operatore e sistemate in MySond.\n\nCon questa linguetta, «📄 Esporta PDF» raggruppa le giornate per squadra della Griglia (chi non era in Griglia va in fondo) e riporta ogni inserimento MySond: commessa, voce, attività, descrizione e ore.';
 // 🌧 Ore scoperte con maltempo
 HELP_TEXTS['cpaFiltro:ore_scoperte_maltempo'] = 'Segnala le giornate pianificate in cui le ore Jira non arrivano alla giornata piena di 8 h e sul cantiere il maltempo era probabile nelle ore di lavoro, dalle 8 alle 17. Si basa sulla pioggia osservata ora per ora e sulle allerte della Protezione Civile.\n\nServe a riconoscere le ore mancanti dovute al meteo. Controlla solo i giorni passati e i cantieri localizzati. Sulle altre anomalie con poche ore, il maltempo compare come etichetta in più.';
 // ⚖️ scarto minimo

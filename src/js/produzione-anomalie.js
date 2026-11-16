@@ -790,6 +790,14 @@ function _cpaCorpo(a, r) {
         (C.jira || []).map(t => _cpaTicketJ(t, false)).join(''),
       '🧾 In MySond');
   }
+  if (a.tipo === 'mysond_oltre_giornata') {
+    const tot = '<div class="text-sm font-semibold mb-1" style="color:#b91c1c;">' + _cpaH(C.mysond.totale) + ' segnate in tutto' +
+      ' <span class="text-xs font-normal text-slate-500">(+' + _cpaH(C.oltre) + ' oltre le ' + _cpaH(C.soglia) + ')</span></div>';
+    const jira = C.oreJira == null
+      ? '<div class="text-xs text-slate-400">Ore Jira non lette per questo operatore.</div>'
+      : '<div class="text-sm font-semibold text-slate-800 mb-1">' + _cpaH(C.oreJira) + ' registrate</div>' + (C.jira || []).map(t => _cpaTicketJ(t, false)).join('');
+    return _cpaConfronto(tot + _cpaMysondColonna(C), jira, '🧾 In MySond');
+  }
   if (a.tipo === 'ore_scoperte_maltempo') {
     return _cpaConfronto(
       (C.griglia || []).map(v => _cpaVoceG(v)).join(''),
@@ -855,7 +863,8 @@ function _cpaSchedaHtml(a, r, ignorata) {
   const G = CPA_GRAVITA[a.gravita] || CPA_GRAVITA.bassa;
   const dove = a.tipo === 'worklog_senza_pianificazione' ? '' : [a.commessa, a.squadra, a.cantiere].filter(Boolean).map(_cpaS).join(' · ');
   const inRic = _cpa.ricontrollo === a.id;
-  let bottoni = ignorata ? '' : '<button type="button" onclick="cpaRicontrollaVoce(this)" class="text-xs px-2 py-0.5 border rounded bg-white hover:bg-amber-50" style="border-color:#fcd34d;color:#b45309;' +
+  /* Le ore MySond non vengono da Jira: rileggere Jira non cambia l'esito (si ricarica con 📥 Carica MySond) */
+  let bottoni = (ignorata || a.tipo === 'mysond_oltre_giornata') ? '' : '<button type="button" onclick="cpaRicontrollaVoce(this)" class="text-xs px-2 py-0.5 border rounded bg-white hover:bg-amber-50" style="border-color:#fcd34d;color:#b45309;' +
     (_cpa.ricontrollo && !inRic ? 'opacity:.5;' : '') + '"' + (_cpa.ricontrollo ? ' disabled' : '') +
     ' title="Rilegge da Jira solo le ore di ' + _cpaS(_cpaOperatoriDi(a).join(', ')) + ' e ricalcola (dopo una correzione fatta su Jira)">' +
     (inRic ? '⏳ Ricontrollo…' : '↻ Ricontrolla') + '</button>';
@@ -979,7 +988,7 @@ function _cpaListaHtml(r, attive, ign) {
   const note = [
     r.nOperatori + ' operatori controllati su Jira, ' + valutati + '.',
     nv.epicSenzaSottotask ? nv.epicSenzaSottotask + ' giornate con ore ma senza sottotask in Griglia: Epic non confrontabile.' : '',
-    r.mysondCaricato ? '' : 'Ore MySond non caricate per questa settimana: confronto Jira/MySond non fatto (📥 Carica MySond nel Controllo Produzione).',
+    r.mysondCaricato ? '' : 'Ore MySond non caricate per questa settimana: confronto Jira/MySond e giornate oltre le 8 h non controllati (📥 Carica MySond nel Controllo Produzione).',
     nv.meteoMancante ? nv.meteoMancante + ' giornate con ore scoperte senza dati meteo (cantiere non localizzato o storico meteo ancora in recupero): maltempo non valutato.' : '',
   ].concat(r.avvisi).filter(Boolean);
   let html = '';

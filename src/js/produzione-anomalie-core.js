@@ -42,6 +42,8 @@ const CPA_TIPI = {
     descrizione: 'Operatori della stessa squadra, nello stesso giorno, con ore Jira diverse.' },
   mysond_diverso:               { icona: '🧾', etichetta: 'Jira diverso da MySond',
     descrizione: 'Ore Jira del giorno diverse dalle ore lavorate in MySond. Viaggio e ore non lavorate non vanno su Jira: Jira è in regola fra le ore di lavoro senza viaggio e quelle con il viaggio.' },
+  mysond_oltre_giornata:        { icona: '⏰', etichetta: 'Più di 8 h in MySond',
+    descrizione: 'Giorni in cui l\'operatore ha segnato in MySond più di 8 ore in tutto (lavoro, viaggio e ore non lavorate di tutte le commesse), con le singole voci inserite.' },
   ore_scoperte_maltempo:        { icona: '🌧', etichetta: 'Ore scoperte con maltempo',
     descrizione: 'Giornate pianificate con meno ore Jira di una giornata piena e probabile maltempo sul cantiere nelle ore di lavoro (pioggia osservata ora per ora, allerta Protezione Civile). Sulle altre anomalie con meno ore il maltempo compare come segnalazione aggiuntiva.' },
 };
@@ -52,6 +54,8 @@ const CPA_SOGLIE_DEFAULT = {
   diffOreAlta: 3,       // scarto da cui la gravità passa a "media"
   diffOreMysond: 0.5,   // scarto (h) fra Jira e MySond oltre cui segnalare
   oreGiornata: 8,       // giornata piena attesa su Jira, per le ore scoperte
+  oreMaxMysond: 8,      // ore MySond del giorno oltre cui segnalare (somma di tutte le voci)
+  diffOreMysondAlta: 2, // ore oltre il massimo da cui la gravità passa a "media"
 };
 
 /* Fascia di lavoro per il maltempo: ore di inizio degli slot orari 8..16 (8:00-17:00) */
@@ -436,6 +440,56 @@ function _cpaControllaMysond(input, out, perOpGiorno, wl, ore) {
   });
 }
 
+/* ---------- 6) Più di 8 ore segnate in MySond ---------- */
+
+/* Somma di TUTTE le voci MySond del giorno (lavoro, viaggio, non lavorate): è quello che
+   l'operatore ha segnato. Non serve Jira: si valuta ogni operatore con ore MySond nella
+   settimana, anche chi non è in Griglia (squadra vuota). Le ore Jira, se lette, si
+   mostrano solo per confronto. */
+function _cpaControllaMysondOltre(input, out) {
+  if (!input.mysond) return;
+  const S = input.soglie;
+  const perOpGiorno = {};
+  (input.celle || []).forEach(c => {
+    if (c.ferie) return;
+    const k = c.operatore + '|||' + c.giorno;
+    (perOpGiorno[k] = perOpGiorno[k] || []).push(c);
+  });
+  Object.keys(input.mysond).forEach(op => {
+    for (let g = 0; g < 6; g++) {
+      const rec = (input.mysond[op] || {})[g];
+      if (!rec) continue;
+      const m = cpaMysondRipartisci(rec);
+      if (!(m.totale > S.oreMaxMysond + 1e-9)) continue;
+      const oltre = Math.round((m.totale - S.oreMaxMysond) * 100) / 100;
+      const celle = perOpGiorno[op + '|||' + g] || [];
+      const squadre = [...new Set(celle.map(c => c.commessa + '|||' + c.squadra))];
+      const cantieri = [...new Set(celle.flatMap(_cpaCantieriCella))];
+      const d = input.worklog ? ((input.worklog[op] || {})[g] || null) : null;
+      const verificato = !!input.worklog && (input.verificati || []).includes(op);
+      out.push({
+        id: _cpaId('mysond_oltre_giornata', input, [op, g]),
+        tipo: 'mysond_oltre_giornata',
+        gravita: oltre >= S.diffOreMysondAlta - 1e-9 ? 'media' : 'bassa',
+        commessa: celle.length ? celle[0].commessa : '', squadra: celle.length ? celle[0].squadra : '',
+        operatore: op, giorno: g, cpKey: celle.length ? celle[0].cpKey : null, cantiere: cantieri.join(', '),
+        titolo: op + ' ha segnato ' + _cpaFmt(m.totale) + ' h in MySond (+' + _cpaFmt(oltre) + ' h oltre le ' + _cpaFmt(S.oreMaxMysond) + ')',
+        dettaglio: 'MySond: ' + m.voci.length + (m.voci.length === 1 ? ' inserimento' : ' inserimenti') + ', ' + _cpaFmt(m.lavoro) + ' h di lavoro' +
+          (m.viaggio > 0 ? ', ' + _cpaFmt(m.viaggio) + ' h di viaggio' : '') +
+          (m.nonLavorate > 0 ? ', ' + _cpaFmt(m.nonLavorate) + ' h non lavorate' : '') + '.' +
+          (verificato ? ' Jira: ' + _cpaFmt(d ? (_cpaNum(d.hours) || 0) : 0) + ' h.' : ''),
+        correzione: 'Verificare con ' + op + ' gli inserimenti MySond del giorno: ore duplicate, voce sul giorno sbagliato o straordinario da giustificare.',
+        confronto: { mysond: m, soglia: S.oreMaxMysond, oltre, squadre: squadre.map(k => { const p = k.split('|||'); return { commessa: p[0], squadra: p[1] }; }),
+          oreJira: verificato ? (d ? (_cpaNum(d.hours) || 0) : 0) : null,
+          jira: verificato && d ? _cpaTicketJira(input, d.tickets) : [],
+          griglia: celle.flatMap(c => (c.voci || []).map(v => ({ commessa: c.commessa, squadra: c.squadra, cantiere: v.cantiere, attivita: v.attivita || '', subtask: v.subtask }))) },
+        azione: null,
+        link: [],
+      });
+    }
+  });
+}
+
 /* ---------- Maltempo nelle ore scoperte ---------- */
 
 /* Open-Meteo dà la pioggia "dell'ora precedente": il valore delle 10:00 è quella caduta
@@ -597,6 +651,7 @@ function cpaRileva(input) {
     const coperti = _cpaAnnotaMeteo(inp, out, nonVerificabili);
     _cpaControllaMaltempo(inp, out, perOpGiorno, wl, ore, coperti, nonVerificabili);
   }
+  _cpaControllaMysondOltre(inp, out);
   const ordTipo = Object.keys(CPA_TIPI);
   out.sort((a, b) =>
     (a.giorno - b.giorno) ||
@@ -673,6 +728,8 @@ function cpaTestoCorrezioni(anomalie, giorniLabel, intestazione) {
     lista.forEach(a => {
       righe.push('- ' + (giorniLabel[a.giorno] || '') + ' · ' + [a.commessa, a.squadra].filter(Boolean).join(' / ') + ' · ' + a.titolo);
       righe.push('  ' + a.dettaglio);
+      if (a.tipo === 'mysond_oltre_giornata') a.confronto.mysond.voci.forEach(v => righe.push('    · ' + _cpaFmt(v.ore) + ' h ' +
+        [v.commessa, v.voce, v.attivita, v.descrizione].filter(Boolean).join(' · ') + (v.tipo === 'viaggio' ? ' (viaggio)' : v.tipo === 'non_lavorate' ? ' (non lavorate)' : '')));
       righe.push('  ' + a.correzione);
       if (a.meteo && a.meteo.testo && a.tipo !== 'ore_scoperte_maltempo') righe.push('  ' + a.meteo.testo);
     });

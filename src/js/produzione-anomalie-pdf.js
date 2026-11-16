@@ -110,7 +110,80 @@ function _cpaPdfSoglia(tipo) {
   const p = _cpaPref();
   if (tipo === 'ore_squadra') return 'Scarto minimo segnalato: ' + _cpaPdfH(Number(p.diffOreSquadra)) + '.';
   if (tipo === 'mysond_diverso') return 'Scarto minimo segnalato: ' + _cpaPdfH(Number(p.diffOreMysond)) + '.';
+  if (tipo === 'mysond_oltre_giornata') return 'Raggruppate per squadra della Griglia quel giorno, con ogni inserimento MySond della giornata.';
   return '';
+}
+
+/* "Più di 8 h in MySond": non una riga per anomalia ma un blocco per squadra (commessa /
+   squadra della Griglia quel giorno; chi non era in Griglia va in fondo) e, per ogni
+   operatore+giorno, una riga per inserimento MySond. Giorno, operatore, totale e Jira
+   occupano tutte le righe dei suoi inserimenti (rowSpan). Restituisce la nuova y. */
+const CPA_PDF_MS_TIPO = { viaggio: ' [viaggio]', non_lavorate: ' [non lavorate]', lavoro: '' };
+
+function _cpaPdfSezioneOltre(doc, voci, r, y, M, pageH) {
+  const SENZA = '';   // chi quel giorno non è in Griglia: blocco in fondo
+  const gruppi = {};
+  voci.forEach(a => {
+    const sq = ((a.confronto || {}).squadre || [])[0];
+    const k = sq ? sq.commessa + '|||' + sq.squadra : SENZA;
+    (gruppi[k] = gruppi[k] || []).push(a);
+  });
+  Object.keys(gruppi).sort((x, z) => ((x === SENZA) - (z === SENZA)) || x.localeCompare(z)).forEach(k => {
+    const lista = gruppi[k].sort((x, z) => (x.giorno - z.giorno) || x.operatore.localeCompare(z.operatore));
+    const nomeGruppo = k === SENZA ? 'Non in Griglia quel giorno' : k.split('|||').filter(Boolean).join(' / ');
+    if (y > pageH - 35) { doc.addPage(); y = 15; }
+    doc.setFont(undefined, 'bold'); doc.setFontSize(10); doc.setTextColor(15, 118, 110);
+    doc.text(_cpaPdfTxt(nomeGruppo + ' (' + lista.length + (lista.length === 1 ? ' giornata' : ' giornate') + ')'), M, y);
+    y += 2;
+
+    const body = [], grav = [];
+    lista.forEach(a => {
+      const C = a.confronto;
+      const ms = C.mysond.voci.slice().sort((x, z) => (x.tipo === 'lavoro' ? 0 : 1) - (z.tipo === 'lavoro' ? 0 : 1) || z.ore - x.ore);
+      const righe = ms.length ? ms : [{ commessa: '', voce: '(senza dettaglio)', attivita: '', descrizione: '', ore: C.mysond.totale, tipo: 'lavoro' }];
+      const n = righe.length;
+      const altre = (C.squadre || []).slice(1).map(x => x.commessa + ' / ' + x.squadra);
+      const span = v => ({ content: _cpaPdfTxt(v), rowSpan: n });
+      righe.forEach((v, i) => {
+        const celle = [_cpaPdfTxt(v.commessa), _cpaPdfTxt(v.voce), _cpaPdfTxt((v.attivita || '') + CPA_PDF_MS_TIPO[v.tipo]),
+          _cpaPdfTxt(v.descrizione), _cpaPdfTxt(_cpaPdfH(v.ore))];
+        if (i === 0) {
+          body.push([
+            span(r.giorniLabel[a.giorno] || ''),
+            span(a.operatore + (a.cantiere ? '\n' + a.cantiere : '') + (altre.length ? '\nanche in ' + altre.join(', ') : '')),
+            span(_cpaPdfH(C.mysond.totale) + '\n(+' + _cpaPdfH(C.oltre) + ')'),
+          ].concat(celle, [span(C.oreJira == null ? 'non lette' : _cpaPdfH(C.oreJira))]));
+          grav.push(a.gravita);
+        } else {
+          body.push(celle);
+          grav.push(null);
+        }
+      });
+    });
+
+    doc.autoTable({
+      startY: y,
+      head: [['Giorno', 'Operatore / cantiere', 'Totale MySond', 'Commessa MySond', 'Voce', 'Attività', 'Descrizione', 'Ore', 'Jira']],
+      body,
+      styles: { font: 'helvetica', fontSize: 7.6, cellPadding: { top: 1.4, bottom: 1.4, left: 2.4, right: 1.6 }, overflow: 'linebreak', valign: 'top', lineColor: [226, 232, 240], lineWidth: 0.1 },
+      headStyles: { fillColor: [180, 83, 9], textColor: 255, fontStyle: 'bold' },
+      columnStyles: {
+        0: { cellWidth: 18, fontStyle: 'bold' }, 1: { cellWidth: 36 }, 2: { cellWidth: 20, fontStyle: 'bold', textColor: [185, 28, 28] },
+        3: { cellWidth: 38 }, 4: { cellWidth: 38 }, 5: { cellWidth: 36 }, 6: { cellWidth: 'auto' },
+        7: { cellWidth: 13, halign: 'right', fontStyle: 'bold' }, 8: { cellWidth: 17 },
+      },
+      margin: { left: M, right: M, bottom: 14 },
+      didDrawCell: h => {
+        if (h.section !== 'body' || h.column.index !== 0) return;
+        const g = CPA_PDF_GRAVITA[grav[h.row.index]];
+        if (!g) return;
+        doc.setFillColor(g[0], g[1], g[2]);
+        doc.rect(h.cell.x, h.cell.y, 1.1, h.cell.height, 'F');
+      },
+    });
+    y = doc.lastAutoTable.finalY + 7;
+  });
+  return y + 2;
 }
 
 function cpaEsportaPdf() {
@@ -163,6 +236,8 @@ function cpaEsportaPdf() {
     const desc = doc.splitTextToSize(_cpaPdfTxt(T.descrizione + ' ' + _cpaPdfSoglia(tipo)), pageW - 2 * M);
     doc.text(desc, M, y);
     y += desc.length * 3.6 + 1;
+
+    if (tipo === 'mysond_oltre_giornata') { y = _cpaPdfSezioneOltre(doc, voci, r, y + 2, M, pageH); return; }
 
     const colonne = CPA_PDF_COLONNE[tipo];
     const head = ['Giorno'].concat(colonne.map(c => c[0]), ['Correzione proposta']);
