@@ -22742,13 +22742,25 @@ function cpKmJiraGiorniMancanti() {
   document.querySelectorAll('.cp-table tr.cp-tr-day[data-giorno]').forEach(tr => {
     lbl[tr.dataset.sqIdx + '|' + tr.dataset.giorno] = tr.dataset.lbl || '';
   });
+  // Giorno passato senza nessun ticket Jira (nessuno ha lavorato: maltempo, fermo…) e con il report
+  // caricato a 0 ore: nessuna produzione, giorno compilato (non c'è un sottotask su cui segnarlo).
+  const lunedi = isoWeekToMonday(pwAnno, pwWeek);
+  const oggi = new Date();
+  const oggiISO = `${oggi.getFullYear()}-${String(oggi.getMonth() + 1).padStart(2, '0')}-${String(oggi.getDate()).padStart(2, '0')}`;
+  const passato = g => {
+    const d = new Date(lunedi);
+    d.setUTCDate(lunedi.getUTCDate() + Number(g));
+    return d.toISOString().slice(0, 10) < oggiISO;
+  };
   const giorni = {};   // sqKey → g → { righe, senza: [{ nome, motivo }] }
   document.querySelectorAll('.cp-table tr[data-cpk]').forEach(tr => {
     const sq = tr.dataset.sqIdx;
     if (sq == null) return;
     const g = String(tr.dataset.cpk || '').split('|||')[3];
     const badges = tr.querySelectorAll('.cp-kmj');
-    const coperto = [...badges].some(b => b.dataset.haKm === '1');
+    const cell = _cpData[tr.dataset.cpk];
+    const fermo = !badges.length && cell && cell.ore_report != null && Number(cell.ore_report) === 0 && passato(g);
+    const coperto = fermo || [...badges].some(b => b.dataset.haKm === '1');
     if (coperto) delete tr.dataset.kmSenza; else tr.dataset.kmSenza = '1';
     const perG = giorni[sq] || (giorni[sq] = {});
     const d = perG[g] || (perG[g] = { righe: 0, senza: [] });

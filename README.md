@@ -115,6 +115,9 @@ Limite noto: il progetto Supabase è sul piano **Free**, che non include backup 
 ## Changelog
 
 ## v18.264.0
+- fix: **Giorni in cui nessuno ha lavorato non più «ancora da sincronizzare».** Un giorno già passato senza nessun ticket Jira (nessuno ha messo ore: maltempo, fermo…) e con il report caricato a 0 ore conta come compilato nel riepilogo «KM su Jira» della squadra: prima restava «ancora da sincronizzare: Gio 12/11» perché, senza un sottotask letto da Jira, non c'era dove segnare «✓ Nessuna». Nessuna modifica a Supabase o alle Edge Function.
+
+## v18.264.0
 - feat: **Sistema sottotask, si può portare anche IN PROGRESS.** Nel «✎» accanto al badge della colonna Stato del Controllo Produzione, lo «Stato finale» propone ora anche IN PROGRESS (al lavoro): da CREATED/TO DO, per un operatore che sta lavorando senza aver attivato il sottotask, e da IN PENDING, per uno che ha ripreso dopo la pausa senza riattivarlo. Da lì Jira conta il tempo da solo da adesso fino a quando l'operatore lo sposta, quindi le ore fatte prima vanno scritte come tratti nella stessa finestra (la finestra lo ricorda, e avvisa se la riga non è di oggi). Assegnatario rimesso all'operatore dopo la transizione, come per gli altri stati. Un DONE da qui continua a non riaprirsi. **Edge Function `jira-worklog-edit` da ridistribuire** (l'azione `stato` accetta `voluto: "IN PROGRESS"`); nessuna modifica allo schema Supabase.
 
 ## v18.263.0
