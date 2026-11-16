@@ -1619,3 +1619,27 @@ async function cpRereadTicket(ev, commessa, squadra, operatore, giorno, dataGior
   }
 }
 
+
+/* Indicatore «sto lavorando» per le finestre che scrivono o leggono su Jira (v18.267.0): spinner,
+   testo e secondi trascorsi. Ogni elemento con data-cp-t0 (ms) mostra i secondi da allora; un solo
+   timer per tutta la pagina, che si ferma da solo quando non ce ne sono più. t0 va tenuto da chi
+   ridisegna, così il conteggio non riparte a ogni render. */
+let _cpAttesaTimer = null;
+function cpAttesaHtml(testo, t0) {
+  _cpAttesaAvvia();
+  const da = Number(t0) || Date.now(), s = Math.floor((Date.now() - da) / 1000);
+  return '<span class="cp-attesa"><span class="cp-attesa-spin"></span><span>' + esc(testo) + '</span>' +
+    '<span class="cp-attesa-sec" data-cp-t0="' + da + '">' + (s >= 1 ? s + ' s' : '') + '</span></span>';
+}
+function _cpAttesaAvvia() {
+  if (_cpAttesaTimer) return;
+  _cpAttesaTimer = setInterval(() => {
+    const els = document.querySelectorAll('[data-cp-t0]');
+    if (!els.length) { clearInterval(_cpAttesaTimer); _cpAttesaTimer = null; return; }
+    const ora = Date.now();
+    els.forEach(el => {
+      const s = Math.floor((ora - Number(el.dataset.cpT0)) / 1000);
+      el.textContent = s >= 1 ? s + ' s' : '';
+    });
+  }, 500);
+}

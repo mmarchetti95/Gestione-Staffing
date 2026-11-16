@@ -114,6 +114,9 @@ Limite noto: il progetto Supabase è sul piano **Free**, che non include backup 
 
 ## Changelog
 
+## v18.267.0
+- feat: **Si vede cosa sta facendo l'app mentre scrive su Jira.** Nel «✎ Sistema sottotask» del Controllo Produzione, dopo «Applica su Jira» la finestra mostra i passi uno per uno (produzione, cambio di stato, ogni worklog da eliminare, correggere o aggiungere): quello in corso ha uno spinner e i secondi trascorsi, quelli finiti ✓, ⚠ o ✕ con l'esito. Per il cambio di stato avvisa che Jira impiega 10–20 secondi, perché aspetta il worklog dell'automazione per eliminarlo. Alla fine la finestra si chiude da sola con il riepilogo. Spinner e secondi anche mentre legge stato, worklog e produzione all'apertura. Nell'editor dei worklog della 🕘 Timeline, durante il salvataggio compare «Scrivo su Jira…» con i secondi, e dopo, nella barra della timeline, «Rileggo da Jira i worklog di …» finché non ha finito. Nessuna modifica a Supabase o alle Edge Function.
+
 ## v18.266.0
 - feat: **Sistema sottotask, la produzione per chiudere in DONE si scrive dalla finestra.** Nel «✎» della colonna Stato del Controllo Produzione, scegliendo DONE la finestra legge da Jira la produzione del sottotask (Actual Production, o KPI_Quantità lavorata per le commesse col campo nuovo). Se manca, compare un campo già compilato (il Km/Cad che c'è in Controllo Produzione per quel ticket, altrimenti 1) che «Applica su Jira» scrive prima del cambio di stato, così il sottotask si chiude in DONE invece di fermarsi in IN PENDING. Stesso canale e modello a delta di «Sincronizza» (Task padre allineato). Il valore va anche nella riga del Controllo Produzione: 1 resta «👁 da verificare» e il report lo sostituisce, un altro valore conta come inserito a mano. Lasciando il campo vuoto si comporta come prima. Nessuna modifica a Supabase o alle Edge Function.
 

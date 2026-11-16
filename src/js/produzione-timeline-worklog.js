@@ -208,6 +208,12 @@ function cpTlWlControlla() {
   if (!box) return;
   const r = _cpTlWlLeggi();
   const righe = [];
+  if (_cpTlWl.salvando) {
+    // Scrittura in corso (con Tempo un'eliminazione aspetta qualche secondo che sparisca da Jira)
+    box.innerHTML = '<span class="text-teal-700 font-semibold">' + cpAttesaHtml('Scrivo su Jira: non chiudere la pagina…', _cpTlWl.salvaT0) + '</span>';
+    if (btn) { btn.disabled = true; btn.style.opacity = '.5'; }
+    return;
+  }
   if (r.durata != null && !r.errori.length) righe.push('<span class="text-slate-600">Durata: <b>' + _cpOjDurata(r.durata) + '</b></span>');
   r.errori.forEach(e => righe.push('<span class="text-red-700">✕ ' + esc(e) + '</span>'));
   r.avvisi.forEach(a => righe.push('<span class="text-amber-700">⚠ ' + esc(a) + '</span>'));
@@ -241,6 +247,8 @@ async function _cpTlWlRileggiOperatore(nome, k, d, esito) {
     return;
   }
   _cpTl.inCorso = true;
+  _cpTl.msg = esito + ' ⏳ Rileggo da Jira i worklog di ' + nome + '…';
+  cpTlRender();
   let avviso = '';
   try {
     const r = await _cpTlLeggiWorklog([nome], d);
@@ -270,6 +278,7 @@ function _cpTlWlCoda() {
 async function _cpTlWlEsegui(body, esito) {
   const W = _cpTlWl, nome = W.nome, k = W.k, d = W.d;
   W.salvando = true;
+  W.salvaT0 = Date.now();
   cpTlWlControlla();
   try {
     let res = await _cpTlWlInvoca(body);

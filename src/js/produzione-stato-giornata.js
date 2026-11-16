@@ -36,6 +36,8 @@ let _cpGs = {
   riga: null,                // riga del Controllo Produzione: { cpk, commessa, squadra, g, cantiere, attivita, anno, week }
   prod: null,                // produzione su Jira (per DONE): { caricando, errore, valore, campo }
   prodValore: '',            // produzione da scrivere prima di DONE se su Jira manca ('' = non scrivere)
+  caricaT0: 0,               // inizio della lettura (per i secondi dell'indicatore)
+  passi: null,               // durante «Applica su Jira»: [{ testo, esito: ''|'ok'|'ko'|'warn', nota, t0 }]
   salvando: false,
 };
 
@@ -77,7 +79,7 @@ async function cpGsApri(btn) {
   Object.assign(_cpGs, {
     aperto: true, key: btn.dataset.k, nome: (tr && tr.dataset.operatore) || '', iso, label: g >= 0 ? d.label[g] : iso,
     k: _cpaKey(pwAnno, pwWeek), d, caricando: true, errore: '', info: null, statoDa: null, tratti: [], altri: [], voluto: '',
-    riga, prod: null, prodValore: '', salvando: false,
+    riga, prod: null, prodValore: '', passi: null, salvando: false,
   });
   _cpGsRender();
   await _cpGsCarica();
@@ -91,7 +93,7 @@ function cpGsChiudi() {
 
 async function _cpGsCarica() {
   const key = _cpGs.key;
-  _cpGs.caricando = true; _cpGs.errore = '';
+  _cpGs.caricando = true; _cpGs.errore = ''; _cpGs.caricaT0 = Date.now();
   _cpGsRender();
   const res = await _cpTlWlInvoca({ action: 'giornata', issueKey: key });
   if (!_cpGs.aperto || _cpGs.key !== key) return;
@@ -154,7 +156,7 @@ function _cpGsKmLocale() {
 
 async function _cpGsLeggiProd() {
   const G = _cpGs, key = G.key;
-  G.prod = { caricando: true };
+  G.prod = { caricando: true, t0: Date.now() };
   _cpGsRender();
   try { await cpCampoProdLoad(); } catch (_) { /* resta il campo di default */ }
   const campo = cpCampoProduzione(G.riga ? G.riga.commessa : '');
@@ -173,7 +175,7 @@ function _cpGsProdHtml() {
   const G = _cpGs, P = G.prod;
   if (G.voluto !== 'DONE' || !P) return '';
   const box = (stile, html) => '<div class="text-xs mb-3" style="border-radius:6px;padding:8px 10px;' + stile + '">' + html + '</div>';
-  if (P.caricando) return box('background:#f8fafc;color:#64748b;', 'Leggo la produzione del sottotask su Jira…');
+  if (P.caricando) return box('background:#f8fafc;color:#64748b;', cpAttesaHtml('Leggo la produzione del sottotask su Jira…', P.t0));
   if (P.errore) {
     return box('background:#fffbeb;color:#92400e;', '⚠ Produzione non letta da Jira (' + esc(P.errore) + '). Se manca, il sottotask si fermerà in IN PENDING: ' +
       '<button type="button" onclick="_cpGsLeggiProd()" class="underline">riprova a leggerla</button>.');
@@ -266,9 +268,23 @@ function _cpGsRender() {
     '<div class="flex-1"></div>' +
     '<button type="button" onclick="cpGsChiudi()" class="text-xs px-3 py-1.5 rounded border border-slate-300 bg-white">Chiudi</button>' + (btn || '') + '</div>';
 
+  // Durante «Applica su Jira»: i passi uno per uno, quello in corso con spinner e secondi
+  if (G.passi) {
+    const ico = { ok: '✓', ko: '✕', warn: '⚠' }, col = { '': '#334155', ok: '#0f766e', ko: '#b91c1c', warn: '#b45309' };
+    root.innerHTML = '<div style="padding:16px 20px 14px;">' + titolo +
+      '<div class="text-sm font-semibold mb-2" style="color:#0f766e">' +
+        (G.salvando ? 'Sto lavorando su Jira: non chiudere la pagina, la finestra si chiude da sola alla fine.' : 'Finito.') + '</div>' +
+      G.passi.map(p => '<div class="text-xs mb-1.5" style="color:' + col[p.esito] + '">' +
+        (p.esito ? ico[p.esito] + ' ' + esc(p.testo.replace(/…$/, '')) : cpAttesaHtml(p.testo, p.t0)) +
+        (p.nota ? '<div class="text-[11px] text-slate-500" style="margin-left:17px">' + esc(p.nota) + '</div>' : '') + '</div>').join('') +
+      '</div>';
+    return;
+  }
+
   if (G.caricando || G.errore || !G.info) {
     root.innerHTML = '<div style="padding:16px 20px 10px;">' + titolo +
-      (G.errore ? '<div class="text-sm text-red-700 mb-2">✕ ' + esc(G.errore) + '</div>' : '<div class="text-sm text-slate-500 mb-2">Lettura da Jira…</div>') +
+      (G.errore ? '<div class="text-sm text-red-700 mb-2">✕ ' + esc(G.errore) + '</div>'
+        : '<div class="text-sm text-slate-500 mb-2">' + cpAttesaHtml('Leggo stato e worklog del sottotask da Jira…', G.caricaT0) + '</div>') +
       '</div>' + piede(G.errore ? '<button type="button" onclick="_cpGsCarica()" class="text-xs px-3 py-1.5 rounded border border-slate-300 bg-white">↻ Riprova</button>' : '');
     return;
   }
@@ -442,6 +458,18 @@ function cpGsControlla() {
 
 /* ---------- Scrittura su Jira ---------- */
 
+/* Avanzamento mostrato nella finestra durante «Applica su Jira» */
+function _cpGsPasso(testo, nota) {
+  _cpGs.passi.push({ testo, esito: '', nota: nota || '', t0: Date.now() });
+  _cpGsRender();
+  return _cpGs.passi[_cpGs.passi.length - 1];
+}
+function _cpGsFatto(p, esito, nota) {
+  p.esito = esito;
+  p.nota = nota || '';
+  _cpGsRender();
+}
+
 function _cpGsDove(inizio, fine) { return _cpOjOra(inizio) + '–' + _cpOjOra(fine) + ' (' + _cpOjDurata(fine - inizio) + ')'; }
 
 async function cpGsApplica() {
@@ -467,50 +495,64 @@ async function cpGsApplica() {
   if (!await showConfirmAsync(msg, 'Applica su Jira')) return;
 
   G.salvando = true;
-  cpGsControlla();
+  G.passi = [];
+  _cpGsRender();
   const fatti = [], problemi = [];
   let ricarica = false, prodScritta = false;
   try {
     // a0. Produzione prima di DONE (se non riesce, la funzione lo ferma in IN PENDING come prima)
     if (v.prod != null) {
+      const pp = _cpGsPasso('Scrivo la produzione ' + v.prod + ' su «' + G.prod.campo + '»…');
       const pr = await _cpGsScriviProd(v.prod);
+      _cpGsFatto(pp, pr.ok ? 'ok' : 'ko', pr.testo);
       if (pr.ok) { fatti.push(pr.testo); prodScritta = true; }
       else problemi.push(pr.testo);
     }
     // a. Stato (prima dei worklog: i worklog nuovi dell'automazione si riconoscono come "nuovi")
     if (v.stato) {
+      // Uscendo da IN PROGRESS la funzione aspetta il worklog dell'automazione Jira per eliminarlo
+      const esce = _cpGsRango(G.info.stato) === CPGS_IN_PROGRESS || v.stato === 'DONE';
+      const ps = _cpGsPasso('Porto ' + G.key + ' da «' + G.info.stato + '» a ' + v.stato + '…',
+        esce ? 'Jira impiega 10–20 secondi: aspetto il worklog che l\'automazione crea uscendo da IN PROGRESS, per eliminarlo.' : '');
       const res = await _cpTlWlInvoca({ action: 'stato', issueKey: G.key, voluto: v.stato, atteso: { stato: G.info.stato }, operatore: G.nome });
       if (res.codice === 'cambiato') {
+        _cpGsFatto(ps, 'ko', res.errore || 'Lo stato è cambiato su Jira nel frattempo.');
         showAlertModal(res.errore || 'Lo stato è cambiato su Jira nel frattempo.');
         ricarica = true;
         return;
       }
       if (res.errore || !res.ok) {
         // Con errore la funzione restituisce comunque i passi fatti (nel corpo dell'errore non li vediamo: si rilegge)
+        _cpGsFatto(ps, 'ko', res.errore || 'risposta non valida');
         problemi.push('Stato: ' + (res.errore || 'risposta non valida'));
         ricarica = true;
         return;
       }
-      fatti.push('Stato: ' + res.prima + ' → ' + res.dopo + (res.rimossi && res.rimossi.length ? ' (eliminati ' + res.rimossi.length + ' worklog dell\'automazione)' : ''));
+      const t = 'Stato: ' + res.prima + ' → ' + res.dopo + (res.rimossi && res.rimossi.length ? ' (eliminati ' + res.rimossi.length + ' worklog dell\'automazione)' : '');
+      _cpGsFatto(ps, res.avviso ? 'warn' : 'ok', t + (res.avviso ? ' ⚠ ' + res.avviso : ''));
+      fatti.push(t);
       if (res.avviso) problemi.push(res.avviso);
     }
     // b. Worklog: prima le eliminazioni (Tempo conta 12 h al giorno per autore), poi correzioni e aggiunte
     const email = _cpTlEmailPerNome()[G.nome] || '';
     let forza = false;
     for (const t of v.elimina) {
+      const p = _cpGsPasso('Elimino il worklog ' + _cpGsDove(t.inizio, t.fine) + '…');
       const res = await _cpTlWlInvoca({ action: 'delete', issueKey: G.key, worklogId: t.id, operatore: G.nome, atteso: { started: t.orig.started, seconds: t.orig.seconds } });
-      if (res.ok) fatti.push('Eliminato ' + _cpGsDove(t.inizio, t.fine));
-      else problemi.push('Eliminazione ' + _cpGsDove(t.inizio, t.fine) + ': ' + (res.errore || 'non riuscita'));
+      if (res.ok) { fatti.push('Eliminato ' + _cpGsDove(t.inizio, t.fine)); _cpGsFatto(p, res.avviso ? 'warn' : 'ok', res.avviso || ''); }
+      else { problemi.push('Eliminazione ' + _cpGsDove(t.inizio, t.fine) + ': ' + (res.errore || 'non riuscita')); _cpGsFatto(p, 'ko', res.errore || 'non riuscita'); }
     }
     for (const t of v.modifica) {
+      const p = _cpGsPasso('Correggo il worklog → ' + _cpGsDove(t.inizio, t.fine) + '…');
       const body = { action: 'update', issueKey: G.key, worklogId: t.id, data: G.iso, inizioMin: t.inizio, durataMin: t.fine - t.inizio,
         operatore: G.nome, email, atteso: { started: t.orig.started, seconds: t.orig.seconds } };
       if ((t.commento || '').trim() !== (t.orig.commento || '').trim()) body.commento = (t.commento || '').trim();
       const res = await _cpTlWlInvoca(body);
-      if (res.ok) fatti.push('Corretto → ' + _cpGsDove(t.inizio, t.fine) + (res.avviso ? ' ⚠ ' + res.avviso : ''));
-      else problemi.push('Correzione → ' + _cpGsDove(t.inizio, t.fine) + ': ' + (res.errore || 'non riuscita'));
+      if (res.ok) { fatti.push('Corretto → ' + _cpGsDove(t.inizio, t.fine) + (res.avviso ? ' ⚠ ' + res.avviso : '')); _cpGsFatto(p, res.avviso ? 'warn' : 'ok', res.avviso || ''); }
+      else { problemi.push('Correzione → ' + _cpGsDove(t.inizio, t.fine) + ': ' + (res.errore || 'non riuscita')); _cpGsFatto(p, 'ko', res.errore || 'non riuscita'); }
     }
     for (const t of v.crea) {
+      const p = _cpGsPasso('Aggiungo il worklog ' + _cpGsDove(t.inizio, t.fine) + '…');
       const body = { action: 'create', issueKey: G.key, data: G.iso, inizioMin: t.inizio, durataMin: t.fine - t.inizio, operatore: G.nome, email, forza };
       if ((t.commento || '').trim()) body.commento = t.commento.trim();
       let res = await _cpTlWlInvoca(body);
@@ -518,11 +560,13 @@ async function cpGsApplica() {
         forza = await showConfirmAsync(res.errore + '\n\nAggiungere comunque le ore?', 'Aggiungi comunque');
         if (forza) res = await _cpTlWlInvoca(Object.assign({}, body, { forza: true }));
       }
-      if (res.ok) fatti.push('Aggiunto ' + _cpGsDove(t.inizio, t.fine) + (res.dopo && res.dopo.autore ? ' (autore ' + res.dopo.autore + ')' : '') + (res.avviso ? ' ⚠ ' + res.avviso : ''));
-      else problemi.push('Aggiunta ' + _cpGsDove(t.inizio, t.fine) + ': ' + (res.errore || 'non riuscita'));
+      const autore = res.dopo && res.dopo.autore ? ' (autore ' + res.dopo.autore + ')' : '';
+      if (res.ok) { fatti.push('Aggiunto ' + _cpGsDove(t.inizio, t.fine) + autore + (res.avviso ? ' ⚠ ' + res.avviso : '')); _cpGsFatto(p, res.avviso ? 'warn' : 'ok', (autore.trim() + ' ' + (res.avviso || '')).trim()); }
+      else { problemi.push('Aggiunta ' + _cpGsDove(t.inizio, t.fine) + ': ' + (res.errore || 'non riuscita')); _cpGsFatto(p, 'ko', res.errore || 'non riuscita'); }
     }
   } finally {
     G.salvando = false;
+    G.passi = null;
     const nome = G.nome, k = G.k, d = G.d;
     const esito = (fatti.length ? '✓ ' + G.key + ': ' + fatti.join(' · ') + '.' : '') +
       (problemi.length ? ' ⚠ ' + problemi.join(' · ') : '');
