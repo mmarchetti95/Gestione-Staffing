@@ -1209,7 +1209,8 @@ function cpKmJiraStato(cell, ticketKey, operatore, campo) {
   const lastEff = cpKmLastSulCampo(cell, ticketKey, campo);
   base.altroCampo = last != null && lastEff == null;
   const delta = Math.round((km - (lastEff == null ? 0 : lastEff)) * 1000) / 1000;
-  if (delta === 0) return { ...base, stato: lastEff != null ? 'ok' : 'vuoto' };
+  // 0 verificato e mai inviato = nessuna produzione (es. maltempo): giorno compilato, niente da inviare.
+  if (delta === 0) return { ...base, stato: lastEff != null ? 'ok' : (km === 0 ? 'nessuna' : 'vuoto') };
   if (operatore && !cpOperatoreHaEmail(operatore)) return { ...base, stato: 'senza_email' };
   return { ...base, stato: lastEff != null ? 'da_aggiornare' : 'da_inviare' };
 }
@@ -1327,8 +1328,9 @@ const CP_KMJ_STATI = {
   da_aggiornare: { lbl: '↻ Agg.',  cls: 'agg' },
   da_inviare:    { lbl: '⬆ Invia', cls: 'inv' },
   senza_email:   { lbl: '⚠ Email', cls: 'mail' },
+  nessuna:       { lbl: '✓ Nessuna', cls: 'ok' },
   vuoto:         { lbl: '—',       cls: 'vuoto' },
-  orfano:        { lbl: '○ Jira',  cls: 'vuoto' },
+  orfano:       { lbl: '○ Jira',  cls: 'vuoto' },
 };
 const CP_KMJ_IN_SOSPESO = ['da_verificare', 'da_aggiornare', 'da_inviare', 'senza_email'];
 
@@ -1342,6 +1344,7 @@ function cpKmJiraTitolo(st, ticketKey) {
     case 'da_inviare': return `${ticketKey}: Km/Cad ${f(st.km)} non ancora inviato a Jira` +
       (st.altroCampo ? ` su questo campo (l'ultimo invio, ${f(st.last)}, era su "${st.campoLast}")` : '') + `.${campo}\nPremi 🔄 Sincronizza squadra per inviarlo.`;
     case 'senza_email': return `${ticketKey}: Km/Cad ${f(st.km)} non inviabile, l'operatore non ha un'email assegnata (la sincronizzazione lo salta).`;
+    case 'nessuna': return `${ticketKey}: nessuna produzione (es. maltempo), Km/Cad 0 dal report.\nGiorno compilato: non c'è niente da inviare a Jira. Se la produzione c'è, scrivi il valore nel campo Km/Cad o carica il report.`;
     case 'orfano': return `${ticketKey}: Km/Cad vuoto qui, ma su Jira resta l'ultimo valore inviato (${f(st.last)}): la sincronizzazione non lo toglie.\nClic per azzerare lo storico (con conferma).`;
     default: return `${ticketKey}: nessun Km/Cad da inviare.`;
   }
@@ -1361,7 +1364,7 @@ function cpKmJiraRefreshDom() {
     b.dataset.haKm = (st.km != null || st.last != null) ? '1' : '';
     const tr = b.closest('tr'), sq = tr && tr.dataset.sqIdx;
     if (sq == null) return;
-    const c = perSquadra[sq] || (perSquadra[sq] = { ok: 0, da_verificare: 0, da_aggiornare: 0, da_inviare: 0, senza_email: 0 });
+    const c = perSquadra[sq] || (perSquadra[sq] = { ok: 0, nessuna: 0, da_verificare: 0, da_aggiornare: 0, da_inviare: 0, senza_email: 0 });
     if (st.stato in c) c[st.stato]++;
   });
   document.querySelectorAll('.cp-table .cp-km-in').forEach(inp => {
@@ -1375,7 +1378,7 @@ function cpKmJiraRefreshDom() {
   document.querySelectorAll('.cp-table .cp-kmj-sum').forEach(el => {
     const c = perSquadra[el.dataset.sqIdx];
     const pend = c ? c.da_verificare + c.da_aggiornare + c.da_inviare + c.senza_email : 0;
-    if (!c || (!pend && !c.ok)) { el.innerHTML = ''; el.className = 'cp-kmj-sum no-print'; el.title = ''; return; }
+    if (!c || (!pend && !c.ok && !c.nessuna)) { el.innerHTML = ''; el.className = 'cp-kmj-sum no-print'; el.title = ''; return; }
     const manc = giorniSq[el.dataset.sqIdx] || [];
     const mancTxt = manc.length ? 'ancora da sincronizzare: ' + manc.map(d => d.lbl + (d.parziale ? ' (in parte)' : '')).join(', ') : '';
     const mancTitle = manc.length
@@ -1384,7 +1387,8 @@ function cpKmJiraRefreshDom() {
     if (!pend && !manc.length) {
       el.className = 'cp-kmj-sum no-print ok';
       el.textContent = '✓ KM verificati e allineati su Jira';
-      el.title = 'Tutti i Km/Cad di questa squadra vengono da un report o sono stati confermati, e sono già su Jira (' + c.ok + ' ticket)';
+      el.title = 'Tutti i Km/Cad di questa squadra vengono da un report o sono stati confermati, e sono già su Jira (' + c.ok + ' ticket)' +
+        (c.nessuna ? '; ' + c.nessuna + ' ticket senza produzione (✓ Nessuna, niente da inviare)' : '');
       return;
     }
     if (!pend) {

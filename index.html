@@ -2133,7 +2133,7 @@
       </span>
       <button id="btn-presentation" class="px-3 py-1.5 text-sm rounded hover:bg-white/10" style="border:1px solid var(--dark-border-strong);color:var(--dark-text);visibility:visible;">📊 Modalità presentazione</button>
       <div class="text-xs pl-2" style="border-left:1px solid var(--dark-border-strong);color:var(--dark-text-muted);">
-        <span id="app-version" class="font-medium" style="color:var(--accent);">v18.262.0</span> · Michele Marchetti
+        <span id="app-version" class="font-medium" style="color:var(--accent);">v18.263.0</span> · Michele Marchetti
         <span id="sb-role-badge" style="margin-left:8px;padding:1px 8px;border-radius:9999px;background:rgba(255,255,255,.1);color:var(--dark-text);font-weight:600;"></span>
       </div>
     </div>
@@ -22533,7 +22533,8 @@ function cpKmJiraStato(cell, ticketKey, operatore, campo) {
   const lastEff = cpKmLastSulCampo(cell, ticketKey, campo);
   base.altroCampo = last != null && lastEff == null;
   const delta = Math.round((km - (lastEff == null ? 0 : lastEff)) * 1000) / 1000;
-  if (delta === 0) return { ...base, stato: lastEff != null ? 'ok' : 'vuoto' };
+  // 0 verificato e mai inviato = nessuna produzione (es. maltempo): giorno compilato, niente da inviare.
+  if (delta === 0) return { ...base, stato: lastEff != null ? 'ok' : (km === 0 ? 'nessuna' : 'vuoto') };
   if (operatore && !cpOperatoreHaEmail(operatore)) return { ...base, stato: 'senza_email' };
   return { ...base, stato: lastEff != null ? 'da_aggiornare' : 'da_inviare' };
 }
@@ -22651,8 +22652,9 @@ const CP_KMJ_STATI = {
   da_aggiornare: { lbl: '↻ Agg.',  cls: 'agg' },
   da_inviare:    { lbl: '⬆ Invia', cls: 'inv' },
   senza_email:   { lbl: '⚠ Email', cls: 'mail' },
+  nessuna:       { lbl: '✓ Nessuna', cls: 'ok' },
   vuoto:         { lbl: '—',       cls: 'vuoto' },
-  orfano:        { lbl: '○ Jira',  cls: 'vuoto' },
+  orfano:       { lbl: '○ Jira',  cls: 'vuoto' },
 };
 const CP_KMJ_IN_SOSPESO = ['da_verificare', 'da_aggiornare', 'da_inviare', 'senza_email'];
 
@@ -22666,6 +22668,7 @@ function cpKmJiraTitolo(st, ticketKey) {
     case 'da_inviare': return `${ticketKey}: Km/Cad ${f(st.km)} non ancora inviato a Jira` +
       (st.altroCampo ? ` su questo campo (l'ultimo invio, ${f(st.last)}, era su "${st.campoLast}")` : '') + `.${campo}\nPremi 🔄 Sincronizza squadra per inviarlo.`;
     case 'senza_email': return `${ticketKey}: Km/Cad ${f(st.km)} non inviabile, l'operatore non ha un'email assegnata (la sincronizzazione lo salta).`;
+    case 'nessuna': return `${ticketKey}: nessuna produzione (es. maltempo), Km/Cad 0 dal report.\nGiorno compilato: non c'è niente da inviare a Jira. Se la produzione c'è, scrivi il valore nel campo Km/Cad o carica il report.`;
     case 'orfano': return `${ticketKey}: Km/Cad vuoto qui, ma su Jira resta l'ultimo valore inviato (${f(st.last)}): la sincronizzazione non lo toglie.\nClic per azzerare lo storico (con conferma).`;
     default: return `${ticketKey}: nessun Km/Cad da inviare.`;
   }
@@ -22685,7 +22688,7 @@ function cpKmJiraRefreshDom() {
     b.dataset.haKm = (st.km != null || st.last != null) ? '1' : '';
     const tr = b.closest('tr'), sq = tr && tr.dataset.sqIdx;
     if (sq == null) return;
-    const c = perSquadra[sq] || (perSquadra[sq] = { ok: 0, da_verificare: 0, da_aggiornare: 0, da_inviare: 0, senza_email: 0 });
+    const c = perSquadra[sq] || (perSquadra[sq] = { ok: 0, nessuna: 0, da_verificare: 0, da_aggiornare: 0, da_inviare: 0, senza_email: 0 });
     if (st.stato in c) c[st.stato]++;
   });
   document.querySelectorAll('.cp-table .cp-km-in').forEach(inp => {
@@ -22699,7 +22702,7 @@ function cpKmJiraRefreshDom() {
   document.querySelectorAll('.cp-table .cp-kmj-sum').forEach(el => {
     const c = perSquadra[el.dataset.sqIdx];
     const pend = c ? c.da_verificare + c.da_aggiornare + c.da_inviare + c.senza_email : 0;
-    if (!c || (!pend && !c.ok)) { el.innerHTML = ''; el.className = 'cp-kmj-sum no-print'; el.title = ''; return; }
+    if (!c || (!pend && !c.ok && !c.nessuna)) { el.innerHTML = ''; el.className = 'cp-kmj-sum no-print'; el.title = ''; return; }
     const manc = giorniSq[el.dataset.sqIdx] || [];
     const mancTxt = manc.length ? 'ancora da sincronizzare: ' + manc.map(d => d.lbl + (d.parziale ? ' (in parte)' : '')).join(', ') : '';
     const mancTitle = manc.length
@@ -22708,7 +22711,8 @@ function cpKmJiraRefreshDom() {
     if (!pend && !manc.length) {
       el.className = 'cp-kmj-sum no-print ok';
       el.textContent = '✓ KM verificati e allineati su Jira';
-      el.title = 'Tutti i Km/Cad di questa squadra vengono da un report o sono stati confermati, e sono già su Jira (' + c.ok + ' ticket)';
+      el.title = 'Tutti i Km/Cad di questa squadra vengono da un report o sono stati confermati, e sono già su Jira (' + c.ok + ' ticket)' +
+        (c.nessuna ? '; ' + c.nessuna + ' ticket senza produzione (✓ Nessuna, niente da inviare)' : '');
       return;
     }
     if (!pend) {
@@ -23260,7 +23264,7 @@ function cpReportAttivitaTicket(t, perTicket, attivitaNote) {
   return (sm && attivitaNote.find(a => sm.startsWith(a.toLowerCase() + ' - '))) || '';
 }
 
-HELP_TEXTS['cp-carica-report'] = 'Importa un file CSV/testo con le ore di produzione reale degli operatori di QUESTA squadra e compila "Ore Report Prod." e il Km/Cad del ticket del comune, per i soli giorni trovati nel file.\n\nSe sullo stesso comune la squadra ha sottotask di più attività (es. due rilievi diversi nella stessa settimana), viene chiesta anche l\'attività: il Km/Cad va sul sottotask di quell\'attività e si aggiornano solo gli operatori/giorni che la svolgono.\n\nSi possono caricare più report per la stessa squadra e settimana (es. 2 giorni fatti con l\'utenza di una persona e 3 con quella di un\'altra): ogni report aggiorna solo i giorni che contiene, gli altri restano come sono. Se due utenze diverse hanno dati sullo stesso giorno, ore e Km/Cad si sommano; ricaricare il report della stessa utenza ne sostituisce i valori invece di sommarli.\n\nI giorni senza dati nel file vengono messi a zero solo se ancora vuoti. Se il file non copre nessun giorno della settimana, ti viene comunque chiesto se vuoi azzerare le ore per quei giorni.\n\nRiguarda solo "Ore Report Prod."/Km — le "Ore Jira" si aggiornano con "Sincronizza da Jira".';
+HELP_TEXTS['cp-carica-report'] = 'Importa un file CSV/testo con le ore di produzione reale degli operatori di QUESTA squadra e compila "Ore Report Prod." e il Km/Cad del ticket del comune, per i soli giorni trovati nel file.\n\nSe sullo stesso comune la squadra ha sottotask di più attività (es. due rilievi diversi nella stessa settimana), viene chiesta anche l\'attività: il Km/Cad va sul sottotask di quell\'attività e si aggiornano solo gli operatori/giorni che la svolgono.\n\nSi possono caricare più report per la stessa squadra e settimana (es. 2 giorni fatti con l\'utenza di una persona e 3 con quella di un\'altra): ogni report aggiorna solo i giorni che contiene, gli altri restano come sono. Se due utenze diverse hanno dati sullo stesso giorno, ore e Km/Cad si sommano; ricaricare il report della stessa utenza ne sostituisce i valori invece di sommarli.\n\nI giorni senza dati nel file vengono messi a zero solo se ancora vuoti. Se sono già passati (maltempo, fermo…) il loro sottotask viene segnato «✓ Nessuna» produzione: Km/Cad 0, giorno compilato, niente scritto su Jira; un report caricato dopo con dati per quel giorno lo sostituisce. Oggi e i giorni futuri restano da compilare. Se il file non copre nessun giorno della settimana, ti viene comunque chiesto se vuoi azzerare le ore per quei giorni.\n\nRiguarda solo "Ore Report Prod."/Km — le "Ore Jira" si aggiornano con "Sincronizza da Jira".';
 
 // Handler del bottone: apre il selettore file (CSV) per la squadra indicata.
 async function cpCaricaReportSquadra(commessa, squadra) {
@@ -23447,6 +23451,25 @@ async function cpProcessReport(csvText, commessa, squadra) {
     const ru = cpKmMeta(cellaDi(u), u.ticketKey).reportUtenze;
     return !!ru && Object.keys(ru).some(x => x !== u.utente);
   };
+  // Giorni già passati senza dati nel file (maltempo, fermo…): il dato di produzione non arriverà
+  // mai, quindi il ticket del report riceve Km/Cad 0 "dal report" = giorno compilato, nessuna
+  // produzione. Niente va su Jira (delta 0). Oggi e i giorni futuri restano da compilare: il report
+  // non può ancora contenerli. Un Km/Cad già presente (anche letto da Jira) non viene toccato.
+  const oggi = new Date();
+  const oggiISO = `${oggi.getFullYear()}-${String(oggi.getMonth() + 1).padStart(2, '0')}-${String(oggi.getDate()).padStart(2, '0')}`;
+  const kmVuoto = u => {
+    const c = cellaDi(u);
+    return (!c.km_by_ticket || c.km_by_ticket[u.ticketKey] == null) &&
+           (!c.km_last_by_ticket || c.km_last_by_ticket[u.ticketKey] == null);
+  };
+  const nessunaProd = updates.filter(u => !u.utente && u.ticketKey && u.dataISO < oggiISO && kmVuoto(u));
+  const GG = ['Lun', 'Mar', 'Mer', 'Gio', 'Ven', 'Sab'];
+  const giorniNessuna = [...new Set(nessunaProd.map(u => u.giorno))].sort((a, b) => a - b)
+    .map(g => GG[g] + ' ' + isoDates[g].slice(8, 10) + '/' + isoDates[g].slice(5, 7));
+  const msgNessuna = giorniNessuna.length
+    ? `\n\nSenza dati nel file: ${giorniNessuna.join(', ')} → segnati come "nessuna produzione" (giorno compilato, Km/Cad 0, niente su Jira).`
+    : '';
+
   const conDati = updates.filter(u => u.utente && u.ticketKey);
   const giorniDi = list => new Set(list.map(u => u.giorno)).size;
   const giorniSomma = giorniDi(conDati.filter(altraUtenza));
@@ -23461,7 +23484,7 @@ async function cpProcessReport(csvText, commessa, squadra) {
     const ok0 = await showConfirmAsync(
       `Nessun dato trovato nel report per gli operatori di "${squadra}" in questa settimana ` +
       `(${isoDates[days[0]]} … ${isoDates[days[days.length-1]]}).\n\nIl report copre il periodo ${range}.\n\n` +
-      `Vuoi comunque azzerare le ore per questi giorni?`,
+      `Vuoi comunque azzerare le ore per questi giorni?` + msgNessuna,
       'Azzera comunque');
     if (!ok0) return;
   } else {
@@ -23470,7 +23493,7 @@ async function cpProcessReport(csvText, commessa, squadra) {
       `(${daysWithData} giorni con dati, ${daysZero} a zero` + (noTicket > 0 ? `, ${noTicket} senza ticket` + (attSel ? ` dell'attività` : ` del comune`) : ``) + `). ` +
       `Vengono aggiornati solo i giorni presenti nel file` +
       (giorniSomma > 0 ? `; su ${giorniSomma} giorn${giorniSomma === 1 ? 'o' : 'i'} c'è già il report di un'altra utenza: ore e Km/Cad verranno sommati` : '') +
-      `. Procedere?`,
+      `.` + msgNessuna + `\n\nProcedere?`,
       'Carica Report');
     if (!ok) return;
     if (giorniIgnoti > 0) {
@@ -23487,14 +23510,28 @@ async function cpProcessReport(csvText, commessa, squadra) {
 
   // Applica: aggiorna cache locale (ore per cella, km sul ticket del comune) e persisti
   const touched = new Map();
+  const nessunaSet = new Set(nessunaProd);
   let giorniZeroSaltati = 0;
   updates.forEach(u => {
     const k = `${commessa}|||${squadra}|||${u.operatore}|||${u.giorno}`;
     if (!_cpData[k]) _cpData[k] = {};
     const cell = _cpData[k];
-    // Giorno senza dati in questo report: si mette a zero solo una cella ancora vuota, mai
-    // quella già compilata da un altro report (salvo la conferma esplicita "Azzera comunque").
-    if (!u.utente && !azzeraTutto && cell.ore_report != null) { giorniZeroSaltati++; return; }
+    if (!u.utente) {
+      // Giorno senza dati in questo report: le ore vanno a zero solo in una cella ancora vuota, mai
+      // in quella già compilata da un altro report (salvo la conferma esplicita "Azzera comunque").
+      const azzeraOre = azzeraTutto || cell.ore_report == null;
+      const segna = nessunaSet.has(u) && kmVuoto(u);
+      if (!azzeraOre && !segna) { giorniZeroSaltati++; return; }
+      if (azzeraOre) cell.ore_report = 0;
+      if (segna) {
+        if (!cell.km_by_ticket || typeof cell.km_by_ticket !== 'object') cell.km_by_ticket = {};
+        cell.km_by_ticket[u.ticketKey] = 0;
+        cpKmMetaSet(cell, u.ticketKey, { fonte: 'report', reportUtenze: null });
+        cell.km_cad = cpSumKm(cell.km_by_ticket);
+      }
+      touched.set(k, u);
+      return;
+    }
     let ore = u.ore, km = u.km, reportUtenze = null;
     if (u.utente && u.ticketKey) {
       const prec = precedenteSenzaUtenza(u);
@@ -23539,6 +23576,9 @@ async function cpProcessReport(csvText, commessa, squadra) {
             `(${daysWithData} giorni con dati, ${daysZero} a zero).`;
   if (giorniSomma > 0) {
     msg += `\n\n➕ Su ${giorniSomma} giorn${giorniSomma === 1 ? 'o' : 'i'} sommato al report di un'altra utenza già caricato.`;
+  }
+  if (giorniNessuna.length) {
+    msg += `\n\n✓ Nessuna produzione (giorno compilato): ${giorniNessuna.join(', ')}.`;
   }
   if (giorniZeroSaltati > 0) {
     msg += `\n\nℹ ${giorniZeroSaltati} operatore/giorno senza dati in questo file lasciati com'erano (già compilati da un altro report).`;
@@ -27789,7 +27829,9 @@ async function cpTlWlElimina() {
      1. mai attivato (TO DO) e lavoro finito  → chiudere e mettere le ore vere;
      2. attivato in ritardo                   → anticipare l'inizio (tratto mancante prima);
      3. finito ma lasciato IN PROGRESS         → chiudere con l'ora di fine vera;
-     4. messo in pausa e non riattivato        → aggiungere il tratto dopo la pausa.
+     4. messo in pausa e non riattivato        → aggiungere il tratto dopo la pausa;
+     5. sta lavorando ma non l'ha attivato     → portarlo IN PROGRESS (da TO DO o IN PENDING,
+                                                 v18.264.0): da lì Jira conta il tempo da solo.
    La finestra mostra stato e worklog del sottotask (letti da Jira all'apertura, azione
    "giornata" di jira-worklog-edit) e propone i tratti di lavoro del giorno in base allo stato.
    «Applica su Jira», dopo una conferma:
@@ -27815,7 +27857,7 @@ let _cpGs = {
   statoDa: null,             // { data, min, oggi, testo } dalla colonna Stato (solo se stesso stato)
   tratti: [],                // { id|null, orig: Wl|null, inizio, fine, commento, elimina, proposto }
   altri: [],                 // worklog del sottotask in altri giorni: { w, p }
-  voluto: '',                // '' (invariato) | 'IN PENDING' | 'DONE'
+  voluto: '',                // '' (invariato) | 'IN PROGRESS' | 'IN PENDING' | 'DONE'
   salvando: false,
 };
 
@@ -27825,6 +27867,14 @@ function cpGsPuo() {
 }
 
 function _cpGsRango(stato) { return CPGS_RANGO.findIndex(r => r.test(String(stato || '').trim())); }
+
+/* Stato finale ammesso da quello attuale: in avanti, più IN PENDING → IN PROGRESS (ripresa dopo
+   la pausa, transizione normale del flusso). Un DONE non si riapre. Stessa regola nell'Edge Function. */
+function _cpGsAmmesso(rAttuale, voluto) {
+  const rV = _cpGsRango(voluto);
+  if (rAttuale < 0 || rV < CPGS_IN_PROGRESS || rAttuale === CPGS_DONE) return false;
+  return rV > rAttuale || (rV === CPGS_IN_PROGRESS && rAttuale === CPGS_IN_PENDING);
+}
 
 /* Pulsante accanto al badge (cpStatoCellHtml); t = stato già letto dalla colonna */
 function cpGsBtnHtml(key, dateISO, t) {
@@ -27909,10 +27959,12 @@ function _cpGsSituazione() {
       'creerebbe da solo (fino al momento della chiusura) viene eliminato e restano le ore scritte qui. Se l\'ha attivato in ritardo, anticipa l\'inizio.';
   }
   if (r >= 0 && r < CPGS_IN_PROGRESS) {
-    return 'Non è mai stato attivato (<b>' + esc(G.info.stato) + '</b>). Se l\'operatore ha lavorato, scrivi le ore e chiudilo.';
+    return 'Non è mai stato attivato (<b>' + esc(G.info.stato) + '</b>). Se l\'operatore ha lavorato, scrivi le ore e chiudilo. ' +
+      'Se sta lavorando adesso, portalo IN PROGRESS: Jira conterà il tempo da adesso fino a quando lo sposta; le ore già fatte scrivile qui.';
   }
   if (r === CPGS_IN_PENDING) {
-    return 'È <b>IN PENDING' + esc(da) + '</b> (in pausa). Se l\'operatore ha ripreso a lavorare senza riattivarlo, aggiungi il tratto mancante con «＋ Aggiungi tratto».';
+    return 'È <b>IN PENDING' + esc(da) + '</b> (in pausa). Se l\'operatore ha ripreso a lavorare senza riattivarlo, aggiungi il tratto mancante con «＋ Aggiungi tratto», ' +
+      'oppure, se sta ancora lavorando, rimettilo IN PROGRESS (le ore fatte finora scrivile qui).';
   }
   if (r === CPGS_DONE) return 'È già <b>DONE</b>: puoi correggere le ore (es. attivato in ritardo: anticipa l\'inizio).';
   return 'Stato <b>' + esc(G.info.stato) + '</b> non previsto dal flusso dei sottotask: puoi solo correggere le ore.';
@@ -27948,10 +28000,11 @@ function _cpGsRender() {
     (urlJira ? ' <a href="' + esc(urlJira) + '" target="_blank" rel="noopener" class="text-xs text-teal-700 underline whitespace-nowrap">Apri su Jira ↗</a>' : '') +
     (info.assegnatario ? '<div class="text-[11px] text-slate-500">Assegnato a ' + esc(info.assegnatario.nome) + '</div>' : '<div class="text-[11px] text-amber-700">Non assegnato</div>') + '</div>';
 
-  // Stato finale: solo in avanti (da qui non si riapre)
+  // Stato finale: in avanti, più IN PENDING → IN PROGRESS (un DONE da qui non si riapre)
   let opz = '<option value=""' + (G.voluto === '' ? ' selected' : '') + '>Lascia «' + esc(info.stato) + '»</option>';
-  if (r >= 0 && r < CPGS_IN_PENDING) opz += '<option value="IN PENDING"' + (G.voluto === 'IN PENDING' ? ' selected' : '') + '>IN PENDING (in pausa)</option>';
-  if (r >= 0 && r < CPGS_DONE) opz += '<option value="DONE"' + (G.voluto === 'DONE' ? ' selected' : '') + '>DONE (finito)</option>';
+  [['IN PROGRESS', 'IN PROGRESS (al lavoro)'], ['IN PENDING', 'IN PENDING (in pausa)'], ['DONE', 'DONE (finito)']].forEach(([v, testo]) => {
+    if (_cpGsAmmesso(r, v)) opz += '<option value="' + v + '"' + (G.voluto === v ? ' selected' : '') + '>' + testo + '</option>';
+  });
 
   const righe = G.tratti.map((t, i) => {
     const barrato = t.elimina ? 'text-decoration:line-through;opacity:.5;' : '';
@@ -28020,7 +28073,7 @@ function _cpGsVerifica() {
   const G = _cpGs, out = { errori: [], avvisi: [], crea: [], modifica: [], elimina: [], stato: '' };
   if (!G.info) return out;
   const r = _cpGsRango(G.info.stato), ora = cpOraRoma();
-  if (G.voluto && _cpGsRango(G.voluto) > r) out.stato = G.voluto;
+  if (G.voluto && _cpGsAmmesso(r, G.voluto)) out.stato = G.voluto;
   const vivi = [];
   G.tratti.forEach((t, i) => {
     if (t.elimina) { out.elimina.push(t); return; }
@@ -28059,8 +28112,12 @@ function _cpGsVerifica() {
   if (out.stato && r === CPGS_IN_PROGRESS && !vivi.length) {
     out.avvisi.push('Nessun tratto: il tempo passato in IN PROGRESS non resterà registrato (il worklog dell\'automazione viene eliminato).');
   }
-  if (out.stato && r < CPGS_IN_PROGRESS && !vivi.length) out.avvisi.push('Nessuna ora: il sottotask si chiude senza worklog.');
+  if (out.stato && out.stato !== 'IN PROGRESS' && r < CPGS_IN_PROGRESS && !vivi.length) out.avvisi.push('Nessuna ora: il sottotask si chiude senza worklog.');
   if (out.stato === 'DONE') out.avvisi.push('Per DONE Jira vuole l\'Actual Production: se manca, il sottotask si ferma in IN PENDING.');
+  if (out.stato === 'IN PROGRESS') {
+    out.avvisi.push('Da IN PROGRESS Jira registra da solo il tempo da adesso a quando l\'operatore lo sposta: le ore fatte prima vanno scritte qui come tratti.');
+    if (ora && G.iso !== ora.data) out.avvisi.push('La riga è di ' + G.label + ', non di oggi: il tempo che conterà Jira parte da adesso, non da quel giorno.');
+  }
   return out;
 }
 
@@ -38375,7 +38432,7 @@ function _chsStatoKm() {
   if (!giornate.length) return { stato: 'na', testo: 'Nessuna giornata pianificata già passata.' };
   if (_chs.erroreRighe) return { stato: 'ignoto', testo: 'Controllo Produzione non letto: ' + _chs.erroreRighe };
   if (!_chs.righe) return { stato: 'attesa', testo: 'Leggo il Controllo Produzione…' };
-  const c = { ok: 0, da_verificare: 0, da_aggiornare: 0, da_inviare: 0, senza_email: 0 };
+  const c = { ok: 0, nessuna: 0, da_verificare: 0, da_aggiornare: 0, da_inviare: 0, senza_email: 0 };
   const senzaKm = [];
   let conTicket = 0;
   giornate.forEach(x => {
@@ -38399,7 +38456,8 @@ function _chsStatoKm() {
   if (c.da_inviare) parti.push(c.da_inviare + ' da inviare');
   if (c.senza_email) parti.push(c.senza_email + ' senza email');
   if (senzaKm.length) parti.push(_chsPlur(senzaKm.length, 'giornata senza Km/Cad', 'giornate senza Km/Cad'));
-  if (!pend && !senzaKm.length) return { stato: 'ok', testo: 'Km/Cad verificati e allineati su Jira (' + _chsPlur(c.ok, 'ticket', 'ticket') + ').' };
+  if (!pend && !senzaKm.length) return { stato: 'ok', testo: 'Km/Cad verificati e allineati su Jira (' + _chsPlur(c.ok, 'ticket', 'ticket') +
+    (c.nessuna ? ', ' + c.nessuna + ' senza produzione' : '') + ').' };
   return { stato: 'ko', testo: 'Ticket: ' + parti.join(' · ') + '.',
     dettaglio: [c.ok ? c.ok + ' ticket già allineati.' : '', senzaKm.length ? 'Senza Km/Cad (report non caricato): ' + _chsPerGiorno(senzaKm) + '.' : '',
       c.da_verificare ? '«Da verificare» = valore letto da Jira (di solito quello dell\'operatore): carica il report o confermalo.' : ''].filter(Boolean).join(' ') };
@@ -39286,12 +39344,12 @@ HELP_TEXTS['cpTlRileggi'] = 'Rilegge da Jira, in sola lettura, i worklog della s
 HELP_TEXTS['cpTlWlApri'] = 'Apre la correzione di questo worklog Jira: puoi cambiare giorno, ora di inizio, ora di fine e commento, oppure eliminarlo. Serve quando l\'operatore non ha fatto bene le transizioni del sottotask e il worklog creato dall\'automazione ha orari o durata sbagliati.\n\nNiente viene scritto finché non premi «Salva su Jira» e confermi. Solo admin e responsabili; il segmento «in corso» (IN PROGRESS) non si corregge, non è ancora un worklog.';
 HELP_TEXTS['cpTlWlNuovo'] = 'Aggiunge un worklog Jira per questo operatore e questo giorno, per esempio quando il sottotask non è mai passato da IN PROGRESS e il worklog manca. Scegli il ticket (sono proposti i suoi sottotask della Griglia, prima quelli del giorno), inizio, fine e commento.\n\nNiente viene scritto finché non premi «Salva su Jira» e confermi. Se il ticket è assegnato a un altro, l\'app avvisa: il worklog non comparirebbe nella giornata dell\'operatore. Solo admin e responsabili.';
 HELP_TEXTS['cp-copia-worklog'] = 'Per quando un operatore ha lavorato con la squadra ma si è dimenticato di usare Jira: copia sui suoi sottotask i worklog che ha inserito un compagno quel giorno. La finestra legge da Jira i worklog del giorno di tutta la squadra e lo stato dei sottotask; scegli «Copia i worklog di» (chi li ha) e «sui sottotask di» (chi li ha dimenticati). Ogni worklog diventa una riga con il sottotask dell\'operatore proposto in base a cantiere e attività della Griglia (se non si trova, scrivi la chiave): orari e commento si possono cambiare, e un worklog già presente uguale parte deselezionato. Se il sottotask del compagno è già IN PENDING o DONE propone di portare allo stesso stato quello dell\'operatore; per DONE, se su Jira manca la produzione, la mette a 1 (resta «👁 da verificare»: il report la sostituisce, non la somma).\n\nScrive su Jira solo dopo «Copia su Jira» e la conferma: prima produzione e stato, poi i worklog, a nome dell\'assegnatario del sottotask. Durante la copia la finestra mostra passo per passo cosa sta facendo; alla fine controlla che i worklog si leggano da Jira e lancia da sola «🔄 Sincronizza squadra», così «Ore Jira» è subito aggiornata. I worklog del compagno non si toccano. Non si annulla con «Indietro». I dipendenti fornitore non compaiono come destinatari (li gestisce «🏢 Worklog fornitori»). Solo admin e responsabili.';
-HELP_TEXTS['cp-sistema-giornata'] = 'Sistema da qui, senza aprire Jira, un sottotask che l\'operatore ha dimenticato di muovere: mai attivato e lavoro finito, attivato in ritardo, finito ma lasciato IN PROGRESS, messo in pausa e non riattivato. La finestra legge da Jira stato e worklog del sottotask e propone i tratti di lavoro del giorno (per un IN PROGRESS, dall\'ora in cui è stato attivato): correggi inizio e fine, aggiungi o elimina tratti e scegli lo stato finale (IN PENDING o DONE; da qui non si riapre).\n\nScrive su Jira solo dopo «Applica su Jira» e la conferma: prima il cambio di stato (con i passaggi intermedi, l\'assegnatario rimesso all\'operatore e i worklog che l\'automazione Jira crea uscendo da IN PROGRESS eliminati), poi i worklog, a nome dell\'assegnatario. Per DONE Jira vuole l\'Actual Production: se manca il sottotask resta in IN PENDING. Non si annulla con «Indietro»; «Ore Jira» si aggiorna con «🔄 Sincronizza da Jira». Solo admin e responsabili.';
+HELP_TEXTS['cp-sistema-giornata'] = 'Sistema da qui, senza aprire Jira, un sottotask che l\'operatore ha dimenticato di muovere: mai attivato e lavoro finito, attivato in ritardo, finito ma lasciato IN PROGRESS, messo in pausa e non riattivato. La finestra legge da Jira stato e worklog del sottotask e propone i tratti di lavoro del giorno (per un IN PROGRESS, dall\'ora in cui è stato attivato): correggi inizio e fine, aggiungi o elimina tratti e scegli lo stato finale (IN PROGRESS se l\'operatore sta lavorando senza averlo attivato o ripreso dalla pausa, IN PENDING o DONE; un DONE da qui non si riapre).\n\nScrive su Jira solo dopo «Applica su Jira» e la conferma: prima il cambio di stato (con i passaggi intermedi, l\'assegnatario rimesso all\'operatore e i worklog che l\'automazione Jira crea uscendo da IN PROGRESS eliminati), poi i worklog, a nome dell\'assegnatario. Per DONE Jira vuole l\'Actual Production: se manca il sottotask resta in IN PENDING. Non si annulla con «Indietro»; «Ore Jira» si aggiorna con «🔄 Sincronizza da Jira». Solo admin e responsabili.';
 HELP_TEXTS['cpGsApplica'] = 'Scrive su Jira quello che hai preparato nella finestra: prima il cambio di stato (eliminando i worklog che l\'automazione Jira crea uscendo da IN PROGRESS), poi elimina, corregge e aggiunge i worklog. Chiede conferma con l\'elenco delle operazioni. Non si annulla con «Indietro».';
 HELP_TEXTS['cpGsAggiungi'] = 'Aggiunge un tratto di lavoro (inizio e fine) per questo sottotask nel giorno della riga, per esempio il lavoro ripreso dopo una pausa senza riattivare il sottotask. Viene scritto su Jira solo con «Applica su Jira».';
 HELP_TEXTS['cpGsElimina'] = 'Segna questo worklog da eliminare su Jira (clic di nuovo per tenerlo). Viene eliminato solo con «Applica su Jira».';
 HELP_TEXTS['cpGsTogli'] = 'Toglie questo tratto nuovo dalla finestra: non è ancora su Jira.';
-HELP_TEXTS['cpGsVoluto'] = 'Stato in cui portare il sottotask: IN PENDING (in pausa) o DONE (finito), oppure lasciarlo com\'è. Si va solo in avanti: da qui non si riapre un sottotask. Per DONE Jira vuole l\'Actual Production, altrimenti si ferma in IN PENDING.';
+HELP_TEXTS['cpGsVoluto'] = 'Stato in cui portare il sottotask: IN PROGRESS (al lavoro), IN PENDING (in pausa) o DONE (finito), oppure lasciarlo com\'è. Si va in avanti, più il ritorno da IN PENDING a IN PROGRESS (ripresa dopo la pausa); un DONE da qui non si riapre. Da IN PROGRESS Jira registra da solo il tempo da adesso a quando l\'operatore lo sposta: le ore fatte prima scrivile come tratti. Per DONE Jira vuole l\'Actual Production, altrimenti si ferma in IN PENDING.';
 HELP_TEXTS['cpTlWlSalva'] = 'Scrive su Jira il worklog con il giorno e gli orari indicati (ora italiana), dopo una conferma che mostra prima e dopo. La stima residua del ticket non cambia. Se nel frattempo qualcuno ha modificato lo stesso worklog su Jira, non tocca nulla e rilegge l\'operatore.\n\nPoi rilegge da Jira i worklog della settimana dell\'operatore e ridisegna la timeline. La colonna «Ore Jira» del Controllo Produzione si aggiorna con «🔄 Sincronizza da Jira». Ogni modifica resta nel log attività con chi l\'ha fatta.\n\nAutore su Jira: un worklog aggiunto risulta a nome dell\'assegnatario del sottotask; uno corretto tiene il suo autore, tranne quelli inseriti dall\'app a nome dell\'account di servizio, che passano all\'assegnatario (per sistemarne uno basta aprirlo e salvarlo senza cambiare nulla).';
 HELP_TEXTS['cpTlWlElimina'] = 'Elimina questo worklog da Jira, dopo una conferma: le sue ore spariscono dal ticket. Da qui non si può annullare; per rimetterlo bisogna aggiungerlo di nuovo con «＋». L\'eliminazione resta nel log attività con chi l\'ha fatta.';
 HELP_TEXTS['cpTlEsportaPdf'] = 'Scarica un PDF in A4 orizzontale con la vista attuale: il giorno o la settimana scelti, con i filtri applicati. Contiene le barre orarie con inizio, fine, totale e pause di ogni operatore. In fondo c\'è l\'elenco dei worklog con ticket, orari, durata e commento. Nel PDF segmenti e ticket sono cliccabili e aprono Jira; le commesse non in dashboard sono in rosso.\n\nNell\'intestazione indica da dove vengono i worklog e quando sono stati letti. Non invia nulla.';

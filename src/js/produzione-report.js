@@ -155,7 +155,7 @@ function cpReportAttivitaTicket(t, perTicket, attivitaNote) {
   return (sm && attivitaNote.find(a => sm.startsWith(a.toLowerCase() + ' - '))) || '';
 }
 
-HELP_TEXTS['cp-carica-report'] = 'Importa un file CSV/testo con le ore di produzione reale degli operatori di QUESTA squadra e compila "Ore Report Prod." e il Km/Cad del ticket del comune, per i soli giorni trovati nel file.\n\nSe sullo stesso comune la squadra ha sottotask di più attività (es. due rilievi diversi nella stessa settimana), viene chiesta anche l\'attività: il Km/Cad va sul sottotask di quell\'attività e si aggiornano solo gli operatori/giorni che la svolgono.\n\nSi possono caricare più report per la stessa squadra e settimana (es. 2 giorni fatti con l\'utenza di una persona e 3 con quella di un\'altra): ogni report aggiorna solo i giorni che contiene, gli altri restano come sono. Se due utenze diverse hanno dati sullo stesso giorno, ore e Km/Cad si sommano; ricaricare il report della stessa utenza ne sostituisce i valori invece di sommarli.\n\nI giorni senza dati nel file vengono messi a zero solo se ancora vuoti. Se il file non copre nessun giorno della settimana, ti viene comunque chiesto se vuoi azzerare le ore per quei giorni.\n\nRiguarda solo "Ore Report Prod."/Km — le "Ore Jira" si aggiornano con "Sincronizza da Jira".';
+HELP_TEXTS['cp-carica-report'] = 'Importa un file CSV/testo con le ore di produzione reale degli operatori di QUESTA squadra e compila "Ore Report Prod." e il Km/Cad del ticket del comune, per i soli giorni trovati nel file.\n\nSe sullo stesso comune la squadra ha sottotask di più attività (es. due rilievi diversi nella stessa settimana), viene chiesta anche l\'attività: il Km/Cad va sul sottotask di quell\'attività e si aggiornano solo gli operatori/giorni che la svolgono.\n\nSi possono caricare più report per la stessa squadra e settimana (es. 2 giorni fatti con l\'utenza di una persona e 3 con quella di un\'altra): ogni report aggiorna solo i giorni che contiene, gli altri restano come sono. Se due utenze diverse hanno dati sullo stesso giorno, ore e Km/Cad si sommano; ricaricare il report della stessa utenza ne sostituisce i valori invece di sommarli.\n\nI giorni senza dati nel file vengono messi a zero solo se ancora vuoti. Se sono già passati (maltempo, fermo…) il loro sottotask viene segnato «✓ Nessuna» produzione: Km/Cad 0, giorno compilato, niente scritto su Jira; un report caricato dopo con dati per quel giorno lo sostituisce. Oggi e i giorni futuri restano da compilare. Se il file non copre nessun giorno della settimana, ti viene comunque chiesto se vuoi azzerare le ore per quei giorni.\n\nRiguarda solo "Ore Report Prod."/Km — le "Ore Jira" si aggiornano con "Sincronizza da Jira".';
 
 // Handler del bottone: apre il selettore file (CSV) per la squadra indicata.
 async function cpCaricaReportSquadra(commessa, squadra) {
@@ -342,6 +342,25 @@ async function cpProcessReport(csvText, commessa, squadra) {
     const ru = cpKmMeta(cellaDi(u), u.ticketKey).reportUtenze;
     return !!ru && Object.keys(ru).some(x => x !== u.utente);
   };
+  // Giorni già passati senza dati nel file (maltempo, fermo…): il dato di produzione non arriverà
+  // mai, quindi il ticket del report riceve Km/Cad 0 "dal report" = giorno compilato, nessuna
+  // produzione. Niente va su Jira (delta 0). Oggi e i giorni futuri restano da compilare: il report
+  // non può ancora contenerli. Un Km/Cad già presente (anche letto da Jira) non viene toccato.
+  const oggi = new Date();
+  const oggiISO = `${oggi.getFullYear()}-${String(oggi.getMonth() + 1).padStart(2, '0')}-${String(oggi.getDate()).padStart(2, '0')}`;
+  const kmVuoto = u => {
+    const c = cellaDi(u);
+    return (!c.km_by_ticket || c.km_by_ticket[u.ticketKey] == null) &&
+           (!c.km_last_by_ticket || c.km_last_by_ticket[u.ticketKey] == null);
+  };
+  const nessunaProd = updates.filter(u => !u.utente && u.ticketKey && u.dataISO < oggiISO && kmVuoto(u));
+  const GG = ['Lun', 'Mar', 'Mer', 'Gio', 'Ven', 'Sab'];
+  const giorniNessuna = [...new Set(nessunaProd.map(u => u.giorno))].sort((a, b) => a - b)
+    .map(g => GG[g] + ' ' + isoDates[g].slice(8, 10) + '/' + isoDates[g].slice(5, 7));
+  const msgNessuna = giorniNessuna.length
+    ? `\n\nSenza dati nel file: ${giorniNessuna.join(', ')} → segnati come "nessuna produzione" (giorno compilato, Km/Cad 0, niente su Jira).`
+    : '';
+
   const conDati = updates.filter(u => u.utente && u.ticketKey);
   const giorniDi = list => new Set(list.map(u => u.giorno)).size;
   const giorniSomma = giorniDi(conDati.filter(altraUtenza));
@@ -356,7 +375,7 @@ async function cpProcessReport(csvText, commessa, squadra) {
     const ok0 = await showConfirmAsync(
       `Nessun dato trovato nel report per gli operatori di "${squadra}" in questa settimana ` +
       `(${isoDates[days[0]]} … ${isoDates[days[days.length-1]]}).\n\nIl report copre il periodo ${range}.\n\n` +
-      `Vuoi comunque azzerare le ore per questi giorni?`,
+      `Vuoi comunque azzerare le ore per questi giorni?` + msgNessuna,
       'Azzera comunque');
     if (!ok0) return;
   } else {
@@ -365,7 +384,7 @@ async function cpProcessReport(csvText, commessa, squadra) {
       `(${daysWithData} giorni con dati, ${daysZero} a zero` + (noTicket > 0 ? `, ${noTicket} senza ticket` + (attSel ? ` dell'attività` : ` del comune`) : ``) + `). ` +
       `Vengono aggiornati solo i giorni presenti nel file` +
       (giorniSomma > 0 ? `; su ${giorniSomma} giorn${giorniSomma === 1 ? 'o' : 'i'} c'è già il report di un'altra utenza: ore e Km/Cad verranno sommati` : '') +
-      `. Procedere?`,
+      `.` + msgNessuna + `\n\nProcedere?`,
       'Carica Report');
     if (!ok) return;
     if (giorniIgnoti > 0) {
@@ -382,14 +401,28 @@ async function cpProcessReport(csvText, commessa, squadra) {
 
   // Applica: aggiorna cache locale (ore per cella, km sul ticket del comune) e persisti
   const touched = new Map();
+  const nessunaSet = new Set(nessunaProd);
   let giorniZeroSaltati = 0;
   updates.forEach(u => {
     const k = `${commessa}|||${squadra}|||${u.operatore}|||${u.giorno}`;
     if (!_cpData[k]) _cpData[k] = {};
     const cell = _cpData[k];
-    // Giorno senza dati in questo report: si mette a zero solo una cella ancora vuota, mai
-    // quella già compilata da un altro report (salvo la conferma esplicita "Azzera comunque").
-    if (!u.utente && !azzeraTutto && cell.ore_report != null) { giorniZeroSaltati++; return; }
+    if (!u.utente) {
+      // Giorno senza dati in questo report: le ore vanno a zero solo in una cella ancora vuota, mai
+      // in quella già compilata da un altro report (salvo la conferma esplicita "Azzera comunque").
+      const azzeraOre = azzeraTutto || cell.ore_report == null;
+      const segna = nessunaSet.has(u) && kmVuoto(u);
+      if (!azzeraOre && !segna) { giorniZeroSaltati++; return; }
+      if (azzeraOre) cell.ore_report = 0;
+      if (segna) {
+        if (!cell.km_by_ticket || typeof cell.km_by_ticket !== 'object') cell.km_by_ticket = {};
+        cell.km_by_ticket[u.ticketKey] = 0;
+        cpKmMetaSet(cell, u.ticketKey, { fonte: 'report', reportUtenze: null });
+        cell.km_cad = cpSumKm(cell.km_by_ticket);
+      }
+      touched.set(k, u);
+      return;
+    }
     let ore = u.ore, km = u.km, reportUtenze = null;
     if (u.utente && u.ticketKey) {
       const prec = precedenteSenzaUtenza(u);
@@ -434,6 +467,9 @@ async function cpProcessReport(csvText, commessa, squadra) {
             `(${daysWithData} giorni con dati, ${daysZero} a zero).`;
   if (giorniSomma > 0) {
     msg += `\n\n➕ Su ${giorniSomma} giorn${giorniSomma === 1 ? 'o' : 'i'} sommato al report di un'altra utenza già caricato.`;
+  }
+  if (giorniNessuna.length) {
+    msg += `\n\n✓ Nessuna produzione (giorno compilato): ${giorniNessuna.join(', ')}.`;
   }
   if (giorniZeroSaltati > 0) {
     msg += `\n\nℹ ${giorniZeroSaltati} operatore/giorno senza dati in questo file lasciati com'erano (già compilati da un altro report).`;

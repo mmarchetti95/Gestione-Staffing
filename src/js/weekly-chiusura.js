@@ -404,7 +404,7 @@ function _chsStatoKm() {
   if (!giornate.length) return { stato: 'na', testo: 'Nessuna giornata pianificata già passata.' };
   if (_chs.erroreRighe) return { stato: 'ignoto', testo: 'Controllo Produzione non letto: ' + _chs.erroreRighe };
   if (!_chs.righe) return { stato: 'attesa', testo: 'Leggo il Controllo Produzione…' };
-  const c = { ok: 0, da_verificare: 0, da_aggiornare: 0, da_inviare: 0, senza_email: 0 };
+  const c = { ok: 0, nessuna: 0, da_verificare: 0, da_aggiornare: 0, da_inviare: 0, senza_email: 0 };
   const senzaKm = [];
   let conTicket = 0;
   giornate.forEach(x => {
@@ -428,7 +428,8 @@ function _chsStatoKm() {
   if (c.da_inviare) parti.push(c.da_inviare + ' da inviare');
   if (c.senza_email) parti.push(c.senza_email + ' senza email');
   if (senzaKm.length) parti.push(_chsPlur(senzaKm.length, 'giornata senza Km/Cad', 'giornate senza Km/Cad'));
-  if (!pend && !senzaKm.length) return { stato: 'ok', testo: 'Km/Cad verificati e allineati su Jira (' + _chsPlur(c.ok, 'ticket', 'ticket') + ').' };
+  if (!pend && !senzaKm.length) return { stato: 'ok', testo: 'Km/Cad verificati e allineati su Jira (' + _chsPlur(c.ok, 'ticket', 'ticket') +
+    (c.nessuna ? ', ' + c.nessuna + ' senza produzione' : '') + ').' };
   return { stato: 'ko', testo: 'Ticket: ' + parti.join(' · ') + '.',
     dettaglio: [c.ok ? c.ok + ' ticket già allineati.' : '', senzaKm.length ? 'Senza Km/Cad (report non caricato): ' + _chsPerGiorno(senzaKm) + '.' : '',
       c.da_verificare ? '«Da verificare» = valore letto da Jira (di solito quello dell\'operatore): carica il report o confermalo.' : ''].filter(Boolean).join(' ') };

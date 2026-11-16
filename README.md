@@ -114,6 +114,12 @@ Limite noto: il progetto Supabase è sul piano **Free**, che non include backup 
 
 ## Changelog
 
+## v18.264.0
+- feat: **Sistema sottotask, si può portare anche IN PROGRESS.** Nel «✎» accanto al badge della colonna Stato del Controllo Produzione, lo «Stato finale» propone ora anche IN PROGRESS (al lavoro): da CREATED/TO DO, per un operatore che sta lavorando senza aver attivato il sottotask, e da IN PENDING, per uno che ha ripreso dopo la pausa senza riattivarlo. Da lì Jira conta il tempo da solo da adesso fino a quando l'operatore lo sposta, quindi le ore fatte prima vanno scritte come tratti nella stessa finestra (la finestra lo ricorda, e avvisa se la riga non è di oggi). Assegnatario rimesso all'operatore dopo la transizione, come per gli altri stati. Un DONE da qui continua a non riaprirsi. **Edge Function `jira-worklog-edit` da ridistribuire** (l'azione `stato` accetta `voluto: "IN PROGRESS"`); nessuna modifica allo schema Supabase.
+
+## v18.263.0
+- feat: **Report produzione, i giorni senza produzione risultano compilati.** Caricando un report, i giorni già passati per cui il file non ha dati (maltempo, fermo…) segnano il sottotask del comune/attività come «✓ Nessuna» produzione: Km/Cad 0 dal report, niente scritto su Jira. Il riepilogo «KM su Jira» della squadra e il passo Km/Cad della Chiusura settimana non li contano più come «report non caricato». Oggi e i giorni futuri restano da compilare; un Km/Cad già presente (anche quello letto da Jira) non viene toccato; un report caricato dopo con dati per quel giorno sostituisce lo 0. I giorni già caricati prima si sistemano ricaricando il report della squadra. Nessuna modifica a Supabase o alle Edge Function.
+
 ## v18.262.0
 - fix: **Niente più «sfarfallio» quando un collega salva.** Prima ogni salvataggio di un altro utente faceva ricaricare e ridisegnare a tutti la Dashboard intera e il tab aperto (in Controllo Produzione la tabella spariva per un attimo con «⏳ Caricamento dati…» e si perdeva il punto in cui si era). Ora si aggiorna solo la parte cambiata davvero (Dashboard, Griglia, Ferie o Doppia Week), il tab aperto si ridisegna sul posto mantenendo lo scroll, il Controllo Produzione rilegge i dati lasciando visibile la tabella, e se si sta scrivendo in un campo l'aggiornamento aspetta che si esca dal campo (prima il testo appena digitato andava perso). Più salvataggi ravvicinati di un collega diventano un solo aggiornamento, e uno arrivato mentre un altro era in corso non viene più perso. Nessuna modifica a Supabase o alle Edge Function.
 
