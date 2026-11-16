@@ -114,6 +114,9 @@ Limite noto: il progetto Supabase è sul piano **Free**, che non include backup 
 
 ## Changelog
 
+## v18.266.0
+- feat: **Sistema sottotask, la produzione per chiudere in DONE si scrive dalla finestra.** Nel «✎» della colonna Stato del Controllo Produzione, scegliendo DONE la finestra legge da Jira la produzione del sottotask (Actual Production, o KPI_Quantità lavorata per le commesse col campo nuovo). Se manca, compare un campo già compilato (il Km/Cad che c'è in Controllo Produzione per quel ticket, altrimenti 1) che «Applica su Jira» scrive prima del cambio di stato, così il sottotask si chiude in DONE invece di fermarsi in IN PENDING. Stesso canale e modello a delta di «Sincronizza» (Task padre allineato). Il valore va anche nella riga del Controllo Produzione: 1 resta «👁 da verificare» e il report lo sostituisce, un altro valore conta come inserito a mano. Lasciando il campo vuoto si comporta come prima. Nessuna modifica a Supabase o alle Edge Function.
+
 ## v18.265.0
 - fix: **Giorni in cui nessuno ha lavorato non più «ancora da sincronizzare».** Un giorno già passato senza nessun ticket Jira (nessuno ha messo ore: maltempo, fermo…) e con il report caricato a 0 ore conta come compilato nel riepilogo «KM su Jira» della squadra: prima restava «ancora da sincronizzare: Gio 12/11» perché, senza un sottotask letto da Jira, non c'era dove segnare «✓ Nessuna». Nessuna modifica a Supabase o alle Edge Function.
 

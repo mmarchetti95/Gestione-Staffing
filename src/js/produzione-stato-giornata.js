@@ -33,6 +33,9 @@ let _cpGs = {
   tratti: [],                // { id|null, orig: Wl|null, inizio, fine, commento, elimina, proposto }
   altri: [],                 // worklog del sottotask in altri giorni: { w, p }
   voluto: '',                // '' (invariato) | 'IN PROGRESS' | 'IN PENDING' | 'DONE'
+  riga: null,                // riga del Controllo Produzione: { cpk, commessa, squadra, g, cantiere, attivita, anno, week }
+  prod: null,                // produzione su Jira (per DONE): { caricando, errore, valore, campo }
+  prodValore: '',            // produzione da scrivere prima di DONE se su Jira manca ('' = non scrivere)
   salvando: false,
 };
 
@@ -64,9 +67,17 @@ async function cpGsApri(btn) {
   if (!cpGsPuo()) return;
   const tr = btn.closest('tr');
   const d = _cpaDateSettimana(), iso = btn.dataset.date, g = d.iso.indexOf(iso);
+  // Riga del Controllo Produzione (commessa|||squadra|||operatore|||giorno): serve per segnarci
+  // la produzione scritta su Jira prima di DONE
+  const parti = String((tr && tr.dataset.cpk) || '').split('|||');
+  const riga = parti.length === 4 ? {
+    cpk: tr.dataset.cpk, commessa: parti[0], squadra: parti[1], g: Number(parti[3]),
+    cantiere: tr.dataset.cantiere || '', attivita: tr.dataset.attivita || '', anno: pwAnno, week: pwWeek,
+  } : null;
   Object.assign(_cpGs, {
     aperto: true, key: btn.dataset.k, nome: (tr && tr.dataset.operatore) || '', iso, label: g >= 0 ? d.label[g] : iso,
-    k: _cpaKey(pwAnno, pwWeek), d, caricando: true, errore: '', info: null, statoDa: null, tratti: [], altri: [], voluto: '', salvando: false,
+    k: _cpaKey(pwAnno, pwWeek), d, caricando: true, errore: '', info: null, statoDa: null, tratti: [], altri: [], voluto: '',
+    riga, prod: null, prodValore: '', salvando: false,
   });
   _cpGsRender();
   await _cpGsCarica();
@@ -121,7 +132,99 @@ async function _cpGsCarica() {
   _cpGs.tratti = tratti;
   _cpGs.altri = altri;
   _cpGs.voluto = voluto;
+  _cpGs.prod = null;
+  _cpGs.prodValore = '';
   _cpGsRender();
+  if (_cpGsAmmesso(r, 'DONE')) _cpGsLeggiProd();
+}
+
+/* ---------- Produzione (per DONE) ----------
+   Jira chiude in DONE solo con la produzione del sottotask > 0 (Actual Production, o KPI_Quantità
+   lavorata per le commesse col campo nuovo). Se manca, la finestra propone di scriverla prima del
+   cambio di stato (default: il Km/Cad già in Controllo Produzione per questo ticket, altrimenti 1),
+   con lo stesso canale e modello a delta di «Sincronizza» (jira-update-production, Task padre
+   allineato). Il valore va anche nella riga del Controllo Produzione: 1 come segnaposto letto da
+   Jira (fonte 'jira', «👁 da verificare», il report lo sostituisce), un altro valore come manuale. */
+
+function _cpGsKmLocale() {
+  const R = _cpGs.riga, cell = R && _cpData[R.cpk];
+  const v = cell && cell.km_by_ticket ? Number(cell.km_by_ticket[_cpGs.key]) : NaN;
+  return isFinite(v) && v > 0 ? v : null;
+}
+
+async function _cpGsLeggiProd() {
+  const G = _cpGs, key = G.key;
+  G.prod = { caricando: true };
+  _cpGsRender();
+  try { await cpCampoProdLoad(); } catch (_) { /* resta il campo di default */ }
+  const campo = cpCampoProduzione(G.riga ? G.riga.commessa : '');
+  const r = await _cpCwInvocaProd({ reads: [{ issueKey: key, campo }] });
+  if (!G.aperto || G.key !== key) return;
+  if (r.errore) G.prod = { errore: r.errore, campo };
+  else {
+    const v = Number((r.values || {})[key]);
+    G.prod = { valore: isFinite(v) ? v : null, campo };
+    if (!(v > 0)) G.prodValore = String(_cpGsKmLocale() || 1);
+  }
+  _cpGsRender();
+}
+
+function _cpGsProdHtml() {
+  const G = _cpGs, P = G.prod;
+  if (G.voluto !== 'DONE' || !P) return '';
+  const box = (stile, html) => '<div class="text-xs mb-3" style="border-radius:6px;padding:8px 10px;' + stile + '">' + html + '</div>';
+  if (P.caricando) return box('background:#f8fafc;color:#64748b;', 'Leggo la produzione del sottotask su Jira…');
+  if (P.errore) {
+    return box('background:#fffbeb;color:#92400e;', '⚠ Produzione non letta da Jira (' + esc(P.errore) + '). Se manca, il sottotask si fermerà in IN PENDING: ' +
+      '<button type="button" onclick="_cpGsLeggiProd()" class="underline">riprova a leggerla</button>.');
+  }
+  if (P.valore > 0) return box('background:#f0fdf4;color:#166534;', '✓ Produzione su Jira: <b>' + esc(String(P.valore)) + '</b> («' + esc(P.campo) + '»): si può chiudere in DONE.');
+  const loc = _cpGsKmLocale();
+  return box('background:#fffbeb;color:#92400e;',
+    'Su Jira manca la produzione («' + esc(P.campo) + '»): senza, Jira non lo chiude in DONE e si ferma in IN PENDING.' +
+    (loc ? ' In Controllo Produzione c\'è già <b>' + esc(String(loc)) + '</b> per questo ticket.' : '') +
+    '<div class="flex flex-wrap items-center gap-2 mt-2" style="color:#334155;"><span class="font-semibold">Scrivi su Jira prima di chiuderlo:</span>' +
+    '<input type="number" step="0.1" min="0" class="border border-slate-300 rounded px-2 py-1 text-sm bg-white" style="width:90px" ' +
+    'value="' + esc(G.prodValore) + '" oninput="cpGsProd(this)">' +
+    '<span class="text-[11px] text-slate-500">vuoto = non scriverla' + (loc ? '' : '; 1 resta «👁 da verificare» e il report la sostituisce') + '</span></div>');
+}
+
+function cpGsProd(el) { _cpGs.prodValore = el.value; cpGsControlla(); }
+
+/* Produzione da scrivere: null (niente) | numero > 0 | NaN (valore non valido) */
+function _cpGsProdDaScrivere() {
+  const G = _cpGs, P = G.prod;
+  if (G.voluto !== 'DONE' || !P || P.caricando || P.errore || P.valore > 0) return null;
+  const s = String(G.prodValore || '').trim().replace(',', '.');
+  if (!s) return null;
+  const v = Number(s);
+  return isFinite(v) && v > 0 ? Math.round(v * 1000) / 1000 : NaN;
+}
+
+async function _cpGsScriviProd(val) {
+  const G = _cpGs, P = G.prod, R = G.riga, key = G.key;
+  const cur = Number(P.valore);
+  const add = Math.round((val - (isFinite(cur) ? cur : 0)) * 1000) / 1000;
+  const w = await _cpCwInvocaProd({ updates: [{ issueKey: key, add, campo: P.campo }] });
+  const ris = w.results && w.results[key];
+  if (w.errore || !ris || !ris.ok) {
+    return { ok: false, testo: 'Produzione non scritta: ' + (w.errore || (w.errors && w.errors[key]) || 'risposta non valida') };
+  }
+  const testo = 'Produzione ' + val + ' su «' + (ris.campo || P.campo) + '»';
+  // Riga del Controllo Produzione: solo se la tabella mostra ancora la settimana aperta
+  if (!R || R.anno !== pwAnno || R.week !== pwWeek) return { ok: true, testo: testo + ' (non segnata in Controllo Produzione: riga non trovata)' };
+  const cell = _cpData[R.cpk] || (_cpData[R.cpk] = {});
+  if (!cell.km_by_ticket || typeof cell.km_by_ticket !== 'object') cell.km_by_ticket = {};
+  if (!cell.km_last_by_ticket || typeof cell.km_last_by_ticket !== 'object') cell.km_last_by_ticket = {};
+  const prima = Number(cell.km_by_ticket[key]), fontePrima = cpKmMeta(cell, key).fonte;
+  const fonte = prima === val && fontePrima !== 'jira' ? (fontePrima || 'manuale') : (val === 1 ? 'jira' : 'manuale');
+  cell.km_by_ticket[key] = val;
+  cell.km_last_by_ticket[key] = val;
+  cpKmMetaSet(cell, key, { fonte, campoLast: ris.campo || P.campo });
+  cell.km_cad = cpSumKm(cell.km_by_ticket);
+  const rec = cpBuildRecordDa(cell, R.anno, R.week, R.commessa, R.squadra, G.nome, R.g, G.iso, R.cantiere, R.attivita);
+  const { error } = await _sbClient.from('controllo_produzione').upsert([rec], { onConflict: 'anno,week,commessa,squadra,operatore,giorno' });
+  return { ok: true, testo: testo + (error ? ' ⚠ ma non salvata in Controllo Produzione: ' + (error.message || error) : (fonte === 'jira' ? ' (👁 da verificare)' : '')) };
 }
 
 /* ---------- Form ---------- */
@@ -205,6 +308,7 @@ function _cpGsRender() {
     '<div style="padding:16px 20px 6px;">' + titolo + ticket +
       '<div class="text-xs mb-3" style="background:#f1f5f9;border-radius:6px;padding:8px 10px;color:#334155;">' + _cpGsSituazione() + '</div>' +
       '<div class="mb-3"><span class="' + lab + '">Stato finale</span><select class="' + inp + '" onchange="cpGsVoluto(this)">' + opz + '</select></div>' +
+      _cpGsProdHtml() +
       '<span class="' + lab + '">Ore di lavoro su questo sottotask, ' + esc(G.label) + '</span>' +
       '<table style="width:100%;border-collapse:collapse"><thead><tr class="text-[11px] text-slate-500"><th></th><th style="text-align:left;padding:0 4px">Inizio</th><th style="text-align:left;padding:0 4px">Fine</th><th></th><th style="text-align:left;padding:0 4px">Commento</th><th></th></tr></thead>' +
       '<tbody>' + (righe || '<tr><td colspan="6" class="text-xs text-slate-400" style="padding:4px">Nessun worklog in questo giorno.</td></tr>') + '</tbody></table>' +
@@ -224,7 +328,7 @@ function cpGsCampo(el) {
   cpGsControlla();
 }
 
-function cpGsVoluto(el) { _cpGs.voluto = el.value; cpGsControlla(); }
+function cpGsVoluto(el) { _cpGs.voluto = el.value; _cpGsRender(); }   // ridisegna: mostra/nasconde la produzione
 
 function cpGsAggiungi() {
   const vivi = _cpGs.tratti.filter(t => !t.elimina && t.fine != null);
@@ -245,10 +349,16 @@ function cpGsElimina(i) {
 
 /* Operazioni da fare + errori (bloccano) e avvisi */
 function _cpGsVerifica() {
-  const G = _cpGs, out = { errori: [], avvisi: [], crea: [], modifica: [], elimina: [], stato: '' };
+  const G = _cpGs, out = { errori: [], avvisi: [], crea: [], modifica: [], elimina: [], stato: '', prod: null };
   if (!G.info) return out;
   const r = _cpGsRango(G.info.stato), ora = cpOraRoma();
   if (G.voluto && _cpGsAmmesso(r, G.voluto)) out.stato = G.voluto;
+  if (out.stato === 'DONE') {
+    const pv = _cpGsProdDaScrivere();
+    if (Number.isNaN(pv)) out.errori.push('Produzione: scrivi un numero maggiore di 0, oppure lascia vuoto.');
+    else out.prod = pv;
+    if (G.prod && G.prod.caricando) out.errori.push('Sto ancora leggendo la produzione da Jira, un attimo.');
+  }
   const vivi = [];
   G.tratti.forEach((t, i) => {
     if (t.elimina) { out.elimina.push(t); return; }
@@ -288,7 +398,12 @@ function _cpGsVerifica() {
     out.avvisi.push('Nessun tratto: il tempo passato in IN PROGRESS non resterà registrato (il worklog dell\'automazione viene eliminato).');
   }
   if (out.stato && out.stato !== 'IN PROGRESS' && r < CPGS_IN_PROGRESS && !vivi.length) out.avvisi.push('Nessuna ora: il sottotask si chiude senza worklog.');
-  if (out.stato === 'DONE') out.avvisi.push('Per DONE Jira vuole l\'Actual Production: se manca, il sottotask si ferma in IN PENDING.');
+  const P = G.prod;
+  if (out.stato === 'DONE' && out.prod == null && !(P && P.valore > 0)) {
+    out.avvisi.push(P && !P.errore && !P.caricando
+      ? 'Senza produzione su Jira il sottotask si ferma in IN PENDING, non in DONE.'
+      : 'Per DONE Jira vuole l\'Actual Production: se manca, il sottotask si ferma in IN PENDING.');
+  }
   if (out.stato === 'IN PROGRESS') {
     out.avvisi.push('Da IN PROGRESS Jira registra da solo il tempo da adesso a quando l\'operatore lo sposta: le ore fatte prima vanno scritte qui come tratti.');
     if (ora && G.iso !== ora.data) out.avvisi.push('La riga è di ' + G.label + ', non di oggi: il tempo che conterà Jira parte da adesso, non da quel giorno.');
@@ -308,6 +423,7 @@ function cpGsControlla() {
   const righe = [];
   if (!niente) {
     const cosa = [];
+    if (v.prod != null) cosa.push('produzione ' + v.prod + ' su Jira');
     if (v.stato) cosa.push(_cpGs.info.stato + ' → ' + v.stato);
     if (v.crea.length) cosa.push(v.crea.length + ' worklog da aggiungere');
     if (v.modifica.length) cosa.push(v.modifica.length + ' da correggere');
@@ -334,6 +450,7 @@ async function cpGsApplica() {
   const v = _cpGsVerifica();
   if (v.errori.length) { cpGsControlla(); return; }
   const righe = [];
+  if (v.prod != null) righe.push('Produzione: scrivo ' + v.prod + ' su «' + G.prod.campo + '» (prima di chiuderlo)');
   if (v.stato) {
     righe.push('Stato: ' + G.info.stato + ' → ' + v.stato + (_cpGsRango(G.info.stato) === CPGS_IN_PROGRESS || v.stato === 'DONE'
       ? ' (i worklog che l\'automazione Jira crea uscendo da IN PROGRESS vengono eliminati)' : ''));
@@ -352,8 +469,14 @@ async function cpGsApplica() {
   G.salvando = true;
   cpGsControlla();
   const fatti = [], problemi = [];
-  let ricarica = false;
+  let ricarica = false, prodScritta = false;
   try {
+    // a0. Produzione prima di DONE (se non riesce, la funzione lo ferma in IN PENDING come prima)
+    if (v.prod != null) {
+      const pr = await _cpGsScriviProd(v.prod);
+      if (pr.ok) { fatti.push(pr.testo); prodScritta = true; }
+      else problemi.push(pr.testo);
+    }
     // a. Stato (prima dei worklog: i worklog nuovi dell'automazione si riconoscono come "nuovi")
     if (v.stato) {
       const res = await _cpTlWlInvoca({ action: 'stato', issueKey: G.key, voluto: v.stato, atteso: { stato: G.info.stato }, operatore: G.nome });
@@ -413,6 +536,7 @@ async function cpGsApplica() {
         '\n\nPer aggiornare «Ore Jira» usa «🔄 Sincronizza da Jira».');
     }
     cpStatoRefresh(true);
+    if (prodScritta) { try { pwControlloRender(); } catch (_) { /* tabella non aperta */ } }   // Km/Cad della riga
     if (fatti.length && _cpTl.letture[k]) _cpTlWlRileggiOperatore(nome, k, d, esito + ' Per aggiornare «Ore Jira» usa «🔄 Sincronizza da Jira».');
   }
 }
