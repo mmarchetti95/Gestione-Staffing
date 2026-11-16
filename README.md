@@ -114,7 +114,7 @@ Limite noto: il progetto Supabase è sul piano **Free**, che non include backup 
 
 ## Changelog
 
-## v18.264.0
+## v18.265.0
 - fix: **Giorni in cui nessuno ha lavorato non più «ancora da sincronizzare».** Un giorno già passato senza nessun ticket Jira (nessuno ha messo ore: maltempo, fermo…) e con il report caricato a 0 ore conta come compilato nel riepilogo «KM su Jira» della squadra: prima restava «ancora da sincronizzare: Gio 12/11» perché, senza un sottotask letto da Jira, non c'era dove segnare «✓ Nessuna». Nessuna modifica a Supabase o alle Edge Function.
 
 ## v18.264.0
