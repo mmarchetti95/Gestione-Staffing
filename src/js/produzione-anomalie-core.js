@@ -443,8 +443,8 @@ function _cpaControllaMysond(input, out, perOpGiorno, wl, ore) {
 /* ---------- 6) Più di 8 ore segnate in MySond ---------- */
 
 /* Somma di TUTTE le voci MySond del giorno (lavoro, viaggio, non lavorate): è quello che
-   l'operatore ha segnato. Non serve Jira: si valuta ogni operatore con ore MySond nella
-   settimana, anche chi non è in Griglia (squadra vuota). Le ore Jira, se lette, si
+   l'operatore ha segnato. Non serve Jira. Solo chi quel giorno è in Griglia (cella non
+   in ferie): chi non c'è non interessa a chi pianifica. Le ore Jira, se lette, si
    mostrano solo per confronto. */
 function _cpaControllaMysondOltre(input, out) {
   if (!input.mysond) return;
@@ -458,11 +458,11 @@ function _cpaControllaMysondOltre(input, out) {
   Object.keys(input.mysond).forEach(op => {
     for (let g = 0; g < 6; g++) {
       const rec = (input.mysond[op] || {})[g];
-      if (!rec) continue;
+      const celle = perOpGiorno[op + '|||' + g] || [];
+      if (!rec || !celle.length) continue;
       const m = cpaMysondRipartisci(rec);
       if (!(m.totale > S.oreMaxMysond + 1e-9)) continue;
       const oltre = Math.round((m.totale - S.oreMaxMysond) * 100) / 100;
-      const celle = perOpGiorno[op + '|||' + g] || [];
       const squadre = [...new Set(celle.map(c => c.commessa + '|||' + c.squadra))];
       const cantieri = [...new Set(celle.flatMap(_cpaCantieriCella))];
       const d = input.worklog ? ((input.worklog[op] || {})[g] || null) : null;

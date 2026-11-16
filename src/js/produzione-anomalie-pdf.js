@@ -110,78 +110,82 @@ function _cpaPdfSoglia(tipo) {
   const p = _cpaPref();
   if (tipo === 'ore_squadra') return 'Scarto minimo segnalato: ' + _cpaPdfH(Number(p.diffOreSquadra)) + '.';
   if (tipo === 'mysond_diverso') return 'Scarto minimo segnalato: ' + _cpaPdfH(Number(p.diffOreMysond)) + '.';
-  if (tipo === 'mysond_oltre_giornata') return 'Raggruppate per squadra della Griglia quel giorno, con ogni inserimento MySond della giornata.';
+  if (tipo === 'mysond_oltre_giornata') return 'Una tabella per squadra della Griglia; per ogni operatore e giorno il totale e, sotto, ogni inserimento MySond. Viaggio e ore non lavorate in grigio.';
   return '';
 }
 
-/* "Più di 8 h in MySond": non una riga per anomalia ma un blocco per squadra (commessa /
-   squadra della Griglia quel giorno; chi non era in Griglia va in fondo) e, per ogni
-   operatore+giorno, una riga per inserimento MySond. Giorno, operatore, totale e Jira
-   occupano tutte le righe dei suoi inserimenti (rowSpan). Restituisce la nuova y. */
-const CPA_PDF_MS_TIPO = { viaggio: ' [viaggio]', non_lavorate: ' [non lavorate]', lavoro: '' };
+/* "Più di 8 h in MySond": una tabella per squadra (commessa / squadra della Griglia quel
+   giorno), con una fascia colorata come titolo. Dentro, per ogni operatore+giorno una riga
+   di intestazione (giorno, operatore, cantiere | totale MySond, ore oltre le 8, Jira) e
+   sotto una riga per inserimento MySond; viaggio e ore non lavorate in grigio corsivo.
+   Restituisce la nuova y. */
+/* Il viaggio si riconosce già dall'attività ("Viaggio …"): etichetta solo per le non lavorate */
+const CPA_PDF_MS_TIPO = { viaggio: '', non_lavorate: 'non lavorate', lavoro: '' };
 
 function _cpaPdfSezioneOltre(doc, voci, r, y, M, pageH) {
-  const SENZA = '';   // chi quel giorno non è in Griglia: blocco in fondo
+  const pageW = doc.internal.pageSize.getWidth();
   const gruppi = {};
   voci.forEach(a => {
-    const sq = ((a.confronto || {}).squadre || [])[0];
-    const k = sq ? sq.commessa + '|||' + sq.squadra : SENZA;
+    const sq = ((a.confronto || {}).squadre || [])[0] || { commessa: a.commessa, squadra: a.squadra };
+    const k = sq.commessa + '|||' + sq.squadra;
     (gruppi[k] = gruppi[k] || []).push(a);
   });
-  Object.keys(gruppi).sort((x, z) => ((x === SENZA) - (z === SENZA)) || x.localeCompare(z)).forEach(k => {
+  Object.keys(gruppi).sort((x, z) => x.localeCompare(z)).forEach(k => {
     const lista = gruppi[k].sort((x, z) => (x.giorno - z.giorno) || x.operatore.localeCompare(z.operatore));
-    const nomeGruppo = k === SENZA ? 'Non in Griglia quel giorno' : k.split('|||').filter(Boolean).join(' / ');
-    if (y > pageH - 35) { doc.addPage(); y = 15; }
-    doc.setFont(undefined, 'bold'); doc.setFontSize(10); doc.setTextColor(15, 118, 110);
-    doc.text(_cpaPdfTxt(nomeGruppo + ' (' + lista.length + (lista.length === 1 ? ' giornata' : ' giornate') + ')'), M, y);
-    y += 2;
+    const p = k.split('|||');
+    if (y > pageH - 45) { doc.addPage(); y = 15; }
+    /* Fascia della squadra */
+    doc.setFillColor(15, 118, 110);
+    doc.rect(M, y, pageW - 2 * M, 7, 'F');
+    doc.setFont(undefined, 'bold'); doc.setFontSize(10.5); doc.setTextColor(255, 255, 255);
+    doc.text(_cpaPdfTxt(p[0] + (p[1] ? '  ·  ' + p[1] : '')), M + 3, y + 4.9);
+    doc.setFont(undefined, 'normal'); doc.setFontSize(8.5);
+    doc.text(_cpaPdfTxt(lista.length + (lista.length === 1 ? ' giornata oltre le 8 h' : ' giornate oltre le 8 h')), pageW - M - 3, y + 4.9, { align: 'right' });
+    y += 7;
 
     const body = [], grav = [];
     lista.forEach(a => {
       const C = a.confronto;
-      const ms = C.mysond.voci.slice().sort((x, z) => (x.tipo === 'lavoro' ? 0 : 1) - (z.tipo === 'lavoro' ? 0 : 1) || z.ore - x.ore);
-      const righe = ms.length ? ms : [{ commessa: '', voce: '(senza dettaglio)', attivita: '', descrizione: '', ore: C.mysond.totale, tipo: 'lavoro' }];
-      const n = righe.length;
       const altre = (C.squadre || []).slice(1).map(x => x.commessa + ' / ' + x.squadra);
-      const span = v => ({ content: _cpaPdfTxt(v), rowSpan: n });
-      righe.forEach((v, i) => {
-        const celle = [_cpaPdfTxt(v.commessa), _cpaPdfTxt(v.voce), _cpaPdfTxt((v.attivita || '') + CPA_PDF_MS_TIPO[v.tipo]),
-          _cpaPdfTxt(v.descrizione), _cpaPdfTxt(_cpaPdfH(v.ore))];
-        if (i === 0) {
-          body.push([
-            span(r.giorniLabel[a.giorno] || ''),
-            span(a.operatore + (a.cantiere ? '\n' + a.cantiere : '') + (altre.length ? '\nanche in ' + altre.join(', ') : '')),
-            span(_cpaPdfH(C.mysond.totale) + '\n(+' + _cpaPdfH(C.oltre) + ')'),
-          ].concat(celle, [span(C.oreJira == null ? 'non lette' : _cpaPdfH(C.oreJira))]));
-          grav.push(a.gravita);
-        } else {
-          body.push(celle);
-          grav.push(null);
-        }
+      const sx = [r.giorniLabel[a.giorno] || '', a.operatore, a.cantiere].filter(Boolean).join(' · ') +
+        (altre.length ? ' (anche in ' + altre.join(', ') + ')' : '');
+      const dx = 'MySond ' + _cpaPdfH(C.mysond.totale) + ' (+' + _cpaPdfH(C.oltre) + ' oltre le ' + _cpaPdfH(C.soglia) + ')' +
+        ' · Jira ' + (C.oreJira == null ? 'non lette' : _cpaPdfH(C.oreJira));
+      const testa = { fillColor: [254, 243, 199], textColor: [30, 41, 59], fontStyle: 'bold', fontSize: 9, cellPadding: { top: 2.2, bottom: 2.2, left: 3.5, right: 2.4 } };
+      body.push([
+        { content: _cpaPdfTxt(sx), colSpan: 3, styles: testa },
+        { content: _cpaPdfTxt(dx), colSpan: 2, styles: Object.assign({}, testa, { halign: 'right', textColor: [185, 28, 28] }) },
+      ]);
+      grav.push(a.gravita);
+      const ms = C.mysond.voci.slice().sort((x, z) => (x.tipo === 'lavoro' ? 0 : 1) - (z.tipo === 'lavoro' ? 0 : 1) || z.ore - x.ore);
+      const righe = ms.length ? ms : [{ commessa: '', voce: '(nessun dettaglio nel file MySond)', attivita: '', descrizione: '', ore: C.mysond.totale, tipo: 'lavoro' }];
+      righe.forEach(v => {
+        const extra = v.tipo === 'lavoro' ? {} : { textColor: [120, 130, 145], fontStyle: 'italic' };
+        const att = [v.attivita, CPA_PDF_MS_TIPO[v.tipo] ? '(' + CPA_PDF_MS_TIPO[v.tipo] + ')' : ''].filter(Boolean).join(' ');
+        body.push([v.commessa, v.voce, att, v.descrizione, _cpaPdfH(v.ore)]
+          .map((t, i) => ({ content: _cpaPdfTxt(t), styles: i === 4 ? Object.assign({ fontStyle: 'bold' }, extra) : extra })));
+        grav.push(null);
       });
     });
 
     doc.autoTable({
       startY: y,
-      head: [['Giorno', 'Operatore / cantiere', 'Totale MySond', 'Commessa MySond', 'Voce', 'Attività', 'Descrizione', 'Ore', 'Jira']],
+      head: [['Commessa MySond', 'Voce', 'Attività', 'Descrizione', 'Ore']],
       body,
-      styles: { font: 'helvetica', fontSize: 7.6, cellPadding: { top: 1.4, bottom: 1.4, left: 2.4, right: 1.6 }, overflow: 'linebreak', valign: 'top', lineColor: [226, 232, 240], lineWidth: 0.1 },
-      headStyles: { fillColor: [180, 83, 9], textColor: 255, fontStyle: 'bold' },
-      columnStyles: {
-        0: { cellWidth: 18, fontStyle: 'bold' }, 1: { cellWidth: 36 }, 2: { cellWidth: 20, fontStyle: 'bold', textColor: [185, 28, 28] },
-        3: { cellWidth: 38 }, 4: { cellWidth: 38 }, 5: { cellWidth: 36 }, 6: { cellWidth: 'auto' },
-        7: { cellWidth: 13, halign: 'right', fontStyle: 'bold' }, 8: { cellWidth: 17 },
-      },
+      styles: { font: 'helvetica', fontSize: 8.5, cellPadding: { top: 1.6, bottom: 1.6, left: 3.5, right: 2.4 }, overflow: 'linebreak', valign: 'top', lineColor: [226, 232, 240], lineWidth: 0.1, textColor: [30, 41, 59] },
+      headStyles: { fillColor: [241, 245, 249], textColor: [71, 85, 105], fontStyle: 'bold', fontSize: 8 },
+      columnStyles: { 0: { cellWidth: 52 }, 1: { cellWidth: 55 }, 2: { cellWidth: 48 }, 3: { cellWidth: 'auto' }, 4: { cellWidth: 18, halign: 'right' } },
+      rowPageBreak: 'avoid',
       margin: { left: M, right: M, bottom: 14 },
       didDrawCell: h => {
         if (h.section !== 'body' || h.column.index !== 0) return;
         const g = CPA_PDF_GRAVITA[grav[h.row.index]];
         if (!g) return;
         doc.setFillColor(g[0], g[1], g[2]);
-        doc.rect(h.cell.x, h.cell.y, 1.1, h.cell.height, 'F');
+        doc.rect(h.cell.x, h.cell.y, 1.4, h.cell.height, 'F');
       },
     });
-    y = doc.lastAutoTable.finalY + 7;
+    y = doc.lastAutoTable.finalY + 8;
   });
   return y + 2;
 }

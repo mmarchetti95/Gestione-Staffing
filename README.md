@@ -114,6 +114,9 @@ Limite noto: il progetto Supabase è sul piano **Free**, che non include backup 
 
 ## Changelog
 
+## v18.271.0
+- fix: **«⏰ Più di 8 h in MySond» solo per chi è in Griglia, PDF più leggibile.** Gli operatori che quel giorno non sono in Griglia (o sono in ferie) non vengono più segnalati. Il PDF ha una tabella per squadra con una fascia colorata come titolo; per ogni operatore e giorno una riga in evidenza con giorno, operatore e cantiere a sinistra e, a destra, totale MySond, ore oltre le 8 e ore Jira; sotto, gli inserimenti MySond su colonne più larghe, con viaggio e ore non lavorate in grigio. Nessuna modifica a Supabase o alle Edge Function.
+
 ## v18.270.0
 - fix: **Controllo Produzione, squadra su due commesse lo stesso giorno.** Jira dà tutti i worklog del giorno dell'operatore e prima finivano su ogni sua riga: chi lavorava su una commessa e poi si spostava su un'altra vedeva su entrambe le righe gli stessi ticket, Epic e ore. Ora ogni riga mostra solo i ticket della sua commessa (riconosciuti dal sottotask della Griglia, altrimenti dal codice progetto Jira della commessa); quelli dell'altra commessa restano in fondo alla colonna Ticket, in grigio con «↪», senza Km/Cad né stato. «Ore Jira» mostra le ore di quella commessa con sotto «di N nel giorno» (il colore della cella resta sul totale della giornata, la colonna MySond confronta sempre il totale); il «Δ Ore» usa le ore della commessa. «Sincronizza» legge e invia il Km/Cad solo per i ticket della commessa della riga, così lo stesso ticket non riceve due volte la produzione da due righe. Stessa regola in «Carica Report» (scelta del comune), negli export Excel/PDF e nel passo Km della Chiusura settimana. Un ticket che non si riesce ad attribuire resta sulla riga come prima. Nessuna modifica a Supabase o alle Edge Function.
 
