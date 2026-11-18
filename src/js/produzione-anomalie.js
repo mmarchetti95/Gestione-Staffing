@@ -54,12 +54,9 @@ let _cpa = {
   registro: null,             // vista registro solleciti aperta ({ tutte, aperti })
 };
 
-function _cpaIgnorate() {
-  try { return JSON.parse(localStorage.getItem(CPA_IGNORATE_KEY) || '{}') || {}; } catch (_) { return {}; }
-}
-function _cpaSalvaIgnorate(m) {
-  try { localStorage.setItem(CPA_IGNORATE_KEY, JSON.stringify(m)); } catch (_) {}
-}
+/* Le anomalie ignorate (_cpaIgnorate, cpaIgnora) stanno nella tabella condivisa
+   cpa_anomalie_ignorate: vedi produzione-anomalie-ignorate.js. CPA_IGNORATE_KEY è la vecchia
+   lista del browser, migrata nella tabella al primo caricamento. */
 
 function _cpaPref() {
   const def = { diffOreSquadra: CPA_SOGLIE_DEFAULT.diffOreSquadra, diffOreMysond: CPA_SOGLIE_DEFAULT.diffOreMysond };
@@ -482,8 +479,13 @@ async function cpaRicontrollaVoce(el) {
 
 function cpaChiudiEsito() { _cpa.esito = null; cpaRender(); }
 
-function cpaFiltro(tipo) { _cpa.filtro = (_cpa.filtro === tipo) ? '' : tipo; cpaRender(); }
-function cpaToggleIgnorate() { _cpa.mostraIgnorate = !_cpa.mostraIgnorate; cpaRender(); }
+function cpaFiltro(tipo) {
+  _cpa.filtro = (!_cpa.mostraIgnorate && _cpa.filtro === tipo) ? '' : tipo;
+  _cpa.mostraIgnorate = false;
+  cpaRender();
+}
+/* Linguetta «🗄 Ignorate»: un secondo clic torna alla linguetta di prima */
+function cpaToggleIgnorate() { _cpa.mostraIgnorate = !_cpa.mostraIgnorate; _cpa.esito = null; cpaRender(); }
 function cpaTogglePool(el) { _cpa.tuttoIlPool = !!el.checked; }
 
 function cpaSetSogliaOre(el) {
@@ -504,11 +506,7 @@ function _cpaTrova(el) {
 
 function cpaIgnora(el) {
   const a = _cpaTrova(el);
-  if (!a) return;
-  const m = _cpaIgnorate();
-  if (m[a.id]) delete m[a.id]; else m[a.id] = Date.now();
-  _cpaSalvaIgnorate(m);
-  cpaRender();
+  if (a) _cpaIgnCambia(a);
 }
 
 /* Chiude il modal e porta in vista la riga del Controllo Produzione (riapre commessa/squadra collassate). */
@@ -871,7 +869,13 @@ function _cpaSchedaHtml(a, r, ignorata) {
   if (a.cpKey && a.tipo !== 'ore_squadra') bottoni += '<button type="button" onclick="cpaVaiAllaRiga(this)" class="text-xs px-2 py-0.5 border border-slate-300 rounded bg-white hover:bg-slate-50">↘ Vai alla riga</button>';
   bottoni += (a.link || []).filter(l => l.url).map(l =>
     '<a href="' + _cpaS(l.url) + '" target="_blank" rel="noopener" class="text-xs px-2 py-0.5 border border-slate-300 rounded bg-white hover:bg-slate-50" style="color:#2563eb;text-decoration:none;">' + _cpaS(l.label) + ' ↗</a>').join('');
-  return '<div class="bg-white border border-slate-200 rounded-lg mt-2" data-cpa-id="' + _cpaS(a.id) + '" style="border-left:4px solid ' + G.colore + ';padding:10px 12px;' + (ignorata ? 'opacity:.5;' : '') + '">' +
+  const inSalva = _cpaIgn.inCorso.has(a.id);
+  const btnIgnora = (!_cpaIgn.caricato || sbCanWrite())
+    ? '<button type="button" onclick="cpaIgnora(this)" class="text-xs text-slate-400 hover:text-slate-800"' + (inSalva ? ' disabled style="opacity:.5;"' : '') + ' title="' +
+      (ignorata ? 'Rimetti fra le anomalie aperte (per tutti i colleghi)' : 'Archivia fra le ignorate: esce dai conteggi, dal PDF, dai solleciti e dalla Chiusura settimana, per tutti i colleghi') + '">' +
+      (inSalva ? '⏳' : (ignorata ? '↩ Ripristina' : '🗄 Ignora')) + '</button>'
+    : '';
+  return '<div class="bg-white border border-slate-200 rounded-lg mt-2" data-cpa-id="' + _cpaS(a.id) + '" style="border-left:4px solid ' + (ignorata ? '#cbd5e1' : G.colore) + ';padding:10px 12px;' + (ignorata ? 'background:#f8fafc;' : '') + '">' +
     '<div class="flex items-start gap-2">' +
       '<span class="text-lg leading-6" title="' + _cpaS(T.etichetta) + '">' + T.icona + '</span>' +
       '<div class="flex-1 min-w-0">' +
@@ -880,9 +884,10 @@ function _cpaSchedaHtml(a, r, ignorata) {
           '<span class="text-[10px] font-bold uppercase rounded px-1.5" style="color:' + G.colore + ';background:' + G.sfondo + ';">' + G.testo + '</span>' +
           _cpaTagSollecito(a) + (a.tipo === 'ore_scoperte_maltempo' ? '' : _cpaTagMeteo(a)) +
           '<div class="flex-1"></div>' +
-          '<button type="button" onclick="cpaIgnora(this)" class="text-xs text-slate-400 hover:text-slate-800" title="' + (ignorata ? 'Rimetti fra le anomalie aperte' : 'Nascondi questa anomalia (solo su questo browser)') + '">' + (ignorata ? '↩ Ripristina' : 'Ignora') + '</button>' +
+          btnIgnora +
         '</div>' +
         (dove ? '<div class="text-[11px] text-slate-500">' + dove + '</div>' : '') +
+        (ignorata ? '<div class="text-[11px] mt-0.5" style="color:#64748b;">🗄 ' + _cpaS(_cpaIgnChiQuando(a.id)) + '</div>' : '') +
         (ignorata ? '' : _cpaCorpo(a, r) + _cpaMeteoHtml(a.meteo)) +
         '<div class="text-xs mt-2" style="color:#0f766e;">💡 ' + _cpaS(a.correzione) + '</div>' +
         (bottoni ? '<div class="flex flex-wrap items-center gap-1.5 mt-1.5">' + bottoni + '</div>' : '') +
@@ -943,19 +948,31 @@ function _cpaSchede(r) {
   if (!r || _cpa.inCorso) return '<div style="height:12px;"></div>';
   const ign = _cpaIgnorate();
   const conta = {};
-  let tot = 0;
-  r.anomalie.forEach(a => { if (!ign[a.id] && !_cpa.risolte.has(a.id)) { conta[a.tipo] = (conta[a.tipo] || 0) + 1; tot++; } });
+  let tot = 0, nIgn = 0;
+  r.anomalie.forEach(a => {
+    if (_cpa.risolte.has(a.id)) return;
+    if (ign[a.id]) { nIgn++; return; }
+    conta[a.tipo] = (conta[a.tipo] || 0) + 1; tot++;
+  });
+  const tabIgn = '<button type="button" data-help-key="cpaToggleIgnorate" onclick="cpaToggleIgnorate()" class="text-xs px-3 py-2 whitespace-nowrap" style="margin-left:auto;border-bottom:3px solid ' + (_cpa.mostraIgnorate ? '#64748b' : 'transparent') + ';' +
+    (_cpa.mostraIgnorate ? 'color:#0f172a;font-weight:700;' : 'color:#64748b;') + '" title="Anomalie archiviate con «Ignora»: non contano nel totale">🗄 Ignorate' +
+    ' <span class="rounded-full px-1.5 text-[11px] font-bold" style="background:#f1f5f9;color:' + (nIgn ? '#475569' : '#94a3b8') + ';">' + nIgn + '</span></button>';
   const tab = (tipo, testo, n) => {
-    const on = _cpa.filtro === tipo;
+    const on = !_cpa.mostraIgnorate && _cpa.filtro === tipo;
     return '<button type="button" data-tipo="' + tipo + '" data-help-key="cpaFiltro:' + (tipo || 'tutte') + '" onclick="cpaFiltro(this.dataset.tipo)" class="text-xs px-3 py-2 whitespace-nowrap" style="border-bottom:3px solid ' + (on ? '#b45309' : 'transparent') + ';' +
       (on ? 'color:#0f172a;font-weight:700;' : 'color:#475569;') + '">' + testo +
       ' <span class="rounded-full px-1.5 text-[11px] font-bold" style="' + (n ? 'background:#fef3c7;color:#92400e;' : 'background:#f1f5f9;color:#94a3b8;') + '">' + n + '</span></button>';
   };
   return '<div class="flex flex-wrap gap-1 mt-2" style="margin-bottom:-1px;">' + tab('', 'Tutte', tot) +
-    Object.keys(CPA_TIPI).map(t => tab(t, CPA_TIPI[t].icona + ' ' + CPA_TIPI[t].etichetta, conta[t] || 0)).join('') + '</div>';
+    Object.keys(CPA_TIPI).map(t => tab(t, CPA_TIPI[t].icona + ' ' + CPA_TIPI[t].etichetta, conta[t] || 0)).join('') + tabIgn + '</div>';
 }
 
 function _cpaBarra(r, attive, ign) {
+  if (_cpa.mostraIgnorate) {
+    return '<div class="flex flex-wrap items-center gap-2" style="padding:8px 20px;background:#f8fafc;border-bottom:1px solid #e2e8f0;">' +
+      '<span class="text-xs text-slate-600">Anomalie archiviate con «🗄 Ignora»: restano fuori dal totale, da «Copia elenco», dal PDF, dai solleciti e dalla Chiusura settimana, anche dopo un nuovo controllo. La lista è condivisa con i colleghi; «↩ Ripristina» la rimette fra le aperte.</span>' +
+    '</div>';
+  }
   const nIgn = attive.filter(a => ign[a.id]).length;
   const nAperte = attive.length - nIgn;
   const desc = _cpa.filtro ? CPA_TIPI[_cpa.filtro].descrizione : 'Tutti i controlli, giorno per giorno.';
@@ -973,7 +990,6 @@ function _cpaBarra(r, attive, ign) {
     ((!_cpa.filtro || _cpa.filtro === 'mysond_diverso') && r.mysondCaricato
       ? selSoglia('diffOreMysond', '🧾', 'Segnala quando le ore Jira si scostano almeno di tanto dalle ore MySond (viaggio escluso)')
       : '') +
-    (nIgn ? '<button type="button" onclick="cpaToggleIgnorate()" class="text-xs text-slate-500 hover:text-slate-800">' + (_cpa.mostraIgnorate ? 'Nascondi' : 'Mostra') + ' ignorate (' + nIgn + ')</button>' : '') +
     (attive.some(a => a.solleciti && a.solleciti.length && !ign[a.id]) ? '<button type="button" onclick="cpaSollApri()" class="text-xs px-2 py-0.5 rounded font-semibold text-white" style="background:#4f46e5;" title="Bozze di messaggio per chi non ha caricato le ore su Jira o ne ha meno dei colleghi di squadra o di MySond">✉️ Prepara solleciti' + (_cpaSollDaInviare().length ? ' (' + _cpaSollDaInviare().length + ' da inviare)' : ' · tutti inviati') + '</button>' : '') +
     (nAperte ? '<button type="button" onclick="cpaCopia()" class="text-xs px-2 py-0.5 border border-slate-300 rounded bg-white hover:bg-slate-50">📋 Copia elenco</button>' : '') +
     (nAperte ? '<button type="button" onclick="cpaEsportaPdf()" class="text-xs px-2 py-0.5 border rounded bg-white hover:bg-amber-50" style="border-color:#fcd34d;color:#b45309;" title="PDF delle anomalie aperte di questa linguetta (ignorate escluse), da mandare ai controller">📄 Esporta PDF</button>' : '') +
@@ -1000,9 +1016,13 @@ function _cpaListaHtml(r, attive, ign) {
       '<button type="button" onclick="cpaChiudiEsito()" class="text-xs opacity-70 hover:opacity-100" title="Chiudi">✕</button></div>';
   }
   html += '<div class="text-[11px] text-slate-500">' + note.map(_cpaS).join('<br>') + '</div>';
-  const lista = attive.filter(a => (_cpa.mostraIgnorate || !ign[a.id]) && (!_cpa.filtro || a.tipo === _cpa.filtro));
+  const lista = _cpa.mostraIgnorate
+    ? attive.filter(a => ign[a.id])
+    : attive.filter(a => !ign[a.id] && (!_cpa.filtro || a.tipo === _cpa.filtro));
   if (!lista.length) {
-    html += '<div class="text-sm mt-6 text-center" style="color:#15803d;">✅ ' + (_cpa.filtro ? 'Nessuna anomalia di questo tipo.' : 'Nessuna anomalia aperta per questa settimana.') + '</div>';
+    html += _cpa.mostraIgnorate
+      ? '<div class="text-sm mt-6 text-center text-slate-500">Nessuna anomalia ignorata per questa settimana.</div>'
+      : '<div class="text-sm mt-6 text-center" style="color:#15803d;">✅ ' + (_cpa.filtro ? 'Nessuna anomalia di questo tipo.' : 'Nessuna anomalia aperta per questa settimana.') + '</div>';
   }
   for (let g = 0; g < 6; g++) {
     const delGiorno = lista.filter(a => a.giorno === g);
@@ -1037,7 +1057,7 @@ function cpaRender() {
   if (r) _cpaMeteoCarica();
 
   /* Il ridisegno non deve far perdere la posizione di lettura nella stessa vista */
-  const vista = _cpa.registro ? 'registro' : (_cpa.soll && r && !_cpa.inCorso ? 'soll' : 'lista|' + _cpa.filtro);
+  const vista = _cpa.registro ? 'registro' : (_cpa.soll && r && !_cpa.inCorso ? 'soll' : 'lista|' + _cpa.filtro + (_cpa.mostraIgnorate ? '|ign' : ''));
   const prima = document.getElementById('cpa-body');
   const scroll = (prima && _cpa._vista === vista) ? prima.scrollTop : 0;
   _cpa._vista = vista;

@@ -64,6 +64,7 @@ JS_FILES = [
     'produzione-mysond.js',
     'produzione-anomalie-core.js',
     'produzione-anomalie.js',
+    'produzione-anomalie-ignorate.js',
     'produzione-anomalie-solleciti.js',
     'produzione-anomalie-pdf.js',
     'produzione-timeline.js',

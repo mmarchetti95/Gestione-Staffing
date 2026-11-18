@@ -114,6 +114,11 @@ Limite noto: il progetto Supabase è sul piano **Free**, che non include backup 
 
 ## Changelog
 
+## v18.278.0
+- feat: **Controllo anomalie, «🗄 Ignora» archivia davvero.** Le anomalie ignorate finiscono nella nuova linguetta «🗄 Ignorate» (con chi le ha ignorate e quando, e «↩ Ripristina») e non tornano più fra le aperte: restano fuori dal totale del bottone, dalle linguette, da «Copia elenco», dal PDF, dai solleciti e dalla Chiusura settimana, anche dopo «↻ Ricontrolla», su un altro PC o per i colleghi. Prima erano salvate solo nel browser e ricomparivano, così il controllo sembrava sempre da rifare. Le ignorate già salvate nel browser vengono portate nella lista condivisa al primo accesso (admin/responsabile). Ignorare e ripristinare: admin e responsabili.
+- Supabase: nuova tabella `cpa_anomalie_ignorate` (una riga per anomalia, chiave = id dell'anomalia; lettura per tutti, scrittura admin/responsabile; Realtime), migrazione `supabase/migrations/20261118_cpa_anomalie_ignorate.sql`. Nessuna modifica alle Edge Function.
+- feat: **Vista «Ibrida» su tutte le mappe.** Nel selettore in alto a destra delle mappe (schermata Mappa, Mappa squadre, Residenze, Pianifica spostamenti, Ricerca squadre), accanto a Stradale e Satellite c'è ora **Ibrida**: foto satellitare con sopra strade, nomi delle vie, città, località e confini (layer di riferimento Esri, gratuiti, senza chiave). I segnaposto restano sopra le scritte. La scelta resta memorizzata nel browser per tutte le mappe; il default resta Satellite. Nessuna modifica a Supabase.
+
 ## v18.277.0
 - fix: **Controllo Produzione, tasti bloccati dopo «📡 Importa da board».** Dopo aver applicato l'import la lista tornava in cima e «≡ Collassa», l'apertura/chiusura di commesse e squadre e la ricerca operatore non funzionavano più fino al refresh: agivano sulle tabelle dell'anteprima della board, rimaste nascoste nella pagina. Ora la finestra si svuota quando si chiude, quei tasti guardano solo la tabella del Controllo Produzione e dopo l'import la lista resta dov'era. Nessuna modifica a Supabase o alle Edge Function.
 

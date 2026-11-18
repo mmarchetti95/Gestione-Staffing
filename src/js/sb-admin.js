@@ -743,6 +743,9 @@ async function sbOnLoggedIn() {
   pwNvSubscribe();
   pwNvUpdateButton();
   pwJsubSubscribe();
+  // Anomalie ignorate del Controllo anomalie (tabella condivisa), non blocca il login.
+  cpaIgnLoad();
+  cpaIgnSubscribe();
 }
 
 function sbSubscribeRealtime() {
@@ -774,6 +777,7 @@ async function sbLogout() {
   }
   pwNvUnsubscribe();
   pwJsubUnsubscribe();
+  cpaIgnUnsubscribe();
   sbFnUnsubscribe();
   await sbStopHeartbeat();
   await _sbClient.auth.signOut();

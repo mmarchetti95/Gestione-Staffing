@@ -23,27 +23,53 @@ function mapStreetLayer() {
    partenza. Chi preferisce la stradale la sceglie dal controllo in alto a destra
    e la scelta resta memorizzata per tutte le mappe dell'app. */
 const MAP_BASE_KEY = 'map_base_layer';
+const MAP_BASE_NOMI = { stradale: 'Stradale', satellite: 'Satellite', ibrida: 'Ibrida' };
 function mapPreferredBase() {
-  try { return localStorage.getItem(MAP_BASE_KEY) === 'stradale' ? 'stradale' : 'satellite'; }
-  catch (_) { return 'satellite'; }
+  try {
+    const v = localStorage.getItem(MAP_BASE_KEY);
+    return MAP_BASE_NOMI[v] ? v : 'satellite';
+  } catch (_) { return 'satellite'; }
 }
 
-// Aggiunge un controllo Leaflet in alto a destra per passare dalla vista stradale
-// a quella satellitare (Esri World Imagery, gratuita, nessuna API key).
-// Il chiamante ha già fatto streetLayer.addTo(map): se la preferenza è satellite
-// lo si sostituisce qui, così tutte le mappe partono dalla stessa vista.
+// Aggiunge un controllo Leaflet in alto a destra per scegliere la vista base:
+// stradale, satellite (Esri World Imagery) o ibrida (satellite + strade e nomi di
+// città/luoghi dai layer di riferimento Esri, gli stessi del basemap «Imagery
+// Hybrid» di ArcGIS). Tutti gratuiti, nessuna API key.
+// Il chiamante ha già fatto streetLayer.addTo(map): se la preferenza è un'altra
+// vista lo si sostituisce qui, così tutte le mappe partono dalla stessa vista.
 function mapAddSatelliteToggle(map, streetLayer) {
-  const satLayer = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+  const esri = s => 'https://server.arcgisonline.com/ArcGIS/rest/services/' + s + '/MapServer/tile/{z}/{y}/{x}';
+  const satTile = () => L.tileLayer(esri('World_Imagery'), {
     attribution: 'Tiles © Esri — Source: Esri, Maxar, Earthstar Geographics',
     maxZoom: 19
   });
-  if (mapPreferredBase() === 'satellite') {
-    if (map.hasLayer(streetLayer)) map.removeLayer(streetLayer);
-    satLayer.addTo(map);
+  const satLayer = satTile();
+  // Le etichette stanno in un pane sopra le tile ma sotto marker e popup.
+  if (!map.getPane('mapEtichette')) {
+    const pane = map.createPane('mapEtichette');
+    pane.style.zIndex = 250;
+    pane.style.pointerEvents = 'none';
   }
-  L.control.layers({ 'Stradale': streetLayer, 'Satellite': satLayer }, null, { position: 'topright' }).addTo(map);
+  const ibridaLayer = L.layerGroup([
+    satTile(),
+    L.tileLayer(esri('Reference/World_Transportation'), { pane: 'mapEtichette', maxZoom: 19 }),
+    L.tileLayer(esri('Reference/World_Boundaries_and_Places'), {
+      pane: 'mapEtichette', maxZoom: 19,
+      attribution: 'Etichette © Esri, HERE, Garmin, © OpenStreetMap contributors'
+    })
+  ]);
+  const basi = { stradale: streetLayer, satellite: satLayer, ibrida: ibridaLayer };
+  const pref = mapPreferredBase();
+  if (pref !== 'stradale') {
+    if (map.hasLayer(streetLayer)) map.removeLayer(streetLayer);
+    basi[pref].addTo(map);
+  }
+  const ctrl = {};
+  Object.keys(basi).forEach(k => { ctrl[MAP_BASE_NOMI[k]] = basi[k]; });
+  L.control.layers(ctrl, null, { position: 'topright' }).addTo(map);
   map.on('baselayerchange', ev => {
-    try { localStorage.setItem(MAP_BASE_KEY, ev.name === 'Satellite' ? 'satellite' : 'stradale'); } catch (_) {}
+    const k = Object.keys(MAP_BASE_NOMI).find(x => MAP_BASE_NOMI[x] === ev.name) || 'stradale';
+    try { localStorage.setItem(MAP_BASE_KEY, k); } catch (_) {}
   });
 }
 
