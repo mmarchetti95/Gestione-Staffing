@@ -114,6 +114,10 @@ Limite noto: il progetto Supabase è sul piano **Free**, che non include backup 
 
 ## Changelog
 
+## v18.275.0
+- fix: **Utenti QField diversi dall'email («📡 Importa da board» e «📄 Carica Report»).** Gli operatori si riconoscevano solo dalla parte dell'email prima della @: chi sul tablet ha un'utenza diversa (hsemry ↔ hsmsemry@, ccica01 ↔ ccica@, mminoia ↔ mmaroneminoia@, gfrenguellotti ↔ gfrenguellotti2@) restava fuori e i suoi Km non venivano scritti. Ora, se un'utenza non corrisponde a nessuna email, l'app la abbina da sola quando è uguale all'email a meno delle cifre finali oppure è fatta di iniziali + cognome della persona; l'abbinamento è segnalato nell'anteprima della board (riquadro blu) e nella conferma del report. Un'utenza che porta a più persone non viene usata e viene segnalata. Per i casi che l'app non riconosce c'è la nuova colonna «Utente QField» in Operatori → ✉ Email/operatore (anche più utenze separate da virgola), sincronizzata con gli altri dati degli operatori.
+- Nessuna modifica a Supabase o alle Edge Function.
+
 ## v18.274.0
 - feat: **Controllo Produzione, «🔄 Aggiorna board» (SINFI).** Sulla riga della commessa e nella finestra «📡 Importa da board» c'è un tasto che fa scaricare subito alla board QField i dati nuovi da QFieldCloud, come «Aggiorna ora» sulla board. Ci vogliono 2-3 minuti: il tasto mostra a che punto è e alla fine l'ora dei dati pubblicati. Se c'è già un aggiornamento in corso (automatico o di un collega) aspetta quello. Con la finestra di import aperta, a fine aggiornamento i dati si rileggono da soli e gli abbinamenti già scelti restano. Il token usato è quello già pubblicato con la board, non sta nel repository. Non scrive niente nel Controllo Produzione né su Jira. Nascondibile da «🧩 Funzioni» insieme all'import.
 - Nessuna modifica a Supabase o alle Edge Function.

@@ -2138,7 +2138,7 @@
       </span>
       <button id="btn-presentation" class="px-3 py-1.5 text-sm rounded hover:bg-white/10" style="border:1px solid var(--dark-border-strong);color:var(--dark-text);visibility:visible;">📊 Modalità presentazione</button>
       <div class="text-xs pl-2" style="border-left:1px solid var(--dark-border-strong);color:var(--dark-text-muted);">
-        <span id="app-version" class="font-medium" style="color:var(--accent);">v18.274.0</span> · Michele Marchetti
+        <span id="app-version" class="font-medium" style="color:var(--accent);">v18.275.0</span> · Michele Marchetti
         <span id="sb-role-badge" style="margin-left:8px;padding:1px 8px;border-radius:9999px;background:rgba(255,255,255,.1);color:var(--dark-text);font-weight:600;"></span>
       </div>
     </div>
@@ -6562,11 +6562,12 @@ function renderEmailOperatori() {
     return;
   }
   const nMiss = ops.filter(o => !o.email || !o.email.trim()).length;
-  let html = `<div class="text-[11px] text-slate-500 mb-2">Email aziendale usata per la sincronizzazione dei worklog da Jira. ${nMiss > 0 ? `<span style="color:#dc2626;font-weight:600;">${nMiss} mancanti.</span>` : '<span style="color:#16a34a;font-weight:600;">Tutte assegnate.</span>'}</div>`;
+  let html = `<div class="text-[11px] text-slate-500 mb-2">Email aziendale usata per la sincronizzazione dei worklog da Jira. «Utente QField» serve solo se l'utenza del tablet non si riconosce da sola dall'email o dal nome (board e report produzione). ${nMiss > 0 ? `<span style="color:#dc2626;font-weight:600;">${nMiss} mancanti.</span>` : '<span style="color:#16a34a;font-weight:600;">Tutte assegnate.</span>'}</div>`;
   html += `<table style="width:100%;border-collapse:collapse;font-size:13px;">
     <thead><tr style="text-align:left;border-bottom:1px solid #e2e8f0;">
       <th style="padding:6px 8px;color:#64748b;font-weight:600;">Operatore</th>
       <th style="padding:6px 8px;color:#64748b;font-weight:600;">Email</th>
+      <th style="padding:6px 8px;color:#64748b;font-weight:600;width:170px;" title="Solo se l'utenza QField (board / report produzione) non si riconosce da sola dall'email o dal nome">Utente QField</th>
       <th style="padding:6px 8px;color:#64748b;font-weight:600;width:90px;">Stato</th>
     </tr></thead><tbody>`;
   ops.forEach(op => {
@@ -6584,6 +6585,10 @@ function renderEmailOperatori() {
         data-op-id="${esc(op.id)}"
         style="width:100%;border:1px solid #cbd5e1;border-radius:4px;padding:3px 6px;font-size:12px;"
         onblur="saveEmailOperatore('${String(op.id).replace(/'/g, "\\'")}', this.value)"></td>
+      <td style="padding:5px 8px;"><input type="text" value="${esc(qfuEspliciti(op).join(', '))}" placeholder="${esc(email.includes('@') ? email.split('@')[0].toLowerCase() : 'automatico')}"
+        title="Utente QField se diverso dall'email (es. hsemry). Più utenze separate da virgola. Vuoto = riconosciuto da email o nome."
+        style="width:100%;border:1px solid #cbd5e1;border-radius:4px;padding:3px 6px;font-size:12px;"
+        onblur="saveUtenteQfieldOperatore('${jsAttr(op.id)}', this.value)"></td>
       <td style="padding:5px 8px;" id="op-email-badge-${esc(op.id)}">${badge}</td>
     </tr>`;
   });
@@ -6606,6 +6611,18 @@ async function saveEmailOperatore(opId, value) {
       : '<span style="font-size:10px;font-weight:700;background:#fee2e2;color:#dc2626;border-radius:3px;padding:2px 6px;">⚠ mancante</span>';
   }
   await saveState('Email operatore', { operatore: op.nome_esteso || op.id });
+}
+
+// «Utente QField» (since v18.275.0): solo per le utenze che l'abbinamento automatico non
+// riconosce (vedi qfield-utenti.js). Vuoto = campo tolto.
+async function saveUtenteQfieldOperatore(opId, value) {
+  if (!sbGuardWrite()) return;
+  const op = (state.operatori || []).find(o => o.id === opId);
+  if (!op) return;
+  const val = [...new Set(String(value || '').split(/[,;\s]+/).map(x => x.trim().toLowerCase()).filter(Boolean))].join(', ');
+  if ((op.utente_qfield || '') === val) return;
+  if (val) op.utente_qfield = val; else delete op.utente_qfield;
+  await saveState('Utente QField operatore', { operatore: op.nome_esteso || op.id });
 }
 
 function apriVistaOperatore(opId) {
@@ -23223,6 +23240,147 @@ function cpOreJiraHide() {
 }
 
 window.addEventListener('scroll', cpOreJiraHide, true);
+/* ==================== UTENTI QFIELD ↔ OPERATORI (since v18.275.0) ==================== */
+/* Chi ha prodotto un dato della board QField o del CSV report si riconosce dall'utente QField
+   (es. «hsemry»), che di solito è la parte prima della @ dell'email aziendale. Non sempre:
+   hsemry ↔ hsmsemry@, ccica01 ↔ ccica@, mminoia ↔ mmaroneminoia@, gfrenguellotti ↔ gfrenguellotti2@.
+   Prima quei dati non si abbinavano a nessuno e i Km del giorno andavano persi in silenzio.
+   Ordine di abbinamento di un utente QField:
+   1. esatto: «Utente QField» impostato a mano sull'operatore (op.utente_qfield, anche più di uno
+      separati da virgola) oppure parte locale dell'email;
+   2. automatico, solo se nessuno lo ha in modo esatto:
+      - uguale alla parte locale dell'email senza le cifre finali (ccica01 ↔ ccica);
+      - iniziali + cognome dal nome dell'operatore (hsemry = H[azem] + Semry, sdenicola = S + De Nicola,
+        anche nome intero + cognome); cognome di almeno 4 lettere.
+   Un abbinamento automatico che porta a più operatori vale solo se fra quelli della squadra ne
+   resta uno; altrimenti è «ambiguo» e non si usa (si imposta «Utente QField» a mano). Puro: legge
+   state.operatori / state.fornitori, non scrive niente. */
+
+function qfuNorm(s) {
+  return String(s || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/[^a-z0-9]/g, '');
+}
+function qfuSenzaCifre(s) { return qfuNorm(s).replace(/\d+$/, ''); }
+
+// Utenti QField impostati a mano su un operatore o dipendente (stringa "a, b" o array).
+function qfuEspliciti(o) {
+  const v = o && o.utente_qfield;
+  const arr = Array.isArray(v) ? v : String(v || '').split(/[,;\s]+/);
+  return arr.map(x => String(x || '').trim().toLowerCase()).filter(Boolean);
+}
+
+// Elenco di tutti quelli che possono avere un utente QField: pool interno + dipendenti fornitore.
+function qfuOperatori() {
+  const out = [], visti = new Set();
+  const add = (nome, email, espl) => {
+    nome = String(nome || '').trim();
+    if (!nome || visti.has(nome)) return;
+    visti.add(nome);
+    const em = String(email || '').trim().toLowerCase();
+    const locale = em.includes('@') ? em.split('@')[0] : '';
+    const esatti = new Set(espl);
+    if (locale) esatti.add(locale);
+    out.push({ nome, locale, esplicito: new Set(espl), esatti,
+      token: nome.split(/[\s'’.\-]+/).map(qfuNorm).filter(Boolean) });
+  };
+  (state.operatori || []).forEach(o => add(o.nome_esteso || o.nome_breve || o.nome, o.email, qfuEspliciti(o)));
+  (state.fornitori || []).forEach(f => (f.dipendenti || []).forEach(d => add(d.nome_esteso, d.email, qfuEspliciti(d))));
+  return out;
+}
+
+/* u (già senza cifre finali) = prefisso + cognome, dove il cognome è una sequenza contigua di
+   parole del nome (≥ 4 lettere in tutto) e il prefisso sono le iniziali di altre parole del nome
+   (in qualunque ordine, ognuna una volta) oppure altre parole intere contigue. */
+function qfuDalNome(u, token) {
+  if (!u || u.length < 5 || token.length < 2) return false;
+  const n = token.length;
+  for (let i = 0; i < n; i++) {
+    let cognome = '';
+    for (let j = i; j < n; j++) {
+      cognome += token[j];
+      if (cognome.length < 4 || !u.endsWith(cognome) || u.length === cognome.length) continue;
+      const pref = u.slice(0, u.length - cognome.length);
+      const altri = token.filter((_, k) => k < i || k > j);
+      if (!altri.length) continue;
+      // iniziali
+      if (pref.length <= altri.length) {
+        const liberi = altri.slice();
+        const ok = [...pref].every(c => {
+          const k = liberi.findIndex(t => t[0] === c);
+          if (k < 0) return false;
+          liberi.splice(k, 1);
+          return true;
+        });
+        if (ok) return true;
+      }
+      // parole intere contigue (es. «marcoperuzzi»)
+      for (let a = 0; a < altri.length; a++) {
+        let s = '';
+        for (let b = a; b < altri.length; b++) { s += altri[b]; if (s === pref) return true; }
+      }
+    }
+  }
+  return false;
+}
+
+function qfuSimile(u, op) {
+  const us = qfuSenzaCifre(u);
+  if (!us) return false;
+  if (op.locale && qfuSenzaCifre(op.locale) === us) return true;
+  return qfuDalNome(us, op.token);
+}
+
+/* Abbina gli utenti QField presenti nei dati agli operatori.
+   utenti: elenco di utenti QField (come compaiono nei dati); preferiti: nomi degli operatori
+   della squadra (servono a sciogliere un abbinamento automatico che porta a più persone).
+   → { perUtente: { u: { nomi: [..], come: 'esplicito'|'email'|'auto' } },
+       ambigui: [{ utente, nomi }] } */
+function qfuAbbina(utenti, preferiti) {
+  const ops = qfuOperatori();
+  const pref = new Set(preferiti || []);
+  const perUtente = {}, ambigui = [];
+  [...new Set((utenti || []).map(u => String(u || '').trim().toLowerCase()).filter(Boolean))].forEach(u => {
+    let cand = ops.filter(o => o.esatti.has(u));
+    let come = cand.some(o => o.esplicito.has(u)) ? 'esplicito' : 'email';
+    if (!cand.length) {
+      cand = ops.filter(o => qfuSimile(u, o));
+      come = 'auto';
+      if (cand.length > 1 && pref.size) {
+        const inSq = cand.filter(o => pref.has(o.nome));
+        if (inSq.length) cand = inSq;
+      }
+      if (cand.length > 1) {
+        // Ambiguo: conta solo se tocca la squadra (gli altri non interessano a questo import).
+        if (!pref.size || cand.some(o => pref.has(o.nome))) ambigui.push({ utente: u, nomi: cand.map(o => o.nome) });
+        return;
+      }
+    }
+    if (cand.length) perUtente[u] = { nomi: cand.map(o => o.nome), come };
+  });
+  return { perUtente, ambigui };
+}
+
+// Utenti QField (fra quelli abbinati) di un operatore.
+function qfuUtentiDi(abb, nome) {
+  return Object.keys(abb.perUtente).filter(u => abb.perUtente[u].nomi.includes(nome));
+}
+
+// "hsemry → Semry Hazem Said Mohamed (email hsmsemry)" per gli abbinamenti automatici dei nomi dati.
+function qfuDescriviAuto(abb, nomi) {
+  const set = new Set(nomi || []);
+  const ops = qfuOperatori();
+  return Object.keys(abb.perUtente).filter(u => abb.perUtente[u].come === 'auto' && abb.perUtente[u].nomi.some(n => set.has(n)))
+    .sort().map(u => {
+      const nome = abb.perUtente[u].nomi[0];
+      const o = ops.find(x => x.nome === nome);
+      return u + ' → ' + nome + (o && o.locale ? ' (email ' + o.locale + '@)' : ' (senza email)');
+    });
+}
+
+// Si può riconoscere l'utente QField di questo operatore (email o «Utente QField»)?
+function qfuHaRiferimento(nome) {
+  const o = qfuOperatori().find(x => x.nome === nome);
+  return !!(o && o.esatti.size);
+}
 /* ==================== CARICA REPORT PRODUZIONE (per squadra) ==================== */
 
 // Converte "HH:MM" in minuti dall'inizio giornata. Null se non valido.
@@ -23408,7 +23566,7 @@ function cpReportAttivitaTicket(t, perTicket, attivitaNote) {
   return (sm && attivitaNote.find(a => sm.startsWith(a.toLowerCase() + ' - '))) || '';
 }
 
-HELP_TEXTS['cp-carica-report'] = 'Importa un file CSV/testo con le ore di produzione reale degli operatori di QUESTA squadra e compila "Ore Report Prod." e il Km/Cad del ticket del comune, per i soli giorni trovati nel file.\n\nSe sullo stesso comune la squadra ha sottotask di più attività (es. due rilievi diversi nella stessa settimana), viene chiesta anche l\'attività: il Km/Cad va sul sottotask di quell\'attività e si aggiornano solo gli operatori/giorni che la svolgono.\n\nSi possono caricare più report per la stessa squadra e settimana (es. 2 giorni fatti con l\'utenza di una persona e 3 con quella di un\'altra): ogni report aggiorna solo i giorni che contiene, gli altri restano come sono. Se due utenze diverse hanno dati sullo stesso giorno, i Km/Cad si sommano; ricaricare il report della stessa utenza ne sostituisce i valori invece di sommarli. "Ore Report Prod." va dalla prima all\'ultima registrazione della giornata su tutti i report caricati per quell\'operatore e giorno (es. Acquedotto la mattina e Fognatura il pomeriggio: la giornata intera, non solo l\'ultimo report caricato).\n\nUn operatore che quel giorno ha solo ticket di un altro comune non entra nella divisione dei Km e resta com\'è.\n\nI giorni senza dati nel file vengono messi a zero solo se ancora vuoti. Se sono già passati (maltempo, fermo…) il loro sottotask viene segnato «✓ Nessuna» produzione: Km/Cad 0, giorno compilato, niente scritto su Jira; un report caricato dopo con dati per quel giorno lo sostituisce. Oggi e i giorni futuri restano da compilare. Se il file non copre nessun giorno della settimana, ti viene comunque chiesto se vuoi azzerare le ore per quei giorni.\n\nRiguarda solo "Ore Report Prod."/Km — le "Ore Jira" si aggiornano con "Sincronizza da Jira".';
+HELP_TEXTS['cp-carica-report'] = 'Importa un file CSV/testo con le ore di produzione reale degli operatori di QUESTA squadra e compila "Ore Report Prod." e il Km/Cad del ticket del comune, per i soli giorni trovati nel file.\n\nSe sullo stesso comune la squadra ha sottotask di più attività (es. due rilievi diversi nella stessa settimana), viene chiesta anche l\'attività: il Km/Cad va sul sottotask di quell\'attività e si aggiornano solo gli operatori/giorni che la svolgono.\n\nSi possono caricare più report per la stessa squadra e settimana (es. 2 giorni fatti con l\'utenza di una persona e 3 con quella di un\'altra): ogni report aggiorna solo i giorni che contiene, gli altri restano come sono. Se due utenze diverse hanno dati sullo stesso giorno, i Km/Cad si sommano; ricaricare il report della stessa utenza ne sostituisce i valori invece di sommarli. "Ore Report Prod." va dalla prima all\'ultima registrazione della giornata su tutti i report caricati per quell\'operatore e giorno (es. Acquedotto la mattina e Fognatura il pomeriggio: la giornata intera, non solo l\'ultimo report caricato).\n\nUn operatore che quel giorno ha solo ticket di un altro comune non entra nella divisione dei Km e resta com\'è.\n\nI giorni senza dati nel file vengono messi a zero solo se ancora vuoti. Se sono già passati (maltempo, fermo…) il loro sottotask viene segnato «✓ Nessuna» produzione: Km/Cad 0, giorno compilato, niente scritto su Jira; un report caricato dopo con dati per quel giorno lo sostituisce. Oggi e i giorni futuri restano da compilare. Se il file non copre nessun giorno della settimana, ti viene comunque chiesto se vuoi azzerare le ore per quei giorni.\n\nRiguarda solo "Ore Report Prod."/Km — le "Ore Jira" si aggiornano con "Sincronizza da Jira".\n\nGli utenti del file si riconoscono dall\'email dell\'operatore; se l\'utenza QField è diversa (es. hsemry con email hsmsemry@, ccica01 con email ccica@) l\'app la abbina da sola dal nome e lo dice nella conferma. Per i casi che non riconosce: «Utente QField» in Operatori → ✉ Email/operatore.';
 
 // Handler del bottone: apre il selettore file (CSV) per la squadra indicata.
 async function cpCaricaReportSquadra(commessa, squadra) {
@@ -23471,8 +23629,13 @@ async function cpProcessReport(csvText, commessa, squadra) {
     isoDates.push(`${d.getUTCFullYear()}-${String(d.getUTCMonth()+1).padStart(2,'0')}-${String(d.getUTCDate()).padStart(2,'0')}`);
   }
 
-  // Mappa nome operatore -> email (stessa logica del sync Jira)
-  const emailByNome = opEmailMappa();
+  // Utenti del file → operatori (since v18.275.0): email, «Utente QField» o abbinamento automatico
+  // dal nome quando l'utenza QField è diversa dall'email (hsemry ↔ hsmsemry@…, ccica01 ↔ ccica@…).
+  const nomiSquadra = [...new Set(days.flatMap(g => opsByDay[g].map(op => op.nome)))];
+  const abbQf = qfuAbbina(Object.keys(parsed).map(k => k.split('|||')[0]), nomiSquadra);
+  const autoQf = qfuDescriviAuto(abbQf, nomiSquadra);
+  const msgUtenti = (autoQf.length ? `\n\nUtenti QField abbinati automaticamente (nome diverso dall'email): ${autoQf.join(' · ')}.` : '')
+    + abbQf.ambigui.map(a => `\n\n⚠ Utente «${a.utente}» ambiguo (${a.nomi.join(' / ')}): i suoi dati non vengono usati. Imposta «Utente QField» sulla persona giusta (Operatori → ✉ Email/operatore).`).join('');
 
   // Comuni (Epic) disponibili nei ticket della squadra questa settimana. Solo i ticket di questa
   // commessa: quelli di un'altra commessa lavorata lo stesso giorno stanno sulla sua riga (v18.270.0).
@@ -23555,11 +23718,12 @@ async function cpProcessReport(csvText, commessa, squadra) {
 
     let source = null, utente = null;
     ops.forEach(op => {
-      const email = emailByNome[op.nome];
-      if (!email) { opsNoEmail.add(op.nome); return; }
-      const user = email.split('@')[0].toLowerCase();
-      const rec = parsed[`${user}|||${dateISO}`];
-      if (rec && (!source || rec.lenM > source.lenM)) { source = rec; utente = user; }
+      const users = qfuUtentiDi(abbQf, op.nome);
+      if (!users.length && !qfuHaRiferimento(op.nome)) { opsNoEmail.add(op.nome); return; }
+      users.forEach(user => {
+        const rec = parsed[`${user}|||${dateISO}`];
+        if (rec && (!source || rec.lenM > source.lenM)) { source = rec; utente = user; }
+      });
     });
 
     let oreVal = 0, kmVal = 0;
@@ -23638,7 +23802,7 @@ async function cpProcessReport(csvText, commessa, squadra) {
     const ok0 = await showConfirmAsync(
       `Nessun dato trovato nel report per gli operatori di "${squadra}" in questa settimana ` +
       `(${isoDates[days[0]]} … ${isoDates[days[days.length-1]]}).\n\nIl report copre il periodo ${range}.\n\n` +
-      `Vuoi comunque azzerare le ore per questi giorni?` + msgNessuna,
+      `Vuoi comunque azzerare le ore per questi giorni?` + msgNessuna + msgUtenti,
       'Azzera comunque');
     if (!ok0) return;
   } else {
@@ -23647,7 +23811,7 @@ async function cpProcessReport(csvText, commessa, squadra) {
       `(${daysWithData} giorni con dati, ${daysZero} a zero` + (noTicket > 0 ? `, ${noTicket} senza ticket` + (attSel ? ` dell'attività` : ` del comune`) : ``) + `). ` +
       `Vengono aggiornati solo i giorni presenti nel file` +
       (giorniSomma > 0 ? `; su ${giorniSomma} giorn${giorniSomma === 1 ? 'o' : 'i'} c'è già il report di un'altra utenza: i Km/Cad verranno sommati` : '') +
-      `.` + msgNessuna + `\n\nProcedere?`,
+      `.` + msgNessuna + msgUtenti + `\n\nProcedere?`,
       'Carica Report');
     if (!ok) return;
     if (giorniIgnoti > 0) {
@@ -23748,7 +23912,7 @@ async function cpProcessReport(csvText, commessa, squadra) {
     msg += `\n\n⚠ ${noTicket} operatore/giorno con dati nel report ma senza ticket ${etichetta} (KM non assegnato). Verifica di aver sincronizzato Jira.`;
   }
   if (opsNoEmail.size > 0) {
-    msg += `\n\n⚠ Operatori senza email assegnata (non abbinabili al report): ${[...opsNoEmail].join(', ')}.`;
+    msg += `\n\n⚠ Operatori senza email né «Utente QField» e non riconosciuti dal nome (non abbinabili al report): ${[...opsNoEmail].join(', ')}.`;
   }
   showAlertModal(msg);
 }
@@ -24252,9 +24416,8 @@ function cpBrdMappaSalva(commessa, mappa) {
    cantiere+attività e il sottotask di ciascuna. Stessa inclusione di cpGetSquadraOpsByDay. */
 function cpBrdOperatori(commessa, squadra) {
   const bc = pwGetWeekData().find(b => b && b.commessa === commessa);
-  const perGiorno = {}, senzaEmail = new Set(), utenti = new Set(), voci = new Map();
-  if (!bc) return { bc: null, perGiorno, senzaEmail: [], utenti: [], voci: [] };
-  const emailByNome = opEmailMappa();
+  const perGiorno = {}, nomi = new Set(), voci = new Map();
+  if (!bc) return { bc: null, perGiorno, nomi: [], voci: [] };
   const ctx = cpCtxTicketCommessa();
   (bc.squadre || []).forEach(sq => {
     if ((sq.nome || 'Squadra') !== squadra) return;
@@ -24265,9 +24428,7 @@ function cpBrdOperatori(commessa, squadra) {
         const opG = (op.giorni || {})[g] || {};
         const vv = pwCellVoci(opG);
         if (!vv.length || pwFerieTipoGiornata(op.nome, g)) continue;
-        const email = emailByNome[op.nome];
-        const utente = email ? email.split('@')[0].toLowerCase() : null;
-        if (utente) utenti.add(utente); else senzaEmail.add(op.nome);
+        nomi.add(op.nome);
         const k = commessa + '|||' + squadra + '|||' + op.nome + '|||' + g;
         const tks = cpTicketsPropri(_cpData[k] && _cpData[k].jira_tickets, commessa, op.nome, g, ctx);
         const vociOp = [];
@@ -24289,13 +24450,13 @@ function cpBrdOperatori(commessa, squadra) {
           if (!voci.has(chiave)) voci.set(chiave, { cantiere: v.cantiere, etichetta, chiave });
         });
         (perGiorno[g] || (perGiorno[g] = [])).push({
-          nome: op.nome, utente, voci: vociOp,
+          nome: op.nome, voci: vociOp,
           cantiere: pwCellCantieri(opG).join(', '), attivita: opG.attivita || '',
         });
       }
     });
   });
-  return { bc, perGiorno, senzaEmail: [...senzaEmail], utenti: [...utenti],
+  return { bc, perGiorno, nomi: [...nomi],
     voci: [...voci.values()].sort((a, b) => (a.cantiere + a.etichetta).localeCompare(b.cantiere + b.etichetta, 'it')) };
 }
 
@@ -24446,7 +24607,7 @@ function cpBrdPiano() {
   return { calc, righe: out };
 }
 
-HELP_TEXTS['cp-board-import'] = 'Importa la produzione di QUESTA squadra direttamente dalla board QField della commessa (oggi SINFI), senza scaricare il CSV: stessi valori di «📄 Carica Report» (Ore Report Prod. e Km/Cad dei sottotask), per i soli giorni della settimana mostrata.\n\nPrima di scrivere mostra un\'anteprima: ogni progetto QField del tablet della squadra (es. Moena_ACQ, Moena_FGN) va abbinato a una voce cantiere + attività della Griglia. L\'app lo propone dal nome e tu lo confermi o lo cambi (la scelta viene ricordata in questo browser). I Km di un progetto si dividono fra gli operatori della squadra che quel giorno hanno quella voce in Griglia e vanno sul loro sottotask; le ore vanno dalla prima all\'ultima registrazione della giornata, su tutti i progetti.\n\nI Km che non trovano posto (progetto non abbinato, voce assente in Griglia quel giorno, sottotask mancante) NON vengono scritti: finiscono nel campo Note delle righe di quel giorno come «⟦Board: …⟧», che viene tolto e ricalcolato a ogni nuova importazione. Correggi la Griglia o crea il sottotask e reimporta.\n\nI giorni già passati senza nessun dato della squadra vengono segnati «✓ Nessuna» produzione; oggi e i giorni futuri restano da compilare. Reimportare sostituisce i valori del tablet della squadra, non li somma. Scrive solo nel Controllo Produzione condiviso: su Jira i Km arrivano con «🔄 Sincronizza squadra».';
+HELP_TEXTS['cp-board-import'] = 'Importa la produzione di QUESTA squadra direttamente dalla board QField della commessa (oggi SINFI), senza scaricare il CSV: stessi valori di «📄 Carica Report» (Ore Report Prod. e Km/Cad dei sottotask), per i soli giorni della settimana mostrata.\n\nPrima di scrivere mostra un\'anteprima: ogni progetto QField del tablet della squadra (es. Moena_ACQ, Moena_FGN) va abbinato a una voce cantiere + attività della Griglia. L\'app lo propone dal nome e tu lo confermi o lo cambi (la scelta viene ricordata in questo browser). I Km di un progetto si dividono fra gli operatori della squadra che quel giorno hanno quella voce in Griglia e vanno sul loro sottotask; le ore vanno dalla prima all\'ultima registrazione della giornata, su tutti i progetti.\n\nI Km che non trovano posto (progetto non abbinato, voce assente in Griglia quel giorno, sottotask mancante) NON vengono scritti: finiscono nel campo Note delle righe di quel giorno come «⟦Board: …⟧», che viene tolto e ricalcolato a ogni nuova importazione. Correggi la Griglia o crea il sottotask e reimporta.\n\nI giorni già passati senza nessun dato della squadra vengono segnati «✓ Nessuna» produzione; oggi e i giorni futuri restano da compilare. Reimportare sostituisce i valori del tablet della squadra, non li somma. Scrive solo nel Controllo Produzione condiviso: su Jira i Km arrivano con «🔄 Sincronizza squadra».\n\nGli utenti QField della squadra si riconoscono dall\'email; se l\'utenza del tablet è diversa (es. hsemry con email hsmsemry@) l\'app la abbina da sola dal nome della persona e lo segnala in un riquadro blu. Se non ci riesce o trova più persone possibili, imposta «Utente QField» in Operatori → ✉ Email/operatore.';
 
 HELP_TEXTS['cp-board-aggiorna'] = 'Fa scaricare subito alla board QField della commessa i dati nuovi da QFieldCloud, come il pulsante «Aggiorna ora» della board. Ci vogliono 2-3 minuti: il tasto mostra a che punto è e alla fine l\'ora dei dati pubblicati. Se un aggiornamento è già in corso (quello automatico o lanciato da un collega) aspetta quello invece di avviarne un altro.\n\nServe per i dati appena sincronizzati dai tablet: da sola la board si aggiorna ogni 30 minuti, dal lunedì al sabato, circa dalle 5 alle 21. Il lavoro che un tablet non ha ancora sincronizzato non arriva comunque.\n\nSe la finestra «📡 Importa da board» è aperta, a fine aggiornamento rilegge i dati da sola e tiene gli abbinamenti già scelti. Non scrive niente nel Controllo Produzione né su Jira.';
 
@@ -24459,10 +24620,6 @@ async function cpBrdApri(commessa, squadra) {
     showAlertModal('La squadra "' + squadra + '" non ha operatori pianificati questa settimana.');
     return;
   }
-  if (!info.utenti.length) {
-    showAlertModal('Nessun operatore della squadra "' + squadra + '" ha un\'email: non si possono riconoscere i suoi utenti QField.');
-    return;
-  }
   const monday = isoWeekToMonday(pwAnno, pwWeek);
   const isoDates = [];
   for (let i = 0; i < 6; i++) {
@@ -24473,7 +24630,7 @@ async function cpBrdApri(commessa, squadra) {
   const oggi = new Date();
   const oggiISO = oggi.getFullYear() + '-' + String(oggi.getMonth() + 1).padStart(2, '0') + '-' + String(oggi.getDate()).padStart(2, '0');
   _cpBrd = { commessa, squadra, fonte, anno: pwAnno, week: pwWeek, isoDates, oggiISO,
-    perGiorno: info.perGiorno, senzaEmail: info.senzaEmail, utenti: info.utenti, voci: info.voci,
+    perGiorno: info.perGiorno, nomi: info.nomi, utenti: [], senzaUtente: [], autoUtenti: [], ambigui: [], voci: info.voci,
     righe: [], progetti: [], mappa: {}, stato: 'carica', errore: null, dati: null };
   document.getElementById('cpbrd-modal').style.display = 'flex';
   await cpBrdCarica();
@@ -24492,7 +24649,16 @@ async function cpBrdCarica() {
     if (!r.ok) throw new Error('HTTP ' + r.status);
     const dati = await r.json();
     if (_cpBrd !== st) return;
-    const utenti = new Set(st.utenti), isoDates = st.isoDates;
+    const isoDates = st.isoDates;
+    // Utenti QField della squadra (since v18.275.0): email, «Utente QField» o abbinamento
+    // automatico dal nome (hsemry ↔ hsmsemry@…), fra tutti gli utenti presenti nella board.
+    const tutti = (Array.isArray(dati.righe) ? dati.righe : []).map(x => x && x.operatore).filter(Boolean);
+    const abb = qfuAbbina(tutti, st.nomi);
+    st.utenti = Object.keys(abb.perUtente).filter(u => abb.perUtente[u].nomi.some(n => st.nomi.includes(n))).sort();
+    st.senzaUtente = st.nomi.filter(n => !qfuUtentiDi(abb, n).length);
+    st.autoUtenti = qfuDescriviAuto(abb, st.nomi);
+    st.ambigui = abb.ambigui;
+    const utenti = new Set(st.utenti);
     st.dati = { aggiornato: dati.aggiornato || null, dal: dati.dal || null, al: dati.al || null, avvisi: dati.avvisi || [] };
     if (st.fonte.repo && dati.aggiornato) {
       (_cpBrdAgg[st.fonte.repo] || (_cpBrdAgg[st.fonte.repo] = {})).ultimo = dati.aggiornato;
@@ -24572,13 +24738,15 @@ function cpBrdRender() {
   }
   const opz = st.voci.map(v => ({ value: v.chiave, label: v.cantiere + ' · ' + (v.etichetta || 'senza attività') }));
   const avvisi = [];
-  if (st.senzaEmail.length) avvisi.push('Operatori senza email (i loro utenti QField non si riconoscono): ' + st.senzaEmail.join(', ') + '.');
+  st.ambigui.forEach(a => avvisi.push('Utente QField «' + a.utente + '» ambiguo (' + a.nomi.join(' / ') + '): i suoi dati non vengono usati. Imposta «Utente QField» sulla persona giusta (Operatori → ✉ Email/operatore).'));
+  if (st.senzaUtente.length) avvisi.push('Nessun utente QField nella board per: ' + st.senzaUtente.join(', ') + '. Se usano un\'utenza molto diversa dall\'email, impostala in «Utente QField» (Operatori → ✉ Email/operatore).');
   if (st.dati && st.dati.dal && st.isoDates[5] < st.dati.dal) avvisi.push('La board conserva i dati dal ' + st.dati.dal + ': questa settimana è troppo vecchia.');
   (st.dati && st.dati.avvisi || []).forEach(a => avvisi.push('Board: ' + a));
+  if (st.autoUtenti.length) h += '<div style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:8px;padding:8px 10px;margin-bottom:12px;color:#1e40af;">Utenti QField abbinati automaticamente (nome diverso dall\'email): ' + st.autoUtenti.map(esc).join(' · ') + '</div>';
   if (avvisi.length) h += '<div style="background:#fef3c7;border:1px solid #fde68a;border-radius:8px;padding:8px 10px;margin-bottom:12px;color:#92400e;">' + avvisi.map(esc).join('<br>') + '</div>';
 
   // Progetti QField
-  h += '<div style="font-weight:700;margin-bottom:6px;">Progetti QField della squadra (' + esc(st.utenti.join(', ')) + ')</div>';
+  h += '<div style="font-weight:700;margin-bottom:6px;">Progetti QField della squadra (' + esc(st.utenti.join(', ') || 'nessun utente riconosciuto') + ')</div>';
   if (!st.progetti.length) {
     h += '<div style="color:#64748b;margin-bottom:14px;">Nessun dato della squadra nella board per questa settimana.</div>';
   } else {

@@ -183,7 +183,7 @@ function cpReportAttivitaTicket(t, perTicket, attivitaNote) {
   return (sm && attivitaNote.find(a => sm.startsWith(a.toLowerCase() + ' - '))) || '';
 }
 
-HELP_TEXTS['cp-carica-report'] = 'Importa un file CSV/testo con le ore di produzione reale degli operatori di QUESTA squadra e compila "Ore Report Prod." e il Km/Cad del ticket del comune, per i soli giorni trovati nel file.\n\nSe sullo stesso comune la squadra ha sottotask di più attività (es. due rilievi diversi nella stessa settimana), viene chiesta anche l\'attività: il Km/Cad va sul sottotask di quell\'attività e si aggiornano solo gli operatori/giorni che la svolgono.\n\nSi possono caricare più report per la stessa squadra e settimana (es. 2 giorni fatti con l\'utenza di una persona e 3 con quella di un\'altra): ogni report aggiorna solo i giorni che contiene, gli altri restano come sono. Se due utenze diverse hanno dati sullo stesso giorno, i Km/Cad si sommano; ricaricare il report della stessa utenza ne sostituisce i valori invece di sommarli. "Ore Report Prod." va dalla prima all\'ultima registrazione della giornata su tutti i report caricati per quell\'operatore e giorno (es. Acquedotto la mattina e Fognatura il pomeriggio: la giornata intera, non solo l\'ultimo report caricato).\n\nUn operatore che quel giorno ha solo ticket di un altro comune non entra nella divisione dei Km e resta com\'è.\n\nI giorni senza dati nel file vengono messi a zero solo se ancora vuoti. Se sono già passati (maltempo, fermo…) il loro sottotask viene segnato «✓ Nessuna» produzione: Km/Cad 0, giorno compilato, niente scritto su Jira; un report caricato dopo con dati per quel giorno lo sostituisce. Oggi e i giorni futuri restano da compilare. Se il file non copre nessun giorno della settimana, ti viene comunque chiesto se vuoi azzerare le ore per quei giorni.\n\nRiguarda solo "Ore Report Prod."/Km — le "Ore Jira" si aggiornano con "Sincronizza da Jira".';
+HELP_TEXTS['cp-carica-report'] = 'Importa un file CSV/testo con le ore di produzione reale degli operatori di QUESTA squadra e compila "Ore Report Prod." e il Km/Cad del ticket del comune, per i soli giorni trovati nel file.\n\nSe sullo stesso comune la squadra ha sottotask di più attività (es. due rilievi diversi nella stessa settimana), viene chiesta anche l\'attività: il Km/Cad va sul sottotask di quell\'attività e si aggiornano solo gli operatori/giorni che la svolgono.\n\nSi possono caricare più report per la stessa squadra e settimana (es. 2 giorni fatti con l\'utenza di una persona e 3 con quella di un\'altra): ogni report aggiorna solo i giorni che contiene, gli altri restano come sono. Se due utenze diverse hanno dati sullo stesso giorno, i Km/Cad si sommano; ricaricare il report della stessa utenza ne sostituisce i valori invece di sommarli. "Ore Report Prod." va dalla prima all\'ultima registrazione della giornata su tutti i report caricati per quell\'operatore e giorno (es. Acquedotto la mattina e Fognatura il pomeriggio: la giornata intera, non solo l\'ultimo report caricato).\n\nUn operatore che quel giorno ha solo ticket di un altro comune non entra nella divisione dei Km e resta com\'è.\n\nI giorni senza dati nel file vengono messi a zero solo se ancora vuoti. Se sono già passati (maltempo, fermo…) il loro sottotask viene segnato «✓ Nessuna» produzione: Km/Cad 0, giorno compilato, niente scritto su Jira; un report caricato dopo con dati per quel giorno lo sostituisce. Oggi e i giorni futuri restano da compilare. Se il file non copre nessun giorno della settimana, ti viene comunque chiesto se vuoi azzerare le ore per quei giorni.\n\nRiguarda solo "Ore Report Prod."/Km — le "Ore Jira" si aggiornano con "Sincronizza da Jira".\n\nGli utenti del file si riconoscono dall\'email dell\'operatore; se l\'utenza QField è diversa (es. hsemry con email hsmsemry@, ccica01 con email ccica@) l\'app la abbina da sola dal nome e lo dice nella conferma. Per i casi che non riconosce: «Utente QField» in Operatori → ✉ Email/operatore.';
 
 // Handler del bottone: apre il selettore file (CSV) per la squadra indicata.
 async function cpCaricaReportSquadra(commessa, squadra) {
@@ -246,8 +246,13 @@ async function cpProcessReport(csvText, commessa, squadra) {
     isoDates.push(`${d.getUTCFullYear()}-${String(d.getUTCMonth()+1).padStart(2,'0')}-${String(d.getUTCDate()).padStart(2,'0')}`);
   }
 
-  // Mappa nome operatore -> email (stessa logica del sync Jira)
-  const emailByNome = opEmailMappa();
+  // Utenti del file → operatori (since v18.275.0): email, «Utente QField» o abbinamento automatico
+  // dal nome quando l'utenza QField è diversa dall'email (hsemry ↔ hsmsemry@…, ccica01 ↔ ccica@…).
+  const nomiSquadra = [...new Set(days.flatMap(g => opsByDay[g].map(op => op.nome)))];
+  const abbQf = qfuAbbina(Object.keys(parsed).map(k => k.split('|||')[0]), nomiSquadra);
+  const autoQf = qfuDescriviAuto(abbQf, nomiSquadra);
+  const msgUtenti = (autoQf.length ? `\n\nUtenti QField abbinati automaticamente (nome diverso dall'email): ${autoQf.join(' · ')}.` : '')
+    + abbQf.ambigui.map(a => `\n\n⚠ Utente «${a.utente}» ambiguo (${a.nomi.join(' / ')}): i suoi dati non vengono usati. Imposta «Utente QField» sulla persona giusta (Operatori → ✉ Email/operatore).`).join('');
 
   // Comuni (Epic) disponibili nei ticket della squadra questa settimana. Solo i ticket di questa
   // commessa: quelli di un'altra commessa lavorata lo stesso giorno stanno sulla sua riga (v18.270.0).
@@ -330,11 +335,12 @@ async function cpProcessReport(csvText, commessa, squadra) {
 
     let source = null, utente = null;
     ops.forEach(op => {
-      const email = emailByNome[op.nome];
-      if (!email) { opsNoEmail.add(op.nome); return; }
-      const user = email.split('@')[0].toLowerCase();
-      const rec = parsed[`${user}|||${dateISO}`];
-      if (rec && (!source || rec.lenM > source.lenM)) { source = rec; utente = user; }
+      const users = qfuUtentiDi(abbQf, op.nome);
+      if (!users.length && !qfuHaRiferimento(op.nome)) { opsNoEmail.add(op.nome); return; }
+      users.forEach(user => {
+        const rec = parsed[`${user}|||${dateISO}`];
+        if (rec && (!source || rec.lenM > source.lenM)) { source = rec; utente = user; }
+      });
     });
 
     let oreVal = 0, kmVal = 0;
@@ -413,7 +419,7 @@ async function cpProcessReport(csvText, commessa, squadra) {
     const ok0 = await showConfirmAsync(
       `Nessun dato trovato nel report per gli operatori di "${squadra}" in questa settimana ` +
       `(${isoDates[days[0]]} … ${isoDates[days[days.length-1]]}).\n\nIl report copre il periodo ${range}.\n\n` +
-      `Vuoi comunque azzerare le ore per questi giorni?` + msgNessuna,
+      `Vuoi comunque azzerare le ore per questi giorni?` + msgNessuna + msgUtenti,
       'Azzera comunque');
     if (!ok0) return;
   } else {
@@ -422,7 +428,7 @@ async function cpProcessReport(csvText, commessa, squadra) {
       `(${daysWithData} giorni con dati, ${daysZero} a zero` + (noTicket > 0 ? `, ${noTicket} senza ticket` + (attSel ? ` dell'attività` : ` del comune`) : ``) + `). ` +
       `Vengono aggiornati solo i giorni presenti nel file` +
       (giorniSomma > 0 ? `; su ${giorniSomma} giorn${giorniSomma === 1 ? 'o' : 'i'} c'è già il report di un'altra utenza: i Km/Cad verranno sommati` : '') +
-      `.` + msgNessuna + `\n\nProcedere?`,
+      `.` + msgNessuna + msgUtenti + `\n\nProcedere?`,
       'Carica Report');
     if (!ok) return;
     if (giorniIgnoti > 0) {
@@ -523,7 +529,7 @@ async function cpProcessReport(csvText, commessa, squadra) {
     msg += `\n\n⚠ ${noTicket} operatore/giorno con dati nel report ma senza ticket ${etichetta} (KM non assegnato). Verifica di aver sincronizzato Jira.`;
   }
   if (opsNoEmail.size > 0) {
-    msg += `\n\n⚠ Operatori senza email assegnata (non abbinabili al report): ${[...opsNoEmail].join(', ')}.`;
+    msg += `\n\n⚠ Operatori senza email né «Utente QField» e non riconosciuti dal nome (non abbinabili al report): ${[...opsNoEmail].join(', ')}.`;
   }
   showAlertModal(msg);
 }

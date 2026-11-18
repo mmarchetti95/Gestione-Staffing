@@ -380,11 +380,12 @@ function renderEmailOperatori() {
     return;
   }
   const nMiss = ops.filter(o => !o.email || !o.email.trim()).length;
-  let html = `<div class="text-[11px] text-slate-500 mb-2">Email aziendale usata per la sincronizzazione dei worklog da Jira. ${nMiss > 0 ? `<span style="color:#dc2626;font-weight:600;">${nMiss} mancanti.</span>` : '<span style="color:#16a34a;font-weight:600;">Tutte assegnate.</span>'}</div>`;
+  let html = `<div class="text-[11px] text-slate-500 mb-2">Email aziendale usata per la sincronizzazione dei worklog da Jira. «Utente QField» serve solo se l'utenza del tablet non si riconosce da sola dall'email o dal nome (board e report produzione). ${nMiss > 0 ? `<span style="color:#dc2626;font-weight:600;">${nMiss} mancanti.</span>` : '<span style="color:#16a34a;font-weight:600;">Tutte assegnate.</span>'}</div>`;
   html += `<table style="width:100%;border-collapse:collapse;font-size:13px;">
     <thead><tr style="text-align:left;border-bottom:1px solid #e2e8f0;">
       <th style="padding:6px 8px;color:#64748b;font-weight:600;">Operatore</th>
       <th style="padding:6px 8px;color:#64748b;font-weight:600;">Email</th>
+      <th style="padding:6px 8px;color:#64748b;font-weight:600;width:170px;" title="Solo se l'utenza QField (board / report produzione) non si riconosce da sola dall'email o dal nome">Utente QField</th>
       <th style="padding:6px 8px;color:#64748b;font-weight:600;width:90px;">Stato</th>
     </tr></thead><tbody>`;
   ops.forEach(op => {
@@ -402,6 +403,10 @@ function renderEmailOperatori() {
         data-op-id="${esc(op.id)}"
         style="width:100%;border:1px solid #cbd5e1;border-radius:4px;padding:3px 6px;font-size:12px;"
         onblur="saveEmailOperatore('${String(op.id).replace(/'/g, "\\'")}', this.value)"></td>
+      <td style="padding:5px 8px;"><input type="text" value="${esc(qfuEspliciti(op).join(', '))}" placeholder="${esc(email.includes('@') ? email.split('@')[0].toLowerCase() : 'automatico')}"
+        title="Utente QField se diverso dall'email (es. hsemry). Più utenze separate da virgola. Vuoto = riconosciuto da email o nome."
+        style="width:100%;border:1px solid #cbd5e1;border-radius:4px;padding:3px 6px;font-size:12px;"
+        onblur="saveUtenteQfieldOperatore('${jsAttr(op.id)}', this.value)"></td>
       <td style="padding:5px 8px;" id="op-email-badge-${esc(op.id)}">${badge}</td>
     </tr>`;
   });
@@ -424,6 +429,18 @@ async function saveEmailOperatore(opId, value) {
       : '<span style="font-size:10px;font-weight:700;background:#fee2e2;color:#dc2626;border-radius:3px;padding:2px 6px;">⚠ mancante</span>';
   }
   await saveState('Email operatore', { operatore: op.nome_esteso || op.id });
+}
+
+// «Utente QField» (since v18.275.0): solo per le utenze che l'abbinamento automatico non
+// riconosce (vedi qfield-utenti.js). Vuoto = campo tolto.
+async function saveUtenteQfieldOperatore(opId, value) {
+  if (!sbGuardWrite()) return;
+  const op = (state.operatori || []).find(o => o.id === opId);
+  if (!op) return;
+  const val = [...new Set(String(value || '').split(/[,;\s]+/).map(x => x.trim().toLowerCase()).filter(Boolean))].join(', ');
+  if ((op.utente_qfield || '') === val) return;
+  if (val) op.utente_qfield = val; else delete op.utente_qfield;
+  await saveState('Utente QField operatore', { operatore: op.nome_esteso || op.id });
 }
 
 function apriVistaOperatore(opId) {

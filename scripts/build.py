@@ -58,6 +58,7 @@ JS_FILES = [
     'weekly-collapse-cp.js',
     'produzione-core.js',
     'produzione-orari-jira.js',
+    'qfield-utenti.js',
     'produzione-report.js',
     'produzione-board.js',
     'produzione-mysond.js',

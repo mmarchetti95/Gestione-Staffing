@@ -236,9 +236,8 @@ function cpBrdMappaSalva(commessa, mappa) {
    cantiere+attività e il sottotask di ciascuna. Stessa inclusione di cpGetSquadraOpsByDay. */
 function cpBrdOperatori(commessa, squadra) {
   const bc = pwGetWeekData().find(b => b && b.commessa === commessa);
-  const perGiorno = {}, senzaEmail = new Set(), utenti = new Set(), voci = new Map();
-  if (!bc) return { bc: null, perGiorno, senzaEmail: [], utenti: [], voci: [] };
-  const emailByNome = opEmailMappa();
+  const perGiorno = {}, nomi = new Set(), voci = new Map();
+  if (!bc) return { bc: null, perGiorno, nomi: [], voci: [] };
   const ctx = cpCtxTicketCommessa();
   (bc.squadre || []).forEach(sq => {
     if ((sq.nome || 'Squadra') !== squadra) return;
@@ -249,9 +248,7 @@ function cpBrdOperatori(commessa, squadra) {
         const opG = (op.giorni || {})[g] || {};
         const vv = pwCellVoci(opG);
         if (!vv.length || pwFerieTipoGiornata(op.nome, g)) continue;
-        const email = emailByNome[op.nome];
-        const utente = email ? email.split('@')[0].toLowerCase() : null;
-        if (utente) utenti.add(utente); else senzaEmail.add(op.nome);
+        nomi.add(op.nome);
         const k = commessa + '|||' + squadra + '|||' + op.nome + '|||' + g;
         const tks = cpTicketsPropri(_cpData[k] && _cpData[k].jira_tickets, commessa, op.nome, g, ctx);
         const vociOp = [];
@@ -273,13 +270,13 @@ function cpBrdOperatori(commessa, squadra) {
           if (!voci.has(chiave)) voci.set(chiave, { cantiere: v.cantiere, etichetta, chiave });
         });
         (perGiorno[g] || (perGiorno[g] = [])).push({
-          nome: op.nome, utente, voci: vociOp,
+          nome: op.nome, voci: vociOp,
           cantiere: pwCellCantieri(opG).join(', '), attivita: opG.attivita || '',
         });
       }
     });
   });
-  return { bc, perGiorno, senzaEmail: [...senzaEmail], utenti: [...utenti],
+  return { bc, perGiorno, nomi: [...nomi],
     voci: [...voci.values()].sort((a, b) => (a.cantiere + a.etichetta).localeCompare(b.cantiere + b.etichetta, 'it')) };
 }
 
@@ -430,7 +427,7 @@ function cpBrdPiano() {
   return { calc, righe: out };
 }
 
-HELP_TEXTS['cp-board-import'] = 'Importa la produzione di QUESTA squadra direttamente dalla board QField della commessa (oggi SINFI), senza scaricare il CSV: stessi valori di «📄 Carica Report» (Ore Report Prod. e Km/Cad dei sottotask), per i soli giorni della settimana mostrata.\n\nPrima di scrivere mostra un\'anteprima: ogni progetto QField del tablet della squadra (es. Moena_ACQ, Moena_FGN) va abbinato a una voce cantiere + attività della Griglia. L\'app lo propone dal nome e tu lo confermi o lo cambi (la scelta viene ricordata in questo browser). I Km di un progetto si dividono fra gli operatori della squadra che quel giorno hanno quella voce in Griglia e vanno sul loro sottotask; le ore vanno dalla prima all\'ultima registrazione della giornata, su tutti i progetti.\n\nI Km che non trovano posto (progetto non abbinato, voce assente in Griglia quel giorno, sottotask mancante) NON vengono scritti: finiscono nel campo Note delle righe di quel giorno come «⟦Board: …⟧», che viene tolto e ricalcolato a ogni nuova importazione. Correggi la Griglia o crea il sottotask e reimporta.\n\nI giorni già passati senza nessun dato della squadra vengono segnati «✓ Nessuna» produzione; oggi e i giorni futuri restano da compilare. Reimportare sostituisce i valori del tablet della squadra, non li somma. Scrive solo nel Controllo Produzione condiviso: su Jira i Km arrivano con «🔄 Sincronizza squadra».';
+HELP_TEXTS['cp-board-import'] = 'Importa la produzione di QUESTA squadra direttamente dalla board QField della commessa (oggi SINFI), senza scaricare il CSV: stessi valori di «📄 Carica Report» (Ore Report Prod. e Km/Cad dei sottotask), per i soli giorni della settimana mostrata.\n\nPrima di scrivere mostra un\'anteprima: ogni progetto QField del tablet della squadra (es. Moena_ACQ, Moena_FGN) va abbinato a una voce cantiere + attività della Griglia. L\'app lo propone dal nome e tu lo confermi o lo cambi (la scelta viene ricordata in questo browser). I Km di un progetto si dividono fra gli operatori della squadra che quel giorno hanno quella voce in Griglia e vanno sul loro sottotask; le ore vanno dalla prima all\'ultima registrazione della giornata, su tutti i progetti.\n\nI Km che non trovano posto (progetto non abbinato, voce assente in Griglia quel giorno, sottotask mancante) NON vengono scritti: finiscono nel campo Note delle righe di quel giorno come «⟦Board: …⟧», che viene tolto e ricalcolato a ogni nuova importazione. Correggi la Griglia o crea il sottotask e reimporta.\n\nI giorni già passati senza nessun dato della squadra vengono segnati «✓ Nessuna» produzione; oggi e i giorni futuri restano da compilare. Reimportare sostituisce i valori del tablet della squadra, non li somma. Scrive solo nel Controllo Produzione condiviso: su Jira i Km arrivano con «🔄 Sincronizza squadra».\n\nGli utenti QField della squadra si riconoscono dall\'email; se l\'utenza del tablet è diversa (es. hsemry con email hsmsemry@) l\'app la abbina da sola dal nome della persona e lo segnala in un riquadro blu. Se non ci riesce o trova più persone possibili, imposta «Utente QField» in Operatori → ✉ Email/operatore.';
 
 HELP_TEXTS['cp-board-aggiorna'] = 'Fa scaricare subito alla board QField della commessa i dati nuovi da QFieldCloud, come il pulsante «Aggiorna ora» della board. Ci vogliono 2-3 minuti: il tasto mostra a che punto è e alla fine l\'ora dei dati pubblicati. Se un aggiornamento è già in corso (quello automatico o lanciato da un collega) aspetta quello invece di avviarne un altro.\n\nServe per i dati appena sincronizzati dai tablet: da sola la board si aggiorna ogni 30 minuti, dal lunedì al sabato, circa dalle 5 alle 21. Il lavoro che un tablet non ha ancora sincronizzato non arriva comunque.\n\nSe la finestra «📡 Importa da board» è aperta, a fine aggiornamento rilegge i dati da sola e tiene gli abbinamenti già scelti. Non scrive niente nel Controllo Produzione né su Jira.';
 
@@ -443,10 +440,6 @@ async function cpBrdApri(commessa, squadra) {
     showAlertModal('La squadra "' + squadra + '" non ha operatori pianificati questa settimana.');
     return;
   }
-  if (!info.utenti.length) {
-    showAlertModal('Nessun operatore della squadra "' + squadra + '" ha un\'email: non si possono riconoscere i suoi utenti QField.');
-    return;
-  }
   const monday = isoWeekToMonday(pwAnno, pwWeek);
   const isoDates = [];
   for (let i = 0; i < 6; i++) {
@@ -457,7 +450,7 @@ async function cpBrdApri(commessa, squadra) {
   const oggi = new Date();
   const oggiISO = oggi.getFullYear() + '-' + String(oggi.getMonth() + 1).padStart(2, '0') + '-' + String(oggi.getDate()).padStart(2, '0');
   _cpBrd = { commessa, squadra, fonte, anno: pwAnno, week: pwWeek, isoDates, oggiISO,
-    perGiorno: info.perGiorno, senzaEmail: info.senzaEmail, utenti: info.utenti, voci: info.voci,
+    perGiorno: info.perGiorno, nomi: info.nomi, utenti: [], senzaUtente: [], autoUtenti: [], ambigui: [], voci: info.voci,
     righe: [], progetti: [], mappa: {}, stato: 'carica', errore: null, dati: null };
   document.getElementById('cpbrd-modal').style.display = 'flex';
   await cpBrdCarica();
@@ -476,7 +469,16 @@ async function cpBrdCarica() {
     if (!r.ok) throw new Error('HTTP ' + r.status);
     const dati = await r.json();
     if (_cpBrd !== st) return;
-    const utenti = new Set(st.utenti), isoDates = st.isoDates;
+    const isoDates = st.isoDates;
+    // Utenti QField della squadra (since v18.275.0): email, «Utente QField» o abbinamento
+    // automatico dal nome (hsemry ↔ hsmsemry@…), fra tutti gli utenti presenti nella board.
+    const tutti = (Array.isArray(dati.righe) ? dati.righe : []).map(x => x && x.operatore).filter(Boolean);
+    const abb = qfuAbbina(tutti, st.nomi);
+    st.utenti = Object.keys(abb.perUtente).filter(u => abb.perUtente[u].nomi.some(n => st.nomi.includes(n))).sort();
+    st.senzaUtente = st.nomi.filter(n => !qfuUtentiDi(abb, n).length);
+    st.autoUtenti = qfuDescriviAuto(abb, st.nomi);
+    st.ambigui = abb.ambigui;
+    const utenti = new Set(st.utenti);
     st.dati = { aggiornato: dati.aggiornato || null, dal: dati.dal || null, al: dati.al || null, avvisi: dati.avvisi || [] };
     if (st.fonte.repo && dati.aggiornato) {
       (_cpBrdAgg[st.fonte.repo] || (_cpBrdAgg[st.fonte.repo] = {})).ultimo = dati.aggiornato;
@@ -556,13 +558,15 @@ function cpBrdRender() {
   }
   const opz = st.voci.map(v => ({ value: v.chiave, label: v.cantiere + ' · ' + (v.etichetta || 'senza attività') }));
   const avvisi = [];
-  if (st.senzaEmail.length) avvisi.push('Operatori senza email (i loro utenti QField non si riconoscono): ' + st.senzaEmail.join(', ') + '.');
+  st.ambigui.forEach(a => avvisi.push('Utente QField «' + a.utente + '» ambiguo (' + a.nomi.join(' / ') + '): i suoi dati non vengono usati. Imposta «Utente QField» sulla persona giusta (Operatori → ✉ Email/operatore).'));
+  if (st.senzaUtente.length) avvisi.push('Nessun utente QField nella board per: ' + st.senzaUtente.join(', ') + '. Se usano un\'utenza molto diversa dall\'email, impostala in «Utente QField» (Operatori → ✉ Email/operatore).');
   if (st.dati && st.dati.dal && st.isoDates[5] < st.dati.dal) avvisi.push('La board conserva i dati dal ' + st.dati.dal + ': questa settimana è troppo vecchia.');
   (st.dati && st.dati.avvisi || []).forEach(a => avvisi.push('Board: ' + a));
+  if (st.autoUtenti.length) h += '<div style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:8px;padding:8px 10px;margin-bottom:12px;color:#1e40af;">Utenti QField abbinati automaticamente (nome diverso dall\'email): ' + st.autoUtenti.map(esc).join(' · ') + '</div>';
   if (avvisi.length) h += '<div style="background:#fef3c7;border:1px solid #fde68a;border-radius:8px;padding:8px 10px;margin-bottom:12px;color:#92400e;">' + avvisi.map(esc).join('<br>') + '</div>';
 
   // Progetti QField
-  h += '<div style="font-weight:700;margin-bottom:6px;">Progetti QField della squadra (' + esc(st.utenti.join(', ')) + ')</div>';
+  h += '<div style="font-weight:700;margin-bottom:6px;">Progetti QField della squadra (' + esc(st.utenti.join(', ') || 'nessun utente riconosciuto') + ')</div>';
   if (!st.progetti.length) {
     h += '<div style="color:#64748b;margin-bottom:14px;">Nessun dato della squadra nella board per questa settimana.</div>';
   } else {
