@@ -2138,7 +2138,7 @@
       </span>
       <button id="btn-presentation" class="px-3 py-1.5 text-sm rounded hover:bg-white/10" style="border:1px solid var(--dark-border-strong);color:var(--dark-text);visibility:visible;">📊 Modalità presentazione</button>
       <div class="text-xs pl-2" style="border-left:1px solid var(--dark-border-strong);color:var(--dark-text-muted);">
-        <span id="app-version" class="font-medium" style="color:var(--accent);">v18.271.0</span> · Michele Marchetti
+        <span id="app-version" class="font-medium" style="color:var(--accent);">v18.272.0</span> · Michele Marchetti
         <span id="sb-role-badge" style="margin-left:8px;padding:1px 8px;border-radius:9999px;background:rgba(255,255,255,.1);color:var(--dark-text);font-weight:600;"></span>
       </div>
     </div>
@@ -2304,6 +2304,10 @@
      .modal-backdrop (100050): conferme e avvisi lanciati da qui devono comparire sopra. -->
 <div id="cptl-modal" class="no-print" style="display:none;position:fixed;inset:0;z-index:99990;background:var(--backdrop);align-items:center;justify-content:center;" onclick="if (event.target === this) cpTlChiudi()">
   <div id="cptl-root" style="background:#f8fafc;border-radius:var(--radius-lg);width:1280px;max-width:97vw;height:90vh;box-shadow:var(--shadow-lg);display:flex;flex-direction:column;overflow:hidden;"></div>
+</div>
+<!-- Importa da board QField di Controllo Produzione (src/js/produzione-board.js). z-index sotto .modal-backdrop -->
+<div id="cpbrd-modal" class="no-print" style="display:none;position:fixed;inset:0;z-index:99990;background:var(--backdrop);align-items:center;justify-content:center;" onclick="if (event.target === this) cpBrdChiudi()">
+  <div id="cpbrd-root" style="background:#f8fafc;border-radius:var(--radius-lg);width:1000px;max-width:97vw;max-height:90vh;box-shadow:var(--shadow-lg);display:flex;flex-direction:column;overflow:hidden;"></div>
 </div>
 <!-- Worklog fornitori di Controllo Produzione (src/js/produzione-fornitori-worklog.js). z-index sotto .modal-backdrop -->
 <div id="cpfw-modal" class="no-print" style="display:none;position:fixed;inset:0;z-index:99990;background:var(--backdrop);align-items:center;justify-content:center;" onclick="if (event.target === this) cpFornWlChiudi()">

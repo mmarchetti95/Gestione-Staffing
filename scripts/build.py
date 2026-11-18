@@ -59,6 +59,7 @@ JS_FILES = [
     'produzione-core.js',
     'produzione-orari-jira.js',
     'produzione-report.js',
+    'produzione-board.js',
     'produzione-mysond.js',
     'produzione-anomalie-core.js',
     'produzione-anomalie.js',
