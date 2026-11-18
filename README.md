@@ -114,6 +114,10 @@ Limite noto: il progetto Supabase è sul piano **Free**, che non include backup 
 
 ## Changelog
 
+## v18.274.0
+- feat: **Controllo Produzione, «🔄 Aggiorna board» (SINFI).** Sulla riga della commessa e nella finestra «📡 Importa da board» c'è un tasto che fa scaricare subito alla board QField i dati nuovi da QFieldCloud, come «Aggiorna ora» sulla board. Ci vogliono 2-3 minuti: il tasto mostra a che punto è e alla fine l'ora dei dati pubblicati. Se c'è già un aggiornamento in corso (automatico o di un collega) aspetta quello. Con la finestra di import aperta, a fine aggiornamento i dati si rileggono da soli e gli abbinamenti già scelti restano. Il token usato è quello già pubblicato con la board, non sta nel repository. Non scrive niente nel Controllo Produzione né su Jira. Nascondibile da «🧩 Funzioni» insieme all'import.
+- Nessuna modifica a Supabase o alle Edge Function.
+
 ## v18.273.0
 - fix: **«⧉ Copia worklog» sostituisce invece di sommare.** Prima i worklog del compagno si aggiungevano a quelli che l'operatore aveva già, e la giornata risultava gonfiata. Ora la copia allinea l'operatore al compagno: nella finestra compaiono i worklog che l'operatore ha già quel giorno, spuntati per essere eliminati; si tengono di default solo quelli uguali a uno da copiare e quelli su un'altra commessa (se quel giorno ha lavorato anche altrove). Si può togliere la spunta a quelli da tenere. Con «Copia su Jira» l'ordine è: stato del sottotask, eliminazione (via Tempo quando c'è il token, così sparisce anche dal timesheet), poi le copie; prima di «Sincronizza squadra» controlla che Jira mostri la giornata nuova. Su un sottotask il cui stato è cambiato nel frattempo non elimina nulla. Nessuna modifica a Supabase o alle Edge Function.
 

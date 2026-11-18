@@ -38,7 +38,7 @@ const SB_FN_FUNZIONI = [
   { gruppo: 'Controllo produzione', chiave: 'controllo:stato-giornata', label: '✎ Stato: sistema stato e ore di un sottotask su Jira', sel: '.cp-gs-btn, #cpgs-modal' },
   { gruppo: 'Controllo produzione', chiave: 'controllo:fornitori-worklog', label: '🏢 Worklog fornitori', sel: '#cpfw-toggle, #cpfw-modal' },
   { gruppo: 'Controllo produzione', chiave: 'controllo:sync-jira', label: '🔄 Sincronizza da Jira', sel: '#cp-sync-jira' },
-  { gruppo: 'Controllo produzione', chiave: 'controllo:board-import', label: '📡 Importa da board QField (per squadra)', sel: '.cp-brd-btn, #cpbrd-modal' },
+  { gruppo: 'Controllo produzione', chiave: 'controllo:board-import', label: '📡 Importa da board QField (per squadra) e 🔄 Aggiorna board', sel: '.cp-brd-btn, .cp-brd-agg-btn, #cpbrd-modal' },
   { gruppo: 'Controllo produzione', chiave: 'controllo:mysond', label: '📥 Carica MySond', sel: '#cp-mysond-btn' },
   { gruppo: 'Auto-pianifica', chiave: 'autoplan:assistente', label: '✦ Assistente pianificazione', sel: '.apc-toggle, #apc-panel' },
   { gruppo: 'Auto-pianifica', chiave: 'autoplan:imprevisti', label: '⚡ Imprevisti', sel: '.ap-imprevisti-box' },

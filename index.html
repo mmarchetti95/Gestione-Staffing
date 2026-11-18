@@ -2138,7 +2138,7 @@
       </span>
       <button id="btn-presentation" class="px-3 py-1.5 text-sm rounded hover:bg-white/10" style="border:1px solid var(--dark-border-strong);color:var(--dark-text);visibility:visible;">📊 Modalità presentazione</button>
       <div class="text-xs pl-2" style="border-left:1px solid var(--dark-border-strong);color:var(--dark-text-muted);">
-        <span id="app-version" class="font-medium" style="color:var(--accent);">v18.273.0</span> · Michele Marchetti
+        <span id="app-version" class="font-medium" style="color:var(--accent);">v18.274.0</span> · Michele Marchetti
         <span id="sb-role-badge" style="margin-left:8px;padding:1px 8px;border-radius:9999px;background:rgba(255,255,255,.1);color:var(--dark-text);font-weight:600;"></span>
       </div>
     </div>
@@ -5069,7 +5069,7 @@ const SB_FN_FUNZIONI = [
   { gruppo: 'Controllo produzione', chiave: 'controllo:stato-giornata', label: '✎ Stato: sistema stato e ore di un sottotask su Jira', sel: '.cp-gs-btn, #cpgs-modal' },
   { gruppo: 'Controllo produzione', chiave: 'controllo:fornitori-worklog', label: '🏢 Worklog fornitori', sel: '#cpfw-toggle, #cpfw-modal' },
   { gruppo: 'Controllo produzione', chiave: 'controllo:sync-jira', label: '🔄 Sincronizza da Jira', sel: '#cp-sync-jira' },
-  { gruppo: 'Controllo produzione', chiave: 'controllo:board-import', label: '📡 Importa da board QField (per squadra)', sel: '.cp-brd-btn, #cpbrd-modal' },
+  { gruppo: 'Controllo produzione', chiave: 'controllo:board-import', label: '📡 Importa da board QField (per squadra) e 🔄 Aggiorna board', sel: '.cp-brd-btn, .cp-brd-agg-btn, #cpbrd-modal' },
   { gruppo: 'Controllo produzione', chiave: 'controllo:mysond', label: '📥 Carica MySond', sel: '#cp-mysond-btn' },
   { gruppo: 'Auto-pianifica', chiave: 'autoplan:assistente', label: '✦ Assistente pianificazione', sel: '.apc-toggle, #apc-panel' },
   { gruppo: 'Auto-pianifica', chiave: 'autoplan:imprevisti', label: '⚡ Imprevisti', sel: '.ap-imprevisti-box' },
@@ -21596,7 +21596,7 @@ function pwControlloRender() {
   const ctxTk = cpCtxTicketCommessa();
 
   blocks.forEach((bl, blIdx) => {
-    html += `<tr class="cp-tr-commessa" data-comm-idx="${blIdx}"><td colspan="19"><span class="cp-carr" style="cursor:pointer;user-select:none;margin-right:5px;font-size:11px;display:inline-block;width:10px;text-align:center;" onclick="cpToggleComm(${blIdx})">▼</span>📁 ${esc(bl.commessa)}${cpCampoSelectHtml(bl.commessa)}</td></tr>`;
+    html += `<tr class="cp-tr-commessa" data-comm-idx="${blIdx}"><td colspan="19"><span class="cp-carr" style="cursor:pointer;user-select:none;margin-right:5px;font-size:11px;display:inline-block;width:10px;text-align:center;" onclick="cpToggleComm(${blIdx})">▼</span>📁 ${esc(bl.commessa)}${cpCampoSelectHtml(bl.commessa)}${cpBrdAggBtnHtml(bl.commessa)}</td></tr>`;
     bl.squadre.forEach((sq, sqIdx) => {
       const sqKey = blIdx + '-' + sqIdx;
       html += `<tr class="cp-tr-squadra" data-comm-idx="${blIdx}" data-sq-idx="${sqKey}"><td colspan="19">&nbsp;&nbsp;&nbsp;<span class="cp-sarr" style="cursor:pointer;user-select:none;margin-right:5px;font-size:11px;display:inline-block;width:10px;text-align:center;" onclick="cpToggleSq('${jsAttr(sqKey)}')">▼</span>👥 ${esc(sq.nome)}<button class="no-print pw-write-action" style="margin-left:10px;font-size:11px;font-weight:600;background:#4f46e5;color:#fff;border:none;border-radius:5px;padding:2px 8px;cursor:pointer;" onclick="event.stopPropagation();pwControlloSyncJira('${jsesc(bl.commessa)}','${jsesc(sq.nome)}',this)">🔄 Sincronizza squadra</button><button class="no-print pw-write-action" style="margin-left:6px;font-size:11px;font-weight:600;background:#0ea5e9;color:#fff;border:none;border-radius:5px;padding:2px 8px;cursor:pointer;" data-help-key="cp-carica-report" title="Click destro per la guida" onclick="event.stopPropagation();cpCaricaReportSquadra('${jsesc(bl.commessa)}','${jsesc(sq.nome)}')">📄 Carica Report</button>${cpBrdBtnHtml(bl.commessa, sq.nome)}<span class="cp-kmj-sum no-print" data-sq-idx="${sqKey}" onclick="event.stopPropagation();cpKmJiraVaiPrimo('${jsAttr(sqKey)}')"></span></td></tr>`;
@@ -24037,16 +24037,142 @@ function pwControlloExportPDF() {
 const CP_BRD_FONTI = [
   { commessa: 'sinfi', nome: 'Board WO SINFI',
     url: 'https://mmarchetti95.github.io/produzione-wo-sinfi/dati.json',
-    link: 'https://mmarchetti95.github.io/produzione-wo-sinfi/' },
+    link: 'https://mmarchetti95.github.io/produzione-wo-sinfi/',
+    repo: 'mmarchetti95/produzione-wo-sinfi', workflow: 'aggiorna.yml' },
 ];
 const CP_BRD_MAPPA_LS = 'cp_brd_mappa_v1';
 const CP_BRD_NOTA_RE = /\s*⟦Board:[^⟧]*⟧/g;
 const CP_BRD_GG = ['Lun', 'Mar', 'Mer', 'Gio', 'Ven', 'Sab'];
 let _cpBrd = null;   // stato del modal aperto
+const _cpBrdAgg = {};  // repo → { testo, t0 } aggiornamento in corso, { ultimo } ora dei dati, { errore }
 
 function cpBrdFonte(commessa) {
   const n = caNorm(commessa);
   return CP_BRD_FONTI.find(f => f.commessa === n) || null;
+}
+
+/* ----- «🔄 Aggiorna board» (since v18.273.0): avvia la GitHub Action della board come il suo
+   pulsante «Aggiorna ora», dalla riga commessa di Controllo Produzione o dal modal di import.
+   Il token (fine-grained, solo «Actions: read and write» sul repo della board) NON sta in questo
+   repo: si legge a ogni avvio dal config.js pubblicato con la board, dove è già pubblico per
+   il pulsante della board stessa. Se c'è già un'esecuzione in corso (automatica o di un collega)
+   si aspetta quella. Finita l'Action si aspetta che dati.json pubblicato cambi «aggiornato»;
+   con il modal aperto sulla stessa board i dati si rileggono da soli, scelte di abbinamento comprese. */
+function cpBrdPausa(ms) { return new Promise(r => setTimeout(r, ms)); }
+
+async function cpBrdToken(fonte) {
+  const r = await fetch(fonte.link + 'config.js?t=' + Date.now(), { cache: 'no-store' });
+  if (!r.ok) throw new Error('configurazione della board non leggibile (HTTP ' + r.status + ')');
+  const m = (await r.text()).match(/token\s*:\s*"([^"]*)"/);
+  if (!m || !m[1]) throw new Error('la board non ha il token per avviare l\'aggiornamento: avvisa il referente della board');
+  return m[1];
+}
+
+async function cpBrdGh(fonte, token, path, opt) {
+  const r = await fetch('https://api.github.com/repos/' + fonte.repo + '/actions' + path, Object.assign({}, opt || {}, {
+    cache: 'no-store',
+    headers: { Accept: 'application/vnd.github+json', Authorization: 'Bearer ' + token, 'X-GitHub-Api-Version': '2022-11-28' },
+  }));
+  if (r.status === 401) throw new Error('il token della board non è valido o è scaduto: avvisa il referente della board');
+  if (r.status === 403 || r.status === 404) throw new Error('il token della board non ha il permesso di avviare l\'aggiornamento');
+  if (!r.ok) throw new Error('GitHub ha risposto ' + r.status);
+  return r.status === 204 ? null : r.json();
+}
+
+async function cpBrdLeggiAggiornato(fonte) {
+  const r = await fetch(fonte.url + '?t=' + Date.now(), { cache: 'no-store' });
+  if (!r.ok) throw new Error('dati della board non leggibili (HTTP ' + r.status + ')');
+  return (await r.json()).aggiornato || null;
+}
+
+function cpBrdOraDati(iso) {
+  if (!iso) return '';
+  const d = new Date(iso);
+  return isNaN(d) ? '' : d.toLocaleString('it-IT', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
+}
+
+function cpBrdAggEtichetta(fonte) {
+  const s = _cpBrdAgg[fonte.repo] || {};
+  if (s.testo) return cpAttesaHtml(s.testo, s.t0);
+  return '🔄 Aggiorna board' + (s.ultimo ? ' <span style="font-weight:400;opacity:.85;">· dati ' + esc(cpBrdOraDati(s.ultimo)) + '</span>' : '');
+}
+
+// Tasto per la riga commessa e per il modal; data-commessa evita stringhe dinamiche nell'onclick.
+function cpBrdAggBtnHtml(commessa, nelModal) {
+  const fonte = cpBrdFonte(commessa);
+  if (!fonte || !fonte.repo) return '';
+  const inCorso = !!(_cpBrdAgg[fonte.repo] || {}).testo;
+  const stile = nelModal
+    ? 'font-size:12px;font-weight:600;border-radius:6px;padding:5px 10px;border:1px solid #99f6e4;background:#f0fdfa;color:#0f766e;'
+    : 'margin-left:8px;font-size:11px;font-weight:600;border-radius:5px;padding:2px 8px;border:1px solid #99f6e4;background:#f0fdfa;color:#0f766e;';
+  return '<button class="no-print cp-brd-agg-btn" data-commessa="' + esc(commessa) + '" data-help-key="cp-board-aggiorna" title="Click destro per la guida"'
+    + (inCorso ? ' disabled' : '') + ' style="' + stile + 'cursor:' + (inCorso ? 'default' : 'pointer') + ';"'
+    + ' onclick="event.stopPropagation();cpBrdAggiornaDa(this)">' + cpBrdAggEtichetta(fonte) + '</button>';
+}
+
+// Ridisegna i tasti già a schermo (riga commessa e modal) senza un render completo.
+function cpBrdAggUi() {
+  document.querySelectorAll('.cp-brd-agg-btn').forEach(b => {
+    const c = b.getAttribute('data-commessa');
+    const fonte = cpBrdFonte(c);
+    if (!fonte) return;
+    const inCorso = !!(_cpBrdAgg[fonte.repo] || {}).testo;
+    b.innerHTML = cpBrdAggEtichetta(fonte);
+    b.disabled = inCorso;
+    b.style.cursor = inCorso ? 'default' : 'pointer';
+  });
+}
+
+function cpBrdAggiornaDa(btn) {
+  cpBrdAggiorna(btn.getAttribute('data-commessa'));
+}
+
+async function cpBrdAggiorna(commessa) {
+  const fonte = cpBrdFonte(commessa);
+  if (!fonte || !fonte.repo) return;
+  const s = _cpBrdAgg[fonte.repo] || (_cpBrdAgg[fonte.repo] = {});
+  if (s.testo) return;
+  s.testo = 'Avvio…'; s.t0 = Date.now(); s.errore = null;
+  const passo = t => { s.testo = t; cpBrdAggUi(); };
+  cpBrdAggUi();
+  if (_cpBrd && _cpBrd.fonte === fonte && _cpBrd.stato !== 'carica') cpBrdRender();   // fascia «in corso»
+  let nuovi = false;
+  try {
+    const token = await cpBrdToken(fonte);
+    const prima = await cpBrdLeggiAggiornato(fonte);
+    const wf = '/workflows/' + fonte.workflow;
+    const ultimoRun = async dopo => ((await cpBrdGh(fonte, token, wf + '/runs?per_page=1' + (dopo ? '&created=' + encodeURIComponent('>=' + dopo) : ''))).workflow_runs || [])[0];
+    let run = await ultimoRun();
+    if (!run || run.status === 'completed') {   // già in corso (automatico o di un collega): si aspetta quello
+      const da = new Date(Date.now() - 60000).toISOString().slice(0, 19) + 'Z';
+      await cpBrdGh(fonte, token, wf + '/dispatches', { method: 'POST', body: JSON.stringify({ ref: 'main' }) });
+      run = null;
+      for (let i = 0; i < 12 && !run; i++) { await cpBrdPausa(5000); run = await ultimoRun(da); }
+      if (!run) throw new Error('l\'aggiornamento non è partito, riprova tra poco');
+    }
+    const t0 = Date.now();
+    while (run.status !== 'completed') {
+      if (Date.now() - t0 > 25 * 60000) throw new Error('l\'aggiornamento sta impiegando troppo, riprova più tardi');
+      passo(run.status === 'in_progress' ? 'Scarico i dati da QFieldCloud…' : 'In coda su GitHub…');
+      await cpBrdPausa(10000);
+      run = await cpBrdGh(fonte, token, '/runs/' + run.id);
+    }
+    if (run.conclusion !== 'success') throw new Error('l\'aggiornamento della board non è riuscito: avvisa il referente della board');
+    passo('Pubblico la board…');
+    let dopo = prima;
+    for (let i = 0; i < 12 && dopo === prima; i++) { await cpBrdPausa(10000); dopo = await cpBrdLeggiAggiornato(fonte); }
+    s.ultimo = dopo || s.ultimo;
+    nuovi = dopo !== prima;
+    if (!nuovi) s.errore = 'aggiornamento completato, ma i dati pubblicati non sono ancora cambiati: riprova tra un minuto';
+  } catch (e) {
+    console.error('cpBrdAggiorna:', e);
+    s.errore = (e && e.message) || String(e);
+  }
+  s.testo = null;
+  cpBrdAggUi();
+  if (nuovi && _cpBrd && _cpBrd.fonte === fonte && _cpBrd.stato !== 'carica') cpBrdCarica();
+  else if (_cpBrd && _cpBrd.fonte === fonte) cpBrdRender();
+  if (s.errore && !(_cpBrd && _cpBrd.fonte === fonte)) showAlertModal('🔄 Aggiorna board: ' + s.errore);
 }
 
 function cpBrdBtnHtml(commessa, squadra) {
@@ -24322,6 +24448,8 @@ function cpBrdPiano() {
 
 HELP_TEXTS['cp-board-import'] = 'Importa la produzione di QUESTA squadra direttamente dalla board QField della commessa (oggi SINFI), senza scaricare il CSV: stessi valori di «📄 Carica Report» (Ore Report Prod. e Km/Cad dei sottotask), per i soli giorni della settimana mostrata.\n\nPrima di scrivere mostra un\'anteprima: ogni progetto QField del tablet della squadra (es. Moena_ACQ, Moena_FGN) va abbinato a una voce cantiere + attività della Griglia. L\'app lo propone dal nome e tu lo confermi o lo cambi (la scelta viene ricordata in questo browser). I Km di un progetto si dividono fra gli operatori della squadra che quel giorno hanno quella voce in Griglia e vanno sul loro sottotask; le ore vanno dalla prima all\'ultima registrazione della giornata, su tutti i progetti.\n\nI Km che non trovano posto (progetto non abbinato, voce assente in Griglia quel giorno, sottotask mancante) NON vengono scritti: finiscono nel campo Note delle righe di quel giorno come «⟦Board: …⟧», che viene tolto e ricalcolato a ogni nuova importazione. Correggi la Griglia o crea il sottotask e reimporta.\n\nI giorni già passati senza nessun dato della squadra vengono segnati «✓ Nessuna» produzione; oggi e i giorni futuri restano da compilare. Reimportare sostituisce i valori del tablet della squadra, non li somma. Scrive solo nel Controllo Produzione condiviso: su Jira i Km arrivano con «🔄 Sincronizza squadra».';
 
+HELP_TEXTS['cp-board-aggiorna'] = 'Fa scaricare subito alla board QField della commessa i dati nuovi da QFieldCloud, come il pulsante «Aggiorna ora» della board. Ci vogliono 2-3 minuti: il tasto mostra a che punto è e alla fine l\'ora dei dati pubblicati. Se un aggiornamento è già in corso (quello automatico o lanciato da un collega) aspetta quello invece di avviarne un altro.\n\nServe per i dati appena sincronizzati dai tablet: da sola la board si aggiorna ogni 30 minuti, dal lunedì al sabato, circa dalle 5 alle 21. Il lavoro che un tablet non ha ancora sincronizzato non arriva comunque.\n\nSe la finestra «📡 Importa da board» è aperta, a fine aggiornamento rilegge i dati da sola e tiene gli abbinamenti già scelti. Non scrive niente nel Controllo Produzione né su Jira.';
+
 async function cpBrdApri(commessa, squadra) {
   if (!sbGuardWrite()) return;
   const fonte = cpBrdFonte(commessa);
@@ -24348,20 +24476,34 @@ async function cpBrdApri(commessa, squadra) {
     perGiorno: info.perGiorno, senzaEmail: info.senzaEmail, utenti: info.utenti, voci: info.voci,
     righe: [], progetti: [], mappa: {}, stato: 'carica', errore: null, dati: null };
   document.getElementById('cpbrd-modal').style.display = 'flex';
+  await cpBrdCarica();
+}
+
+/* Legge dati.json e prepara progetti e abbinamenti del modal aperto. Alla rilettura (dopo
+   «🔄 Aggiorna board») le scelte già fatte nel modal restano; i progetti nuovi prendono la
+   scelta ricordata o la proposta. */
+async function cpBrdCarica() {
+  const st = _cpBrd;
+  if (!st) return;
+  st.stato = 'carica';
   cpBrdRender();
   try {
-    const r = await fetch(fonte.url + '?t=' + Date.now(), { cache: 'no-store' });
+    const r = await fetch(st.fonte.url + '?t=' + Date.now(), { cache: 'no-store' });
     if (!r.ok) throw new Error('HTTP ' + r.status);
     const dati = await r.json();
-    if (!_cpBrd || _cpBrd.commessa !== commessa || _cpBrd.squadra !== squadra) return;
-    const utenti = new Set(info.utenti);
-    _cpBrd.dati = { aggiornato: dati.aggiornato || null, dal: dati.dal || null, al: dati.al || null, avvisi: dati.avvisi || [] };
-    _cpBrd.righe = (Array.isArray(dati.righe) ? dati.righe : []).filter(x => x && isoDates.includes(x.giorno) &&
+    if (_cpBrd !== st) return;
+    const utenti = new Set(st.utenti), isoDates = st.isoDates;
+    st.dati = { aggiornato: dati.aggiornato || null, dal: dati.dal || null, al: dati.al || null, avvisi: dati.avvisi || [] };
+    if (st.fonte.repo && dati.aggiornato) {
+      (_cpBrdAgg[st.fonte.repo] || (_cpBrdAgg[st.fonte.repo] = {})).ultimo = dati.aggiornato;
+      cpBrdAggUi();
+    }
+    st.righe = (Array.isArray(dati.righe) ? dati.righe : []).filter(x => x && isoDates.includes(x.giorno) &&
       utenti.has(String(x.operatore || '').toLowerCase()) && x.progetto)
       .map(x => Object.assign({}, x, { operatore: String(x.operatore).toLowerCase() }));
     // Progetti della settimana con almeno un dato vero (km nuovi o orari).
     const prog = {};
-    _cpBrd.righe.forEach(x => {
+    st.righe.forEach(x => {
       const km = /^note(_|$)/i.test(String(x.layer || '')) ? 0 : (Number(x.km_nuovi) || 0);
       const p = prog[x.progetto] || (prog[x.progetto] = { nome: x.progetto, km: 0, perGiorno: {}, utile: false });
       p.km += km;
@@ -24369,19 +24511,21 @@ async function cpBrdApri(commessa, squadra) {
       p.perGiorno[gi] = (p.perGiorno[gi] || 0) + km;
       if (km > 0 || (x.inizio && x.fine)) p.utile = true;
     });
-    _cpBrd.progetti = Object.values(prog).filter(p => p.utile).sort((a, b) => a.nome.localeCompare(b.nome, 'it'));
-    const ricordata = cpBrdMappaLs()[commessa] || {};
-    _cpBrd.progetti.forEach(p => {
+    st.progetti = Object.values(prog).filter(p => p.utile).sort((a, b) => a.nome.localeCompare(b.nome, 'it'));
+    const ricordata = cpBrdMappaLs()[st.commessa] || {};
+    const scelte = st.mappa;
+    st.mappa = {};
+    st.progetti.forEach(p => {
       const r0 = ricordata[p.nome];
-      const valida = r0 === '-' || (r0 && _cpBrd.voci.some(v => v.chiave === r0));
-      p.proposta = cpBrdProponi(p.nome, _cpBrd.voci);
+      const valida = r0 === '-' || (r0 && st.voci.some(v => v.chiave === r0));
+      p.proposta = cpBrdProponi(p.nome, st.voci);
       p.ricordata = valida ? r0 : null;
-      _cpBrd.mappa[p.nome] = valida ? r0 : p.proposta;
+      st.mappa[p.nome] = Object.prototype.hasOwnProperty.call(scelte, p.nome) ? scelte[p.nome] : (valida ? r0 : p.proposta);
     });
-    _cpBrd.stato = 'pronto';
+    st.stato = 'pronto';
   } catch (e) {
-    console.error('cpBrdApri:', e);
-    if (_cpBrd) { _cpBrd.stato = 'errore'; _cpBrd.errore = (e && e.message) || String(e); }
+    console.error('cpBrdCarica:', e);
+    if (_cpBrd === st) { st.stato = 'errore'; st.errore = (e && e.message) || String(e); }
   }
   cpBrdRender();
 }
@@ -24410,7 +24554,11 @@ function cpBrdRender() {
     + '<div style="font-size:12px;color:#64748b;">' + esc(st.commessa) + ' · Week ' + st.week + ' ' + st.anno + ' · <a href="' + esc(st.fonte.link) + '" target="_blank" rel="noopener" style="color:#0d9488;">' + esc(st.fonte.nome) + '</a>'
     + (st.dati && st.dati.aggiornato ? ' · dati aggiornati al ' + esc(new Date(st.dati.aggiornato).toLocaleString('it-IT', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })) : '')
     + '</div></div>'
+    + cpBrdAggBtnHtml(st.commessa, true)
     + '<button onclick="cpBrdChiudi()" style="' + btn + 'border:1px solid #cbd5e1;background:#fff;">✕</button></div>';
+  const agg = (st.fonte.repo && _cpBrdAgg[st.fonte.repo]) || {};
+  if (agg.errore && !agg.testo) h += '<div style="padding:6px 16px;background:#fef2f2;border-bottom:1px solid #fecaca;color:#b91c1c;font-size:12px;">🔄 Aggiorna board: ' + esc(agg.errore) + '</div>';
+  else if (agg.testo) h += '<div style="padding:6px 16px;background:#f0fdfa;border-bottom:1px solid #99f6e4;color:#0f766e;font-size:12px;">Aggiornamento della board in corso (2-3 minuti): quando finisce i dati qui sotto si rileggono da soli, le scelte di abbinamento restano.</div>';
   h += '<div style="flex:1;overflow:auto;padding:14px 16px;font-size:13px;">';
   if (st.stato === 'carica') {
     h += '<div style="color:#64748b;padding:30px;text-align:center;">⏳ Lettura dati della board…</div></div>';
