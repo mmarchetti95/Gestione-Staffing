@@ -114,6 +114,10 @@ Limite noto: il progetto Supabase è sul piano **Free**, che non include backup 
 
 ## Changelog
 
+## v18.276.0
+- feat: **Ex colleghi e contratti scaduti in Pianificazione Settimanale.** Chi esce (contratto a termine terminato o «Segna come Ex Collega») resta visibile fino alla settimana in cui esce compresa e non compare più dalla settimana successiva — anche nelle settimane future, così non lo si pianifica dopo la fine del contratto. Prima spariva subito, anche dalla settimana in corso e da quelle passate. Vale per scelta operatore in Griglia, statistiche della settimana, Ferie, Doppia Week (prima settimana del mese mostrato), Auto-pianifica, destinatari della mail e «tutto il pool» del Controllo anomalie. «Segna come Ex Collega» ora registra la data (`licenziato_il`); un ex collega senza data resta escluso da tutte le settimane. La Dashboard è invariata.
+- Dati: per i 10 ex colleghi già segnati la data è stata recuperata dal registro attività («Licenziamento operatore», giorno in ora italiana) e scritta nella riga core di `staffing_state`. Nessuna modifica allo schema Supabase o alle Edge Function.
+
 ## v18.275.0
 - fix: **Utenti QField diversi dall'email («📡 Importa da board» e «📄 Carica Report»).** Gli operatori si riconoscevano solo dalla parte dell'email prima della @: chi sul tablet ha un'utenza diversa (hsemry ↔ hsmsemry@, ccica01 ↔ ccica@, mminoia ↔ mmaroneminoia@, gfrenguellotti ↔ gfrenguellotti2@) restava fuori e i suoi Km non venivano scritti. Ora, se un'utenza non corrisponde a nessuna email, l'app la abbina da sola quando è uguale all'email a meno delle cifre finali oppure è fatta di iniziali + cognome della persona; l'abbinamento è segnalato nell'anteprima della board (riquadro blu) e nella conferma del report. Un'utenza che porta a più persone non viene usata e viene segnalata. Per i casi che l'app non riconosce c'è la nuova colonna «Utente QField» in Operatori → ✉ Email/operatore (anche più utenze separate da virgola), sincronizzata con gli altri dati degli operatori.
 - Nessuna modifica a Supabase o alle Edge Function.

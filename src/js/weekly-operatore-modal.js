@@ -31,10 +31,10 @@ function pwOpenOpModal(cidx, sidx, oidx) {
   // verrebbe riproposto, e per giunta in cima come "della commessa".
   const fromStaffing = new Set();
   state.staffing.filter(r => r.commessa === commessa && (Number(r.mesi[mese]) || 0) > 0)
-    .forEach(r => { if (r.risorsa && !isOperatoreLicenziato(r.risorsa)) fromStaffing.add(r.risorsa); });
+    .forEach(r => { if (r.risorsa && !isOperatoreExInSettimana(r.risorsa)) fromStaffing.add(r.risorsa); });
 
   // Tutti gli operatori attivi nel sistema (nome_esteso o nome)
-  const fromOperatori = getOperatoriAttivi().map(o => o.nome_esteso || o.nome).filter(Boolean);
+  const fromOperatori = getOperatoriAttiviSettimana().map(o => o.nome_esteso || o.nome).filter(Boolean);
 
   // Dipendenti dei fornitori esterni (state.fornitori, vedi dashboard-fornitori.js):
   // risorse occasionali, fuori dal pool interno, ma selezionabili qui — con un
@@ -805,7 +805,7 @@ function pwRenderStats() {
 
   const data   = pwGetWeekData();
   const fw     = pwGetFerieWeek();
-  const allOps = getOperatoriAttivi().map(o => o.nome_esteso || o.nome).filter(Boolean);
+  const allOps = getOperatoriAttiviSettimana().map(o => o.nome_esteso || o.nome).filter(Boolean);
 
   // Operatori in ferie/non disponibili (almeno 1 giorno) + giorni (con tipo, per il popover)
   const DAY_ABBR = ['Lun','Mar','Mer','Gio','Ven','Sab'];

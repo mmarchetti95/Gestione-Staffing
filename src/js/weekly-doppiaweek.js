@@ -55,7 +55,10 @@ function pwDwProvenienza(op) {
 // Operatori attivi filtrati/ordinati secondo pwDwVista: [{ nome, op }]
 function pwDwOperatori() {
   const v = pwDwVista;
-  const out = getOperatoriAttivi()
+  // Chi esce resta fino alla sua settimana di uscita: lo si mostra se è ancora in forza
+  // nella prima settimana del mese visualizzato.
+  const w0 = pwMonthWeeks(pwDwYear, pwDwMonth)[0];
+  const out = (w0 ? getOperatoriAttiviSettimana(w0.anno, w0.week) : getOperatoriAttivi())
     .map(o => ({ nome: o.nome_esteso || o.nome, op: o }))
     .filter(x => x.nome)
     .filter(x => {

@@ -583,7 +583,7 @@ function pwGeneraMail() {
     // provengano dalla Griglia sia dalla lista Ferie.
     const nomiAttivi = new Set();
     const emailByNome = {};
-    getOperatoriAttivi().forEach(o => {
+    getOperatoriAttiviSettimana().forEach(o => {
       const n = o.nome_esteso || o.nome_breve || o.nome;
       if (!n) return;
       nomiAttivi.add(n);
@@ -1366,7 +1366,7 @@ function pwGetOperatoriPerCommessa(commessaNome) {
   // Se la commessa non ha righe staffing (es. promossa da pipeline o creata manualmente)
   // restituisci tutti gli operatori del sistema come fallback
   if (nomi.size === 0) {
-    getOperatoriAttivi()
+    getOperatoriAttiviSettimana()
       .map(o => o.nome_esteso || o.nome)
       .filter(Boolean)
       .forEach(n => nomi.add(n));

@@ -2138,7 +2138,7 @@
       </span>
       <button id="btn-presentation" class="px-3 py-1.5 text-sm rounded hover:bg-white/10" style="border:1px solid var(--dark-border-strong);color:var(--dark-text);visibility:visible;">📊 Modalità presentazione</button>
       <div class="text-xs pl-2" style="border-left:1px solid var(--dark-border-strong);color:var(--dark-text-muted);">
-        <span id="app-version" class="font-medium" style="color:var(--accent);">v18.275.0</span> · Michele Marchetti
+        <span id="app-version" class="font-medium" style="color:var(--accent);">v18.276.0</span> · Michele Marchetti
         <span id="sb-role-badge" style="margin-left:8px;padding:1px 8px;border-radius:9999px;background:rgba(255,255,255,.1);color:var(--dark-text);font-weight:600;"></span>
       </div>
     </div>
@@ -6343,7 +6343,7 @@ function renderOperatori() {
       ? `<span class="text-[9px] bg-amber-50 text-amber-700 border border-amber-200 px-1 rounded">📅 fino al ${fmtDate(op.data_fine_rapporto)}</span>` : '';
     const exReason = isOperatoreScaduto(op)
       ? `Contratto a termine scaduto il ${fmtDate(op.data_fine_rapporto)}`
-      : (op.licenziato ? 'Segnato manualmente come ex collega' : '');
+      : (op.licenziato ? 'Segnato manualmente come ex collega' + (op.licenziato_il ? ' il ' + fmtDate(op.licenziato_il) : '') : '');
     const exBadge = modoEx ? `<span class="op-ex-tag" title="${esc(exReason)}">ex</span>` : '';
     const skillBadges = op.skills.map(s => `<span class="skill-badge">${s}</span>`).join('') + woBadgesHtml(op);
     // Il badge attestato porta il colore dello stato di scadenza (verde/ambra/rosso) e nel
@@ -6476,6 +6476,7 @@ async function riattivaOperatore(id) {
   const ok = await showConfirmAsync(msg, 'Riattiva');
   if (!ok) return;
   op.licenziato = false;
+  delete op.licenziato_il;
   if (eraScaduto) { op.contratto_tipo = 'indeterminato'; op.data_inizio_rapporto = ''; op.data_fine_rapporto = ''; }
   await saveState('Riattivazione operatore', {operatore: op.nome_esteso});
   renderAll();
@@ -10718,6 +10719,39 @@ function getOperatoriAttivi() {
   return (state.operatori || []).filter(o => !o.licenziato && !isOperatoreScaduto(o));
 }
 
+/* Pianificazione Settimanale: un operatore che esce (fine del contratto a termine o
+   "Segna come Ex Collega", la prima delle due date) resta visibile fino alla settimana
+   in cui esce compresa e sparisce dalla settimana successiva — anche nelle settimane
+   future, così non lo si pianifica oltre la fine del contratto. La Dashboard continua a
+   usare getOperatoriAttivi() (riferimento: oggi).
+   opDataUscita: '' = in forza; '0000-00-00' = ex collega segnato prima che la data
+   venisse registrata (licenziato_il, dalla v18.276.0): data ignota, escluso ovunque. */
+function opDataUscita(op) {
+  if (!op) return '';
+  const date = [];
+  if (op.contratto_tipo === 'determinato' && op.data_fine_rapporto) date.push(op.data_fine_rapporto);
+  if (op.licenziato) date.push(op.licenziato_il || '0000-00-00');
+  return date.length ? date.sort()[0] : '';
+}
+
+// anno/week ISO; senza argomenti la settimana mostrata in Pianificazione (pwAnno/pwWeek)
+function opAttivoInSettimana(op, anno, week) {
+  const uscita = opDataUscita(op);
+  if (!uscita) return true;
+  if (anno == null) { anno = pwAnno; week = pwWeek; }
+  return uscita >= isoWeekToMonday(anno, week).toISOString().slice(0, 10);
+}
+
+function getOperatoriAttiviSettimana(anno, week) {
+  return (state.operatori || []).filter(o => opAttivoInSettimana(o, anno, week));
+}
+
+// Vero se il nome è di un operatore del pool già uscito prima della settimana indicata
+function isOperatoreExInSettimana(nome, anno, week) {
+  if (!nome) return false;
+  return (state.operatori || []).some(o => (o.nome_esteso || o.nome) === nome && !opAttivoInSettimana(o, anno, week));
+}
+
 /* Seniority dell'operatore ('senior' | 'junior' | '' = non definita). Serve ad affiancare
    sempre, quando possibile, un senior a un junior: due junior insieme sullo stesso cantiere
    sono da evitare. Non definita = nessun vincolo (né premiata né penalizzata). */
@@ -10875,6 +10909,8 @@ async function licenziaOperatore(id) {
   const op = state.operatori.find(o => o.id === id);
   if (!op) return;
   op.licenziato = true;
+  // Data dell'uscita: in Pianificazione resta visibile fino a questa settimana compresa
+  op.licenziato_il = new Date().toISOString().slice(0, 10);
   ricalcolaAllocOperatori();
   await saveState('Licenziamento operatore', {operatore: op.nome_esteso}, true);
   renderAll();
@@ -14778,7 +14814,7 @@ function pwGeneraMail() {
     // provengano dalla Griglia sia dalla lista Ferie.
     const nomiAttivi = new Set();
     const emailByNome = {};
-    getOperatoriAttivi().forEach(o => {
+    getOperatoriAttiviSettimana().forEach(o => {
       const n = o.nome_esteso || o.nome_breve || o.nome;
       if (!n) return;
       nomiAttivi.add(n);
@@ -15561,7 +15597,7 @@ function pwGetOperatoriPerCommessa(commessaNome) {
   // Se la commessa non ha righe staffing (es. promossa da pipeline o creata manualmente)
   // restituisci tutti gli operatori del sistema come fallback
   if (nomi.size === 0) {
-    getOperatoriAttivi()
+    getOperatoriAttiviSettimana()
       .map(o => o.nome_esteso || o.nome)
       .filter(Boolean)
       .forEach(n => nomi.add(n));
@@ -15962,7 +15998,7 @@ function _pwFerieHaAssenze(fw, nome) {
 // Le assenze si salvano per nome in pwFerie come per gli interni, quindi Griglia, scelta
 // operatore, Auto-pianifica, mail e Controllo Produzione le leggono senza altro.
 function pwFerieDipendentiFornitori() {
-  const interni = new Set(getOperatoriAttivi().map(o => o.nome_esteso || o.nome).filter(Boolean));
+  const interni = new Set(getOperatoriAttiviSettimana().map(o => o.nome_esteso || o.nome).filter(Boolean));
   const visti = new Set();
   const out = [];
   (state.fornitori || []).forEach(f => (f.dipendenti || []).forEach(d => {
@@ -15993,7 +16029,7 @@ function pwFerieOperatoriOrdinati(fw) {
     const c = a.label.localeCompare(b.label, 'it', { sensitivity: 'base' });
     return mode === 'za' ? -c : c;
   };
-  const interni = getOperatoriAttivi()
+  const interni = getOperatoriAttiviSettimana()
     .map(o => ({ nome: o.nome_esteso || o.nome, label: pwFerieCognomeNome(o) }))
     .filter(o => o.nome)
     .sort(cmp);
@@ -16229,10 +16265,10 @@ function pwOpenOpModal(cidx, sidx, oidx) {
   // verrebbe riproposto, e per giunta in cima come "della commessa".
   const fromStaffing = new Set();
   state.staffing.filter(r => r.commessa === commessa && (Number(r.mesi[mese]) || 0) > 0)
-    .forEach(r => { if (r.risorsa && !isOperatoreLicenziato(r.risorsa)) fromStaffing.add(r.risorsa); });
+    .forEach(r => { if (r.risorsa && !isOperatoreExInSettimana(r.risorsa)) fromStaffing.add(r.risorsa); });
 
   // Tutti gli operatori attivi nel sistema (nome_esteso o nome)
-  const fromOperatori = getOperatoriAttivi().map(o => o.nome_esteso || o.nome).filter(Boolean);
+  const fromOperatori = getOperatoriAttiviSettimana().map(o => o.nome_esteso || o.nome).filter(Boolean);
 
   // Dipendenti dei fornitori esterni (state.fornitori, vedi dashboard-fornitori.js):
   // risorse occasionali, fuori dal pool interno, ma selezionabili qui — con un
@@ -17003,7 +17039,7 @@ function pwRenderStats() {
 
   const data   = pwGetWeekData();
   const fw     = pwGetFerieWeek();
-  const allOps = getOperatoriAttivi().map(o => o.nome_esteso || o.nome).filter(Boolean);
+  const allOps = getOperatoriAttiviSettimana().map(o => o.nome_esteso || o.nome).filter(Boolean);
 
   // Operatori in ferie/non disponibili (almeno 1 giorno) + giorni (con tipo, per il popover)
   const DAY_ABBR = ['Lun','Mar','Mer','Gio','Ven','Sab'];
@@ -20892,7 +20928,10 @@ function pwDwProvenienza(op) {
 // Operatori attivi filtrati/ordinati secondo pwDwVista: [{ nome, op }]
 function pwDwOperatori() {
   const v = pwDwVista;
-  const out = getOperatoriAttivi()
+  // Chi esce resta fino alla sua settimana di uscita: lo si mostra se è ancora in forza
+  // nella prima settimana del mese visualizzato.
+  const w0 = pwMonthWeeks(pwDwYear, pwDwMonth)[0];
+  const out = (w0 ? getOperatoriAttiviSettimana(w0.anno, w0.week) : getOperatoriAttivi())
     .map(o => ({ nome: o.nome_esteso || o.nome, op: o }))
     .filter(x => x.nome)
     .filter(x => {
@@ -26288,7 +26327,7 @@ async function cpaAvvia() {
     if (_cpa.tuttoIlPool) {
       (state.operatori || []).forEach(o => {
         const n = o.nome_esteso || o.nome_breve || o.nome;
-        if (n && !isOperatoreLicenziato(n)) nomi.push(n);
+        if (n && !isOperatoreExInSettimana(n)) nomi.push(n);
       });
       nomi = [...new Set(nomi)];
     }
@@ -34246,7 +34285,7 @@ function _apCommessaCanonica(nome) {
 
 /* Nomi operatori scritti a mano -> nome esteso del pool (match su cognome o nome intero) */
 function _apOperatoriCanonici(lista) {
-  const pool = getOperatoriAttivi().map(o => o.nome_esteso || o.nome_breve).filter(Boolean);
+  const pool = getOperatoriAttiviSettimana().map(o => o.nome_esteso || o.nome_breve).filter(Boolean);
   return _apLista(lista).map(x => {
     const n = _apNorm(x);
     const esatto = pool.find(p => _apNorm(p) === n);
@@ -34484,7 +34523,7 @@ function apBuildContesto(opts) {
       disponibile: pwIsDwStart(pwAnno, pwWeek, nome) && !viaTutta
     };
   };
-  const conDwDisponibile = getOperatoriAttivi().some(op => dwStato(op.nome_esteso || op.nome_breve).disponibile);
+  const conDwDisponibile = getOperatoriAttiviSettimana().some(op => dwStato(op.nome_esteso || op.nome_breve).disponibile);
 
   /* Il sabato entra nei giorni se richiesto, oppure se c'è qualcuno in doppia week
      disponibile (solo lui potrà lavorarci, vedi disp più sotto). */
@@ -34527,7 +34566,7 @@ function apBuildContesto(opts) {
 
   const operatori = [];
   const disp = {};
-  getOperatoriAttivi().forEach(op => {
+  getOperatoriAttiviSettimana().forEach(op => {
     const nome = op.nome_esteso || op.nome_breve;
     if (!nome) return;
     let base = null;
@@ -35564,13 +35603,13 @@ function _apAttivitaAggiungi(testo) {
 
 function _apSkillCatalogo() {
   const s = new Set(SKILLS);
-  getOperatoriAttivi().forEach(o => (o.skills || []).forEach(k => s.add(k)));
+  getOperatoriAttiviSettimana().forEach(o => (o.skills || []).forEach(k => s.add(k)));
   Object.values(state.commesse_attive_meta || {}).forEach(m => (m.skills || []).forEach(k => s.add(k)));
   return Array.from(s).sort((a, b) => a.localeCompare(b));
 }
 
 function _apOperatoriCatalogo() {
-  return getOperatoriAttivi().map(o => o.nome_esteso || o.nome_breve).filter(Boolean).sort((a, b) => a.localeCompare(b));
+  return getOperatoriAttiviSettimana().map(o => o.nome_esteso || o.nome_breve).filter(Boolean).sort((a, b) => a.localeCompare(b));
 }
 
 function _apSkillCommessa(commessa) {

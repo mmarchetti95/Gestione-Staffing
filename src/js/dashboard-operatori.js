@@ -161,7 +161,7 @@ function renderOperatori() {
       ? `<span class="text-[9px] bg-amber-50 text-amber-700 border border-amber-200 px-1 rounded">📅 fino al ${fmtDate(op.data_fine_rapporto)}</span>` : '';
     const exReason = isOperatoreScaduto(op)
       ? `Contratto a termine scaduto il ${fmtDate(op.data_fine_rapporto)}`
-      : (op.licenziato ? 'Segnato manualmente come ex collega' : '');
+      : (op.licenziato ? 'Segnato manualmente come ex collega' + (op.licenziato_il ? ' il ' + fmtDate(op.licenziato_il) : '') : '');
     const exBadge = modoEx ? `<span class="op-ex-tag" title="${esc(exReason)}">ex</span>` : '';
     const skillBadges = op.skills.map(s => `<span class="skill-badge">${s}</span>`).join('') + woBadgesHtml(op);
     // Il badge attestato porta il colore dello stato di scadenza (verde/ambra/rosso) e nel
@@ -294,6 +294,7 @@ async function riattivaOperatore(id) {
   const ok = await showConfirmAsync(msg, 'Riattiva');
   if (!ok) return;
   op.licenziato = false;
+  delete op.licenziato_il;
   if (eraScaduto) { op.contratto_tipo = 'indeterminato'; op.data_inizio_rapporto = ''; op.data_fine_rapporto = ''; }
   await saveState('Riattivazione operatore', {operatore: op.nome_esteso});
   renderAll();

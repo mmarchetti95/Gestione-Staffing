@@ -204,7 +204,7 @@ function _apCommessaCanonica(nome) {
 
 /* Nomi operatori scritti a mano -> nome esteso del pool (match su cognome o nome intero) */
 function _apOperatoriCanonici(lista) {
-  const pool = getOperatoriAttivi().map(o => o.nome_esteso || o.nome_breve).filter(Boolean);
+  const pool = getOperatoriAttiviSettimana().map(o => o.nome_esteso || o.nome_breve).filter(Boolean);
   return _apLista(lista).map(x => {
     const n = _apNorm(x);
     const esatto = pool.find(p => _apNorm(p) === n);
@@ -442,7 +442,7 @@ function apBuildContesto(opts) {
       disponibile: pwIsDwStart(pwAnno, pwWeek, nome) && !viaTutta
     };
   };
-  const conDwDisponibile = getOperatoriAttivi().some(op => dwStato(op.nome_esteso || op.nome_breve).disponibile);
+  const conDwDisponibile = getOperatoriAttiviSettimana().some(op => dwStato(op.nome_esteso || op.nome_breve).disponibile);
 
   /* Il sabato entra nei giorni se richiesto, oppure se c'è qualcuno in doppia week
      disponibile (solo lui potrà lavorarci, vedi disp più sotto). */
@@ -485,7 +485,7 @@ function apBuildContesto(opts) {
 
   const operatori = [];
   const disp = {};
-  getOperatoriAttivi().forEach(op => {
+  getOperatoriAttiviSettimana().forEach(op => {
     const nome = op.nome_esteso || op.nome_breve;
     if (!nome) return;
     let base = null;
@@ -1522,13 +1522,13 @@ function _apAttivitaAggiungi(testo) {
 
 function _apSkillCatalogo() {
   const s = new Set(SKILLS);
-  getOperatoriAttivi().forEach(o => (o.skills || []).forEach(k => s.add(k)));
+  getOperatoriAttiviSettimana().forEach(o => (o.skills || []).forEach(k => s.add(k)));
   Object.values(state.commesse_attive_meta || {}).forEach(m => (m.skills || []).forEach(k => s.add(k)));
   return Array.from(s).sort((a, b) => a.localeCompare(b));
 }
 
 function _apOperatoriCatalogo() {
-  return getOperatoriAttivi().map(o => o.nome_esteso || o.nome_breve).filter(Boolean).sort((a, b) => a.localeCompare(b));
+  return getOperatoriAttiviSettimana().map(o => o.nome_esteso || o.nome_breve).filter(Boolean).sort((a, b) => a.localeCompare(b));
 }
 
 function _apSkillCommessa(commessa) {

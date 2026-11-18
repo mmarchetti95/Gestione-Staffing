@@ -790,6 +790,39 @@ function getOperatoriAttivi() {
   return (state.operatori || []).filter(o => !o.licenziato && !isOperatoreScaduto(o));
 }
 
+/* Pianificazione Settimanale: un operatore che esce (fine del contratto a termine o
+   "Segna come Ex Collega", la prima delle due date) resta visibile fino alla settimana
+   in cui esce compresa e sparisce dalla settimana successiva — anche nelle settimane
+   future, così non lo si pianifica oltre la fine del contratto. La Dashboard continua a
+   usare getOperatoriAttivi() (riferimento: oggi).
+   opDataUscita: '' = in forza; '0000-00-00' = ex collega segnato prima che la data
+   venisse registrata (licenziato_il, dalla v18.276.0): data ignota, escluso ovunque. */
+function opDataUscita(op) {
+  if (!op) return '';
+  const date = [];
+  if (op.contratto_tipo === 'determinato' && op.data_fine_rapporto) date.push(op.data_fine_rapporto);
+  if (op.licenziato) date.push(op.licenziato_il || '0000-00-00');
+  return date.length ? date.sort()[0] : '';
+}
+
+// anno/week ISO; senza argomenti la settimana mostrata in Pianificazione (pwAnno/pwWeek)
+function opAttivoInSettimana(op, anno, week) {
+  const uscita = opDataUscita(op);
+  if (!uscita) return true;
+  if (anno == null) { anno = pwAnno; week = pwWeek; }
+  return uscita >= isoWeekToMonday(anno, week).toISOString().slice(0, 10);
+}
+
+function getOperatoriAttiviSettimana(anno, week) {
+  return (state.operatori || []).filter(o => opAttivoInSettimana(o, anno, week));
+}
+
+// Vero se il nome è di un operatore del pool già uscito prima della settimana indicata
+function isOperatoreExInSettimana(nome, anno, week) {
+  if (!nome) return false;
+  return (state.operatori || []).some(o => (o.nome_esteso || o.nome) === nome && !opAttivoInSettimana(o, anno, week));
+}
+
 /* Seniority dell'operatore ('senior' | 'junior' | '' = non definita). Serve ad affiancare
    sempre, quando possibile, un senior a un junior: due junior insieme sullo stesso cantiere
    sono da evitare. Non definita = nessun vincolo (né premiata né penalizzata). */
@@ -947,6 +980,8 @@ async function licenziaOperatore(id) {
   const op = state.operatori.find(o => o.id === id);
   if (!op) return;
   op.licenziato = true;
+  // Data dell'uscita: in Pianificazione resta visibile fino a questa settimana compresa
+  op.licenziato_il = new Date().toISOString().slice(0, 10);
   ricalcolaAllocOperatori();
   await saveState('Licenziamento operatore', {operatore: op.nome_esteso}, true);
   renderAll();

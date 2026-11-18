@@ -58,7 +58,7 @@ function _pwFerieHaAssenze(fw, nome) {
 // Le assenze si salvano per nome in pwFerie come per gli interni, quindi Griglia, scelta
 // operatore, Auto-pianifica, mail e Controllo Produzione le leggono senza altro.
 function pwFerieDipendentiFornitori() {
-  const interni = new Set(getOperatoriAttivi().map(o => o.nome_esteso || o.nome).filter(Boolean));
+  const interni = new Set(getOperatoriAttiviSettimana().map(o => o.nome_esteso || o.nome).filter(Boolean));
   const visti = new Set();
   const out = [];
   (state.fornitori || []).forEach(f => (f.dipendenti || []).forEach(d => {
@@ -89,7 +89,7 @@ function pwFerieOperatoriOrdinati(fw) {
     const c = a.label.localeCompare(b.label, 'it', { sensitivity: 'base' });
     return mode === 'za' ? -c : c;
   };
-  const interni = getOperatoriAttivi()
+  const interni = getOperatoriAttiviSettimana()
     .map(o => ({ nome: o.nome_esteso || o.nome, label: pwFerieCognomeNome(o) }))
     .filter(o => o.nome)
     .sort(cmp);

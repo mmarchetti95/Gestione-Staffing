@@ -367,7 +367,7 @@ async function cpaAvvia() {
     if (_cpa.tuttoIlPool) {
       (state.operatori || []).forEach(o => {
         const n = o.nome_esteso || o.nome_breve || o.nome;
-        if (n && !isOperatoreLicenziato(n)) nomi.push(n);
+        if (n && !isOperatoreExInSettimana(n)) nomi.push(n);
       });
       nomi = [...new Set(nomi)];
     }
