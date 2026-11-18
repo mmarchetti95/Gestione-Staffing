@@ -11,11 +11,16 @@
      del ticket. Senza abbinamento la chiave si sceglie a mano.
    - Orari e commento sono modificabili; un worklog già presente uguale sullo stesso sottotask
      («già copiato») parte deselezionato.
+   - Sostituzione (v18.273.0): la copia allinea «A» a «Da», non somma. I worklog che «A» ha già
+     quel giorno sono elencati e partono spuntati per l'eliminazione, tranne quelli uguali a uno
+     da copiare (si tengono) e quelli su sottotask di un'altra commessa (quel giorno può aver
+     lavorato altrove). Si eliminano dopo lo stato e prima delle aggiunte (Tempo conta 12 h al
+     giorno per autore); su un sottotask il cui stato è cambiato nel frattempo non si tocca nulla.
    - Stato: se il sottotask del compagno è IN PENDING/DONE e quello dell'operatore è indietro,
      propone di portarlo allo stesso stato (solo in avanti, azione "stato" di jira-worklog-edit,
      come «✎ Sistema giornata»: prima lo stato, poi i worklog, così quelli dell'automazione Jira
      si riconoscono come nuovi e vengono eliminati).
-   - Scrive SOLO con jira-worklog-edit (create/stato), dopo una conferma; autore = assegnatario
+   - Scrive SOLO con jira-worklog-edit (stato/delete/create), dopo una conferma; autore = assegnatario
      del sottotask via Tempo quando c'è il token. Non aggiorna controllo_produzione: «Ore Jira»
      si aggiorna con «🔄 Sincronizza squadra». I dipendenti fornitore non sono destinatari: i
      loro worklog li gestisce «🏢 Worklog fornitori», che cancellerebbe le copie fatte a mano.
@@ -32,6 +37,8 @@ let _cpCw = {
   letti: {},                  // nome -> { interventi, minuti } (solo chi è stato letto)
   da: '', a: '',
   righe: [],                  // vedi _cpCwCostruisciRighe
+  elimina: {},                // id worklog di «A» -> true se va eliminato (la copia lo sostituisce)
+  esistInfo: {},              // id worklog di «A» -> { altra: commessa|'', uguale: bool }
   statoNo: {},                // chiave destinazione -> true se l'utente non vuole il cambio di stato
   salvando: false,
   passi: null,                // durante la copia: [{ testo, esito: ''|'ok'|'ko'|'warn', nota }]
@@ -100,7 +107,7 @@ async function cpCwApri(btn) {
   Object.assign(_cpCw, {
     aperto: true, commessa: btn.dataset.commessa, squadra: btn.dataset.squadra, g, iso: d.iso[g], label: d.label[g],
     k: _cpaKey(pwAnno, pwWeek), d, caricando: true, errore: '', avvisi: [], membri: [], letti: {},
-    da: '', a: '', righe: [], statoNo: {}, salvando: false, passi: null,
+    da: '', a: '', righe: [], elimina: {}, esistInfo: {}, statoNo: {}, salvando: false, passi: null,
   });
   _cpCw.membri = _cpCwMembri(_cpCw.commessa, _cpCw.squadra, g);
   _cpCwRender();
@@ -210,7 +217,7 @@ function _cpCwAbbina(srcKey, indice) {
 
 function _cpCwCostruisciRighe() {
   const C = _cpCw, src = C.letti[C.da];
-  C.righe = [];
+  C.righe = []; C.elimina = {}; C.esistInfo = {};
   if (!src || !C.a || C.da === C.a) return;
   const indice = _cpaIndiceSottotask();
   const esistenti = (C.letti[C.a] || { interventi: [] }).interventi;
@@ -223,10 +230,25 @@ function _cpCwCostruisciRighe() {
       inizio: iv.inizio, fine: iv.fine, commento: (iv.w.comment || '').trim(),
       dst: ab.key, come: ab.come, gia: false, sel: !!ab.key,
     };
-    r.gia = !!r.dst && esistenti.some(e => e.t.key === r.dst && Math.abs(e.inizio - r.inizio) <= 1 && Math.abs(e.fine - r.fine) <= 1);
+    r.gia = !!r.dst && esistenti.some(e => _cpCwUguale(e, r));
     if (r.gia) r.sel = false;
     return r;
   });
+  // Worklog che «A» ha già quel giorno: la copia li sostituisce, quindi partono da eliminare,
+  // tranne quelli uguali a uno da copiare (restano) e quelli di un'altra commessa.
+  esistenti.forEach(e => {
+    if (e.w.id == null) return;   // senza id non si può eliminare
+    const id = String(e.w.id), o = indice[e.t.key];
+    const altra = o && o.commessa !== C.commessa ? o.commessa : '';
+    const uguale = C.righe.some(r => r.gia && _cpCwUguale(e, r));
+    C.esistInfo[id] = { altra, uguale };
+    C.elimina[id] = !altra && !uguale;
+  });
+}
+
+/* Worklog esistente e riga da copiare uguali: stesso sottotask, orari entro un minuto */
+function _cpCwUguale(e, r) {
+  return e.t.key === r.dst && Math.abs(e.inizio - r.inizio) <= 1 && Math.abs(e.fine - r.fine) <= 1;
 }
 
 /* Ticket proposti per «A»: i suoi sottotask Griglia del giorno e quelli su cui ha già worklog */
@@ -272,6 +294,11 @@ function cpCwCampo(el) {
   else if (f === 'dst') r.dst = el.value.trim().toUpperCase();
   else r[f] = _cpTlWlMin(el.value);
   if (f === 'dst') _cpCwRenderStati();
+  cpCwControlla();
+}
+
+function cpCwElimina(el) {
+  _cpCw.elimina[el.dataset.w] = el.checked;
   cpCwControlla();
 }
 
@@ -393,8 +420,18 @@ function _cpCwRender() {
       '</tr>';
     }).join('');
     const esist = ((C.letti[C.a] || {}).interventi || []);
-    const giaDi = esist.length ? '<div class="text-[11px] text-slate-500 mt-1">' + esc(C.a) + ' ha già su Jira: ' +
-      esist.map(iv => esc(iv.t.key + ' ' + _cpOjOra(iv.inizio) + '–' + _cpOjOra(iv.fine))).join(', ') + '.</div>' : '';
+    const giaDi = !esist.length ? '<div class="text-[11px] text-slate-500 mt-2">' + esc(C.a) + ' non ha worklog su Jira in questo giorno.</div>' :
+      '<div class="mt-3"><span class="' + lab + '">Worklog che ' + esc(C.a) + ' ha già su Jira quel giorno: quelli spuntati vengono eliminati, la copia li sostituisce</span>' +
+      esist.map(e => {
+        const id = String(e.w.id), info = C.esistInfo[id] || {};
+        const link = e.t.url ? '<a href="' + esc(e.t.url) + '" target="_blank" rel="noopener" class="text-teal-700">' + esc(e.t.key) + '</a>' : esc(e.t.key);
+        const nota = info.altra ? 'su un\'altra commessa (' + info.altra + '): di solito si tiene' : info.uguale ? 'uguale a uno da copiare: si tiene' : '';
+        const comm = (e.w.comment || '').trim();
+        return '<label class="flex items-start gap-2 text-xs mb-1"><input type="checkbox" data-w="' + esc(id) + '"' + (C.elimina[id] ? ' checked' : '') + (e.w.id == null ? ' disabled title="Worklog senza id: non si può eliminare da qui"' : '') + ' onchange="cpCwElimina(this)" style="margin-top:2px">' +
+          '<span><b>' + link + '</b> ' + _cpOjOra(e.inizio) + '–' + _cpOjOra(e.fine) + ' (' + _cpOjDurata(e.fine - e.inizio) + ')' +
+          (comm ? ' <span class="text-slate-500">· ' + esc(comm.length > 80 ? comm.slice(0, 80) + '…' : comm) + '</span>' : '') +
+          (nota ? ' <span class="text-amber-700">· ' + esc(nota) + '</span>' : '') + '</span></label>';
+      }).join('') + '</div>';
     corpo =
       '<div class="flex flex-wrap gap-3 mb-3 items-end">' +
         '<label><span class="' + lab + '">Copia i worklog di</span><select class="' + inp + '" data-f="da" onchange="cpCwScegli(this)">' + opzDa + '</select></label>' +
@@ -421,11 +458,20 @@ function _cpCwRender() {
 
 /* Operazioni da fare + errori (bloccano) e avvisi */
 function _cpCwVerifica() {
-  const C = _cpCw, out = { errori: [], avvisi: [], crea: [], stati: [] };
+  const C = _cpCw, out = { errori: [], avvisi: [], crea: [], stati: [], elimina: [] };
   if (!C.a || !C.da || C.da === C.a) return out;
   const ora = cpOraRoma(), noti = new Set(_cpCwTicketDestinazione().map(p => p.key));
   const esistenti = (C.letti[C.a] || { interventi: [] }).interventi;
+  out.elimina = esistenti.filter(e => e.w.id != null && C.elimina[String(e.w.id)]);
+  const restano = esistenti.filter(e => !out.elimina.includes(e));
+  out.elimina.forEach(e => {
+    const info = C.esistInfo[String(e.w.id)] || {};
+    if (info.altra) out.avvisi.push('Elimini anche ' + e.t.key + ' ' + _cpOjOra(e.inizio) + '–' + _cpOjOra(e.fine) + ', che è su un\'altra commessa (' + info.altra + ').');
+  });
   C.righe.forEach((r, i) => {
+    if (!r.sel && r.gia && out.elimina.some(e => _cpCwUguale(e, r))) {
+      out.avvisi.push('Riga ' + (i + 1) + ' (' + r.srcKey + '): il worklog uguale già di ' + C.a + ' viene eliminato e non ricopiato.');
+    }
     if (!r.sel) return;
     const n = 'Riga ' + (i + 1) + ' (' + r.srcKey + ')';
     if (!/^[A-Z][A-Z0-9_]*-\d+$/.test(r.dst || '')) { out.errori.push(n + ': indica il sottotask di ' + C.a + '.'); return; }
@@ -436,14 +482,14 @@ function _cpCwVerifica() {
     else if (!noti.has(r.dst)) out.avvisi.push(n + ': ' + r.dst + ' non è tra i sottotask di ' + C.a + ' di questo giorno.');
     if (r.fine - r.inizio > CPTL_WL_LUNGO_MIN) out.avvisi.push(n + ': durata lunga (' + _cpOjDurata(r.fine - r.inizio) + ').');
     if (r.commento.length >= 299) out.avvisi.push(n + ': il commento letto da Jira può essere accorciato (300 caratteri).');
-    esistenti.forEach(e => {
-      if (e.inizio < r.fine && e.fine > r.inizio) out.avvisi.push(n + ' si sovrappone a ' + e.t.key + ' ' + _cpOjOra(e.inizio) + '–' + _cpOjOra(e.fine) + ' già di ' + C.a + '.');
+    restano.forEach(e => {
+      if (e.inizio < r.fine && e.fine > r.inizio) out.avvisi.push(n + ' si sovrappone a ' + e.t.key + ' ' + _cpOjOra(e.inizio) + '–' + _cpOjOra(e.fine) + ' già di ' + C.a + ' (non eliminato).');
     });
     out.crea.push(r);
   });
   const prop = _cpCwStatiProposti();
   Object.keys(prop).forEach(k => { if (!C.statoNo[k]) out.stati.push(Object.assign({ key: k }, prop[k])); });
-  const totale = esistenti.reduce((s, e) => s + (e.fine - e.inizio), 0) + out.crea.reduce((s, r) => s + (r.fine - r.inizio), 0);
+  const totale = restano.reduce((s, e) => s + (e.fine - e.inizio), 0) + out.crea.reduce((s, r) => s + (r.fine - r.inizio), 0);
   if (totale > 12 * 60) out.avvisi.push('In tutto ' + C.a + ' arriverebbe a ' + _cpOjDurata(totale) + ': Tempo rifiuta oltre 12 h al giorno per persona.');
   // Un sottotask che resta IN PROGRESS: alla chiusura Jira registrerebbe altro tempo
   new Set(out.crea.map(r => r.dst)).forEach(k => {
@@ -459,10 +505,11 @@ function cpCwControlla() {
   const box = document.getElementById('cpcw-check'), btn = document.getElementById('cpcw-applica');
   if (!box) return;
   const v = _cpCwVerifica();
-  const niente = !v.crea.length && !v.stati.length;
+  const niente = !v.crea.length && !v.stati.length && !v.elimina.length;
   const righe = [];
   if (!niente) {
     const cosa = [];
+    if (v.elimina.length) cosa.push(v.elimina.length + ' worklog di ' + _cpCw.a + ' da eliminare (' + _cpOjDurata(v.elimina.reduce((s, e) => s + (e.fine - e.inizio), 0)) + ')');
     if (v.crea.length) cosa.push(v.crea.length + ' worklog da aggiungere a ' + _cpCw.a + ' (' + _cpOjDurata(v.crea.reduce((s, r) => s + (r.fine - r.inizio), 0)) + ')');
     if (v.stati.length) cosa.push(v.stati.length + ' cambio di stato');
     righe.push('<span class="text-slate-600">' + esc(cosa.join(' · ')) + '</span>');
@@ -538,30 +585,36 @@ async function _cpCwProduzioneMinima(key) {
   return { esito: 'scritto', testo: 'produzione messa a 1 su «' + campo + '»' + (error ? ' ⚠ ma non salvata in Controllo Produzione: ' + (error.message || error) : ' (👁 da verificare)') };
 }
 
-/* Rilegge i worklog del giorno dell'operatore finché compaiono quelli aggiunti (Tempo può
-   metterci qualche secondo a crearli su Jira), così «Sincronizza squadra» li trova.
-   → worklog aggiunti che ancora non si leggono */
-async function _cpCwAttendiWorklog(email, creati) {
-  let mancanti = creati;
-  for (let t = 0; t < 5 && mancanti.length; t++) {
+/* Rilegge i worklog del giorno dell'operatore finché compaiono quelli aggiunti e spariscono
+   quelli eliminati (Tempo può metterci qualche secondo ad allineare Jira), così «Sincronizza
+   squadra» trova la giornata giusta.
+   → { mancanti: aggiunti che ancora non si leggono, ancora: eliminati che si leggono ancora } */
+async function _cpCwAttendiWorklog(email, creati, eliminati) {
+  let mancanti = creati, ancora = eliminati;
+  for (let t = 0; t < 5 && (mancanti.length || ancora.length); t++) {
     if (t) await new Promise(r => setTimeout(r, 3000));
     const { data: fn, error } = await _sbClient.functions.invoke('jira-sync-worklogs', { body: { emails: [email], startDate: _cpCw.iso, endDate: _cpCw.iso } });
     if (error) continue;
     const giorno = (((fn && fn.results) || {})[email.toLowerCase()] || {})[_cpCw.iso];
     const iv = cpOreJiraInterventi((giorno && giorno.tickets) || [], _cpCw.iso).interventi;
-    mancanti = creati.filter(r => !iv.some(e => e.t.key === r.dst && Math.abs(e.inizio - r.inizio) <= 1 && Math.abs(e.fine - r.fine) <= 1));
+    mancanti = creati.filter(r => !iv.some(e => _cpCwUguale(e, r)));
+    ancora = eliminati.filter(x => iv.some(e => e.w && String(e.w.id) === String(x.w.id)));
   }
-  return mancanti;
+  return { mancanti, ancora };
 }
 
 async function cpCwApplica() {
   const C = _cpCw;
   if (C.salvando || !cpCwPuo()) return;
   const v = _cpCwVerifica();
-  if (v.errori.length || (!v.crea.length && !v.stati.length)) { cpCwControlla(); return; }
+  if (v.errori.length || (!v.crea.length && !v.stati.length && !v.elimina.length)) { cpCwControlla(); return; }
   const dove = r => _cpOjOra(r.inizio) + '–' + _cpOjOra(r.fine) + ' (' + _cpOjDurata(r.fine - r.inizio) + ')';
   const righe = [];
   v.stati.forEach(s => righe.push('Stato ' + s.key + ': ' + s.da + ' → ' + s.voluto + (s.voluto === 'DONE' ? ' (se manca la produzione, la metto a 1)' : '')));
+  v.elimina.forEach(e => {
+    const c = (e.w.comment || '').trim();
+    righe.push('Elimina da ' + e.t.key + ' ' + dove(e) + (c ? ' «' + (c.length > 60 ? c.slice(0, 60) + '…' : c) + '»' : ''));
+  });
   v.crea.forEach(r => righe.push('Aggiungi su ' + r.dst + ' ' + dove(r) + ' (da ' + r.srcKey + ')'));
   const msg = 'Su Jira, per ' + C.a + ', ' + C.label + ' (copiando da ' + C.da + '):\n\n• ' + righe.join('\n• ') +
     '\n\nI worklog risultano a nome dell\'assegnatario del sottotask; la stima residua non cambia. I worklog di ' + C.da + ' restano come sono. ' +
@@ -572,7 +625,7 @@ async function cpCwApplica() {
   C.salvando = true;
   C.passi = [];
   _cpCwRender();
-  const fatti = [], problemi = [], saltaKey = new Set(), creati = [];
+  const fatti = [], problemi = [], saltaKey = new Set(), creati = [], eliminati = [];
   const nome = C.a, k = C.k, d = C.d, email = (C.membri.find(m => m.nome === C.a) || {}).email || '';
   const commessa = C.commessa, squadra = C.squadra, anno = pwAnno, week = pwWeek;
   try {
@@ -599,7 +652,22 @@ async function cpCwApplica() {
         if (res.codice === 'cambiato') saltaKey.add(s.key);
       }
     }
-    // b. Worklog, uno alla volta
+    // b. Eliminazione dei worklog di «A» che la copia sostituisce (prima delle aggiunte: Tempo
+    //    conta 12 h al giorno per autore). Non su un sottotask il cui stato è cambiato nel frattempo.
+    for (const e of v.elimina) {
+      if (saltaKey.has(e.t.key)) continue;
+      const pe = _cpCwPasso('Elimino il worklog di ' + nome + ' su ' + e.t.key + ' ' + dove(e) + '…');
+      const res = await _cpTlWlInvoca({ action: 'delete', issueKey: e.t.key, worklogId: String(e.w.id), operatore: nome, atteso: { started: e.w.started, seconds: e.w.seconds } });
+      if (res.ok) {
+        eliminati.push(e);
+        fatti.push('Eliminato da ' + e.t.key + ' ' + dove(e) + (res.avviso ? ' ⚠ ' + res.avviso : ''));
+        _cpCwFatto(pe, res.avviso ? 'warn' : 'ok', res.avviso || '');
+      } else {
+        problemi.push('Eliminazione ' + e.t.key + ' ' + dove(e) + ': ' + (res.errore || 'non riuscita'));
+        _cpCwFatto(pe, 'ko', res.errore || 'non riuscita');
+      }
+    }
+    // c. Worklog, uno alla volta
     let forza = false, chiesto = false;
     for (let i = 0; i < v.crea.length; i++) {
       const r = v.crea[i];
@@ -621,15 +689,17 @@ async function cpCwApplica() {
         _cpCwFatto(pw, 'ko', res.errore || 'non riuscito');
       }
     }
-    // c. Prima di sincronizzare: i worklog aggiunti devono già leggersi da Jira
-    if (creati.length && email) {
-      const pv = _cpCwPasso('Controllo che i worklog aggiunti si leggano da Jira…');
-      const mancanti = await _cpCwAttendiWorklog(email, creati);
-      if (mancanti.length) {
-        const t = mancanti.length + ' worklog aggiunti non si leggono ancora da Jira (' + mancanti.map(r => r.dst + ' ' + _cpOjOra(r.inizio)).join(', ') +
-          '): sono stati scritti, NON ricopiarli; se «Ore Jira» non li mostra, rilancia «🔄 Sincronizza squadra» tra qualche minuto.';
-        problemi.push(t);
-        _cpCwFatto(pv, 'warn', t);
+    // d. Prima di sincronizzare: Jira deve già mostrare la giornata nuova
+    if ((creati.length || eliminati.length) && email) {
+      const pv = _cpCwPasso('Controllo che Jira mostri i worklog aggiornati…');
+      const { mancanti, ancora } = await _cpCwAttendiWorklog(email, creati, eliminati);
+      const t = [];
+      if (mancanti.length) t.push(mancanti.length + ' worklog aggiunti non si leggono ancora da Jira (' + mancanti.map(r => r.dst + ' ' + _cpOjOra(r.inizio)).join(', ') + '): sono stati scritti, NON ricopiarli');
+      if (ancora.length) t.push(ancora.length + ' worklog eliminati si leggono ancora da Jira (' + ancora.map(e => e.t.key + ' ' + _cpOjOra(e.inizio)).join(', ') + ')');
+      if (t.length) {
+        const testo = t.join('; ') + '. Se «Ore Jira» non torna, rilancia «🔄 Sincronizza squadra» tra qualche minuto.';
+        problemi.push(testo);
+        _cpCwFatto(pv, 'warn', testo);
       } else _cpCwFatto(pv, 'ok');
     }
     if (fatti.length) _cpCwPasso('Sincronizzo la squadra «' + squadra + '» da Jira…');
@@ -643,7 +713,7 @@ async function cpCwApplica() {
   const esito = '⧉ Copia worklog ' + C.da + ' → ' + nome + ', ' + C.label + ':\n' +
     (fatti.length ? '• ' + fatti.join('\n• ') : 'nessuna modifica fatta su Jira.') +
     (problemi.length ? '\n\n⚠ Da controllare:\n• ' + problemi.join('\n• ') : '');
-  // d. «Sincronizza squadra» senza la domanda iniziale: il prospetto si aggiorna da solo. Solo se
+  // e. «Sincronizza squadra» senza la domanda iniziale: il prospetto si aggiorna da solo. Solo se
   //    si è ancora sulla stessa settimana (altrimenti sincronizzerebbe quella mostrata). La
   //    finestra resta aperta con l'avanzamento finché la sincronizzazione non finisce.
   if (fatti.length && pwAnno === anno && pwWeek === week) {
