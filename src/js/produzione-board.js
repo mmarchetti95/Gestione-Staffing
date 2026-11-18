@@ -520,6 +520,10 @@ function cpBrdChiudi() {
   _cpBrd = null;
   const m = document.getElementById('cpbrd-modal');
   if (m) m.style.display = 'none';
+  // Le tabelle dell'anteprima hanno classe cp-table: lasciate nel DOM (nascoste, prima della
+  // tabella vera) venivano prese da chi cerca '.cp-table' (fix v18.277.0).
+  const root = document.getElementById('cpbrd-root');
+  if (root) root.innerHTML = '';
 }
 
 function cpBrdSetMappa(sel) {
@@ -677,7 +681,12 @@ async function cpBrdApplica() {
   st.progetti.forEach(p => { m[p.nome] = st.mappa[p.nome] || ''; });
   cpBrdMappaSalva(st.commessa, m);
   cpBrdChiudi();
+  // Il ridisegno non deve riportare in cima alla lista.
+  const cont = document.getElementById('cp-table-container');
+  const yPag = window.scrollY, yCont = cont ? cont.scrollTop : 0;
   pwControlloRender();
+  if (cont) cont.scrollTop = yCont;
+  window.scrollTo(window.scrollX, yPag);
   pwApplyProduzioneColors();
   const campo = cpCampoProduzione(st.commessa);
   const inSospeso = righe.reduce((n, r) => n + Object.keys(r.dopo.km_by_ticket || {}).filter(key =>

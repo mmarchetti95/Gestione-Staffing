@@ -114,6 +114,9 @@ Limite noto: il progetto Supabase è sul piano **Free**, che non include backup 
 
 ## Changelog
 
+## v18.277.0
+- fix: **Controllo Produzione, tasti bloccati dopo «📡 Importa da board».** Dopo aver applicato l'import la lista tornava in cima e «≡ Collassa», l'apertura/chiusura di commesse e squadre e la ricerca operatore non funzionavano più fino al refresh: agivano sulle tabelle dell'anteprima della board, rimaste nascoste nella pagina. Ora la finestra si svuota quando si chiude, quei tasti guardano solo la tabella del Controllo Produzione e dopo l'import la lista resta dov'era. Nessuna modifica a Supabase o alle Edge Function.
+
 ## v18.276.0
 - feat: **Ex colleghi e contratti scaduti in Pianificazione Settimanale.** Chi esce (contratto a termine terminato o «Segna come Ex Collega») resta visibile fino alla settimana in cui esce compresa e non compare più dalla settimana successiva — anche nelle settimane future, così non lo si pianifica dopo la fine del contratto. Prima spariva subito, anche dalla settimana in corso e da quelle passate. Vale per scelta operatore in Griglia, statistiche della settimana, Ferie, Doppia Week (prima settimana del mese mostrato), Auto-pianifica, destinatari della mail e «tutto il pool» del Controllo anomalie. «Segna come Ex Collega» ora registra la data (`licenziato_il`); un ex collega senza data resta escluso da tutte le settimane. La Dashboard è invariata.
 - Dati: per i 10 ex colleghi già segnati la data è stata recuperata dal registro attività («Licenziamento operatore», giorno in ora italiana) e scritta nella riga core di `staffing_state`. Nessuna modifica allo schema Supabase o alle Edge Function.

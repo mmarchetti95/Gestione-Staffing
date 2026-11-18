@@ -58,7 +58,7 @@ function cpToggleSq(key) {
   cpApplyCollapse();
 }
 function cpApplyCollapse() {
-  const tbody = document.querySelector('.cp-table tbody');
+  const tbody = document.querySelector('#cp-table-container .cp-table tbody');
   if (!tbody) return;
   tbody.querySelectorAll('tr').forEach(tr => {
     const ci = tr.dataset.commIdx;
@@ -87,7 +87,7 @@ function cpApplyCollapse() {
   }
 }
 function cpCollapseAllToggle() {
-  const tbody = document.querySelector('.cp-table tbody');
+  const tbody = document.querySelector('#cp-table-container .cp-table tbody');
   if (!tbody) return;
   const commRows = [...tbody.querySelectorAll('.cp-tr-commessa[data-comm-idx]')];
   const sqRows   = [...tbody.querySelectorAll('.cp-tr-squadra[data-sq-idx]')];
@@ -115,7 +115,7 @@ function cpSearchOp(term) {
   const infoEl   = document.getElementById('cp-search-op-info');
   if (clearBtn) clearBtn.classList.toggle('hidden', !_cpSearchTerm);
 
-  const tbody = document.querySelector('.cp-table tbody');
+  const tbody = document.querySelector('#cp-table-container .cp-table tbody');
   if (!tbody) return;
 
   if (!_cpSearchTerm) {
