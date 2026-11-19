@@ -287,6 +287,33 @@ async function prfPreparaGriglia() {
 
 function prfGrigliaPronta() { return !!_prf.griglia; }
 
+/* Chiavi dei pool in cui cercare l'indice per una voce: prima l'attività della commessa
+   (nome di catalogo), poi il tipo di WO. Usate da Griglia e Auto-pianifica. */
+function prfChiaviPool(commessa, attivita, tipoWo) {
+  const out = [];
+  if (commessa && attivita) {
+    const v = caTrova(commessa, attivita);
+    const k = caNorm(v ? v.nome : attivita);
+    if (k) out.push('a|' + commessa + '|' + k);
+  }
+  if (tipoWo) out.push('w|' + tipoWo);
+  return out;
+}
+
+/* Indici di un operatore per Auto-pianifica: { chiave: indice } dei pool in cui ha almeno
+   PRF_MIN_GIORNI_CHIP giornate (sotto, l'indice è quasi tutto «prior» a 100). Vuoto se i
+   dati non sono pronti (prfPreparaGriglia) o la vista non è visibile all'utente. */
+function prfIndiciOperatore(nome) {
+  const g = _prf.griglia;
+  const out = {};
+  if (!g || !nome || !prfPuo()) return out;
+  Object.keys(g.pools).forEach(k => {
+    const o = g.pools[k].operatori[nome];
+    if (o && o.giorni >= PRF_MIN_GIORNI_CHIP) out[k] = Math.round(o.indice * 10) / 10;
+  });
+  return out;
+}
+
 /* Indice di un operatore per la squadra aperta in Griglia: prima l'attività più frequente
    della squadra sulla commessa (nome di catalogo), poi il tipo di WO. null = niente dati. */
 function prfIndiceGriglia(nome, commessa, attivitaElenco, tipoWo) {

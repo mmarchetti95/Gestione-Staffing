@@ -13,7 +13,7 @@ const APW_PASSI = [
   { id: 'commessa', t: 'Commessa' },
   { id: 'attivita', t: 'Attività' },
   { id: 'cantiere', t: 'Cantiere' },
-  { id: 'giorni', t: 'Giorni' }
+  { id: 'giorni', t: 'Squadre e giorni' }
 ];
 const APW_NOMINATIM = 'https://nominatim.openstreetmap.org/search?format=jsonv2&addressdetails=1&limit=6&countrycodes=it&accept-language=it&q=';
 const APW_COMUNI = ['city', 'town', 'village', 'municipality', 'hamlet', 'suburb', 'locality'];
@@ -34,6 +34,7 @@ function _apwNuovoStato(base) {
     cercando: false,
     erroreCerca: '',
     giorni: '',
+    nSquadre: 1,        // squadre da impiegare sul cantiere
     nOp: null,          // null = quello del catalogo / 2
     filtro: '',
     aggiunti: 0
@@ -330,22 +331,36 @@ function _apwGiorniHtml() {
   const doppione = _ap.righe.find(r => _apNorm(r.commessa) === _apNorm(_apw.commessa) &&
     _apNorm(r.cantiere) === _apNorm(_apw.cantiere) && _apNorm(r.attivita) === _apNorm(_apw.attivita));
   const giorni = String(_apw.giorni || '');
-  return '<div class="apw-domanda">Quanti <b>giorni di lavoro</b> servono a <b>' + _apE(_apw.cantiere) + '</b>?</div>' +
-    '<div class="apw-sotto">Giorni-squadra: una squadra da ' + sq.n + (sq.n === 1 ? ' persona' : ' persone') + ' per quanti giorni.</div>' +
+  const g = Number(giorni.replace(',', '.'));
+  const nSq = _apw.nSquadre || 1;
+  return '<div class="apw-domanda">Quante <b>squadre</b> impieghi a <b>' + _apE(_apw.cantiere) + '</b>?</div>' +
     '<div class="apw-giorni">' +
-      '<input type="text" inputmode="decimal" class="apw-input apw-input-gg" data-apw-in="giorni" data-apw-focus placeholder="es. 3" value="' + _apE(giorni) + '">' +
-      [1, 2, 3, 4, 5].map(n => '<button type="button" class="apw-chip' + (giorni === String(n) ? ' on' : '') + '" data-apw="gg" data-v="' + n + '" data-help-key="apw-gg">' + n + '</button>').join('') +
+      [1, 2, 3, 4].map(n => '<button type="button" class="apw-chip' + (nSq === n ? ' on' : '') + '" data-apw="nsq" data-v="' + n + '" data-help-key="apw-nsq">' + n + '</button>').join('') +
+      '<span class="apw-sotto">squadre in parallelo sullo stesso cantiere</span>' +
     '</div>' +
     '<div class="apw-squadra">' +
-      '<span>👥 Squadra da</span>' +
+      '<span>👥 Ogni squadra da</span>' +
       '<button type="button" class="apw-chip" data-apw="nop" data-d="-1" data-help-key="apw-nop"' + (sq.n <= 1 ? ' disabled' : '') + '>−</button>' +
       '<b>' + sq.n + '</b>' +
       '<button type="button" class="apw-chip" data-apw="nop" data-d="1" data-help-key="apw-nop"' + (sq.n >= 6 ? ' disabled' : '') + '>＋</button>' +
-      '<span class="apw-sotto">' + _apE(sq.fonte) + '</span>' +
+      '<span class="apw-sotto">' + (sq.n === 1 ? 'persona' : 'persone') + ' · ' + _apE(sq.fonte) + '</span>' +
     '</div>' +
-    '<div class="apw-riepilogo">' + _apE(_apw.commessa) + ' · ' + _apE(_apw.attivita) + ' · ' + _apE(_apw.cantiere) +
-      (_apw.geo ? ' · 📍' : ' · ⚠️ non localizzato') + '</div>' +
+    '<div class="apw-domanda" style="margin-top:16px;">Per quanti <b>giorni</b> lavora ogni squadra?</div>' +
+    '<div class="apw-giorni">' +
+      '<input type="text" inputmode="numeric" class="apw-input apw-input-gg" data-apw-in="giorni" data-apw-focus placeholder="es. 3" value="' + _apE(giorni) + '">' +
+      [1, 2, 3, 4, 5].map(n => '<button type="button" class="apw-chip' + (giorni === String(n) ? ' on' : '') + '" data-apw="gg" data-v="' + n + '" data-help-key="apw-gg">' + n + '</button>').join('') +
+    '</div>' +
+    '<div class="apw-riepilogo" id="apw-totale">' + _apE(_apw.commessa) + ' · ' + _apE(_apw.attivita) + ' · ' + _apE(_apw.cantiere) +
+      (_apw.geo ? ' · 📍' : ' · ⚠️ non localizzato') +
+      '<br><b>' + _apwTotaleTesto(nSq, g) + '</b></div>' +
+    '<div class="apw-sotto" style="margin-top:6px;">Giornate piene: ogni squadra lavora Lun–Ven senza giorni vuoti, quindi nella bozza riceverà anche altri cantieri vicini per riempire la settimana.</div>' +
     (doppione ? '<div class="apw-nota">C\'è già una riga per questo cantiere con la stessa commessa e attività: aggiungendo ne fai una seconda.</div>' : '');
+}
+
+function _apwTotaleTesto(nSq, g) {
+  if (!(g > 0)) return nSq + (nSq === 1 ? ' squadra' : ' squadre') + ' × ? giorni';
+  const gi = Math.ceil(g - 1e-9);
+  return nSq + (nSq === 1 ? ' squadra' : ' squadre') + ' × ' + gi + (gi === 1 ? ' giorno' : ' giorni') + ' = ' + (nSq * gi) + ' giorni-squadra';
 }
 
 /* ---------- mini mappa ---------- */
@@ -475,10 +490,11 @@ async function _apwAggiungi(altro) {
     cantiere: _apw.cantiere.trim(),
     commessa: _apw.commessa,
     attivita: _apw.attivita,
-    giorni: Math.round(gg * 2) / 2,
+    giorni: Math.ceil(gg - 1e-9),   // giornate piene
     /* Il numero di persone si scrive sulla riga solo se scelto qui a mano: altrimenti la
        riga segue il catalogo (anche se cambia dopo) */
-    nOp: _apw.nOp || null
+    nOp: _apw.nOp || null,
+    nSquadre: _apw.nSquadre > 1 ? _apw.nSquadre : null
   }, 'guidato');
   _ap.righe.push(r);
   _apInvalidaBozza();
@@ -526,6 +542,7 @@ function _apwClick(e) {
     _apwRender();
   }
   else if (az === 'gg') { _apw.giorni = b.dataset.v; _apwRender(); }
+  else if (az === 'nsq') { _apw.nSquadre = parseInt(b.dataset.v, 10) || 1; _apwRender(); }
   else if (az === 'nop') {
     const n = Math.min(6, Math.max(1, _apwNOp().n + parseInt(b.dataset.d, 10)));
     const cat = caOperatoriSquadra(_apw.commessa, _apw.attivita) || 2;
@@ -562,6 +579,8 @@ function _apwInput(e) {
     const ok = Number(_apw.giorni.replace(',', '.')) > 0;
     document.querySelectorAll('#apw-modal [data-apw="aggiungi"], #apw-modal [data-apw="aggiungi-altro"]').forEach(x => { x.disabled = !ok; });
     document.querySelectorAll('#apw-modal [data-apw="gg"]').forEach(x => x.classList.toggle('on', x.dataset.v === _apw.giorni));
+    const tot = document.querySelector('#apw-totale b');
+    if (tot) tot.textContent = _apwTotaleTesto(_apw.nSquadre || 1, Number(_apw.giorni.replace(',', '.')));
   }
 }
 

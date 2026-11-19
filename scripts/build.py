@@ -76,6 +76,7 @@ JS_FILES = [
     'weekly-spostamenti.js',
     'weekly-ricerca-squadre.js',
     'autoplan-solver.js',
+    'autoplan-squadre.js',
     'weekly-autoplan.js',
     'weekly-autoplan-wizard.js',
     'weekly-autoplan-chat.js',

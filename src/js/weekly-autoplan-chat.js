@@ -201,6 +201,7 @@ function _apcEsitoPerAgente(b, id) {
   const o = { id, cantiere: r.cantiere, stato: e.stato.replace('_', ' '), giorni: apFmtNum(e.giorniAssegnati) + '/' + apFmtNum(e.richiesti) };
   if (quando) o.piano = quando;
   if (e.oltreScadenza) o.oltre_scadenza = true;
+  if (e.rendimento) o.rendimento_squadra = Math.round(e.rendimento.medio) + ' (indice medio di Prestazioni di chi ci va, 100 = norma)';
   const note = [].concat(e.motivi, e.avvisi);
   if (note.length) o.note = note;
   return o;
@@ -260,7 +261,8 @@ const APC_TOOLS = {
     const out = {
       settimana: _ap.week, anno: _ap.anno,
       giorni_pianificabili: _apcNomeGiorni(giorni) || 'nessuno (settimana passata)',
-      opzioni: { sabato: !!_ap.opzioni.sabato, meteo: !!_ap.opzioni.meteo, max_km: _ap.opzioni.maxKm || 250 },
+      opzioni: { sabato: !!_ap.opzioni.sabato, meteo: !!_ap.opzioni.meteo, max_km: _ap.opzioni.maxKm || 250,
+        rendimento: _ap.opzioni.rendimento !== false ? 'considerato: sui cantieri urgenti (P1, scadenza) favorisce chi ha indice di Prestazioni alto sull\'attività (100 = norma); si cambia solo dalla casella «⚡ rendimento»' : 'ignorato' },
       storico: _ap.modelloInfo || '',
       commesse_attive: pwGetCommesseValide(),
       cantieri: _ap.righe.map(_apcRigaPerAgente),
@@ -282,7 +284,7 @@ const APC_TOOLS = {
       suggerimenti: res.suggerimenti.map(sg => _apNomeRiga(b, sg.rigaId) + ' entra (+' + apFmtNum(sg.guadagno) + ' gg) se passa davanti a ' +
         _apNomeRiga(b, sg.primaDi) + ': ' + _apEffettiTesto(b, sg.effetti) + ' → imposta_precedenza(prima="' + sg.rigaId + '", dopo="' + sg.primaDi + '")'),
       operatori_su_piu_commesse: res.operatoriSuPiuCommesse,
-      distanze: b.infoDistanze, meteo: b.infoMeteo
+      distanze: b.infoDistanze, meteo: b.infoMeteo, rendimento: b.infoRendimento
     };
     return out;
   },

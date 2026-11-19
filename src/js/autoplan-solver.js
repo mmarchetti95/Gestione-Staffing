@@ -18,7 +18,8 @@
    - Preferenze (punteggio): distanza dal punto in cui l'operatore si trova il giorno
      prima, esperienza sulla famiglia di attività, coppie che lavorano spesso insieme,
      restare sulla commessa in cui è già in Griglia, allocazione staffing del mese,
-     continuità della stessa squadra sui giorni dello stesso cantiere.
+     continuità della stessa squadra sui giorni dello stesso cantiere, rendimento
+     dell'operatore sull'attività (indice di «⚡ Prestazioni», pesato per urgenza).
    - Ordine: priorità (P1 prima), poi scadenza, poi impegno più lungo (greedy). */
 
 const AP_STOPWORDS = new Set(['rilievo', 'di', 'e', 'del', 'della', 'delle', 'the', 'con', 'per', 'a', 'da', 'in',
@@ -124,6 +125,7 @@ function apBuildModello(righe) {
 
   const famiglie = {};     // fam -> { km: [], nOp: [], varianti: Set, commesse: {commessa: km[]} }
   const esperienza = {};   // operatore -> { fam: giornate }
+  const esperienzaCommessa = {}; // operatore -> { commessa: giornate, 'commessa|fam': giornate }
   const coppie = {};       // "A|||B" (ordinati) -> giornate insieme
   Object.values(gruppi).forEach(g => {
     const ops = Array.from(g.ops).sort();
@@ -133,6 +135,11 @@ function apBuildModello(righe) {
     ops.forEach(o => {
       if (!esperienza[o]) esperienza[o] = {};
       fams.forEach(f => { esperienza[o][f] = (esperienza[o][f] || 0) + 1; });
+      if (g.commessa) {
+        const ec = esperienzaCommessa[o] || (esperienzaCommessa[o] = {});
+        ec[g.commessa] = (ec[g.commessa] || 0) + 1;
+        fams.forEach(f => { const k = g.commessa + '|' + f; ec[k] = (ec[k] || 0) + 1; });
+      }
     });
     for (let i = 0; i < ops.length; i++) for (let j = i + 1; j < ops.length; j++) {
       const k = ops[i] + '|||' + ops[j];
@@ -161,7 +168,7 @@ function apBuildModello(righe) {
     F.campioni = F.km.length;
     F.varianti = Array.from(F.varianti).sort();
   });
-  return { vocab, famiglie, esperienza, coppie, generato: Date.now() };
+  return { vocab, famiglie, esperienza, esperienzaCommessa, coppie, generato: Date.now() };
 }
 
 /* Famiglia del modello più simile a un testo di attività: prima la corrispondenza esatta,
@@ -238,6 +245,10 @@ function apFmtNum(n) {
 const AP_PESI_DEFAULT = {
   kmCosto: 1,            // punti persi per km di spostamento
   esperienza: 25,        // bonus se l'operatore ha già fatto quella famiglia (saturato)
+  esperienzaCommessa: 200,         // bonus se ha già lavorato su QUELLA commessa (saturato a 10 giornate):
+                                   // vale ~200 km a testa, chi conosce la commessa batte chi è solo più vicino
+  esperienzaCommessaAttivita: 100, // in più se su quella commessa ha fatto quell'attività
+  posizioneIgnota: 500,  // operatore senza residenza/provincia: conta come un viaggio lungo, non come vicino
   coppia: 30,            // bonus coppia abituale (saturato)
   stessaCommessa: 40,    // bonus se già in Griglia su quella commessa questa settimana
   staffing: 30,          // bonus se allocato sulla commessa nello staffing del mese
@@ -246,6 +257,9 @@ const AP_PESI_DEFAULT = {
   soloSenior: 80,        // penalità (leggera) per una squadra di soli senior: senior+junior è meglio,
                          // e un senior "sprecato" in coppia con un altro manca a un'altra squadra
   stessaPartenza: 40,    // bonus coppia che parte dallo stesso luogo (residenze entro AP_STESSA_PARTENZA_KM)
+  rendimento: 50,        // punti per unità di ln(indice/100), × urgenza della riga (vedi apUrgenza): indice 150
+                         // su un P1 ≈ +60, su un P3 ≈ +20; 0 = rendimento ignorato. Le penalità di
+                         // sicurezza (soloJunior) restano più forti: un junior non diventa capo per i km fatti.
   maxSquadreCantiere: 2, // squadre in parallelo sullo stesso cantiere nello stesso giorno (1 = mai rinforzi)
   ritardoGiorno: 400,    // penalità per giorno oltre la scadenza (x peso priorità)
   attesaGiorno: 8,       // penalità per giorno di attesa prima di iniziare (x peso priorità)
@@ -257,8 +271,8 @@ const AP_PESO_PRIORITA = { 1: 3, 2: 2, 3: 1 };
 const AP_FATTORE_STRADA = 1.3; // linea d'aria -> strada, stima prudente quando manca OSRM
 const AP_MAX_RICALCOLI = 80;   // tetto del miglioramento locale (ogni prova = un greedy completo)
 const AP_MAX_MS = 2500;
-const AP_STESSA_PARTENZA_KM = 25;
-const AP_SEMI_SQUADRA = 4;         // capisquadra provati per comporre ogni squadra (vedi scegliSquadra) // residenze più vicine di così = "stesso luogo di partenza"
+const AP_STESSA_PARTENZA_KM = 25; // residenze più vicine di così = "stesso luogo di partenza"
+const AP_SEMI_SQUADRA = 4;         // capisquadra provati per comporre ogni squadra (vedi scegliSquadra)
 
 /* Coppie di operatori con la stessa partenza (residenza / provincia), calcolate una volta per
    contesto: il greedy gira fino a 160 volte e l'affinità si valuta per ogni coppia. Cache
@@ -275,6 +289,62 @@ function _apStessaPartenza(ctx, a, b) {
     haversineKm(oa.base.lat, oa.base.lng, ob.base.lat, ob.base.lng) <= AP_STESSA_PARTENZA_KM);
   m.set(k, v);
   return v;
+}
+
+/* Rendimento (since v18.288.0). Gli indici vengono dalla vista «⚡ Prestazioni»
+   (prestazioni-core.js): 100 = la norma dell'attività, 125 = +25%, già al netto di compagni
+   e comuni. L'adapter li passa come dati, mai come funzioni:
+     operatori[].rendimento = { chiave: indice }   (solo indici con abbastanza giornate)
+     righe[].chiaviRendimento = [chiave, ...]       (attività della commessa, poi tipo di WO)
+   Vale la prima chiave che l'operatore ha. Chi non ha indice conta come 100 (nessun bonus,
+   nessuna penalità): in urgenza salgono solo i rendimenti provati. */
+const AP_REND_CLIP = Math.log(2);   // oltre ×2 / ÷2 l'effetto non cresce più
+
+function apIndiceRendimento(o, r) {
+  if (!o || !o.rendimento || !r || !r.chiaviRendimento) return null;
+  for (const k of r.chiaviRendimento) {
+    const v = o.rendimento[k];
+    if (v > 0) return { indice: v, chiave: k };
+  }
+  return null;
+}
+
+/* Quanto conta il rendimento su una riga: la priorità (P1 = 3, P2 = 2, P3 = 1) più 1 se
+   ha una scadenza in settimana. Su un cantiere urgente il più performante vale di più. */
+function apUrgenza(r) {
+  return (AP_PESO_PRIORITA[r.priorita] || 1) + (r.scadenzaGiorno != null ? 1 : 0);
+}
+
+function apBonusRendimento(o, r, peso) {
+  if (!peso) return 0;
+  const ri = apIndiceRendimento(o, r);
+  if (!ri) return 0;
+  const l = Math.max(-AP_REND_CLIP, Math.min(AP_REND_CLIP, Math.log(ri.indice / 100)));
+  return peso * l * apUrgenza(r);
+}
+
+/* Seniority di un operatore per una riga. Con un tipo di WO (es. «WO I.P») vale SOLO il
+   livello su quel tipo: chi non ce l'ha non conta come senior (niente ripiego sulla
+   seniority generale, since v18.288.0). Senza tipo vale la seniority generale. */
+function apLivelloSeniority(o, tipoWo) {
+  if (!o) return '';
+  if (tipoWo) return (o.senioritaWo && o.senioritaWo[tipoWo]) || '';
+  return o.seniorita || '';
+}
+
+/* Esperienza di un operatore per una riga: famiglia di attività (ovunque), commessa, e
+   commessa + attività. Saturata a 10 giornate per voce. */
+function apBonusEsperienza(o, r, modello, pesi) {
+  if (!modello || !o) return 0;
+  let s = 0;
+  const fam = r.famiglia;
+  const e = (modello.esperienza || {})[o.nome] || {};
+  const ec = (modello.esperienzaCommessa || {})[o.nome] || {};
+  const sat = n => Math.min(n || 0, 10) / 10;
+  if (fam) s += (pesi.esperienza || 0) * sat(e[fam]);
+  if (r.commessa) s += (pesi.esperienzaCommessa || 0) * sat(ec[r.commessa]);
+  if (r.commessa && fam) s += (pesi.esperienzaCommessaAttivita || 0) * sat(ec[r.commessa + '|' + fam]);
+  return s;
 }
 
 /* Ordine di partenza: priorità (P1 prima), scadenza più vicina, impegno più lungo */
@@ -315,7 +385,8 @@ function _apViolaPrecedenze(ordine, precedenze) {
                    seniorita: 'senior'|'junior'|'' (facoltativa, '' = nessun vincolo),
                    senioritaWo: { tipoWo: 'senior'|'junior' } (facoltativa: livello per tipo di WO,
                      vince su seniorita per le righe di quel tipo),
-                   base: {lat,lng}|null, commessaSettimana: string|null, staffing:Set(commesse) }],
+                   base: {lat,lng}|null, commessaSettimana: string|null, staffing:Set(commesse),
+                   rendimento: { chiave: indice } (facoltativo, vedi apIndiceRendimento) }],
      disp: { nome: { d: 'libero'|'ferie'|'dw'|'occupato' } },
      posizione: { nome: { d: {lat,lng,label} } },   // dove è già (celle esistenti)
      distanzaKm(a, b) -> km stradali | null,        // facoltativa: senza, linea d'aria x 1,3
@@ -327,7 +398,8 @@ function _apViolaPrecedenze(ordine, precedenze) {
               geo:{lat,lng}|null, giorni, nOp,
               priorita, scadenzaGiorno (indice o null), dalGiorno, giorniEsclusi:[indici],
               skills:[], attestati:[], preferiti:[], esclusi:[],
-              compagni:[] (facoltativo: chi resta già sul cantiere, righe "sostituto") }]
+              compagni:[] (facoltativo: chi resta già sul cantiere, righe "sostituto"),
+              chiaviRendimento:[] (facoltativo: chiavi dell'indice di rendimento, in ordine) }]
    Output: { assegnazioni: [{rigaId, giorno, operatori:[], quota}], esiti: {rigaId: {...}},
              miglioramenti: [...], suggerimenti: [...], distanze: {stradali, stimate}, ... } */
 function apRisolvi(ctx, righe) {
@@ -495,17 +567,18 @@ function _apGreedy(ctx, pesi, ordinate) {
       if (!pt.casa && km > pesi.maxKmTrasferta) return null;
       viaggio = pt.casa && km > pesi.kmViaggioMezzaGiornata;
       s -= km * pesi.kmCosto;
+    } else if (!pt.p) {
+      s -= pesi.posizioneIgnota; // senza residenza: non deve sembrare il più vicino di tutti
     } else {
-      s -= 60; // posizione ignota: né premiato né scartato, ma dietro a chi è vicino
+      s -= 60; // cantiere non localizzato: distanza non valutabile per nessuno
     }
-    const exp = r.famiglia && ctx.modello && ctx.modello.esperienza[o.nome]
-      ? (ctx.modello.esperienza[o.nome][r.famiglia] || 0) : 0;
-    s += pesi.esperienza * Math.min(exp, 10) / 10;
+    s += apBonusEsperienza(o, r, ctx.modello, pesi);
     if (o.commessaSettimana === r.commessa) s += pesi.stessaCommessa;
     else if (o.commessaSettimana) s -= pesi.stessaCommessa / 2; // eviterebbe una seconda riga in Griglia
     if (o.staffing && o.staffing.has(r.commessa)) s += pesi.staffing;
     if (ieriSuCantiere && ieriSuCantiere.has(o.nome)) s += pesi.continuita;
     if (r.preferiti && r.preferiti.includes(o.nome)) s += 200;
+    s += apBonusRendimento(o, r, pesi.rendimento);
     return { s, km, viaggio };
   };
 
@@ -521,18 +594,12 @@ function _apGreedy(ctx, pesi, ordinate) {
     return s;
   };
 
-  /* Seniority: una squadra di 2+ persone fatta di soli junior va evitata (senior+junior o
-     senior+senior sì). Contano anche i compagni già sul cantiere (righe "sostituto").
-     Seniority non definita = nessun vincolo: la squadra non risulta "di soli junior".
-     Il livello è quello per il tipo di WO della riga (r.tipoWo) se l'operatore ne ha uno,
-     altrimenti la seniority generale. */
-  const livello = (n, r) => {
-    const o = opByNome[n];
-    if (!o) return '';
-    const s = r && r.tipoWo && o.senioritaWo ? o.senioritaWo[r.tipoWo] : '';
-    return s || o.seniorita || '';
-  };
-  const soloJunior = (nomi, r) => nomi.length >= 2 && nomi.every(n => livello(n, r) === 'junior');
+  /* Seniority: una squadra di 2+ persone deve avere un senior (senior+junior o senior+senior).
+     Contano anche i compagni già sul cantiere (righe "sostituto"). Il livello è quello sul
+     tipo di WO della riga, senza ripiego sulla seniority generale (apLivelloSeniority): chi
+     non ha un livello non conta come senior. "soloJunior" = squadra senza senior. */
+  const livello = (n, r) => apLivelloSeniority(opByNome[n], r && r.tipoWo);
+  const soloJunior = (nomi, r) => nomi.length >= 2 && !nomi.some(n => livello(n, r) === 'senior');
   /* Ordine di preferenza: senior+junior, poi senior+senior, poi junior+junior */
   const soloSenior = (nomi, r) => nomi.length >= 2 && nomi.every(n => livello(n, r) === 'senior');
 
@@ -800,8 +867,11 @@ function _apGreedy(ctx, pesi, ordinate) {
     const viaggi = [];
     const giorniSoloJunior = [];
     const meteoVisti = new Set();
+    const indici = [];
+    let opGiorni = 0;
     piano.forEach(p => {
       if (p.sq.soloJunior) giorniSoloJunior.push(AP_GIORNI[p.giorno]);
+      p.sq.scelti.forEach(v => { opGiorni++; const ri = apIndiceRendimento(v.o, r); if (ri) indici.push(ri.indice); });
       const nomi = p.sq.scelti.map(v => v.o.nome);
       p.sq.scelti.forEach(v => {
         if (v.viaggio) viaggi.push(AP_GIORNI[p.giorno] + ' ' + v.o.nome + (v.km != null ? ' (' + Math.round(v.km) + ' km da casa)' : ''));
@@ -817,6 +887,8 @@ function _apGreedy(ctx, pesi, ordinate) {
       if (mt && mt.pen > 0 && !meteoVisti.has(p.giorno)) { meteoVisti.add(p.giorno); esito.meteo.push(AP_GIORNI[p.giorno] + ': ' + mt.motivo); }
     });
     esito.giorniAssegnati = fatto;
+    /* Rendimento medio di chi ci va (operatore-giorni con un indice noto) */
+    if (indici.length) esito.rendimento = { medio: indici.reduce((a, b) => a + b, 0) / indici.length, noti: indici.length, totali: opGiorni, urgenza: apUrgenza(r) };
     esito.kmMedi = kmTot.length ? kmTot.reduce((a, b) => a + b, 0) / kmTot.length : null;
     esito.stato = residuo > 1e-6 ? 'parziale' : 'assegnato';
     if (residuo > 1e-6) esito.motivi.push('restano ' + apFmtNum(residuo) + ' gg-squadra per la settimana successiva');
@@ -831,7 +903,7 @@ function _apGreedy(ctx, pesi, ordinate) {
       esito.avvisi.push('più squadre insieme: ' + e.rinforzi.join(', '));
     }
     if (skillMancanti.size) esito.avvisi.push('skill non coperte: ' + Array.from(skillMancanti).join(', '));
-    if (giorniSoloJunior.length) esito.avvisi.push('solo junior insieme, nessun senior libero a distanza ragionevole: ' + giorniSoloJunior.join(', '));
+    if (giorniSoloJunior.length) esito.avvisi.push('nessun senior' + (r.tipoWo ? ' su ' + r.tipoWo : '') + ' in squadra (nessuno libero a distanza ragionevole): ' + giorniSoloJunior.join(', '));
     if (viaggi.length) esito.avvisi.push('viaggio da casa, mezza giornata produttiva: ' + viaggi.join(', '));
     /* Giorni saltati per allerta dentro l'arco del cantiere (o prima dell'inizio): va detto,
        altrimenti un buco nel piano sembra un errore del calcolo. */
@@ -891,6 +963,8 @@ function apDiagnostica(ctx, righe, risultato, rigaId) {
       const usi = presoDa[o.nome + '|' + d] || [];
       if (usi.includes(r.id)) { out.usatiQui++; return; }
       const voce = { nome: o.nome, km: dist == null ? null : Math.round(dist) };
+      const ri = apIndiceRendimento(o, r);
+      if (ri) voce.rendimento = Math.round(ri.indice);
       if (usi.length) { voce.cantieri = usi.map(id => righeById[id] ? 'P' + righeById[id].priorita + ' ' + righeById[id].cantiere : id); out.presiAltrove.push(voce); }
       else if ((((risultato.capacitaResidua || {})[o.nome] || {})[d] || 0) > 1e-6) out.restanoLiberi.push(voce);
     });
@@ -899,7 +973,7 @@ function apDiagnostica(ctx, righe, risultato, rigaId) {
     out.restanoLiberi.sort(perKm); out.restanoLiberi = out.restanoLiberi.slice(0, 6);
     return out;
   });
-  return { riga: r, esito: e, giorni, maxKm: pesi.maxKmTrasferta };
+  return { riga: r, esito: e, giorni, maxKm: pesi.maxKmTrasferta, pesoRendimento: pesi.rendimento ? pesi.rendimento * apUrgenza(r) : 0 };
 }
 
 /* ---------- riparazione per imprevisti ----------

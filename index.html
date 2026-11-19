@@ -2283,7 +2283,7 @@
       </span>
       <button id="btn-presentation" class="px-3 py-1.5 text-sm rounded hover:bg-white/10" style="border:1px solid var(--dark-border-strong);color:var(--dark-text);visibility:visible;">📊 Modalità presentazione</button>
       <div class="text-xs pl-2" style="border-left:1px solid var(--dark-border-strong);color:var(--dark-text-muted);">
-        <span id="app-version" class="font-medium" style="color:var(--accent);">v18.287.0</span> · Michele Marchetti
+        <span id="app-version" class="font-medium" style="color:var(--accent);">v18.288.0</span> · Michele Marchetti
         <span id="sb-role-badge" style="margin-left:8px;padding:1px 8px;border-radius:9999px;background:rgba(255,255,255,.1);color:var(--dark-text);font-weight:600;"></span>
       </div>
     </div>
@@ -33850,7 +33850,8 @@ function rsInit() {
    - Preferenze (punteggio): distanza dal punto in cui l'operatore si trova il giorno
      prima, esperienza sulla famiglia di attività, coppie che lavorano spesso insieme,
      restare sulla commessa in cui è già in Griglia, allocazione staffing del mese,
-     continuità della stessa squadra sui giorni dello stesso cantiere.
+     continuità della stessa squadra sui giorni dello stesso cantiere, rendimento
+     dell'operatore sull'attività (indice di «⚡ Prestazioni», pesato per urgenza).
    - Ordine: priorità (P1 prima), poi scadenza, poi impegno più lungo (greedy). */
 
 const AP_STOPWORDS = new Set(['rilievo', 'di', 'e', 'del', 'della', 'delle', 'the', 'con', 'per', 'a', 'da', 'in',
@@ -33956,6 +33957,7 @@ function apBuildModello(righe) {
 
   const famiglie = {};     // fam -> { km: [], nOp: [], varianti: Set, commesse: {commessa: km[]} }
   const esperienza = {};   // operatore -> { fam: giornate }
+  const esperienzaCommessa = {}; // operatore -> { commessa: giornate, 'commessa|fam': giornate }
   const coppie = {};       // "A|||B" (ordinati) -> giornate insieme
   Object.values(gruppi).forEach(g => {
     const ops = Array.from(g.ops).sort();
@@ -33965,6 +33967,11 @@ function apBuildModello(righe) {
     ops.forEach(o => {
       if (!esperienza[o]) esperienza[o] = {};
       fams.forEach(f => { esperienza[o][f] = (esperienza[o][f] || 0) + 1; });
+      if (g.commessa) {
+        const ec = esperienzaCommessa[o] || (esperienzaCommessa[o] = {});
+        ec[g.commessa] = (ec[g.commessa] || 0) + 1;
+        fams.forEach(f => { const k = g.commessa + '|' + f; ec[k] = (ec[k] || 0) + 1; });
+      }
     });
     for (let i = 0; i < ops.length; i++) for (let j = i + 1; j < ops.length; j++) {
       const k = ops[i] + '|||' + ops[j];
@@ -33993,7 +34000,7 @@ function apBuildModello(righe) {
     F.campioni = F.km.length;
     F.varianti = Array.from(F.varianti).sort();
   });
-  return { vocab, famiglie, esperienza, coppie, generato: Date.now() };
+  return { vocab, famiglie, esperienza, esperienzaCommessa, coppie, generato: Date.now() };
 }
 
 /* Famiglia del modello più simile a un testo di attività: prima la corrispondenza esatta,
@@ -34070,6 +34077,10 @@ function apFmtNum(n) {
 const AP_PESI_DEFAULT = {
   kmCosto: 1,            // punti persi per km di spostamento
   esperienza: 25,        // bonus se l'operatore ha già fatto quella famiglia (saturato)
+  esperienzaCommessa: 200,         // bonus se ha già lavorato su QUELLA commessa (saturato a 10 giornate):
+                                   // vale ~200 km a testa, chi conosce la commessa batte chi è solo più vicino
+  esperienzaCommessaAttivita: 100, // in più se su quella commessa ha fatto quell'attività
+  posizioneIgnota: 500,  // operatore senza residenza/provincia: conta come un viaggio lungo, non come vicino
   coppia: 30,            // bonus coppia abituale (saturato)
   stessaCommessa: 40,    // bonus se già in Griglia su quella commessa questa settimana
   staffing: 30,          // bonus se allocato sulla commessa nello staffing del mese
@@ -34078,6 +34089,9 @@ const AP_PESI_DEFAULT = {
   soloSenior: 80,        // penalità (leggera) per una squadra di soli senior: senior+junior è meglio,
                          // e un senior "sprecato" in coppia con un altro manca a un'altra squadra
   stessaPartenza: 40,    // bonus coppia che parte dallo stesso luogo (residenze entro AP_STESSA_PARTENZA_KM)
+  rendimento: 50,        // punti per unità di ln(indice/100), × urgenza della riga (vedi apUrgenza): indice 150
+                         // su un P1 ≈ +60, su un P3 ≈ +20; 0 = rendimento ignorato. Le penalità di
+                         // sicurezza (soloJunior) restano più forti: un junior non diventa capo per i km fatti.
   maxSquadreCantiere: 2, // squadre in parallelo sullo stesso cantiere nello stesso giorno (1 = mai rinforzi)
   ritardoGiorno: 400,    // penalità per giorno oltre la scadenza (x peso priorità)
   attesaGiorno: 8,       // penalità per giorno di attesa prima di iniziare (x peso priorità)
@@ -34089,8 +34103,8 @@ const AP_PESO_PRIORITA = { 1: 3, 2: 2, 3: 1 };
 const AP_FATTORE_STRADA = 1.3; // linea d'aria -> strada, stima prudente quando manca OSRM
 const AP_MAX_RICALCOLI = 80;   // tetto del miglioramento locale (ogni prova = un greedy completo)
 const AP_MAX_MS = 2500;
-const AP_STESSA_PARTENZA_KM = 25;
-const AP_SEMI_SQUADRA = 4;         // capisquadra provati per comporre ogni squadra (vedi scegliSquadra) // residenze più vicine di così = "stesso luogo di partenza"
+const AP_STESSA_PARTENZA_KM = 25; // residenze più vicine di così = "stesso luogo di partenza"
+const AP_SEMI_SQUADRA = 4;         // capisquadra provati per comporre ogni squadra (vedi scegliSquadra)
 
 /* Coppie di operatori con la stessa partenza (residenza / provincia), calcolate una volta per
    contesto: il greedy gira fino a 160 volte e l'affinità si valuta per ogni coppia. Cache
@@ -34107,6 +34121,62 @@ function _apStessaPartenza(ctx, a, b) {
     haversineKm(oa.base.lat, oa.base.lng, ob.base.lat, ob.base.lng) <= AP_STESSA_PARTENZA_KM);
   m.set(k, v);
   return v;
+}
+
+/* Rendimento (since v18.288.0). Gli indici vengono dalla vista «⚡ Prestazioni»
+   (prestazioni-core.js): 100 = la norma dell'attività, 125 = +25%, già al netto di compagni
+   e comuni. L'adapter li passa come dati, mai come funzioni:
+     operatori[].rendimento = { chiave: indice }   (solo indici con abbastanza giornate)
+     righe[].chiaviRendimento = [chiave, ...]       (attività della commessa, poi tipo di WO)
+   Vale la prima chiave che l'operatore ha. Chi non ha indice conta come 100 (nessun bonus,
+   nessuna penalità): in urgenza salgono solo i rendimenti provati. */
+const AP_REND_CLIP = Math.log(2);   // oltre ×2 / ÷2 l'effetto non cresce più
+
+function apIndiceRendimento(o, r) {
+  if (!o || !o.rendimento || !r || !r.chiaviRendimento) return null;
+  for (const k of r.chiaviRendimento) {
+    const v = o.rendimento[k];
+    if (v > 0) return { indice: v, chiave: k };
+  }
+  return null;
+}
+
+/* Quanto conta il rendimento su una riga: la priorità (P1 = 3, P2 = 2, P3 = 1) più 1 se
+   ha una scadenza in settimana. Su un cantiere urgente il più performante vale di più. */
+function apUrgenza(r) {
+  return (AP_PESO_PRIORITA[r.priorita] || 1) + (r.scadenzaGiorno != null ? 1 : 0);
+}
+
+function apBonusRendimento(o, r, peso) {
+  if (!peso) return 0;
+  const ri = apIndiceRendimento(o, r);
+  if (!ri) return 0;
+  const l = Math.max(-AP_REND_CLIP, Math.min(AP_REND_CLIP, Math.log(ri.indice / 100)));
+  return peso * l * apUrgenza(r);
+}
+
+/* Seniority di un operatore per una riga. Con un tipo di WO (es. «WO I.P») vale SOLO il
+   livello su quel tipo: chi non ce l'ha non conta come senior (niente ripiego sulla
+   seniority generale, since v18.288.0). Senza tipo vale la seniority generale. */
+function apLivelloSeniority(o, tipoWo) {
+  if (!o) return '';
+  if (tipoWo) return (o.senioritaWo && o.senioritaWo[tipoWo]) || '';
+  return o.seniorita || '';
+}
+
+/* Esperienza di un operatore per una riga: famiglia di attività (ovunque), commessa, e
+   commessa + attività. Saturata a 10 giornate per voce. */
+function apBonusEsperienza(o, r, modello, pesi) {
+  if (!modello || !o) return 0;
+  let s = 0;
+  const fam = r.famiglia;
+  const e = (modello.esperienza || {})[o.nome] || {};
+  const ec = (modello.esperienzaCommessa || {})[o.nome] || {};
+  const sat = n => Math.min(n || 0, 10) / 10;
+  if (fam) s += (pesi.esperienza || 0) * sat(e[fam]);
+  if (r.commessa) s += (pesi.esperienzaCommessa || 0) * sat(ec[r.commessa]);
+  if (r.commessa && fam) s += (pesi.esperienzaCommessaAttivita || 0) * sat(ec[r.commessa + '|' + fam]);
+  return s;
 }
 
 /* Ordine di partenza: priorità (P1 prima), scadenza più vicina, impegno più lungo */
@@ -34147,7 +34217,8 @@ function _apViolaPrecedenze(ordine, precedenze) {
                    seniorita: 'senior'|'junior'|'' (facoltativa, '' = nessun vincolo),
                    senioritaWo: { tipoWo: 'senior'|'junior' } (facoltativa: livello per tipo di WO,
                      vince su seniorita per le righe di quel tipo),
-                   base: {lat,lng}|null, commessaSettimana: string|null, staffing:Set(commesse) }],
+                   base: {lat,lng}|null, commessaSettimana: string|null, staffing:Set(commesse),
+                   rendimento: { chiave: indice } (facoltativo, vedi apIndiceRendimento) }],
      disp: { nome: { d: 'libero'|'ferie'|'dw'|'occupato' } },
      posizione: { nome: { d: {lat,lng,label} } },   // dove è già (celle esistenti)
      distanzaKm(a, b) -> km stradali | null,        // facoltativa: senza, linea d'aria x 1,3
@@ -34159,7 +34230,8 @@ function _apViolaPrecedenze(ordine, precedenze) {
               geo:{lat,lng}|null, giorni, nOp,
               priorita, scadenzaGiorno (indice o null), dalGiorno, giorniEsclusi:[indici],
               skills:[], attestati:[], preferiti:[], esclusi:[],
-              compagni:[] (facoltativo: chi resta già sul cantiere, righe "sostituto") }]
+              compagni:[] (facoltativo: chi resta già sul cantiere, righe "sostituto"),
+              chiaviRendimento:[] (facoltativo: chiavi dell'indice di rendimento, in ordine) }]
    Output: { assegnazioni: [{rigaId, giorno, operatori:[], quota}], esiti: {rigaId: {...}},
              miglioramenti: [...], suggerimenti: [...], distanze: {stradali, stimate}, ... } */
 function apRisolvi(ctx, righe) {
@@ -34327,17 +34399,18 @@ function _apGreedy(ctx, pesi, ordinate) {
       if (!pt.casa && km > pesi.maxKmTrasferta) return null;
       viaggio = pt.casa && km > pesi.kmViaggioMezzaGiornata;
       s -= km * pesi.kmCosto;
+    } else if (!pt.p) {
+      s -= pesi.posizioneIgnota; // senza residenza: non deve sembrare il più vicino di tutti
     } else {
-      s -= 60; // posizione ignota: né premiato né scartato, ma dietro a chi è vicino
+      s -= 60; // cantiere non localizzato: distanza non valutabile per nessuno
     }
-    const exp = r.famiglia && ctx.modello && ctx.modello.esperienza[o.nome]
-      ? (ctx.modello.esperienza[o.nome][r.famiglia] || 0) : 0;
-    s += pesi.esperienza * Math.min(exp, 10) / 10;
+    s += apBonusEsperienza(o, r, ctx.modello, pesi);
     if (o.commessaSettimana === r.commessa) s += pesi.stessaCommessa;
     else if (o.commessaSettimana) s -= pesi.stessaCommessa / 2; // eviterebbe una seconda riga in Griglia
     if (o.staffing && o.staffing.has(r.commessa)) s += pesi.staffing;
     if (ieriSuCantiere && ieriSuCantiere.has(o.nome)) s += pesi.continuita;
     if (r.preferiti && r.preferiti.includes(o.nome)) s += 200;
+    s += apBonusRendimento(o, r, pesi.rendimento);
     return { s, km, viaggio };
   };
 
@@ -34353,18 +34426,12 @@ function _apGreedy(ctx, pesi, ordinate) {
     return s;
   };
 
-  /* Seniority: una squadra di 2+ persone fatta di soli junior va evitata (senior+junior o
-     senior+senior sì). Contano anche i compagni già sul cantiere (righe "sostituto").
-     Seniority non definita = nessun vincolo: la squadra non risulta "di soli junior".
-     Il livello è quello per il tipo di WO della riga (r.tipoWo) se l'operatore ne ha uno,
-     altrimenti la seniority generale. */
-  const livello = (n, r) => {
-    const o = opByNome[n];
-    if (!o) return '';
-    const s = r && r.tipoWo && o.senioritaWo ? o.senioritaWo[r.tipoWo] : '';
-    return s || o.seniorita || '';
-  };
-  const soloJunior = (nomi, r) => nomi.length >= 2 && nomi.every(n => livello(n, r) === 'junior');
+  /* Seniority: una squadra di 2+ persone deve avere un senior (senior+junior o senior+senior).
+     Contano anche i compagni già sul cantiere (righe "sostituto"). Il livello è quello sul
+     tipo di WO della riga, senza ripiego sulla seniority generale (apLivelloSeniority): chi
+     non ha un livello non conta come senior. "soloJunior" = squadra senza senior. */
+  const livello = (n, r) => apLivelloSeniority(opByNome[n], r && r.tipoWo);
+  const soloJunior = (nomi, r) => nomi.length >= 2 && !nomi.some(n => livello(n, r) === 'senior');
   /* Ordine di preferenza: senior+junior, poi senior+senior, poi junior+junior */
   const soloSenior = (nomi, r) => nomi.length >= 2 && nomi.every(n => livello(n, r) === 'senior');
 
@@ -34632,8 +34699,11 @@ function _apGreedy(ctx, pesi, ordinate) {
     const viaggi = [];
     const giorniSoloJunior = [];
     const meteoVisti = new Set();
+    const indici = [];
+    let opGiorni = 0;
     piano.forEach(p => {
       if (p.sq.soloJunior) giorniSoloJunior.push(AP_GIORNI[p.giorno]);
+      p.sq.scelti.forEach(v => { opGiorni++; const ri = apIndiceRendimento(v.o, r); if (ri) indici.push(ri.indice); });
       const nomi = p.sq.scelti.map(v => v.o.nome);
       p.sq.scelti.forEach(v => {
         if (v.viaggio) viaggi.push(AP_GIORNI[p.giorno] + ' ' + v.o.nome + (v.km != null ? ' (' + Math.round(v.km) + ' km da casa)' : ''));
@@ -34649,6 +34719,8 @@ function _apGreedy(ctx, pesi, ordinate) {
       if (mt && mt.pen > 0 && !meteoVisti.has(p.giorno)) { meteoVisti.add(p.giorno); esito.meteo.push(AP_GIORNI[p.giorno] + ': ' + mt.motivo); }
     });
     esito.giorniAssegnati = fatto;
+    /* Rendimento medio di chi ci va (operatore-giorni con un indice noto) */
+    if (indici.length) esito.rendimento = { medio: indici.reduce((a, b) => a + b, 0) / indici.length, noti: indici.length, totali: opGiorni, urgenza: apUrgenza(r) };
     esito.kmMedi = kmTot.length ? kmTot.reduce((a, b) => a + b, 0) / kmTot.length : null;
     esito.stato = residuo > 1e-6 ? 'parziale' : 'assegnato';
     if (residuo > 1e-6) esito.motivi.push('restano ' + apFmtNum(residuo) + ' gg-squadra per la settimana successiva');
@@ -34663,7 +34735,7 @@ function _apGreedy(ctx, pesi, ordinate) {
       esito.avvisi.push('più squadre insieme: ' + e.rinforzi.join(', '));
     }
     if (skillMancanti.size) esito.avvisi.push('skill non coperte: ' + Array.from(skillMancanti).join(', '));
-    if (giorniSoloJunior.length) esito.avvisi.push('solo junior insieme, nessun senior libero a distanza ragionevole: ' + giorniSoloJunior.join(', '));
+    if (giorniSoloJunior.length) esito.avvisi.push('nessun senior' + (r.tipoWo ? ' su ' + r.tipoWo : '') + ' in squadra (nessuno libero a distanza ragionevole): ' + giorniSoloJunior.join(', '));
     if (viaggi.length) esito.avvisi.push('viaggio da casa, mezza giornata produttiva: ' + viaggi.join(', '));
     /* Giorni saltati per allerta dentro l'arco del cantiere (o prima dell'inizio): va detto,
        altrimenti un buco nel piano sembra un errore del calcolo. */
@@ -34723,6 +34795,8 @@ function apDiagnostica(ctx, righe, risultato, rigaId) {
       const usi = presoDa[o.nome + '|' + d] || [];
       if (usi.includes(r.id)) { out.usatiQui++; return; }
       const voce = { nome: o.nome, km: dist == null ? null : Math.round(dist) };
+      const ri = apIndiceRendimento(o, r);
+      if (ri) voce.rendimento = Math.round(ri.indice);
       if (usi.length) { voce.cantieri = usi.map(id => righeById[id] ? 'P' + righeById[id].priorita + ' ' + righeById[id].cantiere : id); out.presiAltrove.push(voce); }
       else if ((((risultato.capacitaResidua || {})[o.nome] || {})[d] || 0) > 1e-6) out.restanoLiberi.push(voce);
     });
@@ -34731,7 +34805,7 @@ function apDiagnostica(ctx, righe, risultato, rigaId) {
     out.restanoLiberi.sort(perKm); out.restanoLiberi = out.restanoLiberi.slice(0, 6);
     return out;
   });
-  return { riga: r, esito: e, giorni, maxKm: pesi.maxKmTrasferta };
+  return { riga: r, esito: e, giorni, maxKm: pesi.maxKmTrasferta, pesoRendimento: pesi.rendimento ? pesi.rendimento * apUrgenza(r) : 0 };
 }
 
 /* ---------- riparazione per imprevisti ----------
@@ -34874,6 +34948,594 @@ function apRiparaImpatto(celle, imprevisti, modificabili, opts) {
   });
   return { rimozioni, assenti, righe, liberati: Object.values(lib), ignorati };
 }
+/* ==================== AUTO-PIANIFICA · SQUADRE SETTIMANALI (modulo puro) ==================== */
+/* Pianificazione a SQUADRE FISSE (since v18.288.0). Regole dell'ufficio:
+   - una squadra lavora TUTTI i giorni della settimana (Lun–Ven, anche il sabato se
+     richiesto): niente giorni senza cantiere finché c'è lavoro da fare;
+   - giornate piene: un cantiere occupa giorni interi;
+   - alla stessa squadra vanno più cantieri vicini fra loro (un "giro");
+   - una squadra da 2+ deve avere un senior sul tipo di WO del lavoro, meglio senior+junior.
+   Per questo il problema non si risolve cantiere per cantiere (come _apGreedy, che resta
+   per la riparazione degli imprevisti) ma in quattro passi:
+     1. QUANTE squadre: giorni-squadra richiesti ÷ giorni della settimana, nel limite degli
+        operatori liberi TUTTA la settimana (chi ha ferie/celle in alcuni giorni resta fuori
+        e viene elencato);
+     2. GIRI: i cantieri (in ordine di priorità) vanno al giro più vicino con posto, poi si
+        migliora spostando/scambiando cantieri fra i giri (vicinanza, stessa commessa, stesso
+        tipo di WO, cantieri non spezzati);
+     3. CHI va in ogni giro: squadra composta come nel greedy (km da casa, esperienza su
+        commessa e attività, seniority sul tipo di WO, stessa partenza, rendimento), poi
+        scambi di operatori fra squadre finché il totale migliora;
+     4. ORDINE dei giorni di ogni squadra: tutte le permutazioni dei suoi cantieri (fino a
+        AP_SQ_MAX_PERM), poi scambi di giorni: km, meteo, scadenze, "non prima di".
+   Stesso formato di uscita di apRisolvi (assegnazioni, esiti, capacitaResidua…) più
+   squadre[] e riepilogo, così bozza, chat, diagnosi e "Applica" restano invariati.
+   Righe: come apRisolvi, più nSquadre (squadre in parallelo, default 1) e giorni = giorni
+   di lavoro di OGNI squadra (giorni-squadra totali = nSquadre × giorni). Deterministico. */
+
+const AP_SQ_APERTURA_KM = 120;   // un cantiere più lontano di così dai giri esistenti ne apre uno nuovo
+const AP_SQ_MISTO_COMMESSA = 40; // km-equivalenti per ogni commessa in più nello stesso giro
+const AP_SQ_MISTO_TIPO = 60;     // ... per ogni tipo di WO in più
+const AP_SQ_SPEZZATO = 100;      // ... per un cantiere diviso fra due squadre
+const AP_SQ_MAX_PERM = 7;        // fino a 7 cantieri per squadra si provano tutti gli ordini
+const AP_SQ_MAX_MS = 2500;
+const AP_SQ_FUORI_GIORNO = 5000; // un cantiere in un giorno non ammesso (allerta, prima del "dal"…)
+const AP_SQ_FRATELLI = 2000;     // due delle N squadre chieste per un cantiere nello stesso giro (= stessa squadra)
+const AP_SQ_ALLINEA = 30;        // per giorno in cui le N squadre di un cantiere non lavorano insieme
+const AP_SQ_ATTESA = 5;          // giorno vuoto prima del lavoro: meglio lasciare liberi gli ultimi giorni
+
+function apPianificaSquadre(ctx, righe) {
+  const t0 = Date.now();
+  const pesi = Object.assign({}, AP_PESI_DEFAULT, ctx.pesi || {});
+  const giorniSq = (ctx.giorni || []).filter(d => ctx.sabato || d <= 4);
+  const nG = giorniSq.length;
+  const opByNome = {};
+  ctx.operatori.forEach(o => { opByNome[o.nome] = o; });
+  const meteo = ctx.meteo || {};
+  const distanze = { stradali: 0, stimate: 0 };
+  const kmMemo = new Map();
+  const kmTra = (a, b) => {
+    if (!a || !b) return null;
+    const k = a.lat.toFixed(4) + ',' + a.lng.toFixed(4) + '>' + b.lat.toFixed(4) + ',' + b.lng.toFixed(4);
+    if (kmMemo.has(k)) return kmMemo.get(k);
+    let km = ctx.distanzaKm ? ctx.distanzaKm(a, b) : null;
+    if (km != null) distanze.stradali++;
+    else { distanze.stimate++; km = haversineKm(a.lat, a.lng, b.lat, b.lng) * AP_FATTORE_STRADA; }
+    kmMemo.set(k, km);
+    return km;
+  };
+  const kmCantieri = (a, b) => (a.geo && b.geo ? kmTra(a.geo, b.geo) : (a === b ? 0 : 60));
+  const peso = r => AP_PESO_PRIORITA[r.priorita] || 1;
+
+  /* ---- esiti iniziali ---- */
+  const esiti = {};
+  righe.forEach(r => {
+    const N = Math.max(1, Math.round(r.nSquadre || 1));
+    const G = Math.max(1, Math.ceil((r.giorni || 1) - 1e-9));
+    esiti[r.id] = { stato: 'non_assegnato', motivi: [], giorniAssegnati: 0, richiesti: N * G, giorniUsati: [],
+      kmMedi: null, avvisi: [], meteo: [], oltreScadenza: false, squadre: [] };
+    if (!r.geo) esiti[r.id].avvisi.push('cantiere non localizzato: distanze non valutate');
+  });
+  const vuoto = extra => Object.assign({ assegnazioni: [], esiti, operatoriSuPiuCommesse: [], capacitaResidua: {},
+    valore: 0, distanze, miglioramenti: [], suggerimenti: [], ordine: righe.map(r => r.id), ricalcoli: 0,
+    squadre: [], riepilogo: { squadre: 0, giorniLiberi: 0, nonPianificati: 0, parziali: [], inutilizzati: 0 } }, extra || {});
+  if (!nG) {
+    righe.forEach(r => esiti[r.id].motivi.push('nessun giorno utile in settimana'));
+    return vuoto();
+  }
+  const isoUltimo = ctx.giorniISO[giorniSq[nG - 1]];
+
+  /* ---- 1. operatori liberi tutta la settimana ---- */
+  const stato = (n, d) => ((ctx.disp[n] || {})[d]) || 'libero';
+  const liberoSempre = o => giorniSq.every(d => stato(o.nome, d) === 'libero') &&
+    !(o.fineRapporto && isoUltimo && o.fineRapporto < isoUltimo);
+  const pool = ctx.operatori.filter(liberoSempre).map(o => o.nome);
+  const parziali = ctx.operatori.filter(o => !liberoSempre(o) && giorniSq.some(d => stato(o.nome, d) === 'libero')).map(o => o.nome);
+
+  /* ---- lavori: nSquadre lavori da G giorni per riga, giorni ammessi per ciascuno ---- */
+  const ordine = apApplicaPrecedenze(apOrdineBase(righe), ctx.precedenze);
+  const lavori = [];
+  const residuoSettimana = {};
+  ordine.forEach((r, idx) => {
+    const N = Math.max(1, Math.round(r.nSquadre || 1));
+    const G = Math.max(1, Math.ceil((r.giorni || 1) - 1e-9));
+    const M = meteo[r.id] || {};
+    const ammessi = giorniSq.filter(d => d >= (r.dalGiorno || 0) && !(r.giorniEsclusi || []).includes(d) && !(M[d] && M[d].blocco));
+    const bloccati = giorniSq.filter(d => M[d] && M[d].blocco);
+    if (bloccati.length) esiti[r.id].avvisi.push('evitati per allerta meteo: ' + bloccati.map(d => AP_GIORNI[d] + ' (' + M[d].motivo + ')').join(', '));
+    for (let i = 0; i < N; i++) {
+      const gg = Math.min(G, ammessi.length);
+      if (G > gg) residuoSettimana[r.id] = (residuoSettimana[r.id] || 0) + (G - gg);
+      if (gg > 0) lavori.push({ id: r.id + '#' + i, r, giorni: gg, ordine: idx, ammessi: new Set(ammessi), nOp: Math.max(1, r.nOp || 2), nSq: N });
+    }
+    if (!ammessi.length) esiti[r.id].motivi.push('nessun giorno utile (vincoli "non prima di"/giorni esclusi/allerte)');
+  });
+
+  /* ---- costo di un giro (indice di compattezza, in km-equivalenti) ---- */
+  const costoGiro = pezzi => {
+    if (!pezzi.length) return 0;
+    // giro "nearest neighbour" dal pezzo più grande: approssima i km fra un cantiere e l'altro
+    const resto = pezzi.slice().sort((a, b) => b.giorni - a.giorni || (a.lavoro.id < b.lavoro.id ? -1 : 1));
+    let cur = resto.shift();
+    let km = 0;
+    while (resto.length) {
+      let bi = 0, bk = Infinity;
+      resto.forEach((p, i) => { const k = kmCantieri(cur.lavoro.r, p.lavoro.r); if (k < bk) { bk = k; bi = i; } });
+      km += bk;
+      cur = resto.splice(bi, 1)[0];
+    }
+    const commesse = new Set(pezzi.map(p => p.lavoro.r.commessa));
+    const tipi = new Set(pezzi.map(p => p.lavoro.r.tipoWo || ''));
+    const righeNelGiro = pezzi.map(p => p.lavoro.r.id);
+    const fratelli = righeNelGiro.length - new Set(righeNelGiro).size;
+    return km + (commesse.size - 1) * AP_SQ_MISTO_COMMESSA + (tipi.size - 1) * AP_SQ_MISTO_TIPO + fratelli * AP_SQ_FRATELLI;
+  };
+  const usati = g => g.pezzi.reduce((t, p) => t + p.giorni, 0);
+  const spezzati = giri => {
+    const dove = {};
+    giri.forEach((g, gi) => g.pezzi.forEach(p => { (dove[p.lavoro.id] = dove[p.lavoro.id] || new Set()).add(gi); }));
+    return Object.values(dove).reduce((t, s) => t + (s.size - 1), 0);
+  };
+  const costoTotale = giri => giri.reduce((t, g) => t + costoGiro(g.pezzi), 0) + spezzati(giri) * AP_SQ_SPEZZATO;
+
+  const assegnazioni = [];
+  const squadre = [];
+  const viaggioRiga = {};   // rigaId -> giornate perse per il viaggio da casa
+  const nonPianificati = {};
+  const cap = {};
+  ctx.operatori.forEach(o => { cap[o.nome] = {}; (ctx.giorni || []).forEach(d => { cap[o.nome][d] = stato(o.nome, d) === 'libero' ? 1 : 0; }); });
+  const liberi = new Set(pool);
+  let valore = 0;
+  let giorniLiberiTot = 0;
+
+  /* Classi per persone per squadra (2, 1…): si comincia da quella con più lavoro pesato */
+  const classi = {};
+  lavori.forEach(l => { (classi[l.nOp] = classi[l.nOp] || []).push(l); });
+  const ordineClassi = Object.keys(classi).map(Number).sort((a, b) => {
+    const v = s => classi[s].reduce((t, l) => t + l.giorni * peso(l.r), 0);
+    return v(b) - v(a) || b - a;
+  });
+
+  ordineClassi.forEach(s => {
+    const lav = classi[s];
+    const W = lav.reduce((t, l) => t + l.giorni, 0);
+    const K = Math.min(Math.ceil(W / nG), Math.floor(liberi.size / s));
+    if (K <= 0) {
+      lav.forEach(l => {
+        nonPianificati[l.r.id] = (nonPianificati[l.r.id] || 0) + l.giorni;
+        const m = 'nessuna squadra da ' + s + ' libera tutta la settimana (' + liberi.size + ' operatori liberi tutti i giorni)';
+        if (!esiti[l.r.id].motivi.includes(m)) esiti[l.r.id].motivi.push(m);
+      });
+      return;
+    }
+
+    /* ---- 2. giri ---- */
+    const giri = [];
+    for (let k = 0; k < K; k++) giri.push({ pezzi: [] });
+    /* A parità di priorità entrano prima i cantieri con più squadre: le N squadre devono finire in giri diversi, e se gli altri cantieri hanno già occupato i posti non ci riescono più */
+    lav.slice().sort((a, b) => (a.r.priorita || 3) - (b.r.priorita || 3) || b.nSq - a.nSq || a.ordine - b.ordine || b.giorni - a.giorni).forEach(l => {
+      let resto = l.giorni;
+      while (resto > 0) {
+        let best = null;
+        giri.forEach(g => {
+          const libero = nG - usati(g);
+          if (libero <= 0) return;
+          let c;
+          if (!g.pezzi.length) c = AP_SQ_APERTURA_KM;
+          else {
+            c = Math.min.apply(null, g.pezzi.map(p => kmCantieri(p.lavoro.r, l.r)));
+            if (!g.pezzi.some(p => p.lavoro.r.commessa === l.r.commessa)) c += AP_SQ_MISTO_COMMESSA;
+            if (!g.pezzi.some(p => (p.lavoro.r.tipoWo || '') === (l.r.tipoWo || ''))) c += AP_SQ_MISTO_TIPO;
+          }
+          if (libero < resto) c += AP_SQ_SPEZZATO;
+          if (g.pezzi.some(p => p.lavoro.r === l.r && p.lavoro !== l)) c += AP_SQ_FRATELLI;
+          if (!best || c < best.c - 1e-9) best = { g, c, libero };
+        });
+        if (!best) break;
+        const gg = Math.min(resto, best.libero);
+        const gia = best.g.pezzi.find(p => p.lavoro === l);
+        if (gia) gia.giorni += gg; else best.g.pezzi.push({ lavoro: l, giorni: gg });
+        resto -= gg;
+      }
+      if (resto > 0) {
+        nonPianificati[l.r.id] = (nonPianificati[l.r.id] || 0) + resto;
+        const m = 'squadre piene con cantieri a priorità più alta: ' + apFmtNum(resto) + ' gg-squadra non pianificati';
+        esiti[l.r.id].motivi.push(m);
+      }
+    });
+
+    /* miglioramento dei giri: sposta un pezzo, o scambia due pezzi, se il costo scende */
+    const unisci = g => {
+      const m = new Map();
+      g.pezzi.forEach(p => { if (m.has(p.lavoro)) m.get(p.lavoro).giorni += p.giorni; else m.set(p.lavoro, { lavoro: p.lavoro, giorni: p.giorni }); });
+      g.pezzi = Array.from(m.values());
+    };
+    let attuale = costoTotale(giri);
+    let migliora = true;
+    while (migliora && Date.now() - t0 < AP_SQ_MAX_MS * 0.4) {
+      migliora = false;
+      for (let a = 0; a < giri.length && !migliora; a++) {
+        for (let pi = 0; pi < giri[a].pezzi.length && !migliora; pi++) {
+          const p = giri[a].pezzi[pi];
+          for (let b = 0; b < giri.length && !migliora; b++) {
+            if (b === a) continue;
+            // sposta
+            if (nG - usati(giri[b]) >= p.giorni) {
+              const prima = [giri[a].pezzi, giri[b].pezzi];
+              giri[a].pezzi = prima[0].filter(x => x !== p);
+              giri[b].pezzi = prima[1].concat([{ lavoro: p.lavoro, giorni: p.giorni }]);
+              unisci(giri[b]);
+              const c = costoTotale(giri);
+              if (c < attuale - 1) { attuale = c; migliora = true; break; }
+              giri[a].pezzi = prima[0]; giri[b].pezzi = prima[1];
+            }
+            // scambia
+            for (let qi = 0; qi < giri[b].pezzi.length && !migliora; qi++) {
+              const q = giri[b].pezzi[qi];
+              if (q.lavoro === p.lavoro) continue;
+              if (usati(giri[a]) - p.giorni + q.giorni > nG || usati(giri[b]) - q.giorni + p.giorni > nG) continue;
+              const prima = [giri[a].pezzi, giri[b].pezzi];
+              giri[a].pezzi = prima[0].filter(x => x !== p).concat([{ lavoro: q.lavoro, giorni: q.giorni }]);
+              giri[b].pezzi = prima[1].filter(x => x !== q).concat([{ lavoro: p.lavoro, giorni: p.giorni }]);
+              unisci(giri[a]); unisci(giri[b]);
+              const c = costoTotale(giri);
+              if (c < attuale - 1) { attuale = c; migliora = true; break; }
+              giri[a].pezzi = prima[0]; giri[b].pezzi = prima[1];
+            }
+          }
+        }
+      }
+    }
+
+    /* ---- 3. chi va in ogni giro ---- */
+    const giorniGiro = g => usati(g) || 1;
+    const individuale = (nome, g) => {
+      const o = opByNome[nome];
+      let sc = 0;
+      for (const p of g.pezzi) {
+        const r = p.lavoro.r;
+        if ((r.esclusi || []).includes(nome)) return null;
+        if ((r.attestati || []).some(a => !o.attestatiValidi(a, isoUltimo))) return null;
+      }
+      // km da casa al cantiere del giro più vicino (il lunedì si parte da lì)
+      const geos = g.pezzi.map(p => p.lavoro.r.geo).filter(Boolean);
+      if (!o.base) sc -= pesi.posizioneIgnota;
+      else if (geos.length) sc -= Math.min.apply(null, geos.map(x => kmTra(o.base, x))) * pesi.kmCosto;
+      else sc -= 60;
+      g.pezzi.forEach(p => {
+        const r = p.lavoro.r;
+        const w = p.giorni / giorniGiro(g);
+        let v = apBonusEsperienza(o, r, ctx.modello, pesi) + apBonusRendimento(o, r, pesi.rendimento);
+        if (o.staffing && o.staffing.has(r.commessa)) v += pesi.staffing;
+        if ((r.preferiti || []).includes(nome)) v += 200;
+        sc += v * w;
+      });
+      return sc;
+    };
+    const valutaSquadra = (nomi, g) => {
+      let sc = 0;
+      for (const n of nomi) { const v = individuale(n, g); if (v == null) return null; sc += v; }
+      for (let i = 0; i < nomi.length; i++) for (let j = i + 1; j < nomi.length; j++) {
+        if (ctx.modello) {
+          const k = nomi[i] < nomi[j] ? nomi[i] + '|||' + nomi[j] : nomi[j] + '|||' + nomi[i];
+          sc += pesi.coppia * Math.min(ctx.modello.coppie[k] || 0, 10) / 10;
+        }
+        if (pesi.stessaPartenza && _apStessaPartenza(ctx, nomi[i], nomi[j])) sc += pesi.stessaPartenza;
+      }
+      if (nomi.length >= 2) {
+        g.pezzi.forEach(p => {
+          const w = p.giorni / giorniGiro(g);
+          const liv = nomi.map(n => apLivelloSeniority(opByNome[n], p.lavoro.r.tipoWo));
+          if (!liv.includes('senior')) sc -= pesi.soloJunior * w;
+          else if (liv.every(x => x === 'senior')) sc -= pesi.soloSenior * w;
+        });
+      }
+      const skill = new Set();
+      g.pezzi.forEach(p => (p.lavoro.r.skills || []).forEach(k => skill.add(k)));
+      skill.forEach(k => { if (nomi.some(n => opByNome[n].skills && opByNome[n].skills.has(k))) sc += 80; });
+      return sc;
+    };
+    const pesoGiro = g => g.pezzi.reduce((t, p) => t + p.giorni * peso(p.lavoro.r) + (p.lavoro.r.scadenzaGiorno != null ? 1 : 0), 0);
+    const giriAttivi = giri.filter(g => g.pezzi.length).sort((a, b) => pesoGiro(b) - pesoGiro(a));
+    giriAttivi.forEach(g => {
+      const cand = Array.from(liberi).filter(n => individuale(n, g) != null);
+      if (cand.length < s) { g.squadra = null; return; }
+      const indiv = {};
+      cand.forEach(n => { indiv[n] = individuale(n, g); });
+      const semi = cand.slice().sort((a, b) => indiv[b] - indiv[a] || (a < b ? -1 : 1)).slice(0, s > 1 ? Math.max(AP_SEMI_SQUADRA, 6) : 1);
+      let migliore = null;
+      semi.forEach(seme => {
+        const nomi = [seme];
+        while (nomi.length < s) {
+          let bn = null, bv = -Infinity;
+          cand.forEach(n => {
+            if (nomi.includes(n)) return;
+            const v = valutaSquadra(nomi.concat([n]), g);
+            if (v != null && (v > bv || (v === bv && bn && n < bn))) { bv = v; bn = n; }
+          });
+          if (!bn) break;
+          nomi.push(bn);
+        }
+        if (nomi.length < s) return;
+        const v = valutaSquadra(nomi, g);
+        if (v != null && (!migliore || v > migliore.v + 1e-9)) migliore = { nomi, v };
+      });
+      if (!migliore) { g.squadra = null; return; }
+      g.squadra = migliore.nomi;
+      migliore.nomi.forEach(n => liberi.delete(n));
+    });
+
+    /* scambi di operatori fra squadre (e con chi è rimasto libero) se il totale sale */
+    const conSquadra = giriAttivi.filter(g => g.squadra);
+    const totale = () => conSquadra.reduce((t, g) => t + (valutaSquadra(g.squadra, g) || -1e9), 0);
+    let tot = totale();
+    migliora = true;
+    while (migliora && Date.now() - t0 < AP_SQ_MAX_MS * 0.8) {
+      migliora = false;
+      for (let a = 0; a < conSquadra.length && !migliora; a++) {
+        const A = conSquadra[a];
+        for (let i = 0; i < A.squadra.length && !migliora; i++) {
+          const x = A.squadra[i];
+          // con un libero
+          for (const u of Array.from(liberi)) {
+            A.squadra[i] = u;
+            const v = totale();
+            if (v > tot + 1) { tot = v; liberi.delete(u); liberi.add(x); migliora = true; break; }
+            A.squadra[i] = x;
+          }
+          if (migliora) break;
+          // con un membro di un'altra squadra
+          for (let b = a + 1; b < conSquadra.length && !migliora; b++) {
+            const B = conSquadra[b];
+            for (let j = 0; j < B.squadra.length; j++) {
+              const y = B.squadra[j];
+              A.squadra[i] = y; B.squadra[j] = x;
+              const v = totale();
+              if (v > tot + 1) { tot = v; migliora = true; break; }
+              A.squadra[i] = x; B.squadra[j] = y;
+            }
+          }
+        }
+      }
+    }
+
+    /* giri senza squadra: il loro lavoro non è pianificato */
+    giriAttivi.filter(g => !g.squadra).forEach(g => g.pezzi.forEach(p => {
+      nonPianificati[p.lavoro.r.id] = (nonPianificati[p.lavoro.r.id] || 0) + p.giorni;
+      const m = 'nessuna squadra da ' + s + ' componibile per questo giro (esclusi, attestati o operatori finiti)';
+      if (!esiti[p.lavoro.r.id].motivi.includes(m)) esiti[p.lavoro.r.id].motivi.push(m);
+    }));
+
+    /* ---- 4. ordine dei giorni di ogni squadra ---- */
+    const giorniRiga = {};   // rigaId -> Set(giorni) già fissati da altre squadre (per allineare le N squadre)
+    conSquadra.forEach(g => {
+      const membri = g.squadra.map(n => opByNome[n]);
+      const pezzi = g.pezzi.slice();
+      const costoGiorni = arr => {
+        let c = 0;
+        let prec = null;
+        let partito = false;
+        arr.forEach((p, i) => {
+          const d = giorniSq[i];
+          if (!p) { if (!partito) c += AP_SQ_ATTESA * (nG - i); prec = null; return; }
+          const r = p.lavoro.r;
+          const altri = giorniRiga[r.id];
+          if (p.lavoro.nSq > 1 && altri && altri.size && !altri.has(d)) c += AP_SQ_ALLINEA;
+          if (!p.lavoro.ammessi.has(d)) c += AP_SQ_FUORI_GIORNO;
+          const mt = (meteo[r.id] || {})[d];
+          if (mt && mt.pen) c += mt.pen;
+          if (r.scadenzaGiorno != null && d > r.scadenzaGiorno) c += pesi.ritardoGiorno * peso(r);
+          if (!partito) membri.forEach(o => { const k = o.base && r.geo ? kmTra(o.base, r.geo) : null; c += k == null ? 60 : k * pesi.kmCosto; });
+          else if (prec && prec !== p) {
+            const k = kmCantieri(prec.lavoro.r, r);
+            c += k * membri.length * pesi.kmCosto;
+            if (k > pesi.maxKmTrasferta) c += 300;
+            // tornare su un cantiere già lasciato costa un trasferimento in più
+            if (arr.slice(0, i).includes(p)) c += 80;
+          }
+          prec = p;
+          partito = true;
+        });
+        return c;
+      };
+      const espandi = ord => { const arr = []; ord.forEach(p => { for (let k = 0; k < p.giorni; k++) arr.push(p); }); while (arr.length < nG) arr.push(null); return arr; };
+      let migliore = null;
+      if (pezzi.length <= AP_SQ_MAX_PERM) {
+        const perm = (resto, pref) => {
+          if (!resto.length) {
+            const arr = espandi(pref);
+            const c = costoGiorni(arr);
+            if (!migliore || c < migliore.c - 1e-9) migliore = { arr, c };
+            return;
+          }
+          resto.forEach((p, i) => perm(resto.slice(0, i).concat(resto.slice(i + 1)), pref.concat([p])));
+        };
+        perm(pezzi, []);
+      } else {
+        // tanti cantieri: dal più vicino a casa, poi il più vicino al precedente
+        const resto = pezzi.slice();
+        const ord = [];
+        let cur = null;
+        while (resto.length) {
+          let bi = 0, bk = Infinity;
+          resto.forEach((p, i) => {
+            const k = cur ? kmCantieri(cur.lavoro.r, p.lavoro.r)
+              : membri.reduce((t, o) => t + (o.base && p.lavoro.r.geo ? kmTra(o.base, p.lavoro.r.geo) : 60), 0);
+            if (k < bk) { bk = k; bi = i; }
+          });
+          cur = resto.splice(bi, 1)[0];
+          ord.push(cur);
+        }
+        const arr = espandi(ord);
+        migliore = { arr, c: costoGiorni(arr) };
+      }
+      // scambi di giorni (anche spezzando un cantiere attorno a un giorno di pioggia)
+      let arr = migliore.arr, c0 = migliore.c, ok = true;
+      while (ok) {
+        ok = false;
+        for (let i = 0; i < nG && !ok; i++) for (let j = i + 1; j < nG && !ok; j++) {
+          if (arr[i] === arr[j]) continue;
+          const t = arr.slice(); t[i] = arr[j]; t[j] = arr[i];
+          const c = costoGiorni(t);
+          if (c < c0 - 1) { arr = t; c0 = c; ok = true; }
+        }
+      }
+      g.giorni = arr;
+      arr.forEach((p, i) => { if (p) (giorniRiga[p.lavoro.r.id] = giorniRiga[p.lavoro.r.id] || new Set()).add(giorniSq[i]); });
+    });
+
+    /* ---- uscita per questa classe ---- */
+    conSquadra.forEach(g => {
+      const id = 'S' + (squadre.length + 1);
+      const membri = g.squadra.map(n => opByNome[n]);
+      const avvisi = [];
+      const piano = {};
+      let kmSettimana = 0;
+      let prec = null;
+      let partito = false;
+      g.giorni.forEach((p, i) => {
+        const d = giorniSq[i];
+        if (!p) { piano[d] = null; return; }
+        const r = p.lavoro.r;
+        piano[d] = r.id;
+        const a = { rigaId: r.id, giorno: d, operatori: g.squadra.slice(), quota: 1, squadra: id };
+        let prod = 1;
+        if (!partito) {
+          partito = true;
+          const viaggiatori = membri.filter(o => o.base && r.geo && kmTra(o.base, r.geo) > pesi.kmViaggioMezzaGiornata);
+          membri.forEach(o => { if (o.base && r.geo) kmSettimana += kmTra(o.base, r.geo); });
+          if (viaggiatori.length) {
+            a.viaggio = viaggiatori.map(o => o.nome);
+            prod = 0.5;
+            a.produttivo = 0.5;
+            viaggioRiga[r.id] = (viaggioRiga[r.id] || 0) + 0.5;
+            esiti[r.id].avvisi.push('viaggio da casa, mezza giornata produttiva: ' + AP_GIORNI[d] + ' ' +
+              viaggiatori.map(o => o.nome + ' (' + Math.round(kmTra(o.base, r.geo)) + ' km da casa)').join(', '));
+          }
+        } else if (prec && prec !== p) {
+          const k = kmCantieri(prec.lavoro.r, r);
+          kmSettimana += k * membri.length;
+          if (k > pesi.maxKmTrasferta) avvisi.push(AP_GIORNI[d] + ': ' + Math.round(k) + ' km dal cantiere precedente (oltre ' + pesi.maxKmTrasferta + ')');
+        }
+        if (!p.lavoro.ammessi.has(d)) avvisi.push(AP_GIORNI[d] + ' su ' + r.cantiere + ' in un giorno non ammesso (allerta o vincolo): nessuna alternativa nel giro');
+        const mt = (meteo[r.id] || {})[d];
+        if (mt && mt.pen > 0) esiti[r.id].meteo.push(AP_GIORNI[d] + ': ' + mt.motivo);
+        assegnazioni.push(a);
+        const e = esiti[r.id];
+        e.giorniAssegnati += prod;
+        if (!e.giorniUsati.includes(d)) e.giorniUsati.push(d);
+        if (!e.squadre.includes(id)) e.squadre.push(id);
+        valore += prod * pesi.giornoFatto * peso(r);
+        g.squadra.forEach(n => { cap[n][d] = 0; });
+        prec = p;
+      });
+      const liberiGg = giorniSq.filter(d => piano[d] == null);
+      giorniLiberiTot += liberiGg.length;
+      if (liberiGg.length) avvisi.push('senza cantiere: ' + liberiGg.map(d => AP_GIORNI[d]).join(', ') + ' — aggiungi cantieri vicini per riempire la settimana');
+      // seniority per tipo di WO del giro
+      const tipi = new Set(g.pezzi.map(p => p.lavoro.r.tipoWo || ''));
+      if (g.squadra.length >= 2) tipi.forEach(t => {
+        const liv = membri.map(o => apLivelloSeniority(o, t));
+        if (!liv.includes('senior')) {
+          const msg = 'nessun senior' + (t ? ' su ' + t : '') + ' in squadra';
+          avvisi.push(msg);
+          g.pezzi.filter(p => (p.lavoro.r.tipoWo || '') === t).forEach(p => {
+            const m2 = msg + ' (' + id + ': ' + g.squadra.join(' + ') + ')';
+            if (!esiti[p.lavoro.r.id].avvisi.includes(m2)) esiti[p.lavoro.r.id].avvisi.push(m2);
+          });
+        }
+      });
+      const senzaCasa = membri.filter(o => !o.base).map(o => o.nome);
+      if (senzaCasa.length) avvisi.push('residenza mancante in anagrafica: ' + senzaCasa.join(', ') + ' (km da casa non valutati)');
+      const skill = new Set();
+      g.pezzi.forEach(p => (p.lavoro.r.skills || []).forEach(k => skill.add(k)));
+      const mancanti = Array.from(skill).filter(k => !membri.some(o => o.skills && o.skills.has(k)));
+      if (mancanti.length) g.pezzi.forEach(p => {
+        const m = 'skill non coperte: ' + mancanti.filter(k => (p.lavoro.r.skills || []).includes(k)).join(', ');
+        if (m !== 'skill non coperte: ' && !esiti[p.lavoro.r.id].avvisi.includes(m)) esiti[p.lavoro.r.id].avvisi.push(m);
+      });
+      valore -= kmSettimana * pesi.kmCosto;
+      squadre.push({ id, nome: 'Squadra ' + (squadre.length + 1), operatori: g.squadra.slice(), persone: s,
+        piano, kmSettimana: Math.round(kmSettimana), avvisi,
+        commesse: Array.from(new Set(g.pezzi.map(p => p.lavoro.r.commessa))),
+        cantieri: Array.from(new Set(g.pezzi.map(p => p.lavoro.r.cantiere))) });
+    });
+  });
+
+  /* ---- esiti finali ---- */
+  righe.forEach(r => {
+    const e = esiti[r.id];
+    e.giorniUsati.sort((a, b) => a - b);
+    const residuo = Math.max(0, e.richiesti - e.giorniAssegnati);
+    if (e.giorniAssegnati <= 1e-6) e.stato = 'non_assegnato';
+    else e.stato = residuo > 1e-6 ? 'parziale' : 'assegnato';
+    if (e.stato !== 'non_assegnato' && residuo > 1e-6) {
+      const fuori = residuoSettimana[r.id] || 0;
+      const viaggio = viaggioRiga[r.id] || 0;
+      const perche = [];
+      if (viaggio) perche.push(apFmtNum(viaggio) + ' persa per il viaggio del primo giorno');
+      if (fuori) perche.push(apFmtNum(fuori) + ' non stanno nei giorni utili di questa');
+      e.motivi.push('restano ' + apFmtNum(residuo) + ' gg-squadra per la settimana successiva' + (perche.length ? ' (' + perche.join('; ') + ')' : ''));
+    } else if (e.stato === 'non_assegnato' && !e.motivi.length) {
+      e.motivi.push('non pianificato');
+    }
+    if (r.scadenzaGiorno != null && e.giorniUsati.length && e.giorniUsati[e.giorniUsati.length - 1] > r.scadenzaGiorno) {
+      e.oltreScadenza = true;
+      e.avvisi.push('finisce oltre la scadenza');
+    }
+    if (e.meteo.length) e.avvisi.push('meteo sfavorevole: ' + e.meteo.join(', '));
+    if (e.squadre.length > 1) e.avvisi.push('lavorato da ' + e.squadre.length + ' squadre: ' + e.squadre.join(', '));
+    if (residuo > 1e-6) valore -= residuo * pesi.ritardoGiorno * peso(r);
+  });
+
+  /* km medi per riga (dal cantiere precedente o da casa) e operatori su più commesse */
+  const perOp = {};
+  assegnazioni.forEach(a => a.operatori.forEach(n => {
+    const r = righe.find(x => x.id === a.rigaId);
+    (perOp[n] = perOp[n] || new Set()).add(r.commessa);
+  }));
+  squadre.forEach(sq => {
+    const kmRiga = {};
+    let prevR = null;
+    let partito = false;
+    giorniSq.forEach(d => {
+      const rid = sq.piano[d];
+      if (!rid) { prevR = null; return; }
+      const r = righe.find(x => x.id === rid);
+      const membri = sq.operatori.map(n => opByNome[n]);
+      let k = null;
+      if (!partito) k = membri.reduce((t, o) => t + (o.base && r.geo ? kmTra(o.base, r.geo) : 0), 0) / membri.length;
+      else if (prevR && prevR !== r) k = kmCantieri(prevR, r);
+      if (k != null) (kmRiga[rid] = kmRiga[rid] || []).push(k);
+      prevR = r;
+      partito = true;
+    });
+    Object.keys(kmRiga).forEach(rid => {
+      const e = esiti[rid];
+      const tutti = (e._km || []).concat(kmRiga[rid]);
+      e._km = tutti;
+      e.kmMedi = tutti.reduce((a, b) => a + b, 0) / tutti.length;
+    });
+  });
+  Object.values(esiti).forEach(e => { delete e._km; });
+
+  return vuoto({
+    assegnazioni,
+    operatoriSuPiuCommesse: Object.keys(perOp).filter(n => perOp[n].size > 1),
+    capacitaResidua: cap,
+    valore,
+    squadre,
+    riepilogo: {
+      squadre: squadre.length,
+      giorniLiberi: giorniLiberiTot,
+      nonPianificati: Object.values(nonPianificati).reduce((a, b) => a + b, 0),
+      parziali,
+      inutilizzati: Array.from(liberi).length,
+      giorni: giorniSq.slice(),
+      ms: Date.now() - t0
+    }
+  });
+}
 /* ==================== AUTO-PIANIFICA (tab Pianificazione settimanale) ==================== */
 /* Da una lista di cantieri con priorità produce una BOZZA della Griglia della settimana
    mostrata, la fa rivedere e solo su conferma la scrive in pwData (annullabile).
@@ -34897,7 +35559,7 @@ let _ap = {
   bozza: null,          // { anno, week, risultato, righeSolver, creata }
   modello: null,
   modelloInfo: '',
-  opzioni: { sabato: false, maxKm: 250, meteo: true, maxSquadre: 2 },
+  opzioni: { sabato: false, maxKm: 250, meteo: true, maxSquadre: 2, rendimento: true },
   precedenze: [],       // [[primaId, dopoId]] scelte dall'utente dai suggerimenti
   stato: { msg: '', err: false },
   toccate: new Set(),   // righe modificate dall'assistente nell'ultima risposta (evidenziate)
@@ -34957,7 +35619,7 @@ function _apCaricaLocale() {
     const s = all[_apWkKey(_ap.anno, _ap.week)];
     if (s) {
       _ap.righe = Array.isArray(s.righe) ? s.righe : [];
-      if (s.opzioni) _ap.opzioni = Object.assign({ sabato: false, maxKm: 250, meteo: true, maxSquadre: 2 }, s.opzioni);
+      if (s.opzioni) _ap.opzioni = Object.assign({ sabato: false, maxKm: 250, meteo: true, maxSquadre: 2, rendimento: true }, s.opzioni);
       if (Array.isArray(s.precedenze)) _ap.precedenze = s.precedenze;
       if (Array.isArray(s.imprevisti)) _ap.imprevisti = s.imprevisti;
     }
@@ -34992,6 +35654,7 @@ const AP_COLONNE = {
   km: ['km', 'km da rilevare', 'km rilevare', 'quantita', 'estensione', 'lunghezza'],
   giorni: ['giorni', 'gg', 'gg squadra', 'giorni squadra', 'giorni-squadra', 'durata'],
   nOp: ['operatori', 'n operatori', 'persone', 'n. operatori', 'op'],
+  nSquadre: ['squadre', 'n squadre', 'n. squadre', 'numero squadre', 'sq'],
   priorita: ['priorita', 'priorità', 'p', 'prio'],
   scadenza: ['scadenza', 'entro', 'deadline', 'data priorita'],
   dal: ['dal', 'non prima di', 'inizio', 'da'],
@@ -35019,7 +35682,7 @@ function _apDaTabella(tab, fonte) {
   if (mappa.filter(Boolean).length >= 2) {
     dati = rows.slice(1);
   } else {
-    mappa = ['cantiere', 'commessa', 'attivita', 'km', 'giorni', 'nOp', 'priorita', 'scadenza', 'dal', 'skills', 'preferiti', 'esclusi', 'note'];
+    mappa = ['cantiere', 'commessa', 'attivita', 'km', 'giorni', 'nOp', 'priorita', 'scadenza', 'dal', 'skills', 'preferiti', 'esclusi', 'note', 'nSquadre'];
   }
   return dati.map(r => {
     const o = {};
@@ -35100,6 +35763,7 @@ function apNormRiga(o, fonte) {
     km: _apNum(o.km),
     giorniManuali: _apNum(o.giorni),
     nOp: _apNum(o.nOp) ? Math.max(1, Math.round(_apNum(o.nOp))) : null,
+    nSquadre: _apNum(o.nSquadre) ? Math.max(1, Math.min(6, Math.round(_apNum(o.nSquadre)))) : null,
     priorita: typeof o.priorita === 'number' && o.priorita >= 1 && o.priorita <= 3 ? o.priorita : _apPriorita(o.priorita),
     scadenza: _apData(o.scadenza),
     dal: _apData(o.dal),
@@ -35194,8 +35858,8 @@ function _apRigheSettimanaPrecedente() {
 }
 
 function apScaricaModello() {
-  const intest = ['Cantiere', 'Commessa', 'Attività', 'Km', 'Giorni', 'Operatori', 'Priorità', 'Scadenza', 'Dal', 'Skill', 'Preferiti', 'Esclusi', 'Note'];
-  const es = ['Ivrea', pwGetCommesseValide()[0] || 'Nome commessa', 'Rilievo WO Fognatura', 12, '', 2, 'P1', '', '', '', '', '', 'giorni vuoto = stima dallo storico'];
+  const intest = ['Cantiere', 'Commessa', 'Attività', 'Km', 'Giorni', 'Operatori', 'Priorità', 'Scadenza', 'Dal', 'Skill', 'Preferiti', 'Esclusi', 'Note', 'Squadre'];
+  const es = ['Ivrea', pwGetCommesseValide()[0] || 'Nome commessa', 'Rilievo WO Fognatura', 12, '', 2, 'P1', '', '', '', '', '', 'giorni = per ogni squadra; vuoto = stima dallo storico', 1];
   const ws = XLSX.utils.aoa_to_sheet([intest, es]);
   const wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, ws, 'Cantieri');
@@ -35381,6 +36045,9 @@ function apBuildContesto(opts) {
       base,
       commessaSettimana: commessaSettimana[nome] || null,
       staffing: staffing[nome] || new Set(),
+      /* Indici di «⚡ Prestazioni» (prestazioni.js): vuoti se l'opzione è spenta, se gli indici
+         non sono stati letti (_apPreparaRendimento) o se l'utente non vede quella vista */
+      rendimento: _apUsaRendimento() ? prfIndiciOperatore(nome) : {},
       dwDisponibile: false
     });
     const dw = dwStato(nome);
@@ -35398,10 +36065,44 @@ function apBuildContesto(opts) {
   });
 
   return {
-    giorni, giorniISO, operatori, disp, posizione,
+    giorni, giorniISO, operatori, disp, posizione, sabato,
     modello: _ap.modello,
-    pesi: { maxKmTrasferta: _ap.opzioni.maxKm || 250, maxSquadreCantiere: _ap.opzioni.maxSquadre || 2 }
+    pesi: { maxKmTrasferta: _ap.opzioni.maxKm || 250, maxSquadreCantiere: _ap.opzioni.maxSquadre || 2,
+      rendimento: _apUsaRendimento() ? AP_PESI_DEFAULT.rendimento : 0 }
   };
+}
+
+/* ================= RENDIMENTO («⚡ Prestazioni») =================
+   Il solver riceve gli indici come dati (operatori[].rendimento, righe[].chiaviRendimento):
+   qui solo la lettura (prfPreparaGriglia: controllo_produzione di tutte le commesse, una volta
+   per sessione) e le chiavi delle righe. Solo admin/responsabile (prfPuo), come la vista. */
+function _apUsaRendimento() {
+  return _ap.opzioni.rendimento !== false && typeof prfPuo === 'function' && prfPuo() && prfGrigliaPronta();
+}
+
+function _apChiaviRendimento(commessa, attivita) {
+  return typeof prfChiaviPool === 'function' ? prfChiaviPool(commessa, attivita, woTipoDiAttivita(commessa, attivita)) : [];
+}
+
+async function _apPreparaRendimento() {
+  if (_ap.opzioni.rendimento === false) return 'rendimento non considerato (opzione spenta)';
+  if (typeof prfPuo !== 'function' || !prfPuo()) return 'rendimento non considerato: vista «⚡ Prestazioni» non disponibile';
+  if (!prfGrigliaPronta()) {
+    _apStatus('Leggo gli indici di rendimento…');
+    try { await prfPreparaGriglia(); }
+    catch (e) { console.error('auto-pianifica: indici di rendimento', e); return 'rendimento non disponibile: ' + (e.message || e); }
+  }
+  return '';
+}
+
+/* Testo per la bozza: quanti operatori hanno un indice usato davvero dalle righe */
+function _apInfoRendimento(ctx, righeSolver, prima) {
+  if (prima) return prima;
+  const chiavi = new Set();
+  righeSolver.forEach(r => (r.chiaviRendimento || []).forEach(k => chiavi.add(k)));
+  const n = ctx.operatori.filter(o => Object.keys(o.rendimento || {}).some(k => chiavi.has(k))).length;
+  return n ? 'rendimento: indici di ' + n + ' operatori sulle attività in lista, pesati per urgenza (P1 più di P3)'
+    : 'rendimento: nessun indice per le attività in lista';
 }
 
 /* ================= DISTANZE STRADALI (OSRM) ================= */
@@ -35606,9 +36307,14 @@ async function apCalcola(opts) {
   if (btn) btn.disabled = true;
   try {
     await _apLocalizza(righe.map(r => r.cantiere));
+    const infoRend = await _apPreparaRendimento();
     const ctx = apBuildContesto();
     const righeSolver = righe.map(r => {
       const stima = _apStima(r);
+      /* giorni = giorni di lavoro di OGNI squadra, interi (giornate piene): scritti a mano
+         sono già per squadra; dalla stima (giorni-squadra totali) si dividono per le squadre */
+      const nSq = r.nSquadre || 1;
+      const giorniSquadra = Math.max(1, Math.ceil((r.giorniManuali > 0 ? r.giorniManuali : stima.giorni / nSq) - 1e-9));
       const meta = (state.commesse_attive_meta || {})[r.commessa] || {};
       const geo = meteoGeoFor(r.cantiere);
       const sg = _apIndiceGiorno(r.scadenza);
@@ -35621,7 +36327,8 @@ async function apCalcola(opts) {
         famiglia: stima.famiglia,
         tipoWo: woTipoDiAttivita(r.commessa, r.attivita),
         geo: geo ? { lat: geo.lat, lng: geo.lng } : null,
-        giorni: stima.giorni,
+        giorni: giorniSquadra,
+        nSquadre: nSq,
         stimaFonte: stima.fonte,
         nOp: stima.nOp,
         priorita: r.priorita || 3,
@@ -35633,7 +36340,8 @@ async function apCalcola(opts) {
         skills: Array.from(new Set((r.skills || []).concat(meta.skills || []))),
         attestati: meta.attestati_richiesti || [],
         preferiti: r.preferiti || [],
-        esclusi: r.esclusi || []
+        esclusi: r.esclusi || [],
+        chiaviRendimento: _apChiaviRendimento(r.commessa, r.attivita)
       };
     });
 
@@ -35644,17 +36352,21 @@ async function apCalcola(opts) {
 
     _apStatus('Calcolo la bozza…');
     await new Promise(res => setTimeout(res, 0)); // lascia disegnare lo stato prima del calcolo
-    const risultato = apRisolvi(ctx, righeSolver);
+    /* Squadre fisse per tutta la settimana con un giro di cantieri (autoplan-squadre.js);
+       apRisolvi resta per la riparazione degli imprevisti (sostituzioni giorno per giorno) */
+    const risultato = apPianificaSquadre(ctx, righeSolver);
     /* ctx resta in memoria con la bozza (non va in localStorage: contiene funzioni) per
        la diagnosi dei "perché" dell'assistente; nuove = celle da evidenziare */
     _ap.bozza = { anno: _ap.anno, week: _ap.week, risultato, righeSolver, ctxGiorni: ctx.giorni, creata: Date.now(),
-      ctx, infoDistanze: dist.info, infoMeteo: met.info, nuove: null,
+      ctx, infoDistanze: dist.info, infoMeteo: met.info, infoRendimento: _apInfoRendimento(ctx, righeSolver, infoRend), nuove: null,
       dwDisponibili: ctx.operatori.filter(o => o.dwDisponibile).map(o => o.nome) };
     const es = Object.values(risultato.esiti);
     apRender();
-    _apStatus('Bozza pronta: ' + es.filter(e => e.stato === 'assegnato').length + ' assegnati, ' +
+    const rp = risultato.riepilogo || {};
+    _apStatus('Bozza pronta: ' + (rp.squadre || 0) + ' squadre · ' + es.filter(e => e.stato === 'assegnato').length + ' cantieri assegnati, ' +
       es.filter(e => e.stato === 'parziale').length + ' parziali, ' +
-      es.filter(e => e.stato === 'non_assegnato').length + ' non assegnati.');
+      es.filter(e => e.stato === 'non_assegnato').length + ' non assegnati' +
+      (rp.giorniLiberi ? ' · ' + rp.giorniLiberi + ' giorni-squadra senza cantiere' : '') + '.');
     return { ok: true };
   } catch (e) {
     console.error('apCalcola', e);
@@ -35961,6 +36673,7 @@ async function apCalcolaRiparazione(opts) {
     const virtuale = JSON.parse(JSON.stringify(data));
     impatto.rimozioni.forEach(c => _apTogliVoce(virtuale, c));
     await _apLocalizza(impatto.righe.map(r => r.cantiere));
+    const infoRend = await _apPreparaRendimento();
     const ctx = apBuildContesto({ data: virtuale, assenti: impatto.assenti, sabato: impatto.rimozioni.some(c => c.giorno === 5) });
     const righeSolver = impatto.righe.map(r => {
       const meta = (state.commesse_attive_meta || {})[r.commessa] || {};
@@ -35971,6 +36684,7 @@ async function apCalcolaRiparazione(opts) {
         geo: geo ? { lat: geo.lat, lng: geo.lng } : null,
         skills: meta.skills || [],
         attestati: meta.attestati_richiesti || [],
+        chiaviRendimento: _apChiaviRendimento(r.commessa, r.attivita),
         stimaFonte: r.tipo === 'sostituto' ? 'giornata già pianificata' : 'giorni persi per il fermo'
       });
     });
@@ -35986,7 +36700,7 @@ async function apCalcolaRiparazione(opts) {
     const risultato = righeSolver.length ? apRisolvi(ctx, righeSolver)
       : { assegnazioni: [], esiti: {}, capacitaResidua: {}, operatoriSuPiuCommesse: [], miglioramenti: [], suggerimenti: [] };
     _ap.riparazione = { anno: _ap.anno, week: _ap.week, impatto, risultato, righeSolver, ctx, ctxGiorni: ctx.giorni,
-      creata: Date.now(), infoDistanze: dist.info, infoMeteo: met.info };
+      creata: Date.now(), infoDistanze: dist.info, infoMeteo: met.info, infoRendimento: _apInfoRendimento(ctx, righeSolver, infoRend) };
     const es = Object.values(risultato.esiti);
     apRender();
     _apStatus('Riparazione pronta: −' + impatto.rimozioni.length + ' celle, +' +
@@ -36215,7 +36929,7 @@ function _apRiparazioneHtml() {
       '<button type="button" onclick="apApplicaRiparazione()" class="text-xs px-3 py-1.5 rounded font-semibold text-white" style="background:#15803d;">✓ Applica riparazione</button>' +
     '</div>' +
     '<div class="text-[11px] text-slate-500 mb-2">Grigio = resta com\'è · barrato = si toglie · tratteggiato = nuovo.' +
-      (rip.infoDistanze ? ' 📏 ' + _apE(rip.infoDistanze) : '') + (rip.infoMeteo ? ' · 🌦️ ' + _apE(rip.infoMeteo) : '') + '</div>' +
+      (rip.infoDistanze ? ' 📏 ' + _apE(rip.infoDistanze) : '') + (rip.infoMeteo ? ' · 🌦️ ' + _apE(rip.infoMeteo) : '') + (rip.infoRendimento ? ' · ⚡ ' + _apE(rip.infoRendimento) : '') + '</div>' +
     (nomi.length ? tab : '<div class="text-xs text-slate-500">Nessuna cella in Griglia da cambiare.</div>') +
     '<div class="text-xs font-semibold text-slate-700 uppercase tracking-wide mt-4 mb-2">Cosa si recupera</div>' +
     lista + liberiHtml +
@@ -36236,6 +36950,7 @@ function apSetCampo(el) {
   const v = el.type === 'checkbox' ? el.checked : el.value;
   if (campo === 'km' || campo === 'giorniManuali') r[campo] = _apNum(v);
   else if (campo === 'nOp') r.nOp = _apNum(v) ? Math.max(1, Math.round(_apNum(v))) : null;
+  else if (campo === 'nSquadre') r.nSquadre = _apNum(v) ? Math.max(1, Math.min(6, Math.round(_apNum(v)))) : null;
   else if (campo === 'priorita') r.priorita = parseInt(v, 10) || 3;
   else if (campo === 'commessa') r.commessa = _apCommessaCanonica(v);
   else if (campo === 'skills') r.skills = _apLista(v);
@@ -36329,8 +37044,8 @@ function apRender() {
             '<div class="flex-1"></div>' +
             '<label data-help-key="ap-opz-sabato" class="text-xs text-slate-600 flex items-center gap-1"><input type="checkbox" data-opz="sabato" onchange="apSetOpzione(this)"' + (_ap.opzioni.sabato ? ' checked' : '') + '> anche sabato</label>' +
             '<label data-help-key="ap-opz-meteo" class="text-xs text-slate-600 flex items-center gap-1" title="Evita i giorni con allerta Protezione Civile e sposta, se possibile, quelli con maltempo previsto"><input type="checkbox" data-opz="meteo" onchange="apSetOpzione(this)"' + (_ap.opzioni.meteo ? ' checked' : '') + '> considera meteo</label>' +
+            (typeof prfPuo === 'function' && prfPuo() ? '<label data-help-key="ap-opz-rendimento" class="text-xs text-slate-600 flex items-center gap-1" title="Sui cantieri urgenti (P1, o con scadenza) preferisce gli operatori più performanti su quell&#39;attività, secondo la vista ⚡ Prestazioni"><input type="checkbox" data-opz="rendimento" onchange="apSetOpzione(this)"' + (_ap.opzioni.rendimento !== false ? ' checked' : '') + '> ⚡ rendimento</label>' : '') +
             '<label data-help-key="ap-opz-maxkm" class="text-xs text-slate-600 flex items-center gap-1" title="Spostamento massimo da un cantiere all&#39;altro durante la settimana. Il viaggio da casa a inizio trasferta non ha limite: costa i suoi km e, oltre 200 km, vale mezza giornata produttiva.">max km fra cantieri <input type="number" min="20" step="10" data-opz="maxKm" onchange="apSetOpzione(this)" value="' + _apE(_ap.opzioni.maxKm) + '" class="w-16 border border-slate-300 rounded px-1 py-0.5 text-xs"></label>' +
-            '<label data-help-key="ap-opz-maxsq" class="text-xs text-slate-600 flex items-center gap-1" title="Squadre che possono lavorare insieme sullo stesso cantiere nello stesso giorno, con gli operatori rimasti liberi, per spostare il lavoro sui giorni di bel tempo o finire prima. 1 = una squadra per cantiere.">squadre per cantiere <select data-opz="maxSquadre" onchange="apSetOpzione(this)" class="border border-slate-300 rounded px-1 py-0.5 text-xs">' + [1, 2, 3].map(n => '<option value="' + n + '"' + ((_ap.opzioni.maxSquadre || 2) === n ? ' selected' : '') + '>' + n + '</option>').join('') + '</select></label>' +
             '<button type="button" onclick="apSvuota()" class="text-xs px-2 py-1 border border-slate-300 rounded hover:bg-slate-50">Svuota</button>' +
             '<button type="button" id="ap-calcola-btn" onclick="apCalcola()" class="text-xs px-3 py-1.5 rounded font-semibold text-white" style="background:var(--accent,#0d9488);">🤖 Calcola bozza</button>' +
             (typeof apcToggle === 'function' ? '<button type="button" onclick="apcToggle()" class="apc-toggle' + (chat ? ' on' : '') + '" title="Chiedi all\'assistente di modificare la bozza in linguaggio naturale"><span class="apc-spark">✦</span> Assistente</button>' : '') +
@@ -36636,7 +37351,7 @@ function _apTabellaRigheHtml() {
      invece di spingere fuori le ultime colonne. */
   const COLS = [
     ['', '2.5%'], ['Cantiere', '10.5%'], ['Commessa', '12.5%'], ['Attività', '12%'], ['Km', '5%'],
-    ['Gg', '5.5%', 'Giorni-squadra: vuoto = stima dallo storico (mostrata in grigio)'], ['Op', '4%', 'Operatori per squadra'],
+    ['Gg', '5%', 'Giorni di lavoro di ogni squadra: vuoto = stima dallo storico (mostrata in grigio)'], ['Sq', '3.5%', 'Squadre da impiegare sul cantiere (default 1)'], ['Op', '3.5%', 'Persone per squadra'],
     ['P', '5%', 'Priorità'], ['Scadenza', '9%'], ['Dal', '9%', 'Non prima di'], ['Skill', '7%'], ['Preferiti', '6.5%'],
     ['Esclusi', '6.5%'], ['Esito', '3.5%'], ['', '1.5%']
   ];
@@ -36678,6 +37393,7 @@ function _apTabellaRigheHtml() {
       '<td class="px-1 py-1">' + _apDdBottone(r, 'attivita', r.attivita || 'Scegli o aggiungi l\'attività') + '</td>' +
       '<td class="px-1 py-1">' + inp('km', r.km, ' inputmode="decimal"') + '</td>' +
       '<td class="px-1 py-1">' + inp('giorniManuali', r.giorniManuali, ' inputmode="decimal" placeholder="' + _apE(apFmtNum(stima.giorni)) + '" title="' + _apE(r.giorniManuali > 0 ? 'Inserito a mano (svuota per usare la stima)' : 'Stima: ' + stima.fonte) + '"') + '</td>' +
+      '<td class="px-1 py-1">' + inp('nSquadre', r.nSquadre, ' inputmode="numeric" placeholder="1" data-help-key="ap-nsquadre"') + '</td>' +
       '<td class="px-1 py-1">' + inp('nOp', r.nOp, ' inputmode="numeric" placeholder="' + _apE(stima.nOp) + '"') + '</td>' +
       '<td class="px-1 py-1"><select data-campo="priorita" data-help-key="ap-priorita" onchange="apSetCampo(this)" class="ap-cell w-full border border-slate-200 rounded text-xs py-0.5">' +
         [1, 2, 3].map(p => '<option value="' + p + '"' + (r.priorita === p ? ' selected' : '') + '>P' + p + '</option>').join('') + '</select></td>' +
@@ -36694,6 +37410,43 @@ function _apTabellaRigheHtml() {
   });
   html += '</tbody></table></div>';
   return html;
+}
+
+/* Bozza a squadre fisse: una riga per squadra, un giorno per colonna. Un giorno senza
+   cantiere è in rosso (la regola vuole squadre piene: va riempito a mano o aggiungendo
+   cantieri vicini); 🚐 = viaggio da casa, ☂ = meteo sfavorevole. */
+function _apSquadreHtml(b, giornoLbl, righeById, incluse) {
+  const res = b.risultato;
+  const rp = res.riepilogo || {};
+  const giorni = rp.giorni || b.ctxGiorni;
+  const meteo = (b.ctx && b.ctx.meteo) || {};
+  let h = '<div class="text-[11px] mb-2 flex flex-wrap gap-x-3 gap-y-1">' +
+    '<span><b>' + (rp.squadre || 0) + '</b> squadre fisse ' + (giorni.includes(5) ? 'Lun–Sab' : 'Lun–Ven') + '</span>' +
+    (rp.giorniLiberi ? '<span style="color:#b91c1c;">⚠ ' + rp.giorniLiberi + ' giorni-squadra senza cantiere: aggiungi cantieri vicini</span>' : '<span style="color:#15803d;">✓ tutte le squadre piene</span>') +
+    (rp.nonPianificati ? '<span style="color:#b45309;">' + apFmtNum(rp.nonPianificati) + ' gg-squadra non pianificati (operatori finiti)</span>' : '') +
+    ((rp.parziali || []).length ? '<span class="text-slate-500" title="' + _apE(rp.parziali.join(', ')) + '">' + rp.parziali.length + ' operatori con ferie/celle in alcuni giorni lasciati fuori dalle squadre fisse</span>' : '') +
+    '<span class="text-slate-500">' + (rp.inutilizzati || 0) + ' operatori liberi non impiegati</span></div>';
+  h += '<div style="overflow-x:auto;"><table class="w-full text-[11px]"><thead class="bg-slate-50"><tr><th class="px-2 py-1 text-left">Squadra</th>' +
+    giorni.map(d => '<th class="px-2 py-1 text-left whitespace-nowrap">' + _apE(giornoLbl(d)) + '</th>').join('') +
+    '<th class="px-2 py-1 text-right">km</th></tr></thead><tbody>';
+  res.squadre.forEach(sq => {
+    h += '<tr class="border-t border-slate-100 align-top"><td class="px-2 py-1 whitespace-nowrap"><div class="font-semibold">' + _apE(sq.nome) + '</div>' +
+      sq.operatori.map(n => '<div>' + _apE(n) + (res.operatoriSuPiuCommesse.includes(n) ? ' <span title="In Griglia comparirà su più commesse">⚠️</span>' : '') + '</div>').join('') +
+      (sq.avvisi.length ? '<div class="text-amber-700" style="white-space:normal;max-width:220px;">' + _apE(sq.avvisi.join(' · ')) + '</div>' : '') + '</td>';
+    giorni.forEach(d => {
+      const rid = sq.piano[d];
+      if (!rid) { h += '<td class="px-1 py-1"><div style="border:1.5px dashed #fca5a5;background:#fef2f2;color:#b91c1c;border-radius:3px;padding:1px 4px;">— libero</div></td>'; return; }
+      const r = righeById[rid];
+      const a = res.assegnazioni.find(x => x.squadra === sq.id && x.giorno === d);
+      const mt = (meteo[rid] || {})[d];
+      const nuova = b.nuove && a && a.operatori.some(n => b.nuove.has(n + '|' + d + '|' + rid));
+      h += '<td class="px-1 py-1"><div' + (nuova ? ' class="ap-cella-nuova"' : '') + ' title="' + _apE(r.commessa + ' · ' + (r.attivita || '') + (mt && mt.pen ? ' · ' + mt.motivo : '')) + '" style="border:1.5px dashed #0d9488;background:#f0fdfa;color:#0f766e;border-radius:3px;padding:1px 4px;font-weight:600;' + (incluse.has(rid) ? '' : 'opacity:.4;') + '">' +
+        _apE(r.cantiere) + (a && a.viaggio ? ' <span title="Viaggio da casa: mezza giornata produttiva">🚐</span>' : '') + (mt && mt.pen ? ' <span title="' + _apE(mt.motivo) + '">☂</span>' : '') +
+        ' <span style="font-weight:400;color:#64748b;">P' + r.priorita + '</span></div></td>';
+    });
+    h += '<td class="px-2 py-1 text-right text-slate-500">' + (sq.kmSettimana || 0) + '</td></tr>';
+  });
+  return h + '</tbody></table></div>';
 }
 
 /* Nome breve di una riga della bozza, per i messaggi: "P1 Ivrea" */
@@ -36786,9 +37539,10 @@ function _apBozzaHtml(puoAnnullare) {
   const mon = isoWeekToMonday(b.anno, b.week);
   const giornoLbl = d => { const x = new Date(mon); x.setUTCDate(mon.getUTCDate() + d); return PW_MAP_DAY_SHORT[d] + ' ' + formatDate(x); };
 
-  let tab = '<div style="overflow-x:auto;"><table class="w-full text-[11px]"><thead class="bg-slate-50"><tr><th class="px-2 py-1 text-left">Operatore</th>' +
+  let tab = res.squadre ? _apSquadreHtml(b, giornoLbl, righeById, incluse) :
+    '<div style="overflow-x:auto;"><table class="w-full text-[11px]"><thead class="bg-slate-50"><tr><th class="px-2 py-1 text-left">Operatore</th>' +
     giorni.map(d => '<th class="px-2 py-1 text-left whitespace-nowrap">' + _apE(giornoLbl(d)) + '</th>').join('') + '</tr></thead><tbody>';
-  nomi.forEach(n => {
+  if (!res.squadre) nomi.forEach(n => {
     tab += '<tr class="border-t border-slate-100"><td class="px-2 py-1 font-semibold whitespace-nowrap">' + _apE(n) +
       (res.operatoriSuPiuCommesse.includes(n) ? ' <span title="In Griglia comparirà su più commesse">⚠️</span>' : '') +
       ((b.dwDisponibili || []).includes(n) ? ' <span title="Doppia week: disponibilità data ma non ancora impiegato in Griglia, pianificabile anche il sabato" style="background:#f3e8ff;color:#7e22ce;font-size:9px;font-weight:700;padding:0 4px;border-radius:3px;">DW</span>' : '') + '</td>';
@@ -36803,7 +37557,7 @@ function _apBozzaHtml(puoAnnullare) {
     });
     tab += '</tr>';
   });
-  tab += '</tbody></table></div>';
+  if (!res.squadre) tab += '</tbody></table></div>';
 
   /* Elenco per cantiere: quando, con chi, perché */
   const es = res.esiti;
@@ -36813,16 +37567,18 @@ function _apBozzaHtml(puoAnnullare) {
     const e = es[r.id];
     const st = AP_STATO_STILE[e.stato];
     const ass = res.assegnazioni.filter(a => a.rigaId === r.id);
-    const quando = ass.map(a => PW_MAP_DAY_SHORT[a.giorno] + (a.quota < 1 ? '½' : '') + (a.viaggio ? ' 🚐' : '') + (a.rinforzo ? ' ➕' : '') + ': ' + a.operatori.join(' + ')).join(' · ');
+    const quando = ass.map(a => PW_MAP_DAY_SHORT[a.giorno] + (a.quota < 1 ? '½' : '') + (a.viaggio ? ' 🚐' : '') + (a.rinforzo ? ' ➕' : '') + ': ' +
+      (a.squadra ? (res.squadre.find(q => q.id === a.squadra) || {}).nome + ' (' + a.operatori.join(' + ') + ')' : a.operatori.join(' + '))).join(' · ');
     lista += '<div class="text-[11px] border-l-4 pl-2 py-0.5" style="border-color:' + st.fg + ';' + (incluse.has(r.id) ? '' : 'opacity:.5;') + '">' +
       '<b>P' + r.priorita + ' · ' + _apE(r.cantiere) + '</b> <span class="text-slate-500">' + _apE(r.commessa) + (r.attivita ? ' · ' + _apE(r.attivita) : '') + '</span> ' +
       '<span style="color:' + st.fg + ';font-weight:700;">' + st.t + '</span>' +
       (e.kmMedi != null ? ' <span class="text-slate-500">· ~' + Math.round(e.kmMedi) + ' km di spostamento medio</span>' : '') +
+      (e.rendimento ? ' <span class="text-slate-500" title="' + _apE('Indice medio di «⚡ Prestazioni» di chi ci va (100 = nella norma), su ' + e.rendimento.noti + ' operatore-giorni con un indice noto su ' + e.rendimento.totali) + '">· ⚡ rendimento squadra ' + Math.round(e.rendimento.medio) + '</span>' : '') +
       (typeof apcPerche === 'function' && (e.stato !== 'assegnato' || e.oltreScadenza)
         ? ' <button type="button" data-ap-perche="' + _apE(r.id) + '" onclick="apcPerche(this)" class="apc-perche" title="Chiedi all\'assistente perché">✦ Perché?</button>' : '') +
       (quando ? '<div class="text-slate-700">' + _apE(quando) + '</div>' : '') +
       ([].concat(e.motivi, e.avvisi).length ? '<div class="text-amber-700">' + _apE([].concat(e.motivi, e.avvisi).join(' · ')) + '</div>' : '') +
-      '<div class="text-slate-400">stima: ' + apFmtNum(r.giorni) + ' gg × ' + r.nOp + ' op — ' + _apE(r.stimaFonte) + '</div>' +
+      '<div class="text-slate-400">stima: ' + (r.nSquadre > 1 ? r.nSquadre + ' squadre × ' : '') + apFmtNum(r.giorni) + ' gg × ' + r.nOp + ' op — ' + _apE(r.stimaFonte) + '</div>' +
       '</div>';
   });
   lista += '</div>';
@@ -36834,8 +37590,8 @@ function _apBozzaHtml(puoAnnullare) {
       '<div class="flex-1"></div>' + annullaBtn +
       '<button type="button" onclick="apApplica()" class="text-xs px-3 py-1.5 rounded font-semibold text-white" style="background:#15803d;"' + (nCelle ? '' : ' disabled') + '>✓ Applica alla Griglia</button>' +
     '</div>' +
-    '<div class="text-[11px] text-slate-500 mb-2">Grigio = già in Griglia (non viene toccato) · tratteggiato = proposta · 🚐 = viaggio da casa, mezza giornata produttiva · ➕ = squadra in più sullo stesso cantiere (bel tempo / per finire prima). Togli la spunta a una riga della lista per escluderla dall\'applicazione.</div>' +
-    '<div class="text-[11px] text-slate-500 mb-3">📏 ' + _apE(b.infoDistanze || '') + ' · 🌦️ ' + _apE(b.infoMeteo || '') + '</div>' +
+    '<div class="text-[11px] text-slate-500 mb-2">Grigio = già in Griglia (non viene toccato) · tratteggiato = proposta · 🚐 = viaggio da casa, mezza giornata produttiva · ☂ = meteo sfavorevole · km = percorsi dalla squadra (andata da casa + spostamenti fra cantieri). Togli la spunta a una riga della lista per escluderla dall\'applicazione.</div>' +
+    '<div class="text-[11px] text-slate-500 mb-3">📏 ' + _apE(b.infoDistanze || '') + ' · 🌦️ ' + _apE(b.infoMeteo || '') + (b.infoRendimento ? ' · ⚡ ' + _apE(b.infoRendimento) : '') + '</div>' +
     _apMiglioramentiHtml(b) +
     tab +
     '<div class="text-xs font-semibold text-slate-700 uppercase tracking-wide mt-4 mb-2">Per cantiere</div>' +
@@ -36857,7 +37613,7 @@ const APW_PASSI = [
   { id: 'commessa', t: 'Commessa' },
   { id: 'attivita', t: 'Attività' },
   { id: 'cantiere', t: 'Cantiere' },
-  { id: 'giorni', t: 'Giorni' }
+  { id: 'giorni', t: 'Squadre e giorni' }
 ];
 const APW_NOMINATIM = 'https://nominatim.openstreetmap.org/search?format=jsonv2&addressdetails=1&limit=6&countrycodes=it&accept-language=it&q=';
 const APW_COMUNI = ['city', 'town', 'village', 'municipality', 'hamlet', 'suburb', 'locality'];
@@ -36878,6 +37634,7 @@ function _apwNuovoStato(base) {
     cercando: false,
     erroreCerca: '',
     giorni: '',
+    nSquadre: 1,        // squadre da impiegare sul cantiere
     nOp: null,          // null = quello del catalogo / 2
     filtro: '',
     aggiunti: 0
@@ -37174,22 +37931,36 @@ function _apwGiorniHtml() {
   const doppione = _ap.righe.find(r => _apNorm(r.commessa) === _apNorm(_apw.commessa) &&
     _apNorm(r.cantiere) === _apNorm(_apw.cantiere) && _apNorm(r.attivita) === _apNorm(_apw.attivita));
   const giorni = String(_apw.giorni || '');
-  return '<div class="apw-domanda">Quanti <b>giorni di lavoro</b> servono a <b>' + _apE(_apw.cantiere) + '</b>?</div>' +
-    '<div class="apw-sotto">Giorni-squadra: una squadra da ' + sq.n + (sq.n === 1 ? ' persona' : ' persone') + ' per quanti giorni.</div>' +
+  const g = Number(giorni.replace(',', '.'));
+  const nSq = _apw.nSquadre || 1;
+  return '<div class="apw-domanda">Quante <b>squadre</b> impieghi a <b>' + _apE(_apw.cantiere) + '</b>?</div>' +
     '<div class="apw-giorni">' +
-      '<input type="text" inputmode="decimal" class="apw-input apw-input-gg" data-apw-in="giorni" data-apw-focus placeholder="es. 3" value="' + _apE(giorni) + '">' +
-      [1, 2, 3, 4, 5].map(n => '<button type="button" class="apw-chip' + (giorni === String(n) ? ' on' : '') + '" data-apw="gg" data-v="' + n + '" data-help-key="apw-gg">' + n + '</button>').join('') +
+      [1, 2, 3, 4].map(n => '<button type="button" class="apw-chip' + (nSq === n ? ' on' : '') + '" data-apw="nsq" data-v="' + n + '" data-help-key="apw-nsq">' + n + '</button>').join('') +
+      '<span class="apw-sotto">squadre in parallelo sullo stesso cantiere</span>' +
     '</div>' +
     '<div class="apw-squadra">' +
-      '<span>👥 Squadra da</span>' +
+      '<span>👥 Ogni squadra da</span>' +
       '<button type="button" class="apw-chip" data-apw="nop" data-d="-1" data-help-key="apw-nop"' + (sq.n <= 1 ? ' disabled' : '') + '>−</button>' +
       '<b>' + sq.n + '</b>' +
       '<button type="button" class="apw-chip" data-apw="nop" data-d="1" data-help-key="apw-nop"' + (sq.n >= 6 ? ' disabled' : '') + '>＋</button>' +
-      '<span class="apw-sotto">' + _apE(sq.fonte) + '</span>' +
+      '<span class="apw-sotto">' + (sq.n === 1 ? 'persona' : 'persone') + ' · ' + _apE(sq.fonte) + '</span>' +
     '</div>' +
-    '<div class="apw-riepilogo">' + _apE(_apw.commessa) + ' · ' + _apE(_apw.attivita) + ' · ' + _apE(_apw.cantiere) +
-      (_apw.geo ? ' · 📍' : ' · ⚠️ non localizzato') + '</div>' +
+    '<div class="apw-domanda" style="margin-top:16px;">Per quanti <b>giorni</b> lavora ogni squadra?</div>' +
+    '<div class="apw-giorni">' +
+      '<input type="text" inputmode="numeric" class="apw-input apw-input-gg" data-apw-in="giorni" data-apw-focus placeholder="es. 3" value="' + _apE(giorni) + '">' +
+      [1, 2, 3, 4, 5].map(n => '<button type="button" class="apw-chip' + (giorni === String(n) ? ' on' : '') + '" data-apw="gg" data-v="' + n + '" data-help-key="apw-gg">' + n + '</button>').join('') +
+    '</div>' +
+    '<div class="apw-riepilogo" id="apw-totale">' + _apE(_apw.commessa) + ' · ' + _apE(_apw.attivita) + ' · ' + _apE(_apw.cantiere) +
+      (_apw.geo ? ' · 📍' : ' · ⚠️ non localizzato') +
+      '<br><b>' + _apwTotaleTesto(nSq, g) + '</b></div>' +
+    '<div class="apw-sotto" style="margin-top:6px;">Giornate piene: ogni squadra lavora Lun–Ven senza giorni vuoti, quindi nella bozza riceverà anche altri cantieri vicini per riempire la settimana.</div>' +
     (doppione ? '<div class="apw-nota">C\'è già una riga per questo cantiere con la stessa commessa e attività: aggiungendo ne fai una seconda.</div>' : '');
+}
+
+function _apwTotaleTesto(nSq, g) {
+  if (!(g > 0)) return nSq + (nSq === 1 ? ' squadra' : ' squadre') + ' × ? giorni';
+  const gi = Math.ceil(g - 1e-9);
+  return nSq + (nSq === 1 ? ' squadra' : ' squadre') + ' × ' + gi + (gi === 1 ? ' giorno' : ' giorni') + ' = ' + (nSq * gi) + ' giorni-squadra';
 }
 
 /* ---------- mini mappa ---------- */
@@ -37319,10 +38090,11 @@ async function _apwAggiungi(altro) {
     cantiere: _apw.cantiere.trim(),
     commessa: _apw.commessa,
     attivita: _apw.attivita,
-    giorni: Math.round(gg * 2) / 2,
+    giorni: Math.ceil(gg - 1e-9),   // giornate piene
     /* Il numero di persone si scrive sulla riga solo se scelto qui a mano: altrimenti la
        riga segue il catalogo (anche se cambia dopo) */
-    nOp: _apw.nOp || null
+    nOp: _apw.nOp || null,
+    nSquadre: _apw.nSquadre > 1 ? _apw.nSquadre : null
   }, 'guidato');
   _ap.righe.push(r);
   _apInvalidaBozza();
@@ -37370,6 +38142,7 @@ function _apwClick(e) {
     _apwRender();
   }
   else if (az === 'gg') { _apw.giorni = b.dataset.v; _apwRender(); }
+  else if (az === 'nsq') { _apw.nSquadre = parseInt(b.dataset.v, 10) || 1; _apwRender(); }
   else if (az === 'nop') {
     const n = Math.min(6, Math.max(1, _apwNOp().n + parseInt(b.dataset.d, 10)));
     const cat = caOperatoriSquadra(_apw.commessa, _apw.attivita) || 2;
@@ -37406,6 +38179,8 @@ function _apwInput(e) {
     const ok = Number(_apw.giorni.replace(',', '.')) > 0;
     document.querySelectorAll('#apw-modal [data-apw="aggiungi"], #apw-modal [data-apw="aggiungi-altro"]').forEach(x => { x.disabled = !ok; });
     document.querySelectorAll('#apw-modal [data-apw="gg"]').forEach(x => x.classList.toggle('on', x.dataset.v === _apw.giorni));
+    const tot = document.querySelector('#apw-totale b');
+    if (tot) tot.textContent = _apwTotaleTesto(_apw.nSquadre || 1, Number(_apw.giorni.replace(',', '.')));
   }
 }
 
@@ -37634,6 +38409,7 @@ function _apcEsitoPerAgente(b, id) {
   const o = { id, cantiere: r.cantiere, stato: e.stato.replace('_', ' '), giorni: apFmtNum(e.giorniAssegnati) + '/' + apFmtNum(e.richiesti) };
   if (quando) o.piano = quando;
   if (e.oltreScadenza) o.oltre_scadenza = true;
+  if (e.rendimento) o.rendimento_squadra = Math.round(e.rendimento.medio) + ' (indice medio di Prestazioni di chi ci va, 100 = norma)';
   const note = [].concat(e.motivi, e.avvisi);
   if (note.length) o.note = note;
   return o;
@@ -37693,7 +38469,8 @@ const APC_TOOLS = {
     const out = {
       settimana: _ap.week, anno: _ap.anno,
       giorni_pianificabili: _apcNomeGiorni(giorni) || 'nessuno (settimana passata)',
-      opzioni: { sabato: !!_ap.opzioni.sabato, meteo: !!_ap.opzioni.meteo, max_km: _ap.opzioni.maxKm || 250 },
+      opzioni: { sabato: !!_ap.opzioni.sabato, meteo: !!_ap.opzioni.meteo, max_km: _ap.opzioni.maxKm || 250,
+        rendimento: _ap.opzioni.rendimento !== false ? 'considerato: sui cantieri urgenti (P1, scadenza) favorisce chi ha indice di Prestazioni alto sull\'attività (100 = norma); si cambia solo dalla casella «⚡ rendimento»' : 'ignorato' },
       storico: _ap.modelloInfo || '',
       commesse_attive: pwGetCommesseValide(),
       cantieri: _ap.righe.map(_apcRigaPerAgente),
@@ -37715,7 +38492,7 @@ const APC_TOOLS = {
       suggerimenti: res.suggerimenti.map(sg => _apNomeRiga(b, sg.rigaId) + ' entra (+' + apFmtNum(sg.guadagno) + ' gg) se passa davanti a ' +
         _apNomeRiga(b, sg.primaDi) + ': ' + _apEffettiTesto(b, sg.effetti) + ' → imposta_precedenza(prima="' + sg.rigaId + '", dopo="' + sg.primaDi + '")'),
       operatori_su_piu_commesse: res.operatoriSuPiuCommesse,
-      distanze: b.infoDistanze, meteo: b.infoMeteo
+      distanze: b.infoDistanze, meteo: b.infoMeteo, rendimento: b.infoRendimento
     };
     return out;
   },
@@ -41973,7 +42750,7 @@ HELP_TEXTS['apScaricaModello'] = 'Scarica un file Excel di esempio con le colonn
 // Svuota
 HELP_TEXTS['apSvuota'] = 'Toglie, dopo una conferma, tutti i cantieri dalla lista di questa settimana; anche la bozza eventualmente calcolata viene scartata.\n\nLa Griglia non viene toccata. Non c\'è un annulla: per riavere le righe vanno reimportate.';
 // 🤖 Calcola bozza
-HELP_TEXTS['#ap-calcola-btn'] = 'Calcola una BOZZA della Griglia per la settimana mostrata a partire dalle righe spuntate della lista (servono cantiere e commessa). Assegna i singoli operatori liberi ai cantieri ricomponendo le squadre e tenendo conto di priorità, scadenze, vincoli e delle opzioni accanto (sabato, meteo, max km fra cantieri). Le celle già compilate in Griglia non vengono mai sovrascritte e i giorni già passati non si usano.\n\nPer il calcolo localizza i cantieri, chiede le distanze stradali a un servizio di routing esterno (se non risponde le stima in linea d\'aria) e, con «considera meteo» attivo, usa previsioni e allerte della Protezione Civile. Se i giorni non sono indicati, la durata è stimata dai km con lo storico di produzione.\n\nLa bozza resta solo in memoria (si perde ricaricando la pagina): la Griglia cambia solo con «Applica alla Griglia».';
+HELP_TEXTS['#ap-calcola-btn'] = 'Calcola una BOZZA della Griglia a SQUADRE FISSE: ogni squadra lavora tutti i giorni della settimana (Lun–Ven, anche sabato se spuntato) con un giro di cantieri vicini, senza giorni vuoti finché c\'è lavoro; entrano solo operatori liberi tutta la settimana (chi ha ferie o celle in alcuni giorni resta fuori ed è elencato). Le squadre hanno un senior sul tipo di WO dell\'attività, preferiscono chi conosce la commessa, chi parte vicino e chi parte dallo stesso posto; i giorni di allerta e maltempo vengono evitati riordinando il giro.\n\nCalcola una BOZZA della Griglia per la settimana mostrata a partire dalle righe spuntate della lista (servono cantiere e commessa). Assegna i singoli operatori liberi ai cantieri ricomponendo le squadre e tenendo conto di priorità, scadenze, vincoli e delle opzioni accanto (sabato, meteo, max km fra cantieri). Le celle già compilate in Griglia non vengono mai sovrascritte e i giorni già passati non si usano.\n\nPer il calcolo localizza i cantieri, chiede le distanze stradali a un servizio di routing esterno (se non risponde le stima in linea d\'aria) e, con «considera meteo» attivo, usa previsioni e allerte della Protezione Civile. Se i giorni non sono indicati, la durata è stimata dai km con lo storico di produzione.\n\nLa bozza resta solo in memoria (si perde ricaricando la pagina): la Griglia cambia solo con «Applica alla Griglia».';
 // ✦ Assistente
 HELP_TEXTS['apcToggle'] = 'Apre o chiude il pannello dell\'Assistente pianificazione, una chat in cui chiedere in linguaggio naturale di aggiungere o modificare cantieri, cambiare priorità e vincoli, segnalare imprevisti, ricalcolare la bozza e spiegarne il risultato.\n\nL\'assistente usa un servizio di intelligenza artificiale esterno tramite il server: serve l\'accesso e deve essere attivato da un amministratore. Lavora solo su lista e bozza, mai sulla Griglia, che cambia solo quando premi «Applica».\n\nCon la chat aperta le fonti per aggiungere cantieri passano nel riquadro richiudibile «📥 Aggiungi cantieri». La conversazione è salvata per settimana su questo browser.';
 // aggiorna (storico)
@@ -42029,7 +42806,9 @@ HELP_TEXTS['apwIncollaApri'] = 'Apre un riquadro in cui incollare righe copiate 
 HELP_TEXTS['apw-step'] = 'Passi dell\'inserimento guidato. Un passo già fatto (✓) si può cliccare per tornare indietro e cambiare la scelta; quelle dei passi successivi restano, tranne l\'attività se cambi commessa.';
 HELP_TEXTS['apw-scelta'] = 'Sceglie questa voce e passa alla domanda successiva. Con la tastiera: scrivi per filtrare, Invio sceglie la voce evidenziata.\n\nPer le attività, «👥 N» sono le persone per squadra (dal catalogo della commessa; grigio = regola normale da 2).';
 HELP_TEXTS['apw-geo'] = 'Sceglie questa località come posizione del cantiere: la mappa sotto mostra il punto. Serve per distanze, meteo e regione.\n\nSe il nome del cantiere era già localizzato altrove, proseguendo la posizione viene corretta per tutti (rubrica condivisa, come dalla Mappa Squadre).';
-HELP_TEXTS['apw-gg'] = 'Imposta i giorni di lavoro del cantiere: giorni-squadra, cioè per quanti giorni serve una squadra intera. Si possono scrivere anche mezze giornate nella casella (es. 2,5).';
+HELP_TEXTS['apw-gg'] = 'Imposta per quanti giorni lavora OGNI squadra su questo cantiere, a giornate piene (2,5 diventa 3). Con 2 squadre e 3 giorni il cantiere vale 6 giorni-squadra.\n\nNella bozza le squadre restano fisse tutta la settimana: finito questo cantiere ne ricevono altri vicini per non avere giorni vuoti.';
+HELP_TEXTS['apw-nsq'] = 'Quante squadre impiegare insieme su questo cantiere. Ognuna lavora i giorni indicati sotto, di solito negli stessi giorni delle altre; le squadre sono diverse fra loro (mai la stessa due volte).\n\nLa lista è solo su questo browser; la Griglia cambia solo con «Applica».';
+HELP_TEXTS['ap-nsquadre'] = 'Squadre da impiegare su questo cantiere (vuoto = 1). I giorni della colonna «Gg» sono per ogni squadra: 2 squadre × 3 giorni = 6 giorni-squadra.\n\nVale dal prossimo calcolo. La Griglia non viene toccata.';
 HELP_TEXTS['apw-nop'] = 'Cambia le persone per squadra solo per questo cantiere. Di norma è 2, oppure quanto dice il catalogo attività della commessa (colonna «Op/sq»): tornando a quel numero la riga torna a seguire il catalogo.';
 HELP_TEXTS['apw-indietro'] = 'Torna alla domanda precedente senza perdere le risposte già date.';
 HELP_TEXTS['apw-avanti'] = 'Conferma il cantiere e passa ai giorni di lavoro. Se la località non è stata localizzata si può proseguire lo stesso: il calcolo riproverà a cercarla col nome.';
@@ -42293,8 +43072,7 @@ HELP_TEXTS['ap-imp-chi'] = 'Sceglie chi è assente (fra gli operatori) o quale c
 HELP_TEXTS['ap-imp-giorno'] = 'Spunta i giorni in cui vale l\'imprevisto. I giorni già passati non si possono scegliere.\n\nNon modifica la Griglia: l\'imprevisto entra in elenco con «＋ Aggiungi».';
 // in Ferie come
 HELP_TEXTS['ap-imp-registra'] = 'Per un\'assenza, sceglie se, applicando la riparazione, registrarla anche in Ferie come «Ferie» o «Non disponibile», oppure non registrarla.\n\nLe Ferie vengono scritte solo con «✓ Applica riparazione», e solo sui giorni non già segnati.';
-// squadre per cantiere
-HELP_TEXTS['ap-opz-maxsq'] = 'Quante squadre possono lavorare insieme sullo stesso cantiere nello stesso giorno (1 = mai più di una).\n\nDopo aver dato una squadra a ogni cantiere, il calcolo usa gli operatori rimasti liberi per mettere una squadra in più (➕ nella bozza) nei giorni di bel tempo: così il lavoro previsto in un giorno di pioggia o oltre la scadenza si sposta su un giorno buono, oppure un cantiere che non finirebbe in settimana finisce prima. Lo fa solo se conviene (km e composizione della squadra contano) e non toglie operatori agli altri cantieri.\n\nVale dal prossimo calcolo. La Griglia non viene toccata.';
+HELP_TEXTS['ap-opz-rendimento'] = 'Attiva: nella scelta delle squadre conta anche il rendimento di ogni operatore sull\'attività del cantiere, preso dalla vista «⚡ Prestazioni» (100 = nella norma). Pesa di più sui cantieri urgenti: P1 tre volte un P3, e un po\' di più se c\'è una scadenza in settimana. Chi non ha abbastanza giornate su quell\'attività conta come nella norma.\n\nResta un criterio fra gli altri: distanza, seniority (mai due junior insieme se c\'è un senior), continuità sullo stesso cantiere e preferiti scelti a mano continuano a valere. Nella bozza ogni cantiere mostra il «⚡ rendimento squadra» di chi ci va.\n\nAl primo calcolo legge i dati di Controllo produzione di tutte le commesse (qualche secondo). Solo admin e responsabili. Vale dal prossimo calcolo; la scelta resta in questo browser.';
 // anche sabato
 HELP_TEXTS['ap-opz-sabato'] = 'Se è spuntato, la bozza può usare anche il sabato come giorno di lavoro.\n\nVale dal prossimo calcolo. La Griglia non viene toccata.';
 // considera meteo
@@ -47345,6 +48123,33 @@ async function prfPreparaGriglia() {
 }
 
 function prfGrigliaPronta() { return !!_prf.griglia; }
+
+/* Chiavi dei pool in cui cercare l'indice per una voce: prima l'attività della commessa
+   (nome di catalogo), poi il tipo di WO. Usate da Griglia e Auto-pianifica. */
+function prfChiaviPool(commessa, attivita, tipoWo) {
+  const out = [];
+  if (commessa && attivita) {
+    const v = caTrova(commessa, attivita);
+    const k = caNorm(v ? v.nome : attivita);
+    if (k) out.push('a|' + commessa + '|' + k);
+  }
+  if (tipoWo) out.push('w|' + tipoWo);
+  return out;
+}
+
+/* Indici di un operatore per Auto-pianifica: { chiave: indice } dei pool in cui ha almeno
+   PRF_MIN_GIORNI_CHIP giornate (sotto, l'indice è quasi tutto «prior» a 100). Vuoto se i
+   dati non sono pronti (prfPreparaGriglia) o la vista non è visibile all'utente. */
+function prfIndiciOperatore(nome) {
+  const g = _prf.griglia;
+  const out = {};
+  if (!g || !nome || !prfPuo()) return out;
+  Object.keys(g.pools).forEach(k => {
+    const o = g.pools[k].operatori[nome];
+    if (o && o.giorni >= PRF_MIN_GIORNI_CHIP) out[k] = Math.round(o.indice * 10) / 10;
+  });
+  return out;
+}
 
 /* Indice di un operatore per la squadra aperta in Griglia: prima l'attività più frequente
    della squadra sulla commessa (nome di catalogo), poi il tipo di WO. null = niente dati. */

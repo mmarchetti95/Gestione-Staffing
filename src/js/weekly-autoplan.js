@@ -21,7 +21,7 @@ let _ap = {
   bozza: null,          // { anno, week, risultato, righeSolver, creata }
   modello: null,
   modelloInfo: '',
-  opzioni: { sabato: false, maxKm: 250, meteo: true, maxSquadre: 2 },
+  opzioni: { sabato: false, maxKm: 250, meteo: true, maxSquadre: 2, rendimento: true },
   precedenze: [],       // [[primaId, dopoId]] scelte dall'utente dai suggerimenti
   stato: { msg: '', err: false },
   toccate: new Set(),   // righe modificate dall'assistente nell'ultima risposta (evidenziate)
@@ -81,7 +81,7 @@ function _apCaricaLocale() {
     const s = all[_apWkKey(_ap.anno, _ap.week)];
     if (s) {
       _ap.righe = Array.isArray(s.righe) ? s.righe : [];
-      if (s.opzioni) _ap.opzioni = Object.assign({ sabato: false, maxKm: 250, meteo: true, maxSquadre: 2 }, s.opzioni);
+      if (s.opzioni) _ap.opzioni = Object.assign({ sabato: false, maxKm: 250, meteo: true, maxSquadre: 2, rendimento: true }, s.opzioni);
       if (Array.isArray(s.precedenze)) _ap.precedenze = s.precedenze;
       if (Array.isArray(s.imprevisti)) _ap.imprevisti = s.imprevisti;
     }
@@ -116,6 +116,7 @@ const AP_COLONNE = {
   km: ['km', 'km da rilevare', 'km rilevare', 'quantita', 'estensione', 'lunghezza'],
   giorni: ['giorni', 'gg', 'gg squadra', 'giorni squadra', 'giorni-squadra', 'durata'],
   nOp: ['operatori', 'n operatori', 'persone', 'n. operatori', 'op'],
+  nSquadre: ['squadre', 'n squadre', 'n. squadre', 'numero squadre', 'sq'],
   priorita: ['priorita', 'priorità', 'p', 'prio'],
   scadenza: ['scadenza', 'entro', 'deadline', 'data priorita'],
   dal: ['dal', 'non prima di', 'inizio', 'da'],
@@ -143,7 +144,7 @@ function _apDaTabella(tab, fonte) {
   if (mappa.filter(Boolean).length >= 2) {
     dati = rows.slice(1);
   } else {
-    mappa = ['cantiere', 'commessa', 'attivita', 'km', 'giorni', 'nOp', 'priorita', 'scadenza', 'dal', 'skills', 'preferiti', 'esclusi', 'note'];
+    mappa = ['cantiere', 'commessa', 'attivita', 'km', 'giorni', 'nOp', 'priorita', 'scadenza', 'dal', 'skills', 'preferiti', 'esclusi', 'note', 'nSquadre'];
   }
   return dati.map(r => {
     const o = {};
@@ -224,6 +225,7 @@ function apNormRiga(o, fonte) {
     km: _apNum(o.km),
     giorniManuali: _apNum(o.giorni),
     nOp: _apNum(o.nOp) ? Math.max(1, Math.round(_apNum(o.nOp))) : null,
+    nSquadre: _apNum(o.nSquadre) ? Math.max(1, Math.min(6, Math.round(_apNum(o.nSquadre)))) : null,
     priorita: typeof o.priorita === 'number' && o.priorita >= 1 && o.priorita <= 3 ? o.priorita : _apPriorita(o.priorita),
     scadenza: _apData(o.scadenza),
     dal: _apData(o.dal),
@@ -318,8 +320,8 @@ function _apRigheSettimanaPrecedente() {
 }
 
 function apScaricaModello() {
-  const intest = ['Cantiere', 'Commessa', 'Attività', 'Km', 'Giorni', 'Operatori', 'Priorità', 'Scadenza', 'Dal', 'Skill', 'Preferiti', 'Esclusi', 'Note'];
-  const es = ['Ivrea', pwGetCommesseValide()[0] || 'Nome commessa', 'Rilievo WO Fognatura', 12, '', 2, 'P1', '', '', '', '', '', 'giorni vuoto = stima dallo storico'];
+  const intest = ['Cantiere', 'Commessa', 'Attività', 'Km', 'Giorni', 'Operatori', 'Priorità', 'Scadenza', 'Dal', 'Skill', 'Preferiti', 'Esclusi', 'Note', 'Squadre'];
+  const es = ['Ivrea', pwGetCommesseValide()[0] || 'Nome commessa', 'Rilievo WO Fognatura', 12, '', 2, 'P1', '', '', '', '', '', 'giorni = per ogni squadra; vuoto = stima dallo storico', 1];
   const ws = XLSX.utils.aoa_to_sheet([intest, es]);
   const wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, ws, 'Cantieri');
@@ -505,6 +507,9 @@ function apBuildContesto(opts) {
       base,
       commessaSettimana: commessaSettimana[nome] || null,
       staffing: staffing[nome] || new Set(),
+      /* Indici di «⚡ Prestazioni» (prestazioni.js): vuoti se l'opzione è spenta, se gli indici
+         non sono stati letti (_apPreparaRendimento) o se l'utente non vede quella vista */
+      rendimento: _apUsaRendimento() ? prfIndiciOperatore(nome) : {},
       dwDisponibile: false
     });
     const dw = dwStato(nome);
@@ -522,10 +527,44 @@ function apBuildContesto(opts) {
   });
 
   return {
-    giorni, giorniISO, operatori, disp, posizione,
+    giorni, giorniISO, operatori, disp, posizione, sabato,
     modello: _ap.modello,
-    pesi: { maxKmTrasferta: _ap.opzioni.maxKm || 250, maxSquadreCantiere: _ap.opzioni.maxSquadre || 2 }
+    pesi: { maxKmTrasferta: _ap.opzioni.maxKm || 250, maxSquadreCantiere: _ap.opzioni.maxSquadre || 2,
+      rendimento: _apUsaRendimento() ? AP_PESI_DEFAULT.rendimento : 0 }
   };
+}
+
+/* ================= RENDIMENTO («⚡ Prestazioni») =================
+   Il solver riceve gli indici come dati (operatori[].rendimento, righe[].chiaviRendimento):
+   qui solo la lettura (prfPreparaGriglia: controllo_produzione di tutte le commesse, una volta
+   per sessione) e le chiavi delle righe. Solo admin/responsabile (prfPuo), come la vista. */
+function _apUsaRendimento() {
+  return _ap.opzioni.rendimento !== false && typeof prfPuo === 'function' && prfPuo() && prfGrigliaPronta();
+}
+
+function _apChiaviRendimento(commessa, attivita) {
+  return typeof prfChiaviPool === 'function' ? prfChiaviPool(commessa, attivita, woTipoDiAttivita(commessa, attivita)) : [];
+}
+
+async function _apPreparaRendimento() {
+  if (_ap.opzioni.rendimento === false) return 'rendimento non considerato (opzione spenta)';
+  if (typeof prfPuo !== 'function' || !prfPuo()) return 'rendimento non considerato: vista «⚡ Prestazioni» non disponibile';
+  if (!prfGrigliaPronta()) {
+    _apStatus('Leggo gli indici di rendimento…');
+    try { await prfPreparaGriglia(); }
+    catch (e) { console.error('auto-pianifica: indici di rendimento', e); return 'rendimento non disponibile: ' + (e.message || e); }
+  }
+  return '';
+}
+
+/* Testo per la bozza: quanti operatori hanno un indice usato davvero dalle righe */
+function _apInfoRendimento(ctx, righeSolver, prima) {
+  if (prima) return prima;
+  const chiavi = new Set();
+  righeSolver.forEach(r => (r.chiaviRendimento || []).forEach(k => chiavi.add(k)));
+  const n = ctx.operatori.filter(o => Object.keys(o.rendimento || {}).some(k => chiavi.has(k))).length;
+  return n ? 'rendimento: indici di ' + n + ' operatori sulle attività in lista, pesati per urgenza (P1 più di P3)'
+    : 'rendimento: nessun indice per le attività in lista';
 }
 
 /* ================= DISTANZE STRADALI (OSRM) ================= */
@@ -730,9 +769,14 @@ async function apCalcola(opts) {
   if (btn) btn.disabled = true;
   try {
     await _apLocalizza(righe.map(r => r.cantiere));
+    const infoRend = await _apPreparaRendimento();
     const ctx = apBuildContesto();
     const righeSolver = righe.map(r => {
       const stima = _apStima(r);
+      /* giorni = giorni di lavoro di OGNI squadra, interi (giornate piene): scritti a mano
+         sono già per squadra; dalla stima (giorni-squadra totali) si dividono per le squadre */
+      const nSq = r.nSquadre || 1;
+      const giorniSquadra = Math.max(1, Math.ceil((r.giorniManuali > 0 ? r.giorniManuali : stima.giorni / nSq) - 1e-9));
       const meta = (state.commesse_attive_meta || {})[r.commessa] || {};
       const geo = meteoGeoFor(r.cantiere);
       const sg = _apIndiceGiorno(r.scadenza);
@@ -745,7 +789,8 @@ async function apCalcola(opts) {
         famiglia: stima.famiglia,
         tipoWo: woTipoDiAttivita(r.commessa, r.attivita),
         geo: geo ? { lat: geo.lat, lng: geo.lng } : null,
-        giorni: stima.giorni,
+        giorni: giorniSquadra,
+        nSquadre: nSq,
         stimaFonte: stima.fonte,
         nOp: stima.nOp,
         priorita: r.priorita || 3,
@@ -757,7 +802,8 @@ async function apCalcola(opts) {
         skills: Array.from(new Set((r.skills || []).concat(meta.skills || []))),
         attestati: meta.attestati_richiesti || [],
         preferiti: r.preferiti || [],
-        esclusi: r.esclusi || []
+        esclusi: r.esclusi || [],
+        chiaviRendimento: _apChiaviRendimento(r.commessa, r.attivita)
       };
     });
 
@@ -768,17 +814,21 @@ async function apCalcola(opts) {
 
     _apStatus('Calcolo la bozza…');
     await new Promise(res => setTimeout(res, 0)); // lascia disegnare lo stato prima del calcolo
-    const risultato = apRisolvi(ctx, righeSolver);
+    /* Squadre fisse per tutta la settimana con un giro di cantieri (autoplan-squadre.js);
+       apRisolvi resta per la riparazione degli imprevisti (sostituzioni giorno per giorno) */
+    const risultato = apPianificaSquadre(ctx, righeSolver);
     /* ctx resta in memoria con la bozza (non va in localStorage: contiene funzioni) per
        la diagnosi dei "perché" dell'assistente; nuove = celle da evidenziare */
     _ap.bozza = { anno: _ap.anno, week: _ap.week, risultato, righeSolver, ctxGiorni: ctx.giorni, creata: Date.now(),
-      ctx, infoDistanze: dist.info, infoMeteo: met.info, nuove: null,
+      ctx, infoDistanze: dist.info, infoMeteo: met.info, infoRendimento: _apInfoRendimento(ctx, righeSolver, infoRend), nuove: null,
       dwDisponibili: ctx.operatori.filter(o => o.dwDisponibile).map(o => o.nome) };
     const es = Object.values(risultato.esiti);
     apRender();
-    _apStatus('Bozza pronta: ' + es.filter(e => e.stato === 'assegnato').length + ' assegnati, ' +
+    const rp = risultato.riepilogo || {};
+    _apStatus('Bozza pronta: ' + (rp.squadre || 0) + ' squadre · ' + es.filter(e => e.stato === 'assegnato').length + ' cantieri assegnati, ' +
       es.filter(e => e.stato === 'parziale').length + ' parziali, ' +
-      es.filter(e => e.stato === 'non_assegnato').length + ' non assegnati.');
+      es.filter(e => e.stato === 'non_assegnato').length + ' non assegnati' +
+      (rp.giorniLiberi ? ' · ' + rp.giorniLiberi + ' giorni-squadra senza cantiere' : '') + '.');
     return { ok: true };
   } catch (e) {
     console.error('apCalcola', e);
@@ -1085,6 +1135,7 @@ async function apCalcolaRiparazione(opts) {
     const virtuale = JSON.parse(JSON.stringify(data));
     impatto.rimozioni.forEach(c => _apTogliVoce(virtuale, c));
     await _apLocalizza(impatto.righe.map(r => r.cantiere));
+    const infoRend = await _apPreparaRendimento();
     const ctx = apBuildContesto({ data: virtuale, assenti: impatto.assenti, sabato: impatto.rimozioni.some(c => c.giorno === 5) });
     const righeSolver = impatto.righe.map(r => {
       const meta = (state.commesse_attive_meta || {})[r.commessa] || {};
@@ -1095,6 +1146,7 @@ async function apCalcolaRiparazione(opts) {
         geo: geo ? { lat: geo.lat, lng: geo.lng } : null,
         skills: meta.skills || [],
         attestati: meta.attestati_richiesti || [],
+        chiaviRendimento: _apChiaviRendimento(r.commessa, r.attivita),
         stimaFonte: r.tipo === 'sostituto' ? 'giornata già pianificata' : 'giorni persi per il fermo'
       });
     });
@@ -1110,7 +1162,7 @@ async function apCalcolaRiparazione(opts) {
     const risultato = righeSolver.length ? apRisolvi(ctx, righeSolver)
       : { assegnazioni: [], esiti: {}, capacitaResidua: {}, operatoriSuPiuCommesse: [], miglioramenti: [], suggerimenti: [] };
     _ap.riparazione = { anno: _ap.anno, week: _ap.week, impatto, risultato, righeSolver, ctx, ctxGiorni: ctx.giorni,
-      creata: Date.now(), infoDistanze: dist.info, infoMeteo: met.info };
+      creata: Date.now(), infoDistanze: dist.info, infoMeteo: met.info, infoRendimento: _apInfoRendimento(ctx, righeSolver, infoRend) };
     const es = Object.values(risultato.esiti);
     apRender();
     _apStatus('Riparazione pronta: −' + impatto.rimozioni.length + ' celle, +' +
@@ -1339,7 +1391,7 @@ function _apRiparazioneHtml() {
       '<button type="button" onclick="apApplicaRiparazione()" class="text-xs px-3 py-1.5 rounded font-semibold text-white" style="background:#15803d;">✓ Applica riparazione</button>' +
     '</div>' +
     '<div class="text-[11px] text-slate-500 mb-2">Grigio = resta com\'è · barrato = si toglie · tratteggiato = nuovo.' +
-      (rip.infoDistanze ? ' 📏 ' + _apE(rip.infoDistanze) : '') + (rip.infoMeteo ? ' · 🌦️ ' + _apE(rip.infoMeteo) : '') + '</div>' +
+      (rip.infoDistanze ? ' 📏 ' + _apE(rip.infoDistanze) : '') + (rip.infoMeteo ? ' · 🌦️ ' + _apE(rip.infoMeteo) : '') + (rip.infoRendimento ? ' · ⚡ ' + _apE(rip.infoRendimento) : '') + '</div>' +
     (nomi.length ? tab : '<div class="text-xs text-slate-500">Nessuna cella in Griglia da cambiare.</div>') +
     '<div class="text-xs font-semibold text-slate-700 uppercase tracking-wide mt-4 mb-2">Cosa si recupera</div>' +
     lista + liberiHtml +
@@ -1360,6 +1412,7 @@ function apSetCampo(el) {
   const v = el.type === 'checkbox' ? el.checked : el.value;
   if (campo === 'km' || campo === 'giorniManuali') r[campo] = _apNum(v);
   else if (campo === 'nOp') r.nOp = _apNum(v) ? Math.max(1, Math.round(_apNum(v))) : null;
+  else if (campo === 'nSquadre') r.nSquadre = _apNum(v) ? Math.max(1, Math.min(6, Math.round(_apNum(v)))) : null;
   else if (campo === 'priorita') r.priorita = parseInt(v, 10) || 3;
   else if (campo === 'commessa') r.commessa = _apCommessaCanonica(v);
   else if (campo === 'skills') r.skills = _apLista(v);
@@ -1453,8 +1506,8 @@ function apRender() {
             '<div class="flex-1"></div>' +
             '<label data-help-key="ap-opz-sabato" class="text-xs text-slate-600 flex items-center gap-1"><input type="checkbox" data-opz="sabato" onchange="apSetOpzione(this)"' + (_ap.opzioni.sabato ? ' checked' : '') + '> anche sabato</label>' +
             '<label data-help-key="ap-opz-meteo" class="text-xs text-slate-600 flex items-center gap-1" title="Evita i giorni con allerta Protezione Civile e sposta, se possibile, quelli con maltempo previsto"><input type="checkbox" data-opz="meteo" onchange="apSetOpzione(this)"' + (_ap.opzioni.meteo ? ' checked' : '') + '> considera meteo</label>' +
+            (typeof prfPuo === 'function' && prfPuo() ? '<label data-help-key="ap-opz-rendimento" class="text-xs text-slate-600 flex items-center gap-1" title="Sui cantieri urgenti (P1, o con scadenza) preferisce gli operatori più performanti su quell&#39;attività, secondo la vista ⚡ Prestazioni"><input type="checkbox" data-opz="rendimento" onchange="apSetOpzione(this)"' + (_ap.opzioni.rendimento !== false ? ' checked' : '') + '> ⚡ rendimento</label>' : '') +
             '<label data-help-key="ap-opz-maxkm" class="text-xs text-slate-600 flex items-center gap-1" title="Spostamento massimo da un cantiere all&#39;altro durante la settimana. Il viaggio da casa a inizio trasferta non ha limite: costa i suoi km e, oltre 200 km, vale mezza giornata produttiva.">max km fra cantieri <input type="number" min="20" step="10" data-opz="maxKm" onchange="apSetOpzione(this)" value="' + _apE(_ap.opzioni.maxKm) + '" class="w-16 border border-slate-300 rounded px-1 py-0.5 text-xs"></label>' +
-            '<label data-help-key="ap-opz-maxsq" class="text-xs text-slate-600 flex items-center gap-1" title="Squadre che possono lavorare insieme sullo stesso cantiere nello stesso giorno, con gli operatori rimasti liberi, per spostare il lavoro sui giorni di bel tempo o finire prima. 1 = una squadra per cantiere.">squadre per cantiere <select data-opz="maxSquadre" onchange="apSetOpzione(this)" class="border border-slate-300 rounded px-1 py-0.5 text-xs">' + [1, 2, 3].map(n => '<option value="' + n + '"' + ((_ap.opzioni.maxSquadre || 2) === n ? ' selected' : '') + '>' + n + '</option>').join('') + '</select></label>' +
             '<button type="button" onclick="apSvuota()" class="text-xs px-2 py-1 border border-slate-300 rounded hover:bg-slate-50">Svuota</button>' +
             '<button type="button" id="ap-calcola-btn" onclick="apCalcola()" class="text-xs px-3 py-1.5 rounded font-semibold text-white" style="background:var(--accent,#0d9488);">🤖 Calcola bozza</button>' +
             (typeof apcToggle === 'function' ? '<button type="button" onclick="apcToggle()" class="apc-toggle' + (chat ? ' on' : '') + '" title="Chiedi all\'assistente di modificare la bozza in linguaggio naturale"><span class="apc-spark">✦</span> Assistente</button>' : '') +
@@ -1760,7 +1813,7 @@ function _apTabellaRigheHtml() {
      invece di spingere fuori le ultime colonne. */
   const COLS = [
     ['', '2.5%'], ['Cantiere', '10.5%'], ['Commessa', '12.5%'], ['Attività', '12%'], ['Km', '5%'],
-    ['Gg', '5.5%', 'Giorni-squadra: vuoto = stima dallo storico (mostrata in grigio)'], ['Op', '4%', 'Operatori per squadra'],
+    ['Gg', '5%', 'Giorni di lavoro di ogni squadra: vuoto = stima dallo storico (mostrata in grigio)'], ['Sq', '3.5%', 'Squadre da impiegare sul cantiere (default 1)'], ['Op', '3.5%', 'Persone per squadra'],
     ['P', '5%', 'Priorità'], ['Scadenza', '9%'], ['Dal', '9%', 'Non prima di'], ['Skill', '7%'], ['Preferiti', '6.5%'],
     ['Esclusi', '6.5%'], ['Esito', '3.5%'], ['', '1.5%']
   ];
@@ -1802,6 +1855,7 @@ function _apTabellaRigheHtml() {
       '<td class="px-1 py-1">' + _apDdBottone(r, 'attivita', r.attivita || 'Scegli o aggiungi l\'attività') + '</td>' +
       '<td class="px-1 py-1">' + inp('km', r.km, ' inputmode="decimal"') + '</td>' +
       '<td class="px-1 py-1">' + inp('giorniManuali', r.giorniManuali, ' inputmode="decimal" placeholder="' + _apE(apFmtNum(stima.giorni)) + '" title="' + _apE(r.giorniManuali > 0 ? 'Inserito a mano (svuota per usare la stima)' : 'Stima: ' + stima.fonte) + '"') + '</td>' +
+      '<td class="px-1 py-1">' + inp('nSquadre', r.nSquadre, ' inputmode="numeric" placeholder="1" data-help-key="ap-nsquadre"') + '</td>' +
       '<td class="px-1 py-1">' + inp('nOp', r.nOp, ' inputmode="numeric" placeholder="' + _apE(stima.nOp) + '"') + '</td>' +
       '<td class="px-1 py-1"><select data-campo="priorita" data-help-key="ap-priorita" onchange="apSetCampo(this)" class="ap-cell w-full border border-slate-200 rounded text-xs py-0.5">' +
         [1, 2, 3].map(p => '<option value="' + p + '"' + (r.priorita === p ? ' selected' : '') + '>P' + p + '</option>').join('') + '</select></td>' +
@@ -1818,6 +1872,43 @@ function _apTabellaRigheHtml() {
   });
   html += '</tbody></table></div>';
   return html;
+}
+
+/* Bozza a squadre fisse: una riga per squadra, un giorno per colonna. Un giorno senza
+   cantiere è in rosso (la regola vuole squadre piene: va riempito a mano o aggiungendo
+   cantieri vicini); 🚐 = viaggio da casa, ☂ = meteo sfavorevole. */
+function _apSquadreHtml(b, giornoLbl, righeById, incluse) {
+  const res = b.risultato;
+  const rp = res.riepilogo || {};
+  const giorni = rp.giorni || b.ctxGiorni;
+  const meteo = (b.ctx && b.ctx.meteo) || {};
+  let h = '<div class="text-[11px] mb-2 flex flex-wrap gap-x-3 gap-y-1">' +
+    '<span><b>' + (rp.squadre || 0) + '</b> squadre fisse ' + (giorni.includes(5) ? 'Lun–Sab' : 'Lun–Ven') + '</span>' +
+    (rp.giorniLiberi ? '<span style="color:#b91c1c;">⚠ ' + rp.giorniLiberi + ' giorni-squadra senza cantiere: aggiungi cantieri vicini</span>' : '<span style="color:#15803d;">✓ tutte le squadre piene</span>') +
+    (rp.nonPianificati ? '<span style="color:#b45309;">' + apFmtNum(rp.nonPianificati) + ' gg-squadra non pianificati (operatori finiti)</span>' : '') +
+    ((rp.parziali || []).length ? '<span class="text-slate-500" title="' + _apE(rp.parziali.join(', ')) + '">' + rp.parziali.length + ' operatori con ferie/celle in alcuni giorni lasciati fuori dalle squadre fisse</span>' : '') +
+    '<span class="text-slate-500">' + (rp.inutilizzati || 0) + ' operatori liberi non impiegati</span></div>';
+  h += '<div style="overflow-x:auto;"><table class="w-full text-[11px]"><thead class="bg-slate-50"><tr><th class="px-2 py-1 text-left">Squadra</th>' +
+    giorni.map(d => '<th class="px-2 py-1 text-left whitespace-nowrap">' + _apE(giornoLbl(d)) + '</th>').join('') +
+    '<th class="px-2 py-1 text-right">km</th></tr></thead><tbody>';
+  res.squadre.forEach(sq => {
+    h += '<tr class="border-t border-slate-100 align-top"><td class="px-2 py-1 whitespace-nowrap"><div class="font-semibold">' + _apE(sq.nome) + '</div>' +
+      sq.operatori.map(n => '<div>' + _apE(n) + (res.operatoriSuPiuCommesse.includes(n) ? ' <span title="In Griglia comparirà su più commesse">⚠️</span>' : '') + '</div>').join('') +
+      (sq.avvisi.length ? '<div class="text-amber-700" style="white-space:normal;max-width:220px;">' + _apE(sq.avvisi.join(' · ')) + '</div>' : '') + '</td>';
+    giorni.forEach(d => {
+      const rid = sq.piano[d];
+      if (!rid) { h += '<td class="px-1 py-1"><div style="border:1.5px dashed #fca5a5;background:#fef2f2;color:#b91c1c;border-radius:3px;padding:1px 4px;">— libero</div></td>'; return; }
+      const r = righeById[rid];
+      const a = res.assegnazioni.find(x => x.squadra === sq.id && x.giorno === d);
+      const mt = (meteo[rid] || {})[d];
+      const nuova = b.nuove && a && a.operatori.some(n => b.nuove.has(n + '|' + d + '|' + rid));
+      h += '<td class="px-1 py-1"><div' + (nuova ? ' class="ap-cella-nuova"' : '') + ' title="' + _apE(r.commessa + ' · ' + (r.attivita || '') + (mt && mt.pen ? ' · ' + mt.motivo : '')) + '" style="border:1.5px dashed #0d9488;background:#f0fdfa;color:#0f766e;border-radius:3px;padding:1px 4px;font-weight:600;' + (incluse.has(rid) ? '' : 'opacity:.4;') + '">' +
+        _apE(r.cantiere) + (a && a.viaggio ? ' <span title="Viaggio da casa: mezza giornata produttiva">🚐</span>' : '') + (mt && mt.pen ? ' <span title="' + _apE(mt.motivo) + '">☂</span>' : '') +
+        ' <span style="font-weight:400;color:#64748b;">P' + r.priorita + '</span></div></td>';
+    });
+    h += '<td class="px-2 py-1 text-right text-slate-500">' + (sq.kmSettimana || 0) + '</td></tr>';
+  });
+  return h + '</tbody></table></div>';
 }
 
 /* Nome breve di una riga della bozza, per i messaggi: "P1 Ivrea" */
@@ -1910,9 +2001,10 @@ function _apBozzaHtml(puoAnnullare) {
   const mon = isoWeekToMonday(b.anno, b.week);
   const giornoLbl = d => { const x = new Date(mon); x.setUTCDate(mon.getUTCDate() + d); return PW_MAP_DAY_SHORT[d] + ' ' + formatDate(x); };
 
-  let tab = '<div style="overflow-x:auto;"><table class="w-full text-[11px]"><thead class="bg-slate-50"><tr><th class="px-2 py-1 text-left">Operatore</th>' +
+  let tab = res.squadre ? _apSquadreHtml(b, giornoLbl, righeById, incluse) :
+    '<div style="overflow-x:auto;"><table class="w-full text-[11px]"><thead class="bg-slate-50"><tr><th class="px-2 py-1 text-left">Operatore</th>' +
     giorni.map(d => '<th class="px-2 py-1 text-left whitespace-nowrap">' + _apE(giornoLbl(d)) + '</th>').join('') + '</tr></thead><tbody>';
-  nomi.forEach(n => {
+  if (!res.squadre) nomi.forEach(n => {
     tab += '<tr class="border-t border-slate-100"><td class="px-2 py-1 font-semibold whitespace-nowrap">' + _apE(n) +
       (res.operatoriSuPiuCommesse.includes(n) ? ' <span title="In Griglia comparirà su più commesse">⚠️</span>' : '') +
       ((b.dwDisponibili || []).includes(n) ? ' <span title="Doppia week: disponibilità data ma non ancora impiegato in Griglia, pianificabile anche il sabato" style="background:#f3e8ff;color:#7e22ce;font-size:9px;font-weight:700;padding:0 4px;border-radius:3px;">DW</span>' : '') + '</td>';
@@ -1927,7 +2019,7 @@ function _apBozzaHtml(puoAnnullare) {
     });
     tab += '</tr>';
   });
-  tab += '</tbody></table></div>';
+  if (!res.squadre) tab += '</tbody></table></div>';
 
   /* Elenco per cantiere: quando, con chi, perché */
   const es = res.esiti;
@@ -1937,16 +2029,18 @@ function _apBozzaHtml(puoAnnullare) {
     const e = es[r.id];
     const st = AP_STATO_STILE[e.stato];
     const ass = res.assegnazioni.filter(a => a.rigaId === r.id);
-    const quando = ass.map(a => PW_MAP_DAY_SHORT[a.giorno] + (a.quota < 1 ? '½' : '') + (a.viaggio ? ' 🚐' : '') + (a.rinforzo ? ' ➕' : '') + ': ' + a.operatori.join(' + ')).join(' · ');
+    const quando = ass.map(a => PW_MAP_DAY_SHORT[a.giorno] + (a.quota < 1 ? '½' : '') + (a.viaggio ? ' 🚐' : '') + (a.rinforzo ? ' ➕' : '') + ': ' +
+      (a.squadra ? (res.squadre.find(q => q.id === a.squadra) || {}).nome + ' (' + a.operatori.join(' + ') + ')' : a.operatori.join(' + '))).join(' · ');
     lista += '<div class="text-[11px] border-l-4 pl-2 py-0.5" style="border-color:' + st.fg + ';' + (incluse.has(r.id) ? '' : 'opacity:.5;') + '">' +
       '<b>P' + r.priorita + ' · ' + _apE(r.cantiere) + '</b> <span class="text-slate-500">' + _apE(r.commessa) + (r.attivita ? ' · ' + _apE(r.attivita) : '') + '</span> ' +
       '<span style="color:' + st.fg + ';font-weight:700;">' + st.t + '</span>' +
       (e.kmMedi != null ? ' <span class="text-slate-500">· ~' + Math.round(e.kmMedi) + ' km di spostamento medio</span>' : '') +
+      (e.rendimento ? ' <span class="text-slate-500" title="' + _apE('Indice medio di «⚡ Prestazioni» di chi ci va (100 = nella norma), su ' + e.rendimento.noti + ' operatore-giorni con un indice noto su ' + e.rendimento.totali) + '">· ⚡ rendimento squadra ' + Math.round(e.rendimento.medio) + '</span>' : '') +
       (typeof apcPerche === 'function' && (e.stato !== 'assegnato' || e.oltreScadenza)
         ? ' <button type="button" data-ap-perche="' + _apE(r.id) + '" onclick="apcPerche(this)" class="apc-perche" title="Chiedi all\'assistente perché">✦ Perché?</button>' : '') +
       (quando ? '<div class="text-slate-700">' + _apE(quando) + '</div>' : '') +
       ([].concat(e.motivi, e.avvisi).length ? '<div class="text-amber-700">' + _apE([].concat(e.motivi, e.avvisi).join(' · ')) + '</div>' : '') +
-      '<div class="text-slate-400">stima: ' + apFmtNum(r.giorni) + ' gg × ' + r.nOp + ' op — ' + _apE(r.stimaFonte) + '</div>' +
+      '<div class="text-slate-400">stima: ' + (r.nSquadre > 1 ? r.nSquadre + ' squadre × ' : '') + apFmtNum(r.giorni) + ' gg × ' + r.nOp + ' op — ' + _apE(r.stimaFonte) + '</div>' +
       '</div>';
   });
   lista += '</div>';
@@ -1958,8 +2052,8 @@ function _apBozzaHtml(puoAnnullare) {
       '<div class="flex-1"></div>' + annullaBtn +
       '<button type="button" onclick="apApplica()" class="text-xs px-3 py-1.5 rounded font-semibold text-white" style="background:#15803d;"' + (nCelle ? '' : ' disabled') + '>✓ Applica alla Griglia</button>' +
     '</div>' +
-    '<div class="text-[11px] text-slate-500 mb-2">Grigio = già in Griglia (non viene toccato) · tratteggiato = proposta · 🚐 = viaggio da casa, mezza giornata produttiva · ➕ = squadra in più sullo stesso cantiere (bel tempo / per finire prima). Togli la spunta a una riga della lista per escluderla dall\'applicazione.</div>' +
-    '<div class="text-[11px] text-slate-500 mb-3">📏 ' + _apE(b.infoDistanze || '') + ' · 🌦️ ' + _apE(b.infoMeteo || '') + '</div>' +
+    '<div class="text-[11px] text-slate-500 mb-2">Grigio = già in Griglia (non viene toccato) · tratteggiato = proposta · 🚐 = viaggio da casa, mezza giornata produttiva · ☂ = meteo sfavorevole · km = percorsi dalla squadra (andata da casa + spostamenti fra cantieri). Togli la spunta a una riga della lista per escluderla dall\'applicazione.</div>' +
+    '<div class="text-[11px] text-slate-500 mb-3">📏 ' + _apE(b.infoDistanze || '') + ' · 🌦️ ' + _apE(b.infoMeteo || '') + (b.infoRendimento ? ' · ⚡ ' + _apE(b.infoRendimento) : '') + '</div>' +
     _apMiglioramentiHtml(b) +
     tab +
     '<div class="text-xs font-semibold text-slate-700 uppercase tracking-wide mt-4 mb-2">Per cantiere</div>' +
