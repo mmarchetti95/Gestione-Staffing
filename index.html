@@ -2258,7 +2258,7 @@
       </span>
       <button id="btn-presentation" class="px-3 py-1.5 text-sm rounded hover:bg-white/10" style="border:1px solid var(--dark-border-strong);color:var(--dark-text);visibility:visible;">📊 Modalità presentazione</button>
       <div class="text-xs pl-2" style="border-left:1px solid var(--dark-border-strong);color:var(--dark-text-muted);">
-        <span id="app-version" class="font-medium" style="color:var(--accent);">v18.283.0</span> · Michele Marchetti
+        <span id="app-version" class="font-medium" style="color:var(--accent);">v18.284.0</span> · Michele Marchetti
         <span id="sb-role-badge" style="margin-left:8px;padding:1px 8px;border-radius:9999px;background:rgba(255,255,255,.1);color:var(--dark-text);font-weight:600;"></span>
       </div>
     </div>
@@ -46994,6 +46994,17 @@ const PRF_MIN_GIORNI_CHIP = 3;     // giornate minime per il chip in Griglia
 const PRF_VITA_CACHE_MS = 6 * 3600 * 1000;
 const PRF_FONTI_VERIFICATE = ['report', 'manuale'];
 
+// Colonne ordinabili della classifica (primo clic: dir; secondo clic: verso opposto).
+const PRF_ORD_CL = [
+  { k: 'nome', dir: 1 },
+  { k: 'indice', dir: -1 },
+  { k: 'stima', dir: -1 },
+  { k: 'reale', dir: -1 },
+  { k: 'giorni', dir: -1 },
+  { k: 'aff', dir: -1 },
+];
+const PRF_AFF_ORD = { alta: 3, media: 2, bassa: 1 };
+
 const _prf = {
   modo: 'att',                     // 'att' = attività della commessa · 'wo' = tipo di WO
   commessa: '',                    // '' = tutte
@@ -47001,6 +47012,8 @@ const _prf = {
   soloVer: true,
   comune: true,
   minGiorni: 5,
+  ordM: { col: '', dir: 1 },        // matrice: '' = per nome, altrimenti la chiave del pool; dir -1 = dal più alto
+  ordC: { col: 'indice', dir: -1 }, // classifica: indice | stima | reale | giorni | aff | nome
   q: '',
   focus: '',                       // pool aperto in classifica ('' = matrice)
   aperto: '',                      // operatore espanso nella classifica
@@ -47021,12 +47034,14 @@ const _prf = {
     if (typeof p.soloVer === 'boolean') _prf.soloVer = p.soloVer;
     if (typeof p.comune === 'boolean') _prf.comune = p.comune;
     if ([3, 5, 10, 15].includes(p.minGiorni)) _prf.minGiorni = p.minGiorni;
+    if (p.ordM && typeof p.ordM.col === 'string') _prf.ordM = { col: p.ordM.col, dir: p.ordM.dir === -1 ? -1 : 1 };
+    if (p.ordC && PRF_ORD_CL.some(c => c.k === p.ordC.col)) _prf.ordC = { col: p.ordC.col, dir: p.ordC.dir === 1 ? 1 : -1 };
   } catch (_) { /* preferenze illeggibili: default */ }
 })();
 
 function _prfPrefSave() {
   try {
-    localStorage.setItem(PRF_PREF_KEY, JSON.stringify({ modo: _prf.modo, commessa: _prf.commessa, per: _prf.per, soloVer: _prf.soloVer, comune: _prf.comune, minGiorni: _prf.minGiorni }));
+    localStorage.setItem(PRF_PREF_KEY, JSON.stringify({ modo: _prf.modo, commessa: _prf.commessa, per: _prf.per, soloVer: _prf.soloVer, comune: _prf.comune, minGiorni: _prf.minGiorni, ordM: _prf.ordM, ordC: _prf.ordC }));
   } catch (_) {}
 }
 
@@ -47287,9 +47302,19 @@ function _prfInitUi() {
   };
   Object.keys(azioni).forEach(id => { const el = document.getElementById(id); if (el) el.onclick = () => azioni[id](); });
   view.addEventListener('click', ev => {
-    const el = ev.target.closest('[data-prf-pool],[data-prf-cella],[data-prf-op],[data-prf-back],[data-prf-cp],[data-prf-guida]');
+    const el = ev.target.closest('[data-prf-pool],[data-prf-cella],[data-prf-op],[data-prf-back],[data-prf-cp],[data-prf-guida],[data-prf-ordm],[data-prf-ordc]');
     if (!el || !view.contains(el)) return;
-    if (el.hasAttribute('data-prf-guida')) {
+    if (el.hasAttribute('data-prf-ordm')) {
+      const col = el.getAttribute('data-prf-ordm');
+      // Attività: primo clic dal più performante; nome: dalla A. Secondo clic: verso opposto.
+      _prf.ordM = _prf.ordM.col === col ? { col, dir: -_prf.ordM.dir } : { col, dir: col ? -1 : 1 };
+      _prfPrefSave(); _prfRenderCorpo();
+    } else if (el.hasAttribute('data-prf-ordc')) {
+      const col = el.getAttribute('data-prf-ordc');
+      const def = PRF_ORD_CL.find(c => c.k === col);
+      _prf.ordC = _prf.ordC.col === col ? { col, dir: -_prf.ordC.dir } : { col, dir: def ? def.dir : -1 };
+      _prfPrefSave(); _prfRenderCorpo();
+    } else if (el.hasAttribute('data-prf-guida')) {
       const g = document.getElementById('prf-guida');
       if (g) { g.open = true; g.scrollIntoView({ behavior: 'smooth', block: 'start' }); }
     } else if (el.hasAttribute('data-prf-cp')) {
@@ -47417,6 +47442,45 @@ function _prfEsclusiHtml() {
   return pezzi.length ? '<p class="av-nota" style="padding:6px 12px">Giornate di squadra escluse: ' + esc(pezzi.join(', ')) + '.</p>' : '';
 }
 
+function _prfFreccia(on, dir) {
+  return '<span class="av-arr">' + (on ? (dir === 1 ? '▲' : '▼') : '↕') + '</span>';
+}
+
+/* Righe della matrice ordinate per nome o per l'indice di un'attività. Con un'attività:
+   prima chi ha almeno «Min. giornate» (per indice, nel verso scelto), poi chi ne ha meno,
+   poi chi non ha dati su quell'attività; a parità, per nome. */
+function _prfOrdinaMatrice(nomi, r) {
+  const { col, dir } = _prf.ordM;
+  if (!col || !r.pools[col]) return nomi.sort((a, b) => a.localeCompare(b) * dir);
+  const ops = r.pools[col].operatori;
+  const gruppo = n => { const x = ops[n]; return !x ? 2 : x.giorni < _prf.minGiorni ? 1 : 0; };
+  return nomi.sort((a, b) => {
+    const ga = gruppo(a), gb = gruppo(b);
+    if (ga !== gb) return ga - gb;
+    if (ga === 0) { const d = (ops[a].indice - ops[b].indice) * dir; if (d) return d; }
+    if (ga === 1) { const d = ops[b].giorni - ops[a].giorni; if (d) return d; }
+    return a.localeCompare(b);
+  });
+}
+
+/* Ordinamento della classifica; valori mancanti (stima con più unità) sempre in fondo. */
+function _prfOrdinaClassifica(lista, p, r) {
+  const { col, dir } = _prf.ordC;
+  const val = o => {
+    if (col === 'nome') return o.nome;
+    if (col === 'giorni') return o.giorni;
+    if (col === 'aff') return PRF_AFF_ORD[o.affidabilita] * 1000 + o.indice / 1000;
+    if (col === 'stima' || col === 'reale') { const pg = _prfProdGg(p, o, r.attEtichette); return pg ? pg[col] : null; }
+    return o.indice;
+  };
+  return lista.sort((a, b) => {
+    const va = val(a), vb = val(b);
+    if ((va == null) !== (vb == null)) return va == null ? 1 : -1;
+    const c = (typeof va === 'string') ? va.localeCompare(vb) : (va - vb);
+    return c * dir || b.indice - a.indice || a.nome.localeCompare(b.nome);
+  });
+}
+
 function _prfHtmlMatrice() {
   const r = _prf.ris;
   const cols = _prfColonne();
@@ -47429,13 +47493,17 @@ function _prfHtmlMatrice() {
   const qn = caNorm(_prf.q);
   const nomi = new Set();
   cols.forEach(k => Object.keys(r.pools[k].operatori).forEach(o => nomi.add(o)));
-  const righe = [...nomi].filter(o => !qn || caNorm(o).indexOf(qn) !== -1).sort((a, b) => a.localeCompare(b));
+  if (_prf.ordM.col && !cols.includes(_prf.ordM.col)) _prf.ordM = { col: '', dir: 1 };
+  const righe = _prfOrdinaMatrice([...nomi].filter(o => !qn || caNorm(o).indexOf(qn) !== -1), r);
   if (n) n.textContent = righe.length + ' operatori · ' + cols.length + ' ' + (_prf.modo === 'wo' ? 'tipi di WO' : 'attività');
 
-  let h = '<div class="prf-tw"><table class="av-t prf-mat"><thead><tr><th class="prf-mat-op">Operatore</th>' + cols.map(k => {
+  const om = _prf.ordM;
+  let h = '<div class="prf-tw"><table class="av-t prf-mat"><thead><tr><th class="prf-mat-op av-th-sort' + (!om.col ? ' av-th-on' : '') + '" data-prf-ordm="" data-help-key="prf-ordina" title="Ordina per nome">Operatore ' + _prfFreccia(!om.col, om.dir) + '</th>' + cols.map(k => {
     const sub = _prfPoolSub(k);
-    return '<th class="prf-mat-col" data-prf-pool="' + esc(k) + '" data-help-key="prf-colonna" title="Apri la classifica di ' + esc(_prfPoolLabel(k)) + '">' +
-      esc(_prfPoolLabel(k)) + (sub ? '<small>' + esc(sub) + '</small>' : '') + '<small>' + r.pools[k].nGiorni + ' gg squadra</small></th>';
+    const on = om.col === k;
+    return '<th class="prf-mat-col' + (on ? ' av-th-on' : '') + '" data-prf-ordm="' + esc(k) + '" data-help-key="prf-ordina" title="Ordina per ' + esc(_prfPoolLabel(k)) + ' (clic di nuovo per invertire)">' +
+      esc(_prfPoolLabel(k)) + ' ' + _prfFreccia(on, om.dir) + (sub ? '<small>' + esc(sub) + '</small>' : '') + '<small>' + r.pools[k].nGiorni + ' gg squadra</small>' +
+      '<button type="button" class="prf-pool-btn" data-prf-pool="' + esc(k) + '" data-help-key="prf-colonna" title="Apri la classifica di ' + esc(_prfPoolLabel(k)) + '">📊 classifica</button></th>';
   }).join('') + '</tr></thead><tbody>';
   righe.forEach(o => {
     h += '<tr><td class="prf-mat-op">' + esc(o) + '</td>' + cols.map(k => {
@@ -47450,7 +47518,7 @@ function _prfHtmlMatrice() {
     }).join('') + '</tr>';
   });
   h += '</tbody></table></div>';
-  h += '<p class="av-nota" style="padding:6px 12px">100 = resa nella norma dell\'attività (mediana). Verde sopra, rosso sotto; in grigio chi ha meno di ' + _prf.minGiorni + ' giornate. Il numero piccolo è il numero di giornate. Clicca un\'intestazione per la classifica, una cella per il dettaglio.' +
+  h += '<p class="av-nota" style="padding:6px 12px">100 = resa nella norma dell\'attività (mediana). Verde sopra, rosso sotto; in grigio chi ha meno di ' + _prf.minGiorni + ' giornate. Il numero piccolo è il numero di giornate. Clicca un\'intestazione per ordinare (dal più performante; di nuovo per invertire; chi ha poche giornate resta in fondo), «📊 classifica» per la classifica dell\'attività, una cella per il dettaglio.' +
     (nascoste > 0 ? ' ' + nascoste + ' ' + (_prf.modo === 'wo' ? 'tipi' : 'attività') + ' con meno di ' + PRF_MIN_GIORNI_COLONNA + ' giornate di squadra non sono mostrati.' : '') + '</p>';
   return h + _prfEsclusiHtml();
 }
@@ -47502,8 +47570,10 @@ function _prfHtmlClassifica(key) {
   if (!p) return '';
   const qn = caNorm(_prf.q);
   const tutti = Object.values(p.operatori).filter(o => !qn || caNorm(o.nome).indexOf(qn) !== -1);
-  const ok = tutti.filter(o => o.giorni >= _prf.minGiorni).sort((a, b) => b.indice - a.indice || a.nome.localeCompare(b.nome));
-  const pochi = tutti.filter(o => o.giorni < _prf.minGiorni).sort((a, b) => b.giorni - a.giorni || a.nome.localeCompare(b.nome));
+  const ok = _prfOrdinaClassifica(tutti.filter(o => o.giorni >= _prf.minGiorni), p, r);
+  const pochi = _prfOrdinaClassifica(tutti.filter(o => o.giorni < _prf.minGiorni), p, r);
+  const oc = _prf.ordC;
+  const th = (k, testo, cls, extra) => '<th class="av-th-sort' + (cls ? ' ' + cls : '') + (oc.col === k ? ' av-th-on' : '') + '" data-prf-ordc="' + k + '" data-help-key="prf-ordina-cl"' + (extra || '') + '>' + testo + ' ' + _prfFreccia(oc.col === k, oc.dir) + '</th>';
   const n = document.getElementById('prf-n');
   if (n) n.textContent = ok.length + ' in classifica';
   const sub = _prfPoolSub(key);
@@ -47518,10 +47588,11 @@ function _prfHtmlClassifica(key) {
     (_prf.comune ? ' e <b>della difficoltà dei comuni</b>' : '') + '. Con poche giornate l\'indice resta vicino a 100. La barra va da 50 a 200; la fascia è l\'intervallo probabile. ' +
     '<button type="button" class="av-link" data-prf-guida="1" data-help-key="prf-guida">📖 Come leggere le colonne</button></div>';
 
-  h += '<div class="prf-tw"><table class="av-t prf-cl"><thead><tr><th class="r">#</th><th>Operatore</th><th class="r">Indice</th><th style="min-width:180px">50 · 100 · 200</th><th>Intervallo</th>' +
-    '<th class="r" title="Quanto produce a testa in una giornata normale da ' + PRF_ORE_GIORNATA + ' ore: il suo indice applicato alla norma dell\'attività, al netto di compagni e comuni">Stima / gg</th>' +
-    '<th class="r" title="La sua quota effettiva (produzione della squadra divisa per i membri) per giornata lavorata, così com\'è: compagni, comuni e ore della giornata compresi">Media reale / gg</th>' +
-    '<th class="r">Giornate</th><th>Affidabilità</th><th>Compagno più frequente</th></tr></thead><tbody>';
+  h += '<div class="prf-tw"><table class="av-t prf-cl"><thead><tr><th class="r">#</th>' + th('nome', 'Operatore') + th('indice', 'Indice', 'r') +
+    '<th style="min-width:180px">50 · 100 · 200</th><th>Intervallo</th>' +
+    th('stima', 'Stima / gg', 'r', ' title="Quanto produce a testa in una giornata normale da ' + PRF_ORE_GIORNATA + ' ore: il suo indice applicato alla norma dell\'attività, al netto di compagni e comuni"') +
+    th('reale', 'Media reale / gg', 'r', ' title="La sua quota effettiva (produzione della squadra divisa per i membri) per giornata lavorata, così com\'è: compagni, comuni e ore della giornata compresi"') +
+    th('giorni', 'Giornate', 'r') + th('aff', 'Affidabilità') + '<th>Compagno più frequente</th></tr></thead><tbody>';
   const riga = (o, pos) => {
     const aperto = _prf.aperto === o.nome;
     const pg = _prfProdGg(p, o, r.attEtichette);

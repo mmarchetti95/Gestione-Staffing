@@ -115,6 +115,9 @@ Limite noto: il progetto Supabase è sul piano **Free**, che non include backup 
 
 ## Changelog
 
+## v18.284.0
+- feat: **Prestazioni operatori, ordinamento.** Nella matrice un clic sull'intestazione di un'attività ordina gli operatori su quell'attività: al primo clic in cima i più performanti, al secondo l'ordine si inverte; chi ha meno giornate della soglia «Min. giornate» e chi non ha mai fatto quell'attività restano sempre in fondo, così non sale in cima chi ha poche giornate fortunate. Clic su «Operatore» = per nome. La classifica dell'attività si apre dal pulsante «📊 classifica» sotto il titolo della colonna. Anche la classifica si ordina cliccando le intestazioni (Operatore, Indice, Stima / gg, Media reale / gg, Giornate, Affidabilità), in entrambi i versi; chi è sotto soglia resta nella sezione in fondo. Gli ordinamenti restano memorizzati nel browser. (La guida «📖 Come leggere questa vista» e le guide del tasto destro aggiornate per l'ordinamento erano già uscite con la v18.283.0.) Nessuna modifica a Supabase o alle Edge Function.
+
 ## v18.283.0
 - **Auto-pianifica, composizione delle squadre**: ordine di preferenza senior+junior, poi senior+senior (nuova penalità leggera, così i senior si distribuiscono), poi junior+junior. Chi parte dallo stesso luogo (residenze entro 25 km) viene messo in squadra insieme, a parità di km. Ogni squadra si compone provando più capisquadra, non solo il singolo più vicino.
 - **Più squadre sullo stesso cantiere** (opzione «squadre per cantiere», 1–3, default 2): dopo aver dato una squadra a ogni cantiere, gli operatori rimasti liberi rinforzano i cantieri nei giorni di bel tempo, spostando il lavoro previsto con maltempo forte o oltre la scadenza, oppure finendo in settimana un cantiere che resterebbe a metà. Solo se conviene (km, composizione) e senza togliere nessuno agli altri cantieri. In bozza sono segnate con ➕.
