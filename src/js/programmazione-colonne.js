@@ -14,24 +14,23 @@
    si svuotano, dopo conferma, e restano nello storico dell'elemento. */
 
 const PRG_TIPI = {
-  testo:       { label: 'Testo',                      w: 160 },
-  testo_lungo: { label: 'Testo lungo / note',         w: 220 },
-  stato:       { label: 'Stato / etichetta',          w: 150 },
-  numero:      { label: 'Numero',                     w: 100 },
-  data:        { label: 'Data',                       w: 110 },
-  data_ora:    { label: 'Data e ora',                 w: 140 },
-  timeline:    { label: 'Timeline (dal – al)',        w: 180 },
-  settimane:   { label: 'Settimane (dalla timeline)', w: 110 },
-  check:       { label: 'Spunta',                     w: 80 },
-  email:       { label: 'Email',                      w: 210 },
-  telefono:    { label: 'Telefono',                   w: 140 },
+  testo:       { label: 'Testo' },
+  testo_lungo: { label: 'Testo lungo / note' },
+  stato:       { label: 'Stato / etichetta' },
+  numero:      { label: 'Numero' },
+  data:        { label: 'Data' },
+  data_ora:    { label: 'Data e ora' },
+  timeline:    { label: 'Timeline (dal – al)' },
+  settimane:   { label: 'Settimane (dalla timeline)' },
+  check:       { label: 'Spunta' },
+  email:       { label: 'Email' },
+  telefono:    { label: 'Telefono' },
 };
 
 // Colori delle etichette, sulla falsariga di quelli di Monday.
 const PRG_PALETTE = ['#00c875', '#fdab3d', '#e2445c', '#579bfc', '#a25ddc', '#0086c0', '#ffcb00', '#9cd326',
   '#ff7575', '#66ccff', '#7f5347', '#ff158a', '#037f4c', '#bb3354', '#784bd1', '#c4c4c4'];
 
-function prgLarghezzaTipo(t) { return (PRG_TIPI[t] || PRG_TIPI.testo).w; }
 function prgEtichettaTipo(t) { return (PRG_TIPI[t] || { label: t }).label; }
 
 /* Colore proposto per un'etichetta dal suo significato (stati di avanzamento, esiti), altrimenti
@@ -179,7 +178,7 @@ function prgCeRender() {
       + '<input class="prg-f-inp prg-ce-tit" data-cf="titolo" value="' + prgEsc(c.titolo) + '" placeholder="Titolo colonna">'
       + '<select class="prg-f-inp prg-ce-tipo" data-cf="tipo">' + Object.keys(PRG_TIPI).map(t =>
         '<option value="' + t + '"' + (t === c.tipo ? ' selected' : '') + '>' + prgEsc(PRG_TIPI[t].label) + '</option>').join('') + '</select>'
-      + '<input class="prg-f-inp prg-ce-w" type="number" min="60" max="600" step="10" data-cf="larghezza" value="' + (c.larghezza || prgLarghezzaTipo(c.tipo)) + '" title="Larghezza in pixel">'
+      + '<input class="prg-f-inp prg-ce-w" type="number" min="60" max="600" step="10" data-cf="larghezza" value="' + (c.larghezza || '') + '" placeholder="auto" title="Larghezza in pixel per tutti; vuoto = automatica sul testo più lungo">'
       + (c.tipo === 'stato' ? '<label class="prg-ce-grp" title="Raggruppa la board per questa colonna"><input type="radio" name="prg-ce-gruppo" data-cf="gruppo"'
         + (_prgCe.gruppo === c.id ? ' checked' : '') + '> Raggruppa</label>' : '')
       + '<button class="prg-ce-mini prg-ce-del" data-ce="del" title="Elimina colonna">🗑</button>'
@@ -269,7 +268,11 @@ function prgCeChange(e) {
     if (c.tipo === 'settimane') { const tl = _prgCe.colonne.find(k => k.tipo === 'timeline'); c.da = tl ? tl.id : ''; }
     if (c.tipo !== 'stato' && _prgCe.gruppo === c.id) _prgCe.gruppo = null;
     prgCeRender();
-  } else if (f === 'larghezza') c.larghezza = Math.max(60, Math.min(600, Number(t.value) || prgLarghezzaTipo(c.tipo)));
+  } else if (f === 'larghezza') {
+    const n = Number(String(t.value).trim());
+    if (!String(t.value).trim() || !n) delete c.larghezza;
+    else c.larghezza = Math.max(60, Math.min(600, n));
+  }
   else if (f === 'gruppo') _prgCe.gruppo = c.id;
   else if (f === 'riepilogo') c.riepilogo = t.value;
   else if (f === 'da') c.da = t.value;

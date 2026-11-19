@@ -22,7 +22,11 @@
 
 const PRG_T = { board: 'prg_board', el: 'prg_elemento', com: 'prg_commento', sto: 'prg_storico' };
 const PRG_PREF_KEY = 'prg_pref_v1';
-const PRG_LARGHEZZA_NOME = 300;
+// Larghezze: automatiche dal testo più lungo della colonna (intestazione su max 2 righe),
+// salvo larghezza fissata da «⚙️ Colonne» (per tutti) o trascinata a mano (solo questo browser).
+const PRG_LARG_MIN = 70;
+const PRG_LARG_MAX = 520;          // oltre, il testo resta tagliato (intero nel tooltip e nel pannello)
+const PRG_LARG_NOME = [180, 440];  // min/max della prima colonna
 
 const _prg = {
   boards: [],
@@ -53,6 +57,7 @@ function prgEl(id) {
 function prgPrefB(id) {
   const p = _prg.pref.boards || (_prg.pref.boards = {});
   if (!p[id]) p[id] = { nascoste: [], ord: null, chiusi: [], cerca: '' };
+  if (!p[id].larg) p[id].larg = {};     // larghezze trascinate a mano: { idColonna|'__nome': px }
   return p[id];
 }
 function prgSalvaPref() { try { localStorage.setItem(PRG_PREF_KEY, JSON.stringify(_prg.pref)); } catch (_) {} }
@@ -106,9 +111,18 @@ function prgCommesse() {
 }
 
 /* ---------- gruppi (righe raggruppate per la colonna di stato, come i gruppi di Monday) ---------- */
-function prgColonnaGruppo(b) {
+/* Colonna che raggruppa: quella della board (config.gruppo), salvo scelta «Raggruppa per» di
+   questo browser (pref.gruppo: id di una colonna stato, '__nessuno' = nessun raggruppamento). */
+function prgColonnaGruppoBoard(b) {
   const c = prgCol(b, (b && b.config && b.config.gruppo) || '');
   return c && c.tipo === 'stato' ? c : null;
+}
+function prgColonnaGruppo(b) {
+  if (!b) return null;
+  const scelta = prgPrefB(b.id).gruppo;
+  if (scelta === '__nessuno') return null;
+  const c = scelta ? prgCol(b, scelta) : null;
+  return c && c.tipo === 'stato' ? c : prgColonnaGruppoBoard(b);
 }
 function prgGruppi(b) {
   const gc = prgColonnaGruppo(b);
@@ -242,11 +256,28 @@ function prgRenderTesta() {
       + '<span id="prg-conta" class="text-xs text-slate-500"></span>'
       + '<div class="ml-auto flex items-center gap-2 flex-wrap">'
       + '<button class="prg-btn" data-prg-azione="vista" data-help-key="prg-vista">👁 Colonne visibili</button>'
-      + '<button class="prg-btn" data-prg-azione="gruppi" data-help-key="prg-gruppi">↕ Apri/chiudi gruppi</button>'
+      + prgRaggruppaHtml(b)
+      + '<button class="prg-btn" data-prg-azione="comprimi" data-help-key="prg-comprimi" title="Chiude tutti i gruppi">⊟ Comprimi tutti</button>'
+      + '<button class="prg-btn" data-prg-azione="espandi" data-help-key="prg-espandi" title="Apre tutti i gruppi">⊞ Espandi tutti</button>'
+      + (Object.keys(pb.larg).length ? '<button class="prg-btn" data-prg-azione="larghezze" data-help-key="prg-larghezze">↔ Larghezze automatiche</button>' : '')
       + '<button class="prg-btn" data-prg-azione="esporta" data-help-key="prg-esporta">📤 Esporta Excel</button>'
       + (w ? '<button class="prg-btn" data-prg-azione="colonne" data-help-key="prg-colonne">⚙️ Colonne</button>'
         + '<button class="prg-btn" data-prg-azione="board" data-help-key="prg-board">✎ Board</button>' : '')
       + '</div></div>' : '');
+}
+
+function prgRaggruppaHtml(b) {
+  const stati = prgCols(b).filter(c => c.tipo === 'stato');
+  if (!stati.length) return '';
+  const gc = prgColonnaGruppo(b);
+  const cur = gc ? gc.id : '__nessuno';
+  const def = prgColonnaGruppoBoard(b);
+  return '<label class="prg-raggr" data-help-key="prg-raggruppa">Raggruppa per '
+    + '<select id="prg-raggruppa" class="prg-f-inp">'
+    + stati.map(c => '<option value="' + prgEsc(c.id) + '"' + (c.id === cur ? ' selected' : '') + '>'
+      + prgEsc(c.titolo) + (def && def.id === c.id ? ' (board)' : '') + '</option>').join('')
+    + '<option value="__nessuno"' + (cur === '__nessuno' ? ' selected' : '') + '>— nessun gruppo —</option>'
+    + '</select></label>';
 }
 
 function prgElementiFiltrati(b) {
@@ -320,26 +351,36 @@ function prgRenderTabella() {
 
   const ord = pb.ord || {};
   const freccia = id => ord.col === id ? (ord.dir === 'desc' ? ' ▼' : ' ▲') : '';
-  const larghezza = c => Math.max(60, Number(c.larghezza) || prgLarghezzaTipo(c.tipo));
-  const totW = PRG_LARGHEZZA_NOME + cols.reduce((s, c) => s + larghezza(c), 0);
-  let h = '<div id="prg-scroll" class="prg-scroll"><table class="prg-table" style="width:' + totW + 'px">'
-    + '<colgroup><col style="width:' + PRG_LARGHEZZA_NOME + 'px">' + cols.map(c => '<col style="width:' + larghezza(c) + 'px">').join('') + '</colgroup>'
-    + '<thead><tr><th class="prg-sticky" data-prg-sort="__nome">' + prgEsc((b.config && b.config.titoloNome) || 'Elemento') + freccia('__nome') + '</th>'
+  const larg = prgLarghezze(b, cols);
+  const totW = cols.reduce((s, c) => s + larg[c.id], larg.__nome);
+  const titoloNome = (b.config && b.config.titoloNome) || 'Elemento';
+  const rs = id => '<span class="prg-rs" data-prg-rs="' + prgEsc(id) + '" title="Trascina per cambiare la larghezza · doppio clic: torna automatica"></span>';
+  // Intestazione delle colonne ripetuta in ogni gruppo (come Monday), appiccicata in alto mentre
+  // si scorre il gruppo: quella del gruppo successivo la copre quando arriva.
+  const intestazione = '<tr class="prg-grp-cols"><th class="prg-sticky" data-prg-sort="__nome"><span class="prg-th-t">' + prgEsc(titoloNome) + freccia('__nome') + '</span>' + rs('__nome') + '</th>'
     + cols.map(c => '<th data-prg-sort="' + prgEsc(c.id) + '" title="' + prgEsc(c.titolo + ' · ' + prgEtichettaTipo(c.tipo) + ' · clic per ordinare') + '">'
-      + prgEsc(c.titolo) + freccia(c.id) + '</th>').join('')
-    + '</tr></thead>';
+      + '<span class="prg-th-t">' + prgEsc(c.titolo) + freccia(c.id) + '</span>' + rs(c.id) + '</th>').join('')
+    + '</tr>';
+  let h = '<div id="prg-scroll" class="prg-scroll"><table class="prg-table" style="width:' + totW + 'px">'
+    + '<colgroup><col data-col="__nome" style="width:' + larg.__nome + 'px">'
+    + cols.map(c => '<col data-col="' + prgEsc(c.id) + '" style="width:' + larg[c.id] + 'px">').join('') + '</colgroup>';
+  let mostrati = 0;
   gruppi.forEach(g => {
     const els = perGruppo[g.id] || [];
     if (g.id === '__nessuno' && !els.length) return;
     if (cerca && !els.length) return;
+    mostrati++;
     const chiuso = pb.chiusi.includes(g.id);
-    h += '<tbody class="prg-grp" style="--g:' + prgEsc(g.colore) + '">'
-      + '<tr class="prg-grp-head"><td colspan="' + (cols.length + 1) + '"><div class="prg-grp-head-in">'
-      + '<button class="prg-grp-tog" data-prg-grp="' + prgEsc(g.id) + '" title="' + (chiuso ? 'Apri' : 'Chiudi') + ' il gruppo">' + (chiuso ? '▸' : '▾') + '</button>'
+    h += '<tbody class="prg-grp' + (chiuso ? ' chiuso' : '') + '" style="--g:' + prgEsc(g.colore) + '">'
+      + (mostrati > 1 ? '<tr class="prg-grp-gap"><td colspan="' + (cols.length + 1) + '"></td></tr>' : '')
+      + '<tr class="prg-grp-head"><td colspan="' + (cols.length + 1) + '">'
+      + '<div class="prg-grp-head-in" data-prg-grp="' + prgEsc(g.id) + '" title="' + (chiuso ? 'Espandi' : 'Comprimi') + ' il gruppo">'
+      + '<span class="prg-grp-tog">' + (chiuso ? '▸' : '▾') + '</span>'
       + '<span class="prg-grp-tit">' + prgEsc(g.label) + '</span>'
       + '<span class="prg-grp-n">' + els.length + ' element' + (els.length === 1 ? 'o' : 'i') + '</span>'
       + '</div></td></tr>';
     if (!chiuso) {
+      h += intestazione;
       els.forEach(el => { h += prgRigaHtml(b, cols, el, g.colore, w); });
       if (w && !cerca) {
         h += '<tr class="prg-add"><td class="prg-sticky"><input class="prg-add-inp" placeholder="＋ Aggiungi elemento" data-prg-add="' + prgEsc(g.id) + '">'
@@ -350,6 +391,8 @@ function prgRenderTabella() {
     h += '</tbody>';
   });
   h += '</table></div>';
+  if (!mostrati) h = '<div class="bg-white border border-slate-200 rounded-lg p-10 text-center text-sm text-slate-500">'
+    + (cerca ? 'Nessun elemento corrisponde alla ricerca.' : 'La board non ha ancora elementi.') + '</div>';
   box.innerHTML = h;
   const conta = document.getElementById('prg-conta');
   if (conta) {
@@ -358,6 +401,131 @@ function prgRenderTabella() {
   }
   const sc = document.getElementById('prg-scroll');
   if (sc && scroll) { sc.scrollTop = scroll.t; sc.scrollLeft = scroll.l; }
+}
+
+/* ---------- larghezze delle colonne ---------- */
+const _prgMis = { ctx: null, font: '', cache: new Map() };
+// Larghezza in px di un testo col font della tabella (canvas; senza canvas, stima sui caratteri).
+function prgMisuraTesto(testo, peso, px) {
+  const s = String(testo === null || testo === undefined ? '' : testo);
+  if (!s) return 0;
+  const k = peso + '|' + px + '|' + s;
+  if (_prgMis.cache.has(k)) return _prgMis.cache.get(k);
+  if (_prgMis.ctx === null) {
+    try { const cv = document.createElement('canvas'); _prgMis.ctx = (cv.getContext && cv.getContext('2d')) || false; } catch (_) { _prgMis.ctx = false; }
+    try { _prgMis.font = getComputedStyle(document.body).fontFamily || ''; } catch (_) {}
+    if (!_prgMis.font) _prgMis.font = "'Inter', system-ui, sans-serif";
+  }
+  let w;
+  if (_prgMis.ctx) { _prgMis.ctx.font = peso + ' ' + px + 'px ' + _prgMis.font; w = _prgMis.ctx.measureText(s).width; }
+  else w = s.length * px * 0.58;
+  if (_prgMis.cache.size > 30000) _prgMis.cache.clear();
+  _prgMis.cache.set(k, w);
+  return w;
+}
+// Riga più lunga di un testo su più righe.
+function _prgMisuraRighe(s, peso, px) {
+  return String(s).split('\n').reduce((m, r) => Math.max(m, prgMisuraTesto(r.trim(), peso, px)), 0);
+}
+// Intestazione: va a capo su al massimo due righe, quindi basta metà testo (o la parola più lunga).
+function _prgLargIntestazione(titolo) {
+  const t = String(titolo || '');
+  const tot = prgMisuraTesto(t, '600', 12);
+  const parola = t.split(/\s+/).reduce((m, p) => Math.max(m, prgMisuraTesto(p, '600', 12)), 0);
+  const unaRiga = tot <= 150;   // titoli corti restano su una riga
+  return Math.ceil((unaRiga ? tot : Math.max(parola, tot / 2 + 14)) + 32);  // padding + freccia + maniglia
+}
+
+/* Larghezza automatica di una colonna: il valore più lungo fra tutti gli elementi della board
+   (non solo quelli filtrati o nei gruppi aperti, così non cambia mentre si cerca). */
+function prgLarghezzaAuto(c, els) {
+  let max = 0;
+  const mis = (s, peso, px) => { const x = _prgMisuraRighe(s, peso || '400', px || 13); if (x > max) max = x; };
+  let extra = 16;   // padding della cella + margine
+  switch (c.tipo) {
+    case 'check': max = 20; break;
+    case 'stato': {
+      const usati = new Set(els.map(e => e.valori && e.valori[c.id]).filter(Boolean));
+      const opz = (c.opzioni || []).filter(o => !usati.size || usati.has(o.id));
+      opz.forEach(o => mis(o.label, '500', 12.5));
+      extra = 22;
+      break;
+    }
+    case 'timeline':
+      els.forEach(e => { const t = prgTimelineTesto(e.valori && e.valori[c.id]); if (t) mis(t, '400', 12); });
+      extra = 34;
+      break;
+    case 'settimane':
+      els.forEach(e => mis(prgSettimane(e.valori && e.valori[c.da])));
+      break;
+    case 'numero': {
+      let tot = 0;
+      els.forEach(e => {
+        const v = e.valori && e.valori[c.id];
+        if (v === undefined || v === null || v === '') return;
+        if (typeof v === 'number') tot += Math.abs(v);
+        mis(prgFmtNumero(v) + (c.unita ? ' ' + c.unita : ''));
+      });
+      if (tot) mis(prgFmtNumero(tot) + (c.unita ? ' ' + c.unita : ''), '600', 12);   // riepilogo del gruppo
+      break;
+    }
+    case 'email': case 'telefono':
+      els.forEach(e => { const v = e.valori && e.valori[c.id]; if (v) mis(v); });
+      extra = 40;   // icona ✉ / ☎
+      break;
+    default:
+      els.forEach(e => { const v = e.valori && e.valori[c.id]; if (v !== undefined && v !== null && v !== '') mis(prgTesto(c, v, e)); });
+  }
+  const w = Math.max(_prgLargIntestazione(c.titolo), Math.ceil(max + extra));
+  return Math.max(PRG_LARG_MIN, Math.min(PRG_LARG_MAX, w));
+}
+
+function prgLarghezzaNomeAuto(b, els) {
+  let max = 0;
+  els.forEach(e => { const x = _prgMisuraRighe(e.nome || '', '500', 13); if (x > max) max = x; });
+  const w = Math.max(_prgLargIntestazione((b.config && b.config.titoloNome) || 'Elemento'), Math.ceil(max + 70));  // bordo colore + 💬 n
+  return Math.max(PRG_LARG_NOME[0], Math.min(PRG_LARG_NOME[1], w));
+}
+
+/* Larghezze in uso: trascinata a mano (questo browser) > fissata in «⚙️ Colonne» > automatica. */
+function prgLarghezze(b, cols) {
+  const pb = prgPrefB(b.id);
+  const els = prgEls(b.id);
+  const out = {};
+  out.__nome = Number(pb.larg.__nome) || prgLarghezzaNomeAuto(b, els);
+  cols.forEach(c => { out[c.id] = Number(pb.larg[c.id]) || Number(c.larghezza) || prgLarghezzaAuto(c, els); });
+  return out;
+}
+
+/* Trascinamento del bordo destro di un'intestazione: allarga/stringe la colonna dal vivo e la
+   ricorda in questo browser. Tutte le intestazioni ripetute nei gruppi condividono il <colgroup>. */
+function prgRidimensiona(h, ev) {
+  const b = prgBoard();
+  const tab = document.querySelector('#prg-corpo .prg-table');
+  if (!b || !tab) return;
+  const id = h.dataset.prgRs;
+  const col = tab.querySelector('col[data-col="' + CSS.escape(id) + '"]');
+  if (!col) return;
+  const w0 = parseFloat(col.style.width) || 100, tw0 = parseFloat(tab.style.width) || 0, x0 = ev.clientX;
+  let w = w0;
+  document.body.classList.add('prg-ridim');
+  const muovi = e => {
+    w = Math.max(50, Math.min(1200, Math.round(w0 + e.clientX - x0)));
+    col.style.width = w + 'px';
+    tab.style.width = (tw0 + w - w0) + 'px';
+  };
+  const fine = () => {
+    document.removeEventListener('mousemove', muovi);
+    document.removeEventListener('mouseup', fine);
+    document.body.classList.remove('prg-ridim');
+    _prg.ridimFine = Date.now();
+    if (w === w0) return;
+    prgPrefB(b.id).larg[id] = w;
+    prgSalvaPref();
+    prgRenderTesta();    // compare «↔ Larghezze automatiche»
+  };
+  document.addEventListener('mousemove', muovi);
+  document.addEventListener('mouseup', fine);
 }
 
 function prgRigaHtml(b, cols, el, colore, w) {
@@ -418,14 +586,20 @@ function prgFmtNumero(v) {
   return typeof v === 'number' ? v.toLocaleString('it-IT', { maximumFractionDigits: 2 }) : String(v);
 }
 
+function prgTimelineTesto(v) {
+  if (!v || !v.inizio || !_prgYmd(v.inizio)) return '';
+  const fine = _prgYmd(v.fine) ? v.fine : v.inizio;
+  const anni = _prgYmd(v.inizio)[0] !== _prgYmd(fine)[0] || _prgYmd(fine)[0] !== new Date().getFullYear();
+  return v.inizio === fine ? prgDataBreve(v.inizio, anni) : prgDataBreve(v.inizio, anni) + ' – ' + prgDataBreve(fine, anni);
+}
+
 function prgTimelineHtml(v) {
-  if (!v || !v.inizio) return '';
-  const fine = v.fine || v.inizio;
+  const txt = prgTimelineTesto(v);
+  if (!txt) return '';
+  const fine = _prgYmd(v.fine) ? v.fine : v.inizio;
   const oggi = prgOggiYmd();
   const t0 = new Date(v.inizio).getTime(), t1 = new Date(fine).getTime(), tn = new Date(oggi).getTime();
   const pct = t1 > t0 ? Math.max(0, Math.min(100, Math.round((tn - t0) / (t1 - t0) * 100))) : (tn >= t0 ? 100 : 0);
-  const anni = _prgYmd(v.inizio)[0] !== _prgYmd(fine)[0] || _prgYmd(fine)[0] !== new Date().getFullYear();
-  const txt = v.inizio === fine ? prgDataBreve(v.inizio, anni) : prgDataBreve(v.inizio, anni) + ' – ' + prgDataBreve(fine, anni);
   return '<div class="prg-tl" title="' + prgEsc(prgFmtData(v.inizio) + ' – ' + prgFmtData(fine)) + '"><div class="prg-tl-fill" style="width:' + pct + '%"></div><span>' + prgEsc(txt) + '</span></div>';
 }
 
@@ -1165,6 +1339,8 @@ function prgBind() {
   root.addEventListener('click', e => {
     const t = e.target;
     if (t.closest('a[href]') || t.closest('input.prg-inline')) return;
+    // fine di un trascinamento della larghezza: non è un clic per ordinare
+    if (t.closest('[data-prg-rs]') || Date.now() - (_prg.ridimFine || 0) < 300) return;
     let x;
     if ((x = t.closest('[data-prg-board]'))) { prgScegliBoard(Number(x.dataset.prgBoard)); return; }
     if ((x = t.closest('[data-prg-azione]'))) { prgAzione(x.dataset.prgAzione); return; }
@@ -1194,6 +1370,31 @@ function prgBind() {
   root.addEventListener('keydown', e => {
     if (e.target.dataset && e.target.dataset.prgAdd !== undefined && e.key === 'Enter') { e.preventDefault(); prgAggiungiElemento(e.target); }
   });
+  root.addEventListener('change', e => {
+    if (e.target.id !== 'prg-raggruppa') return;
+    const b = prgBoard(); if (!b) return;
+    const def = prgColonnaGruppoBoard(b);
+    const v = e.target.value;
+    prgPrefB(b.id).gruppo = def && v === def.id ? null : v;
+    prgSalvaPref();
+    prgRenderTabella();
+  });
+  root.addEventListener('mousedown', e => {
+    const h = e.target.closest && e.target.closest('[data-prg-rs]');
+    if (!h || e.button !== 0) return;
+    e.preventDefault();
+    e.stopPropagation();
+    prgRidimensiona(h, e);
+  });
+  root.addEventListener('dblclick', e => {
+    const h = e.target.closest && e.target.closest('[data-prg-rs]');
+    if (!h) return;
+    const b = prgBoard(); if (!b) return;
+    delete prgPrefB(b.id).larg[h.dataset.prgRs];
+    prgSalvaPref();
+    prgRenderTesta();
+    prgRenderTabella();
+  });
 }
 
 function prgAzione(a) {
@@ -1205,11 +1406,15 @@ function prgAzione(a) {
   else if (a === 'esporta') prgEsporta();
   else if (a === 'colonne') prgColonneApri();
   else if (a === 'board') prgImpostazioniBoard();
-  else if (a === 'gruppi' && b) {
+  else if ((a === 'comprimi' || a === 'espandi') && b) {
     const pb = prgPrefB(b.id);
     const ids = prgGruppi(b).map(g => g.id);
-    pb.chiusi = pb.chiusi.length ? [] : ids;
+    pb.chiusi = a === 'comprimi' ? Array.from(new Set(pb.chiusi.concat(ids))) : pb.chiusi.filter(id => !ids.includes(id));
     prgSalvaPref(); prgRenderTabella();
+  }
+  else if (a === 'larghezze' && b) {
+    prgPrefB(b.id).larg = {};
+    prgSalvaPref(); prgRenderTesta(); prgRenderTabella();
   }
 }
 
@@ -1287,7 +1492,10 @@ HELP_TEXTS['prg-importa'] = 'Ricrea una board di Monday dall\'Excel esportato (i
 HELP_TEXTS['prg-importa-conferma'] = 'Scrive la board e i suoi elementi nella Programmazione condivisa.\n\nI valori delle colonne del file sostituiscono quelli già presenti negli stessi elementi (i valori di prima restano nello storico di ogni elemento). Gli elementi della board che non sono nel file non vengono toccati.';
 HELP_TEXTS['prg-cerca'] = 'Filtra gli elementi della board: cerca nel nome e in tutte le colonne (etichette, contatti, note, date).\n\nSolo visualizzazione: la ricerca resta in questo browser.';
 HELP_TEXTS['prg-vista'] = 'Sceglie quali colonne vedere nella tabella. Vale solo per te, in questo browser: i colleghi continuano a vederle tutte.\n\nNel pannello dell\'elemento le colonne nascoste restano visibili.';
-HELP_TEXTS['prg-gruppi'] = 'Chiude tutti i gruppi (resta solo il titolo con il numero di elementi) o li riapre tutti. Ogni gruppo si apre e si chiude anche dal suo ▾.\n\nSolo visualizzazione, ricordata da questo browser.';
+HELP_TEXTS['prg-comprimi'] = 'Chiude tutti i gruppi: di ognuno resta solo la barra con il titolo e il numero di elementi. Un gruppo si apre e si chiude anche cliccando la sua barra.\n\nSolo visualizzazione, ricordata da questo browser.';
+HELP_TEXTS['prg-espandi'] = 'Apre tutti i gruppi. Un gruppo si apre e si chiude anche cliccando la sua barra.\n\nSolo visualizzazione, ricordata da questo browser.';
+HELP_TEXTS['prg-raggruppa'] = 'Sceglie la colonna di stato che divide le righe in gruppi (Stato, Regione, Priorità…), o nessun gruppo. «(board)» è quella impostata per tutti in «⚙️ Colonne».\n\nVale solo per te, in questo browser.';
+HELP_TEXTS['prg-larghezze'] = 'Riporta tutte le colonne alla larghezza automatica, calcolata sul testo più lungo di ogni colonna. Le larghezze trascinate a mano (bordo destro dell\'intestazione) valgono solo in questo browser.';
 HELP_TEXTS['prg-esporta'] = 'Scarica la board in un file Excel: una riga per elemento, con il gruppo e tutte le colonne come testo leggibile (i numeri restano numeri).\n\nNon modifica nulla.';
 HELP_TEXTS['prg-colonne'] = 'Modifica le colonne della board per tutti: titolo, tipo, larghezza, ordine, etichette e colori delle colonne di stato, colonna che raggruppa la board.\n\nCambiando tipo i valori già inseriti vengono convertiti; quelli non convertibili si svuotano dopo una conferma e restano nello storico di ogni elemento.';
 HELP_TEXTS['prg-colonne-salva'] = 'Salva le colonne per tutti i colleghi. Se elimini colonne con valori, togli etichette in uso o cambi tipo, prima ti chiede conferma e ti dice quanti valori vengono toccati.';
