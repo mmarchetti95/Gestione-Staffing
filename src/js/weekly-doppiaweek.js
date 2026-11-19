@@ -105,6 +105,8 @@ function pwDoppiaWeekRender() {
   if (ops.length === 0) {
     const filtro = _pwDwFiltroLabel();
     grid.innerHTML = '<div style="padding:20px;color:#94a3b8;font-size:13px;">' + (filtro ? 'Nessun operatore attivo con provenienza ' + esc(filtro) + '.' : 'Nessun operatore attivo.') + '</div>';
+    _pwDwCercaLista([]);
+    _pwDwCercaApplica(false);
     return;
   }
 
@@ -125,7 +127,7 @@ function pwDoppiaWeekRender() {
   // Righe operatori
   ops.forEach(nome => {
     const cnt = pwDwCount(nome, weeks, pwDwYear);
-    html += `<div style="display:grid;grid-template-columns:${cols};min-width:${minW}px;">`;
+    html += `<div data-dw-nome="${esc(nome)}" style="display:grid;grid-template-columns:${cols};min-width:${minW}px;">`;
     const prov = provDi[nome];
     html += `<div style="position:sticky;left:0;z-index:1;background:#fff;padding:4px 8px;border-bottom:1px solid #f1f5f9;overflow:hidden;" title="${esc(nome + (prov ? ' · ' + prov : ''))}">
       <div style="font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${esc(nome)}</div>
@@ -177,6 +179,103 @@ function pwDoppiaWeekRender() {
   html += `</div>`;
 
   grid.innerHTML = html;
+  _pwDwCercaLista(ops);
+  _pwDwCercaApplica(false); // dopo un clic su una cella o un cambio mese l'evidenza resta, senza saltare
+}
+
+/* Ricerca operatore: porta alla sua riga nel prospetto e la evidenzia.
+   Solo vista (niente salvato): il testo resta finché non si svuota il campo. */
+let _pwDwCerca = { testo: '', idx: 0, timer: null };
+
+function _pwDwNorm(s) {
+  return String(s || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
+}
+
+// Nomi che contengono tutte le parole cercate (in qualsiasi ordine): prima il nome
+// identico, poi chi inizia così, poi gli altri nell'ordine del prospetto.
+function _pwDwCercaTrova(testo, nomi) {
+  const q = _pwDwNorm(testo);
+  if (!q) return [];
+  const parole = q.split(' ');
+  const rank = n => { const x = _pwDwNorm(n); return x === q ? 0 : (x.startsWith(q) ? 1 : 2); };
+  return nomi
+    .filter(n => { const x = _pwDwNorm(n); return parole.every(p => x.includes(p)); })
+    .map((n, i) => ({ n, i, r: rank(n) }))
+    .sort((a, b) => a.r - b.r || a.i - b.i)
+    .map(o => o.n);
+}
+
+function _pwDwCercaLista(nomi) {
+  const dl = document.getElementById('pw-dw-cerca-lista');
+  if (dl) dl.innerHTML = nomi.map(n => '<option value="' + esc(n) + '"></option>').join('');
+}
+
+function pwDwCerca(valore) {
+  _pwDwCerca.testo = valore || '';
+  _pwDwCerca.idx = 0;
+  clearTimeout(_pwDwCerca.timer);
+  _pwDwCerca.timer = setTimeout(() => _pwDwCercaApplica(true), 150);
+}
+
+function pwDwCercaTasto(ev) {
+  if (ev.key === 'Enter') {
+    ev.preventDefault();
+    clearTimeout(_pwDwCerca.timer);
+    _pwDwCerca.testo = ev.target.value || '';
+    _pwDwCerca.idx++;
+    _pwDwCercaApplica(true);
+  } else if (ev.key === 'Escape') {
+    ev.target.value = '';
+    pwDwCerca('');
+  }
+}
+
+// Toglie i filtri di provenienza per mostrare un operatore che cadeva fuori, tenendo la ricerca
+function pwDwCercaMostraTutti() {
+  pwDwVista.regione = '';
+  pwDwVista.provincia = '';
+  try { localStorage.setItem(PW_DW_VISTA_KEY, JSON.stringify(pwDwVista)); } catch (e) { /* non persistito */ }
+  _pwDwCerca.idx = 0;
+  pwDoppiaWeekRender();
+  _pwDwCercaApplica(true);
+}
+
+function _pwDwCercaApplica(scorri) {
+  const grid = document.getElementById('pw-dw-grid');
+  const info = document.getElementById('pw-dw-cerca-info');
+  if (!grid) return;
+  const righe = Array.from(grid.querySelectorAll('[data-dw-nome]'));
+  righe.forEach(r => r.classList.remove('pw-dw-trovato', 'pw-dw-attuale'));
+  const inp = document.getElementById('pw-dw-cerca');
+  if (inp && inp.value !== _pwDwCerca.testo && document.activeElement !== inp) inp.value = _pwDwCerca.testo;
+  if (!_pwDwNorm(_pwDwCerca.testo)) { if (info) info.innerHTML = ''; return; }
+
+  const perNome = {};
+  righe.forEach(r => { perNome[r.dataset.dwNome] = r; });
+  const trovati = _pwDwCercaTrova(_pwDwCerca.testo, righe.map(r => r.dataset.dwNome));
+  if (!trovati.length) {
+    // Forse c'è ma i filtri di provenienza lo nascondono
+    const w0 = pwMonthWeeks(pwDwYear, pwDwMonth)[0];
+    const tutti = (w0 ? getOperatoriAttiviSettimana(w0.anno, w0.week) : getOperatoriAttivi()).map(o => o.nome_esteso || o.nome).filter(Boolean);
+    const fuori = (pwDwVista.regione || pwDwVista.provincia) ? _pwDwCercaTrova(_pwDwCerca.testo, tutti) : [];
+    if (info) info.innerHTML = fuori.length
+      ? 'Nascosto dai filtri <button type="button" class="pw-dw-cerca-mostra" onclick="pwDwCercaMostraTutti()" title="Toglie il filtro di regione/provincia">Mostra</button>'
+      : 'Nessuno';
+    return;
+  }
+  _pwDwCerca.idx = ((_pwDwCerca.idx % trovati.length) + trovati.length) % trovati.length;
+  trovati.forEach(n => perNome[n].classList.add('pw-dw-trovato'));
+  const riga = perNome[trovati[_pwDwCerca.idx]];
+  riga.classList.add('pw-dw-attuale');
+  if (info) info.textContent = trovati.length > 1 ? (_pwDwCerca.idx + 1) + '/' + trovati.length + ' (Invio = succ.)' : '';
+  if (!scorri) return;
+  const box = document.getElementById('pw-dw-scroll');
+  if (box) {
+    // Scorre solo il riquadro del prospetto, riga al centro (sotto l'intestazione fissa)
+    const rb = riga.getBoundingClientRect(), bb = box.getBoundingClientRect();
+    box.scrollTop += (rb.top - bb.top) - (box.clientHeight - rb.height) / 2;
+    if (bb.top < 0 || bb.bottom > window.innerHeight) box.scrollIntoView({ block: 'nearest' });
+  }
 }
 
 async function pwDwToggle(nome, anno, week) {
