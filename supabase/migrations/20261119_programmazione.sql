@@ -159,3 +159,10 @@ create policy prg_storico_select on public.prg_storico for select to authenticat
 alter publication supabase_realtime add table public.prg_board;
 alter publication supabase_realtime add table public.prg_elemento;
 alter publication supabase_realtime add table public.prg_commento;
+
+-- Le funzioni non sono API: il trigger dello storico non si chiama via /rpc (avviso Supabase
+-- «security definer eseguibile»; un trigger non richiede EXECUTE a chi modifica la riga).
+revoke execute on function public.prg_elemento_storico() from public, anon, authenticated;
+revoke execute on function public.prg_touch() from public, anon;
+revoke execute on function public.prg_imposta(bigint, text, jsonb) from public, anon;
+grant execute on function public.prg_imposta(bigint, text, jsonb) to authenticated;
