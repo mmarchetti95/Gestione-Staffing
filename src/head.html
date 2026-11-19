@@ -1658,6 +1658,19 @@
   .prf-gg th { position: static; }
   .prf-spiega { font-size: 13px; color: #475569; }
   .prf-toggle { font-size: 13px; }
+  .prf-guida { background: #fff; border: 1px solid #e2e8f0; border-radius: 8px; margin-bottom: 12px; }
+  .prf-guida > summary { cursor: pointer; padding: 10px 14px; font-size: 13px; font-weight: 600; color: #0f766e; list-style: none; }
+  .prf-guida > summary::-webkit-details-marker { display: none; }
+  .prf-guida[open] > summary { border-bottom: 1px solid #e2e8f0; }
+  .prf-guida-corpo { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 14px 28px; padding: 14px 18px; font-size: 13px; color: #334155; line-height: 1.5; }
+  .prf-guida-corpo h4 { font-size: 13px; font-weight: 700; color: #0f172a; margin: 0 0 6px; }
+  .prf-guida-corpo p { margin: 0 0 8px; }
+  .prf-guida-corpo dt { font-weight: 700; color: #0f172a; margin-top: 6px; }
+  .prf-guida-corpo dd { margin: 0 0 4px; }
+  .prf-guida-corpo ul { margin: 0; padding-left: 18px; list-style: disc; }
+  .prf-guida-corpo li { margin-bottom: 4px; }
+  .prf-guida-v { background: rgba(16,185,129,.35); padding: 0 4px; border-radius: 3px; }
+  .prf-guida-r { background: rgba(244,63,94,.3); padding: 0 4px; border-radius: 3px; }
   .ms-tbl { width: 100%; border-collapse: separate; border-spacing: 0; font-size: 13px; color: #1e293b; }
   .ms-tbl thead th { position: sticky; top: 0; z-index: 3; background: #f8fafc; border-bottom: 1px solid #e2e8f0;
     padding: 0; text-align: left; font-weight: 600; color: #475569; white-space: nowrap; }
@@ -2168,7 +2181,7 @@
       </span>
       <button id="btn-presentation" class="px-3 py-1.5 text-sm rounded hover:bg-white/10" style="border:1px solid var(--dark-border-strong);color:var(--dark-text);visibility:visible;">📊 Modalità presentazione</button>
       <div class="text-xs pl-2" style="border-left:1px solid var(--dark-border-strong);color:var(--dark-text-muted);">
-        <span id="app-version" class="font-medium" style="color:var(--accent);">v18.280.0</span> · Michele Marchetti
+        <span id="app-version" class="font-medium" style="color:var(--accent);">v18.281.0</span> · Michele Marchetti
         <span id="sb-role-badge" style="margin-left:8px;padding:1px 8px;border-radius:9999px;background:rgba(255,255,255,.1);color:var(--dark-text);font-weight:600;"></span>
       </div>
     </div>
@@ -3129,6 +3142,43 @@
       <button type="button" id="prf-refresh" class="av-btn">↻ Aggiorna</button>
       <span id="prf-status" class="text-xs text-slate-400"></span>
     </div>
+    <details id="prf-guida" class="prf-guida no-print">
+      <summary data-help-key="prf-guida">📖 Come leggere questa vista</summary>
+      <div class="prf-guida-corpo">
+        <section>
+          <h4>Da dove vengono i numeri</h4>
+          <p>Dalle giornate salvate in <b>Controllo produzione</b>: per ogni squadra, comune e attività, la produzione del giorno (Km/Cad) e le ore Jira dei membri. Le squadre lavorano quasi sempre <b>in coppia con un solo tablet</b>, quindi i km di una giornata sono della coppia, non del singolo.</p>
+          <p>Il contributo del singolo si ricava perché <b>le coppie cambiano</b>. Esempio: Mario+Luca fanno 2,0 km/gg, Mario+Paolo 2,0, Luca+Paolo 1,4 → è Mario che alza la resa. Il calcolo fa lo stesso ragionamento su tutte le settimane insieme e, se «Tiene conto del comune» è attivo, toglie anche la difficoltà dei comuni (centri densi, zone sparse).</p>
+          <p>Le giornate della stessa coppia sullo stesso comune nella stessa settimana contano insieme, perché la board registra i km nel giorno in cui il tablet sincronizza, non in quello del rilievo.</p>
+        </section>
+        <section>
+          <h4>Le colonne</h4>
+          <dl>
+            <dt>Indice</dt><dd><b>100 = la norma</b> dell'attività (la mediana: metà delle giornate fa di più, metà di meno). 130 = +30%, 80 = −20%. È già <b>al netto dei compagni e dei comuni</b>. Con poche giornate resta vicino a 100 apposta, così una settimana fortunata non porta nessuno in cima.</dd>
+            <dt>Barra 50 · 100 · 200</dt><dd>Il pallino è l'indice, la riga verticale è 100. La fascia colorata è l'<b>intervallo probabile</b>.</dd>
+            <dt>Intervallo</dt><dd>Dove sta il valore vero 8 volte su 10. Stretto = stima sicura; largo = pochi dati o giornate molto diverse fra loro. <b>Se le fasce di due operatori si sovrappongono molto, non si può dire chi dei due sia più bravo.</b></dd>
+            <dt>Stima / gg</dt><dd>Quanto ci si aspetta che produca <b>lui da solo</b> in una giornata piena da 8 ore, con un compagno nella norma su un comune nella norma: indice × norma dell'attività. Esempio: indice 161 su una norma di 1,80 km/gg → 2,90 km/gg. Una coppia fa circa la somma delle due stime. È il numero da usare per pianificare.</dd>
+            <dt>Media reale / gg</dt><dd>Quello che è successo davvero: la sua quota della produzione della squadra (produzione ÷ membri) divisa per le giornate lavorate. Comprende tutto: compagni bravi o meno, comuni facili o difficili, giornate corte (viaggio, maltempo). <b>Se la media reale è molto più alta della stima</b>, ha lavorato spesso con compagni forti o su comuni facili; <b>se è più bassa</b>, il contrario. Passando il mouse si vede l'indice «grezzo», cioè la stessa cosa espressa come indice.</dd>
+            <dt>Giornate</dt><dd>Giornate valide usate nel calcolo (le escluse sono contate in fondo alla pagina: produzione non verificata, un compagno senza ore, ecc.).</dd>
+            <dt>Affidabilità</dt><dd><b>alta</b> ≈ 15 o più giornate in coppia (o equivalenti); <b>media</b> ≈ 6–14; <b>bassa</b> = meno di 6, indice ancora poco attendibile.</dd>
+            <dt>Compagno più frequente</dt><dd>Con chi ha lavorato più spesso e in che quota. <b>⚠ non separabile</b> = più dell'80% delle giornate con la stessa persona: i due non si possono distinguere, l'indice è quello della coppia.</dd>
+          </dl>
+        </section>
+        <section>
+          <h4>Nella matrice</h4>
+          <p>Ogni cella è l'indice dell'operatore su quell'attività, col numero di giornate sotto. <span class="prf-guida-v">verde</span> sopra la norma, <span class="prf-guida-r">rosso</span> sotto, più intenso quanto più è lontano; grigio = meno giornate della soglia «Min. giornate». Clic su un'intestazione = classifica; clic su una cella = classifica con le settimane di quell'operatore.</p>
+        </section>
+        <section>
+          <h4>Come usarla e cosa non dice</h4>
+          <ul>
+            <li>Per un cantiere urgente scegli fra chi ha <b>indice alto e affidabilità media o alta</b>; fra due operatori con fasce sovrapposte la differenza non è reale.</li>
+            <li>Non misura la <b>qualità</b> del rilievo (errori, rifacimenti), la sicurezza, il lavoro non produttivo né le attività senza Km/Cad.</li>
+            <li>Conta solo le settimane sincronizzate in Controllo produzione: se mancano dati di un periodo, mancano anche qui.</li>
+            <li>È un aiuto alla pianificazione, <b>non una valutazione del personale</b>.</li>
+          </ul>
+        </section>
+      </div>
+    </details>
     <div class="bg-white border border-slate-200 rounded-lg">
       <div class="av-filtri no-print">
         <div class="relative" style="min-width:200px;flex:1;max-width:300px">

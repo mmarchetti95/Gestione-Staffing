@@ -266,7 +266,7 @@ async function prfPreparaGriglia() {
   const base = { commessa: '', range: _prfRange({ tipo: 'tutto' }), soloVer: true, comune: true };
   const a = _prfCalcola(dati.rows, Object.assign({ modo: 'att' }, base));
   const w = _prfCalcola(dati.rows, Object.assign({ modo: 'wo' }, base));
-  _prf.griglia = { ts: Date.now(), pools: Object.assign({}, a.pools, w.pools), etichette: Object.assign({}, a.etichette, w.etichette) };
+  _prf.griglia = { ts: Date.now(), pools: Object.assign({}, a.pools, w.pools), etichette: Object.assign({}, a.etichette, w.etichette), attEtichette: Object.assign({}, a.attEtichette, w.attEtichette) };
   return _prf.griglia;
 }
 
@@ -288,7 +288,7 @@ function prfIndiceGriglia(nome, commessa, attivitaElenco, tipoWo) {
   for (const k of chiavi) {
     const p = g.pools[k];
     const o = p && p.operatori[nome];
-    if (o && o.giorni >= PRF_MIN_GIORNI_CHIP) return { pool: k, label: (g.etichette[k] || {}).label || '', op: o };
+    if (o && o.giorni >= PRF_MIN_GIORNI_CHIP) return { pool: k, label: (g.etichette[k] || {}).label || '', op: o, prod: _prfProdGg(p, o, g.attEtichette) };
   }
   return null;
 }
@@ -299,7 +299,9 @@ function prfChipHtml(x) {
   const col = o.inseparabile ? 'bg-slate-50 text-slate-500 border-slate-200'
     : i >= 110 ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
     : i <= 90 ? 'bg-rose-50 text-rose-700 border-rose-200' : 'bg-slate-50 text-slate-600 border-slate-200';
-  const tit = 'Rendimento su ' + x.label + ': ' + i + ' (100 = nella norma) · ' + o.giorni + ' giornate · affidabilità ' + o.affidabilita +
+  const tit = 'Rendimento su ' + x.label + ': ' + i + ' (100 = nella norma)' +
+    (x.prod ? ' · ≈ ' + _prfNum(x.prod.stima, 2) + ' ' + _prfUnitaGg(x.prod.unita) + ' a testa (norma ' + _prfNum(x.prod.mediana, 2) + ')' : '') +
+    ' · ' + o.giorni + ' giornate · affidabilità ' + o.affidabilita +
     (o.inseparabile ? ' · lavora quasi sempre con ' + o.compagnoTop + ': non separabile' : '');
   return '<span class="prf-griglia text-[9px] ' + col + ' border px-1 rounded" title="' + esc(tit) + '">⚡ ' + i + (o.affidabilita === 'bassa' ? '?' : '') + '</span>';
 }
@@ -325,9 +327,12 @@ function _prfInitUi() {
   };
   Object.keys(azioni).forEach(id => { const el = document.getElementById(id); if (el) el.onclick = () => azioni[id](); });
   view.addEventListener('click', ev => {
-    const el = ev.target.closest('[data-prf-pool],[data-prf-cella],[data-prf-op],[data-prf-back],[data-prf-cp]');
+    const el = ev.target.closest('[data-prf-pool],[data-prf-cella],[data-prf-op],[data-prf-back],[data-prf-cp],[data-prf-guida]');
     if (!el || !view.contains(el)) return;
-    if (el.hasAttribute('data-prf-cp')) {
+    if (el.hasAttribute('data-prf-guida')) {
+      const g = document.getElementById('prf-guida');
+      if (g) { g.open = true; g.scrollIntoView({ behavior: 'smooth', block: 'start' }); }
+    } else if (el.hasAttribute('data-prf-cp')) {
       const p = el.getAttribute('data-prf-cp').split('|');
       pwAnno = Number(p[0]); pwWeek = Number(p[1]);
       pwSwitchTab('controllo');
@@ -477,7 +482,8 @@ function _prfHtmlMatrice() {
       const x = r.pools[k].operatori[o];
       if (!x) return '<td></td>';
       const debole = x.giorni < _prf.minGiorni;
-      const tit = Math.round(x.indice) + ' · ' + x.giorni + ' giornate' + (x.giorniInd ? ' (' + x.giorniInd + ' individuali)' : '') + ' · affidabilità ' + x.affidabilita +
+      const pg = _prfProdGg(r.pools[k], x, r.attEtichette);
+      const tit = Math.round(x.indice) + (pg ? ' · ≈ ' + _prfNum(pg.stima, 2) + ' ' + _prfUnitaGg(pg.unita) + ' a testa' : '') + ' · ' + x.giorni + ' giornate' + (x.giorniInd ? ' (' + x.giorniInd + ' individuali)' : '') + ' · affidabilità ' + x.affidabilita +
         (x.inseparabile ? ' · quasi sempre con ' + x.compagnoTop : '');
       return '<td class="prf-cella' + (debole ? ' prf-debole' : '') + '" style="' + _prfColore(x.indice, debole || x.inseparabile) + '" data-prf-cella="' + esc(k + '\u0001' + o) + '" data-help-key="prf-cella" title="' + esc(tit) + '">' +
         (debole ? '<span class="av-muted">' + x.giorni + ' gg</span>' : '<b>' + Math.round(x.indice) + '</b>' + (x.inseparabile ? ' <span title="Lavora quasi sempre con ' + esc(x.compagnoTop) + ': indice non separabile">⚠</span>' : '') + '<small>' + x.giorni + '</small>') + '</td>';
@@ -503,7 +509,32 @@ function _prfMedianaTesto(p) {
   const atts = Object.keys(p.mediane);
   if (atts.length !== 1) return atts.length + ' attività, ognuna confrontata con la sua mediana';
   const e = r.attEtichette[atts[0]] || {};
-  return 'mediana ' + _prfNum(p.mediane[atts[0]] * PRF_ORE_GIORNATA, 2) + ' ' + esc(e.unita || '') + ' per giornata-uomo da ' + PRF_ORE_GIORNATA + ' h';
+  return 'norma (100) = ' + _prfNum(p.mediane[atts[0]] * PRF_ORE_GIORNATA, 2) + ' ' + esc(_prfUnitaGg(e.unita)) + ' a testa (giornata da ' + PRF_ORE_GIORNATA + ' h)';
+}
+
+/* Produzione a giornata, A TESTA, di un operatore su un pool con una sola attività (unità
+   unica; con più attività le unità non si sommano → null).
+   - stima: il suo indice applicato alla mediana dell'attività, giornata da PRF_ORE_GIORNATA ore
+     (al netto di compagni e comuni: «quanto fa in una giornata normale»);
+   - reale: la sua quota effettiva (produzione della squadra ÷ membri) per giornata lavorata,
+     così com'è (ore della giornata comprese, compagni e comuni compresi). */
+function _prfProdGg(p, o, attEtichette) {
+  const atts = Object.keys((p && p.mediane) || {});
+  if (atts.length !== 1 || !(p.mediane[atts[0]] > 0) || !o) return null;
+  let km = 0, gg = 0;
+  (o.oss || []).forEach(x => { km += (Number(x.rif.km) || 0) / Math.max(1, (x.membri || []).length); gg += x.peso || 1; });
+  return {
+    unita: ((attEtichette || {})[atts[0]] || {}).unita || '',
+    stima: o.indice / 100 * p.mediane[atts[0]] * PRF_ORE_GIORNATA,
+    reale: gg ? km / gg : null,
+    mediana: p.mediane[atts[0]] * PRF_ORE_GIORNATA,
+  };
+}
+
+function _prfUnitaGg(u) {
+  u = String(u || '').trim();
+  if (!u) return '/gg';
+  return u.indexOf('/') !== -1 ? u + ' al gg' : u + '/gg';
 }
 
 function _prfHtmlClassifica(key) {
@@ -524,30 +555,37 @@ function _prfHtmlClassifica(key) {
     p.nGiorni + ' giornate di squadra · ' + nComuni + ' comuni · ' + _prfMedianaTesto(p) + ' · periodo: ' + esc(_prfPerLabel()) + '</div></div></div>';
 
   h += '<div class="av-sintesi prf-spiega">Indice 100 = resa nella norma. Calcolato <b>togliendo l\'effetto dei compagni</b> (le coppie ruotano: si confronta la stessa persona con compagni diversi)' +
-    (_prf.comune ? ' e <b>della difficoltà dei comuni</b>' : '') + '. Con poche giornate l\'indice resta vicino a 100. La barra va da 50 a 200; la fascia è l\'intervallo probabile.</div>';
+    (_prf.comune ? ' e <b>della difficoltà dei comuni</b>' : '') + '. Con poche giornate l\'indice resta vicino a 100. La barra va da 50 a 200; la fascia è l\'intervallo probabile. ' +
+    '<button type="button" class="av-link" data-prf-guida="1" data-help-key="prf-guida">📖 Come leggere le colonne</button></div>';
 
-  h += '<div class="prf-tw"><table class="av-t prf-cl"><thead><tr><th class="r">#</th><th>Operatore</th><th class="r">Indice</th><th style="min-width:180px">50 · 100 · 200</th><th>Intervallo</th><th class="r">Giornate</th><th>Affidabilità</th><th>Compagno più frequente</th><th class="r" title="Media semplice delle sue giornate, senza togliere compagni e comuni">Grezzo</th></tr></thead><tbody>';
+  h += '<div class="prf-tw"><table class="av-t prf-cl"><thead><tr><th class="r">#</th><th>Operatore</th><th class="r">Indice</th><th style="min-width:180px">50 · 100 · 200</th><th>Intervallo</th>' +
+    '<th class="r" title="Quanto produce a testa in una giornata normale da ' + PRF_ORE_GIORNATA + ' ore: il suo indice applicato alla norma dell\'attività, al netto di compagni e comuni">Stima / gg</th>' +
+    '<th class="r" title="La sua quota effettiva (produzione della squadra divisa per i membri) per giornata lavorata, così com\'è: compagni, comuni e ore della giornata compresi">Media reale / gg</th>' +
+    '<th class="r">Giornate</th><th>Affidabilità</th><th>Compagno più frequente</th></tr></thead><tbody>';
   const riga = (o, pos) => {
     const aperto = _prf.aperto === o.nome;
+    const pg = _prfProdGg(p, o, r.attEtichette);
+    const ug = pg ? ' <span class="av-muted">' + esc(_prfUnitaGg(pg.unita)) + '</span>' : '';
     let t = '<tr class="av-row-click' + (aperto ? ' av-aperta' : '') + (pos ? '' : ' prf-pochi') + '" data-prf-op="' + esc(o.nome) + '" data-help-key="prf-op">' +
       '<td class="r av-muted">' + (pos || '') + '</td>' +
       '<td><span class="av-chev">' + (aperto ? '▾' : '▸') + '</span> <b>' + esc(o.nome) + '</b></td>' +
       '<td class="r"><b class="prf-ind">' + Math.round(o.indice) + '</b></td>' +
       '<td>' + _prfBarra(o) + '</td>' +
       '<td class="av-muted">' + (o.inseparabile ? 'non separabile' : Math.round(o.basso) + '–' + Math.round(o.alto)) + '</td>' +
+      '<td class="r">' + (pg ? '<b>' + _prfNum(pg.stima, 2) + '</b>' + ug : '<span class="av-muted" title="Più attività con unità diverse: scegli «Per: Attività»">—</span>') + '</td>' +
+      '<td class="r" title="' + esc(o.grezzo != null ? 'Indice grezzo (senza togliere compagni e comuni): ' + Math.round(o.grezzo) : '') + '">' + (pg && pg.reale != null ? _prfNum(pg.reale, 2) + ug : '<span class="av-muted">—</span>') + '</td>' +
       '<td class="r">' + o.giorni + (o.giorniInd ? ' <span class="av-muted" title="Giornate con tablet proprio">(' + o.giorniInd + ' ind.)</span>' : '') + '</td>' +
       '<td><span class="prf-aff prf-aff-' + o.affidabilita + '">' + o.affidabilita + '</span></td>' +
-      '<td>' + (o.compagnoTop ? esc(o.compagnoTop) + ' <span class="av-muted">' + Math.round(o.quotaTop * 100) + '% delle giornate</span>' + (o.inseparabile ? ' <span class="av-warn" title="Lavora quasi sempre con questa persona: il contributo dei due non si può separare">⚠</span>' : '') : '<span class="av-muted">da solo</span>') + '</td>' +
-      '<td class="r av-muted">' + (o.grezzo != null ? Math.round(o.grezzo) : '') + '</td></tr>';
+      '<td>' + (o.compagnoTop ? esc(o.compagnoTop) + ' <span class="av-muted">' + Math.round(o.quotaTop * 100) + '% delle giornate</span>' + (o.inseparabile ? ' <span class="av-warn" title="Lavora quasi sempre con questa persona: il contributo dei due non si può separare">⚠</span>' : '') : '<span class="av-muted">da solo</span>') + '</td></tr>';
     if (aperto) t += _prfHtmlGiornate(o);
     return t;
   };
   ok.forEach((o, i) => { h += riga(o, i + 1); });
   if (pochi.length) {
-    h += '<tr class="prf-sez"><td colspan="9">Meno di ' + _prf.minGiorni + ' giornate: non in classifica</td></tr>';
+    h += '<tr class="prf-sez"><td colspan="10">Meno di ' + _prf.minGiorni + ' giornate: non in classifica</td></tr>';
     pochi.forEach(o => { h += riga(o, 0); });
   }
-  if (!ok.length && !pochi.length) h += '<tr><td colspan="9" class="av-vuoto">Nessun operatore.</td></tr>';
+  if (!ok.length && !pochi.length) h += '<tr><td colspan="10" class="av-vuoto">Nessun operatore.</td></tr>';
   h += '</tbody></table></div>';
   return h + _prfEsclusiHtml();
 }
@@ -555,7 +593,7 @@ function _prfHtmlClassifica(key) {
 function _prfHtmlGiornate(o) {
   const righe = o.oss.slice().sort((a, b) => b.rif.dataISO.localeCompare(a.rif.dataISO));
   const wo = _prf.modo === 'wo';
-  let h = '<tr class="prf-giorni"><td></td><td colspan="8"><table class="av-t prf-gg"><thead><tr><th>Settimana</th><th>Comune</th>' + (wo ? '<th>Attività</th>' : '') +
+  let h = '<tr class="prf-giorni"><td></td><td colspan="9"><table class="av-t prf-gg"><thead><tr><th>Settimana</th><th>Comune</th>' + (wo ? '<th>Attività</th>' : '') +
     '<th>Con</th><th class="r">Produzione</th><th class="r">Ore-uomo</th><th class="r">Resa / ' + PRF_ORE_GIORNATA + ' h</th><th class="r">Rispetto alla mediana</th><th></th></tr></thead><tbody>';
   righe.forEach(x => {
     const f = x.rif;
@@ -631,13 +669,16 @@ function prfEsporta() {
   if (!r) return;
   if (typeof XLSX === 'undefined') { showAlertModal('Libreria Excel non disponibile.'); return; }
   const ind = [['Periodo', _prfPerLabel(), 'Raggruppato per', _prf.modo === 'wo' ? 'Tipo di WO' : 'Attività', 'Solo verificata', _prf.soloVer ? 'sì' : 'no', 'Effetto comune', _prf.comune ? 'sì' : 'no'], [],
-    ['Attività / tipo', 'Commessa', 'Operatore', 'Indice', 'Intervallo da', 'Intervallo a', 'Giornate', 'Di cui individuali', 'Affidabilità', 'Compagno più frequente', 'Quota con lui %', 'Non separabile', 'Grezzo']];
+    ['Attività / tipo', 'Commessa', 'Operatore', 'Indice', 'Intervallo da', 'Intervallo a', 'Giornate', 'Di cui individuali', 'Affidabilità', 'Compagno più frequente', 'Quota con lui %', 'Non separabile', 'Grezzo', 'Stima a testa / gg (' + PRF_ORE_GIORNATA + ' h)', 'Media reale a testa / gg', 'Norma / gg', 'Unità']];
   const gg = [['Attività / tipo', 'Operatore', 'Settimana', 'Anno', 'Giornate', 'Giorni', 'Comune', 'Attività', 'Squadra', 'Con', 'Produzione', 'Unità', 'Ore-uomo', 'Rispetto alla mediana', 'Individuale']];
+  const arr = v => v == null ? '' : Math.round(v * 1000) / 1000;
   Object.keys(r.pools).sort((x, y) => _prfPoolLabel(x).localeCompare(_prfPoolLabel(y))).forEach(k => {
     const p = r.pools[k], lab = _prfPoolLabel(k), comm = ((r.etichette[k] || {}).commessa) || '';
     Object.values(p.operatori).sort((a, b) => b.indice - a.indice).forEach(o => {
+      const pg = _prfProdGg(p, o, r.attEtichette);
       ind.push([lab, comm, o.nome, Math.round(o.indice), o.inseparabile ? '' : Math.round(o.basso), o.inseparabile ? '' : Math.round(o.alto), o.giorni, o.giorniInd, o.affidabilita,
-        o.compagnoTop, o.compagnoTop ? Math.round(o.quotaTop * 100) : '', o.inseparabile ? 'sì' : '', o.grezzo != null ? Math.round(o.grezzo) : '']);
+        o.compagnoTop, o.compagnoTop ? Math.round(o.quotaTop * 100) : '', o.inseparabile ? 'sì' : '', o.grezzo != null ? Math.round(o.grezzo) : '',
+        pg ? arr(pg.stima) : '', pg ? arr(pg.reale) : '', pg ? arr(pg.mediana) : '', pg ? pg.unita : '']);
       o.oss.forEach(x => {
         const f = x.rif;
         gg.push([lab, o.nome, f.week, f.anno, (f.giorni || [f.dataISO]).length, (f.giorni || [f.dataISO]).join(' '), f.comune, f.attivita, f.squadra, (f.membri || []).filter(m => m !== o.nome).join(', '), f.km, f.unita || '', f.ore, Math.round(Math.exp(x.l) * 100), x.individuale ? 'sì' : '']);
