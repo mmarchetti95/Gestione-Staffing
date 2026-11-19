@@ -7,12 +7,15 @@
    con scritto "Access blocked — App is not following the tile usage policy" —
    a video un mosaico di riquadri gialli/neri (fix v18.174.0). La vista satellite
    non era toccata perché passa da Esri, da cui il sintomo "satellite sì, stradale no".
-   CARTO Voyager serve gli stessi dati OpenStreetMap da una CDN pensata per l'uso
-   applicativo, gratuita e senza API key. Modificare qui vale per tutte le mappe. */
+   Poi CARTO Voyager, finché (nov 2026, fix v18.279.0) ha iniziato a servire tile
+   con scritto "API KEY REQUIRED" (HTTP 200, ~2KB): stesso sintomo, mappa stradale
+   vuota. Ora Esri World Street Map, dallo stesso server del satellite e dell'ibrida,
+   gratuito e senza API key. Se torna a rompersi, scaricare una tile e GUARDARLA:
+   questi servizi rispondono 200 anche quando bloccano. Modificare qui vale per
+   tutte le mappe. */
 function mapStreetLayer() {
-  return L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
-    attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> · © <a href="https://carto.com/attributions">CARTO</a>',
-    subdomains: 'abcd',
+  return L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}', {
+    attribution: 'Tiles © Esri — Source: Esri, HERE, Garmin, USGS, © OpenStreetMap contributors',
     maxZoom: 19
   });
 }

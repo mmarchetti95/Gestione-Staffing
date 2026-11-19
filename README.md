@@ -114,6 +114,9 @@ Limite noto: il progetto Supabase è sul piano **Free**, che non include backup 
 
 ## Changelog
 
+## v18.279.0
+- fix: **Mappe, vista «Stradale» vuota.** Il servizio usato per la cartografia stradale (CARTO) ha iniziato a chiedere una chiave a pagamento e al posto della mappa mostrava riquadri con scritto «API KEY REQUIRED». Ora la vista Stradale usa la mappa stradale Esri (stesso fornitore di Satellite e Ibrida, gratuita, senza chiave), su tutte le mappe dell'app. Nessuna modifica a Supabase o alle Edge Function.
+
 ## v18.278.0
 - feat: **Controllo anomalie, «🗄 Ignora» archivia davvero.** Le anomalie ignorate finiscono nella nuova linguetta «🗄 Ignorate» (con chi le ha ignorate e quando, e «↩ Ripristina») e non tornano più fra le aperte: restano fuori dal totale del bottone, dalle linguette, da «Copia elenco», dal PDF, dai solleciti e dalla Chiusura settimana, anche dopo «↻ Ricontrolla», su un altro PC o per i colleghi. Prima erano salvate solo nel browser e ricomparivano, così il controllo sembrava sempre da rifare. Le ignorate già salvate nel browser vengono portate nella lista condivisa al primo accesso (admin/responsabile). Ignorare e ripristinare: admin e responsabili.
 - Supabase: nuova tabella `cpa_anomalie_ignorate` (una riga per anomalia, chiave = id dell'anomalia; lettura per tutti, scrittura admin/responsabile; Realtime), migrazione `supabase/migrations/20261118_cpa_anomalie_ignorate.sql`. Nessuna modifica alle Edge Function.
