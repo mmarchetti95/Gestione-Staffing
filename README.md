@@ -115,6 +115,10 @@ Limite noto: il progetto Supabase è sul piano **Free**, che non include backup 
 
 ## Changelog
 
+## v18.287.0
+- feat: **Mappa, pin colorati solo per stato.** Il colore del pin ora dice soltanto lo stato del cantiere, con la stessa legenda della colonna «Stato» (arancio in corso, grigio scuro da fare, verde completato, grigio chiaro stato n/d); il bordo è bianco per tutti. Tolti anche i pallini colorati per commessa nei filtri, nell'elenco Cantieri/Commesse e nel dettaglio, che facevano pensare a un secondo codice colore.
+- feat: **Mappa, «🌦 Meteo live».** Nuovo pulsante sotto lo zoom: apre sopra la mappa la mappa meteo interattiva di Windy, centrata sulla zona inquadrata, con livelli Pioggia, Vento, Temperatura, Nuvole, Neve e Temporali (l'ultimo scelto resta salvato in questo browser). «✕ Torna ai cantieri» la chiude. Nessuna chiave API; a Windy arrivano solo centro e zoom della vista. Nessuna modifica a Supabase o alle Edge Function.
+
 ## v18.284.0
 - feat: **Prestazioni operatori, ordinamento.** Nella matrice un clic sull'intestazione di un'attività ordina gli operatori su quell'attività: al primo clic in cima i più performanti, al secondo l'ordine si inverte; chi ha meno giornate della soglia «Min. giornate» e chi non ha mai fatto quell'attività restano sempre in fondo, così non sale in cima chi ha poche giornate fortunate. Clic su «Operatore» = per nome. La classifica dell'attività si apre dal pulsante «📊 classifica» sotto il titolo della colonna. Anche la classifica si ordina cliccando le intestazioni (Operatore, Indice, Stima / gg, Media reale / gg, Giornate, Affidabilità), in entrambi i versi; chi è sotto soglia resta nella sezione in fondo. Gli ordinamenti restano memorizzati nel browser. (La guida «📖 Come leggere questa vista» e le guide del tasto destro aggiornate per l'ordinamento erano già uscite con la v18.283.0.) Nessuna modifica a Supabase o alle Edge Function.
 

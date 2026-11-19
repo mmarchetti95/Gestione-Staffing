@@ -1875,14 +1875,15 @@
   .ml-row-st { width: 8px; height: 22px; border-radius: 3px; flex-shrink: 0; }
   .ml-warn { font-size: 10px; }
 
-  /* Pin: cerchio commessa + anello stato Task + icona meteo + eventuale allerta PC */
+  /* Pin: cerchio colorato dallo stato del Task + icona meteo + eventuale allerta PC */
   .ml-pin-wrap { background: transparent; border: none; }
   .ml-pin {
     position: relative; width: 34px; height: 34px; border-radius: 50%;
-    border: 3px solid #cbd5e1; box-shadow: 0 1px 4px rgba(15,23,42,.35);
+    border: 2px solid #fff; box-shadow: 0 1px 4px rgba(15,23,42,.45);
     display: flex; align-items: center; justify-content: center;
   }
   .ml-pin-n { color: white; font-size: 12.5px; font-weight: 700; text-shadow: 0 1px 2px rgba(0,0,0,.4); }
+  .ml-pin-nd .ml-pin-n { color: #334155; text-shadow: none; }
   .ml-pin-meteo { position: absolute; top: -9px; right: -9px; font-size: 14px; line-height: 1; }
   .ml-pin-alert { position: absolute; bottom: -8px; left: -6px; font-size: 12px; line-height: 1; }
   .ml-pc-gialla { color: #eab308; }
@@ -1894,6 +1895,30 @@
     display: none; align-items: center; justify-content: center;
     font-size: 13px; color: #475569; z-index: 500;
   }
+
+  /* Meteo live (Windy): pulsante sotto lo zoom Leaflet, pannello che copre la mappa
+     dei cantieri (sotto il drawer di dettaglio, sopra i controlli Leaflet a 1000). */
+  .ml-windy-btn {
+    position: absolute; top: 84px; left: 10px; z-index: 1001;
+    background: white; border: 2px solid rgba(0,0,0,.2); border-radius: 6px;
+    padding: 4px 8px; font-size: 12px; font-weight: 600; color: #0f172a; cursor: pointer;
+  }
+  .ml-windy-btn:hover { background: #f1f5f9; }
+  .ml-windy { position: absolute; inset: 0; z-index: 1050; display: flex; flex-direction: column; background: #0f172a; }
+  .ml-windy.hidden { display: none; }
+  .ml-windy-bar {
+    display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+    padding: 6px 10px; background: var(--dark-bg); color: white; font-size: 12px;
+  }
+  .ml-windy-lbl { font-weight: 700; }
+  .ml-windy-layers { display: flex; gap: 4px; flex-wrap: wrap; flex: 1; }
+  .ml-windy-layers button, .ml-windy-close {
+    background: rgba(255,255,255,.12); color: white; border: 1px solid rgba(255,255,255,.25);
+    border-radius: 999px; padding: 2px 10px; font-size: 12px; cursor: pointer;
+  }
+  .ml-windy-layers button.active { background: white; color: #0f172a; }
+  .ml-windy-close { border-radius: 6px; font-weight: 600; }
+  #ml-windy-frame { flex: 1; width: 100%; border: 0; }
 
   .ml-drawer {
     position: absolute; top: 0; right: 0; bottom: 0; width: 370px; max-width: 92%;
@@ -2258,7 +2283,7 @@
       </span>
       <button id="btn-presentation" class="px-3 py-1.5 text-sm rounded hover:bg-white/10" style="border:1px solid var(--dark-border-strong);color:var(--dark-text);visibility:visible;">📊 Modalità presentazione</button>
       <div class="text-xs pl-2" style="border-left:1px solid var(--dark-border-strong);color:var(--dark-text-muted);">
-        <span id="app-version" class="font-medium" style="color:var(--accent);">v18.284.0</span> · Michele Marchetti
+        <span id="app-version" class="font-medium" style="color:var(--accent);">v18.287.0</span> · Michele Marchetti
         <span id="sb-role-badge" style="margin-left:8px;padding:1px 8px;border-radius:9999px;background:rgba(255,255,255,.1);color:var(--dark-text);font-weight:600;"></span>
       </div>
     </div>
@@ -3679,7 +3704,7 @@
       </div>
     </div>
     <div class="ml-filtri-foot">
-      <span class="ml-filtro-hint">Il colore del pin indica la commessa, il bordo lo stato del cantiere.</span>
+      <span class="ml-filtro-hint">Il colore del pin indica solo lo stato del cantiere (legenda «Stato»).</span>
       <button id="ml-filtro-clear" class="text-[11px] text-slate-500 underline" style="display:none;">Azzera filtri</button>
     </div>
   </div>
@@ -3695,6 +3720,15 @@
     </div>
     <div class="ml-map-wrap">
       <div id="ml-map"></div>
+      <button id="ml-windy-btn" class="ml-windy-btn" onclick="mlWindyToggle()" title="Mappa meteo interattiva (Windy) sulla zona inquadrata">🌦 Meteo live</button>
+      <div id="ml-windy" class="ml-windy hidden">
+        <div class="ml-windy-bar">
+          <span class="ml-windy-lbl">🌦 Meteo live · Windy</span>
+          <span id="ml-windy-layers" class="ml-windy-layers"></span>
+          <button class="ml-windy-close" onclick="mlWindyToggle(false)" title="Torna alla mappa dei cantieri">✕ Torna ai cantieri</button>
+        </div>
+        <iframe id="ml-windy-frame" title="Mappa meteo Windy" loading="lazy" referrerpolicy="no-referrer"></iframe>
+      </div>
       <div id="ml-loading" class="ml-loading">⏳ Localizzazione cantieri…</div>
       <div id="ml-drawer" class="ml-drawer hidden">
         <div class="ml-drawer-head">
@@ -44179,6 +44213,71 @@ function mlInit() {
   setTimeout(() => _mlMap.invalidateSize(), 200);
 }
 
+/* ----- Meteo live (Windy) -----
+   Embed ufficiale di Windy (embed.windy.com) in un pannello sopra la mappa dei
+   cantieri, centrato sulla zona inquadrata in quel momento. Nessuna chiave API;
+   a Windy arrivano solo centro e zoom della vista. Il livello scelto (pioggia,
+   vento, ...) resta in localStorage per questo browser. */
+const ML_WINDY_LIVELLI = [
+  { v: 'rain', l: '🌧 Pioggia' },
+  { v: 'wind', l: '💨 Vento' },
+  { v: 'temp', l: '🌡 Temperatura' },
+  { v: 'clouds', l: '☁️ Nuvole' },
+  { v: 'snowAccu', l: '❄️ Neve' },
+  { v: 'thunder', l: '⚡ Temporali' },
+];
+let _mlWindyAperto = false;
+
+function _mlWindyLivello() {
+  let v = '';
+  try { v = localStorage.getItem('ml_windy_livello') || ''; } catch (e) {}
+  return ML_WINDY_LIVELLI.some(x => x.v === v) ? v : 'rain';
+}
+
+function _mlWindyUrl(livello) {
+  const c = _mlMap ? _mlMap.getCenter() : { lat: 43.1, lng: 12.4 };
+  const z = Math.max(3, Math.min(11, Math.round(_mlMap ? _mlMap.getZoom() : 6)));
+  const p = {
+    type: 'map', location: 'coordinates', metricRain: 'mm', metricTemp: '°C', metricWind: 'km/h',
+    zoom: z, overlay: livello, product: 'ecmwf', level: 'surface',
+    lat: c.lat.toFixed(3), lon: c.lng.toFixed(3),
+  };
+  return 'https://embed.windy.com/embed.html?' +
+    Object.keys(p).map(k => k + '=' + encodeURIComponent(p[k])).join('&');
+}
+
+function _mlWindyRenderLivelli() {
+  const el = document.getElementById('ml-windy-layers');
+  if (!el) return;
+  const cur = _mlWindyLivello();
+  el.innerHTML = ML_WINDY_LIVELLI.map(x =>
+    '<button class="' + (x.v === cur ? 'active' : '') + '" data-v="' + esc(x.v) + '">' + esc(x.l) + '</button>').join('');
+  el.querySelectorAll('button').forEach(b => {
+    b.onclick = () => {
+      try { localStorage.setItem('ml_windy_livello', b.dataset.v); } catch (e) {}
+      _mlWindyRenderLivelli();
+      const fr = document.getElementById('ml-windy-frame');
+      if (fr) fr.src = _mlWindyUrl(b.dataset.v);
+    };
+  });
+}
+
+function mlWindyToggle(forza) {
+  const box = document.getElementById('ml-windy');
+  const fr = document.getElementById('ml-windy-frame');
+  if (!box || !fr) return;
+  _mlWindyAperto = typeof forza === 'boolean' ? forza : !_mlWindyAperto;
+  box.classList.toggle('hidden', !_mlWindyAperto);
+  const btn = document.getElementById('ml-windy-btn');
+  if (btn) btn.style.display = _mlWindyAperto ? 'none' : '';
+  if (_mlWindyAperto) {
+    _mlWindyRenderLivelli();
+    fr.src = _mlWindyUrl(_mlWindyLivello());
+  } else {
+    fr.src = 'about:blank';
+  }
+}
+
 async function mlRender(opts) {
   if (!_mlMap) return;
   if (_mlRendering) return;
@@ -44389,7 +44488,7 @@ function mlRenderFiltri(tutti) {
   }
   [..._mlFiltroCantieri].forEach(c => { if (!cantieri.includes(c)) _mlFiltroCantieri.delete(c); });
 
-  mlRenderChips('ml-filtro-commesse', commesse, _mlFiltroCommesse, _mlSearchCommesse, 'nessuna commessa pianificata', true);
+  mlRenderChips('ml-filtro-commesse', commesse, _mlFiltroCommesse, _mlSearchCommesse, 'nessuna commessa pianificata', false);
   mlRenderChips('ml-filtro-operatori', operatori, _mlFiltroOperatori, _mlSearchOperatori, 'nessun operatore pianificato', false);
   mlRenderChips('ml-filtro-regioni', regioni, _mlFiltroRegioni, _mlSearchRegioni,
     regioniInCaricamento ? '⏳ in caricamento…' : 'nessuna regione nota', false);
@@ -44481,16 +44580,18 @@ function mlClearFiltri() {
   mlRender({ reloadJira: false, reloadProduzione: false, keepView: true });
 }
 
-/* Pin: cerchio colorato come la commessa, anello colorato dallo stato del Task,
-   icona meteo in alto a destra e numero di operatori al centro. */
+/* Pin: cerchio colorato SOLO dallo stato del Task (stessa legenda della colonna
+   «Stato»: in corso / da fare / completato / n/d), bordo bianco neutro, icona meteo
+   in alto a destra e numero di operatori al centro. Il colore della commessa non
+   compare più sul pin: due codici colore insieme rendevano la mappa illeggibile. */
 function mlMarkerHtml(g, dateISO) {
   const stato = g.stato;
-  const ring = stato ? ML_STATUS_COLORS[stato] : '#cbd5e1';
+  const fill = stato ? ML_STATUS_COLORS[stato] : '#cbd5e1';
   const info = dateISO ? pwMeteoInfoFor(g.cantiere, dateISO) : null;
   const pcCol = dateISO ? pcColorePeggiore(pcInfoFor(g.cantiere, dateISO)) : null;
   const meteoEl = info ? '<span class="ml-pin-meteo">' + pwMeteoIconFor(info.code) + '</span>' : '';
   const allerta = pcCol ? '<span class="ml-pin-alert ml-pc-' + esc(pcCol) + '">▲</span>' : '';
-  return '<div class="ml-pin" style="background:' + esc(g.color) + ';border-color:' + esc(ring) + '">' +
+  return '<div class="ml-pin' + (stato ? '' : ' ml-pin-nd') + '" style="background:' + esc(fill) + '">' +
     '<span class="ml-pin-n">' + g.nOperatori + '</span>' + meteoEl + allerta + '</div>';
 }
 
@@ -44756,7 +44857,6 @@ function mlRenderLista(groups, items) {
     const lbl = stato ? ML_STATUS_LABELS[stato] : 'Stato non disponibile';
     const warn = geo ? '' : '<span class="ml-warn" title="Cantiere non localizzato da Nominatim">📍?</span>';
     return '<button class="ml-row" data-idx="' + idx + '">' +
-      '<span class="ml-row-dot" style="background:' + esc(g.color) + '"></span>' +
       '<span class="ml-row-main">' +
         '<span class="ml-row-t">' + esc(g.cantiere) + ' ' + warn + '</span>' +
         '<span class="ml-row-s">' + esc([...g.commesse].join(', ')) + '</span>' +
@@ -44807,7 +44907,6 @@ function mlRenderCommesseList(items) {
     const titolo = chiavi.length + ' cantieri · ' + cnt.done + ' completati · ' + cnt.indeterminate + ' in corso · ' +
                    cnt.new + ' da fare · ' + cnt.nd + ' senza stato';
     return '<button class="ml-row ml-row-comm" data-comm="' + esc(c.nome) + '" title="' + esc(titolo) + '">' +
-      '<span class="ml-row-dot" style="background:' + esc(c.color) + '"></span>' +
       '<span class="ml-row-main">' +
         '<span class="ml-row-t">' + esc(c.nome) + '</span>' +
         '<span class="ml-row-s">' + chiavi.length + ' cantieri · ' + c.operatori.size + ' operatori</span>' +
@@ -44941,7 +45040,7 @@ function mlDettaglioHtml(g) {
   const puoGriglia = typeof sbCanSeePage !== 'function' || sbCanSeePage('weekly:griglia');
   g.items.forEach((it, i) => {
     html += '<div class="ml-sec">';
-    html += '<div class="ml-sec-t"><span class="ml-row-dot" style="background:' + esc(it.color) + '"></span>' + esc(it.squadra) +
+    html += '<div class="ml-sec-t">' + esc(it.squadra) +
       (puoGriglia && it.loc ? '<button class="ml-link ml-griglia-link" data-ml-griglia="' + i + '" title="Apri la Griglia settimanale su questa cella (' + esc(it.loc.label) + ')">📅 Apri in Griglia</button>' : '') +
       '</div>';
     html += '<div class="ml-kv"><span>Commessa</span><b><button class="ml-link" data-ml-commessa="' + esc(it.commessa) + '">' + esc(it.commessa) + '</button></b></div>';

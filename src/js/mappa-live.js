@@ -836,6 +836,71 @@ function mlInit() {
   setTimeout(() => _mlMap.invalidateSize(), 200);
 }
 
+/* ----- Meteo live (Windy) -----
+   Embed ufficiale di Windy (embed.windy.com) in un pannello sopra la mappa dei
+   cantieri, centrato sulla zona inquadrata in quel momento. Nessuna chiave API;
+   a Windy arrivano solo centro e zoom della vista. Il livello scelto (pioggia,
+   vento, ...) resta in localStorage per questo browser. */
+const ML_WINDY_LIVELLI = [
+  { v: 'rain', l: '🌧 Pioggia' },
+  { v: 'wind', l: '💨 Vento' },
+  { v: 'temp', l: '🌡 Temperatura' },
+  { v: 'clouds', l: '☁️ Nuvole' },
+  { v: 'snowAccu', l: '❄️ Neve' },
+  { v: 'thunder', l: '⚡ Temporali' },
+];
+let _mlWindyAperto = false;
+
+function _mlWindyLivello() {
+  let v = '';
+  try { v = localStorage.getItem('ml_windy_livello') || ''; } catch (e) {}
+  return ML_WINDY_LIVELLI.some(x => x.v === v) ? v : 'rain';
+}
+
+function _mlWindyUrl(livello) {
+  const c = _mlMap ? _mlMap.getCenter() : { lat: 43.1, lng: 12.4 };
+  const z = Math.max(3, Math.min(11, Math.round(_mlMap ? _mlMap.getZoom() : 6)));
+  const p = {
+    type: 'map', location: 'coordinates', metricRain: 'mm', metricTemp: '°C', metricWind: 'km/h',
+    zoom: z, overlay: livello, product: 'ecmwf', level: 'surface',
+    lat: c.lat.toFixed(3), lon: c.lng.toFixed(3),
+  };
+  return 'https://embed.windy.com/embed.html?' +
+    Object.keys(p).map(k => k + '=' + encodeURIComponent(p[k])).join('&');
+}
+
+function _mlWindyRenderLivelli() {
+  const el = document.getElementById('ml-windy-layers');
+  if (!el) return;
+  const cur = _mlWindyLivello();
+  el.innerHTML = ML_WINDY_LIVELLI.map(x =>
+    '<button class="' + (x.v === cur ? 'active' : '') + '" data-v="' + esc(x.v) + '">' + esc(x.l) + '</button>').join('');
+  el.querySelectorAll('button').forEach(b => {
+    b.onclick = () => {
+      try { localStorage.setItem('ml_windy_livello', b.dataset.v); } catch (e) {}
+      _mlWindyRenderLivelli();
+      const fr = document.getElementById('ml-windy-frame');
+      if (fr) fr.src = _mlWindyUrl(b.dataset.v);
+    };
+  });
+}
+
+function mlWindyToggle(forza) {
+  const box = document.getElementById('ml-windy');
+  const fr = document.getElementById('ml-windy-frame');
+  if (!box || !fr) return;
+  _mlWindyAperto = typeof forza === 'boolean' ? forza : !_mlWindyAperto;
+  box.classList.toggle('hidden', !_mlWindyAperto);
+  const btn = document.getElementById('ml-windy-btn');
+  if (btn) btn.style.display = _mlWindyAperto ? 'none' : '';
+  if (_mlWindyAperto) {
+    _mlWindyRenderLivelli();
+    fr.src = _mlWindyUrl(_mlWindyLivello());
+  } else {
+    fr.src = 'about:blank';
+  }
+}
+
 async function mlRender(opts) {
   if (!_mlMap) return;
   if (_mlRendering) return;
@@ -1046,7 +1111,7 @@ function mlRenderFiltri(tutti) {
   }
   [..._mlFiltroCantieri].forEach(c => { if (!cantieri.includes(c)) _mlFiltroCantieri.delete(c); });
 
-  mlRenderChips('ml-filtro-commesse', commesse, _mlFiltroCommesse, _mlSearchCommesse, 'nessuna commessa pianificata', true);
+  mlRenderChips('ml-filtro-commesse', commesse, _mlFiltroCommesse, _mlSearchCommesse, 'nessuna commessa pianificata', false);
   mlRenderChips('ml-filtro-operatori', operatori, _mlFiltroOperatori, _mlSearchOperatori, 'nessun operatore pianificato', false);
   mlRenderChips('ml-filtro-regioni', regioni, _mlFiltroRegioni, _mlSearchRegioni,
     regioniInCaricamento ? '⏳ in caricamento…' : 'nessuna regione nota', false);
@@ -1138,16 +1203,18 @@ function mlClearFiltri() {
   mlRender({ reloadJira: false, reloadProduzione: false, keepView: true });
 }
 
-/* Pin: cerchio colorato come la commessa, anello colorato dallo stato del Task,
-   icona meteo in alto a destra e numero di operatori al centro. */
+/* Pin: cerchio colorato SOLO dallo stato del Task (stessa legenda della colonna
+   «Stato»: in corso / da fare / completato / n/d), bordo bianco neutro, icona meteo
+   in alto a destra e numero di operatori al centro. Il colore della commessa non
+   compare più sul pin: due codici colore insieme rendevano la mappa illeggibile. */
 function mlMarkerHtml(g, dateISO) {
   const stato = g.stato;
-  const ring = stato ? ML_STATUS_COLORS[stato] : '#cbd5e1';
+  const fill = stato ? ML_STATUS_COLORS[stato] : '#cbd5e1';
   const info = dateISO ? pwMeteoInfoFor(g.cantiere, dateISO) : null;
   const pcCol = dateISO ? pcColorePeggiore(pcInfoFor(g.cantiere, dateISO)) : null;
   const meteoEl = info ? '<span class="ml-pin-meteo">' + pwMeteoIconFor(info.code) + '</span>' : '';
   const allerta = pcCol ? '<span class="ml-pin-alert ml-pc-' + esc(pcCol) + '">▲</span>' : '';
-  return '<div class="ml-pin" style="background:' + esc(g.color) + ';border-color:' + esc(ring) + '">' +
+  return '<div class="ml-pin' + (stato ? '' : ' ml-pin-nd') + '" style="background:' + esc(fill) + '">' +
     '<span class="ml-pin-n">' + g.nOperatori + '</span>' + meteoEl + allerta + '</div>';
 }
 
@@ -1413,7 +1480,6 @@ function mlRenderLista(groups, items) {
     const lbl = stato ? ML_STATUS_LABELS[stato] : 'Stato non disponibile';
     const warn = geo ? '' : '<span class="ml-warn" title="Cantiere non localizzato da Nominatim">📍?</span>';
     return '<button class="ml-row" data-idx="' + idx + '">' +
-      '<span class="ml-row-dot" style="background:' + esc(g.color) + '"></span>' +
       '<span class="ml-row-main">' +
         '<span class="ml-row-t">' + esc(g.cantiere) + ' ' + warn + '</span>' +
         '<span class="ml-row-s">' + esc([...g.commesse].join(', ')) + '</span>' +
@@ -1464,7 +1530,6 @@ function mlRenderCommesseList(items) {
     const titolo = chiavi.length + ' cantieri · ' + cnt.done + ' completati · ' + cnt.indeterminate + ' in corso · ' +
                    cnt.new + ' da fare · ' + cnt.nd + ' senza stato';
     return '<button class="ml-row ml-row-comm" data-comm="' + esc(c.nome) + '" title="' + esc(titolo) + '">' +
-      '<span class="ml-row-dot" style="background:' + esc(c.color) + '"></span>' +
       '<span class="ml-row-main">' +
         '<span class="ml-row-t">' + esc(c.nome) + '</span>' +
         '<span class="ml-row-s">' + chiavi.length + ' cantieri · ' + c.operatori.size + ' operatori</span>' +
@@ -1598,7 +1663,7 @@ function mlDettaglioHtml(g) {
   const puoGriglia = typeof sbCanSeePage !== 'function' || sbCanSeePage('weekly:griglia');
   g.items.forEach((it, i) => {
     html += '<div class="ml-sec">';
-    html += '<div class="ml-sec-t"><span class="ml-row-dot" style="background:' + esc(it.color) + '"></span>' + esc(it.squadra) +
+    html += '<div class="ml-sec-t">' + esc(it.squadra) +
       (puoGriglia && it.loc ? '<button class="ml-link ml-griglia-link" data-ml-griglia="' + i + '" title="Apri la Griglia settimanale su questa cella (' + esc(it.loc.label) + ')">📅 Apri in Griglia</button>' : '') +
       '</div>';
     html += '<div class="ml-kv"><span>Commessa</span><b><button class="ml-link" data-ml-commessa="' + esc(it.commessa) + '">' + esc(it.commessa) + '</button></b></div>';
