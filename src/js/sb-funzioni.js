@@ -12,6 +12,7 @@ const SB_FN_TABLE = 'app_funzioni_nascoste';
 const SB_FN_FUNZIONI = [
   { gruppo: 'Schermate', chiave: 'dashboard', label: '📊 Dashboard', sel: '#nav-dashboard' },
   { gruppo: 'Schermate', chiave: 'mappa', label: '🗺 Mappa (vista live)', sel: '#nav-mappa' },
+  { gruppo: 'Schermate', chiave: 'programmazione', label: '📋 Programmazione (board tipo Monday)', sel: '#nav-programmazione' },
   { gruppo: 'Pianificazione settimanale', chiave: 'weekly:griglia', label: '📋 Griglia settimanale', sel: '#pw-tab-griglia' },
   { gruppo: 'Pianificazione settimanale', chiave: 'weekly:ferie', label: '🏖 Ferie / Permessi', sel: '#pw-tab-ferie' },
   { gruppo: 'Pianificazione settimanale', chiave: 'weekly:mappa', label: '🗺 Mappa squadre', sel: '#pw-tab-mappa' },

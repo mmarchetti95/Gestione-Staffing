@@ -81,14 +81,17 @@ function switchScreen(screen) {
   if (screen === 'dashboard' && !sbCanSeePage('dashboard')) return;
   if (screen === 'weekly' && !PW_TAB_KEYS.some(k => sbCanSeePage('weekly:' + k))) return;
   if (screen === 'mappa' && !sbCanSeePage('mappa')) return;
+  if (screen === 'programmazione' && !sbCanSeePage('programmazione')) return;
   const _cpTorna = document.getElementById('cp-torna-btn');
   if (_cpTorna) _cpTorna.remove();
   const mainEl   = document.querySelector('main');
   const weeklyEl = document.getElementById('screen-weekly');
   const mappaEl  = document.getElementById('screen-mappa');
+  const prgScr   = document.getElementById('screen-programmazione');
   const navDash  = document.getElementById('nav-dashboard');
   const navWk    = document.getElementById('nav-weekly');
   const navMl    = document.getElementById('nav-mappa');
+  const navPrg   = document.getElementById('nav-programmazione');
   const btnPres  = document.getElementById('btn-presentation');
   const dbUndoBar = document.getElementById('db-undo-bar');
   if (dbUndoBar) dbUndoBar.style.display = screen === 'dashboard' ? '' : 'none';
@@ -99,7 +102,10 @@ function switchScreen(screen) {
   mainEl.classList.add('hidden');
   weeklyEl.classList.add('hidden');
   if (mappaEl) mappaEl.classList.add('hidden');
-  [navDash, navWk, navMl].forEach(n => n && n.classList.remove('active'));
+  if (prgScr) prgScr.classList.add('hidden');
+  [navDash, navWk, navMl, navPrg].forEach(n => n && n.classList.remove('active'));
+  // Pannello elemento e popover della Programmazione sono fuori dallo screen (position:fixed)
+  if (screen !== 'programmazione' && typeof prgChiudiDrawer === 'function') { prgChiudiDrawer(); prgPopChiudi(); }
   // Il timer di refresh Jira della Mappa gira solo mentre la Mappa è aperta
   // (vedi mlStartAutoRefresh): uscendo da qualsiasi altra parte va fermato.
   if (typeof mlStopAutoRefresh === 'function') mlStopAutoRefresh();
@@ -116,6 +122,11 @@ function switchScreen(screen) {
     // La Mappa legge pwData: senza pwLoad() la prima apertura diretta (ripristino
     // di last_screen) troverebbe la pianificazione vuota.
     pwLoad().then(() => mlEnter());
+  } else if (screen === 'programmazione') {
+    if (prgScr) prgScr.classList.remove('hidden');
+    if (navPrg) navPrg.classList.add('active');
+    if (btnPres) btnPres.style.visibility = 'hidden';
+    prgEnter();
   } else {
     mainEl.classList.remove('hidden');
     if (navDash) navDash.classList.add('active');

@@ -93,6 +93,9 @@ JS_FILES = [
     'avanzamento-comuni.js',
     'prestazioni-core.js',
     'prestazioni.js',
+    'programmazione.js',
+    'programmazione-colonne.js',
+    'programmazione-import.js',
     'ai-assistant.js',
 ]
 

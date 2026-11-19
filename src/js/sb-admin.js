@@ -49,32 +49,35 @@ function sbApplyPageVisibility() {
   const navDash = document.getElementById('nav-dashboard');
   const navWk = document.getElementById('nav-weekly');
   const navMl = document.getElementById('nav-mappa');
+  const navPrg = document.getElementById('nav-programmazione');
   const canDash = sbCanSeePage('dashboard');
   const anyWeekly = PW_TAB_KEYS.some(k => sbCanSeePage('weekly:' + k));
   const canMappa = sbCanSeePage('mappa');
+  const canPrg = sbCanSeePage('programmazione');
   if (navDash) navDash.style.display = canDash ? '' : 'none';
   if (navWk) navWk.style.display = anyWeekly ? '' : 'none';
   if (navMl) navMl.style.display = canMappa ? '' : 'none';
+  if (navPrg) navPrg.style.display = canPrg ? '' : 'none';
   PW_TAB_KEYS.forEach(k => {
     const el = document.getElementById('pw-tab-' + k);
     if (el) el.style.display = sbCanSeePage('weekly:' + k) ? '' : 'none';
   });
   const weeklyEl = document.getElementById('screen-weekly');
   const mappaEl = document.getElementById('screen-mappa');
+  const prgScr = document.getElementById('screen-programmazione');
   const onWeekly = weeklyEl && !weeklyEl.classList.contains('hidden');
   const onMappa = mappaEl && !mappaEl.classList.contains('hidden');
+  const onPrg = prgScr && !prgScr.classList.contains('hidden');
   // Se lo screen aperto non è più visibile per il ruolo corrente, si ripiega sul
-  // primo consentito nell'ordine Dashboard -> Pianificazione -> Mappa.
-  if (onMappa && !canMappa) {
+  // primo consentito nell'ordine Dashboard -> Pianificazione -> Mappa -> Programmazione.
+  const ripiega = () => {
     if (canDash) switchScreen('dashboard');
     else if (anyWeekly) switchScreen('weekly');
-  } else if (onWeekly && !anyWeekly) {
-    if (canDash) switchScreen('dashboard');
     else if (canMappa) switchScreen('mappa');
-  } else if (!onWeekly && !onMappa && !canDash) {
-    if (anyWeekly) switchScreen('weekly');
-    else if (canMappa) switchScreen('mappa');
-  }
+    else if (canPrg) switchScreen('programmazione');
+  };
+  if ((onMappa && !canMappa) || (onWeekly && !anyWeekly) || (onPrg && !canPrg)) ripiega();
+  else if (!onWeekly && !onMappa && !onPrg && !canDash) ripiega();
   if (onWeekly && typeof _pwActiveTab !== 'undefined' && !sbCanSeePage('weekly:' + _pwActiveTab)) {
     const allowed = PW_TAB_KEYS.find(k => sbCanSeePage('weekly:' + k));
     if (allowed) pwSwitchTab(allowed);
@@ -374,9 +377,10 @@ const SB_PAGE_LABELS = {
   'weekly:meteo-storico': 'Storico meteo',
   'weekly:doppia': 'Doppia Week',
   'mappa': 'Mappa (vista d\'insieme)',
+  'programmazione': 'Programmazione',
 };
 function sbAllPageKeys() {
-  return ['dashboard', ...PW_TAB_KEYS.map(k => 'weekly:' + k).filter(k => !SB_PAGINE_RESPONSABILI.includes(k)), 'mappa'];
+  return ['dashboard', ...PW_TAB_KEYS.map(k => 'weekly:' + k).filter(k => !SB_PAGINE_RESPONSABILI.includes(k)), 'mappa', 'programmazione'];
 }
 function sbGuestPagesChecksHtml(checked) {
   return sbAllPageKeys().map(k =>
@@ -751,6 +755,8 @@ async function sbOnLoggedIn() {
   // Anomalie ignorate del Controllo anomalie (tabella condivisa), non blocca il login.
   cpaIgnLoad();
   cpaIgnSubscribe();
+  // Programmazione: se all'avvio è stata ripristinata quella schermata, ora c'è l'utente.
+  if (typeof prgDopoLogin === 'function') prgDopoLogin();
 }
 
 function sbSubscribeRealtime() {
@@ -781,6 +787,7 @@ async function sbLogout() {
     _sbRealtimeChannel = null;
   }
   pwNvUnsubscribe();
+  if (typeof prgUnsubscribe === 'function') prgUnsubscribe();
   pwJsubUnsubscribe();
   cpaIgnUnsubscribe();
   sbFnUnsubscribe();

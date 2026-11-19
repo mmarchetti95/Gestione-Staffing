@@ -228,6 +228,9 @@ document.addEventListener('DOMContentLoaded', async () => {
   document.getElementById('nav-weekly').onclick = () => switchScreen('weekly');
   const _navMappa = document.getElementById('nav-mappa');
   if (_navMappa) _navMappa.onclick = () => switchScreen('mappa');
+  const _navPrg = document.getElementById('nav-programmazione');
+  if (_navPrg) _navPrg.onclick = () => switchScreen('programmazione');
+  if (typeof prgBind === 'function') prgBind();
   // Toolbar/filtri dello screen Mappa: agganciati una volta sola qui, non ad ogni
   // ingresso nello screen, così non si accumulano handler duplicati.
   if (typeof mlBindToolbar === 'function') mlBindToolbar();
@@ -264,7 +267,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   // che state/Supabase siano già pronti (loadState + sbInitAndCheck sopra).
   try {
     const _last = localStorage.getItem('last_screen');
-    if (_last === 'weekly' || _last === 'mappa') switchScreen(_last);
+    if (_last === 'weekly' || _last === 'mappa' || _last === 'programmazione') switchScreen(_last);
   } catch (_) {}
 });
 

@@ -14,6 +14,7 @@ Applicazione web per la gestione dello staffing e della pipeline commerciale del
 - 📅 **Staffing mensile** — allocazione gg-uomo per commessa, saturazione e gap analysis
 - 🗓️ **Pianificazione settimanale** — composizione squadre, assegnazione cantieri, gestione ferie
 - 🗺️ **Mappa cantieri** — visualizzazione geografica delle commesse attive
+- 📋 **Programmazione** — board tipo Monday per la fase che precede la partenza dei rilievi (ODL, contatti col comune, documenti, sopralluoghi, qualità del dato, stato), con aggiornamenti e storico per elemento; sostituisce Monday, si importa dal suo Excel
 - ⚡ **Prestazioni operatori** — rendimento di ogni operatore per attività o tipo di WO rispetto alla norma (100), stimato separando il contributo del singolo da quello dei compagni; solo admin e responsabili, per scegliere i più adatti nelle urgenze
 - 🌦️ **Meteo cantieri** — previsioni e criticità (Open-Meteo + bollettino Protezione Civile) in Griglia e Mappa, e storico del meteo osservato nei giorni passati (tab "Storico meteo")
 - 📈 **Gantt** — timeline visiva pipeline e commesse attive
@@ -114,6 +115,12 @@ Limite noto: il progetto Supabase è sul piano **Free**, che non include backup 
 ---
 
 ## Changelog
+
+## v18.295.0
+- **Nuova schermata «📋 Programmazione»** (accanto a Mappa): sostituisce Monday per la parte preventiva dei rilievi (ODL, contatti col comune, documenti, sopralluoghi, qualità del dato, stato), così non va più aggiornato a mano in parallelo. Una **board** per tipo di lavoro (es. SINFI WALKOUT, SINFI MMS/PEDESTRIAN), collegabile a una commessa della dashboard. Tabella come Monday: righe raggruppate per stato (gruppi apribili/chiudibili, riepilogo per gruppo con somme, spunte x/n, distribuzione delle etichette, periodo), etichette colorate, timeline con avanzamento ad oggi, settimane calcolate («W41 – W47»), link per mail e telefono, ricerca in tutte le colonne, ordinamento per colonna, colonne visibili per browser, export Excel. Clic su una cella per modificarla, «＋ Aggiungi elemento» in fondo a ogni gruppo. Clic sul nome apre il **pannello dell'elemento**: tutti i campi, **aggiornamenti** (commenti firmati) e **storico** di chi ha cambiato cosa, con «↶ ripristina».
+- **«📥 Importa da Monday»**: carica l'Excel esportato da una board Monday e la ricrea (colonne, tipi proposti e correggibili in anteprima, etichette con colori, gruppi anche vuoti come stati, aggiornamenti con autore e data originali). Reimportando non si creano doppioni (si riconosce l'Item ID). **«⚙️ Colonne»** per aggiungere, rinominare, riordinare, cambiare tipo (con conversione dei valori) e gestire etichette e colori.
+- Modificano admin e responsabili, gli altri consultano; i colleghi vedono le modifiche in tempo reale. Nascondibile da «🧩 Funzioni» e assegnabile ai Guest.
+- **Supabase**: nuove tabelle `prg_board`, `prg_elemento`, `prg_commento`, `prg_storico` con RLS, trigger dello storico e funzione `prg_imposta` (migrazione `supabase/migrations/20261119_programmazione.sql`, **da applicare prima di usare la schermata**).
 
 ## v18.294.0
 - **Mappa, «🌦 Meteo live» più leggero.** La zona caricata oltre quella visibile passa da mezza schermata a un quarto per lato (massimo 500 px): Windy disegna circa metà dei pixel di prima e la navigazione è più fluida. Più spostamenti o clic di zoom di seguito fanno una sola ricarica, a mappa ferma da un secondo. Corretto anche un pezzo dei comandi di Windy (logo/selettore) che poteva spuntare in alto durante uno spostamento.
