@@ -872,14 +872,21 @@ const ML_WINDY_LIVELLI = [
 ];
 const ML_WINDY_ZOOM_MIN = 3;
 const ML_WINDY_ZOOM_MAX = 11;
-// Margine caricato oltre la parte visibile, per lato: metà vista (così anche uno
-// zoom indietro di un livello resta coperto), almeno quanto basta a spingere fuori
-// vista logo e timeline di Windy, al massimo ML_WINDY_MARGINE_MAX.
-const ML_WINDY_MARGINE = 0.5;
-const ML_WINDY_MARGINE_MIN = 160;
-const ML_WINDY_MARGINE_MAX = 900;
-const ML_WINDY_BORDO = 24;          // px di margine che devono restare oltre il bordo visibile
-const ML_WINDY_RICARICA_MS = 700;   // attesa a mappa ferma prima di ricaricare l'embed
+// Margine caricato oltre la parte visibile, per lato: un quarto di vista (iframe
+// ≈ 2,25 volte l'area visibile; con metà vista, v18.293.0, era ≈ 4 volte e
+// l'animazione di Windy pesava troppo), almeno quanto basta a spingere fuori vista
+// logo e timeline di Windy, al massimo ML_WINDY_MARGINE_MAX.
+const ML_WINDY_MARGINE = 0.25;
+const ML_WINDY_MARGINE_MIN = 100;
+const ML_WINDY_MARGINE_MAX = 500;
+// In alto (logo, selettore, +/−) e in basso (timeline, legenda) Windy disegna i
+// suoi comandi su ~90 px: in verticale si aggiungono al margine e non contano
+// come zona coperta, così non spuntano dentro la vista durante uno spostamento.
+const ML_WINDY_COMANDI = 100;
+const ML_WINDY_BORDO = 16;          // px di margine che devono restare oltre il bordo visibile
+// Attesa a mappa ferma prima di ricaricare: più spostamenti o clic di zoom di
+// seguito fanno una sola ricarica, alla fine.
+const ML_WINDY_RICARICA_MS = 1000;
 const ML_WINDY_SCAMBIO_MS = 1500;   // dopo il load, tempo per disegnare il livello meteo
 const ML_WINDY_SCAMBIO_MAX_MS = 7000; // scambio comunque, anche senza load
 const ML_WINDY_DISSOLVENZA_MS = 400;
@@ -915,7 +922,7 @@ function _mlWindyGeometria(box) {
   const w = box.clientWidth, h = box.clientHeight;
   if (!_mlWindy.cantieri) return { w, h, mx: 0, my: 0 };
   const m = d => Math.max(ML_WINDY_MARGINE_MIN, Math.min(ML_WINDY_MARGINE_MAX, Math.round(d * ML_WINDY_MARGINE)));
-  return { w, h, mx: m(w), my: m(h) };
+  return { w, h, mx: m(w), my: m(h) + ML_WINDY_COMANDI };
 }
 
 // Iframe davanti (quello che si vede): l'ultimo con la classe ml-windy-vis.
@@ -957,7 +964,8 @@ function _mlWindyServeRicarica(box, vis, liv) {
   if (_mlMap.getZoom() !== vis._mlVista.z) return true;
   if (!_mlWindy.cantieri) return false;
   const p = _mlMap.latLngToContainerPoint(vis._mlVista.c);
-  return Math.abs(p.x - g.w / 2) > g.mx - ML_WINDY_BORDO || Math.abs(p.y - g.h / 2) > g.my - ML_WINDY_BORDO;
+  return Math.abs(p.x - g.w / 2) > g.mx - ML_WINDY_BORDO ||
+    Math.abs(p.y - g.h / 2) > g.my - ML_WINDY_COMANDI - ML_WINDY_BORDO;
 }
 
 function _mlWindyCarica(forza) {
