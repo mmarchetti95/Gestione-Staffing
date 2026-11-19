@@ -11,7 +11,7 @@
    Ogni risposta che modifica qualcosa mostra le differenze e si può annullare (pila in
    memoria). La conversazione è per settimana, salvata in localStorage (per browser). */
 
-const APC_MAX_PASSI = 10;          // richieste al modello per ogni messaggio dell'utente
+const APC_MAX_PASSI = 18;          // richieste al modello per messaggio (il controllo con autocorrezione ne usa di più)
 const APC_STORAGE_KEY = 'ap_chat_v1';
 const APC_MAX_TRASCR = 50;         // messaggi di trascrizione inviati/salvati
 const APC_MAX_MSGS = 60;           // bolle visibili salvate
@@ -122,7 +122,7 @@ async function apcControllaStato(forza) {
 /* ================= STRUMENTI (eseguiti sulla bozza locale) ================= */
 
 const APC_MODIFICANO = new Set(['aggiungi_cantieri', 'modifica_cantiere', 'rimuovi_cantiere',
-  'importa_settimana_precedente', 'imposta_precedenza', 'imposta_opzioni', 'calcola_bozza',
+  'importa_settimana_precedente', 'imposta_precedenza', 'imposta_opzioni', 'calcola_bozza', 'imposta_vincolo',
   'segnala_imprevisto', 'rimuovi_imprevisto', 'calcola_riparazione']);
 
 /* Riferimento a una riga: id ("r12") oppure nome del cantiere, se univoco */
@@ -176,8 +176,10 @@ function _apcRigaPerAgente(r) {
     priorita: 'P' + (r.priorita || 3)
   };
   if (r.km != null) o.km = r.km;
-  o.giorni = r.giorniManuali > 0 ? r.giorniManuali + ' (fissati a mano)' : st.giorni + ' (stima: ' + st.fonte + ')';
-  o.operatori = r.nOp || st.nOp;
+  o.squadre = r.nSquadre || 1;
+  o.giorni_per_squadra = r.giorniManuali > 0 ? r.giorniManuali + ' (fissati a mano)'
+    : apFmtNum(Math.ceil(st.giorni / (r.nSquadre || 1) - 1e-9)) + ' (stima: ' + st.fonte + ')';
+  o.persone_per_squadra = r.nOp || st.nOp;
   if (r.scadenza) o.scadenza = r.scadenza;
   if (r.dal) o.dal = r.dal;
   const ge = _apGiorniLista(r.giorniEsclusi);
@@ -197,7 +199,8 @@ function _apcEsitoPerAgente(b, id) {
   const r = b.righeSolver.find(x => x.id === id);
   if (!e || !r) return null;
   const quando = b.risultato.assegnazioni.filter(a => a.rigaId === id)
-    .map(a => AP_GIORNI[a.giorno] + (a.quota < 1 ? '½' : '') + (a.viaggio ? ' (viaggio da casa, ½ produttiva)' : '') + ': ' + a.operatori.join(' + ')).join(' · ');
+    .map(a => AP_GIORNI[a.giorno] + (a.viaggio ? ' (viaggio da casa, ½ produttiva)' : '') + ': ' +
+      (a.squadra ? _apcNomeSquadra(b, a.squadra) + ' (' + a.operatori.join(' + ') + ')' : a.operatori.join(' + '))).join(' · ');
   const o = { id, cantiere: r.cantiere, stato: e.stato.replace('_', ' '), giorni: apFmtNum(e.giorniAssegnati) + '/' + apFmtNum(e.richiesti) };
   if (quando) o.piano = quando;
   if (e.oltreScadenza) o.oltre_scadenza = true;
@@ -207,14 +210,105 @@ function _apcEsitoPerAgente(b, id) {
   return o;
 }
 
+function _apcNomeSquadra(b, id) {
+  const sq = ((b.risultato || {}).squadre || []).find(x => x.id === id);
+  return sq ? sq.nome : id;
+}
+
 function _apcRiepilogo(b) {
   const es = Object.values(b.risultato.esiti);
   const n = st => es.filter(e => e.stato === st).length;
-  return {
+  const rp = b.risultato.riepilogo || {};
+  const out = {
     assegnati: n('assegnato'), parziali: n('parziale'), non_assegnati: n('non_assegnato'),
     oltre_scadenza: es.filter(e => e.oltreScadenza).length,
     celle: b.risultato.assegnazioni.reduce((t, a) => t + a.operatori.length, 0)
   };
+  if (b.risultato.squadre) {
+    out.squadre = rp.squadre || 0;
+    out.giorni_squadra_vuoti = rp.giorniLiberi || 0;
+    out.gg_squadra_non_pianificati = rp.nonPianificati || 0;
+  }
+  return out;
+}
+
+/* Squadre della bozza in forma compatta per il modello */
+function _apcSquadrePerAgente(b) {
+  const res = b.risultato;
+  if (!res.squadre) return undefined;
+  const giorni = (res.riepilogo && res.riepilogo.giorni) || b.ctxGiorni;
+  const nome = id => { const r = b.righeSolver.find(x => x.id === id); return r ? r.cantiere : id; };
+  return res.squadre.map(sq => {
+    const o = { squadra: sq.nome, operatori: sq.operatori,
+      giro: giorni.map(d => AP_GIORNI[d] + ' ' + (sq.piano[d] ? nome(sq.piano[d]) : '— vuoto')).join(', '),
+      km_settimana: sq.kmSettimana };
+    if (sq.avvisi.length) o.avvisi = sq.avvisi;
+    return o;
+  });
+}
+
+/* Controllo delle regole dell'ufficio sulla bozza: ogni problema con l'azione possibile.
+   È la base del ciclo di autocorrezione dell'assistente. */
+function _apcProblemi(b) {
+  const res = b.risultato;
+  const rp = res.riepilogo || {};
+  const out = [];
+  const nome = id => { const r = b.righeSolver.find(x => x.id === id); return r ? r.cantiere : id; };
+  (res.squadre || []).forEach(sq => {
+    const vuoti = Object.keys(sq.piano).filter(d => !sq.piano[d]).map(d => AP_GIORNI[d]);
+    if (vuoti.length) out.push({ tipo: 'giorni_vuoti', squadra: sq.nome, giorni: vuoti.join(', '),
+      azione: 'proponi_cantieri_vicini per questa squadra e chiedi all\'utente se aggiungerli (non aggiungere cantieri da solo)' });
+    sq.avvisi.filter(a => a.startsWith('nessun senior')).forEach(a => out.push({ tipo: 'senza_senior', squadra: sq.nome, operatori: sq.operatori.join(' + '), dettaglio: a,
+      azione: 'spiega_squadra per vedere chi è senior sul tipo e libero; poi imposta_vincolo (insieme/separati/operatore_cantiere) e ricalcola, oppure segnala che mancano senior' }));
+    sq.avvisi.filter(a => / km dal cantiere precedente/.test(a)).forEach(a => out.push({ tipo: 'spostamento_lungo', squadra: sq.nome, dettaglio: a,
+      azione: 'imposta_vincolo cantieri_separati fra i due cantieri, oppure alza max_km se l\'utente è d\'accordo' }));
+    sq.avvisi.filter(a => a.startsWith('residenza mancante')).forEach(a => out.push({ tipo: 'residenza_mancante', squadra: sq.nome, dettaglio: a,
+      azione: 'solo da segnalare: va inserita la residenza in anagrafica operatori' }));
+  });
+  b.righeSolver.forEach(r => {
+    const e = res.esiti[r.id];
+    if (!e) return;
+    if (e.stato !== 'assegnato') out.push({ tipo: e.stato === 'parziale' ? 'cantiere_parziale' : 'cantiere_non_assegnato', cantiere: r.cantiere, priorita: 'P' + r.priorita,
+      giorni: apFmtNum(e.giorniAssegnati) + '/' + apFmtNum(e.richiesti), motivi: e.motivi,
+      azione: /viaggio/.test(e.motivi.join(' ')) ? 'mezza giornata persa per il viaggio del lunedì: di solito si accetta' : 'spiega_cantiere; confronta_scenari (es. sabato, una squadra in più su un altro cantiere)' });
+    if (e.oltreScadenza) out.push({ tipo: 'oltre_scadenza', cantiere: r.cantiere, azione: 'priorità più alta o imposta_precedenza, poi ricalcola' });
+    if (e.meteo && e.meteo.length) out.push({ tipo: 'maltempo', cantiere: r.cantiere, giorni: e.meteo.join('; '),
+      azione: 'di solito il calcolo li ha già minimizzati; giorni_esclusi sul cantiere solo se l\'utente lo chiede' });
+  });
+  (rp.vincoli || []).filter(v => !v.rispettato).forEach(v => out.push({ tipo: 'vincolo_non_rispettato', vincolo: v.testo,
+    azione: 'probabilmente in conflitto con altri vincoli, esclusi o seniority: spiegalo all\'utente' }));
+  if ((res.operatoriSuPiuCommesse || []).length) out.push({ tipo: 'operatori_su_piu_commesse', operatori: res.operatoriSuPiuCommesse.join(', '),
+    azione: 'informativo: in Griglia compariranno in due blocchi commessa' });
+  return out;
+}
+
+/* Numeri di una soluzione, per confrontare scenari */
+function _apcKpi(res, righe) {
+  const es = righe.map(r => res.esiti[r.id]).filter(Boolean);
+  const rp = res.riepilogo || {};
+  return {
+    squadre: (res.squadre || []).length,
+    giorni_squadra_vuoti: rp.giorniLiberi || 0,
+    gg_squadra_non_pianificati: rp.nonPianificati || 0,
+    cantieri_finiti: es.filter(e => e.stato === 'assegnato').length + '/' + es.length,
+    p1_non_finiti: righe.filter(r => r.priorita === 1 && res.esiti[r.id] && res.esiti[r.id].stato !== 'assegnato').map(r => r.cantiere),
+    km_totali: (res.squadre || []).reduce((t, s) => t + (s.kmSettimana || 0), 0),
+    squadre_senza_senior: (res.squadre || []).filter(s => s.avvisi.some(a => a.startsWith('nessun senior'))).length,
+    giornate_con_maltempo: es.reduce((t, e) => t + (e.meteo || []).length, 0),
+    vincoli_non_rispettati: (rp.vincoli || []).filter(v => !v.rispettato).map(v => v.testo),
+    operatori_impiegati: (res.squadre || []).reduce((t, s) => t + s.operatori.length, 0)
+  };
+}
+
+/* Operatori: nome del pool univoco o errore (per i vincoli serve certezza) */
+function _apcOperatoreUnico(nome) {
+  const pool = _apOperatoriCatalogo();
+  const n = _apNorm(nome);
+  const esatto = pool.find(p => _apNorm(p) === n);
+  if (esatto) return esatto;
+  const simili = pool.filter(p => _apNorm(p).split(' ').includes(n) || _apNorm(p).includes(n));
+  if (simili.length === 1) return simili[0];
+  throw new Error('operatore "' + nome + '" ' + (simili.length ? 'ambiguo: ' + simili.slice(0, 6).join(', ') : 'non trovato fra gli operatori attivi'));
 }
 
 /* Riparazione per imprevisti, in forma compatta per il modello */
@@ -267,6 +361,7 @@ const APC_TOOLS = {
       commesse_attive: pwGetCommesseValide(),
       cantieri: _ap.righe.map(_apcRigaPerAgente),
       precedenze: _ap.precedenze.map(([a, c]) => _apNomeRiga(null, a) + ' prima di ' + _apNomeRiga(null, c)),
+      vincoli: _ap.vincoli.map(v => ({ id: v.id, vincolo: _apVincoloTesto(v) })),
       imprevisti: _ap.imprevisti.map(x => ({ id: x.id, imprevisto: _apImprevistoTesto(x), motivo: x.motivo || undefined })),
       riparazione: _ap.riparazione ? _apcRiparazionePerAgente(_ap.riparazione)
         : (_ap.imprevisti.length ? 'non calcolata: chiama calcola_riparazione' : null)
@@ -286,6 +381,15 @@ const APC_TOOLS = {
       operatori_su_piu_commesse: res.operatoriSuPiuCommesse,
       distanze: b.infoDistanze, meteo: b.infoMeteo, rendimento: b.infoRendimento
     };
+    if (res.squadre) {
+      const rp = res.riepilogo || {};
+      out.bozza.squadre = _apcSquadrePerAgente(b);
+      out.bozza.esclusi_dalle_squadre_fisse = (rp.parziali || []).slice(0, 25).map(n => n + ' (ferie o celle in alcuni giorni)');
+      out.bozza.liberi_non_impiegati = (rp.liberi || []).slice(0, 25);
+      out.bozza.vincoli = (rp.vincoli || []).map(v => (v.rispettato ? 'rispettato: ' : 'NON rispettato: ') + v.testo);
+      delete out.bozza.migliorie;
+      delete out.bozza.suggerimenti;
+    }
     return out;
   },
 
@@ -372,7 +476,7 @@ const APC_TOOLS = {
         if (!String(c.commessa || '').trim()) throw new Error('manca la commessa');
         const commessa = _apcCommessa(c.commessa);
         const r = apNormRiga({
-          cantiere: c.cantiere, commessa, attivita: c.attivita, km: c.km, giorni: c.giorni, nOp: c.operatori,
+          cantiere: c.cantiere, commessa, attivita: c.attivita, km: c.km, giorni: c.giorni, nOp: c.operatori, nSquadre: c.squadre,
           priorita: parseInt(c.priorita, 10) || 3, scadenza: c.scadenza, dal: c.dal, note: c.note,
           giorniEsclusi: c.giorni_esclusi
         }, 'assistente');
@@ -407,6 +511,7 @@ const APC_TOOLS = {
     if (has('km')) set('km', 'km', _apNum(args.km));
     if (has('giorni')) { const g = _apNum(args.giorni); set('giorniManuali', 'giorni', g > 0 ? g : null, v => v > 0 ? apFmtNum(v) : 'stima'); }
     if (has('operatori')) { const n = _apNum(args.operatori); set('nOp', 'operatori', n ? Math.max(1, Math.round(n)) : null, v => v || 'stima'); }
+    if (has('squadre')) { const n = _apNum(args.squadre); set('nSquadre', 'squadre', n ? Math.max(1, Math.min(6, Math.round(n))) : null, v => v || 1); }
     if (has('priorita')) { const p = parseInt(args.priorita, 10); if (p >= 1 && p <= 3) set('priorita', 'priorità', p, v => 'P' + v); }
     if (has('scadenza')) set('scadenza', 'scadenza', _apData(args.scadenza));
     if (has('dal')) set('dal', 'dal', _apData(args.dal));
@@ -431,6 +536,7 @@ const APC_TOOLS = {
     const r = _apcRiga(args.rif);
     _ap.righe = _ap.righe.filter(x => x !== r);
     _ap.precedenze = _ap.precedenze.filter(([x, y]) => x !== r.id && y !== r.id);
+    _ap.vincoli = _ap.vincoli.filter(v => v.a !== r.id && v.b !== r.id);
     _apcAggiorna([]);
     return { rimosso: r.cantiere };
   },
@@ -501,13 +607,130 @@ const APC_TOOLS = {
     return _apcRiparazionePerAgente(_ap.riparazione);
   },
 
+  verifica_bozza() {
+    const b = _ap.bozza;
+    if (!b) return { error: 'bozza non calcolata o non aggiornata: chiama prima calcola_bozza' };
+    const problemi = _apcProblemi(b);
+    return { problemi, totale: problemi.length, nota: problemi.length ? 'risolvi quello che puoi con gli strumenti, poi ricalcola e verifica di nuovo (al massimo 3 giri); il resto spiegalo all\'utente' : 'nessun problema: bozza conforme alle regole' };
+  },
+
+  spiega_squadra(args) {
+    const b = _ap.bozza;
+    if (!b || !b.ctx || !b.risultato.squadre) return { error: 'bozza a squadre non calcolata: chiama prima calcola_bozza' };
+    const q = String(args.squadra || '').trim();
+    const sq = b.risultato.squadre.find(x => x.id === q || _apNorm(x.nome) === _apNorm(q) || _apNorm(x.nome) === _apNorm('squadra ' + q) ||
+      x.operatori.some(n => _apNorm(n).includes(_apNorm(q))));
+    if (!sq) return { error: 'squadra "' + q + '" non trovata. Squadre: ' + b.risultato.squadre.map(x => x.nome + ' (' + x.operatori.join(' + ') + ')').join('; ') };
+    return apSpiegaSquadra(b.ctx, b.righeSolver, b.risultato, sq.id);
+  },
+
+  confronta_scenari(args) {
+    const b = _ap.bozza;
+    if (!b || !b.ctx || !b.risultato.squadre) return { error: 'serve una bozza a squadre calcolata: chiama prima calcola_bozza' };
+    const scen = (Array.isArray(args.scenari) ? args.scenari : []).slice(0, 4);
+    if (!scen.length) return { error: 'indica almeno uno scenario' };
+    const out = [{ scenario: 'bozza attuale', numeri: _apcKpi(b.risultato, b.righeSolver) }];
+    scen.forEach((sc, i) => {
+      const note = [];
+      try {
+        let ctx = Object.assign({}, b.ctx, { pesi: Object.assign({}, b.ctx.pesi), vincoli: (b.ctx.vincoli || []).slice() });
+        if (typeof sc.sabato === 'boolean' && sc.sabato !== !!b.ctx.sabato) {
+          if (sc.sabato) {
+            const n = apBuildContesto({ sabato: true });
+            ctx = Object.assign({}, ctx, { giorni: n.giorni, giorniISO: n.giorniISO, disp: n.disp, sabato: true });
+            note.push('sabato: meteo non valutato per il sabato');
+          } else ctx.sabato = false;
+        }
+        const mk = parseInt(sc.max_km, 10);
+        if (mk >= 20 && mk <= 1000) ctx.pesi.maxKmTrasferta = mk;
+        const escl = new Set((sc.escludi_operatori || []).map(_apcOperatoreUnico));
+        if (escl.size) ctx.operatori = ctx.operatori.filter(o => !escl.has(o.nome));
+        let righe = b.righeSolver.map(r => Object.assign({}, r));
+        (sc.senza_cantieri || []).forEach(rif => { const id = _apcRiga(rif).id; righe = righe.filter(r => r.id !== id); });
+        (sc.squadre || []).forEach(x => {
+          const id = _apcRiga(x.rif).id;
+          const r = righe.find(y => y.id === id);
+          if (r && x.n >= 1) r.nSquadre = Math.min(6, Math.round(x.n));
+          if (r && x.giorni >= 1) r.giorni = Math.round(x.giorni);
+        });
+        (sc.vincoli || []).forEach(v => { ctx.vincoli.push(_apcRisolviVincolo(v)); });
+        const res = apPianificaSquadre(ctx, righe);
+        out.push({ scenario: sc.nome || ('scenario ' + (i + 1)), numeri: _apcKpi(res, righe), note: note.length ? note : undefined });
+      } catch (e) {
+        out.push({ scenario: sc.nome || ('scenario ' + (i + 1)), error: e.message || String(e) });
+      }
+    });
+    return { confronto: out, nota: 'nessuna modifica fatta alla lista: per adottare uno scenario rifai le stesse modifiche con gli strumenti (dopo l\'ok dell\'utente) e chiama calcola_bozza' };
+  },
+
+  proponi_cantieri_vicini(args) {
+    const b = _ap.bozza;
+    if (!b || !b.risultato.squadre) return { error: 'serve una bozza a squadre calcolata: chiama prima calcola_bozza' };
+    const max = Math.min(10, Math.max(1, parseInt(args.max, 10) || 6));
+    const q = _apNorm(args.squadra || '');
+    const squadre = b.risultato.squadre.filter(sq => q ? (_apNorm(sq.nome) === q || _apNorm(sq.nome) === _apNorm('squadra ' + q) || sq.id === args.squadra)
+      : Object.values(sq.piano).some(x => !x));
+    if (!squadre.length) return { nota: q ? 'squadra non trovata' : 'nessuna squadra con giorni vuoti' };
+    const inLista = new Set(_ap.righe.map(r => _apNorm(r.cantiere) + '|' + _apNorm(r.commessa)));
+    const inGriglia = new Set();
+    pwGetWeekData().forEach(bc => (bc.squadre || []).forEach(sq => (sq.operatori || []).forEach(op => {
+      for (let d = 0; d < 6; d++) pwCellVoci((op.giorni || {})[d]).forEach(v => inGriglia.add(_apNorm(v.cantiere) + '|' + _apNorm(bc.commessa)));
+    })));
+    /* Storico recente della Griglia: comuni lavorati nelle ultime 8 settimane */
+    const storico = {};
+    for (let k = 1; k <= 8; k++) {
+      const w = pwWeekAdd(_ap.anno, _ap.week, -k);
+      (((pwData[w.anno] || {})[w.week]) || []).forEach(bc => (bc.squadre || []).forEach(sq => (sq.operatori || []).forEach(op => {
+        for (let d = 0; d < 6; d++) pwCellVoci((op.giorni || {})[d]).forEach(v => {
+          if (!v.cantiere || (typeof caTrova === 'function' && (caTrova(bc.commessa, v.attivita) || {}).servizio)) return;
+          const key = _apNorm(v.cantiere) + '|' + _apNorm(bc.commessa);
+          if (inLista.has(key) || inGriglia.has(key)) return;
+          const x = storico[key] || (storico[key] = { cantiere: v.cantiere, commessa: bc.commessa, attivita: {}, giornate: 0, ultima: 0 });
+          x.giornate++;
+          if (v.attivita) x.attivita[v.attivita] = (x.attivita[v.attivita] || 0) + 1;
+          x.ultima = Math.max(x.ultima, w.week + w.anno * 100);
+        });
+      })));
+    }
+    const geoRiga = id => { const r = b.righeSolver.find(x => x.id === id); return r && r.geo; };
+    return {
+      squadre: squadre.map(sq => {
+        const geos = Array.from(new Set(Object.values(sq.piano).filter(Boolean))).map(geoRiga).filter(Boolean);
+        const commesse = new Set((sq.commesse || []).map(_apNorm));
+        const cand = Object.values(storico).map(x => {
+          const g = meteoGeoFor(x.cantiere);
+          const km = g && geos.length ? Math.min.apply(null, geos.map(p => haversineKm(p.lat, p.lng, g.lat, g.lng) * AP_FATTORE_STRADA)) : null;
+          const att = Object.keys(x.attivita).sort((a, c) => x.attivita[c] - x.attivita[a])[0] || '';
+          return { cantiere: x.cantiere, commessa: x.commessa, attivita: att, km_dal_giro: km == null ? null : Math.round(km),
+            stessa_commessa: commesse.has(_apNorm(x.commessa)), giornate_ultime_8_settimane: x.giornate, ultima_settimana: x.ultima % 100 };
+        }).filter(x => x.km_dal_giro != null && x.km_dal_giro <= (_ap.opzioni.maxKm || 250))
+          .sort((a, c) => (c.stessa_commessa - a.stessa_commessa) || a.km_dal_giro - c.km_dal_giro).slice(0, max);
+        return { squadra: sq.nome, giorni_vuoti: Object.keys(sq.piano).filter(d => !sq.piano[d]).map(d => AP_GIORNI[d]).join(', ') || 'nessuno',
+          cantieri_del_giro: Array.from(new Set(Object.values(sq.piano).filter(Boolean))).map(id => (b.righeSolver.find(r => r.id === id) || {}).cantiere),
+          candidati: cand };
+      }),
+      nota: 'candidati presi dalla Griglia delle ultime 8 settimane (non so se quei comuni sono già finiti): proponili all\'utente e aggiungili SOLO se conferma, chiedendo i giorni'
+    };
+  },
+
+  imposta_vincolo(args) {
+    const v = _apcRisolviVincolo(args);
+    const testo = apVincoloImposta(v.tipo, v.a, v.b, args.attiva);
+    _apcAggiorna([]);
+    return { vincolo: testo, nota: 'vale dal prossimo calcolo: chiama calcola_bozza' };
+  },
+
   async calcola_bozza() {
     const prima = _ap.bozza || _ap.ultimaBozza;
     const res = await apCalcola({ silenzioso: true });
     if (!res || !res.ok) return { error: (res && res.errore) || 'calcolo non riuscito' };
     const b = _ap.bozza;
     const out = { riepilogo: _apcRiepilogo(b), esiti: b.righeSolver.map(r => _apcEsitoPerAgente(b, r.id)).filter(Boolean) };
-    if (b.risultato.suggerimenti.length) out.suggerimenti = APC_TOOLS.leggi_bozza().bozza.suggerimenti;
+    if (b.risultato.squadre) {
+      out.squadre = _apcSquadrePerAgente(b);
+      out.problemi = _apcProblemi(b);
+      if ((b.risultato.riepilogo || {}).vincoli && b.risultato.riepilogo.vincoli.length) out.vincoli = b.risultato.riepilogo.vincoli.map(v => (v.rispettato ? 'rispettato: ' : 'NON rispettato: ') + v.testo);
+    } else if (b.risultato.suggerimenti.length) out.suggerimenti = APC_TOOLS.leggi_bozza().bozza.suggerimenti;
     if (prima) {
       const d = _apcDiffBozze(prima, b);
       out.rispetto_a_prima = d.righe.length ? d.righe.map(x => x.testo) : ['nessun cambio negli esiti'];
@@ -517,6 +740,24 @@ const APC_TOOLS = {
   }
 };
 
+/* Argomenti di un vincolo (operatori, cantieri, commesse per nome) -> { tipo, a, b } risolto */
+function _apcRisolviVincolo(x) {
+  const tipo = String(x.tipo || '');
+  if (tipo === 'insieme' || tipo === 'separati') return { tipo, a: _apcOperatoreUnico(x.a), b: _apcOperatoreUnico(x.b) };
+  if (tipo === 'operatore_cantiere') return { tipo, a: _apcOperatoreUnico(x.a), b: _apcRiga(x.b).id };
+  if (tipo === 'operatore_limitato') {
+    const lista = (Array.isArray(x.commesse) ? x.commesse : (x.b ? [x.b] : [])).map(_apcCommessa);
+    if (!lista.length) throw new Error('indica le commesse in "commesse"');
+    return { tipo, a: _apcOperatoreUnico(x.a), b: lista };
+  }
+  if (tipo === 'cantieri_insieme' || tipo === 'cantieri_separati') {
+    const a = _apcRiga(x.a).id, b = _apcRiga(x.b).id;
+    if (a === b) throw new Error('servono due cantieri diversi');
+    return { tipo, a, b };
+  }
+  throw new Error('tipo di vincolo sconosciuto: ' + tipo);
+}
+
 /* ================= DIFFERENZE E ANNULLA ================= */
 
 function _apcSnapshot() {
@@ -524,6 +765,7 @@ function _apcSnapshot() {
     righe: JSON.parse(JSON.stringify(_ap.righe)),
     opzioni: Object.assign({}, _ap.opzioni),
     precedenze: JSON.parse(JSON.stringify(_ap.precedenze)),
+    vincoli: JSON.parse(JSON.stringify(_ap.vincoli)),
     bozza: _ap.bozza,
     imprevisti: JSON.parse(JSON.stringify(_ap.imprevisti)),
     riparazione: _ap.riparazione
@@ -531,7 +773,7 @@ function _apcSnapshot() {
 }
 
 function _apcFirma() {
-  return JSON.stringify([_ap.righe, _ap.opzioni, _ap.precedenze, _ap.bozza ? _ap.bozza.creata : 0,
+  return JSON.stringify([_ap.righe, _ap.opzioni, _ap.precedenze, _ap.vincoli, _ap.bozza ? _ap.bozza.creata : 0,
     _ap.imprevisti, _ap.riparazione ? _ap.riparazione.creata : 0]);
 }
 
@@ -579,6 +821,7 @@ function _apcDiffTurno(snap) {
     if (p.km !== r.km) c.push('km ' + (r.km == null ? '—' : apFmtNum(r.km)));
     if (p.giorniManuali !== r.giorniManuali) c.push(r.giorniManuali > 0 ? apFmtNum(r.giorniManuali) + ' gg a mano' : 'giorni da stima');
     if (p.nOp !== r.nOp) c.push((r.nOp || 'stima') + ' operatori');
+    if ((p.nSquadre || 1) !== (r.nSquadre || 1)) c.push((r.nSquadre || 1) + ' squadre');
     if (p.scadenza !== r.scadenza) c.push(r.scadenza ? 'entro ' + formatDate(new Date(r.scadenza + 'T00:00:00Z')) : 'senza scadenza');
     if (p.dal !== r.dal) c.push(r.dal ? 'dal ' + formatDate(new Date(r.dal + 'T00:00:00Z')) : 'senza "dal"');
     if (JSON.stringify(_apGiorniLista(p.giorniEsclusi)) !== JSON.stringify(_apGiorniLista(r.giorniEsclusi))) {
@@ -601,6 +844,11 @@ function _apcDiffTurno(snap) {
   const pp = new Set(snap.precedenze.map(k)), po = new Set(_ap.precedenze.map(k));
   _ap.precedenze.forEach(p => { if (!pp.has(k(p))) d.lista.push({ tipo: 'prec', testo: _apNomeRiga(null, p[0]) + ' prima di ' + _apNomeRiga(null, p[1]) }); });
   snap.precedenze.forEach(p => { if (!po.has(k(p))) d.lista.push({ tipo: 'del', testo: 'precedenza ' + _apNomeRiga(null, p[0]) + ' → ' + _apNomeRiga(null, p[1]) }); });
+
+  const vk = v => v.tipo + '|' + v.a + '|' + JSON.stringify(v.b);
+  const vp = new Set((snap.vincoli || []).map(vk)), vo = new Set(_ap.vincoli.map(vk));
+  _ap.vincoli.forEach(v => { if (!vp.has(vk(v))) d.lista.push({ tipo: 'prec', testo: 'vincolo: ' + _apVincoloTesto(v) }); });
+  (snap.vincoli || []).forEach(v => { if (!vo.has(vk(v))) d.lista.push({ tipo: 'del', testo: 'vincolo: ' + _apVincoloTesto(v) }); });
 
   const impPrima = {};
   (snap.imprevisti || []).forEach(x => { impPrima[x.id] = x; });
@@ -643,6 +891,7 @@ async function apcAnnulla(i) {
   _ap.righe = s.righe;
   _ap.opzioni = s.opzioni;
   _ap.precedenze = s.precedenze;
+  _ap.vincoli = s.vincoli || [];
   _ap.bozza = s.bozza;
   if (_ap.bozza) _ap.bozza.nuove = null;
   _ap.imprevisti = s.imprevisti || [];
@@ -677,6 +926,11 @@ function _apcEtichetta(nome, args) {
       (args && args.giorni && args.giorni.length ? ' ' + _apcNomeGiorni(_apGiorniLista(args.giorni)) : '');
     case 'rimuovi_imprevisto': return args && args.tutti ? 'Tolgo tutti gli imprevisti' : 'Tolgo un imprevisto';
     case 'calcola_riparazione': return 'Cerco sostituti e recuperi';
+    case 'verifica_bozza': return 'Controllo le regole sulla bozza';
+    case 'spiega_squadra': return 'Analizzo ' + (args && args.squadra ? (/^\d+$/.test(String(args.squadra)) ? 'la squadra ' + args.squadra : args.squadra) : 'la squadra');
+    case 'confronta_scenari': return 'Confronto ' + ((args && args.scenari || []).length || '') + ' scenari';
+    case 'proponi_cantieri_vicini': return 'Cerco cantieri vicini' + (args && args.squadra ? ' per ' + args.squadra : ' per i giorni vuoti');
+    case 'imposta_vincolo': return (args && args.attiva === false ? 'Tolgo un vincolo' : 'Imposto un vincolo') + (args && args.tipo ? ' (' + String(args.tipo).replace('_', ' ') + ')' : '');
     default: return nome;
   }
 }
@@ -684,7 +938,8 @@ function _apcEtichetta(nome, args) {
 const APC_ICONA = {
   leggi_bozza: '📋', leggi_operatori: '👷', spiega_cantiere: '🔎', aggiungi_cantieri: '＋', modifica_cantiere: 'Δ',
   rimuovi_cantiere: '−', importa_settimana_precedente: '↩', imposta_precedenza: '⇅', imposta_opzioni: '⚙︎', calcola_bozza: '⟳',
-  segnala_imprevisto: '⚡', rimuovi_imprevisto: '−', calcola_riparazione: '🔧'
+  segnala_imprevisto: '⚡', rimuovi_imprevisto: '−', calcola_riparazione: '🔧',
+  verifica_bozza: '✓', spiega_squadra: '👥', confronta_scenari: '⚖', proponi_cantieri_vicini: '📍', imposta_vincolo: '🔗'
 };
 
 /* Avanzamento del calcolo (da _apStatus): mostrato sotto il passo in corso */
@@ -797,8 +1052,14 @@ function _apcEsitoBreve(nome, r) {
   if (!r) return '';
   if (nome === 'calcola_bozza' && r.riepilogo) {
     const x = r.riepilogo;
-    return x.assegnati + ' assegnati · ' + x.parziali + ' parziali · ' + x.non_assegnati + ' non assegnati';
+    return (x.squadre != null ? x.squadre + ' squadre · ' : '') + x.assegnati + ' assegnati · ' + x.parziali + ' parziali · ' + x.non_assegnati + ' non assegnati' +
+      (x.giorni_squadra_vuoti ? ' · ' + x.giorni_squadra_vuoti + ' giorni vuoti' : '');
   }
+  if (nome === 'verifica_bozza') return r.totale ? r.totale + ' problemi' : 'nessun problema';
+  if (nome === 'spiega_squadra' && r.operatori) return r.operatori.join(' + ');
+  if (nome === 'confronta_scenari' && r.confronto) return r.confronto.length - 1 + ' scenari calcolati';
+  if (nome === 'proponi_cantieri_vicini' && r.squadre) return r.squadre.reduce((t, x) => t + x.candidati.length, 0) + ' candidati';
+  if (nome === 'imposta_vincolo') return r.vincolo || '';
   if (nome === 'aggiungi_cantieri') return (r.aggiunti.length ? r.aggiunti.length + ' aggiunti' : 'nessuno aggiunto') + (r.scartati.length ? ' · ' + r.scartati.length + ' scartati' : '');
   if (nome === 'modifica_cantiere') return (r.modifiche || []).join(' · ');
   if (nome === 'importa_settimana_precedente') return r.aggiunti.length ? r.aggiunti.length + ' cantieri' : (r.nota || '');
@@ -882,7 +1143,11 @@ function _apcSuggerimenti() {
   const ko = es.find(x => x.e.stato === 'non_assegnato') || es.find(x => x.e.stato === 'parziale');
   if (ko) out.push('Perché ' + ko.r.cantiere + ' ' + (ko.e.stato === 'non_assegnato' ? 'non è assegnato' : 'è parziale') + '?');
   if (es.some(x => x.r.priorita === 1 && x.e.stato !== 'assegnato')) out.push('Come faccio entrare tutti i P1?');
-  if (b.risultato.suggerimenti.length) out.push('Conviene applicare i suggerimenti? Spiegami il costo');
+  if (b.risultato.squadre) {
+    out.push('Controlla la bozza e correggi quello che puoi');
+    if ((b.risultato.riepilogo || {}).giorniLiberi) out.push('Riempi i giorni vuoti con cantieri vicini');
+    if (b.risultato.squadre[0]) out.push('Perché la ' + b.risultato.squadre[0].nome + ' è fatta così?');
+  } else if (b.risultato.suggerimenti.length) out.push('Conviene applicare i suggerimenti? Spiegami il costo');
   out.push('Riepiloga la bozza per squadra');
   if (!_ap.opzioni.sabato) out.push('Cosa cambia se lavoriamo anche sabato?');
   return out.slice(0, 4);

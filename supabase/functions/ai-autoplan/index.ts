@@ -38,7 +38,7 @@ const SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "";
 const MAX_TOKENS = 2048;
 const MAX_MESSAGES = 60;
 const MAX_TEXT = 6000;
-const MAX_RESULT = 14000;
+const MAX_RESULT = 20000;
 
 const CORS_HEADERS = {
   "Access-Control-Allow-Origin": "*",
@@ -66,8 +66,9 @@ const CAMPI_CANTIERE = {
   commessa: { type: "string", description: "nome della commessa (va ricondotto a una commessa attiva)" },
   attivita: { type: "string" },
   km: { type: "number", description: "km da rilevare: con km e attività i giorni si stimano dallo storico" },
-  giorni: { type: "number", description: "giorni-squadra fissati a mano (0 = torna alla stima)" },
-  operatori: { type: "integer", description: "operatori per squadra" },
+  squadre: { type: "integer", description: "quante squadre impiegare in parallelo sul cantiere (default 1)" },
+  giorni: { type: "number", description: "giorni di lavoro di OGNI squadra, interi (2 squadre x 3 giorni: squadre=2, giorni=3). 0 = torna alla stima" },
+  operatori: { type: "integer", description: "persone per squadra (vuoto = catalogo attività della commessa, altrimenti 2)" },
   priorita: { type: "integer", description: "1, 2 o 3 (1 = massima)" },
   scadenza: { type: "string", description: "data ISO AAAA-MM-GG entro cui finire ('' per togliere)" },
   dal: { type: "string", description: "data ISO: non iniziare prima ('' per togliere)" },
@@ -77,10 +78,17 @@ const CAMPI_CANTIERE = {
   note: { type: "string" },
 };
 
+const VINCOLO = {
+  tipo: { type: "string", enum: ["insieme", "separati", "operatore_cantiere", "operatore_limitato", "cantieri_insieme", "cantieri_separati"] },
+  a: { type: "string", description: "operatore (insieme, separati, operatore_cantiere, operatore_limitato) oppure cantiere (cantieri_insieme/separati)" },
+  b: { type: "string", description: "secondo operatore (insieme/separati), cantiere (operatore_cantiere, cantieri_*)" },
+  commesse: { type: "array", items: { type: "string" }, description: "solo per operatore_limitato: commesse ammesse" },
+};
+
 const TOOLS = [
   {
     name: "leggi_bozza",
-    description: "Stato attuale: settimana, giorni pianificabili, opzioni, elenco cantieri con id/priorità/stima/vincoli, precedenze e, se calcolata, l'esito della bozza (stato per cantiere, giorni e operatori, migliorie, suggerimenti). Chiamalo PRIMA di ogni modifica, per conoscere id e valori attuali.",
+    description: "Stato attuale: settimana, giorni pianificabili, opzioni, elenco cantieri (id, squadre, giorni per squadra, priorità, vincoli di riga), vincoli fra operatori/cantieri e, se calcolata, la bozza: squadre con il loro giro giorno per giorno, esito per cantiere, chi è rimasto fuori (ferie parziali) o libero, vincoli rispettati o no. Chiamalo PRIMA di ogni modifica, per conoscere id e valori attuali.",
     parameters: { type: "object", properties: {}, required: [] },
   },
   {
@@ -185,27 +193,88 @@ const TOOLS = [
   },
   {
     name: "calcola_bozza",
-    description: "Ricalcola la bozza con il solver (localizza i cantieri, distanze stradali, meteo, poi assegna). Va chiamato dopo ogni gruppo di modifiche prima di riferire i risultati. Restituisce il riepilogo e le differenze rispetto alla bozza precedente.",
+    description: "Ricalcola la bozza (localizza i cantieri, distanze stradali, meteo, poi forma le squadre e i giri). Va chiamato dopo ogni gruppo di modifiche prima di riferire i risultati. Restituisce riepilogo, squadre con il giro, esiti, PROBLEMI rispetto alle regole (con l'azione possibile), vincoli e differenze rispetto alla bozza precedente.",
     parameters: { type: "object", properties: {}, required: [] },
+  },
+  {
+    name: "verifica_bozza",
+    description: "Controlla la bozza calcolata rispetto alle regole dell'ufficio: giorni vuoti per squadra, squadre senza senior sul tipo di WO, spostamenti oltre il limite, cantieri parziali o non assegnati, oltre scadenza, giornate col maltempo, vincoli non rispettati, residenze mancanti. Ogni problema ha l'azione suggerita.",
+    parameters: { type: "object", properties: {}, required: [] },
+  },
+  {
+    name: "spiega_squadra",
+    description: "Perché una squadra è composta così: punti voce per voce di ogni membro sul suo giro (km da casa, esperienza su commessa e attività, rendimento, preferito), coppia (già insieme, stessa partenza), seniority per cantiere e tipo di WO, vincoli, alternative libere e operatori più adatti finiti in altre squadre.",
+    parameters: { type: "object", properties: { squadra: { type: "string", description: "nome ('Squadra 2'), numero ('2') o nome di un suo operatore" } }, required: ["squadra"] },
+  },
+  {
+    name: "confronta_scenari",
+    description: "Ricalcola la bozza con varianti SENZA modificare la lista e confronta i numeri con la bozza attuale (squadre, giorni vuoti, giorni-squadra non pianificati, cantieri finiti, P1 non finiti, km, squadre senza senior, giornate col maltempo, vincoli non rispettati). Massimo 4 scenari. Serve per proporre all'utente decisioni con i numeri.",
+    parameters: {
+      type: "object",
+      properties: {
+        scenari: {
+          type: "array",
+          items: {
+            type: "object",
+            properties: {
+              nome: { type: "string" },
+              sabato: { type: "boolean" },
+              max_km: { type: "integer" },
+              escludi_operatori: { type: "array", items: { type: "string" } },
+              senza_cantieri: { type: "array", items: { type: "string" }, description: "id o nomi di cantieri da togliere nello scenario" },
+              squadre: { type: "array", items: { type: "object", properties: { rif: RIF, n: { type: "integer", description: "squadre in parallelo" }, giorni: { type: "integer", description: "giorni per squadra" } }, required: ["rif"] } },
+              vincoli: { type: "array", items: { type: "object", properties: VINCOLO, required: ["tipo", "a"] } },
+            },
+            required: [],
+          },
+        },
+      },
+      required: ["scenari"],
+    },
+  },
+  {
+    name: "proponi_cantieri_vicini",
+    description: "Per le squadre con giorni vuoti (o una squadra indicata) cerca cantieri vicini al loro giro fra i comuni lavorati in Griglia nelle ultime 8 settimane e non in lista: commessa, attività, km dal giro. NON li aggiunge: vanno proposti all'utente.",
+    parameters: { type: "object", properties: { squadra: { type: "string" }, max: { type: "integer", description: "candidati per squadra (default 6)" } }, required: [] },
+  },
+  {
+    name: "imposta_vincolo",
+    description: "Aggiunge (o toglie con attiva=false) un vincolo per il calcolo: insieme/separati (due operatori nella stessa squadra o in squadre diverse), operatore_cantiere (operatore in una squadra che lavora quel cantiere), operatore_limitato (operatore solo su certe commesse), cantieri_insieme/cantieri_separati (due cantieri alla stessa squadra o a squadre diverse). Vale dal prossimo calcola_bozza.",
+    parameters: { type: "object", properties: { ...VINCOLO, attiva: { type: "boolean" } }, required: ["tipo", "a"] },
   },
 ];
 
 function systemPrompt(anno: number, settimana: number, oggi: string): string {
   return [
-    "Sei l'assistente di pianificazione della tab Auto-pianifica della Dashboard Staffing di Eagleprojects (reparto rilievi).",
+    "Sei l'assistente di pianificazione della tab Auto-pianifica della Dashboard Staffing di Eagleprojects (reparto rilievi). Ragioni e agisci con gli strumenti: il calcolo lo fa un motore deterministico, tu lo guidi, lo controlli e spieghi.",
     `L'utente sta preparando la BOZZA della settimana ISO ${settimana} del ${anno}. Oggi è ${oggi}.`,
     "Due modalità: (a) BOZZA da una lista di cantieri; (b) RIPARAZIONE per imprevisti sulla Griglia già compilata.",
-    "Trasferte: gli operatori partono da casa (spesso Perugia) il lunedì e rientrano il venerdì (salvo doppia week). Il viaggio da casa non ha limite di km ma costa km e, se oltre 200 km, quel giorno vale mezza giornata produttiva (🚐/'viaggio da casa' negli esiti). Il limite max_km vale solo per gli spostamenti fra cantieri in settimana.",
-    "Come funziona la bozza: c'è una lista di cantieri da pianificare (cantiere, commessa, attività, km, priorità P1-P3, scadenza, vincoli). Un solver deterministico assegna singoli operatori ai giorni: le squadre si ricompongono. I giorni-squadra si stimano dallo storico di produzione (km / km al giorno della famiglia di attività) se non sono fissati a mano.",
-    "Regole:",
-    "1. Lavori SOLO con gli strumenti. Non inventare nomi, id, numeri o esiti: leggili con leggi_bozza, leggi_operatori, spiega_cantiere.",
-    "2. Prima di modificare, leggi lo stato (leggi_bozza). Dopo un gruppo di modifiche chiama calcola_bozza UNA volta e riferisci l'esito reale.",
-    "3. Non puoi scrivere la Griglia: la bozza finisce in Griglia solo quando l'utente preme «Applica alla Griglia». Non dire mai di averla applicata.",
-    "4. Se una richiesta è ambigua (due cantieri con nomi simili, operatore non riconosciuto, data non chiara) chiedi prima di modificare.",
-    "5. Il solver non fissa un operatore a un giorno preciso: per 'mettere X su Y' usa preferiti (favorisce) ed esclusi (vieta); per i giorni usa dal, scadenza e giorni_esclusi. Se qualcosa non si può esprimere, dillo e proponi l'alternativa più vicina.",
-    "6. Per i 'perché' usa spiega_cantiere e cita la causa concreta (es. 'i 3 operatori vicini sono già su Ivrea, P1').",
-    "7. Imprevisti a settimana già pianificata ('X è malato mercoledì', 'il cantiere Y è chiuso giovedì'): NON usare la lista cantieri. Usa segnala_imprevisto (uno per operatore o cantiere), poi calcola_riparazione una volta, e riferisci chi sostituisce chi, cosa si recupera e cosa resta scoperto. Si applica solo con «Applica riparazione», premuto dall'utente. Se non è chiaro come registrare l'assenza in Ferie, chiedilo o lascia 'nessuno'.",
-    "Stile: italiano, breve, concreto. Chiama i cantieri per nome (mai per id). Usa elenchi puntati corti e **grassetto** solo per i nomi chiave. Chiudi, quando utile, con una proposta di passo successivo in una riga.",
+    "",
+    "COME FUNZIONA IL CALCOLO DELLA BOZZA (squadre fisse):",
+    "- Ogni squadra è FISSA per tutta la settimana e lavora TUTTI i giorni Lun–Ven (anche sabato solo se l'opzione è attiva), giornate piene, con un GIRO di cantieri vicini: finito un cantiere passa al più vicino. Nessun giorno vuoto finché c'è lavoro; se i cantieri non bastano, l'ultima squadra ha giorni vuoti.",
+    "- Entrano solo operatori liberi TUTTA la settimana: chi ha ferie o celle in Griglia anche un solo giorno resta fuori (esclusi_dalle_squadre_fisse).",
+    "- Per ogni cantiere: squadre (quante in parallelo) × giorni per squadra. Le N squadre di un cantiere sono diverse e lavorano di preferenza negli stessi giorni. Persone per squadra: dal catalogo attività della commessa (es. PEDESTRIAN 1), altrimenti 2.",
+    "- Composizione: una squadra da 2+ deve avere un SENIOR sul tipo di WO dell'attività (es. WO I.P); conta solo il livello su quel tipo, non la seniority generale; preferita senior+junior. Poi esperienza sulla commessa (fino a ~200 km di vantaggio) e sull'attività, km da casa (residenza mancante = 500 km), stessa partenza, rendimento, preferiti/esclusi della riga, vincoli.",
+    "- Meteo: i giorni di allerta sono esclusi, il maltempo si evita riordinando i giorni del giro. Trasferte: si parte da casa (spesso Perugia) il primo giorno; oltre 200 km quel giorno vale mezza giornata (per questo molti cantieri restano 'parziali' di 0,5: è normale). max_km limita gli spostamenti fra cantieri in settimana.",
+    "",
+    "REGOLE:",
+    "1. Lavori SOLO con gli strumenti. Non inventare nomi, id, numeri o esiti.",
+    "2. Prima di modificare leggi lo stato (leggi_bozza). Dopo un gruppo di modifiche chiama calcola_bozza e riferisci l'esito reale.",
+    "3. Non puoi scrivere la Griglia: la bozza arriva in Griglia solo con «Applica alla Griglia», premuto dall'utente. Non dire mai di averla applicata.",
+    "4. Se una richiesta è ambigua (nomi simili, operatore non riconosciuto, data non chiara) chiedi prima di modificare.",
+    "5. Richieste sulle persone ('Contini e Cica insieme', 'Venezia solo in Valtellina', 'Rossi su Moena', 'Moena e Predazzo alla stessa squadra') → imposta_vincolo, poi calcola_bozza e verifica in 'vincoli' che sia rispettato. 'Mai Rossi su Moena' → esclusi della riga.",
+    "6. 'Perché': per una squadra usa spiega_squadra, per un cantiere spiega_cantiere; cita le voci concrete (km da casa, esperienza sulla commessa, seniority sul tipo, chi era libero e quanto valeva).",
+    "7. Imprevisti a settimana già in Griglia ('X è malato mercoledì', 'Y è chiuso giovedì'): NON usare la lista. segnala_imprevisto (uno per operatore o cantiere), poi calcola_riparazione una volta; si applica solo con «Applica riparazione».",
+    "",
+    "CICLO DI AUTOCORREZIONE (dopo ogni calcola_bozza):",
+    "a) Leggi 'problemi' (o chiama verifica_bozza).",
+    "b) Correggi DA SOLO solo ciò che non cambia le decisioni dell'utente: vincoli fra persone/cantieri per dare un senior a una squadra che non lo ha, separare due cantieri troppo lontani nello stesso giro, rimettere insieme chi parte dallo stesso posto. Dopo ogni tentativo ricalcola: tieni la modifica solo se i problemi calano e non peggiorano cantieri finiti e P1; altrimenti toglila (imposta_vincolo attiva=false) e ricalcola. Massimo 3 giri.",
+    "c) NON fare da solo, ma PROPONI con i numeri di confronta_scenari: aggiungere o togliere cantieri, lavorare il sabato, alzare max_km, cambiare priorità, giorni o numero di squadre, escludere persone.",
+    "d) Giorni vuoti: proponi_cantieri_vicini e chiedi all'utente quali aggiungere e per quanti giorni; aggiungili solo dopo il suo sì.",
+    "e) Problemi solo informativi (mezza giornata di viaggio, residenza mancante, operatori su due commesse): citali in breve, senza tentare correzioni.",
+    "",
+    "RISPOSTA FINALE: 1) cosa hai cambiato tu e perché (una riga per modifica); 2) com'è la bozza ora (squadre, giorni vuoti, cantieri non finiti); 3) decisioni per l'utente, ognuna con i numeri a confronto; 4) ricorda che la Griglia cambia solo con «Applica».",
+    "Stile: italiano, breve, concreto. Chiama cantieri e squadre per nome (mai per id). Elenchi puntati corti, **grassetto** solo per i nomi chiave.",
   ].join("\n");
 }
 

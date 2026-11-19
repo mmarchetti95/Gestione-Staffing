@@ -33,6 +33,147 @@ const AP_SQ_FUORI_GIORNO = 5000; // un cantiere in un giorno non ammesso (allert
 const AP_SQ_FRATELLI = 2000;     // due delle N squadre chieste per un cantiere nello stesso giro (= stessa squadra)
 const AP_SQ_ALLINEA = 30;        // per giorno in cui le N squadre di un cantiere non lavorano insieme
 const AP_SQ_ATTESA = 5;          // giorno vuoto prima del lavoro: meglio lasciare liberi gli ultimi giorni
+const AP_SQ_BUCO = 200;          // giorno vuoto IN MEZZO al giro: in trasferta è una giornata persa
+
+/* ---------- VINCOLI dati dall'utente (anche a voce, tramite l'assistente) ----------
+   ctx.vincoli = [{ tipo, a, b }]:
+     insieme / separati            a, b = operatori        stessa squadra / squadre diverse
+     operatore_cantiere            a = operatore, b = id riga   in una squadra che lavora quel cantiere
+     operatore_limitato            a = operatore, b = [commesse] solo in giri di quelle commesse
+     cantieri_insieme / cantieri_separati   a, b = id righe   stesso giro / giri diversi
+   Sono penalità forti (AP_SQ_VINCOLO), non divieti assoluti: se due vincoli si
+   contraddicono il calcolo sceglie il male minore e riepilogo.vincoli dice quale non regge. */
+const AP_SQ_VINCOLO = 4000;
+
+function _apSqKmFactory(ctx, distanze) {
+  const memo = new Map();
+  return (a, b) => {
+    if (!a || !b) return null;
+    const k = a.lat.toFixed(4) + ',' + a.lng.toFixed(4) + '>' + b.lat.toFixed(4) + ',' + b.lng.toFixed(4);
+    if (memo.has(k)) return memo.get(k);
+    let km = ctx.distanzaKm ? ctx.distanzaKm(a, b) : null;
+    if (km != null) { if (distanze) distanze.stradali++; }
+    else { if (distanze) distanze.stimate++; km = haversineKm(a.lat, a.lng, b.lat, b.lng) * AP_FATTORE_STRADA; }
+    memo.set(k, km);
+    return km;
+  };
+}
+
+/* Punteggio di un operatore su un giro (pezzi = [{ r, giorni }]), voce per voce: è lo
+   stesso numero che usa il calcolo e che "spiega squadra" mostra. null = non può andarci. */
+function apSqVociOperatore(ctx, pesi, o, pezzi, kmTra, isoUltimo) {
+  for (const p of pezzi) {
+    if ((p.r.esclusi || []).includes(o.nome)) return { totale: null, escluso: 'escluso a mano da ' + p.r.cantiere };
+    const manca = (p.r.attestati || []).filter(a => !o.attestatiValidi(a, isoUltimo));
+    if (manca.length) return { totale: null, escluso: 'attestati mancanti per ' + p.r.cantiere + ': ' + manca.join(', ') };
+  }
+  const voci = {};
+  const tot = pezzi.reduce((t, p) => t + p.giorni, 0) || 1;
+  const geos = pezzi.map(p => p.r.geo).filter(Boolean);
+  if (!o.base) { voci.residenza_mancante = -pesi.posizioneIgnota; }
+  else if (geos.length) {
+    const km = Math.min.apply(null, geos.map(x => kmTra(o.base, x)));
+    voci.km_da_casa = Math.round(km);
+    voci.punti_km = -Math.round(km * pesi.kmCosto);
+  } else voci.punti_km = -60;
+  let esp = 0, rend = 0, staff = 0, pref = 0;
+  pezzi.forEach(p => {
+    const w = p.giorni / tot;
+    esp += apBonusEsperienza(o, p.r, ctx.modello, pesi) * w;
+    rend += apBonusRendimento(o, p.r, pesi.rendimento) * w;
+    if (o.staffing && o.staffing.has(p.r.commessa)) staff += pesi.staffing * w;
+    if ((p.r.preferiti || []).includes(o.nome)) pref += 200 * w;
+  });
+  if (esp) voci.esperienza = Math.round(esp);
+  if (rend) voci.rendimento = Math.round(rend);
+  if (staff) voci.staffing_commessa = Math.round(staff);
+  if (pref) voci.preferito = Math.round(pref);
+  const totale = (voci.residenza_mancante || 0) + (voci.punti_km || 0) + esp + rend + staff + pref;
+  return { totale, voci };
+}
+
+/* Vincoli che riguardano una squadra su un giro: penalità e testi delle violazioni */
+function _apSqVincoliSquadra(vincoli, nomi, righeGiro) {
+  let pen = 0;
+  const violati = [];
+  const ha = n => nomi.includes(n);
+  (vincoli || []).forEach(v => {
+    if (v.tipo === 'insieme' && ha(v.a) !== ha(v.b)) { pen += AP_SQ_VINCOLO / 2; violati.push(v); }
+    else if (v.tipo === 'separati' && ha(v.a) && ha(v.b)) { pen += AP_SQ_VINCOLO; violati.push(v); }
+    else if (v.tipo === 'operatore_cantiere') {
+      if (ha(v.a) && !righeGiro.some(r => r.id === v.b)) { pen += AP_SQ_VINCOLO; violati.push(v); }
+      else if (!ha(v.a) && righeGiro.some(r => r.id === v.b)) { pen += AP_SQ_VINCOLO / 2; violati.push(v); }
+    } else if (v.tipo === 'operatore_limitato' && ha(v.a) && Array.isArray(v.b) &&
+      righeGiro.some(r => !v.b.includes(r.commessa))) { pen += AP_SQ_VINCOLO; violati.push(v); }
+  });
+  return { pen, violati };
+}
+
+/* Valutazione completa di una squadra su un giro (stessa formula del calcolo) */
+function apSqValutaSquadra(ctx, pesi, nomi, pezzi, kmTra, isoUltimo, opByNome) {
+  const membri = {};
+  let tot = 0;
+  for (const n of nomi) {
+    const v = apSqVociOperatore(ctx, pesi, opByNome[n], pezzi, kmTra, isoUltimo);
+    if (v.totale == null) return { totale: null, escluso: n + ': ' + v.escluso };
+    membri[n] = v;
+    tot += v.totale;
+  }
+  const coppia = { storico: 0, stessa_partenza: 0 };
+  for (let i = 0; i < nomi.length; i++) for (let j = i + 1; j < nomi.length; j++) {
+    if (ctx.modello) {
+      const k = nomi[i] < nomi[j] ? nomi[i] + '|||' + nomi[j] : nomi[j] + '|||' + nomi[i];
+      coppia.storico += pesi.coppia * Math.min(ctx.modello.coppie[k] || 0, 10) / 10;
+    }
+    if (pesi.stessaPartenza && _apStessaPartenza(ctx, nomi[i], nomi[j])) coppia.stessa_partenza += pesi.stessaPartenza;
+  }
+  tot += coppia.storico + coppia.stessa_partenza;
+  const giorniTot = pezzi.reduce((t, p) => t + p.giorni, 0) || 1;
+  const seniority = [];
+  if (nomi.length >= 2) {
+    pezzi.forEach(p => {
+      const w = p.giorni / giorniTot;
+      const liv = nomi.map(n => apLivelloSeniority(opByNome[n], p.r.tipoWo));
+      let pen = 0, esito = 'senior + junior';
+      if (!liv.includes('senior')) { pen = pesi.soloJunior * w; esito = 'nessun senior' + (p.r.tipoWo ? ' su ' + p.r.tipoWo : ''); }
+      else if (liv.every(x => x === 'senior')) { pen = pesi.soloSenior * w; esito = 'tutti senior'; }
+      tot -= pen;
+      seniority.push({ cantiere: p.r.cantiere, tipo_wo: p.r.tipoWo || '', livelli: nomi.map((n, i) => n + ': ' + (liv[i] || 'nessun livello')).join(', '), esito, punti: -Math.round(pen) });
+    });
+  }
+  const skill = new Set();
+  pezzi.forEach(p => (p.r.skills || []).forEach(k => skill.add(k)));
+  let skillCoperte = 0;
+  skill.forEach(k => { if (nomi.some(n => opByNome[n].skills && opByNome[n].skills.has(k))) skillCoperte++; });
+  tot += skillCoperte * 80;
+  const vinc = _apSqVincoliSquadra(ctx.vincoli, nomi, pezzi.map(p => p.r));
+  tot -= vinc.pen;
+  return { totale: tot, membri, coppia, seniority, skillCoperte, skillRichieste: skill.size, vincoliViolati: vinc.violati };
+}
+
+/* Esito di ogni vincolo sulla soluzione finale */
+function _apSqVerificaVincoli(vincoli, squadre, righeById) {
+  const squadraDi = {};
+  squadre.forEach(sq => sq.operatori.forEach(n => { squadraDi[n] = sq; }));
+  const righeDi = sq => new Set(Object.values(sq.piano).filter(Boolean));
+  const nome = id => (righeById[id] ? righeById[id].cantiere : id);
+  return (vincoli || []).map(v => {
+    let ok = true, testo = '';
+    const A = squadraDi[v.a], B = squadraDi[v.b];
+    if (v.tipo === 'insieme') { testo = v.a + ' e ' + v.b + ' nella stessa squadra'; ok = (!A && !B) || (A && A === B); }
+    else if (v.tipo === 'separati') { testo = v.a + ' e ' + v.b + ' in squadre diverse'; ok = !(A && A === B); }
+    else if (v.tipo === 'operatore_cantiere') { testo = v.a + ' su ' + nome(v.b); ok = !!(A && righeDi(A).has(v.b)); }
+    else if (v.tipo === 'operatore_limitato') {
+      testo = v.a + ' solo su ' + (v.b || []).join(', ');
+      ok = !A || Array.from(righeDi(A)).every(id => righeById[id] && (v.b || []).includes(righeById[id].commessa));
+    } else if (v.tipo === 'cantieri_insieme' || v.tipo === 'cantieri_separati') {
+      const insieme = squadre.some(sq => { const s = righeDi(sq); return s.has(v.a) && s.has(v.b); });
+      testo = nome(v.a) + ' e ' + nome(v.b) + (v.tipo === 'cantieri_insieme' ? ' nello stesso giro' : ' in giri diversi');
+      ok = v.tipo === 'cantieri_insieme' ? insieme : !insieme;
+    }
+    return { tipo: v.tipo, testo, rispettato: ok };
+  });
+}
 
 function apPianificaSquadre(ctx, righe) {
   const t0 = Date.now();
@@ -43,17 +184,8 @@ function apPianificaSquadre(ctx, righe) {
   ctx.operatori.forEach(o => { opByNome[o.nome] = o; });
   const meteo = ctx.meteo || {};
   const distanze = { stradali: 0, stimate: 0 };
-  const kmMemo = new Map();
-  const kmTra = (a, b) => {
-    if (!a || !b) return null;
-    const k = a.lat.toFixed(4) + ',' + a.lng.toFixed(4) + '>' + b.lat.toFixed(4) + ',' + b.lng.toFixed(4);
-    if (kmMemo.has(k)) return kmMemo.get(k);
-    let km = ctx.distanzaKm ? ctx.distanzaKm(a, b) : null;
-    if (km != null) distanze.stradali++;
-    else { distanze.stimate++; km = haversineKm(a.lat, a.lng, b.lat, b.lng) * AP_FATTORE_STRADA; }
-    kmMemo.set(k, km);
-    return km;
-  };
+  const kmTra = _apSqKmFactory(ctx, distanze);
+  const vincoli = ctx.vincoli || [];
   const kmCantieri = (a, b) => (a.geo && b.geo ? kmTra(a.geo, b.geo) : (a === b ? 0 : 60));
   const peso = r => AP_PESO_PRIORITA[r.priorita] || 1;
 
@@ -118,7 +250,13 @@ function apPianificaSquadre(ctx, righe) {
     const tipi = new Set(pezzi.map(p => p.lavoro.r.tipoWo || ''));
     const righeNelGiro = pezzi.map(p => p.lavoro.r.id);
     const fratelli = righeNelGiro.length - new Set(righeNelGiro).size;
-    return km + (commesse.size - 1) * AP_SQ_MISTO_COMMESSA + (tipi.size - 1) * AP_SQ_MISTO_TIPO + fratelli * AP_SQ_FRATELLI;
+    const ids = new Set(righeNelGiro);
+    let vinc = 0;
+    vincoli.forEach(v => {
+      if (v.tipo === 'cantieri_separati' && ids.has(v.a) && ids.has(v.b)) vinc += AP_SQ_VINCOLO;
+      if (v.tipo === 'cantieri_insieme' && ids.has(v.a) !== ids.has(v.b)) vinc += AP_SQ_VINCOLO / 2;
+    });
+    return km + (commesse.size - 1) * AP_SQ_MISTO_COMMESSA + (tipi.size - 1) * AP_SQ_MISTO_TIPO + fratelli * AP_SQ_FRATELLI + vinc;
   };
   const usati = g => g.pezzi.reduce((t, p) => t + p.giorni, 0);
   const spezzati = giri => {
@@ -179,6 +317,12 @@ function apPianificaSquadre(ctx, righe) {
           }
           if (libero < resto) c += AP_SQ_SPEZZATO;
           if (g.pezzi.some(p => p.lavoro.r === l.r && p.lavoro !== l)) c += AP_SQ_FRATELLI;
+          vincoli.forEach(v => {
+            if (v.tipo !== 'cantieri_insieme' && v.tipo !== 'cantieri_separati') return;
+            const altro = v.a === l.r.id ? v.b : (v.b === l.r.id ? v.a : null);
+            if (!altro || !g.pezzi.some(p => p.lavoro.r.id === altro)) return;
+            c += v.tipo === 'cantieri_separati' ? AP_SQ_VINCOLO : -AP_SQ_APERTURA_KM * 2;
+          });
           if (!best || c < best.c - 1e-9) best = { g, c, libero };
         });
         if (!best) break;
@@ -239,52 +383,9 @@ function apPianificaSquadre(ctx, righe) {
 
     /* ---- 3. chi va in ogni giro ---- */
     const giorniGiro = g => usati(g) || 1;
-    const individuale = (nome, g) => {
-      const o = opByNome[nome];
-      let sc = 0;
-      for (const p of g.pezzi) {
-        const r = p.lavoro.r;
-        if ((r.esclusi || []).includes(nome)) return null;
-        if ((r.attestati || []).some(a => !o.attestatiValidi(a, isoUltimo))) return null;
-      }
-      // km da casa al cantiere del giro più vicino (il lunedì si parte da lì)
-      const geos = g.pezzi.map(p => p.lavoro.r.geo).filter(Boolean);
-      if (!o.base) sc -= pesi.posizioneIgnota;
-      else if (geos.length) sc -= Math.min.apply(null, geos.map(x => kmTra(o.base, x))) * pesi.kmCosto;
-      else sc -= 60;
-      g.pezzi.forEach(p => {
-        const r = p.lavoro.r;
-        const w = p.giorni / giorniGiro(g);
-        let v = apBonusEsperienza(o, r, ctx.modello, pesi) + apBonusRendimento(o, r, pesi.rendimento);
-        if (o.staffing && o.staffing.has(r.commessa)) v += pesi.staffing;
-        if ((r.preferiti || []).includes(nome)) v += 200;
-        sc += v * w;
-      });
-      return sc;
-    };
-    const valutaSquadra = (nomi, g) => {
-      let sc = 0;
-      for (const n of nomi) { const v = individuale(n, g); if (v == null) return null; sc += v; }
-      for (let i = 0; i < nomi.length; i++) for (let j = i + 1; j < nomi.length; j++) {
-        if (ctx.modello) {
-          const k = nomi[i] < nomi[j] ? nomi[i] + '|||' + nomi[j] : nomi[j] + '|||' + nomi[i];
-          sc += pesi.coppia * Math.min(ctx.modello.coppie[k] || 0, 10) / 10;
-        }
-        if (pesi.stessaPartenza && _apStessaPartenza(ctx, nomi[i], nomi[j])) sc += pesi.stessaPartenza;
-      }
-      if (nomi.length >= 2) {
-        g.pezzi.forEach(p => {
-          const w = p.giorni / giorniGiro(g);
-          const liv = nomi.map(n => apLivelloSeniority(opByNome[n], p.lavoro.r.tipoWo));
-          if (!liv.includes('senior')) sc -= pesi.soloJunior * w;
-          else if (liv.every(x => x === 'senior')) sc -= pesi.soloSenior * w;
-        });
-      }
-      const skill = new Set();
-      g.pezzi.forEach(p => (p.lavoro.r.skills || []).forEach(k => skill.add(k)));
-      skill.forEach(k => { if (nomi.some(n => opByNome[n].skills && opByNome[n].skills.has(k))) sc += 80; });
-      return sc;
-    };
+    const pezziDi = g => g.pezzi.map(p => ({ r: p.lavoro.r, giorni: p.giorni }));
+    const individuale = (nome, g) => apSqVociOperatore(ctx, pesi, opByNome[nome], pezziDi(g), kmTra, isoUltimo).totale;
+    const valutaSquadra = (nomi, g) => apSqValutaSquadra(ctx, pesi, nomi, pezziDi(g), kmTra, isoUltimo, opByNome).totale;
     const pesoGiro = g => g.pezzi.reduce((t, p) => t + p.giorni * peso(p.lavoro.r) + (p.lavoro.r.scadenzaGiorno != null ? 1 : 0), 0);
     const giriAttivi = giri.filter(g => g.pezzi.length).sort((a, b) => pesoGiro(b) - pesoGiro(a));
     giriAttivi.forEach(g => {
@@ -367,7 +468,7 @@ function apPianificaSquadre(ctx, righe) {
         let partito = false;
         arr.forEach((p, i) => {
           const d = giorniSq[i];
-          if (!p) { if (!partito) c += AP_SQ_ATTESA * (nG - i); prec = null; return; }
+          if (!p) { if (!partito) c += AP_SQ_ATTESA * (nG - i); return; }
           const r = p.lavoro.r;
           const altri = giorniRiga[r.id];
           if (p.lavoro.nSq > 1 && altri && altri.size && !altri.has(d)) c += AP_SQ_ALLINEA;
@@ -386,6 +487,11 @@ function apPianificaSquadre(ctx, righe) {
           prec = p;
           partito = true;
         });
+        /* giorni vuoti fra il primo e l'ultimo giorno di lavoro */
+        const primo = arr.findIndex(Boolean);
+        let ultimo = -1;
+        arr.forEach((p, i) => { if (p) ultimo = i; });
+        for (let i = primo + 1; i < ultimo; i++) if (!arr[i]) c += AP_SQ_BUCO;
         return c;
       };
       const espandi = ord => { const arr = []; ord.forEach(p => { for (let k = 0; k < p.giorni; k++) arr.push(p); }); while (arr.length < nG) arr.push(null); return arr; };
@@ -472,6 +578,12 @@ function apPianificaSquadre(ctx, righe) {
         if (mt && mt.pen > 0) esiti[r.id].meteo.push(AP_GIORNI[d] + ': ' + mt.motivo);
         assegnazioni.push(a);
         const e = esiti[r.id];
+        membri.forEach(o => {
+          const ri = apIndiceRendimento(o, r);
+          const R = e.rendimento || (e.rendimento = { somma: 0, noti: 0, totali: 0, medio: 0 });
+          R.totali++;
+          if (ri) { R.somma += ri.indice; R.noti++; }
+        });
         e.giorniAssegnati += prod;
         if (!e.giorniUsati.includes(d)) e.giorniUsati.push(d);
         if (!e.squadre.includes(id)) e.squadre.push(id);
@@ -567,7 +679,16 @@ function apPianificaSquadre(ctx, righe) {
       e.kmMedi = tutti.reduce((a, b) => a + b, 0) / tutti.length;
     });
   });
-  Object.values(esiti).forEach(e => { delete e._km; });
+  Object.values(esiti).forEach(e => {
+    delete e._km;
+    if (e.rendimento) {
+      if (e.rendimento.noti) e.rendimento.medio = e.rendimento.somma / e.rendimento.noti;
+      else delete e.rendimento;
+    }
+  });
+  const righeById = {};
+  righe.forEach(r => { righeById[r.id] = r; });
+  const esitoVincoli = _apSqVerificaVincoli(vincoli, squadre, righeById);
 
   return vuoto({
     assegnazioni,
@@ -581,8 +702,61 @@ function apPianificaSquadre(ctx, righe) {
       nonPianificati: Object.values(nonPianificati).reduce((a, b) => a + b, 0),
       parziali,
       inutilizzati: Array.from(liberi).length,
+      liberi: Array.from(liberi),
+      vincoli: esitoVincoli,
       giorni: giorniSq.slice(),
       ms: Date.now() - t0
     }
   });
+}
+
+/* Perché una squadra è fatta così: punteggio voce per voce dei membri sul loro giro, coppia,
+   seniority per cantiere, vincoli, e le alternative (chi era libero e chi è finito in
+   un'altra squadra pur valendo di più su questo giro). Stesse formule del calcolo. */
+function apSpiegaSquadra(ctx, righe, risultato, idSquadra) {
+  const sq = (risultato.squadre || []).find(x => x.id === idSquadra || x.nome.toLowerCase() === String(idSquadra).toLowerCase());
+  if (!sq) return null;
+  const pesi = Object.assign({}, AP_PESI_DEFAULT, ctx.pesi || {});
+  const opByNome = {};
+  ctx.operatori.forEach(o => { opByNome[o.nome] = o; });
+  const kmTra = _apSqKmFactory(ctx, null);
+  const giorni = (risultato.riepilogo && risultato.riepilogo.giorni) || ctx.giorni;
+  const isoUltimo = ctx.giorniISO[giorni[giorni.length - 1]];
+  const conta = {};
+  giorni.forEach(d => { const id = sq.piano[d]; if (id) conta[id] = (conta[id] || 0) + 1; });
+  const pezzi = Object.keys(conta).map(id => ({ r: righe.find(r => r.id === id), giorni: conta[id] })).filter(p => p.r);
+  const val = apSqValutaSquadra(ctx, pesi, sq.operatori, pezzi, kmTra, isoUltimo, opByNome);
+  const membri = sq.operatori.map(n => ({ nome: n, punti: Math.round((val.membri[n] || {}).totale || 0), voci: (val.membri[n] || {}).voci || {} }));
+  const minimo = Math.min.apply(null, membri.map(m => m.punti));
+  const valuta = n => apSqVociOperatore(ctx, pesi, opByNome[n], pezzi, kmTra, isoUltimo);
+  const liberi = ((risultato.riepilogo && risultato.riepilogo.liberi) || []).map(n => ({ n, v: valuta(n) })).filter(x => x.v.totale != null)
+    .sort((a, b) => b.v.totale - a.v.totale).slice(0, 4)
+    .map(x => ({ nome: x.n, punti: Math.round(x.v.totale), voci: x.v.voci,
+      perche_no: _apSqVincoliSquadra(ctx.vincoli, [x.n], pezzi.map(p => p.r)).violati.some(v => v.a === x.n && (v.tipo === 'operatore_limitato' || v.tipo === 'operatore_cantiere'))
+        ? 'un vincolo lo tiene fuori da questo giro'
+        : (x.v.totale <= minimo ? 'vale meno dei membri su questo giro' : 'vale di più da solo, ma la squadra con lui vale meno (seniority, coppia o vincoli)') }));
+  const altrove = [];
+  (risultato.squadre || []).forEach(o => {
+    if (o === sq) return;
+    o.operatori.forEach(n => {
+      const v = valuta(n);
+      if (v.totale != null && v.totale > minimo) altrove.push({ nome: n, squadra: o.nome, punti: Math.round(v.totale) });
+    });
+  });
+  altrove.sort((a, b) => b.punti - a.punti);
+  return {
+    squadra: sq.nome, operatori: sq.operatori,
+    giro: giorni.map(d => AP_GIORNI[d] + ': ' + (sq.piano[d] ? (righe.find(r => r.id === sq.piano[d]) || {}).cantiere : 'libero')).join(', '),
+    km_settimana: sq.kmSettimana,
+    punteggio_squadra: Math.round(val.totale || 0),
+    membri,
+    coppia: { gia_lavorato_insieme: Math.round(val.coppia ? val.coppia.storico : 0), stessa_partenza: Math.round(val.coppia ? val.coppia.stessa_partenza : 0) },
+    seniority: val.seniority,
+    skill: (val.skillCoperte || 0) + '/' + (val.skillRichieste || 0) + ' coperte',
+    vincoli_violati: (val.vincoliViolati || []).map(v => v.tipo + ' ' + (Array.isArray(v.b) ? v.a + ' → ' + v.b.join(', ') : v.a + ' / ' + v.b)),
+    alternative_libere: liberi,
+    piu_adatti_finiti_in_altre_squadre: altrove.slice(0, 4),
+    legenda: 'punti in km-equivalenti: −1 per km da casa; esperienza fino a +200 sulla commessa e +100 sulla stessa attività; senza senior sul tipo di WO −300; tutti senior −80; stessa partenza +40; residenza mancante −500',
+    avvisi: sq.avvisi
+  };
 }

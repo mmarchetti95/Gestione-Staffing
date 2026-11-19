@@ -23,6 +23,7 @@ let _ap = {
   modelloInfo: '',
   opzioni: { sabato: false, maxKm: 250, meteo: true, maxSquadre: 2, rendimento: true },
   precedenze: [],       // [[primaId, dopoId]] scelte dall'utente dai suggerimenti
+  vincoli: [],          // [{ id, tipo, a, b }] per il calcolo a squadre (autoplan-squadre.js), di solito dettati all'assistente
   stato: { msg: '', err: false },
   toccate: new Set(),   // righe modificate dall'assistente nell'ultima risposta (evidenziate)
   imprevisti: [],       // assenze / cantieri fermi della settimana già pianificata (vedi IMPREVISTI)
@@ -63,7 +64,7 @@ function _apSalvaLocale() {
   try {
     const raw = localStorage.getItem(AP_STORAGE_KEY);
     const all = raw ? JSON.parse(raw) : {};
-    all[_apWkKey(_ap.anno, _ap.week)] = { righe: _ap.righe, opzioni: _ap.opzioni, precedenze: _ap.precedenze, imprevisti: _ap.imprevisti, ts: Date.now() };
+    all[_apWkKey(_ap.anno, _ap.week)] = { righe: _ap.righe, opzioni: _ap.opzioni, precedenze: _ap.precedenze, vincoli: _ap.vincoli, imprevisti: _ap.imprevisti, ts: Date.now() };
     // Tiene solo le 8 settimane toccate più di recente
     const keys = Object.keys(all).sort((a, b) => (all[b].ts || 0) - (all[a].ts || 0));
     keys.slice(8).forEach(k => delete all[k]);
@@ -74,6 +75,7 @@ function _apSalvaLocale() {
 function _apCaricaLocale() {
   _ap.righe = [];
   _ap.precedenze = [];
+  _ap.vincoli = [];
   _ap.imprevisti = [];
   try {
     const raw = localStorage.getItem(AP_STORAGE_KEY);
@@ -83,6 +85,7 @@ function _apCaricaLocale() {
       _ap.righe = Array.isArray(s.righe) ? s.righe : [];
       if (s.opzioni) _ap.opzioni = Object.assign({ sabato: false, maxKm: 250, meteo: true, maxSquadre: 2, rendimento: true }, s.opzioni);
       if (Array.isArray(s.precedenze)) _ap.precedenze = s.precedenze;
+      if (Array.isArray(s.vincoli)) _ap.vincoli = s.vincoli;
       if (Array.isArray(s.imprevisti)) _ap.imprevisti = s.imprevisti;
     }
   } catch (_) {}
@@ -811,6 +814,7 @@ async function apCalcola(opts) {
 
     const ids = new Set(righeSolver.map(r => r.id));
     ctx.precedenze = _ap.precedenze.filter(([a, b]) => ids.has(a) && ids.has(b));
+    ctx.vincoli = _apVincoliValidi(ids);
 
     _apStatus('Calcolo la bozza…');
     await new Promise(res => setTimeout(res, 0)); // lascia disegnare lo stato prima del calcolo
@@ -1450,6 +1454,7 @@ async function apSvuota() {
   const ok = await showConfirmAsync('Svuotare la lista dei cantieri di questa settimana? La Griglia non viene toccata.', 'Svuota');
   if (!ok) return;
   _ap.righe = [];
+  _ap.vincoli = [];
   _apInvalidaBozza();
   _apSalvaLocale();
   apRender();
@@ -1516,6 +1521,7 @@ function apRender() {
             ' <button type="button" onclick="apCaricaStorico(true)" class="underline">aggiorna</button></div>' +
           _apTabellaRigheHtml() +
           _apPrecedenzeHtml() +
+          _apVincoliHtml() +
           '<div id="ap-status" class="text-xs mt-2" style="color:' + (_ap.stato.err ? '#e11d48' : '#64748b') + ';">' + _apE(_ap.stato.msg) + '</div>' +
         '</div>' +
         _apBozzaHtml(puoAnnullare) +
@@ -1951,6 +1957,64 @@ function _apMiglioramentiHtml(b) {
 }
 
 /* Precedenze scelte dai suggerimenti: restano (per settimana) finché non si tolgono */
+/* ---------- vincoli del calcolo a squadre ---------- */
+const AP_VINCOLI_TIPI = ['insieme', 'separati', 'operatore_cantiere', 'operatore_limitato', 'cantieri_insieme', 'cantieri_separati'];
+let _apVincSeq = 0;
+
+/* Vincoli applicabili al calcolo: quelli sui cantieri solo se le righe sono in calcolo */
+function _apVincoliValidi(ids) {
+  return _ap.vincoli.filter(v => {
+    if (v.tipo === 'operatore_cantiere') return ids.has(v.b);
+    if (v.tipo === 'cantieri_insieme' || v.tipo === 'cantieri_separati') return ids.has(v.a) && ids.has(v.b);
+    return true;
+  }).map(v => ({ tipo: v.tipo, a: v.a, b: v.b }));
+}
+
+function _apVincoloTesto(v) {
+  const nr = id => { const r = _ap.righe.find(x => x.id === id); return r ? r.cantiere : '(cantiere tolto)'; };
+  switch (v.tipo) {
+    case 'insieme': return v.a + ' e ' + v.b + ' nella stessa squadra';
+    case 'separati': return v.a + ' e ' + v.b + ' in squadre diverse';
+    case 'operatore_cantiere': return v.a + ' su ' + nr(v.b);
+    case 'operatore_limitato': return v.a + ' solo su ' + (v.b || []).join(', ');
+    case 'cantieri_insieme': return nr(v.a) + ' e ' + nr(v.b) + ' alla stessa squadra';
+    case 'cantieri_separati': return nr(v.a) + ' e ' + nr(v.b) + ' a squadre diverse';
+    default: return v.tipo;
+  }
+}
+
+/* Aggiunge (o toglie, attiva=false) un vincolo già risolto: a/b sono nomi di operatori,
+   id di righe o elenco di commesse secondo il tipo. Restituisce il testo. */
+function apVincoloImposta(tipo, a, b, attiva) {
+  if (!AP_VINCOLI_TIPI.includes(tipo)) throw new Error('tipo di vincolo sconosciuto: ' + tipo);
+  const chiave = v => v.tipo + '|' + (['insieme', 'separati', 'cantieri_insieme', 'cantieri_separati'].includes(v.tipo) ? [v.a, v.b].sort().join('|') : v.a + '|' + JSON.stringify(v.b));
+  const nuovo = { tipo, a, b };
+  const k = chiave(nuovo);
+  /* "solo su" e "su" sono uno per operatore: il nuovo sostituisce il vecchio */
+  _ap.vincoli = _ap.vincoli.filter(v => chiave(v) !== k && !(attiva !== false && v.tipo === tipo && v.a === a && (tipo === 'operatore_limitato')));
+  if (attiva !== false) {
+    _ap.vincoli.forEach(v => { const n = parseInt(String(v.id).replace('v', ''), 10); if (n > _apVincSeq) _apVincSeq = n; });
+    _ap.vincoli.push(Object.assign({ id: 'v' + (++_apVincSeq) }, nuovo));
+  }
+  return _apVincoloTesto(nuovo) + (attiva === false ? ' (tolto)' : '');
+}
+
+function apRimuoviVincolo(el) {
+  const id = el && el.dataset.vincolo;
+  _ap.vincoli = _ap.vincoli.filter(v => v.id !== id);
+  _apInvalidaBozza();
+  _apSalvaLocale();
+  apRender();
+}
+
+function _apVincoliHtml() {
+  if (!_ap.vincoli.length) return '';
+  return '<div class="mt-2 flex flex-wrap items-center gap-1 text-[11px]"><span class="text-slate-500" data-help-key="ap-vincoli">🔗 Vincoli:</span>' +
+    _ap.vincoli.map(v => '<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full" style="background:#eef2ff;color:#3730a3;">' + _apE(_apVincoloTesto(v)) +
+      '<button type="button" data-vincolo="' + _apE(v.id) + '" onclick="apRimuoviVincolo(this)" title="Togli il vincolo" class="hover:text-rose-600">✕</button></span>').join('') +
+    '</div>';
+}
+
 function _apPrecedenzeHtml() {
   const ids = new Set(_ap.righe.map(r => r.id));
   const valide = _ap.precedenze.map((p, i) => ({ p, i })).filter(x => ids.has(x.p[0]) && ids.has(x.p[1]));
