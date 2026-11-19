@@ -843,10 +843,19 @@ function mlInit() {
 }
 
 /* ----- Meteo live (Windy) -----
-   Embed ufficiale di Windy (embed.windy.com) in un pannello sopra la mappa dei
-   cantieri, centrato sulla zona inquadrata in quel momento. Nessuna chiave API;
-   a Windy arrivano solo centro e zoom della vista. Il livello scelto (pioggia,
-   vento, ...) resta in localStorage per questo browser. */
+   Embed ufficiale di Windy (embed.windy.com) centrato sulla zona inquadrata.
+   Nessuna chiave API; a Windy arrivano solo centro e zoom della vista.
+   «Cantieri sopra il meteo» (default, v18.292.0): l'iframe sta SOTTO la mappa
+   Leaflet, resa trasparente e senza tile, così i pin restano visibili e cliccabili.
+   L'embed non comunica la sua vista, quindi è la mappa a guidare: a parità di
+   centro e zoom intero l'embed coincide pixel per pixel con Leaflet (verificato su
+   Milano/Torino a zoom 7). Durante pan/zoom l'iframe viene traslato/scalato con un
+   transform; a mappa ferma (ML_WINDY_RICARICA_MS) si carica un nuovo iframe sotto
+   quello visibile e si scambiano a caricamento avvenuto (niente schermo vuoto).
+   Zoom limitato a 3..11 (quelli dell'embed) finché Windy è aperto.
+   La fascia in fondo resta scoperta: timeline e play di Windy usabili.
+   Spento: Windy sopra la mappa e interattivo, senza cantieri (comportamento
+   precedente). Livello e preferenza «cantieri» in localStorage per questo browser. */
 const ML_WINDY_LIVELLI = [
   { v: 'rain', l: '🌧 Pioggia' },
   { v: 'wind', l: '💨 Vento' },
@@ -855,7 +864,12 @@ const ML_WINDY_LIVELLI = [
   { v: 'snowAccu', l: '❄️ Neve' },
   { v: 'thunder', l: '⚡ Temporali' },
 ];
-let _mlWindyAperto = false;
+const ML_WINDY_ZOOM_MIN = 3;
+const ML_WINDY_ZOOM_MAX = 11;
+const ML_WINDY_RICARICA_MS = 450;   // attesa a mappa ferma prima di ricaricare l'embed
+const ML_WINDY_SCAMBIO_MS = 1200;   // dopo il load, tempo per disegnare il livello meteo
+const ML_WINDY_SCAMBIO_MAX_MS = 5000; // scambio comunque, anche senza load
+const _mlWindy = { aperto: false, cantieri: true, zoomPrima: null, timer: null, eventi: false, gen: 0, ultima: null };
 
 function _mlWindyLivello() {
   let v = '';
@@ -863,16 +877,96 @@ function _mlWindyLivello() {
   return ML_WINDY_LIVELLI.some(x => x.v === v) ? v : 'rain';
 }
 
-function _mlWindyUrl(livello) {
-  const c = _mlMap ? _mlMap.getCenter() : { lat: 43.1, lng: 12.4 };
-  const z = Math.max(3, Math.min(11, Math.round(_mlMap ? _mlMap.getZoom() : 6)));
+function _mlWindyCantieriPref() {
+  try { return localStorage.getItem('ml_windy_cantieri') !== '0'; } catch (e) { return true; }
+}
+
+function _mlWindyUrl(livello, c, z) {
   const p = {
     type: 'map', location: 'coordinates', metricRain: 'mm', metricTemp: '°C', metricWind: 'km/h',
     zoom: z, overlay: livello, product: 'ecmwf', level: 'surface',
-    lat: c.lat.toFixed(3), lon: c.lng.toFixed(3),
+    lat: c.lat.toFixed(4), lon: c.lng.toFixed(4),
   };
   return 'https://embed.windy.com/embed.html?' +
     Object.keys(p).map(k => k + '=' + encodeURIComponent(p[k])).join('&');
+}
+
+// Vista da dare all'embed: il centro dell'iframe (che copre anche la fascia in
+// fondo, quindi è più in basso del centro della mappa) e lo zoom intero corrente.
+function _mlWindyVista() {
+  const box = document.getElementById('ml-windy');
+  const z = Math.max(ML_WINDY_ZOOM_MIN, Math.min(ML_WINDY_ZOOM_MAX, Math.round(_mlMap.getZoom())));
+  const c = _mlMap.containerPointToLatLng(L.point(box.clientWidth / 2, box.clientHeight / 2));
+  return { c, z };
+}
+
+// Porta ogni iframe a coincidere con la vista della mappa (o con quella di arrivo
+// di un'animazione di zoom: centro/zoom passati da 'zoomanim').
+function _mlWindyAllinea(centro, zoom, anima) {
+  const box = document.getElementById('ml-windy');
+  if (!box || !_mlWindy.aperto || !_mlMap) return;
+  const c0 = centro || _mlMap.getCenter();
+  const z0 = zoom != null ? zoom : _mlMap.getZoom();
+  const meta = _mlMap.getSize().divideBy(2);
+  const cf = L.point(box.clientWidth / 2, box.clientHeight / 2);
+  box.querySelectorAll('iframe').forEach(f => {
+    const v = f._mlVista;
+    if (!v) return;
+    if (!_mlWindy.cantieri) { f.style.transition = 'none'; f.style.transform = ''; return; }
+    const p = _mlMap.project(v.c, z0).subtract(_mlMap.project(c0, z0)).add(meta);
+    const s = Math.pow(2, z0 - v.z);
+    f.style.transition = anima ? 'transform .25s cubic-bezier(0,0,0.25,1)' : 'none';
+    f.style.transform = 'translate(' + (p.x - cf.x).toFixed(1) + 'px,' + (p.y - cf.y).toFixed(1) + 'px) scale(' + s + ')';
+  });
+}
+
+function _mlWindyCarica(forza) {
+  const box = document.getElementById('ml-windy');
+  if (!box || !_mlWindy.aperto || !_mlMap) return;
+  const v = _mlWindyVista();
+  const liv = _mlWindyLivello();
+  // Vista invariata (moveend senza spostamento, resize nullo): niente ricarica.
+  const u = _mlWindy.ultima;
+  if (!forza && u && u.liv === liv && u.v.z === v.z && box.querySelector('iframe') &&
+      _mlMap.project(u.v.c, v.z).distanceTo(_mlMap.project(v.c, v.z)) < 2) return;
+  _mlWindy.ultima = { v, liv };
+  // Resta solo quello davanti (visibile, anche se ancora in caricamento): quelli
+  // sotto sono caricamenti per viste già superate.
+  const presenti = box.querySelectorAll('iframe');
+  presenti.forEach((f, i) => { if (i < presenti.length - 1) f.remove(); });
+  const gen = ++_mlWindy.gen;
+  const fr = document.createElement('iframe');
+  fr.className = 'ml-windy-frame';
+  fr.title = 'Mappa meteo Windy';
+  fr.referrerPolicy = 'no-referrer';
+  fr._mlVista = v;
+  // Scambio solo se nel frattempo non è stato chiesto un caricamento più recente.
+  // Windy può tardare l'evento load (continua a scaricare risorse): comunque entro
+  // ML_WINDY_SCAMBIO_MAX_MS il nuovo passa davanti.
+  const scambia = () => {
+    if (!fr.isConnected || gen !== _mlWindy.gen) return;
+    box.querySelectorAll('iframe').forEach(f => { if (f !== fr) f.remove(); });
+  };
+  fr.onload = () => setTimeout(scambia, ML_WINDY_SCAMBIO_MS);
+  setTimeout(scambia, ML_WINDY_SCAMBIO_MAX_MS);
+  fr.src = _mlWindyUrl(liv, v.c, v.z);
+  // Sotto quello visibile: il vecchio resta davanti finché il nuovo non è pronto.
+  box.insertBefore(fr, box.firstChild);
+  _mlWindyAllinea();
+}
+
+function _mlWindyProgramma() {
+  if (!_mlWindy.aperto || !_mlWindy.cantieri) return;
+  clearTimeout(_mlWindy.timer);
+  _mlWindy.timer = setTimeout(() => _mlWindyCarica(), ML_WINDY_RICARICA_MS);
+}
+
+function _mlWindyAgganciaEventi() {
+  if (_mlWindy.eventi || !_mlMap) return;
+  _mlWindy.eventi = true;
+  _mlMap.on('move', () => { if (_mlWindy.aperto) _mlWindyAllinea(); });
+  _mlMap.on('zoomanim', e => { if (_mlWindy.aperto) _mlWindyAllinea(e.center, e.zoom, true); });
+  _mlMap.on('moveend resize', _mlWindyProgramma);
 }
 
 function _mlWindyRenderLivelli() {
@@ -885,10 +979,24 @@ function _mlWindyRenderLivelli() {
     b.onclick = () => {
       try { localStorage.setItem('ml_windy_livello', b.dataset.v); } catch (e) {}
       _mlWindyRenderLivelli();
-      const fr = document.getElementById('ml-windy-frame');
-      if (fr) fr.src = _mlWindyUrl(b.dataset.v);
+      _mlWindyCarica(true);
     };
   });
+}
+
+function _mlWindyApplicaModo() {
+  const wrap = document.getElementById('ml-windy') && document.getElementById('ml-windy').parentElement;
+  if (wrap) wrap.classList.toggle('ml-windy-libero', _mlWindy.aperto && !_mlWindy.cantieri);
+  const cb = document.getElementById('ml-windy-pin');
+  if (cb) cb.checked = _mlWindy.cantieri;
+}
+
+function mlWindyCantieri(on) {
+  _mlWindy.cantieri = !!on;
+  try { localStorage.setItem('ml_windy_cantieri', on ? '1' : '0'); } catch (e) {}
+  _mlWindyApplicaModo();
+  // Riallinea all'inquadratura della mappa: da spento l'utente può aver mosso Windy.
+  _mlWindyCarica(true);
 }
 
 /* ----- Radar pioggia (RainViewer) -----
@@ -1007,17 +1115,40 @@ function mlRadarPasso(d) {
 
 function mlWindyToggle(forza) {
   const box = document.getElementById('ml-windy');
-  const fr = document.getElementById('ml-windy-frame');
-  if (!box || !fr) return;
-  _mlWindyAperto = typeof forza === 'boolean' ? forza : !_mlWindyAperto;
-  box.classList.toggle('hidden', !_mlWindyAperto);
-  const btn = document.getElementById('ml-windy-btn');
-  if (btn) btn.style.display = _mlWindyAperto ? 'none' : '';
-  if (_mlWindyAperto) {
-    _mlWindyRenderLivelli();
-    fr.src = _mlWindyUrl(_mlWindyLivello());
+  const bar = document.getElementById('ml-windy-bar');
+  if (!box || !bar || !_mlMap) return;
+  const aperto = typeof forza === 'boolean' ? forza : !_mlWindy.aperto;
+  if (aperto === _mlWindy.aperto) return;
+  _mlWindy.aperto = aperto;
+  _mlWindyAgganciaEventi();
+  clearTimeout(_mlWindy.timer);
+  if (aperto) {
+    _mlWindy.cantieri = _mlWindyCantieriPref();
+    _mlWindy.zoomPrima = { min: _mlMap.options.minZoom, max: _mlMap.options.maxZoom };
+    _mlMap.setMinZoom(ML_WINDY_ZOOM_MIN);
+    _mlMap.setMaxZoom(ML_WINDY_ZOOM_MAX);
   } else {
-    fr.src = 'about:blank';
+    box.innerHTML = '';
+    _mlWindy.ultima = null;
+    _mlWindy.gen++;
+    if (_mlWindy.zoomPrima) {
+      _mlMap.setMinZoom(_mlWindy.zoomPrima.min);
+      _mlMap.setMaxZoom(_mlWindy.zoomPrima.max);
+      _mlWindy.zoomPrima = null;
+    }
+  }
+  box.parentElement.classList.toggle('ml-windy-on', aperto);
+  box.classList.toggle('hidden', !aperto);
+  bar.classList.toggle('hidden', !aperto);
+  _mlWindyApplicaModo();
+  const btn = document.getElementById('ml-windy-btn');
+  if (btn) btn.style.display = aperto ? 'none' : '';
+  // La mappa si accorcia/allunga della fascia di Windy: angolo in alto fermo, i pin
+  // non si spostano.
+  _mlMap.invalidateSize({ pan: false });
+  if (aperto) {
+    _mlWindyRenderLivelli();
+    _mlWindyCarica(true);
   }
 }
 
