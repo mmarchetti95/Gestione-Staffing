@@ -116,6 +116,9 @@ Limite noto: il progetto Supabase è sul piano **Free**, che non include backup 
 
 ## Changelog
 
+## v18.297.0
+- **Programmazione, fix gruppi**: il titolo di ogni gruppo (stato e numero di elementi) finiva al centro della tabella, fuori schermo a destra, e si vedeva solo scorrendo; ora è sopra le sue righe, sempre sul bordo sinistro anche scorrendo in orizzontale, come su Monday. Righe più compatte ed etichette di stato che riempiono la cella (una regola generale dell'app aggiungeva margini a tutte le celle), intestazioni bianche e fascia colorata del gruppo lungo tutte le sue righe.
+
 ## v18.296.0
 - **Programmazione, gruppi come su Monday**: ogni gruppo di stato è un blocco a sé con barra colorata (titolo e numero di elementi) e le intestazioni delle colonne ripetute, che restano in alto mentre si scorre il gruppo. Clic sulla barra per comprimere/espandere il gruppo; «⊟ Comprimi tutti» / «⊞ Espandi tutti» nella barra strumenti. Nuovo **«Raggruppa per»**: Stato, Regione, Priority, Service… o nessun gruppo (solo per te, in questo browser; quella della board per tutti resta in «⚙️ Colonne»).
 - **Larghezza delle colonne automatica**: ogni colonna prende la larghezza del suo testo più lungo (intestazione su massimo due righe), fino a 520 px; oltre, il testo intero resta nel tooltip e nel pannello dell'elemento. Trascinando il bordo destro di un'intestazione la si allarga o stringe a mano (ricordato in questo browser, doppio clic per tornare automatica; «↔ Larghezze automatiche» le ripristina tutte). In «⚙️ Colonne» la larghezza vuota = automatica.

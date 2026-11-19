@@ -2308,36 +2308,36 @@
   .prg-cerca { width: 280px; max-width: 100%; padding: 5px 10px; font-size: 13px; border: 1px solid #cbd5e1; border-radius: 6px; background: #fff; }
   .prg-scroll { overflow: auto; max-height: calc(100vh - 210px); border: 1px solid #e2e8f0; border-radius: 8px; background: #fff; }
   .prg-table { table-layout: fixed; border-collapse: separate; border-spacing: 0; font-size: 13px; }
-  .prg-table th { position: sticky; top: 0; z-index: 3; background: #f8fafc; color: #475569; font-weight: 600; font-size: 12px; text-align: center;
-    padding: 5px 12px 5px 8px; border-top: 1px solid #e2e8f0; border-bottom: 1px solid #e2e8f0; border-right: 1px solid #eef2f6; line-height: 1.25; height: 40px; overflow: hidden; cursor: pointer; user-select: none; }
+  .prg-table th { position: sticky; top: 0; z-index: 3; background: #fff; color: #323338; font-weight: 400; font-size: 13px; text-align: center;
+    padding: 4px 12px 4px 8px; border-top: 1px solid #d0d4e4; border-bottom: 1px solid #d0d4e4; border-right: 1px solid #e6e9ef; line-height: 1.25; height: 40px; overflow: hidden; cursor: pointer; user-select: none; }
   .prg-th-t { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; white-space: normal; overflow-wrap: anywhere; }
   .prg-rs { position: absolute; top: 0; right: 0; width: 7px; height: 100%; cursor: col-resize; z-index: 1; }
   .prg-rs:hover { background: rgba(37, 99, 235, .35); }
   body.prg-ridim, body.prg-ridim * { cursor: col-resize !important; user-select: none !important; }
-  .prg-table th:hover { background: #f1f5f9; }
-  .prg-table td { border-bottom: 1px solid #eef2f6; border-right: 1px solid #eef2f6; padding: 0 6px; height: 36px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; text-align: center; color: #1e293b; }
+  .prg-table th:hover { background: #f5f6f8; }
+  .prg-table td { border-bottom: 1px solid #e6e9ef; border-right: 1px solid #e6e9ef; padding: 0 8px !important; height: 36px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; text-align: center; color: #1e293b; }
   .prg-table .prg-sticky { position: sticky; left: 0; z-index: 2; background: #fff; text-align: left; }
-  .prg-table th.prg-sticky { z-index: 4; background: #f8fafc; text-align: left; padding-left: 12px; }
-  .prg-grp-gap td { height: 22px; padding: 0; border: none; background: #fff; }
-  .prg-grp-head td { padding: 0; height: auto; border-right: none; border-bottom: none; background: #fff; overflow: visible; }
-  .prg-grp-head-in { position: sticky; left: 0; display: inline-flex; align-items: center; gap: 10px; padding: 8px 14px 8px 6px; cursor: pointer; border-radius: 6px; }
-  .prg-grp-head-in:hover { background: #f1f5f9; }
-  .prg-grp-tog { display: inline-flex; align-items: center; justify-content: center; width: 22px; height: 22px; color: var(--g); font-size: 16px; line-height: 1; filter: brightness(.85); }
-  .prg-grp-tit { color: var(--g); font-weight: 700; font-size: 16px; filter: brightness(.8); }
-  .prg-grp-n { color: #64748b; font-size: 12px; background: #f1f5f9; border-radius: 9999px; padding: 1px 8px; }
-  .prg-grp.chiuso .prg-grp-head-in { border-left: 6px solid var(--g); background: #f8fafc; min-width: min(560px, 80vw); padding-left: 10px; }
-  .prg-grp.chiuso .prg-grp-head-in:hover { background: #f1f5f9; }
-  .prg-grp-cols th.prg-sticky { border-left: 6px solid var(--g); }
+  .prg-table th.prg-sticky { z-index: 4; background: #fff; text-align: left; padding-left: 14px; }
+  .prg-grp-gap td { height: 30px; padding: 0 !important; border: none; background: #fff; }
+  .prg-table .prg-grp-head td { padding: 0 !important; height: auto; border: none; background: #fff; overflow: visible; text-align: left; }
+  .prg-grp-head-in { position: sticky; left: 0; display: inline-flex; align-items: baseline; gap: 8px; padding: 6px 12px 8px 2px; cursor: pointer; border-radius: 6px; white-space: nowrap; }
+  .prg-grp-head-in:hover .prg-grp-tit { text-decoration: underline; text-underline-offset: 3px; }
+  .prg-grp-tog { display: inline-block; width: 22px; text-align: center; color: var(--g); font-size: 15px; line-height: 1; filter: brightness(.85); }
+  .prg-grp-tit { color: var(--g); font-weight: 500; font-size: 20px; line-height: 1.2; filter: brightness(.8); }
+  .prg-grp-n { color: #676879; font-size: 14px; }
+  .prg-grp.chiuso .prg-grp-head-in { border-left: 6px solid var(--g); background: #fff; border-top: 1px solid #d0d4e4; border-bottom: 1px solid #d0d4e4;
+    border-right: 1px solid #d0d4e4; border-radius: 8px; min-width: min(640px, 80vw); padding: 10px 14px 10px 8px; }
+  .prg-grp-cols th.prg-sticky { border-left: 6px solid var(--g); border-top-left-radius: 8px; }
   .prg-row:hover td, .prg-row:hover td.prg-sticky { background: #f8fafc; }
   .prg-row.sel td, .prg-row.sel td.prg-sticky { background: #eef6ff; }
-  .prg-table td.prg-nome { border-left: 6px solid var(--g); padding-left: 10px; cursor: pointer; }
+  .prg-table td.prg-nome { border-left: 6px solid var(--g); padding-left: 14px !important; cursor: pointer; }
   .prg-nome-t { display: inline-block; max-width: calc(100% - 44px); overflow: hidden; text-overflow: ellipsis; vertical-align: middle; font-weight: 500; }
   .prg-nome:hover .prg-nome-t { color: var(--accent); text-decoration: underline; }
   .prg-com { float: right; font-size: 12px; color: #cbd5e1; margin-top: 1px; }
   .prg-com.on { color: #2563eb; font-weight: 600; }
   .prg-ed { cursor: pointer; }
   .prg-ed:hover { box-shadow: inset 0 0 0 1px #93c5fd; }
-  .prg-table td.prg-c-stato { padding: 0; }
+  .prg-table td.prg-c-stato { padding: 0 !important; }
   .prg-lbl { display: flex; align-items: center; justify-content: center; height: 100%; min-height: 35px; width: 100%; padding: 0 6px; font-weight: 500; font-size: 12.5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .prg-lbl-vuota { background: #f1f5f9; color: #94a3b8; }
   .prg-lbl-mini { display: inline-flex; width: auto; min-height: 22px; height: 22px; border-radius: 4px; padding: 0 8px; }
@@ -2351,7 +2351,8 @@
   .prg-tl-fill { position: absolute; left: 0; top: 0; bottom: 0; background: var(--g, #579bfc); }
   .prg-tl span { position: relative; }
   .prg-inline { width: 100%; height: 30px; border: 1px solid #60a5fa; border-radius: 4px; padding: 0 6px; font-size: 13px; outline: none; }
-  .prg-add td { height: 34px; }
+  .prg-add td { height: 36px; }
+  .prg-add td.prg-sticky { border-left: 6px solid color-mix(in srgb, var(--g) 45%, #fff); border-bottom-left-radius: 8px; padding-left: 8px !important; }
   .prg-add-inp { width: 100%; border: none; outline: none; font-size: 13px; padding: 4px 4px 4px 14px; background: transparent; color: #334155; }
   .prg-add-inp:focus { background: #f8fafc; }
   .prg-sum td, .prg-sum td.prg-sticky { background: #fbfcfd; font-size: 12px; color: #334155; height: 32px; font-weight: 600; }
@@ -2453,7 +2454,7 @@
       </span>
       <button id="btn-presentation" class="px-3 py-1.5 text-sm rounded hover:bg-white/10" style="border:1px solid var(--dark-border-strong);color:var(--dark-text);visibility:visible;">📊 Modalità presentazione</button>
       <div class="text-xs pl-2" style="border-left:1px solid var(--dark-border-strong);color:var(--dark-text-muted);">
-        <span id="app-version" class="font-medium" style="color:var(--accent);">v18.296.0</span> · Michele Marchetti
+        <span id="app-version" class="font-medium" style="color:var(--accent);">v18.297.0</span> · Michele Marchetti
         <span id="sb-role-badge" style="margin-left:8px;padding:1px 8px;border-radius:9999px;background:rgba(255,255,255,.1);color:var(--dark-text);font-weight:600;"></span>
       </div>
     </div>
