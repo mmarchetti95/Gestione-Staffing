@@ -115,6 +115,9 @@ Limite noto: il progetto Supabase è sul piano **Free**, che non include backup 
 
 ## Changelog
 
+## v18.293.0
+- **Mappa, «🌦 Meteo live» senza ricariche a ogni spostamento.** Prima ogni spostamento della mappa ricaricava Windy da capo (schermata di attesa, animazione che ripartiva). Ora Windy carica una zona più ampia di quella visibile: gli spostamenti normali scorrono e basta, senza ricaricare; si ricarica solo cambiando zoom o livello, o allontanandosi molto, e la nuova mappa compare in dissolvenza sopra la vecchia. Con i cantieri sopra si vede il meteo dell'ora attuale (logo, timeline e legenda di Windy restano fuori vista); per scorrere le ore si toglie la spunta «📍 Cantieri sopra il meteo».
+
 ## v18.292.0
 - **Mappa, «🌦 Meteo live» con i cantieri sopra.** Aprendo il meteo live i pin dei cantieri restano visibili e cliccabili sopra la mappa Windy: niente più cambio fra le due viste. La mappa si sposta e si ingrandisce con i comandi soliti (+/−, trascinamento) e Windy la segue; a mappa ferma il meteo si ricarica sulla nuova zona. Timeline e ▶ di Windy, in fondo, restano usabili. Con il meteo aperto lo zoom va da 3 a 11 (quelli di Windy) e radar pioggia e scelta Stradale/Satellite sono nascosti. Togliendo la spunta «📍 Cantieri sopra il meteo» si torna alla mappa Windy completa e interattiva (clic su un punto per la previsione), senza cantieri; la scelta resta in questo browser.
 

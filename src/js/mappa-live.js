@@ -849,13 +849,19 @@ function mlInit() {
    Leaflet, resa trasparente e senza tile, così i pin restano visibili e cliccabili.
    L'embed non comunica la sua vista, quindi è la mappa a guidare: a parità di
    centro e zoom intero l'embed coincide pixel per pixel con Leaflet (verificato su
-   Milano/Torino a zoom 7). Durante pan/zoom l'iframe viene traslato/scalato con un
-   transform; a mappa ferma (ML_WINDY_RICARICA_MS) si carica un nuovo iframe sotto
-   quello visibile e si scambiano a caricamento avvenuto (niente schermo vuoto).
+   Milano/Torino a zoom 7). Ogni caricamento di Windy riparte da zero (schermata
+   di attesa, animazione, ora), quindi va evitato (v18.293.0): l'iframe carica
+   un'area più grande della vista (ML_WINDY_MARGINE per lato) e durante pan/zoom
+   viene solo traslato/scalato con un transform; si ricarica a mappa ferma e solo
+   se cambiano zoom, livello o dimensioni o se il bordo caricato entra in vista
+   (_mlWindyServeRicarica). Il nuovo embed entra trasparente sopra il vecchio e
+   compare in dissolvenza quando è disegnato. Con i margini logo, timeline e
+   legenda di Windy restano fuori vista: si vede l'ora attuale (l'embed non
+   accetta un'ora di partenza: `calendar` è ignorato sia da embed.html sia da
+   embed2.html, verificato).
    Zoom limitato a 3..11 (quelli dell'embed) finché Windy è aperto.
-   La fascia in fondo resta scoperta: timeline e play di Windy usabili.
-   Spento: Windy sopra la mappa e interattivo, senza cantieri (comportamento
-   precedente). Livello e preferenza «cantieri» in localStorage per questo browser. */
+   Spento: Windy sopra la mappa, a misura e interattivo (timeline, clic per la
+   previsione), senza cantieri. Livello e preferenza in localStorage per browser. */
 const ML_WINDY_LIVELLI = [
   { v: 'rain', l: '🌧 Pioggia' },
   { v: 'wind', l: '💨 Vento' },
@@ -866,10 +872,18 @@ const ML_WINDY_LIVELLI = [
 ];
 const ML_WINDY_ZOOM_MIN = 3;
 const ML_WINDY_ZOOM_MAX = 11;
-const ML_WINDY_RICARICA_MS = 450;   // attesa a mappa ferma prima di ricaricare l'embed
-const ML_WINDY_SCAMBIO_MS = 1200;   // dopo il load, tempo per disegnare il livello meteo
-const ML_WINDY_SCAMBIO_MAX_MS = 5000; // scambio comunque, anche senza load
-const _mlWindy = { aperto: false, cantieri: true, zoomPrima: null, timer: null, eventi: false, gen: 0, ultima: null };
+// Margine caricato oltre la parte visibile, per lato: metà vista (così anche uno
+// zoom indietro di un livello resta coperto), almeno quanto basta a spingere fuori
+// vista logo e timeline di Windy, al massimo ML_WINDY_MARGINE_MAX.
+const ML_WINDY_MARGINE = 0.5;
+const ML_WINDY_MARGINE_MIN = 160;
+const ML_WINDY_MARGINE_MAX = 900;
+const ML_WINDY_BORDO = 24;          // px di margine che devono restare oltre il bordo visibile
+const ML_WINDY_RICARICA_MS = 700;   // attesa a mappa ferma prima di ricaricare l'embed
+const ML_WINDY_SCAMBIO_MS = 1500;   // dopo il load, tempo per disegnare il livello meteo
+const ML_WINDY_SCAMBIO_MAX_MS = 7000; // scambio comunque, anche senza load
+const ML_WINDY_DISSOLVENZA_MS = 400;
+const _mlWindy = { aperto: false, cantieri: true, zoomPrima: null, timer: null, eventi: false, gen: 0 };
 
 function _mlWindyLivello() {
   let v = '';
@@ -891,17 +905,28 @@ function _mlWindyUrl(livello, c, z) {
     Object.keys(p).map(k => k + '=' + encodeURIComponent(p[k])).join('&');
 }
 
-// Vista da dare all'embed: il centro dell'iframe (che copre anche la fascia in
-// fondo, quindi è più in basso del centro della mappa) e lo zoom intero corrente.
-function _mlWindyVista() {
-  const box = document.getElementById('ml-windy');
-  const z = Math.max(ML_WINDY_ZOOM_MIN, Math.min(ML_WINDY_ZOOM_MAX, Math.round(_mlMap.getZoom())));
-  const c = _mlMap.containerPointToLatLng(L.point(box.clientWidth / 2, box.clientHeight / 2));
-  return { c, z };
+function _mlWindyZoom() {
+  return Math.max(ML_WINDY_ZOOM_MIN, Math.min(ML_WINDY_ZOOM_MAX, Math.round(_mlMap.getZoom())));
+}
+
+// Dimensioni del riquadro visibile e margini da caricare oltre (nessuno con
+// Windy interattivo: lì devono vedersi i suoi comandi).
+function _mlWindyGeometria(box) {
+  const w = box.clientWidth, h = box.clientHeight;
+  if (!_mlWindy.cantieri) return { w, h, mx: 0, my: 0 };
+  const m = d => Math.max(ML_WINDY_MARGINE_MIN, Math.min(ML_WINDY_MARGINE_MAX, Math.round(d * ML_WINDY_MARGINE)));
+  return { w, h, mx: m(w), my: m(h) };
+}
+
+// Iframe davanti (quello che si vede): l'ultimo con la classe ml-windy-vis.
+function _mlWindyVisibile(box) {
+  const vis = box.querySelectorAll('iframe.ml-windy-vis');
+  return vis.length ? vis[vis.length - 1] : null;
 }
 
 // Porta ogni iframe a coincidere con la vista della mappa (o con quella di arrivo
-// di un'animazione di zoom: centro/zoom passati da 'zoomanim').
+// di un'animazione di zoom: centro/zoom passati da 'zoomanim'). Il centro
+// dell'iframe è il centro del riquadro (margini uguali sui due lati).
 function _mlWindyAllinea(centro, zoom, anima) {
   const box = document.getElementById('ml-windy');
   if (!box || !_mlWindy.aperto || !_mlMap) return;
@@ -909,54 +934,82 @@ function _mlWindyAllinea(centro, zoom, anima) {
   const z0 = zoom != null ? zoom : _mlMap.getZoom();
   const meta = _mlMap.getSize().divideBy(2);
   const cf = L.point(box.clientWidth / 2, box.clientHeight / 2);
+  const tr = 'opacity ' + ML_WINDY_DISSOLVENZA_MS + 'ms ease';
   box.querySelectorAll('iframe').forEach(f => {
     const v = f._mlVista;
     if (!v) return;
-    if (!_mlWindy.cantieri) { f.style.transition = 'none'; f.style.transform = ''; return; }
+    if (!_mlWindy.cantieri) { f.style.transition = tr; f.style.transform = ''; return; }
     const p = _mlMap.project(v.c, z0).subtract(_mlMap.project(c0, z0)).add(meta);
     const s = Math.pow(2, z0 - v.z);
-    f.style.transition = anima ? 'transform .25s cubic-bezier(0,0,0.25,1)' : 'none';
+    f.style.transition = tr + (anima ? ', transform .25s cubic-bezier(0,0,0.25,1)' : '');
     f.style.transform = 'translate(' + (p.x - cf.x).toFixed(1) + 'px,' + (p.y - cf.y).toFixed(1) + 'px) scale(' + s + ')';
   });
+}
+
+// Serve un nuovo embed? Solo se cambiano livello, dimensioni o zoom, o se lo
+// spostamento ha portato il bordo della parte caricata dentro la vista. I pan
+// entro il margine restano un semplice transform: Windy non si ricarica.
+function _mlWindyServeRicarica(box, vis, liv) {
+  if (!vis || !vis._mlVista || vis._mlLiv !== liv) return true;
+  const g = _mlWindyGeometria(box);
+  const vg = vis._mlGeo;
+  if (vg.w !== g.w || vg.h !== g.h || vg.mx !== g.mx || vg.my !== g.my) return true;
+  if (_mlMap.getZoom() !== vis._mlVista.z) return true;
+  if (!_mlWindy.cantieri) return false;
+  const p = _mlMap.latLngToContainerPoint(vis._mlVista.c);
+  return Math.abs(p.x - g.w / 2) > g.mx - ML_WINDY_BORDO || Math.abs(p.y - g.h / 2) > g.my - ML_WINDY_BORDO;
 }
 
 function _mlWindyCarica(forza) {
   const box = document.getElementById('ml-windy');
   if (!box || !_mlWindy.aperto || !_mlMap) return;
-  const v = _mlWindyVista();
   const liv = _mlWindyLivello();
-  // Vista invariata (moveend senza spostamento, resize nullo): niente ricarica.
-  const u = _mlWindy.ultima;
-  if (!forza && u && u.liv === liv && u.v.z === v.z && box.querySelector('iframe') &&
-      _mlMap.project(u.v.c, v.z).distanceTo(_mlMap.project(v.c, v.z)) < 2) return;
-  _mlWindy.ultima = { v, liv };
-  // Resta solo quello davanti (visibile, anche se ancora in caricamento): quelli
-  // sotto sono caricamenti per viste già superate.
-  const presenti = box.querySelectorAll('iframe');
-  presenti.forEach((f, i) => { if (i < presenti.length - 1) f.remove(); });
+  const vis = _mlWindyVisibile(box);
+  if (!forza && !_mlWindyServeRicarica(box, vis, liv)) return;
+  // Caricamenti ancora in corso: già superati da questo.
+  box.querySelectorAll('iframe:not(.ml-windy-vis)').forEach(f => f.remove());
+  const g = _mlWindyGeometria(box);
+  const v = { c: _mlMap.containerPointToLatLng(L.point(g.w / 2, g.h / 2)), z: _mlWindyZoom() };
   const gen = ++_mlWindy.gen;
   const fr = document.createElement('iframe');
   fr.className = 'ml-windy-frame';
   fr.title = 'Mappa meteo Windy';
   fr.referrerPolicy = 'no-referrer';
+  fr.style.left = (-g.mx) + 'px';
+  fr.style.top = (-g.my) + 'px';
+  fr.style.width = (g.w + 2 * g.mx) + 'px';
+  fr.style.height = (g.h + 2 * g.my) + 'px';
   fr._mlVista = v;
-  // Scambio solo se nel frattempo non è stato chiesto un caricamento più recente.
-  // Windy può tardare l'evento load (continua a scaricare risorse): comunque entro
-  // ML_WINDY_SCAMBIO_MAX_MS il nuovo passa davanti.
-  const scambia = () => {
-    if (!fr.isConnected || gen !== _mlWindy.gen) return;
-    box.querySelectorAll('iframe').forEach(f => { if (f !== fr) f.remove(); });
+  fr._mlGeo = g;
+  fr._mlLiv = liv;
+  fr._mlGen = gen;
+  // Il nuovo entra davanti ma trasparente; a disegno avvenuto compare in
+  // dissolvenza e il vecchio, rimasto visibile fino ad allora, viene tolto.
+  const mostra = () => {
+    if (!fr.isConnected || gen !== _mlWindy.gen || fr.classList.contains('ml-windy-vis')) return;
+    box.querySelectorAll('iframe.ml-windy-vis').forEach(f => f.classList.remove('ml-windy-vis'));
+    fr.classList.add('ml-windy-vis');
+    fr.style.opacity = '1';
+    setTimeout(() => {
+      box.querySelectorAll('iframe').forEach(f => {
+        if (f !== fr && !f.classList.contains('ml-windy-vis') && f._mlGen < gen) f.remove();
+      });
+    }, ML_WINDY_DISSOLVENZA_MS + 50);
   };
-  fr.onload = () => setTimeout(scambia, ML_WINDY_SCAMBIO_MS);
-  setTimeout(scambia, ML_WINDY_SCAMBIO_MAX_MS);
+  if (vis) {
+    fr.style.opacity = '0';
+    fr.onload = () => setTimeout(mostra, ML_WINDY_SCAMBIO_MS);
+    setTimeout(mostra, ML_WINDY_SCAMBIO_MAX_MS);
+  } else {
+    fr.classList.add('ml-windy-vis');   // niente da tenere a schermo: subito visibile
+  }
   fr.src = _mlWindyUrl(liv, v.c, v.z);
-  // Sotto quello visibile: il vecchio resta davanti finché il nuovo non è pronto.
-  box.insertBefore(fr, box.firstChild);
+  box.appendChild(fr);
   _mlWindyAllinea();
 }
 
 function _mlWindyProgramma() {
-  if (!_mlWindy.aperto || !_mlWindy.cantieri) return;
+  if (!_mlWindy.aperto) return;
   clearTimeout(_mlWindy.timer);
   _mlWindy.timer = setTimeout(() => _mlWindyCarica(), ML_WINDY_RICARICA_MS);
 }
@@ -964,8 +1017,8 @@ function _mlWindyProgramma() {
 function _mlWindyAgganciaEventi() {
   if (_mlWindy.eventi || !_mlMap) return;
   _mlWindy.eventi = true;
-  _mlMap.on('move', () => { if (_mlWindy.aperto) _mlWindyAllinea(); });
-  _mlMap.on('zoomanim', e => { if (_mlWindy.aperto) _mlWindyAllinea(e.center, e.zoom, true); });
+  _mlMap.on('move', () => { if (_mlWindy.aperto && _mlWindy.cantieri) _mlWindyAllinea(); });
+  _mlMap.on('zoomanim', e => { if (_mlWindy.aperto && _mlWindy.cantieri) _mlWindyAllinea(e.center, e.zoom, true); });
   _mlMap.on('moveend resize', _mlWindyProgramma);
 }
 
@@ -995,7 +1048,10 @@ function mlWindyCantieri(on) {
   _mlWindy.cantieri = !!on;
   try { localStorage.setItem('ml_windy_cantieri', on ? '1' : '0'); } catch (e) {}
   _mlWindyApplicaModo();
-  // Riallinea all'inquadratura della mappa: da spento l'utente può aver mosso Windy.
+  // Cambiano i margini (nessuno con Windy interattivo) e, da spento, l'utente può
+  // aver mosso Windy: si riparte con un embed nuovo sulla vista della mappa.
+  const box = document.getElementById('ml-windy');
+  if (box) box.innerHTML = '';
   _mlWindyCarica(true);
 }
 
@@ -1129,7 +1185,6 @@ function mlWindyToggle(forza) {
     _mlMap.setMaxZoom(ML_WINDY_ZOOM_MAX);
   } else {
     box.innerHTML = '';
-    _mlWindy.ultima = null;
     _mlWindy.gen++;
     if (_mlWindy.zoomPrima) {
       _mlMap.setMinZoom(_mlWindy.zoomPrima.min);
@@ -1143,9 +1198,6 @@ function mlWindyToggle(forza) {
   _mlWindyApplicaModo();
   const btn = document.getElementById('ml-windy-btn');
   if (btn) btn.style.display = aperto ? 'none' : '';
-  // La mappa si accorcia/allunga della fascia di Windy: angolo in alto fermo, i pin
-  // non si spostano.
-  _mlMap.invalidateSize({ pan: false });
   if (aperto) {
     _mlWindyRenderLivelli();
     _mlWindyCarica(true);
