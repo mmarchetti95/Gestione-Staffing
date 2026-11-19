@@ -2,8 +2,9 @@
 /* Da una lista di cantieri con priorità produce una BOZZA della Griglia della settimana
    mostrata, la fa rivedere e solo su conferma la scrive in pwData (annullabile).
    Il calcolo sta in autoplan-solver.js (modulo puro); qui ci sono:
-   - gli ADAPTER delle fonti: incolla da Excel/CSV, file .xlsx, riga manuale, cantieri
-     della settimana precedente. Tutti producono le stesse righe (apNormRiga), così una
+   - gli ADAPTER delle fonti: inserimento guidato (weekly-autoplan-wizard.js, apw*),
+     incolla da Excel/CSV, file .xlsx, riga manuale, cantieri della settimana precedente
+     (queste ultime nel menu «⋯ Altre fonti»). Tutti producono le stesse righe (apNormRiga), così una
      fonte nuova (Jira, agente AI) è solo un altro adapter.
    - la stima dell'impegno dallo storico di controllo_produzione (cache localStorage 12h)
    - il contesto della settimana (disponibilità, posizioni, attestati, staffing)
@@ -24,7 +25,6 @@ let _ap = {
   precedenze: [],       // [[primaId, dopoId]] scelte dall'utente dai suggerimenti
   stato: { msg: '', err: false },
   toccate: new Set(),   // righe modificate dall'assistente nell'ultima risposta (evidenziate)
-  fontiAperte: false,   // con la chat aperta le fonti stanno in un pannello richiudibile
   imprevisti: [],       // assenze / cantieri fermi della settimana già pianificata (vedi IMPREVISTI)
   riparazione: null,    // { anno, week, impatto, risultato, righeSolver, ctx, ... } in memoria
   impForm: { tipo: 'assenza', chi: '', giorni: [], registra: 'ferie', motivo: '' }
@@ -701,6 +701,13 @@ async function _apDistanzeEMeteo(ctx, righeSolver) {
   return { dist, met };
 }
 
+/* Stima dell'impegno con le persone per squadra del catalogo attività (caOperatoriSquadra):
+   tutti i lettori passano di qui, così tabella, chat e calcolo vedono lo stesso numero. */
+function _apStima(r) {
+  const nOpCatalogo = typeof caOperatoriSquadra === 'function' ? caOperatoriSquadra(r.commessa, r.attivita) : null;
+  return apStimaImpegno(Object.assign({}, r, { nOpCatalogo }), _ap.modello);
+}
+
 function _apRigaCompleta(r) {
   return r.cantiere && r.commessa;
 }
@@ -721,7 +728,7 @@ async function apCalcola(opts) {
     await _apLocalizza(righe.map(r => r.cantiere));
     const ctx = apBuildContesto();
     const righeSolver = righe.map(r => {
-      const stima = apStimaImpegno(r, _ap.modello);
+      const stima = _apStima(r);
       const meta = (state.commesse_attive_meta || {})[r.commessa] || {};
       const geo = meteoGeoFor(r.cantiere);
       const sg = _apIndiceGiorno(r.scadenza);
@@ -1424,18 +1431,21 @@ function apRender() {
   try { undo = JSON.parse(localStorage.getItem(AP_UNDO_KEY) || 'null'); } catch (_) {}
   const puoAnnullare = undo && undo.anno === pwAnno && undo.week === pwWeek;
 
-  /* Con la chat aperta la colonna delle fonti lascia il posto alla chat: le fonti
-     diventano un pannello richiudibile sopra la tabella. */
+  /* A sinistra solo «＋ Nuovo cantiere» e la casella per l'assistente (apwColonnaHtml).
+     Con la chat aperta la colonna sparisce (la chat ha la sua casella) e «＋ Nuovo
+     cantiere» passa nella testata della lista. Le altre fonti stanno in «⋯ Altre fonti». */
   const chat = typeof apcAperta === 'function' && apcAperta();
   root.innerHTML =
     '<div class="grid grid-cols-1 ' + (chat ? '' : 'xl:grid-cols-5 ') + 'gap-4 items-start">' +
-      (chat ? _apFontiRichiudibiliHtml() : _apPannelloFontiHtml()) +
+      (chat ? '' : apwColonnaHtml()) +
       '<div class="' + (chat ? '' : 'xl:col-span-4 ') + 'space-y-4" style="min-width:0;">' +
         _apImprevistiHtml() +
         _apRiparazioneHtml() +
         '<div class="bg-white border border-slate-200 rounded-lg p-3 shadow-sm">' +
           '<div class="flex flex-wrap items-center gap-2 mb-2">' +
             '<div class="text-xs font-semibold text-slate-700 uppercase tracking-wide">📋 Cantieri da pianificare · ' + _apE(giorniLabel) + '</div>' +
+            (chat ? '<button type="button" onclick="apwApri()" class="apw-nuovo-mini">＋ Nuovo cantiere</button>' : '') +
+            apwAltreFontiHtml() +
             '<div class="flex-1"></div>' +
             '<label data-help-key="ap-opz-sabato" class="text-xs text-slate-600 flex items-center gap-1"><input type="checkbox" data-opz="sabato" onchange="apSetOpzione(this)"' + (_ap.opzioni.sabato ? ' checked' : '') + '> anche sabato</label>' +
             '<label data-help-key="ap-opz-meteo" class="text-xs text-slate-600 flex items-center gap-1" title="Evita i giorni con allerta Protezione Civile e sposta, se possibile, quelli con maltempo previsto"><input type="checkbox" data-opz="meteo" onchange="apSetOpzione(this)"' + (_ap.opzioni.meteo ? ' checked' : '') + '> considera meteo</label>' +
@@ -1453,42 +1463,6 @@ function apRender() {
         _apBozzaHtml(puoAnnullare) +
       '</div>' +
     '</div>';
-}
-
-function _apFontiRichiudibiliHtml() {
-  return '<details class="ap-fonti-box no-print"' + (_ap.fontiAperte ? ' open' : '') + ' ontoggle="apFontiToggle(this)">' +
-    '<summary data-help-key="ap-fonti"><span class="text-xs font-semibold text-slate-700">📥 Aggiungi cantieri</span>' +
-    '<span class="text-[11px] text-slate-400">incolla da Excel · file · settimana precedente · riga manuale</span></summary>' +
-    '<div class="pt-2 grid grid-cols-1 md:grid-cols-2 gap-3">' + _apFontiCorpoHtml() + '</div></details>';
-}
-
-function apFontiToggle(el) { _ap.fontiAperte = !!el.open; }
-
-function _apPannelloFontiHtml() {
-  /* Colonna a sinistra da 1280px in su; sotto, sta sopra la tabella e si dispone su due
-     colonne (incolla | altre fonti) per non occupare mezza pagina in altezza. */
-  return '<div class="xl:col-span-1 bg-white border border-slate-200 rounded-lg p-3 shadow-sm no-print">' +
-    '<div class="text-xs font-semibold text-slate-700 uppercase tracking-wide mb-1">🤖 Auto-pianifica</div>' +
-    '<div class="text-[11px] text-slate-500 leading-snug mb-3">Carica i cantieri da una o più fonti, controlla stima e priorità, poi calcola una bozza: la Griglia cambia solo quando premi <b>Applica</b>.</div>' +
-    '<div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-1 gap-3">' + _apFontiCorpoHtml() + '</div>' +
-  '</div>';
-}
-
-function _apFontiCorpoHtml() {
-  return '<div>' +
-        '<label class="block text-xs font-semibold text-slate-600 mb-1">Incolla da Excel / CSV</label>' +
-        '<textarea id="ap-incolla" rows="4" placeholder="Cantiere&#9;Commessa&#9;Attività&#9;Km&#9;…&#9;Priorità" class="w-full px-2 py-1.5 text-xs border border-slate-300 rounded font-mono"></textarea>' +
-        '<button type="button" onclick="apImportaTesto()" class="mt-1 w-full text-xs px-2 py-1.5 border border-slate-300 rounded hover:bg-slate-50">⬇ Importa righe incollate</button>' +
-      '</div>' +
-      '<div>' +
-        '<div class="grid grid-cols-1 gap-1">' +
-          '<button type="button" onclick="document.getElementById(\'ap-file\').click()" class="text-xs px-2 py-1.5 border border-slate-300 rounded hover:bg-slate-50 text-left">📂 Da file .xlsx / .csv</button>' +
-          '<button type="button" onclick="apDaSettimanaPrecedente()" class="text-xs px-2 py-1.5 border border-slate-300 rounded hover:bg-slate-50 text-left">↩ Cantieri della settimana precedente</button>' +
-          '<button type="button" onclick="apAggiungiRiga()" class="text-xs px-2 py-1.5 border border-slate-300 rounded hover:bg-slate-50 text-left">＋ Riga manuale</button>' +
-          '<button type="button" onclick="apScaricaModello()" class="text-xs px-2 py-1.5 text-slate-500 hover:text-slate-800 text-left underline">Scarica il modello Excel</button>' +
-        '</div>' +
-        '<div class="text-[10px] text-slate-400 leading-snug mt-2">Colonne riconosciute: Cantiere, Commessa, Attività, Km, Giorni, Operatori, Priorità (P1/P2/P3), Scadenza, Dal, Skill, Preferiti, Esclusi, Note. Giorni vuoto = stima dallo storico di produzione.</div>' +
-      '</div>';
 }
 
 /* ---------- cataloghi per i menu a tendina ---------- */
@@ -1769,7 +1743,9 @@ function _apDdBottone(r, campo, titolo) {
 
 function _apTabellaRigheHtml() {
   if (!_ap.righe.length) {
-    return '<div class="text-xs text-slate-400 italic text-center py-8">Nessun cantiere: usa una delle fonti a sinistra.</div>';
+    return '<div class="text-xs text-slate-400 italic text-center py-8">Nessun cantiere in lista. ' +
+      '<button type="button" onclick="apwApri()" class="underline text-teal-700 not-italic font-semibold">＋ Inserisci il primo cantiere</button>' +
+      ' oppure scrivi all\'assistente cosa pianificare.</div>';
   }
   const commesse = pwGetCommesseValide();
   const pool = new Set(_apOperatoriCatalogo());
@@ -1793,7 +1769,7 @@ function _apTabellaRigheHtml() {
     '</tr></thead><tbody>';
 
   _ap.righe.forEach(r => {
-    const stima = apStimaImpegno(r, _ap.modello);
+    const stima = _apStima(r);
     const ignoti = r.preferiti.concat(r.esclusi).filter(n => !pool.has(n));
     const commessaOk = !r.commessa || commesse.includes(r.commessa);
     const es = esiti[r.id];

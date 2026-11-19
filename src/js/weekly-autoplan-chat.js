@@ -170,7 +170,7 @@ function _apcAggiorna(righeToccate) {
 }
 
 function _apcRigaPerAgente(r) {
-  const st = apStimaImpegno(r, _ap.modello);
+  const st = _apStima(r);
   const o = {
     id: r.id, cantiere: r.cantiere, commessa: r.commessa || null, attivita: r.attivita || null,
     priorita: 'P' + (r.priorita || 3)

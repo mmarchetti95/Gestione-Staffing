@@ -1671,6 +1671,11 @@
   .prf-guida-corpo li { margin-bottom: 4px; }
   .prf-guida-v { background: rgba(16,185,129,.35); padding: 0 4px; border-radius: 3px; }
   .prf-guida-r { background: rgba(244,63,94,.3); padding: 0 4px; border-radius: 3px; }
+  /* Doppia Week: ricerca operatore (pwDwCerca) */
+  .pw-dw-trovato > div:first-child { background: #fef9c3 !important; }
+  .pw-dw-attuale > div { box-shadow: inset 0 2px 0 #ca8a04, inset 0 -2px 0 #ca8a04; }
+  .pw-dw-attuale > div:first-child { background: #fde047 !important; box-shadow: inset 4px 0 0 #ca8a04, inset 0 2px 0 #ca8a04, inset 0 -2px 0 #ca8a04; }
+  .pw-dw-cerca-mostra { background: #fff; color: #4338ca; border-radius: 4px; padding: 0 6px; font-weight: 600; }
   .ms-tbl { width: 100%; border-collapse: separate; border-spacing: 0; font-size: 13px; color: #1e293b; }
   .ms-tbl thead th { position: sticky; top: 0; z-index: 3; background: #f8fafc; border-bottom: 1px solid #e2e8f0;
     padding: 0; text-align: left; font-weight: 600; color: #475569; white-space: nowrap; }
@@ -2136,11 +2141,81 @@
   .apc-perche { font-size: 10.5px; font-weight: 600; color: var(--accent-dark); background: #f0fdfa; border: 1px solid #99f6e4;
     border-radius: 999px; padding: 0 7px; margin-left: 4px; line-height: 17px; vertical-align: 1px; }
   .apc-perche:hover { background: var(--accent-soft); }
-  .ap-fonti-box { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius-md); padding: 8px 12px; box-shadow: var(--shadow-sm); }
-  .ap-fonti-box > summary { cursor: pointer; list-style: none; display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 10px; }
-  .ap-fonti-box > summary::-webkit-details-marker { display: none; }
-  .ap-fonti-box > summary::before { content: '▸'; font-size: 10px; color: var(--muted); transition: transform .15s; }
-  .ap-fonti-box[open] > summary::before { transform: rotate(90deg); }
+  /* Auto-pianifica: colonna sinistra, menu «Altre fonti», inserimento guidato (apw*) */
+  .apw-col { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius-md); padding: 12px; box-shadow: var(--shadow-sm); }
+  .apw-nuovo { width: 100%; padding: 10px 12px; border-radius: var(--radius-md); background: var(--accent); color: #fff; font-weight: 700; font-size: 13px; }
+  .apw-nuovo:hover { background: var(--accent-dark); }
+  .apw-nuovo-mini { font-size: 12px; padding: 4px 10px; border-radius: var(--radius-sm); background: var(--accent); color: #fff; font-weight: 600; }
+  .apw-nuovo-mini:hover { background: var(--accent-dark); }
+  .apw-nl { margin-top: 16px; padding-top: 12px; border-top: 1px solid var(--border); }
+  .apw-nl textarea { width: 100%; font-size: 12px; padding: 8px; border: 1px solid #cbd5e1; border-radius: var(--radius-sm); resize: vertical; background: var(--card); color: var(--text); line-height: 1.45; }
+  .apw-nl textarea:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-ring); }
+  .apw-nl-invia { margin-top: 6px; width: 100%; font-size: 12px; font-weight: 600; padding: 6px 10px; border-radius: var(--radius-sm); border: 1px solid var(--accent); color: var(--accent-dark); background: var(--card); }
+  .apw-nl-invia:hover { background: var(--accent-soft); }
+  .apw-menu { position: relative; }
+  .apw-menu > summary { list-style: none; cursor: pointer; font-size: 12px; padding: 4px 10px; border: 1px solid #cbd5e1; border-radius: var(--radius-sm); color: var(--text); background: var(--card); }
+  .apw-menu > summary::-webkit-details-marker { display: none; }
+  .apw-menu[open] > summary, .apw-menu > summary:hover { background: #f8fafc; }
+  .apw-menu-lista { position: absolute; z-index: 40; top: calc(100% + 4px); left: 0; min-width: 250px; background: var(--card); border: 1px solid var(--border); border-radius: var(--radius-md); box-shadow: var(--shadow-lg); padding: 4px; display: flex; flex-direction: column; }
+  .apw-menu-lista > button { text-align: left; font-size: 12px; padding: 7px 10px; border-radius: var(--radius-sm); color: var(--text); }
+  .apw-menu-lista > button:hover { background: var(--accent-soft); }
+  .apw-menu-lista > .apw-menu-sec { color: var(--muted); text-decoration: underline; border-top: 1px solid var(--border); border-radius: 0; margin-top: 2px; }
+  .apw-bg { position: fixed; inset: 0; background: var(--backdrop); z-index: 99980; display: none; align-items: flex-start; justify-content: center; padding: 6vh 16px 16px; }
+  .apw-box { background: var(--card); color: var(--text); width: 100%; max-width: 560px; max-height: 88vh; display: flex; flex-direction: column; border-radius: var(--radius-lg); box-shadow: var(--shadow-lg); overflow: hidden; }
+  .apw-head { display: flex; align-items: center; gap: 8px; padding: 12px 16px 8px; }
+  .apw-titolo { flex: 1; font-weight: 700; font-size: 14px; }
+  .apw-titolo span { font-weight: 400; color: var(--muted); font-size: 12px; }
+  .apw-x { width: 28px; height: 28px; border-radius: var(--radius-sm); color: var(--muted); }
+  .apw-x:hover { background: #f1f5f9; }
+  .apw-steps { display: flex; gap: 4px; padding: 0 16px 10px; border-bottom: 1px solid var(--border); }
+  .apw-step { flex: 1; min-width: 0; display: flex; align-items: center; gap: 6px; padding: 5px 6px; border-radius: var(--radius-sm); text-align: left; font-size: 11px; color: var(--muted); }
+  .apw-step.fatto { color: var(--text); cursor: pointer; }
+  .apw-step.fatto:hover { background: #f8fafc; }
+  .apw-step.on { background: var(--accent-soft); color: var(--accent-dark); font-weight: 600; }
+  .apw-step-n { flex: none; width: 18px; height: 18px; line-height: 18px; text-align: center; border-radius: 9px; font-size: 10px; font-weight: 700; background: #e2e8f0; color: #475569; }
+  .apw-step.on .apw-step-n { background: var(--accent); color: #fff; }
+  .apw-step.fatto .apw-step-n { background: #dcfce7; color: #15803d; }
+  .apw-step-t { min-width: 0; display: flex; flex-direction: column; line-height: 1.2; }
+  .apw-step-v { font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .apw-corpo { padding: 14px 16px; overflow-y: auto; min-height: 200px; }
+  .apw-domanda { font-size: 15px; margin-bottom: 10px; }
+  .apw-sotto { font-size: 11px; color: var(--muted); }
+  .apw-input { width: 100%; font-size: 14px; padding: 8px 10px; border: 1px solid #cbd5e1; border-radius: var(--radius-sm); background: var(--card); color: var(--text); }
+  .apw-input:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-ring); }
+  .apw-lista { margin-top: 8px; display: flex; flex-direction: column; gap: 2px; max-height: 42vh; overflow-y: auto; }
+  .apw-lista-geo { max-height: 180px; }
+  .apw-voce { display: flex; align-items: center; gap: 8px; text-align: left; padding: 7px 10px; border-radius: var(--radius-sm); border: 1px solid transparent; font-size: 13px; color: var(--text); }
+  .apw-voce:hover { background: #f8fafc; border-color: var(--border); }
+  .apw-voce.primo { border-color: var(--accent); background: var(--accent-soft); }
+  .apw-voce.altra .apw-voce-t { color: var(--muted); }
+  .apw-voce-t { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .apw-voce-i { flex: none; font-size: 11px; color: var(--muted); max-width: 45%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .apw-tag { flex: none; font-size: 10px; font-weight: 600; padding: 1px 6px; border-radius: 999px; background: #ccfbf1; color: #0f766e; }
+  .apw-tag.grigio { background: #f1f5f9; color: #64748b; }
+  .apw-vuoto { font-size: 12px; color: var(--muted); font-style: italic; padding: 10px; }
+  .apw-nota { margin-top: 8px; font-size: 11px; line-height: 1.4; padding: 6px 8px; border-radius: var(--radius-sm); background: #fffbeb; border: 1px solid #fde68a; color: #92400e; }
+  .apw-geo { margin-top: 6px; }
+  .apw-geo-ok { font-size: 11px; color: #15803d; }
+  .apw-geo-ko { font-size: 11px; color: #b45309; }
+  .apw-geo-stato { font-size: 11px; color: var(--muted); }
+  .apw-mappa { height: 180px; margin-top: 8px; border-radius: var(--radius-sm); border: 1px solid var(--border); }
+  .apw-giorni { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin-top: 8px; }
+  .apw-input-gg { width: 90px; text-align: center; font-size: 18px; font-weight: 700; }
+  .apw-chip { min-width: 34px; height: 34px; padding: 0 8px; border: 1px solid #cbd5e1; border-radius: var(--radius-sm); font-size: 13px; font-weight: 600; color: var(--text); background: var(--card); }
+  .apw-chip:hover:not(:disabled) { border-color: var(--accent); }
+  .apw-chip.on { background: var(--accent); border-color: var(--accent); color: #fff; }
+  .apw-chip:disabled { opacity: .4; }
+  .apw-squadra { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-top: 14px; font-size: 13px; }
+  .apw-squadra .apw-chip { min-width: 28px; height: 28px; }
+  .apw-riepilogo { margin-top: 14px; font-size: 12px; color: var(--muted); padding: 8px 10px; border-radius: var(--radius-sm); background: #f8fafc; border: 1px solid var(--border); }
+  .apw-piede { display: flex; align-items: center; gap: 8px; padding: 10px 16px; border-top: 1px solid var(--border); }
+  .apw-contatore { font-size: 11px; color: #15803d; font-weight: 600; }
+  .apw-btn { font-size: 12px; padding: 6px 12px; border-radius: var(--radius-sm); border: 1px solid #cbd5e1; color: var(--text); background: var(--card); }
+  .apw-btn:hover:not(:disabled) { background: #f8fafc; }
+  .apw-btn:disabled { opacity: .45; cursor: not-allowed; }
+  .apw-primario { background: var(--accent); border-color: var(--accent); color: #fff; font-weight: 600; }
+  .apw-primario:hover:not(:disabled) { background: var(--accent-dark); }
+  @media (max-width: 640px) { .apw-step-v { display: none; } .apw-bg { padding-top: 16px; } }
   .ap-tabella tr.ap-riga-toccata > td { background: #f0fdfa; }
   .ap-tabella tr.ap-riga-toccata > td:first-child { box-shadow: inset 3px 0 0 var(--accent); }
   .ap-ge-badge { flex: none; font-size: 10px; font-weight: 700; line-height: 18px; padding: 0 5px; border-radius: 4px;
@@ -2181,7 +2256,7 @@
       </span>
       <button id="btn-presentation" class="px-3 py-1.5 text-sm rounded hover:bg-white/10" style="border:1px solid var(--dark-border-strong);color:var(--dark-text);visibility:visible;">📊 Modalità presentazione</button>
       <div class="text-xs pl-2" style="border-left:1px solid var(--dark-border-strong);color:var(--dark-text-muted);">
-        <span id="app-version" class="font-medium" style="color:var(--accent);">v18.281.0</span> · Michele Marchetti
+        <span id="app-version" class="font-medium" style="color:var(--accent);">v18.282.0</span> · Michele Marchetti
         <span id="sb-role-badge" style="margin-left:8px;padding:1px 8px;border-radius:9999px;background:rgba(255,255,255,.1);color:var(--dark-text);font-weight:600;"></span>
       </div>
     </div>
@@ -3203,6 +3278,11 @@
           <button class="px-2 py-0.5 rounded hover:bg-indigo-500" title="Mese successivo" onclick="pwDwMonthNav(1)">›</button>
         </div>
         <div class="flex items-center gap-2 flex-wrap justify-end">
+          <span class="flex items-center gap-1">
+            <input id="pw-dw-cerca" type="search" list="pw-dw-cerca-lista" autocomplete="off" placeholder="🔍 Cerca operatore…" oninput="pwDwCerca(this.value)" onkeydown="pwDwCercaTasto(event)" title="Scrivi un nome (anche solo una parte o il cognome): porta alla riga dell'operatore. Invio = risultato successivo, Esc = svuota" class="text-xs text-slate-800 bg-white rounded px-1.5 py-1" style="width:180px;">
+            <datalist id="pw-dw-cerca-lista"></datalist>
+            <span id="pw-dw-cerca-info" class="text-xs whitespace-nowrap"></span>
+          </span>
           <select id="pw-dw-f-regione" onchange="pwDwSetFiltro('regione', this.value)" title="Filtra per regione di provenienza" class="text-xs text-slate-800 bg-white rounded px-1.5 py-1"><option value="">Tutte le regioni</option></select>
           <select id="pw-dw-f-provincia" onchange="pwDwSetFiltro('provincia', this.value)" title="Filtra per provincia di provenienza" class="text-xs text-slate-800 bg-white rounded px-1.5 py-1"><option value="">Tutte le province</option></select>
           <select id="pw-dw-ordine" onchange="pwDwSetFiltro('ordine', this.value)" title="Ordinamento operatori" class="text-xs text-slate-800 bg-white rounded px-1.5 py-1">
@@ -12493,7 +12573,9 @@ function renderConfrontoBox(commessaNome, meseSel) {
    - activity_type: Activity Type Jira proposto nella creazione dei sottotask (prima era
      ricordato solo nel browser, vedi pwJiraActivityTypeGuess).
    - wo_tipo: tipo di WO dell'attività per la seniority per tipo (operatori-tipi-wo.js);
-     '' = automatico, dalle parole chiave del tipo nel nome. */
+     '' = automatico, dalle parole chiave del tipo nel nome.
+   - operatori_squadra: persone per squadra in Auto-pianifica (null = 2, la regola
+     normale; es. PEDESTRIAN = 1). Letto solo tramite caOperatoriSquadra. */
 
 HELP_TEXTS['#ma-btn-attivita'] = 'Apre il catalogo delle attività di questa commessa: nome, se è produttiva, KPI_Quantità target giornaliero per squadra, unità, Activity Type Jira e nomi vecchi (alias).\n\nCon il catalogo, in Griglia il campo attività diventa una tendina con queste voci (più Viaggio, Riposo compensativo e le altre voci di servizio) e un nome fuori catalogo viene rifiutato; i nomi già scritti nelle settimane passate non vengono toccati, gli alias li ricollegano alla voce giusta. «Importa dalla Griglia» propone i nomi già usati.\n\nLe modifiche valgono solo dopo «Salva» della scheda commessa e sono condivise con tutti.';
 
@@ -12526,6 +12608,14 @@ function caTrova(commessa, testo) {
 }
 
 // Nomi proposti nella tendina della Griglia: catalogo, poi voci di servizio.
+/* Persone per squadra di un'attività (catalogo della commessa); null se non indicato:
+   chi legge applica la regola normale delle squadre da 2. */
+function caOperatoriSquadra(commessa, attivita) {
+  const v = caTrova(commessa, attivita);
+  const n = v && !v.servizio ? parseInt(v.operatori_squadra, 10) : NaN;
+  return n >= 1 && n <= 10 ? n : null;
+}
+
 function caNomiTendina(commessa) {
   return caCatalogo(commessa).map(a => a.nome).concat(CA_ATTIVITA_SERVIZIO);
 }
@@ -12591,6 +12681,7 @@ function caClona(lista) {
     activity_type: a.activity_type && a.activity_type.id ? { id: String(a.activity_type.id), label: a.activity_type.label || '' } : null,
     alias: [...(a.alias || [])],
     wo_tipo: a.wo_tipo || '',
+    operatori_squadra: parseInt(a.operatori_squadra, 10) >= 1 ? parseInt(a.operatori_squadra, 10) : null,
   }));
 }
 
@@ -12626,6 +12717,8 @@ function caOpenEditor(opts) {
       const k = row.querySelector('.ca-kpi').value.trim().replace(',', '.');
       a.kpi_target = k === '' || !isFinite(Number(k)) ? null : Number(k);
       a.unita = row.querySelector('.ca-unita').value.trim();
+      const sq = parseInt(row.querySelector('.ca-sq').value, 10);
+      a.operatori_squadra = sq >= 1 && sq <= 10 ? sq : null;
       a.alias = row.querySelector('.ca-alias').value.split(',').map(s => s.trim()).filter(Boolean);
       const wo = row.querySelector('.ca-wo');
       if (wo) a.wo_tipo = wo.value;
@@ -12659,11 +12752,12 @@ function caOpenEditor(opts) {
 
   function righeHtml() {
     if (!lista.length) return '<div class="text-xs text-slate-400 italic py-2">Nessuna attività: aggiungile a mano o importale dai nomi usati in Griglia.</div>';
-    return lista.map((a, i) => '<div data-ca-idx="' + i + '" class="grid gap-1 items-center py-1 border-b border-slate-100" style="grid-template-columns: minmax(0,2fr) 52px 70px 60px minmax(0,1.5fr) minmax(0,1.3fr) minmax(0,2fr) 22px;">' +
+    return lista.map((a, i) => '<div data-ca-idx="' + i + '" class="grid gap-1 items-center py-1 border-b border-slate-100" style="grid-template-columns: minmax(0,2fr) 52px 70px 60px 50px minmax(0,1.5fr) minmax(0,1.3fr) minmax(0,2fr) 22px;">' +
       '<input class="ca-nome border border-slate-300 rounded px-1.5 py-1 text-xs" value="' + esc(a.nome) + '" placeholder="Es: Rilievo IP">' +
       '<label class="flex justify-center"><input type="checkbox" class="ca-prod"' + (a.produttiva !== false ? ' checked' : '') + '></label>' +
       '<input class="ca-kpi border border-slate-300 rounded px-1.5 py-1 text-xs text-right" inputmode="decimal" value="' + (a.kpi_target === null ? '' : esc(String(a.kpi_target).replace('.', ','))) + '" placeholder="—">' +
       '<input class="ca-unita border border-slate-300 rounded px-1.5 py-1 text-xs" value="' + esc(a.unita) + '" placeholder="km">' +
+      '<input class="ca-sq border border-slate-300 rounded px-1.5 py-1 text-xs text-right" type="number" min="1" max="10" value="' + (a.operatori_squadra ? esc(String(a.operatori_squadra)) : '') + '" placeholder="2" title="Persone per squadra in Auto-pianifica (vuoto = 2)">' +
       '<div>' + activityHtml(a) + '</div>' +
       '<div>' + woTipoSelectHtml(a) + '</div>' +
       '<input class="ca-alias border border-slate-300 rounded px-1.5 py-1 text-xs" value="' + esc((a.alias || []).join(', ')) + '" placeholder="nomi vecchi, separati da virgola">' +
@@ -12702,7 +12796,7 @@ function caOpenEditor(opts) {
       const nuove = [];
       layer.querySelectorAll('.ca-imp').forEach(sel => {
         const nome = sel.dataset.nome;
-        if (sel.value === '__nuova__') nuove.push({ nome, produttiva: true, kpi_target: null, unita: '', activity_type: null, alias: [], wo_tipo: '' });
+        if (sel.value === '__nuova__') nuove.push({ nome, produttiva: true, kpi_target: null, unita: '', activity_type: null, alias: [], wo_tipo: '', operatori_squadra: null });
         else if (sel.value !== '' && lista[Number(sel.value)]) lista[Number(sel.value)].alias.push(nome);
       });
       lista = lista.concat(nuove);
@@ -12714,9 +12808,10 @@ function caOpenEditor(opts) {
     '<h3 class="font-semibold text-slate-900 mb-1">Attività e KPI — ' + esc(commessa) + '</h3>' +
     '<p class="text-xs text-slate-500 mb-3">Le attività di questa commessa diventano la tendina del campo attività in Griglia. ' +
     '<b>KPI target</b> = KPI_Quantità target <b>giornaliero per squadra</b>: nel sottotask di ogni operatore va diviso per chi della sua squadra è quel giorno sullo stesso cantiere con la stessa attività. ' +
+    '<b>Op/sq</b> = persone per squadra in Auto-pianifica (vuoto = 2; es. 1 per PEDESTRIAN). ' +
     'Le voci di servizio (' + esc(CA_ATTIVITA_SERVIZIO.join(', ')) + ') ci sono sempre e non sono produttive.</p>' +
-    '<div class="grid gap-1 text-[10px] text-slate-500 uppercase font-medium border-b border-slate-200 pb-1" style="grid-template-columns: minmax(0,2fr) 52px 70px 60px minmax(0,1.5fr) minmax(0,1.3fr) minmax(0,2fr) 22px;">' +
-    '<span>Attività</span><span class="text-center">Produttiva</span><span class="text-right">KPI/sq/gg</span><span>Unità</span><span>Activity Type</span><span title="Per la seniority per tipo di WO degli operatori">Tipo WO</span><span>Nomi vecchi (alias)</span><span></span></div>' +
+    '<div class="grid gap-1 text-[10px] text-slate-500 uppercase font-medium border-b border-slate-200 pb-1" style="grid-template-columns: minmax(0,2fr) 52px 70px 60px 50px minmax(0,1.5fr) minmax(0,1.3fr) minmax(0,2fr) 22px;">' +
+    '<span>Attività</span><span class="text-center">Produttiva</span><span class="text-right">KPI/sq/gg</span><span>Unità</span><span class="text-right" title="Persone per squadra in Auto-pianifica (vuoto = 2)">Op/sq</span><span>Activity Type</span><span title="Per la seniority per tipo di WO degli operatori">Tipo WO</span><span>Nomi vecchi (alias)</span><span></span></div>' +
     '<div id="ca-righe"></div>' +
     '<button type="button" id="ca-add" class="mt-2 text-xs px-2 py-1 bg-slate-100 text-slate-700 border border-slate-300 rounded hover:bg-slate-200">+ Attività</button>' +
     '<div class="mt-4 pt-3 border-t border-slate-200"><div class="text-xs font-medium text-slate-600 mb-1">Importa dalla Griglia</div><div id="ca-import"></div></div>' +
@@ -12727,7 +12822,7 @@ function caOpenEditor(opts) {
   root.appendChild(layer);
   render();
 
-  layer.querySelector('#ca-add').onclick = () => { leggi(); lista.push({ nome: '', produttiva: true, kpi_target: null, unita: '', activity_type: null, alias: [], wo_tipo: '' }); render(); };
+  layer.querySelector('#ca-add').onclick = () => { leggi(); lista.push({ nome: '', produttiva: true, kpi_target: null, unita: '', activity_type: null, alias: [], wo_tipo: '', operatori_squadra: null }); render(); };
   layer.querySelector('#ca-annulla').onclick = chiudi;
   layer.querySelector('#ca-ok').onclick = () => {
     leggi();
@@ -21171,6 +21266,8 @@ function pwDoppiaWeekRender() {
   if (ops.length === 0) {
     const filtro = _pwDwFiltroLabel();
     grid.innerHTML = '<div style="padding:20px;color:#94a3b8;font-size:13px;">' + (filtro ? 'Nessun operatore attivo con provenienza ' + esc(filtro) + '.' : 'Nessun operatore attivo.') + '</div>';
+    _pwDwCercaLista([]);
+    _pwDwCercaApplica(false);
     return;
   }
 
@@ -21191,7 +21288,7 @@ function pwDoppiaWeekRender() {
   // Righe operatori
   ops.forEach(nome => {
     const cnt = pwDwCount(nome, weeks, pwDwYear);
-    html += `<div style="display:grid;grid-template-columns:${cols};min-width:${minW}px;">`;
+    html += `<div data-dw-nome="${esc(nome)}" style="display:grid;grid-template-columns:${cols};min-width:${minW}px;">`;
     const prov = provDi[nome];
     html += `<div style="position:sticky;left:0;z-index:1;background:#fff;padding:4px 8px;border-bottom:1px solid #f1f5f9;overflow:hidden;" title="${esc(nome + (prov ? ' · ' + prov : ''))}">
       <div style="font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${esc(nome)}</div>
@@ -21243,6 +21340,103 @@ function pwDoppiaWeekRender() {
   html += `</div>`;
 
   grid.innerHTML = html;
+  _pwDwCercaLista(ops);
+  _pwDwCercaApplica(false); // dopo un clic su una cella o un cambio mese l'evidenza resta, senza saltare
+}
+
+/* Ricerca operatore: porta alla sua riga nel prospetto e la evidenzia.
+   Solo vista (niente salvato): il testo resta finché non si svuota il campo. */
+let _pwDwCerca = { testo: '', idx: 0, timer: null };
+
+function _pwDwNorm(s) {
+  return String(s || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
+}
+
+// Nomi che contengono tutte le parole cercate (in qualsiasi ordine): prima il nome
+// identico, poi chi inizia così, poi gli altri nell'ordine del prospetto.
+function _pwDwCercaTrova(testo, nomi) {
+  const q = _pwDwNorm(testo);
+  if (!q) return [];
+  const parole = q.split(' ');
+  const rank = n => { const x = _pwDwNorm(n); return x === q ? 0 : (x.startsWith(q) ? 1 : 2); };
+  return nomi
+    .filter(n => { const x = _pwDwNorm(n); return parole.every(p => x.includes(p)); })
+    .map((n, i) => ({ n, i, r: rank(n) }))
+    .sort((a, b) => a.r - b.r || a.i - b.i)
+    .map(o => o.n);
+}
+
+function _pwDwCercaLista(nomi) {
+  const dl = document.getElementById('pw-dw-cerca-lista');
+  if (dl) dl.innerHTML = nomi.map(n => '<option value="' + esc(n) + '"></option>').join('');
+}
+
+function pwDwCerca(valore) {
+  _pwDwCerca.testo = valore || '';
+  _pwDwCerca.idx = 0;
+  clearTimeout(_pwDwCerca.timer);
+  _pwDwCerca.timer = setTimeout(() => _pwDwCercaApplica(true), 150);
+}
+
+function pwDwCercaTasto(ev) {
+  if (ev.key === 'Enter') {
+    ev.preventDefault();
+    clearTimeout(_pwDwCerca.timer);
+    _pwDwCerca.testo = ev.target.value || '';
+    _pwDwCerca.idx++;
+    _pwDwCercaApplica(true);
+  } else if (ev.key === 'Escape') {
+    ev.target.value = '';
+    pwDwCerca('');
+  }
+}
+
+// Toglie i filtri di provenienza per mostrare un operatore che cadeva fuori, tenendo la ricerca
+function pwDwCercaMostraTutti() {
+  pwDwVista.regione = '';
+  pwDwVista.provincia = '';
+  try { localStorage.setItem(PW_DW_VISTA_KEY, JSON.stringify(pwDwVista)); } catch (e) { /* non persistito */ }
+  _pwDwCerca.idx = 0;
+  pwDoppiaWeekRender();
+  _pwDwCercaApplica(true);
+}
+
+function _pwDwCercaApplica(scorri) {
+  const grid = document.getElementById('pw-dw-grid');
+  const info = document.getElementById('pw-dw-cerca-info');
+  if (!grid) return;
+  const righe = Array.from(grid.querySelectorAll('[data-dw-nome]'));
+  righe.forEach(r => r.classList.remove('pw-dw-trovato', 'pw-dw-attuale'));
+  const inp = document.getElementById('pw-dw-cerca');
+  if (inp && inp.value !== _pwDwCerca.testo && document.activeElement !== inp) inp.value = _pwDwCerca.testo;
+  if (!_pwDwNorm(_pwDwCerca.testo)) { if (info) info.innerHTML = ''; return; }
+
+  const perNome = {};
+  righe.forEach(r => { perNome[r.dataset.dwNome] = r; });
+  const trovati = _pwDwCercaTrova(_pwDwCerca.testo, righe.map(r => r.dataset.dwNome));
+  if (!trovati.length) {
+    // Forse c'è ma i filtri di provenienza lo nascondono
+    const w0 = pwMonthWeeks(pwDwYear, pwDwMonth)[0];
+    const tutti = (w0 ? getOperatoriAttiviSettimana(w0.anno, w0.week) : getOperatoriAttivi()).map(o => o.nome_esteso || o.nome).filter(Boolean);
+    const fuori = (pwDwVista.regione || pwDwVista.provincia) ? _pwDwCercaTrova(_pwDwCerca.testo, tutti) : [];
+    if (info) info.innerHTML = fuori.length
+      ? 'Nascosto dai filtri <button type="button" class="pw-dw-cerca-mostra" onclick="pwDwCercaMostraTutti()" title="Toglie il filtro di regione/provincia">Mostra</button>'
+      : 'Nessuno';
+    return;
+  }
+  _pwDwCerca.idx = ((_pwDwCerca.idx % trovati.length) + trovati.length) % trovati.length;
+  trovati.forEach(n => perNome[n].classList.add('pw-dw-trovato'));
+  const riga = perNome[trovati[_pwDwCerca.idx]];
+  riga.classList.add('pw-dw-attuale');
+  if (info) info.textContent = trovati.length > 1 ? (_pwDwCerca.idx + 1) + '/' + trovati.length + ' (Invio = succ.)' : '';
+  if (!scorri) return;
+  const box = document.getElementById('pw-dw-scroll');
+  if (box) {
+    // Scorre solo il riquadro del prospetto, riga al centro (sotto l'intestazione fissa)
+    const rb = riga.getBoundingClientRect(), bb = box.getBoundingClientRect();
+    box.scrollTop += (rb.top - bb.top) - (box.clientHeight - rb.height) / 2;
+    if (bb.top < 0 || bb.bottom > window.innerHeight) box.scrollIntoView({ block: 'nearest' });
+  }
 }
 
 async function pwDwToggle(nome, anno, week) {
@@ -33795,7 +33989,11 @@ function apStimaImpegno(riga, modello) {
   const fam = apTrovaFamiglia(modello, riga.attivita);
   const F = fam ? modello.famiglie[fam] : null;
   out.famiglia = fam;
-  out.nOp = riga.nOp || (F ? F.nOpTipico : 2);
+  /* Persone per squadra: quelle scritte sulla riga, poi il catalogo attività della commessa
+     (riga.nOpCatalogo, es. PEDESTRIAN = 1, passato dall'adapter), altrimenti 2: le
+     squadre sono sempre da 2. Lo storico (nOpTipico) non decide più: rifletteva come si
+     era lavorato, non la regola. */
+  out.nOp = riga.nOp || riga.nOpCatalogo || 2;
 
   if (riga.giorniManuali > 0) {
     out.giorni = riga.giorniManuali;
@@ -34478,8 +34676,9 @@ function apRiparaImpatto(celle, imprevisti, modificabili, opts) {
 /* Da una lista di cantieri con priorità produce una BOZZA della Griglia della settimana
    mostrata, la fa rivedere e solo su conferma la scrive in pwData (annullabile).
    Il calcolo sta in autoplan-solver.js (modulo puro); qui ci sono:
-   - gli ADAPTER delle fonti: incolla da Excel/CSV, file .xlsx, riga manuale, cantieri
-     della settimana precedente. Tutti producono le stesse righe (apNormRiga), così una
+   - gli ADAPTER delle fonti: inserimento guidato (weekly-autoplan-wizard.js, apw*),
+     incolla da Excel/CSV, file .xlsx, riga manuale, cantieri della settimana precedente
+     (queste ultime nel menu «⋯ Altre fonti»). Tutti producono le stesse righe (apNormRiga), così una
      fonte nuova (Jira, agente AI) è solo un altro adapter.
    - la stima dell'impegno dallo storico di controllo_produzione (cache localStorage 12h)
    - il contesto della settimana (disponibilità, posizioni, attestati, staffing)
@@ -34500,7 +34699,6 @@ let _ap = {
   precedenze: [],       // [[primaId, dopoId]] scelte dall'utente dai suggerimenti
   stato: { msg: '', err: false },
   toccate: new Set(),   // righe modificate dall'assistente nell'ultima risposta (evidenziate)
-  fontiAperte: false,   // con la chat aperta le fonti stanno in un pannello richiudibile
   imprevisti: [],       // assenze / cantieri fermi della settimana già pianificata (vedi IMPREVISTI)
   riparazione: null,    // { anno, week, impatto, risultato, righeSolver, ctx, ... } in memoria
   impForm: { tipo: 'assenza', chi: '', giorni: [], registra: 'ferie', motivo: '' }
@@ -35177,6 +35375,13 @@ async function _apDistanzeEMeteo(ctx, righeSolver) {
   return { dist, met };
 }
 
+/* Stima dell'impegno con le persone per squadra del catalogo attività (caOperatoriSquadra):
+   tutti i lettori passano di qui, così tabella, chat e calcolo vedono lo stesso numero. */
+function _apStima(r) {
+  const nOpCatalogo = typeof caOperatoriSquadra === 'function' ? caOperatoriSquadra(r.commessa, r.attivita) : null;
+  return apStimaImpegno(Object.assign({}, r, { nOpCatalogo }), _ap.modello);
+}
+
 function _apRigaCompleta(r) {
   return r.cantiere && r.commessa;
 }
@@ -35197,7 +35402,7 @@ async function apCalcola(opts) {
     await _apLocalizza(righe.map(r => r.cantiere));
     const ctx = apBuildContesto();
     const righeSolver = righe.map(r => {
-      const stima = apStimaImpegno(r, _ap.modello);
+      const stima = _apStima(r);
       const meta = (state.commesse_attive_meta || {})[r.commessa] || {};
       const geo = meteoGeoFor(r.cantiere);
       const sg = _apIndiceGiorno(r.scadenza);
@@ -35900,18 +36105,21 @@ function apRender() {
   try { undo = JSON.parse(localStorage.getItem(AP_UNDO_KEY) || 'null'); } catch (_) {}
   const puoAnnullare = undo && undo.anno === pwAnno && undo.week === pwWeek;
 
-  /* Con la chat aperta la colonna delle fonti lascia il posto alla chat: le fonti
-     diventano un pannello richiudibile sopra la tabella. */
+  /* A sinistra solo «＋ Nuovo cantiere» e la casella per l'assistente (apwColonnaHtml).
+     Con la chat aperta la colonna sparisce (la chat ha la sua casella) e «＋ Nuovo
+     cantiere» passa nella testata della lista. Le altre fonti stanno in «⋯ Altre fonti». */
   const chat = typeof apcAperta === 'function' && apcAperta();
   root.innerHTML =
     '<div class="grid grid-cols-1 ' + (chat ? '' : 'xl:grid-cols-5 ') + 'gap-4 items-start">' +
-      (chat ? _apFontiRichiudibiliHtml() : _apPannelloFontiHtml()) +
+      (chat ? '' : apwColonnaHtml()) +
       '<div class="' + (chat ? '' : 'xl:col-span-4 ') + 'space-y-4" style="min-width:0;">' +
         _apImprevistiHtml() +
         _apRiparazioneHtml() +
         '<div class="bg-white border border-slate-200 rounded-lg p-3 shadow-sm">' +
           '<div class="flex flex-wrap items-center gap-2 mb-2">' +
             '<div class="text-xs font-semibold text-slate-700 uppercase tracking-wide">📋 Cantieri da pianificare · ' + _apE(giorniLabel) + '</div>' +
+            (chat ? '<button type="button" onclick="apwApri()" class="apw-nuovo-mini">＋ Nuovo cantiere</button>' : '') +
+            apwAltreFontiHtml() +
             '<div class="flex-1"></div>' +
             '<label data-help-key="ap-opz-sabato" class="text-xs text-slate-600 flex items-center gap-1"><input type="checkbox" data-opz="sabato" onchange="apSetOpzione(this)"' + (_ap.opzioni.sabato ? ' checked' : '') + '> anche sabato</label>' +
             '<label data-help-key="ap-opz-meteo" class="text-xs text-slate-600 flex items-center gap-1" title="Evita i giorni con allerta Protezione Civile e sposta, se possibile, quelli con maltempo previsto"><input type="checkbox" data-opz="meteo" onchange="apSetOpzione(this)"' + (_ap.opzioni.meteo ? ' checked' : '') + '> considera meteo</label>' +
@@ -35929,42 +36137,6 @@ function apRender() {
         _apBozzaHtml(puoAnnullare) +
       '</div>' +
     '</div>';
-}
-
-function _apFontiRichiudibiliHtml() {
-  return '<details class="ap-fonti-box no-print"' + (_ap.fontiAperte ? ' open' : '') + ' ontoggle="apFontiToggle(this)">' +
-    '<summary data-help-key="ap-fonti"><span class="text-xs font-semibold text-slate-700">📥 Aggiungi cantieri</span>' +
-    '<span class="text-[11px] text-slate-400">incolla da Excel · file · settimana precedente · riga manuale</span></summary>' +
-    '<div class="pt-2 grid grid-cols-1 md:grid-cols-2 gap-3">' + _apFontiCorpoHtml() + '</div></details>';
-}
-
-function apFontiToggle(el) { _ap.fontiAperte = !!el.open; }
-
-function _apPannelloFontiHtml() {
-  /* Colonna a sinistra da 1280px in su; sotto, sta sopra la tabella e si dispone su due
-     colonne (incolla | altre fonti) per non occupare mezza pagina in altezza. */
-  return '<div class="xl:col-span-1 bg-white border border-slate-200 rounded-lg p-3 shadow-sm no-print">' +
-    '<div class="text-xs font-semibold text-slate-700 uppercase tracking-wide mb-1">🤖 Auto-pianifica</div>' +
-    '<div class="text-[11px] text-slate-500 leading-snug mb-3">Carica i cantieri da una o più fonti, controlla stima e priorità, poi calcola una bozza: la Griglia cambia solo quando premi <b>Applica</b>.</div>' +
-    '<div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-1 gap-3">' + _apFontiCorpoHtml() + '</div>' +
-  '</div>';
-}
-
-function _apFontiCorpoHtml() {
-  return '<div>' +
-        '<label class="block text-xs font-semibold text-slate-600 mb-1">Incolla da Excel / CSV</label>' +
-        '<textarea id="ap-incolla" rows="4" placeholder="Cantiere&#9;Commessa&#9;Attività&#9;Km&#9;…&#9;Priorità" class="w-full px-2 py-1.5 text-xs border border-slate-300 rounded font-mono"></textarea>' +
-        '<button type="button" onclick="apImportaTesto()" class="mt-1 w-full text-xs px-2 py-1.5 border border-slate-300 rounded hover:bg-slate-50">⬇ Importa righe incollate</button>' +
-      '</div>' +
-      '<div>' +
-        '<div class="grid grid-cols-1 gap-1">' +
-          '<button type="button" onclick="document.getElementById(\'ap-file\').click()" class="text-xs px-2 py-1.5 border border-slate-300 rounded hover:bg-slate-50 text-left">📂 Da file .xlsx / .csv</button>' +
-          '<button type="button" onclick="apDaSettimanaPrecedente()" class="text-xs px-2 py-1.5 border border-slate-300 rounded hover:bg-slate-50 text-left">↩ Cantieri della settimana precedente</button>' +
-          '<button type="button" onclick="apAggiungiRiga()" class="text-xs px-2 py-1.5 border border-slate-300 rounded hover:bg-slate-50 text-left">＋ Riga manuale</button>' +
-          '<button type="button" onclick="apScaricaModello()" class="text-xs px-2 py-1.5 text-slate-500 hover:text-slate-800 text-left underline">Scarica il modello Excel</button>' +
-        '</div>' +
-        '<div class="text-[10px] text-slate-400 leading-snug mt-2">Colonne riconosciute: Cantiere, Commessa, Attività, Km, Giorni, Operatori, Priorità (P1/P2/P3), Scadenza, Dal, Skill, Preferiti, Esclusi, Note. Giorni vuoto = stima dallo storico di produzione.</div>' +
-      '</div>';
 }
 
 /* ---------- cataloghi per i menu a tendina ---------- */
@@ -36245,7 +36417,9 @@ function _apDdBottone(r, campo, titolo) {
 
 function _apTabellaRigheHtml() {
   if (!_ap.righe.length) {
-    return '<div class="text-xs text-slate-400 italic text-center py-8">Nessun cantiere: usa una delle fonti a sinistra.</div>';
+    return '<div class="text-xs text-slate-400 italic text-center py-8">Nessun cantiere in lista. ' +
+      '<button type="button" onclick="apwApri()" class="underline text-teal-700 not-italic font-semibold">＋ Inserisci il primo cantiere</button>' +
+      ' oppure scrivi all\'assistente cosa pianificare.</div>';
   }
   const commesse = pwGetCommesseValide();
   const pool = new Set(_apOperatoriCatalogo());
@@ -36269,7 +36443,7 @@ function _apTabellaRigheHtml() {
     '</tr></thead><tbody>';
 
   _ap.righe.forEach(r => {
-    const stima = apStimaImpegno(r, _ap.modello);
+    const stima = _apStima(r);
     const ignoti = r.preferiti.concat(r.esclusi).filter(n => !pool.has(n));
     const commessaOk = !r.commessa || commesse.includes(r.commessa);
     const es = esiti[r.id];
@@ -36461,6 +36635,595 @@ function _apBozzaHtml(puoAnnullare) {
     lista +
   '</div>';
 }
+/* ==================== AUTO-PIANIFICA · INSERIMENTO GUIDATO (apw*) ==================== */
+/* Colonna sinistra della tab Auto-pianifica e inserimento di un cantiere a domande e
+   risposte: COMMESSA → ATTIVITÀ (dal catalogo della commessa) → CANTIERE (con geocoding)
+   → GIORNI. È solo un altro adapter delle fonti: produce una riga con apNormRiga e la
+   aggiunge alla lista locale (_ap.righe), come incolla/file/settimana precedente. Non
+   tocca pwData; l'unica scrittura condivisa è la posizione scelta del cantiere in
+   geo_cache (come la correzione dalla Mappa Squadre), e solo se l'utente ne sceglie una
+   diversa da quella già nota.
+   La casella di testo a sinistra manda la frase all'Assistente pianificazione
+   (weekly-autoplan-chat.js), che ha già gli strumenti per aggiungere/modificare righe. */
+
+const APW_PASSI = [
+  { id: 'commessa', t: 'Commessa' },
+  { id: 'attivita', t: 'Attività' },
+  { id: 'cantiere', t: 'Cantiere' },
+  { id: 'giorni', t: 'Giorni' }
+];
+const APW_NOMINATIM = 'https://nominatim.openstreetmap.org/search?format=jsonv2&addressdetails=1&limit=6&countrycodes=it&accept-language=it&q=';
+const APW_COMUNI = ['city', 'town', 'village', 'municipality', 'hamlet', 'suburb', 'locality'];
+
+let _apw = null;   // stato del modale aperto (null = chiuso)
+let _apwCercaTimer = null;
+let _apwCercaSeq = 0;
+
+function _apwNuovoStato(base) {
+  return Object.assign({
+    passo: 0,
+    commessa: '',
+    attivita: '',
+    cantiere: '',
+    geo: null,          // { lat, lng, label } scelto o già noto
+    geoScelto: false,   // true = scelto ora dall'elenco (da salvare in geo_cache se diverso)
+    risultati: [],      // risultati Nominatim dell'ultima ricerca
+    cercando: false,
+    erroreCerca: '',
+    giorni: '',
+    nOp: null,          // null = quello del catalogo / 2
+    filtro: '',
+    aggiunti: 0
+  }, base || {});
+}
+
+/* ---------- colonna sinistra ---------- */
+
+function apwColonnaHtml() {
+  return '<div class="xl:col-span-1 apw-col no-print">' +
+    '<div class="text-xs font-semibold text-slate-700 uppercase tracking-wide mb-1">🤖 Auto-pianifica</div>' +
+    '<div class="text-[11px] text-slate-500 leading-snug mb-3">Inserisci i cantieri, poi calcola una bozza: la Griglia cambia solo quando premi <b>Applica</b>.</div>' +
+    '<button type="button" onclick="apwApri()" class="apw-nuovo">＋ Nuovo cantiere</button>' +
+    '<div class="apw-nl">' +
+      '<label for="apw-nl-testo" class="block text-xs font-semibold text-slate-600 mb-1">✦ Dillo all\'assistente</label>' +
+      '<textarea id="apw-nl-testo" data-help-key="apw-nl" rows="5" placeholder="Es: aggiungi Moena e Predazzo per SINFI, rilievo acquedotto, 3 giorni ciascuno. Rossi non deve andare a Moena." onkeydown="apwNlTasto(event)"></textarea>' +
+      '<button type="button" onclick="apwInviaTesto()" class="apw-nl-invia">Invia all\'assistente ↑</button>' +
+      '<div class="text-[10px] text-slate-400 mt-1">Invio per mandare · Maiusc+Invio per andare a capo</div>' +
+    '</div>' +
+  '</div>';
+}
+
+function apwNlTasto(e) {
+  if (e.key === 'Enter' && !e.shiftKey && !e.isComposing) { e.preventDefault(); apwInviaTesto(); }
+}
+
+/* La frase va all'Assistente pianificazione: si apre la chat (a destra) e il messaggio
+   parte da lì, così risposta, modifiche e «annulla» stanno nello stesso posto. */
+function apwInviaTesto() {
+  const ta = document.getElementById('apw-nl-testo');
+  const testo = ta ? ta.value.trim() : '';
+  if (!testo) { if (ta) ta.focus(); return; }
+  if (typeof apcInvia !== 'function') { showAlertModal('Assistente non disponibile.'); return; }
+  if (ta) ta.value = '';
+  if (!apcAperta()) apcToggle(true);
+  apcInvia(testo);
+}
+
+/* ---------- menu «⋯ Altre fonti» ---------- */
+
+function apwAltreFontiHtml() {
+  return '<details class="apw-menu no-print" data-help-key="apw-altre-fonti">' +
+    '<summary>⋯ Altre fonti</summary>' +
+    '<div class="apw-menu-lista">' +
+      '<button type="button" onclick="apwIncollaApri()">📋 Incolla da Excel / CSV</button>' +
+      '<button type="button" onclick="apwMenuChiudi(); document.getElementById(\'ap-file\').click()" data-help-key="#ap-file">📂 Da file .xlsx / .csv</button>' +
+      '<button type="button" onclick="apwMenuChiudi(); apDaSettimanaPrecedente()">↩ Cantieri della settimana precedente</button>' +
+      '<button type="button" onclick="apwMenuChiudi(); apAggiungiRiga()">＋ Riga vuota in tabella</button>' +
+      '<button type="button" onclick="apwMenuChiudi(); apScaricaModello()" class="apw-menu-sec">Scarica il modello Excel</button>' +
+    '</div></details>';
+}
+
+function apwMenuChiudi() {
+  document.querySelectorAll('details.apw-menu[open]').forEach(d => d.removeAttribute('open'));
+}
+
+document.addEventListener('click', e => {
+  if (!e.target.closest || e.target.closest('details.apw-menu')) return;
+  apwMenuChiudi();
+});
+
+/* ---------- modale (contenitore unico: inserimento guidato o incolla) ---------- */
+
+function _apwModale() {
+  let m = document.getElementById('apw-modal');
+  if (!m) {
+    m = document.createElement('div');
+    m.id = 'apw-modal';
+    m.className = 'apw-bg no-print';
+    m.addEventListener('mousedown', e => { if (e.target === m) apwChiudi(); });
+    m.addEventListener('click', _apwClick);
+    m.addEventListener('input', _apwInput);
+    m.addEventListener('keydown', _apwTasto);
+    document.body.appendChild(m);
+  }
+  return m;
+}
+
+function apwChiudi() {
+  clearTimeout(_apwCercaTimer);
+  _apwDistruggiMappa();
+  const m = document.getElementById('apw-modal');
+  if (m) { m.style.display = 'none'; m.innerHTML = ''; }
+  const n = _apw ? _apw.aggiunti : 0;
+  _apw = null;
+  if (n) _apStatus(n === 1 ? '1 cantiere aggiunto.' : n + ' cantieri aggiunti.');
+}
+
+function apwIncollaApri() {
+  apwMenuChiudi();
+  const m = _apwModale();
+  _apw = null;
+  m.innerHTML = '<div class="apw-box" role="dialog" aria-label="Incolla da Excel">' +
+    '<div class="apw-head"><div class="apw-titolo">📋 Incolla da Excel / CSV</div>' +
+      '<button type="button" class="apw-x" data-apw="chiudi" title="Chiudi">✕</button></div>' +
+    '<div class="apw-corpo">' +
+      '<textarea id="ap-incolla" rows="9" placeholder="Cantiere&#9;Commessa&#9;Attività&#9;Km&#9;Giorni&#9;Operatori&#9;Priorità" class="w-full px-2 py-1.5 text-xs border border-slate-300 rounded font-mono"></textarea>' +
+      '<div class="text-[11px] text-slate-500 mt-2 leading-snug">Celle copiate direttamente da Excel, oppure CSV con ; o ,. Colonne riconosciute: Cantiere, Commessa, Attività, Km, Giorni, Operatori, Priorità (P1/P2/P3), Scadenza, Dal, Skill, Preferiti, Esclusi, Note. Serve almeno il cantiere.</div>' +
+    '</div>' +
+    '<div class="apw-piede"><div class="flex-1"></div>' +
+      '<button type="button" class="apw-btn" data-apw="chiudi">Annulla</button>' +
+      '<button type="button" class="apw-btn apw-primario" data-apw="incolla" data-help-key="apImportaTesto">⬇ Importa righe</button>' +
+    '</div></div>';
+  m.style.display = 'flex';
+  setTimeout(() => { const t = document.getElementById('ap-incolla'); if (t) t.focus(); }, 30);
+}
+
+function apwApri() {
+  apwMenuChiudi();
+  if (!_ap.anno) apInit();
+  /* Ripropone commessa e attività dell'ultimo inserimento: di solito si caricano più
+     comuni della stessa commessa uno dopo l'altro. */
+  const ultima = _ap.righe.length ? _ap.righe[_ap.righe.length - 1] : null;
+  _apw = _apwNuovoStato();
+  if (ultima && ultima.fonte === 'guidato' && pwGetCommesseValide().includes(ultima.commessa)) {
+    _apw.commessaSuggerita = ultima.commessa;
+  }
+  _apwModale().style.display = 'flex';
+  _apwRender();
+}
+
+/* ---------- dati per i passi ---------- */
+
+/* Commesse attive: prima quelle già in Griglia questa settimana o la precedente */
+function _apwCommesse() {
+  const tutte = pwGetCommesseValide().slice().sort((a, b) => a.localeCompare(b));
+  const recenti = new Set();
+  const prev = pwWeekAdd(_ap.anno, _ap.week, -1);
+  [[_ap.anno, _ap.week], [prev.anno, prev.week]].forEach(([a, w]) =>
+    (((pwData[a] || {})[w]) || []).forEach(bc => { if (bc && bc.commessa) recenti.add(bc.commessa); }));
+  return tutte.map(c => ({ nome: c, recente: recenti.has(c) }))
+    .sort((x, y) => (y.recente - x.recente) || x.nome.localeCompare(y.nome));
+}
+
+/* Attività proponibili per la commessa: il catalogo (solo voci produttive) se c'è,
+   altrimenti i nomi usati in Griglia per quella commessa e poi tutti gli altri noti. */
+function _apwAttivita(commessa) {
+  if (caHaCatalogo(commessa)) {
+    return {
+      catalogo: true,
+      voci: caCatalogo(commessa).filter(a => a.nome && a.produttiva !== false).map(a => ({
+        nome: a.nome,
+        nOp: caOperatoriSquadra(commessa, a.nome),
+        info: a.kpi_target ? 'KPI ' + caFmtNum(a.kpi_target) + (a.unita ? ' ' + a.unita : '') + '/sq/gg' : ''
+      }))
+    };
+  }
+  const visti = new Set();
+  const voci = [];
+  caNomiUsatiInGriglia(commessa).forEach(x => {
+    if (CA_ATTIVITA_SERVIZIO.some(s => caNorm(s) === caNorm(x.nome))) return;
+    visti.add(caNorm(x.nome));
+    voci.push({ nome: x.nome, nOp: null, info: 'usata ' + x.n + (x.n === 1 ? ' volta' : ' volte') });
+  });
+  _apAttivitaCatalogo().forEach(n => {
+    if (visti.has(caNorm(n)) || CA_ATTIVITA_SERVIZIO.some(s => caNorm(s) === caNorm(n))) return;
+    visti.add(caNorm(n));
+    voci.push({ nome: n, nOp: null, info: '', altra: true });
+  });
+  return { catalogo: false, voci };
+}
+
+function _apwNOp() {
+  if (_apw.nOp) return { n: _apw.nOp, fonte: 'scelto qui' };
+  const c = caOperatoriSquadra(_apw.commessa, _apw.attivita);
+  return c ? { n: c, fonte: 'dal catalogo attività' } : { n: 2, fonte: 'regola normale' };
+}
+
+/* ---------- render ---------- */
+
+function _apwRender() {
+  if (!_apw) return;
+  const m = _apwModale();
+  const passo = APW_PASSI[_apw.passo].id;
+  const valori = { commessa: _apw.commessa, attivita: _apw.attivita, cantiere: _apw.cantiere, giorni: _apw.giorni ? apFmtNum(Number(_apw.giorni)) + ' gg' : '' };
+  const stepper = APW_PASSI.map((p, i) => {
+    const cls = i === _apw.passo ? ' on' : (i < _apw.passo ? ' fatto' : '');
+    return '<button type="button" class="apw-step' + cls + '"' + (i < _apw.passo ? ' data-apw="vai" data-i="' + i + '"' : ' disabled') + ' data-help-key="apw-step">' +
+      '<span class="apw-step-n">' + (i < _apw.passo ? '✓' : (i + 1)) + '</span>' +
+      '<span class="apw-step-t">' + _apE(p.t) + (i < _apw.passo && valori[p.id] ? '<span class="apw-step-v">' + _apE(valori[p.id]) + '</span>' : '') + '</span></button>';
+  }).join('');
+
+  let corpo = '';
+  if (passo === 'commessa') corpo = _apwCommessaHtml();
+  else if (passo === 'attivita') corpo = _apwAttivitaHtml();
+  else if (passo === 'cantiere') corpo = _apwCantiereHtml();
+  else corpo = _apwGiorniHtml();
+
+  let piede = '<div class="apw-piede">' +
+    (_apw.passo > 0 ? '<button type="button" class="apw-btn" data-apw="indietro" data-help-key="apw-indietro">‹ Indietro</button>' : '') +
+    (_apw.aggiunti ? '<span class="apw-contatore">✓ ' + _apw.aggiunti + (_apw.aggiunti === 1 ? ' aggiunto' : ' aggiunti') + '</span>' : '') +
+    '<div class="flex-1"></div>';
+  if (passo === 'cantiere') {
+    piede += '<button type="button" class="apw-btn apw-primario" data-apw="avanti" data-help-key="apw-avanti"' + (_apw.cantiere.trim() ? '' : ' disabled') + '>Avanti ›</button>';
+  } else if (passo === 'giorni') {
+    const ok = Number(String(_apw.giorni).replace(',', '.')) > 0;
+    piede += '<button type="button" class="apw-btn" data-apw="aggiungi-altro" data-help-key="apw-aggiungi-altro"' + (ok ? '' : ' disabled') + ' title="Invio">Aggiungi e inserisci un altro</button>' +
+      '<button type="button" class="apw-btn apw-primario" data-apw="aggiungi" data-help-key="apw-aggiungi"' + (ok ? '' : ' disabled') + ' title="Ctrl+Invio">Aggiungi</button>';
+  } else {
+    piede += '<button type="button" class="apw-btn" data-apw="chiudi" data-help-key="apw-chiudi">' + (_apw.aggiunti ? 'Fine' : 'Annulla') + '</button>';
+  }
+  piede += '</div>';
+
+  _apwDistruggiMappa();
+  m.innerHTML = '<div class="apw-box" role="dialog" aria-label="Nuovo cantiere">' +
+    '<div class="apw-head"><div class="apw-titolo">＋ Nuovo cantiere <span>· Settimana ' + _apE(_ap.week) + ' · ' + _apE(_ap.anno) + '</span></div>' +
+      '<button type="button" class="apw-x" data-apw="chiudi" title="Chiudi">✕</button></div>' +
+    '<div class="apw-steps">' + stepper + '</div>' +
+    '<div class="apw-corpo">' + corpo + '</div>' +
+    piede + '</div>';
+  if (passo === 'cantiere') _apwMappa();
+  setTimeout(() => {
+    const f = m.querySelector('[data-apw-focus]');
+    if (f) { f.focus(); if (f.select && f.tagName === 'INPUT' && f.type !== 'number') { const v = f.value; f.value = ''; f.value = v; } }
+  }, 20);
+}
+
+function _apwFiltra(voci, campo) {
+  const q = caNorm(_apw.filtro);
+  return q ? voci.filter(v => caNorm(campo(v)).includes(q)) : voci;
+}
+
+function _apwCommessaHtml() {
+  const voci = _apwFiltra(_apwCommesse(), v => v.nome);
+  const sugg = _apw.commessaSuggerita;
+  /* Invio sceglie la voce evidenziata: la prima filtrata, o l'ultima commessa usata */
+  const iPrimo = !_apw.filtro && sugg && voci.some(v => v.nome === sugg) ? voci.findIndex(v => v.nome === sugg) : 0;
+  return '<div class="apw-domanda">Per quale <b>commessa</b>?</div>' +
+    '<input type="search" class="apw-input" data-apw-in="filtro" data-apw-focus placeholder="Cerca la commessa…" value="' + _apE(_apw.filtro) + '">' +
+    '<div class="apw-lista">' +
+    (voci.length ? voci.map((v, i) =>
+      '<button type="button" class="apw-voce' + (i === iPrimo ? ' primo' : '') + '" data-apw="commessa" data-v="' + _apE(v.nome) + '" data-help-key="apw-scelta">' +
+        '<span class="apw-voce-t">' + _apE(v.nome) + '</span>' +
+        (v.nome === sugg ? '<span class="apw-tag">ultima usata</span>' : (v.recente ? '<span class="apw-tag">in Griglia</span>' : '')) +
+        (caHaCatalogo(v.nome) ? '' : '<span class="apw-tag grigio" title="Senza catalogo attività: attività a testo libero, squadre da 2">senza catalogo</span>') +
+      '</button>').join('')
+      : '<div class="apw-vuoto">Nessuna commessa attiva con questo nome.</div>') +
+    '</div>';
+}
+
+function _apwAttivitaHtml() {
+  const att = _apwAttivita(_apw.commessa);
+  const voci = _apwFiltra(att.voci, v => v.nome);
+  const q = _apw.filtro.trim();
+  const esatta = q && att.voci.some(v => caNorm(v.nome) === caNorm(q));
+  let h = '<div class="apw-domanda">Quale <b>attività</b> su <b>' + _apE(_apw.commessa) + '</b>?</div>' +
+    '<input type="search" class="apw-input" data-apw-in="filtro" data-apw-focus placeholder="' + (att.catalogo ? 'Cerca nel catalogo…' : 'Cerca o scrivi l\'attività…') + '" value="' + _apE(_apw.filtro) + '">';
+  if (!att.catalogo) {
+    h += '<div class="apw-nota">Questa commessa non ha il catalogo attività: le squadre sono da 2. Per dire, ad esempio, che PEDESTRIAN va fatto da 1 persona: Dashboard → Commesse attive → ✏️ → «🏷️ Attività e KPI», colonna «Op/sq».</div>';
+  }
+  h += '<div class="apw-lista">';
+  if (!att.catalogo && q && !esatta) {
+    h += '<button type="button" class="apw-voce primo" data-apw="attivita" data-v="' + _apE(q) + '" data-help-key="apw-scelta"><span class="apw-voce-t">Usa «' + _apE(q) + '»</span><span class="apw-tag">nuova</span></button>';
+  }
+  h += voci.map((v, i) =>
+    '<button type="button" class="apw-voce' + (i === 0 && (att.catalogo || !q || esatta) ? ' primo' : '') + (v.altra ? ' altra' : '') + '" data-apw="attivita" data-v="' + _apE(v.nome) + '" data-help-key="apw-scelta">' +
+      '<span class="apw-voce-t">' + _apE(v.nome) + '</span>' +
+      (v.info ? '<span class="apw-voce-i">' + _apE(v.info) + '</span>' : '') +
+      '<span class="apw-tag' + (v.nOp ? '' : ' grigio') + '" title="Persone per squadra">👥 ' + (v.nOp || 2) + '</span>' +
+    '</button>').join('');
+  if (!voci.length && (att.catalogo || !q)) {
+    h += '<div class="apw-vuoto">' + (att.catalogo ? 'Nessuna attività del catalogo con questo nome.' : 'Scrivi il nome dell\'attività.') + '</div>';
+  }
+  return h + '</div>';
+}
+
+function _apwCantiereHtml() {
+  const noto = _apw.cantiere.trim() ? meteoGeoFor(_apw.cantiere) : null;
+  let h = '<div class="apw-domanda">In quale <b>cantiere</b> (comune o località)?</div>' +
+    '<input type="text" class="apw-input" data-apw-in="cantiere" data-apw-focus placeholder="Es: Moena" value="' + _apE(_apw.cantiere) + '" autocomplete="off">';
+  h += '<div class="apw-geo">';
+  if (_apw.geo) {
+    h += '<div class="apw-geo-ok">📍 ' + _apE(_apw.geo.label || '') + '</div>';
+  } else if (_apw.cantiere.trim()) {
+    h += '<div class="apw-geo-ko">Non ancora localizzato: scegli la località giusta fra i risultati.</div>';
+  }
+  if (_apw.cercando) h += '<div class="apw-geo-stato">Cerco…</div>';
+  else if (_apw.erroreCerca) h += '<div class="apw-geo-ko">' + _apE(_apw.erroreCerca) + '</div>';
+  const ris = _apw.risultati.filter(r => !_apw.geo || Math.abs(r.lat - _apw.geo.lat) > 1e-4 || Math.abs(r.lng - _apw.geo.lng) > 1e-4);
+  if (ris.length) {
+    h += '<div class="apw-lista apw-lista-geo">' + ris.map(r =>
+      '<button type="button" class="apw-voce" data-apw="geo" data-lat="' + r.lat + '" data-lng="' + r.lng + '" data-nome="' + _apE(r.nome) + '" data-label="' + _apE(r.label) + '" data-help-key="apw-geo">' +
+        '<span class="apw-voce-t">' + _apE(r.nome) + '</span><span class="apw-voce-i">' + _apE(r.dove) + '</span></button>').join('') + '</div>';
+  }
+  if (_apw.geoScelto && noto && _apw.geo && (Math.abs(noto.lat - _apw.geo.lat) > 1e-4 || Math.abs(noto.lng - _apw.geo.lng) > 1e-4)) {
+    h += '<div class="apw-nota">La posizione di «' + _apE(_apw.cantiere.trim()) + '» era già nota in un altro punto: proseguendo viene corretta per tutti (come dalla Mappa Squadre).</div>';
+  }
+  h += '</div><div id="apw-mappa" class="apw-mappa"' + (_apw.geo ? '' : ' style="display:none;"') + '></div>';
+  return h;
+}
+
+function _apwGiorniHtml() {
+  const sq = _apwNOp();
+  const doppione = _ap.righe.find(r => _apNorm(r.commessa) === _apNorm(_apw.commessa) &&
+    _apNorm(r.cantiere) === _apNorm(_apw.cantiere) && _apNorm(r.attivita) === _apNorm(_apw.attivita));
+  const giorni = String(_apw.giorni || '');
+  return '<div class="apw-domanda">Quanti <b>giorni di lavoro</b> servono a <b>' + _apE(_apw.cantiere) + '</b>?</div>' +
+    '<div class="apw-sotto">Giorni-squadra: una squadra da ' + sq.n + (sq.n === 1 ? ' persona' : ' persone') + ' per quanti giorni.</div>' +
+    '<div class="apw-giorni">' +
+      '<input type="text" inputmode="decimal" class="apw-input apw-input-gg" data-apw-in="giorni" data-apw-focus placeholder="es. 3" value="' + _apE(giorni) + '">' +
+      [1, 2, 3, 4, 5].map(n => '<button type="button" class="apw-chip' + (giorni === String(n) ? ' on' : '') + '" data-apw="gg" data-v="' + n + '" data-help-key="apw-gg">' + n + '</button>').join('') +
+    '</div>' +
+    '<div class="apw-squadra">' +
+      '<span>👥 Squadra da</span>' +
+      '<button type="button" class="apw-chip" data-apw="nop" data-d="-1" data-help-key="apw-nop"' + (sq.n <= 1 ? ' disabled' : '') + '>−</button>' +
+      '<b>' + sq.n + '</b>' +
+      '<button type="button" class="apw-chip" data-apw="nop" data-d="1" data-help-key="apw-nop"' + (sq.n >= 6 ? ' disabled' : '') + '>＋</button>' +
+      '<span class="apw-sotto">' + _apE(sq.fonte) + '</span>' +
+    '</div>' +
+    '<div class="apw-riepilogo">' + _apE(_apw.commessa) + ' · ' + _apE(_apw.attivita) + ' · ' + _apE(_apw.cantiere) +
+      (_apw.geo ? ' · 📍' : ' · ⚠️ non localizzato') + '</div>' +
+    (doppione ? '<div class="apw-nota">C\'è già una riga per questo cantiere con la stessa commessa e attività: aggiungendo ne fai una seconda.</div>' : '');
+}
+
+/* ---------- mini mappa ---------- */
+
+let _apwMap = null;
+function _apwDistruggiMappa() {
+  if (_apwMap) { try { _apwMap.remove(); } catch (_) {} _apwMap = null; }
+}
+
+function _apwMappa() {
+  if (!_apw || !_apw.geo || typeof L === 'undefined') return;
+  const el = document.getElementById('apw-mappa');
+  if (!el) return;
+  _apwDistruggiMappa();
+  _apwMap = L.map(el, { zoomControl: true, attributionControl: false }).setView([_apw.geo.lat, _apw.geo.lng], 11);
+  const strada = mapStreetLayer();
+  strada.addTo(_apwMap);
+  if (typeof mapAddSatelliteToggle === 'function') mapAddSatelliteToggle(_apwMap, strada);
+  L.marker([_apw.geo.lat, _apw.geo.lng]).addTo(_apwMap);
+  setTimeout(() => { if (_apwMap) _apwMap.invalidateSize(); }, 50);
+}
+
+/* ---------- geocoding ---------- */
+
+function _apwCercaPresto() {
+  clearTimeout(_apwCercaTimer);
+  const q = _apw.cantiere.trim();
+  if (q.length < 3) { _apw.risultati = []; _apw.cercando = false; return; }
+  /* Una richiesta ogni pausa di battitura (regole d'uso di Nominatim: max 1/s) */
+  _apwCercaTimer = setTimeout(() => _apwCerca(q), 700);
+}
+
+async function _apwCerca(q) {
+  if (!_apw) return;
+  const seq = ++_apwCercaSeq;
+  _apw.cercando = true;
+  _apw.erroreCerca = '';
+  _apwAggiornaGeo();
+  let ris = [];
+  try {
+    const res = await fetch(APW_NOMINATIM + encodeURIComponent(q), { headers: { 'Accept-Language': 'it' } });
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    const data = await res.json();
+    ris = (Array.isArray(data) ? data : []).map(r => {
+      const a = r.address || {};
+      const nome = a.city || a.town || a.village || a.municipality || a.hamlet || a.suburb || r.name || q;
+      const dove = [a.county || a.province || '', a.state || ''].filter(Boolean).join(', ');
+      return { lat: parseFloat(r.lat), lng: parseFloat(r.lon), nome, dove: dove || r.display_name, label: r.display_name, comune: APW_COMUNI.indexOf(r.addresstype) >= 0 };
+    }).filter(r => isFinite(r.lat) && isFinite(r.lng));
+    ris.sort((x, y) => y.comune - x.comune);
+  } catch (e) {
+    if (seq === _apwCercaSeq && _apw) _apw.erroreCerca = 'Ricerca non riuscita (' + (e.message || e) + '): puoi proseguire, il calcolo riproverà col nome.';
+  }
+  if (seq !== _apwCercaSeq || !_apw) return;
+  _apw.cercando = false;
+  _apw.risultati = ris;
+  /* Nessuna posizione ancora scelta e un solo comune col nome scritto: lo si propone già */
+  if (!_apw.geo) {
+    const esatti = ris.filter(r => r.comune && caNorm(r.nome) === caNorm(q));
+    if (esatti.length === 1 && _apw.cantiere.trim() === q) {
+      _apw.geo = { lat: esatti[0].lat, lng: esatti[0].lng, label: esatti[0].label };
+      _apw.geoScelto = true;
+      /* Scritto in minuscolo: si prende la grafia del comune */
+      if (_apw.cantiere.trim() !== esatti[0].nome) {
+        _apw.cantiere = esatti[0].nome;
+        const inp = document.querySelector('[data-apw-in="cantiere"]');
+        if (inp) inp.value = _apw.cantiere;
+      }
+    }
+  }
+  _apwAggiornaGeo();
+}
+
+/* Ridisegna solo il pezzo del geocoding, senza togliere il fuoco alla casella */
+function _apwAggiornaGeo() {
+  if (!_apw || APW_PASSI[_apw.passo].id !== 'cantiere') return;
+  const m = document.getElementById('apw-modal');
+  if (!m) return;
+  const tmp = document.createElement('div');
+  tmp.innerHTML = _apwCantiereHtml();
+  const geo = m.querySelector('.apw-geo');
+  const nuovo = tmp.querySelector('.apw-geo');
+  if (geo && nuovo) geo.replaceWith(nuovo);
+  const mappa = document.getElementById('apw-mappa');
+  if (mappa) mappa.style.display = _apw.geo ? '' : 'none';
+  const av = m.querySelector('[data-apw="avanti"]');
+  if (av) av.disabled = !_apw.cantiere.trim();
+  if (_apw.geo) {
+    if (_apwMap) { _apwMap.setView([_apw.geo.lat, _apw.geo.lng], 11); _apwMap.eachLayer(l => { if (l instanceof L.Marker) l.setLatLng([_apw.geo.lat, _apw.geo.lng]); }); _apwMap.invalidateSize(); }
+    else _apwMappa();
+  }
+}
+
+/* Salva la posizione scelta nella rubrica condivisa (geo_cache), solo se è nuova o
+   diversa da quella nota: il calcolo legge i cantieri da lì (meteoGeoFor). */
+async function _apwSalvaGeo() {
+  if (!_apw.geo || !_apw.geoScelto) return;
+  const key = _apNorm(_apw.cantiere);
+  const noto = meteoGeoFor(_apw.cantiere);
+  if (noto && Math.abs(noto.lat - _apw.geo.lat) < 1e-4 && Math.abs(noto.lng - _apw.geo.lng) < 1e-4) return;
+  _geoCache[key] = { lat: _apw.geo.lat, lng: _apw.geo.lng, label: _apw.geo.label };
+  try { await _geoCacheSaveSingle(key, _geoCache[key]); } catch (_) {}
+  try { await _geoCacheSave(); } catch (_) {}
+}
+
+/* ---------- eventi ---------- */
+
+function _apwScegli(campo, valore) {
+  _apw[campo] = valore;
+  _apw.filtro = '';
+  if (campo === 'commessa') { _apw.attivita = ''; _apw.nOp = null; }
+  if (campo === 'attivita') _apw.nOp = null;
+  _apw.passo++;
+  if (APW_PASSI[_apw.passo].id === 'cantiere' && _apw.cantiere.trim() && !_apw.geo) {
+    const noto = meteoGeoFor(_apw.cantiere);
+    if (noto) { _apw.geo = noto; _apw.geoScelto = false; }
+  }
+  _apwRender();
+}
+
+async function _apwAggiungi(altro) {
+  const gg = Number(String(_apw.giorni).replace(',', '.'));
+  if (!(gg > 0)) return;
+  await _apwSalvaGeo();
+  const sq = _apwNOp();
+  const r = apNormRiga({
+    cantiere: _apw.cantiere.trim(),
+    commessa: _apw.commessa,
+    attivita: _apw.attivita,
+    giorni: Math.round(gg * 2) / 2,
+    /* Il numero di persone si scrive sulla riga solo se scelto qui a mano: altrimenti la
+       riga segue il catalogo (anche se cambia dopo) */
+    nOp: _apw.nOp || null
+  }, 'guidato');
+  _ap.righe.push(r);
+  _apInvalidaBozza();
+  _apSalvaLocale();
+  _ap.toccate = new Set([r.id]);
+  apRender();
+  _apw.aggiunti++;
+  if (!altro) { apwChiudi(); return; }
+  /* Stessa commessa e attività, nuovo cantiere */
+  const tieni = { commessa: _apw.commessa, attivita: _apw.attivita, nOp: sq.fonte === 'scelto qui' ? _apw.nOp : null, aggiunti: _apw.aggiunti };
+  _apw = _apwNuovoStato(Object.assign(tieni, { passo: 2 }));
+  _apwRender();
+}
+
+function _apwClick(e) {
+  const b = e.target.closest('[data-apw]');
+  if (!b || b.disabled) return;
+  const az = b.dataset.apw;
+  if (az === 'chiudi') { apwChiudi(); return; }
+  if (az === 'incolla') {
+    const prima = _ap.righe.length;
+    apImportaTesto();
+    if (_ap.righe.length > prima) apwChiudi();
+    return;
+  }
+  if (!_apw) return;
+  if (az === 'commessa') _apwScegli('commessa', b.dataset.v);
+  else if (az === 'attivita') _apwScegli('attivita', b.dataset.v);
+  else if (az === 'vai') { _apw.passo = parseInt(b.dataset.i, 10); _apw.filtro = ''; _apwRender(); }
+  else if (az === 'indietro') { _apw.passo = Math.max(0, _apw.passo - 1); _apw.filtro = ''; _apwRender(); }
+  else if (az === 'geo') {
+    _apw.geo = { lat: parseFloat(b.dataset.lat), lng: parseFloat(b.dataset.lng), label: b.dataset.label };
+    _apw.geoScelto = true;
+    /* Scritto in minuscolo o abbreviato: si prende il nome del comune trovato */
+    if (caNorm(_apw.cantiere) === caNorm(b.dataset.nome) || caNorm(b.dataset.nome).startsWith(caNorm(_apw.cantiere))) {
+      _apw.cantiere = b.dataset.nome;
+      const inp = document.querySelector('[data-apw-in="cantiere"]');
+      if (inp) inp.value = _apw.cantiere;
+    }
+    _apwAggiornaGeo();
+  }
+  else if (az === 'avanti') {
+    if (!_apw.cantiere.trim()) return;
+    _apw.passo++;
+    _apwRender();
+  }
+  else if (az === 'gg') { _apw.giorni = b.dataset.v; _apwRender(); }
+  else if (az === 'nop') {
+    const n = Math.min(6, Math.max(1, _apwNOp().n + parseInt(b.dataset.d, 10)));
+    const cat = caOperatoriSquadra(_apw.commessa, _apw.attivita) || 2;
+    _apw.nOp = n === cat ? null : n;
+    _apwRender();
+  }
+  else if (az === 'aggiungi') _apwAggiungi(false);
+  else if (az === 'aggiungi-altro') _apwAggiungi(true);
+}
+
+function _apwInput(e) {
+  const t = e.target;
+  if (!_apw || !t.dataset || !t.dataset.apwIn) return;
+  const campo = t.dataset.apwIn;
+  if (campo === 'filtro') {
+    _apw.filtro = t.value;
+    const passo = APW_PASSI[_apw.passo].id;
+    const tmp = document.createElement('div');
+    tmp.innerHTML = passo === 'commessa' ? _apwCommessaHtml() : _apwAttivitaHtml();
+    const lista = document.querySelector('#apw-modal .apw-lista');
+    const nuova = tmp.querySelector('.apw-lista');
+    if (lista && nuova) lista.replaceWith(nuova);
+  } else if (campo === 'cantiere') {
+    _apw.cantiere = t.value;
+    _apw.geo = null;
+    _apw.geoScelto = false;
+    _apw.risultati = [];
+    const noto = t.value.trim() ? meteoGeoFor(t.value) : null;
+    if (noto) _apw.geo = noto;
+    _apwAggiornaGeo();
+    _apwCercaPresto();
+  } else if (campo === 'giorni') {
+    _apw.giorni = t.value.trim();
+    const ok = Number(_apw.giorni.replace(',', '.')) > 0;
+    document.querySelectorAll('#apw-modal [data-apw="aggiungi"], #apw-modal [data-apw="aggiungi-altro"]').forEach(x => { x.disabled = !ok; });
+    document.querySelectorAll('#apw-modal [data-apw="gg"]').forEach(x => x.classList.toggle('on', x.dataset.v === _apw.giorni));
+  }
+}
+
+function _apwTasto(e) {
+  if (e.key === 'Escape') { e.preventDefault(); apwChiudi(); return; }
+  if (!_apw || e.key !== 'Enter' || e.isComposing) return;
+  const passo = APW_PASSI[_apw.passo].id;
+  if (e.target.tagName === 'BUTTON') return;   // Invio su un bottone = il suo clic
+  e.preventDefault();
+  if (passo === 'commessa' || passo === 'attivita') {
+    const primo = document.querySelector('#apw-modal .apw-voce.primo') || document.querySelector('#apw-modal .apw-voce');
+    if (primo) primo.click();
+  } else if (passo === 'cantiere') {
+    /* Invio: prende il primo risultato se non c'è ancora una posizione, poi avanti */
+    if (!_apw.geo) {
+      const primo = document.querySelector('#apw-modal [data-apw="geo"]');
+      if (primo) { primo.click(); return; }
+    }
+    const av = document.querySelector('#apw-modal [data-apw="avanti"]');
+    if (av && !av.disabled) av.click();
+  } else if (passo === 'giorni') {
+    const ok = Number(String(_apw.giorni).replace(',', '.')) > 0;
+    if (ok) _apwAggiungi(!e.ctrlKey);   // Invio = aggiungi e un altro; Ctrl+Invio = aggiungi e chiudi
+  }
+}
 /* ==================== AUTO-PIANIFICA: ASSISTENTE IN CHAT (apc*) ==================== */
 /* Chat dedicata alla bozza della tab Auto-pianifica, distinta dall'assistente generico
    (ai-assistant.js), con cui condivide solo la configurazione del provider e il rendering
@@ -36633,7 +37396,7 @@ function _apcAggiorna(righeToccate) {
 }
 
 function _apcRigaPerAgente(r) {
-  const st = apStimaImpegno(r, _ap.modello);
+  const st = _apStima(r);
   const o = {
     id: r.id, cantiere: r.cantiere, commessa: r.commessa || null, attivita: r.attivita || null,
     priorita: 'P' + (r.priorita || 3)
@@ -41049,7 +41812,21 @@ HELP_TEXTS['apcPerche'] = 'Apre l\'Assistente pianificazione (se è chiuso) e gl
 // ⚡ Imprevisti
 HELP_TEXTS['ap-imprevisti'] = 'Apre o chiude il riquadro «Imprevisti», per assenze o cantieri fermi in una settimana già pianificata in Griglia: si segnalano gli imprevisti, si calcola una riparazione che tocca solo le celle colpite e la si applica dopo averla rivista.\n\nAprire o chiudere il riquadro non modifica niente. Per le settimane passate non c\'è più niente da ripianificare.';
 // 📥 Aggiungi cantieri
-HELP_TEXTS['ap-fonti'] = 'Apre o chiude il riquadro con le fonti per aggiungere cantieri alla lista: incolla da Excel, file, settimana precedente, riga manuale, modello Excel. Con l\'Assistente aperto le fonti stanno qui invece che nella colonna a sinistra. Non modifica niente.';
+HELP_TEXTS['apwApri'] = 'Apre l\'inserimento guidato di un cantiere da pianificare, a domande e risposte: commessa, attività (dal catalogo «🏷️ Attività e KPI» della commessa), cantiere (con la ricerca della località sulla mappa) e giorni di lavoro.\n\nLa squadra è da 2 persone, oppure quante ne dice il catalogo per quell\'attività (es. PEDESTRIAN = 1); si può cambiare per il singolo cantiere.\n\nIl cantiere va nella lista di questa settimana, salvata solo su questo browser: la Griglia non cambia finché non calcoli la bozza e premi «Applica». L\'unica cosa condivisa è la posizione scelta per la località, se diversa da quella già nota (come la correzione dalla Mappa Squadre).';
+HELP_TEXTS['apw-nl'] = 'Scrivi qui in linguaggio naturale cosa pianificare o cosa cambiare, ad esempio «aggiungi Moena e Predazzo per SINFI, 3 giorni ciascuno» oppure «Rossi non deve andare a Moena». Invio manda il messaggio, Maiusc+Invio va a capo.\n\nIl messaggio va all\'Assistente pianificazione, che si apre a destra: modifica la lista dei cantieri e la bozza (ogni sua risposta si può annullare), mai la Griglia.';
+HELP_TEXTS['apwInviaTesto'] = 'Manda all\'Assistente pianificazione il testo scritto nella casella e apre la chat a destra, dove compaiono la risposta e le modifiche fatte alla lista e alla bozza (annullabili). La Griglia non cambia: per scriverla serve sempre «Applica».';
+HELP_TEXTS['apw-altre-fonti'] = 'Apre il menu delle altre fonti per aggiungere cantieri alla lista: incolla da Excel/CSV, file .xlsx/.csv, cantieri della settimana precedente, riga vuota da compilare in tabella, modello Excel da scaricare. Aprirlo non modifica niente.';
+HELP_TEXTS['apwIncollaApri'] = 'Apre un riquadro in cui incollare righe copiate da Excel (o un CSV) e aggiungerle alla lista dei cantieri. La lista è salvata solo su questo browser; la Griglia non cambia.';
+HELP_TEXTS['apw-step'] = 'Passi dell\'inserimento guidato. Un passo già fatto (✓) si può cliccare per tornare indietro e cambiare la scelta; quelle dei passi successivi restano, tranne l\'attività se cambi commessa.';
+HELP_TEXTS['apw-scelta'] = 'Sceglie questa voce e passa alla domanda successiva. Con la tastiera: scrivi per filtrare, Invio sceglie la voce evidenziata.\n\nPer le attività, «👥 N» sono le persone per squadra (dal catalogo della commessa; grigio = regola normale da 2).';
+HELP_TEXTS['apw-geo'] = 'Sceglie questa località come posizione del cantiere: la mappa sotto mostra il punto. Serve per distanze, meteo e regione.\n\nSe il nome del cantiere era già localizzato altrove, proseguendo la posizione viene corretta per tutti (rubrica condivisa, come dalla Mappa Squadre).';
+HELP_TEXTS['apw-gg'] = 'Imposta i giorni di lavoro del cantiere: giorni-squadra, cioè per quanti giorni serve una squadra intera. Si possono scrivere anche mezze giornate nella casella (es. 2,5).';
+HELP_TEXTS['apw-nop'] = 'Cambia le persone per squadra solo per questo cantiere. Di norma è 2, oppure quanto dice il catalogo attività della commessa (colonna «Op/sq»): tornando a quel numero la riga torna a seguire il catalogo.';
+HELP_TEXTS['apw-indietro'] = 'Torna alla domanda precedente senza perdere le risposte già date.';
+HELP_TEXTS['apw-avanti'] = 'Conferma il cantiere e passa ai giorni di lavoro. Se la località non è stata localizzata si può proseguire lo stesso: il calcolo riproverà a cercarla col nome.';
+HELP_TEXTS['apw-aggiungi'] = 'Aggiunge il cantiere alla lista di questa settimana e chiude (Ctrl+Invio). La lista è salvata solo su questo browser; una bozza già calcolata va ricalcolata. La Griglia non cambia.';
+HELP_TEXTS['apw-aggiungi-altro'] = 'Aggiunge il cantiere alla lista e riparte subito dalla domanda sul cantiere, tenendo commessa e attività: comodo per caricare più comuni della stessa commessa (Invio). La Griglia non cambia.';
+HELP_TEXTS['apw-chiudi'] = 'Chiude l\'inserimento guidato. I cantieri già aggiunti restano nella lista.';
 // Invia / Ferma
 HELP_TEXTS['#apc-send'] = 'Invia all\'assistente il messaggio scritto nella casella (come premere Invio; Maiusc+Invio va a capo). Mentre l\'assistente lavora il bottone diventa ■ e serve a fermarlo (anche con Esc): i passaggi già fatti restano e si possono annullare.\n\nIl messaggio è elaborato da un servizio di intelligenza artificiale esterno tramite il server. L\'assistente può leggere la bozza, modificare lista, opzioni, precedenze e imprevisti e ricalcolare, ma non scrive mai in Griglia. Domanda e risposta vengono registrate nello storico dell\'assistente.';
 // Nuova conversazione
@@ -41290,7 +42067,9 @@ HELP_TEXTS['pwDwSetFiltro:regione'] = 'Mostra nel prospetto Doppia Week solo gli
 // Filtro provincia
 HELP_TEXTS['pwDwSetFiltro:provincia'] = 'Mostra nel prospetto Doppia Week solo gli operatori con provenienza nella provincia scelta. Vale anche per l\'esportazione PDF.\n\nCambia solo la vista e non modifica dati.';
 // Ordinamento
-HELP_TEXTS['pwDwSetFiltro:ordine'] = 'Ordina gli operatori del prospetto Doppia Week per nome oppure per provenienza. Vale anche per l\'esportazione PDF.\n\nCambia solo la vista e non modifica dati.';
+HELP_TEXTS['pwDwCercaMostraTutti'] = 'L\'operatore cercato c\'è, ma il filtro di regione o provincia lo nasconde: toglie il filtro di provenienza e porta alla sua riga.\n\nCambia solo la vista e non modifica dati.';
+
+HELP_TEXTS['pwDwSetFiltro:ordine'] ='Ordina gli operatori del prospetto Doppia Week per nome oppure per provenienza. Vale anche per l\'esportazione PDF.\n\nCambia solo la vista e non modifica dati.';
 // Filtro regione
 HELP_TEXTS['#pw-map-regione-filter'] = 'Limita alla regione scelta entrambe le mappe: i cantieri nella mappa Cantieri e gli operatori nella mappa Residenze.\n\nCambia solo la vista e non modifica dati.';
 // Ordine delle tappe

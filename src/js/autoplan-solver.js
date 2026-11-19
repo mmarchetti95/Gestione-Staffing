@@ -193,7 +193,11 @@ function apStimaImpegno(riga, modello) {
   const fam = apTrovaFamiglia(modello, riga.attivita);
   const F = fam ? modello.famiglie[fam] : null;
   out.famiglia = fam;
-  out.nOp = riga.nOp || (F ? F.nOpTipico : 2);
+  /* Persone per squadra: quelle scritte sulla riga, poi il catalogo attività della commessa
+     (riga.nOpCatalogo, es. PEDESTRIAN = 1, passato dall'adapter), altrimenti 2: le
+     squadre sono sempre da 2. Lo storico (nOpTipico) non decide più: rifletteva come si
+     era lavorato, non la regola. */
+  out.nOp = riga.nOp || riga.nOpCatalogo || 2;
 
   if (riga.giorniManuali > 0) {
     out.giorni = riga.giorniManuali;

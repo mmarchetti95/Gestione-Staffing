@@ -373,7 +373,21 @@ HELP_TEXTS['apcPerche'] = 'Apre l\'Assistente pianificazione (se è chiuso) e gl
 // ⚡ Imprevisti
 HELP_TEXTS['ap-imprevisti'] = 'Apre o chiude il riquadro «Imprevisti», per assenze o cantieri fermi in una settimana già pianificata in Griglia: si segnalano gli imprevisti, si calcola una riparazione che tocca solo le celle colpite e la si applica dopo averla rivista.\n\nAprire o chiudere il riquadro non modifica niente. Per le settimane passate non c\'è più niente da ripianificare.';
 // 📥 Aggiungi cantieri
-HELP_TEXTS['ap-fonti'] = 'Apre o chiude il riquadro con le fonti per aggiungere cantieri alla lista: incolla da Excel, file, settimana precedente, riga manuale, modello Excel. Con l\'Assistente aperto le fonti stanno qui invece che nella colonna a sinistra. Non modifica niente.';
+HELP_TEXTS['apwApri'] = 'Apre l\'inserimento guidato di un cantiere da pianificare, a domande e risposte: commessa, attività (dal catalogo «🏷️ Attività e KPI» della commessa), cantiere (con la ricerca della località sulla mappa) e giorni di lavoro.\n\nLa squadra è da 2 persone, oppure quante ne dice il catalogo per quell\'attività (es. PEDESTRIAN = 1); si può cambiare per il singolo cantiere.\n\nIl cantiere va nella lista di questa settimana, salvata solo su questo browser: la Griglia non cambia finché non calcoli la bozza e premi «Applica». L\'unica cosa condivisa è la posizione scelta per la località, se diversa da quella già nota (come la correzione dalla Mappa Squadre).';
+HELP_TEXTS['apw-nl'] = 'Scrivi qui in linguaggio naturale cosa pianificare o cosa cambiare, ad esempio «aggiungi Moena e Predazzo per SINFI, 3 giorni ciascuno» oppure «Rossi non deve andare a Moena». Invio manda il messaggio, Maiusc+Invio va a capo.\n\nIl messaggio va all\'Assistente pianificazione, che si apre a destra: modifica la lista dei cantieri e la bozza (ogni sua risposta si può annullare), mai la Griglia.';
+HELP_TEXTS['apwInviaTesto'] = 'Manda all\'Assistente pianificazione il testo scritto nella casella e apre la chat a destra, dove compaiono la risposta e le modifiche fatte alla lista e alla bozza (annullabili). La Griglia non cambia: per scriverla serve sempre «Applica».';
+HELP_TEXTS['apw-altre-fonti'] = 'Apre il menu delle altre fonti per aggiungere cantieri alla lista: incolla da Excel/CSV, file .xlsx/.csv, cantieri della settimana precedente, riga vuota da compilare in tabella, modello Excel da scaricare. Aprirlo non modifica niente.';
+HELP_TEXTS['apwIncollaApri'] = 'Apre un riquadro in cui incollare righe copiate da Excel (o un CSV) e aggiungerle alla lista dei cantieri. La lista è salvata solo su questo browser; la Griglia non cambia.';
+HELP_TEXTS['apw-step'] = 'Passi dell\'inserimento guidato. Un passo già fatto (✓) si può cliccare per tornare indietro e cambiare la scelta; quelle dei passi successivi restano, tranne l\'attività se cambi commessa.';
+HELP_TEXTS['apw-scelta'] = 'Sceglie questa voce e passa alla domanda successiva. Con la tastiera: scrivi per filtrare, Invio sceglie la voce evidenziata.\n\nPer le attività, «👥 N» sono le persone per squadra (dal catalogo della commessa; grigio = regola normale da 2).';
+HELP_TEXTS['apw-geo'] = 'Sceglie questa località come posizione del cantiere: la mappa sotto mostra il punto. Serve per distanze, meteo e regione.\n\nSe il nome del cantiere era già localizzato altrove, proseguendo la posizione viene corretta per tutti (rubrica condivisa, come dalla Mappa Squadre).';
+HELP_TEXTS['apw-gg'] = 'Imposta i giorni di lavoro del cantiere: giorni-squadra, cioè per quanti giorni serve una squadra intera. Si possono scrivere anche mezze giornate nella casella (es. 2,5).';
+HELP_TEXTS['apw-nop'] = 'Cambia le persone per squadra solo per questo cantiere. Di norma è 2, oppure quanto dice il catalogo attività della commessa (colonna «Op/sq»): tornando a quel numero la riga torna a seguire il catalogo.';
+HELP_TEXTS['apw-indietro'] = 'Torna alla domanda precedente senza perdere le risposte già date.';
+HELP_TEXTS['apw-avanti'] = 'Conferma il cantiere e passa ai giorni di lavoro. Se la località non è stata localizzata si può proseguire lo stesso: il calcolo riproverà a cercarla col nome.';
+HELP_TEXTS['apw-aggiungi'] = 'Aggiunge il cantiere alla lista di questa settimana e chiude (Ctrl+Invio). La lista è salvata solo su questo browser; una bozza già calcolata va ricalcolata. La Griglia non cambia.';
+HELP_TEXTS['apw-aggiungi-altro'] = 'Aggiunge il cantiere alla lista e riparte subito dalla domanda sul cantiere, tenendo commessa e attività: comodo per caricare più comuni della stessa commessa (Invio). La Griglia non cambia.';
+HELP_TEXTS['apw-chiudi'] = 'Chiude l\'inserimento guidato. I cantieri già aggiunti restano nella lista.';
 // Invia / Ferma
 HELP_TEXTS['#apc-send'] = 'Invia all\'assistente il messaggio scritto nella casella (come premere Invio; Maiusc+Invio va a capo). Mentre l\'assistente lavora il bottone diventa ■ e serve a fermarlo (anche con Esc): i passaggi già fatti restano e si possono annullare.\n\nIl messaggio è elaborato da un servizio di intelligenza artificiale esterno tramite il server. L\'assistente può leggere la bozza, modificare lista, opzioni, precedenze e imprevisti e ricalcolare, ma non scrive mai in Griglia. Domanda e risposta vengono registrate nello storico dell\'assistente.';
 // Nuova conversazione
@@ -614,7 +628,9 @@ HELP_TEXTS['pwDwSetFiltro:regione'] = 'Mostra nel prospetto Doppia Week solo gli
 // Filtro provincia
 HELP_TEXTS['pwDwSetFiltro:provincia'] = 'Mostra nel prospetto Doppia Week solo gli operatori con provenienza nella provincia scelta. Vale anche per l\'esportazione PDF.\n\nCambia solo la vista e non modifica dati.';
 // Ordinamento
-HELP_TEXTS['pwDwSetFiltro:ordine'] = 'Ordina gli operatori del prospetto Doppia Week per nome oppure per provenienza. Vale anche per l\'esportazione PDF.\n\nCambia solo la vista e non modifica dati.';
+HELP_TEXTS['pwDwCercaMostraTutti'] = 'L\'operatore cercato c\'è, ma il filtro di regione o provincia lo nasconde: toglie il filtro di provenienza e porta alla sua riga.\n\nCambia solo la vista e non modifica dati.';
+
+HELP_TEXTS['pwDwSetFiltro:ordine'] ='Ordina gli operatori del prospetto Doppia Week per nome oppure per provenienza. Vale anche per l\'esportazione PDF.\n\nCambia solo la vista e non modifica dati.';
 // Filtro regione
 HELP_TEXTS['#pw-map-regione-filter'] = 'Limita alla regione scelta entrambe le mappe: i cantieri nella mappa Cantieri e gli operatori nella mappa Residenze.\n\nCambia solo la vista e non modifica dati.';
 // Ordine delle tappe
