@@ -2283,7 +2283,7 @@
       </span>
       <button id="btn-presentation" class="px-3 py-1.5 text-sm rounded hover:bg-white/10" style="border:1px solid var(--dark-border-strong);color:var(--dark-text);visibility:visible;">📊 Modalità presentazione</button>
       <div class="text-xs pl-2" style="border-left:1px solid var(--dark-border-strong);color:var(--dark-text-muted);">
-        <span id="app-version" class="font-medium" style="color:var(--accent);">v18.288.0</span> · Michele Marchetti
+        <span id="app-version" class="font-medium" style="color:var(--accent);">v18.289.0</span> · Michele Marchetti
         <span id="sb-role-badge" style="margin-left:8px;padding:1px 8px;border-radius:9999px;background:rgba(255,255,255,.1);color:var(--dark-text);font-weight:600;"></span>
       </div>
     </div>
@@ -25709,6 +25709,7 @@ const CPA_SOGLIE_DEFAULT = {
   diffOreMysond: 0.5,   // scarto (h) fra Jira e MySond oltre cui segnalare
   oreGiornata: 8,       // giornata piena attesa su Jira, per le ore scoperte
   oreMaxMysond: 8,      // ore MySond del giorno oltre cui segnalare (somma di tutte le voci)
+  oltreSenzaViaggio: false, // true: per "più di 8 h" conta il totale MySond meno il viaggio (solo straordinari sul lavoro)
   diffOreMysondAlta: 2, // ore oltre il massimo da cui la gravità passa a "media"
 };
 
@@ -26097,7 +26098,9 @@ function _cpaControllaMysond(input, out, perOpGiorno, wl, ore) {
 /* ---------- 6) Più di 8 ore segnate in MySond ---------- */
 
 /* Somma di TUTTE le voci MySond del giorno (lavoro, viaggio, non lavorate): è quello che
-   l'operatore ha segnato. Non serve Jira. Solo chi quel giorno è in Griglia (cella non
+   l'operatore ha segnato. Con soglie.oltreSenzaViaggio il viaggio non conta: restano i
+   giorni in cui il lavoro (più le eventuali ore non lavorate) supera le 8 h, cioè gli
+   straordinari sul lavoro effettivo. L'id non cambia, quindi le ignorate restano tali. Non serve Jira. Solo chi quel giorno è in Griglia (cella non
    in ferie): chi non c'è non interessa a chi pianifica. Le ore Jira, se lette, si
    mostrano solo per confronto. */
 function _cpaControllaMysondOltre(input, out) {
@@ -26115,8 +26118,10 @@ function _cpaControllaMysondOltre(input, out) {
       const celle = perOpGiorno[op + '|||' + g] || [];
       if (!rec || !celle.length) continue;
       const m = cpaMysondRipartisci(rec);
-      if (!(m.totale > S.oreMaxMysond + 1e-9)) continue;
-      const oltre = Math.round((m.totale - S.oreMaxMysond) * 100) / 100;
+      const senzaViaggio = !!S.oltreSenzaViaggio;
+      const contate = senzaViaggio ? Math.round((m.totale - m.viaggio) * 100) / 100 : m.totale;
+      if (!(contate > S.oreMaxMysond + 1e-9)) continue;
+      const oltre = Math.round((contate - S.oreMaxMysond) * 100) / 100;
       const squadre = [...new Set(celle.map(c => c.commessa + '|||' + c.squadra))];
       const cantieri = [...new Set(celle.flatMap(_cpaCantieriCella))];
       const d = input.worklog ? ((input.worklog[op] || {})[g] || null) : null;
@@ -26127,13 +26132,15 @@ function _cpaControllaMysondOltre(input, out) {
         gravita: oltre >= S.diffOreMysondAlta - 1e-9 ? 'media' : 'bassa',
         commessa: celle.length ? celle[0].commessa : '', squadra: celle.length ? celle[0].squadra : '',
         operatore: op, giorno: g, cpKey: celle.length ? celle[0].cpKey : null, cantiere: cantieri.join(', '),
-        titolo: op + ' ha segnato ' + _cpaFmt(m.totale) + ' h in MySond (+' + _cpaFmt(oltre) + ' h oltre le ' + _cpaFmt(S.oreMaxMysond) + ')',
+        titolo: senzaViaggio
+          ? op + ' ha segnato ' + _cpaFmt(contate) + ' h in MySond senza il viaggio (+' + _cpaFmt(oltre) + ' h oltre le ' + _cpaFmt(S.oreMaxMysond) + ')'
+          : op + ' ha segnato ' + _cpaFmt(m.totale) + ' h in MySond (+' + _cpaFmt(oltre) + ' h oltre le ' + _cpaFmt(S.oreMaxMysond) + ')',
         dettaglio: 'MySond: ' + m.voci.length + (m.voci.length === 1 ? ' inserimento' : ' inserimenti') + ', ' + _cpaFmt(m.lavoro) + ' h di lavoro' +
           (m.viaggio > 0 ? ', ' + _cpaFmt(m.viaggio) + ' h di viaggio' : '') +
           (m.nonLavorate > 0 ? ', ' + _cpaFmt(m.nonLavorate) + ' h non lavorate' : '') + '.' +
           (verificato ? ' Jira: ' + _cpaFmt(d ? (_cpaNum(d.hours) || 0) : 0) + ' h.' : ''),
         correzione: 'Verificare con ' + op + ' gli inserimenti MySond del giorno: ore duplicate, voce sul giorno sbagliato o straordinario da giustificare.',
-        confronto: { mysond: m, soglia: S.oreMaxMysond, oltre, squadre: squadre.map(k => { const p = k.split('|||'); return { commessa: p[0], squadra: p[1] }; }),
+        confronto: { mysond: m, soglia: S.oreMaxMysond, oltre, contate, senzaViaggio, squadre: squadre.map(k => { const p = k.split('|||'); return { commessa: p[0], squadra: p[1] }; }),
           oreJira: verificato ? (d ? (_cpaNum(d.hours) || 0) : 0) : null,
           jira: verificato && d ? _cpaTicketJira(input, d.tickets) : [],
           griglia: celle.flatMap(c => (c.voci || []).map(v => ({ commessa: c.commessa, squadra: c.squadra, cantiere: v.cantiere, attivita: v.attivita || '', subtask: v.subtask }))) },
@@ -26451,7 +26458,8 @@ let _cpa = {
    lista del browser, migrata nella tabella al primo caricamento. */
 
 function _cpaPref() {
-  const def = { diffOreSquadra: CPA_SOGLIE_DEFAULT.diffOreSquadra, diffOreMysond: CPA_SOGLIE_DEFAULT.diffOreMysond };
+  const def = { diffOreSquadra: CPA_SOGLIE_DEFAULT.diffOreSquadra, diffOreMysond: CPA_SOGLIE_DEFAULT.diffOreMysond,
+    oltreSenzaViaggio: CPA_SOGLIE_DEFAULT.oltreSenzaViaggio };
   try { return Object.assign(def, JSON.parse(localStorage.getItem(CPA_PREF_KEY) || '{}')); }
   catch (_) { return def; }
 }
@@ -26795,7 +26803,8 @@ function _cpaRicalcola() {
     ferieDi: (op, g) => pwFerieTipoGiornata(op, g),
     meteoDi: _cpaMeteoDi(B.date.iso),
     soglie: { diffOreSquadra: Number(pref.diffOreSquadra) || CPA_SOGLIE_DEFAULT.diffOreSquadra,
-      diffOreMysond: Number(pref.diffOreMysond) || CPA_SOGLIE_DEFAULT.diffOreMysond },
+      diffOreMysond: Number(pref.diffOreMysond) || CPA_SOGLIE_DEFAULT.diffOreMysond,
+      oltreSenzaViaggio: pref.oltreSenzaViaggio === true },
   });
   r.mysondCaricato = !!mysond;
   r.giorniLabel = B.date.label;
@@ -26885,6 +26894,15 @@ function cpaSetSogliaOre(el) {
   const k = el.dataset.k;
   if (!(k in CPA_SOGLIE_DEFAULT)) return;
   p[k] = Number(el.value) || CPA_SOGLIE_DEFAULT[k];
+  try { localStorage.setItem(CPA_PREF_KEY, JSON.stringify(p)); } catch (_) {}
+  _cpaRicalcola();
+  cpaRender();
+}
+
+/* «Più di 8 h in MySond»: checkbox «viaggio escluso», per browser come le soglie */
+function cpaSetOltreSenzaViaggio(el) {
+  const p = _cpaPref();
+  p.oltreSenzaViaggio = !!el.checked;
   try { localStorage.setItem(CPA_PREF_KEY, JSON.stringify(p)); } catch (_) {}
   _cpaRicalcola();
   cpaRender();
@@ -27181,8 +27199,12 @@ function _cpaCorpo(a, r) {
       '🧾 In MySond');
   }
   if (a.tipo === 'mysond_oltre_giornata') {
-    const tot = '<div class="text-sm font-semibold mb-1" style="color:#b91c1c;">' + _cpaH(C.mysond.totale) + ' segnate in tutto' +
-      ' <span class="text-xs font-normal text-slate-500">(+' + _cpaH(C.oltre) + ' oltre le ' + _cpaH(C.soglia) + ')</span></div>';
+    const tot = C.senzaViaggio
+      ? '<div class="text-sm font-semibold" style="color:#b91c1c;">' + _cpaH(C.contate) + ' senza il viaggio' +
+          ' <span class="text-xs font-normal text-slate-500">(+' + _cpaH(C.oltre) + ' oltre le ' + _cpaH(C.soglia) + ')</span></div>' +
+        '<div class="text-[11px] text-slate-500 mb-1">' + _cpaH(C.mysond.totale) + ' segnate in tutto' + (C.mysond.viaggio > 0 ? ', di cui ' + _cpaH(C.mysond.viaggio) + ' di viaggio (non contate)' : '') + '</div>'
+      : '<div class="text-sm font-semibold mb-1" style="color:#b91c1c;">' + _cpaH(C.mysond.totale) + ' segnate in tutto' +
+        ' <span class="text-xs font-normal text-slate-500">(+' + _cpaH(C.oltre) + ' oltre le ' + _cpaH(C.soglia) + ')</span></div>';
     const jira = C.oreJira == null
       ? '<div class="text-xs text-slate-400">Ore Jira non lette per questo operatore.</div>'
       : '<div class="text-sm font-semibold text-slate-800 mb-1">' + _cpaH(C.oreJira) + ' registrate</div>' + (C.jira || []).map(t => _cpaTicketJ(t, false)).join('');
@@ -27381,6 +27403,10 @@ function _cpaBarra(r, attive, ign) {
       : '') +
     ((!_cpa.filtro || _cpa.filtro === 'mysond_diverso') && r.mysondCaricato
       ? selSoglia('diffOreMysond', '🧾', 'Segnala quando le ore Jira si scostano almeno di tanto dalle ore MySond (viaggio escluso)')
+      : '') +
+    ((!_cpa.filtro || _cpa.filtro === 'mysond_oltre_giornata') && r.mysondCaricato
+      ? '<label id="cpa-oltre-senza-viaggio" class="text-xs text-slate-600 flex items-center gap-1 cursor-pointer" title="Per ⏰ Più di 8 h in MySond conta solo lavoro (e ore non lavorate), non il viaggio: restano gli straordinari sul lavoro effettivo">' +
+        '<input type="checkbox" onchange="cpaSetOltreSenzaViaggio(this)"' + (pref.oltreSenzaViaggio === true ? ' checked' : '') + '> ⏰ escludi viaggio</label>'
       : '') +
     (attive.some(a => a.solleciti && a.solleciti.length && !ign[a.id]) ? '<button type="button" onclick="cpaSollApri()" class="text-xs px-2 py-0.5 rounded font-semibold text-white" style="background:#4f46e5;" title="Bozze di messaggio per chi non ha caricato le ore su Jira o ne ha meno dei colleghi di squadra o di MySond">✉️ Prepara solleciti' + (_cpaSollDaInviare().length ? ' (' + _cpaSollDaInviare().length + ' da inviare)' : ' · tutti inviati') + '</button>' : '') +
     (nAperte ? '<button type="button" onclick="cpaCopia()" class="text-xs px-2 py-0.5 border border-slate-300 rounded bg-white hover:bg-slate-50">📋 Copia elenco</button>' : '') +
@@ -28233,7 +28259,8 @@ function _cpaPdfSoglia(tipo) {
   const p = _cpaPref();
   if (tipo === 'ore_squadra') return 'Scarto minimo segnalato: ' + _cpaPdfH(Number(p.diffOreSquadra)) + '.';
   if (tipo === 'mysond_diverso') return 'Scarto minimo segnalato: ' + _cpaPdfH(Number(p.diffOreMysond)) + '.';
-  if (tipo === 'mysond_oltre_giornata') return 'Una tabella per squadra della Griglia; per ogni operatore e giorno il totale e, sotto, ogni inserimento MySond. Viaggio e ore non lavorate in grigio.';
+  if (tipo === 'mysond_oltre_giornata') return (p.oltreSenzaViaggio === true ? 'Viaggio escluso dal conteggio: solo giorni con più di 8 h fra lavoro e ore non lavorate. ' : '') +
+    'Una tabella per squadra della Griglia; per ogni operatore e giorno il totale e, sotto, ogni inserimento MySond. Viaggio e ore non lavorate in grigio.';
   return '';
 }
 
@@ -28272,7 +28299,9 @@ function _cpaPdfSezioneOltre(doc, voci, r, y, M, pageH) {
       const altre = (C.squadre || []).slice(1).map(x => x.commessa + ' / ' + x.squadra);
       const sx = [r.giorniLabel[a.giorno] || '', a.operatore, a.cantiere].filter(Boolean).join(' · ') +
         (altre.length ? ' (anche in ' + altre.join(', ') + ')' : '');
-      const dx = 'MySond ' + _cpaPdfH(C.mysond.totale) + ' (+' + _cpaPdfH(C.oltre) + ' oltre le ' + _cpaPdfH(C.soglia) + ')' +
+      const dx = (C.senzaViaggio
+          ? 'MySond senza viaggio ' + _cpaPdfH(C.contate) + ' (+' + _cpaPdfH(C.oltre) + ' oltre le ' + _cpaPdfH(C.soglia) + ', totale ' + _cpaPdfH(C.mysond.totale) + ')'
+          : 'MySond ' + _cpaPdfH(C.mysond.totale) + ' (+' + _cpaPdfH(C.oltre) + ' oltre le ' + _cpaPdfH(C.soglia) + ')') +
         ' · Jira ' + (C.oreJira == null ? 'non lette' : _cpaPdfH(C.oreJira));
       const testa = { fillColor: [254, 243, 199], textColor: [30, 41, 59], fontStyle: 'bold', fontSize: 9, cellPadding: { top: 2.2, bottom: 2.2, left: 3.5, right: 2.4 } };
       body.push([
@@ -42968,6 +42997,7 @@ HELP_TEXTS['cpaFiltro:ore_scoperte_maltempo'] = 'Segnala le giornate pianificate
 // ⚖️ scarto minimo
 HELP_TEXTS['cpaSetSogliaOre:diffOreSquadra'] = 'Imposta quante ore in meno del collega di squadra con più ore deve avere un operatore perché «Ore diverse in squadra» lo segnali. Il controllo si ricalcola subito, senza rileggere Jira.\n\nLa scelta resta salvata solo in questo browser.';
 // 🧾 scarto minimo
+HELP_TEXTS['cpaSetOltreSenzaViaggio'] = 'Per «⏰ Più di 8 h in MySond»: se spuntato, le ore di viaggio segnate in MySond non contano, quindi restano solo i giorni in cui il lavoro effettivo (più le eventuali ore non lavorate) supera le 8 h, cioè gli straordinari. Il dettaglio mostra comunque tutte le voci, viaggio compreso. Vale anche per i conteggi, «Copia elenco», il PDF e la Chiusura settimana. Il controllo si ricalcola subito, senza rileggere Jira.\n\nLa scelta resta salvata solo in questo browser.';
 HELP_TEXTS['cpaSetSogliaOre:diffOreMysond'] = 'Imposta di quanto le ore Jira devono scostarsi dalle ore MySond (viaggio escluso) perché «Jira diverso da MySond» le segnali. Compare solo se le ore MySond della settimana sono caricate. Il controllo si ricalcola subito, senza rileggere Jira.\n\nLa scelta resta salvata solo in questo browser.';
 // Mostra / Nascondi ignorate
 HELP_TEXTS['cpaToggleIgnorate'] = 'Linguetta «🗄 Ignorate»: mostra le anomalie della settimana archiviate con «Ignora», con chi le ha ignorate e quando, e il bottone «↩ Ripristina». Il numero conta le ignorate della settimana; non sono comprese nel numero di «Tutte» né nelle altre linguette.\n\nLa lista è condivisa: le ignorate restano fuori dai conteggi, da «Copia elenco», dal PDF, dai solleciti e dalla Chiusura settimana per tutti i colleghi, anche dopo un nuovo controllo. Un secondo clic torna all\'elenco di prima.';

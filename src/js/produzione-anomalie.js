@@ -59,7 +59,8 @@ let _cpa = {
    lista del browser, migrata nella tabella al primo caricamento. */
 
 function _cpaPref() {
-  const def = { diffOreSquadra: CPA_SOGLIE_DEFAULT.diffOreSquadra, diffOreMysond: CPA_SOGLIE_DEFAULT.diffOreMysond };
+  const def = { diffOreSquadra: CPA_SOGLIE_DEFAULT.diffOreSquadra, diffOreMysond: CPA_SOGLIE_DEFAULT.diffOreMysond,
+    oltreSenzaViaggio: CPA_SOGLIE_DEFAULT.oltreSenzaViaggio };
   try { return Object.assign(def, JSON.parse(localStorage.getItem(CPA_PREF_KEY) || '{}')); }
   catch (_) { return def; }
 }
@@ -403,7 +404,8 @@ function _cpaRicalcola() {
     ferieDi: (op, g) => pwFerieTipoGiornata(op, g),
     meteoDi: _cpaMeteoDi(B.date.iso),
     soglie: { diffOreSquadra: Number(pref.diffOreSquadra) || CPA_SOGLIE_DEFAULT.diffOreSquadra,
-      diffOreMysond: Number(pref.diffOreMysond) || CPA_SOGLIE_DEFAULT.diffOreMysond },
+      diffOreMysond: Number(pref.diffOreMysond) || CPA_SOGLIE_DEFAULT.diffOreMysond,
+      oltreSenzaViaggio: pref.oltreSenzaViaggio === true },
   });
   r.mysondCaricato = !!mysond;
   r.giorniLabel = B.date.label;
@@ -493,6 +495,15 @@ function cpaSetSogliaOre(el) {
   const k = el.dataset.k;
   if (!(k in CPA_SOGLIE_DEFAULT)) return;
   p[k] = Number(el.value) || CPA_SOGLIE_DEFAULT[k];
+  try { localStorage.setItem(CPA_PREF_KEY, JSON.stringify(p)); } catch (_) {}
+  _cpaRicalcola();
+  cpaRender();
+}
+
+/* «Più di 8 h in MySond»: checkbox «viaggio escluso», per browser come le soglie */
+function cpaSetOltreSenzaViaggio(el) {
+  const p = _cpaPref();
+  p.oltreSenzaViaggio = !!el.checked;
   try { localStorage.setItem(CPA_PREF_KEY, JSON.stringify(p)); } catch (_) {}
   _cpaRicalcola();
   cpaRender();
@@ -789,8 +800,12 @@ function _cpaCorpo(a, r) {
       '🧾 In MySond');
   }
   if (a.tipo === 'mysond_oltre_giornata') {
-    const tot = '<div class="text-sm font-semibold mb-1" style="color:#b91c1c;">' + _cpaH(C.mysond.totale) + ' segnate in tutto' +
-      ' <span class="text-xs font-normal text-slate-500">(+' + _cpaH(C.oltre) + ' oltre le ' + _cpaH(C.soglia) + ')</span></div>';
+    const tot = C.senzaViaggio
+      ? '<div class="text-sm font-semibold" style="color:#b91c1c;">' + _cpaH(C.contate) + ' senza il viaggio' +
+          ' <span class="text-xs font-normal text-slate-500">(+' + _cpaH(C.oltre) + ' oltre le ' + _cpaH(C.soglia) + ')</span></div>' +
+        '<div class="text-[11px] text-slate-500 mb-1">' + _cpaH(C.mysond.totale) + ' segnate in tutto' + (C.mysond.viaggio > 0 ? ', di cui ' + _cpaH(C.mysond.viaggio) + ' di viaggio (non contate)' : '') + '</div>'
+      : '<div class="text-sm font-semibold mb-1" style="color:#b91c1c;">' + _cpaH(C.mysond.totale) + ' segnate in tutto' +
+        ' <span class="text-xs font-normal text-slate-500">(+' + _cpaH(C.oltre) + ' oltre le ' + _cpaH(C.soglia) + ')</span></div>';
     const jira = C.oreJira == null
       ? '<div class="text-xs text-slate-400">Ore Jira non lette per questo operatore.</div>'
       : '<div class="text-sm font-semibold text-slate-800 mb-1">' + _cpaH(C.oreJira) + ' registrate</div>' + (C.jira || []).map(t => _cpaTicketJ(t, false)).join('');
@@ -989,6 +1004,10 @@ function _cpaBarra(r, attive, ign) {
       : '') +
     ((!_cpa.filtro || _cpa.filtro === 'mysond_diverso') && r.mysondCaricato
       ? selSoglia('diffOreMysond', '🧾', 'Segnala quando le ore Jira si scostano almeno di tanto dalle ore MySond (viaggio escluso)')
+      : '') +
+    ((!_cpa.filtro || _cpa.filtro === 'mysond_oltre_giornata') && r.mysondCaricato
+      ? '<label id="cpa-oltre-senza-viaggio" class="text-xs text-slate-600 flex items-center gap-1 cursor-pointer" title="Per ⏰ Più di 8 h in MySond conta solo lavoro (e ore non lavorate), non il viaggio: restano gli straordinari sul lavoro effettivo">' +
+        '<input type="checkbox" onchange="cpaSetOltreSenzaViaggio(this)"' + (pref.oltreSenzaViaggio === true ? ' checked' : '') + '> ⏰ escludi viaggio</label>'
       : '') +
     (attive.some(a => a.solleciti && a.solleciti.length && !ign[a.id]) ? '<button type="button" onclick="cpaSollApri()" class="text-xs px-2 py-0.5 rounded font-semibold text-white" style="background:#4f46e5;" title="Bozze di messaggio per chi non ha caricato le ore su Jira o ne ha meno dei colleghi di squadra o di MySond">✉️ Prepara solleciti' + (_cpaSollDaInviare().length ? ' (' + _cpaSollDaInviare().length + ' da inviare)' : ' · tutti inviati') + '</button>' : '') +
     (nAperte ? '<button type="button" onclick="cpaCopia()" class="text-xs px-2 py-0.5 border border-slate-300 rounded bg-white hover:bg-slate-50">📋 Copia elenco</button>' : '') +

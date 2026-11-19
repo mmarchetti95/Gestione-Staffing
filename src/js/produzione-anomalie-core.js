@@ -55,6 +55,7 @@ const CPA_SOGLIE_DEFAULT = {
   diffOreMysond: 0.5,   // scarto (h) fra Jira e MySond oltre cui segnalare
   oreGiornata: 8,       // giornata piena attesa su Jira, per le ore scoperte
   oreMaxMysond: 8,      // ore MySond del giorno oltre cui segnalare (somma di tutte le voci)
+  oltreSenzaViaggio: false, // true: per "più di 8 h" conta il totale MySond meno il viaggio (solo straordinari sul lavoro)
   diffOreMysondAlta: 2, // ore oltre il massimo da cui la gravità passa a "media"
 };
 
@@ -443,7 +444,9 @@ function _cpaControllaMysond(input, out, perOpGiorno, wl, ore) {
 /* ---------- 6) Più di 8 ore segnate in MySond ---------- */
 
 /* Somma di TUTTE le voci MySond del giorno (lavoro, viaggio, non lavorate): è quello che
-   l'operatore ha segnato. Non serve Jira. Solo chi quel giorno è in Griglia (cella non
+   l'operatore ha segnato. Con soglie.oltreSenzaViaggio il viaggio non conta: restano i
+   giorni in cui il lavoro (più le eventuali ore non lavorate) supera le 8 h, cioè gli
+   straordinari sul lavoro effettivo. L'id non cambia, quindi le ignorate restano tali. Non serve Jira. Solo chi quel giorno è in Griglia (cella non
    in ferie): chi non c'è non interessa a chi pianifica. Le ore Jira, se lette, si
    mostrano solo per confronto. */
 function _cpaControllaMysondOltre(input, out) {
@@ -461,8 +464,10 @@ function _cpaControllaMysondOltre(input, out) {
       const celle = perOpGiorno[op + '|||' + g] || [];
       if (!rec || !celle.length) continue;
       const m = cpaMysondRipartisci(rec);
-      if (!(m.totale > S.oreMaxMysond + 1e-9)) continue;
-      const oltre = Math.round((m.totale - S.oreMaxMysond) * 100) / 100;
+      const senzaViaggio = !!S.oltreSenzaViaggio;
+      const contate = senzaViaggio ? Math.round((m.totale - m.viaggio) * 100) / 100 : m.totale;
+      if (!(contate > S.oreMaxMysond + 1e-9)) continue;
+      const oltre = Math.round((contate - S.oreMaxMysond) * 100) / 100;
       const squadre = [...new Set(celle.map(c => c.commessa + '|||' + c.squadra))];
       const cantieri = [...new Set(celle.flatMap(_cpaCantieriCella))];
       const d = input.worklog ? ((input.worklog[op] || {})[g] || null) : null;
@@ -473,13 +478,15 @@ function _cpaControllaMysondOltre(input, out) {
         gravita: oltre >= S.diffOreMysondAlta - 1e-9 ? 'media' : 'bassa',
         commessa: celle.length ? celle[0].commessa : '', squadra: celle.length ? celle[0].squadra : '',
         operatore: op, giorno: g, cpKey: celle.length ? celle[0].cpKey : null, cantiere: cantieri.join(', '),
-        titolo: op + ' ha segnato ' + _cpaFmt(m.totale) + ' h in MySond (+' + _cpaFmt(oltre) + ' h oltre le ' + _cpaFmt(S.oreMaxMysond) + ')',
+        titolo: senzaViaggio
+          ? op + ' ha segnato ' + _cpaFmt(contate) + ' h in MySond senza il viaggio (+' + _cpaFmt(oltre) + ' h oltre le ' + _cpaFmt(S.oreMaxMysond) + ')'
+          : op + ' ha segnato ' + _cpaFmt(m.totale) + ' h in MySond (+' + _cpaFmt(oltre) + ' h oltre le ' + _cpaFmt(S.oreMaxMysond) + ')',
         dettaglio: 'MySond: ' + m.voci.length + (m.voci.length === 1 ? ' inserimento' : ' inserimenti') + ', ' + _cpaFmt(m.lavoro) + ' h di lavoro' +
           (m.viaggio > 0 ? ', ' + _cpaFmt(m.viaggio) + ' h di viaggio' : '') +
           (m.nonLavorate > 0 ? ', ' + _cpaFmt(m.nonLavorate) + ' h non lavorate' : '') + '.' +
           (verificato ? ' Jira: ' + _cpaFmt(d ? (_cpaNum(d.hours) || 0) : 0) + ' h.' : ''),
         correzione: 'Verificare con ' + op + ' gli inserimenti MySond del giorno: ore duplicate, voce sul giorno sbagliato o straordinario da giustificare.',
-        confronto: { mysond: m, soglia: S.oreMaxMysond, oltre, squadre: squadre.map(k => { const p = k.split('|||'); return { commessa: p[0], squadra: p[1] }; }),
+        confronto: { mysond: m, soglia: S.oreMaxMysond, oltre, contate, senzaViaggio, squadre: squadre.map(k => { const p = k.split('|||'); return { commessa: p[0], squadra: p[1] }; }),
           oreJira: verificato ? (d ? (_cpaNum(d.hours) || 0) : 0) : null,
           jira: verificato && d ? _cpaTicketJira(input, d.tickets) : [],
           griglia: celle.flatMap(c => (c.voci || []).map(v => ({ commessa: c.commessa, squadra: c.squadra, cantiere: v.cantiere, attivita: v.attivita || '', subtask: v.subtask }))) },

@@ -110,7 +110,8 @@ function _cpaPdfSoglia(tipo) {
   const p = _cpaPref();
   if (tipo === 'ore_squadra') return 'Scarto minimo segnalato: ' + _cpaPdfH(Number(p.diffOreSquadra)) + '.';
   if (tipo === 'mysond_diverso') return 'Scarto minimo segnalato: ' + _cpaPdfH(Number(p.diffOreMysond)) + '.';
-  if (tipo === 'mysond_oltre_giornata') return 'Una tabella per squadra della Griglia; per ogni operatore e giorno il totale e, sotto, ogni inserimento MySond. Viaggio e ore non lavorate in grigio.';
+  if (tipo === 'mysond_oltre_giornata') return (p.oltreSenzaViaggio === true ? 'Viaggio escluso dal conteggio: solo giorni con più di 8 h fra lavoro e ore non lavorate. ' : '') +
+    'Una tabella per squadra della Griglia; per ogni operatore e giorno il totale e, sotto, ogni inserimento MySond. Viaggio e ore non lavorate in grigio.';
   return '';
 }
 
@@ -149,7 +150,9 @@ function _cpaPdfSezioneOltre(doc, voci, r, y, M, pageH) {
       const altre = (C.squadre || []).slice(1).map(x => x.commessa + ' / ' + x.squadra);
       const sx = [r.giorniLabel[a.giorno] || '', a.operatore, a.cantiere].filter(Boolean).join(' · ') +
         (altre.length ? ' (anche in ' + altre.join(', ') + ')' : '');
-      const dx = 'MySond ' + _cpaPdfH(C.mysond.totale) + ' (+' + _cpaPdfH(C.oltre) + ' oltre le ' + _cpaPdfH(C.soglia) + ')' +
+      const dx = (C.senzaViaggio
+          ? 'MySond senza viaggio ' + _cpaPdfH(C.contate) + ' (+' + _cpaPdfH(C.oltre) + ' oltre le ' + _cpaPdfH(C.soglia) + ', totale ' + _cpaPdfH(C.mysond.totale) + ')'
+          : 'MySond ' + _cpaPdfH(C.mysond.totale) + ' (+' + _cpaPdfH(C.oltre) + ' oltre le ' + _cpaPdfH(C.soglia) + ')') +
         ' · Jira ' + (C.oreJira == null ? 'non lette' : _cpaPdfH(C.oreJira));
       const testa = { fillColor: [254, 243, 199], textColor: [30, 41, 59], fontStyle: 'bold', fontSize: 9, cellPadding: { top: 2.2, bottom: 2.2, left: 3.5, right: 2.4 } };
       body.push([

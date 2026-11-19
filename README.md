@@ -115,6 +115,9 @@ Limite noto: il progetto Supabase è sul piano **Free**, che non include backup 
 
 ## Changelog
 
+## v18.289.0
+- **Controllo anomalie, «⏰ Più di 8 h in MySond»**: nuova casella «escludi viaggio» nella barra della linguetta (salvata per browser). Spuntata, le ore di viaggio non contano e restano solo i giorni in cui il lavoro effettivo supera le 8 h (straordinari); il dettaglio mostra il totale senza viaggio, quello complessivo e tutte le voci. Vale anche per conteggi, Copia elenco, PDF e Chiusura settimana; le anomalie ignorate restano ignorate.
+
 ## v18.288.0
 - **Auto-pianifica a squadre fisse**: la bozza non assegna più operatori cantiere per cantiere, ma forma squadre che lavorano **tutti i giorni** della settimana (Lun–Ven, anche il sabato se spuntato) con un **giro di cantieri vicini**: finito un cantiere, la squadra passa al più vicino. Giornate piene, nessun giorno vuoto finché c'è lavoro; se i cantieri non bastano a riempire l'ultima squadra, i giorni liberi sono segnati in rosso. Entrano solo operatori liberi tutta la settimana (chi ha ferie o celle in alcuni giorni è elencato a parte). L'ordine dei giorni di ogni squadra evita allerte e maltempo e rispetta scadenze e «non prima di». Bozza in vista **per squadra** (giorni in colonna, km della settimana, avvisi). La riparazione degli imprevisti resta giorno per giorno.
 - **Quante squadre per cantiere**: nuova domanda nell'inserimento guidato e colonna «Sq» nella lista; i giorni sono per ogni squadra (2 squadre × 3 giorni = 6 giorni-squadra). Le N squadre sono sempre diverse e lavorano di preferenza negli stessi giorni. L'opzione «squadre per cantiere» (rinforzi) è tolta: lo decide la riga.
