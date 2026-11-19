@@ -115,6 +115,9 @@ Limite noto: il progetto Supabase è sul piano **Free**, che non include backup 
 
 ## Changelog
 
+## v18.290.0
+- feat: **Mappa, «🌧 Radar pioggia».** Nuovo pulsante sotto «🌦 Meteo live»: accende sopra la mappa dei cantieri il radar della pioggia osservata (RainViewer, gratuito, senza chiave), trasparente, con i pin sempre visibili sopra. Mostra le ultime 2 ore a passi di 10 minuti: ▶ anima, ‹ › spostano di 10 minuti, l'ora è quella del fotogramma («Ultimo» = il più recente). Si aggiorna da solo ogni 10 minuti con la Mappa aperta. Solo pioggia già caduta, nessuna previsione; il dettaglio arriva fino a un livello di zoom regionale, oltre l'immagine è ingrandita. Acceso/spento resta salvato in questo browser. Nessuna modifica a Supabase o alle Edge Function.
+
 ## v18.289.0
 - **Controllo anomalie, «⏰ Più di 8 h in MySond»**: nuova casella «escludi viaggio» nella barra della linguetta (salvata per browser). Spuntata, le ore di viaggio non contano e restano solo i giorni in cui il lavoro effettivo supera le 8 h (straordinari); il dettaglio mostra il totale senza viaggio, quello complessivo e tutte le voci. Vale anche per conteggi, Copia elenco, PDF e Chiusura settimana; le anomalie ignorate restano ignorate.
 

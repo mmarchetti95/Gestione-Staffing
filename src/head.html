@@ -1904,6 +1904,20 @@
     padding: 4px 8px; font-size: 12px; font-weight: 600; color: #0f172a; cursor: pointer;
   }
   .ml-windy-btn:hover { background: #f1f5f9; }
+  .ml-radar-btn { top: 116px; }
+  .ml-radar-btn.active { background: #0ea5e9; color: white; border-color: #0284c7; }
+  .ml-radar-bar {
+    position: absolute; left: 10px; bottom: 22px; z-index: 1001;
+    display: flex; align-items: center; gap: 6px;
+    background: rgba(255,255,255,.95); border: 2px solid rgba(0,0,0,.2); border-radius: 6px;
+    padding: 3px 8px; font-size: 12px; color: #0f172a;
+  }
+  .ml-radar-bar.hidden { display: none; }
+  .ml-radar-bar button { background: none; border: none; cursor: pointer; font-size: 13px; padding: 0 3px; color: #0f172a; }
+  .ml-radar-ora { min-width: 92px; text-align: center; font-weight: 600; font-variant-numeric: tabular-nums; }
+  .ml-radar-scala { display: inline-flex; align-items: center; gap: 4px; color: #64748b; font-size: 11px; }
+  .ml-radar-scala i { display: inline-block; width: 60px; height: 7px; border-radius: 4px;
+    background: linear-gradient(90deg, #d4d4d4, #88ddee, #0099cc, #0077aa, #ffee00, #ff9900, #ff4400, #c10000); }
   .ml-windy { position: absolute; inset: 0; z-index: 1050; display: flex; flex-direction: column; background: #0f172a; }
   .ml-windy.hidden { display: none; }
   .ml-windy-bar {
@@ -2283,7 +2297,7 @@
       </span>
       <button id="btn-presentation" class="px-3 py-1.5 text-sm rounded hover:bg-white/10" style="border:1px solid var(--dark-border-strong);color:var(--dark-text);visibility:visible;">📊 Modalità presentazione</button>
       <div class="text-xs pl-2" style="border-left:1px solid var(--dark-border-strong);color:var(--dark-text-muted);">
-        <span id="app-version" class="font-medium" style="color:var(--accent);">v18.289.0</span> · Michele Marchetti
+        <span id="app-version" class="font-medium" style="color:var(--accent);">v18.290.0</span> · Michele Marchetti
         <span id="sb-role-badge" style="margin-left:8px;padding:1px 8px;border-radius:9999px;background:rgba(255,255,255,.1);color:var(--dark-text);font-weight:600;"></span>
       </div>
     </div>
@@ -3721,6 +3735,14 @@
     <div class="ml-map-wrap">
       <div id="ml-map"></div>
       <button id="ml-windy-btn" class="ml-windy-btn" onclick="mlWindyToggle()" title="Mappa meteo interattiva (Windy) sulla zona inquadrata">🌦 Meteo live</button>
+      <button id="ml-radar-btn" class="ml-windy-btn ml-radar-btn" onclick="mlRadarToggle()" title="Radar pioggia osservata (ultime 2 ore) sopra la mappa dei cantieri">🌧 Radar pioggia</button>
+      <div id="ml-radar-bar" class="ml-radar-bar hidden">
+        <button id="ml-radar-play" onclick="mlRadarPlay()" title="Anima le ultime 2 ore">▶</button>
+        <button onclick="mlRadarPasso(-1)" title="10 minuti prima">‹</button>
+        <span id="ml-radar-ora" class="ml-radar-ora">—</span>
+        <button onclick="mlRadarPasso(1)" title="10 minuti dopo">›</button>
+        <span class="ml-radar-scala" title="Intensità della pioggia">debole <i></i> forte</span>
+      </div>
       <div id="ml-windy" class="ml-windy hidden">
         <div class="ml-windy-bar">
           <span class="ml-windy-lbl">🌦 Meteo live · Windy</span>

@@ -833,6 +833,12 @@ function mlInit() {
   const street = mapStreetLayer().addTo(_mlMap);
   mapAddSatelliteToggle(_mlMap, street);
   _mlLayer = L.layerGroup().addTo(_mlMap);
+  // Pane del radar: sopra le tile (200) e le etichette dell'Ibrida (250), sotto i pin (600).
+  _mlMap.createPane('mlRadar').style.zIndex = 350;
+  _mlMap.getPane('mlRadar').style.pointerEvents = 'none';
+  let radarOn = false;
+  try { radarOn = localStorage.getItem('ml_radar_on') === '1'; } catch (e) {}
+  if (radarOn) mlRadarToggle(true);
   setTimeout(() => _mlMap.invalidateSize(), 200);
 }
 
@@ -883,6 +889,120 @@ function _mlWindyRenderLivelli() {
       if (fr) fr.src = _mlWindyUrl(b.dataset.v);
     };
   });
+}
+
+/* ----- Radar pioggia (RainViewer) -----
+   Livello trasparente sopra la mappa dei cantieri: mosaico dei radar meteo con la
+   pioggia OSSERVATA nelle ultime ~2 ore a passi di 10 minuti (nessuna previsione:
+   l'API pubblica gratuita non dà più il nowcast). Nessuna chiave API. Le tile
+   esistono solo fino allo zoom 7 (oltre, RainViewer risponde con un'immagine
+   «Zoom Level Not Supported»): maxNativeZoom 7 fa ingrandire a Leaflet le tile del 7.
+   Elenco dei fotogrammi riletto ogni 10 minuti, solo con lo screen aperto e la
+   scheda visibile. Acceso/spento resta in localStorage per questo browser. */
+const ML_RADAR_API = 'https://api.rainviewer.com/public/weather-maps.json';
+const ML_RADAR_OPACITA = 0.65;
+const _mlRadar = { on: false, host: '', frames: [], idx: -1, layers: {}, play: null, refresh: null, letto: 0 };
+
+function _mlRadarLayer(f) {
+  if (!_mlRadar.layers[f.path]) {
+    _mlRadar.layers[f.path] = L.tileLayer(_mlRadar.host + f.path + '/256/{z}/{x}/{y}/2/1_1.png', {
+      pane: 'mlRadar', opacity: 0, maxNativeZoom: 7, maxZoom: 19, tileSize: 256,
+      attribution: 'Radar &copy; <a href="https://www.rainviewer.com/" target="_blank">RainViewer</a>',
+    }).addTo(_mlMap);
+  }
+  return _mlRadar.layers[f.path];
+}
+
+function _mlRadarMostra(i) {
+  const fr = _mlRadar.frames;
+  if (!fr.length) return;
+  i = ((i % fr.length) + fr.length) % fr.length;
+  const prima = fr[_mlRadar.idx];
+  _mlRadarLayer(fr[i]).setOpacity(ML_RADAR_OPACITA);
+  if (prima && prima.path !== fr[i].path && _mlRadar.layers[prima.path]) _mlRadar.layers[prima.path].setOpacity(0);
+  _mlRadar.idx = i;
+  if (_mlRadar.play) _mlRadarLayer(fr[(i + 1) % fr.length]); // precarica il prossimo
+  const el = document.getElementById('ml-radar-ora');
+  if (el) {
+    const d = new Date(fr[i].time * 1000);
+    const hh = String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0');
+    el.textContent = (i === fr.length - 1 ? 'Ultimo · ' : 'Radar · ') + hh;
+    el.title = d.toLocaleString('it-IT');
+  }
+}
+
+async function _mlRadarCarica() {
+  try {
+    const r = await fetch(ML_RADAR_API, { cache: 'no-store' });
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    const j = await r.json();
+    const frames = (j && j.radar && Array.isArray(j.radar.past)) ? j.radar.past : [];
+    if (!frames.length || !j.host) throw new Error('nessun fotogramma');
+    if (!_mlRadar.on) return;
+    // Fotogramma mostrato prima della rilettura: se era l'ultimo si passa al nuovo ultimo.
+    const cur = _mlRadar.frames[_mlRadar.idx];
+    const eraUltimo = !cur || _mlRadar.idx === _mlRadar.frames.length - 1;
+    // Toglie i layer dei fotogrammi usciti dalla finestra delle 2 ore.
+    const vivi = new Set(frames.map(f => f.path));
+    Object.keys(_mlRadar.layers).forEach(p => {
+      if (!vivi.has(p)) { _mlMap.removeLayer(_mlRadar.layers[p]); delete _mlRadar.layers[p]; }
+    });
+    _mlRadar.host = j.host;
+    _mlRadar.frames = frames;
+    _mlRadar.letto = Date.now();
+    const k = cur ? frames.findIndex(f => f.path === cur.path) : -1;
+    _mlRadar.idx = k;
+    _mlRadarMostra(eraUltimo || k < 0 ? frames.length - 1 : k);
+  } catch (e) {
+    const el = document.getElementById('ml-radar-ora');
+    if (el) { el.textContent = 'Radar n/d'; el.title = 'RainViewer non risponde: ' + (e && e.message ? e.message : e); }
+  }
+}
+
+function mlRadarToggle(forza) {
+  if (!_mlMap) return;
+  _mlRadar.on = typeof forza === 'boolean' ? forza : !_mlRadar.on;
+  try { localStorage.setItem('ml_radar_on', _mlRadar.on ? '1' : '0'); } catch (e) {}
+  const btn = document.getElementById('ml-radar-btn');
+  if (btn) btn.classList.toggle('active', _mlRadar.on);
+  const bar = document.getElementById('ml-radar-bar');
+  if (bar) bar.classList.toggle('hidden', !_mlRadar.on);
+  if (_mlRadar.on) {
+    _mlRadarCarica();
+    if (!_mlRadar.refresh) {
+      _mlRadar.refresh = setInterval(() => {
+        const scr = document.getElementById('screen-mappa');
+        if (document.hidden || !scr || scr.classList.contains('hidden')) return;
+        _mlRadarCarica();
+      }, 10 * 60 * 1000);
+    }
+  } else {
+    mlRadarPlay(false);
+    if (_mlRadar.refresh) { clearInterval(_mlRadar.refresh); _mlRadar.refresh = null; }
+    Object.keys(_mlRadar.layers).forEach(p => _mlMap.removeLayer(_mlRadar.layers[p]));
+    _mlRadar.layers = {};
+    _mlRadar.frames = [];
+    _mlRadar.idx = -1;
+  }
+}
+
+function mlRadarPlay(forza) {
+  const vuole = typeof forza === 'boolean' ? forza : !_mlRadar.play;
+  if (_mlRadar.play) { clearInterval(_mlRadar.play); _mlRadar.play = null; }
+  if (vuole && _mlRadar.on && _mlRadar.frames.length) {
+    _mlRadar.play = setInterval(() => {
+      const scr = document.getElementById('screen-mappa');
+      if (document.hidden || !scr || scr.classList.contains('hidden')) { mlRadarPlay(false); return; }
+      _mlRadarMostra(_mlRadar.idx + 1);
+    }, 700);
+  }
+  const b = document.getElementById('ml-radar-play');
+  if (b) { b.textContent = _mlRadar.play ? '⏸' : '▶'; b.title = _mlRadar.play ? 'Ferma' : 'Anima le ultime 2 ore'; }
+}
+
+function mlRadarPasso(d) {
+  mlRadarPlay(false);
+  _mlRadarMostra(_mlRadar.idx + d);
 }
 
 function mlWindyToggle(forza) {
