@@ -19,6 +19,8 @@ function sbGuestPages() {
 function sbCanSeePage(pageKey) {
   // Pagine nascoste dall'admin nel pannello "🧩 Funzioni" (src/js/sb-funzioni.js)
   if (typeof sbFnPaginaVisibile === 'function' && !sbFnPaginaVisibile(pageKey)) return false;
+  // Rendimento degli operatori: solo chi pianifica (admin/responsabile).
+  if (SB_PAGINE_RESPONSABILI.includes(pageKey) && !sbCanWrite()) return false;
   return sbRole() !== 'guest' || sbGuestPages().includes(pageKey);
 }
 // Guard da chiamare in cima alle azioni di modifica: blocca l'azione se il ruolo
@@ -36,7 +38,9 @@ function sbGuardWrite() {
 }
 
 // Chiavi pagina della Pianificazione Settimanale, stesso ordine/id dei tab in src/head.html
-const PW_TAB_KEYS = ['griglia', 'ferie', 'mappa', 'spostamenti', 'ricerca-squadre', 'autoplan', 'controllo', 'avanzamento', 'meteo-storico', 'doppia'];
+const PW_TAB_KEYS = ['griglia', 'ferie', 'mappa', 'spostamenti', 'ricerca-squadre', 'autoplan', 'controllo', 'avanzamento', 'prestazioni', 'meteo-storico', 'doppia'];
+// Pagine riservate ad admin/responsabile (mai visibili a operatore/guest, nemmeno se assegnate).
+const SB_PAGINE_RESPONSABILI = ['weekly:prestazioni'];
 
 // Mostra/nasconde nav Dashboard/Pianificazione e le singole tab in base alle pagine
 // visibili per il ruolo corrente (rilevante solo per il ruolo 'guest'); se lo schermo/tab
@@ -366,12 +370,13 @@ const SB_PAGE_LABELS = {
   'weekly:autoplan': 'Auto-pianifica',
   'weekly:controllo': 'Controllo Produzione',
   'weekly:avanzamento': 'Avanzamento comuni',
+  'weekly:prestazioni': 'Prestazioni operatori',
   'weekly:meteo-storico': 'Storico meteo',
   'weekly:doppia': 'Doppia Week',
   'mappa': 'Mappa (vista d\'insieme)',
 };
 function sbAllPageKeys() {
-  return ['dashboard', ...PW_TAB_KEYS.map(k => 'weekly:' + k), 'mappa'];
+  return ['dashboard', ...PW_TAB_KEYS.map(k => 'weekly:' + k).filter(k => !SB_PAGINE_RESPONSABILI.includes(k)), 'mappa'];
 }
 function sbGuestPagesChecksHtml(checked) {
   return sbAllPageKeys().map(k =>

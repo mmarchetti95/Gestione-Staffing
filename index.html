@@ -321,6 +321,7 @@
   #pw-tab-controllo        { --pwt-bg: #ecf3f3; --pwt-bg-hover: #d8e8e8; --pwt-ink: #33696b; }
   #pw-tab-meteo-storico    { --pwt-bg: #edf2f6; --pwt-bg-hover: #dae5ee; --pwt-ink: #3d6380; }
   #pw-tab-avanzamento      { --pwt-bg: #eef5f0; --pwt-bg-hover: #dcebe0; --pwt-ink: #2f6a46; }
+  #pw-tab-prestazioni      { --pwt-bg: #f6f3e9; --pwt-bg-hover: #ece5cf; --pwt-ink: #74602a; }
   #pw-tab-doppia           { --pwt-bg: #f5eff0; --pwt-bg-hover: #eadcdf; --pwt-ink: #7a4852; }
   .commessa-card summary { outline: none; }
   .commessa-card summary::-webkit-details-marker { display: none; }
@@ -1628,6 +1629,35 @@
   .av-ind { padding-left: 26px !important; color: #475569; }
   .av-futuro td { color: #94a3b8; }
   .av-senza td { background: #fffbeb; }
+  /* Prestazioni operatori (prf*) */
+  .prf-tw { overflow: auto; max-height: 70vh; }
+  .prf-mat th.prf-mat-col { cursor: pointer; text-align: center; white-space: normal; min-width: 92px; max-width: 140px; vertical-align: bottom; line-height: 1.25; }
+  .prf-mat th.prf-mat-col:hover { color: #0f766e; background: #f0fdfa; }
+  .prf-mat th small { display: block; font-weight: 400; color: #94a3b8; font-size: 10px; }
+  .prf-mat .prf-mat-op { position: sticky; left: 0; background: #fff; z-index: 2; white-space: nowrap; font-weight: 600; color: #334155; }
+  .prf-mat thead .prf-mat-op { background: #f8fafc; z-index: 3; }
+  .prf-cella { text-align: center; cursor: pointer; border-left: 1px solid #f1f5f9; }
+  .prf-cella:hover { outline: 2px solid #0d9488; outline-offset: -2px; }
+  .prf-cella b { font-size: 14px; color: #0f172a; }
+  .prf-cella small { display: block; font-size: 9px; color: #64748b; line-height: 1; }
+  .prf-debole { background: #fafafa; }
+  .prf-bar { position: relative; height: 14px; background: #f1f5f9; border-radius: 999px; min-width: 160px; }
+  .prf-bar-c { position: absolute; left: 50%; top: -2px; bottom: -2px; width: 1px; background: #94a3b8; }
+  .prf-bar-int { position: absolute; top: 4px; height: 6px; border-radius: 999px; opacity: .3; }
+  .prf-bar-p { position: absolute; top: 2px; width: 10px; height: 10px; margin-left: -5px; border-radius: 999px; border: 2px solid #fff; box-shadow: 0 0 0 1px rgba(15,23,42,.15); }
+  .prf-ind { font-size: 15px; }
+  .prf-aff { font-size: 11px; padding: 1px 7px; border-radius: 999px; }
+  .prf-aff-alta { background: #dcfce7; color: #166534; }
+  .prf-aff-media { background: #fef9c3; color: #854d0e; }
+  .prf-aff-bassa { background: #f1f5f9; color: #64748b; }
+  .prf-pochi td { color: #94a3b8; }
+  .prf-pochi .prf-ind { color: #94a3b8; }
+  .prf-sez td { background: #f8fafc; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .04em; color: #94a3b8; padding: 10px 8px 4px; }
+  .prf-giorni > td { background: #fcfcfd; padding: 4px 8px 12px; }
+  .prf-gg { font-size: 12px; }
+  .prf-gg th { position: static; }
+  .prf-spiega { font-size: 13px; color: #475569; }
+  .prf-toggle { font-size: 13px; }
   .ms-tbl { width: 100%; border-collapse: separate; border-spacing: 0; font-size: 13px; color: #1e293b; }
   .ms-tbl thead th { position: sticky; top: 0; z-index: 3; background: #f8fafc; border-bottom: 1px solid #e2e8f0;
     padding: 0; text-align: left; font-weight: 600; color: #475569; white-space: nowrap; }
@@ -2138,7 +2168,7 @@
       </span>
       <button id="btn-presentation" class="px-3 py-1.5 text-sm rounded hover:bg-white/10" style="border:1px solid var(--dark-border-strong);color:var(--dark-text);visibility:visible;">📊 Modalità presentazione</button>
       <div class="text-xs pl-2" style="border-left:1px solid var(--dark-border-strong);color:var(--dark-text-muted);">
-        <span id="app-version" class="font-medium" style="color:var(--accent);">v18.279.0</span> · Michele Marchetti
+        <span id="app-version" class="font-medium" style="color:var(--accent);">v18.280.0</span> · Michele Marchetti
         <span id="sb-role-badge" style="margin-left:8px;padding:1px 8px;border-radius:9999px;background:rgba(255,255,255,.1);color:var(--dark-text);font-weight:600;"></span>
       </div>
     </div>
@@ -2937,6 +2967,7 @@
     <button id="pw-tab-autoplan" class="tab-btn text-sm py-3">🤖 Auto-pianifica</button>
     <button id="pw-tab-controllo" class="tab-btn text-sm py-3">📊 Controllo produzione</button>
     <button id="pw-tab-avanzamento" class="tab-btn text-sm py-3">📍 Avanzamento comuni</button>
+    <button id="pw-tab-prestazioni" class="tab-btn text-sm py-3">⚡ Prestazioni</button>
     <button id="pw-tab-meteo-storico" class="tab-btn text-sm py-3">🌦️ Storico meteo</button>
     <button id="pw-tab-doppia" class="tab-btn text-sm py-3">🔁 Doppia Week</button>
   </div>
@@ -3083,6 +3114,33 @@
     </div>
     <section id="av-dettaglio" class="hidden"></section>
     <p class="text-xs text-slate-400 mt-2">Ore e produzione sono quelle salvate in Controllo Produzione (aggiornate con «Sincronizza da Jira» e il report di produzione) e si riferiscono al periodo scelto. Per comune, una riga per attività: attività diverse non si sommano. Clicca un comune o un'attività per il dettaglio. Sola lettura.</p>
+  </div>
+
+  <!-- Vista Prestazioni operatori (src/js/prestazioni.js, motore src/js/prestazioni-core.js) -->
+  <div id="pw-view-prestazioni" class="hidden">
+    <div class="av-barra no-print">
+      <span class="av-barra-tit">⚡ Prestazioni operatori</span>
+      <button type="button" id="prf-modo-btn" class="av-chip-btn">Per ▾</button>
+      <button type="button" id="prf-commessa-btn" class="av-chip-btn">Commessa ▾</button>
+      <button type="button" id="prf-periodo-btn" class="av-chip-btn">Periodo ▾</button>
+      <button type="button" id="prf-min-btn" class="av-chip-btn">Min. giornate ▾</button>
+      <button type="button" id="prf-ver-btn" class="av-chip-btn prf-toggle">Solo produzione verificata</button>
+      <button type="button" id="prf-comune-btn" class="av-chip-btn prf-toggle">Tiene conto del comune</button>
+      <button type="button" id="prf-refresh" class="av-btn">↻ Aggiorna</button>
+      <span id="prf-status" class="text-xs text-slate-400"></span>
+    </div>
+    <div class="bg-white border border-slate-200 rounded-lg">
+      <div class="av-filtri no-print">
+        <div class="relative" style="min-width:200px;flex:1;max-width:300px">
+          <span class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm pointer-events-none">🔍</span>
+          <input id="prf-q" type="text" placeholder="Cerca operatore…" class="w-full pl-8 pr-3 py-1.5 text-sm border border-slate-200 rounded-lg focus:outline-none focus:border-teal-400 bg-slate-50">
+        </div>
+        <span id="prf-n" class="text-xs text-slate-400"></span>
+        <button type="button" id="prf-export" class="av-btn" style="margin-left:auto">⬇ Excel</button>
+      </div>
+      <div id="prf-corpo"><div class="av-vuoto">Caricamento…</div></div>
+    </div>
+    <p class="text-xs text-slate-400 mt-2">Rendimento di ogni operatore rispetto alla norma dell'attività (100), dalle giornate salvate in Controllo Produzione: produzione della squadra diviso le ore Jira dei membri. Le squadre lavorano quasi sempre in coppia con un solo tablet, quindi il contributo del singolo è stimato confrontando le sue giornate con compagni diversi. Sola lettura, visibile solo ad admin e responsabili: è un aiuto alla pianificazione, non una valutazione del personale.</p>
   </div>
 
   <!-- Vista Doppia Week -->
@@ -3915,6 +3973,8 @@ function sbGuestPages() {
 function sbCanSeePage(pageKey) {
   // Pagine nascoste dall'admin nel pannello "🧩 Funzioni" (src/js/sb-funzioni.js)
   if (typeof sbFnPaginaVisibile === 'function' && !sbFnPaginaVisibile(pageKey)) return false;
+  // Rendimento degli operatori: solo chi pianifica (admin/responsabile).
+  if (SB_PAGINE_RESPONSABILI.includes(pageKey) && !sbCanWrite()) return false;
   return sbRole() !== 'guest' || sbGuestPages().includes(pageKey);
 }
 // Guard da chiamare in cima alle azioni di modifica: blocca l'azione se il ruolo
@@ -3932,7 +3992,9 @@ function sbGuardWrite() {
 }
 
 // Chiavi pagina della Pianificazione Settimanale, stesso ordine/id dei tab in src/head.html
-const PW_TAB_KEYS = ['griglia', 'ferie', 'mappa', 'spostamenti', 'ricerca-squadre', 'autoplan', 'controllo', 'avanzamento', 'meteo-storico', 'doppia'];
+const PW_TAB_KEYS = ['griglia', 'ferie', 'mappa', 'spostamenti', 'ricerca-squadre', 'autoplan', 'controllo', 'avanzamento', 'prestazioni', 'meteo-storico', 'doppia'];
+// Pagine riservate ad admin/responsabile (mai visibili a operatore/guest, nemmeno se assegnate).
+const SB_PAGINE_RESPONSABILI = ['weekly:prestazioni'];
 
 // Mostra/nasconde nav Dashboard/Pianificazione e le singole tab in base alle pagine
 // visibili per il ruolo corrente (rilevante solo per il ruolo 'guest'); se lo schermo/tab
@@ -4262,12 +4324,13 @@ const SB_PAGE_LABELS = {
   'weekly:autoplan': 'Auto-pianifica',
   'weekly:controllo': 'Controllo Produzione',
   'weekly:avanzamento': 'Avanzamento comuni',
+  'weekly:prestazioni': 'Prestazioni operatori',
   'weekly:meteo-storico': 'Storico meteo',
   'weekly:doppia': 'Doppia Week',
   'mappa': 'Mappa (vista d\'insieme)',
 };
 function sbAllPageKeys() {
-  return ['dashboard', ...PW_TAB_KEYS.map(k => 'weekly:' + k), 'mappa'];
+  return ['dashboard', ...PW_TAB_KEYS.map(k => 'weekly:' + k).filter(k => !SB_PAGINE_RESPONSABILI.includes(k)), 'mappa'];
 }
 function sbGuestPagesChecksHtml(checked) {
   return sbAllPageKeys().map(k =>
@@ -5055,6 +5118,7 @@ const SB_FN_FUNZIONI = [
   { gruppo: 'Pianificazione settimanale', chiave: 'weekly:autoplan', label: '🤖 Auto-pianifica', sel: '#pw-tab-autoplan' },
   { gruppo: 'Pianificazione settimanale', chiave: 'weekly:controllo', label: '📊 Controllo produzione', sel: '#pw-tab-controllo' },
   { gruppo: 'Pianificazione settimanale', chiave: 'weekly:avanzamento', label: '📍 Avanzamento comuni', sel: '#pw-tab-avanzamento' },
+  { gruppo: 'Pianificazione settimanale', chiave: 'weekly:prestazioni', label: '⚡ Prestazioni operatori (anche il chip ⚡ in Griglia)', sel: '#pw-tab-prestazioni, .prf-griglia' },
   { gruppo: 'Pianificazione settimanale', chiave: 'weekly:meteo-storico', label: '🌦️ Storico meteo', sel: '#pw-tab-meteo-storico' },
   { gruppo: 'Pianificazione settimanale', chiave: 'weekly:doppia', label: '🔁 Doppia Week', sel: '#pw-tab-doppia' },
   { gruppo: 'Griglia', chiave: 'griglia:strumenti', label: '🔧 Aggiorna strumenti Jira', sel: '#pw-strumenti-refresh, #pw-strumenti-status' },
@@ -14136,9 +14200,9 @@ document.addEventListener('DOMContentLoaded', async () => {
   if (gSort) gSort.addEventListener('change', e => { _ganttCfg.sort = e.target.value; renderGantt(); });
 
   const _dashTabBtns = '#pw-tab-griglia, #pw-tab-ferie, #pw-tab-mappa, #pw-tab-spostamenti, #pw-tab-controllo, #pw-tab-doppia';
-  document.querySelectorAll(`.tab-btn:not(#pw-tab-griglia):not(#pw-tab-ferie):not(#pw-tab-mappa):not(#pw-tab-spostamenti):not(#pw-tab-controllo):not(#pw-tab-doppia):not(#pw-tab-meteo-storico):not(#pw-tab-avanzamento)`).forEach(b => {
+  document.querySelectorAll(`.tab-btn:not(#pw-tab-griglia):not(#pw-tab-ferie):not(#pw-tab-mappa):not(#pw-tab-spostamenti):not(#pw-tab-controllo):not(#pw-tab-doppia):not(#pw-tab-meteo-storico):not(#pw-tab-avanzamento):not(#pw-tab-prestazioni)`).forEach(b => {
     b.onclick = () => {
-      document.querySelectorAll(`.tab-btn:not(#pw-tab-griglia):not(#pw-tab-ferie):not(#pw-tab-mappa):not(#pw-tab-spostamenti):not(#pw-tab-controllo):not(#pw-tab-doppia):not(#pw-tab-meteo-storico):not(#pw-tab-avanzamento)`).forEach(x => x.classList.remove('active'));
+      document.querySelectorAll(`.tab-btn:not(#pw-tab-griglia):not(#pw-tab-ferie):not(#pw-tab-mappa):not(#pw-tab-spostamenti):not(#pw-tab-controllo):not(#pw-tab-doppia):not(#pw-tab-meteo-storico):not(#pw-tab-avanzamento):not(#pw-tab-prestazioni)`).forEach(x => x.classList.remove('active'));
       b.classList.add('active');
       state.activeTab = b.dataset.tab;
       renderCommesse();
@@ -14213,6 +14277,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   document.getElementById('pw-tab-doppia').onclick = () => pwSwitchTab('doppia');
   document.getElementById('pw-tab-meteo-storico').onclick = () => pwSwitchTab('meteo-storico');
   document.getElementById('pw-tab-avanzamento').onclick = () => pwSwitchTab('avanzamento');
+  document.getElementById('pw-tab-prestazioni').onclick = () => pwSwitchTab('prestazioni');
 
   // Carica rubrica geocoding
   _geoCacheLoad();
@@ -16396,6 +16461,37 @@ function pwOpenOpModal(cidx, sidx, oidx) {
     buildList(search.value);
   };
   geoRow.appendChild(btnDw);
+
+  // Rendimento per attività (prestazioni.js, solo admin/responsabile): chip «⚡ 125» accanto
+  // al nome e, a richiesta, i più performanti in cima a parità di disponibilità. Gli indici
+  // si calcolano in sottofondo la prima volta: intanto la lista resta quella normale.
+  const prfOk = typeof prfPuo === 'function' && prfPuo();
+  let ordRend = false;
+  const prfDi = nome => prfOk ? prfIndiceGriglia(nome, commessa, attivitaSquadra, tipoSen) : null;
+  if (prfOk) {
+    const btnRend = document.createElement('button');
+    btnRend.type = 'button';
+    btnRend.className = 'op-modal-skill-btn prf-griglia';
+    btnRend.style.cssText = 'flex:0 0 auto;font-size:13px;padding:6px 12px;';
+    btnRend.dataset.helpKey = 'pw-opmodal-rendimento';
+    const testoRend = () => '⚡ Rendimento in cima' + (prfGrigliaPronta() ? '' : ' (calcolo…)');
+    btnRend.textContent = testoRend();
+    btnRend.title = 'Mette in cima chi rende di più sull\'attività della squadra, a parità di disponibilità';
+    btnRend.onclick = () => {
+      ordRend = !ordRend;
+      btnRend.style.background = ordRend ? '#ecfdf5' : '#fff';
+      btnRend.style.borderColor = ordRend ? '#10b981' : '#cbd5e1';
+      btnRend.style.color = ordRend ? '#047857' : '#475569';
+      btnRend.style.fontWeight = ordRend ? '700' : '400';
+      buildList(search.value);
+    };
+    geoRow.appendChild(btnRend);
+    if (!prfGrigliaPronta()) {
+      prfPreparaGriglia()
+        .then(() => { if (document.body.contains(btnRend)) { btnRend.textContent = testoRend(); buildList(search.value); } })
+        .catch(e => { console.error('prestazioni: indici per la Griglia', e); btnRend.textContent = '⚡ Rendimento non disponibile'; btnRend.disabled = true; });
+    }
+  }
   modal.appendChild(geoRow);
 
   // Seniority: se nella squadra non c'è ancora un senior (primo operatore, o finora solo
@@ -16536,9 +16632,14 @@ function pwOpenOpModal(cidx, sidx, oidx) {
       return 4; // non_disponibile
     };
     const senRango = nome => (serveSenior && opSenioritaPer(nome, tipoSen) === 'senior') ? 0 : 1;
+    const rendimento = new Map();
+    filtrati.forEach(n => rendimento.set(n, prfDi(n)));
+    // Senza dati = 100 (nella norma): in urgenza salgono solo i rendimenti provati.
+    const rendDi = nome => { const x = rendimento.get(nome); return x ? x.op.indice : 100; };
     const ordinati = [...filtrati].sort((a, b) => {
       const dRango = rangoDi(a) - rangoDi(b);
       if (dRango !== 0) return dRango;
+      if (ordRend) { const dRend = rendDi(b) - rendDi(a); if (dRend !== 0) return dRend; }
       const dSen = senRango(a) - senRango(b);
       if (dSen !== 0) return dSen;
       const dComm = (fromStaffing.has(a) ? 0 : 1) - (fromStaffing.has(b) ? 0 : 1);
@@ -16575,6 +16676,7 @@ function pwOpenOpModal(cidx, sidx, oidx) {
         inCommessa ? '<span>✅ in commessa</span>' : '<span>fuori commessa</span>',
         geoLabel ? '<span>📍 ' + esc(geoLabel) + '</span>' : '',
         senBadge,
+        prfOk ? prfChipHtml(rendimento.get(nome)) : '',
         dwBadge,
         fornNome ? '<span class="op-modal-forn" style="background:#e0e7ff;color:#4338ca;border-radius:3px;padding:0 5px;">🏢 ' + esc(fornNome) + '</span>' : ''
       ].filter(Boolean).join('');
@@ -20723,7 +20825,7 @@ function switchScreen(screen) {
 let _pwActiveTab = (function(){ try { return localStorage.getItem('pw_last_tab') || 'griglia'; } catch(_) { return 'griglia'; } })();
 // Ricorda la posizione di scroll di ciascun tab (Griglia/Ferie/Mappa = scroll pagina,
 // Controllo Produzione = scroll interno alla tabella) finché non si fa il refresh.
-let _pwScrollY = { griglia: 0, ferie: 0, mappa: 0, spostamenti: 0, ricerca_squadre: 0, autoplan: 0, controllo: 0, doppia: 0, 'meteo-storico': 0, avanzamento: 0 };
+let _pwScrollY = { griglia: 0, ferie: 0, mappa: 0, spostamenti: 0, ricerca_squadre: 0, autoplan: 0, controllo: 0, doppia: 0, 'meteo-storico': 0, avanzamento: 0, prestazioni: 0 };
 let _cpTableScrollTop = 0;
 
 function pwSwitchTab(tab) {
@@ -20772,6 +20874,7 @@ function pwSwitchTab(tab) {
   const td = document.getElementById('pw-tab-doppia');
   const tms = document.getElementById('pw-tab-meteo-storico');
   const tav = document.getElementById('pw-tab-avanzamento');
+  const tpr = document.getElementById('pw-tab-prestazioni');
   const vg = document.getElementById('pw-view-griglia');
   const vf = document.getElementById('pw-view-ferie');
   const vm = document.getElementById('pw-view-mappa');
@@ -20782,9 +20885,10 @@ function pwSwitchTab(tab) {
   const vd = document.getElementById('pw-view-doppia');
   const vms = document.getElementById('pw-view-meteo-storico');
   const vav = document.getElementById('pw-view-avanzamento');
+  const vpr = document.getElementById('pw-view-prestazioni');
 
-  [tg, tf, tm, ts, trs, tap, tc, td, tms, tav].forEach(t => t && t.classList.remove('active'));
-  [vg, vf, vm, vs, vrs, vap, vc, vd, vms, vav].forEach(v => v && v.classList.add('hidden'));
+  [tg, tf, tm, ts, trs, tap, tc, td, tms, tav, tpr].forEach(t => t && t.classList.remove('active'));
+  [vg, vf, vm, vs, vrs, vap, vc, vd, vms, vav, vpr].forEach(v => v && v.classList.add('hidden'));
 
   if (tab === 'mappa') {
     tm.classList.add('active');
@@ -20853,6 +20957,12 @@ function pwSwitchTab(tab) {
     vav.classList.remove('hidden');
     avRender();
     window.scrollTo(0, _pwScrollY.avanzamento || 0);
+  } else if (tab === 'prestazioni') {
+    // Rendimento operatori (prestazioni.js): periodo e commessa propri, solo admin/responsabile.
+    tpr.classList.add('active');
+    vpr.classList.remove('hidden');
+    prfRender();
+    window.scrollTo(0, _pwScrollY.prestazioni || 0);
   } else {
     tg.classList.add('active');
     vg.classList.remove('hidden');
@@ -40564,6 +40674,22 @@ HELP_TEXTS['#av-refresh'] = 'Rilegge da Supabase la produzione e le ore salvate 
 HELP_TEXTS['av-comune'] = 'Apre il dettaglio di questo comune: un riquadro per ogni attività, con Task Jira, avanzamento, produzione, ore, giorni e il progressivo settimana per settimana.\n\nNell\'elenco ogni comune ha una riga di intestazione (totali del comune nel periodo) e sotto una riga per attività: attività diverse hanno unità e target diversi e non si sommano.';
 HELP_TEXTS['av-sort'] = 'Ordina l\'elenco per questa colonna; un secondo clic inverte l\'ordine. I comuni restano raggruppati: un comune sale se una delle sue attività sale.\n\nL\'ordinamento resta memorizzato solo in questo browser.';
 HELP_TEXTS['#av-q'] = 'Filtra l\'elenco per nome del comune (maiuscole e accenti non contano).';
+// ⚡ Prestazioni operatori
+HELP_TEXTS['#pw-tab-prestazioni'] = 'Apre le Prestazioni operatori: per ogni attività (o tipo di WO) quanto rende ciascun operatore rispetto alla norma, 100. Serve a scegliere i più adatti quando un cantiere è urgente.\n\nLe squadre lavorano quasi sempre in coppia con un solo tablet, quindi la produzione del giorno è della coppia: il contributo del singolo è stimato confrontando le sue giornate con compagni diversi e su comuni diversi. Con poche giornate l\'indice resta vicino a 100.\n\nVisibile solo ad admin e responsabili. Sola lettura: non scrive niente e gli indici non vengono salvati.';
+HELP_TEXTS['#prf-modo-btn'] = 'Sceglie come raggruppare: per attività di ogni commessa (es. Rilievo WO IP · Sinfi) oppure per tipo di WO (WO I.P, WO Fognatura…), che unisce le attività dello stesso tipo anche fra commesse diverse. Ogni attività è comunque confrontata con la sua mediana: unità diverse non si mescolano.\n\nLa scelta resta solo in questo browser.';
+HELP_TEXTS['#prf-commessa-btn'] = 'Limita il calcolo a una commessa, oppure le usa tutte.\n\nLa scelta resta solo in questo browser.';
+HELP_TEXTS['#prf-periodo-btn'] = 'Sceglie le giornate da considerare: tutte, gli ultimi 30/90/180 giorni o un intervallo di date. Oggi non conta mai (la giornata non è finita). Un periodo recente segue meglio chi sta migliorando, ma ha meno giornate e indici meno sicuri.\n\nLa scelta resta solo in questo browser.';
+HELP_TEXTS['#prf-min-btn'] = 'Giornate minime perché un operatore entri in classifica e sia colorato nella matrice. Sotto la soglia l\'indice si vede in grigio, in fondo alla classifica.\n\nLa scelta resta solo in questo browser.';
+HELP_TEXTS['#prf-ver-btn'] = 'Attivo: conta solo le giornate con produzione verificata (dal report di produzione o confermata a mano in Controllo produzione). Spento: usa anche la produzione letta da Jira e non verificata, spesso il segnaposto «1» dell\'operatore, che falsa la resa.\n\nConsigliato attivo. La scelta resta solo in questo browser.';
+HELP_TEXTS['#prf-comune-btn'] = 'Attivo: tiene conto che alcuni comuni rendono di più o di meno per tutti (centri densi, zone sparse) e toglie quell\'effetto, così chi ha lavorato sui comuni più difficili non viene penalizzato.\n\nLa scelta resta solo in questo browser.';
+HELP_TEXTS['#prf-refresh'] = 'Rilegge da Supabase tutte le giornate salvate in Controllo produzione e ricalcola gli indici. Sola lettura.\n\nI dati nuovi arrivano qui solo dopo «Sincronizza da Jira» e il report di produzione in Controllo produzione.';
+HELP_TEXTS['#prf-export'] = 'Scarica un file Excel con gli indici (foglio «Indici») e tutte le giornate usate nel calcolo (foglio «Giornate»), con le opzioni scelte.\n\nContiene dati sul rendimento delle persone: va trattato come riservato.';
+HELP_TEXTS['#prf-q'] = 'Filtra per nome dell\'operatore (maiuscole e accenti non contano).';
+HELP_TEXTS['prf-colonna'] = 'Apre la classifica di questa attività: tutti gli operatori dal più al meno performante, con intervallo probabile, affidabilità e compagno più frequente.';
+HELP_TEXTS['prf-cella'] = 'Indice dell\'operatore su questa attività: 100 = nella norma, 125 = +25%. Il numero piccolo è il numero di giornate; in grigio, sotto la soglia minima. ⚠ = lavora quasi sempre con la stessa persona, quindi il suo contributo non si può separare da quello del compagno.\n\nClic: apre la classifica dell\'attività con le giornate di questo operatore.';
+HELP_TEXTS['prf-back'] = 'Torna alla matrice con tutte le attività.';
+HELP_TEXTS['prf-op'] = 'Apre o chiude le giornate di questo operatore usate nel calcolo: comune, compagni, produzione, ore e resa della giornata rispetto alla mediana.\n\n«Grezzo» è la media semplice delle sue giornate; l\'indice invece toglie l\'effetto dei compagni e dei comuni.';
+HELP_TEXTS['prf-cp'] = 'Apre questa settimana in Controllo produzione, per controllare o correggere ore e produzione della giornata.';
 HELP_TEXTS['#av-f-clear'] = 'Toglie i filtri dell\'elenco (ricerca, attività, stato, mostra). Il periodo resta quello scelto.';
 HELP_TEXTS['#av-export-lista'] = 'Scarica un file Excel con le righe dell\'elenco così come sono filtrate e ordinate.\n\nIl file resta sul tuo computer; non si modifica niente.';
 HELP_TEXTS['av-back'] = 'Torna all\'elenco dei comuni, con i filtri e l\'ordinamento di prima.';
@@ -40735,7 +40861,8 @@ HELP_TEXTS['#pfi-confirm'] = 'Conferma l\'importazione: per gli operatori ricono
 // Doppia week
 HELP_TEXTS['pwDwToggle'] = 'Su una settimana libera assegna a questo operatore una doppia week che parte qui e copre anche la settimana successiva: nella seconda rientra il giovedì e ha riposo compensativo il venerdì. Non si può assegnare se è in ferie in una delle due settimane. Su una settimana già in doppia week (➊ o ➋) toglie l\'intero blocco, dopo una conferma.\n\nScrive solo il calendario Doppia Week condiviso con i colleghi: la Griglia non viene modificata. Se l\'operatore è già impiegato lì, verifica tu rientro e riposo. ⚠ = doppia week di fila, sconsigliata. Serve il ruolo admin o responsabile.';
 // 🔁 Doppia week
-HELP_TEXTS['pw-opmodal-dw'] = 'Mostra solo gli operatori in doppia week nella settimana mostrata (prima o seconda settimana del blocco); il numero dice quanti sono. Clicca di nuovo per togliere il filtro.\n\nFiltra solo la lista. È disattivo se nessuno è in doppia week.';
+HELP_TEXTS['pw-opmodal-rendimento'] = 'Mette in cima, a parità di disponibilità, chi rende di più sull\'attività prevalente della squadra (se non ci sono dati, sul tipo di WO). Il chip ⚡ accanto al nome è l\'indice: 100 = nella norma; il «?» indica pochi dati. Chi non ha dati conta come 100.\n\nGli indici vengono dalla vista «⚡ Prestazioni» e si calcolano la prima volta che apri questa finestra. Cambia solo l\'ordine della lista.';
+HELP_TEXTS['pw-opmodal-dw'] ='Mostra solo gli operatori in doppia week nella settimana mostrata (prima o seconda settimana del blocco); il numero dice quanti sono. Clicca di nuovo per togliere il filtro.\n\nFiltra solo la lista. È disattivo se nessuno è in doppia week.';
 // Skill
 HELP_TEXTS['pw-opmodal-skill'] = 'Filtra l\'elenco a chi ha questa skill in anagrafica. Puoi accenderne più di una: restano solo gli operatori che le hanno tutte.\n\nFiltra solo la lista, non modifica nulla.';
 // — nessuno / rimuovi —
@@ -45622,6 +45749,858 @@ function avEsportaComune() {
   XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(prog), 'Progressivo');
   XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(gg), 'Giorni');
   XLSX.writeFile(wb, ('avanzamento_' + m.commessa + '_' + c.nome).replace(/[^\w\-]+/g, '_') + '.xlsx');
+}
+/* ==================== PRESTAZIONI OPERATORI · MOTORE (prf*) ==================== */
+/* Modulo PURO (niente DOM, niente variabili globali dell'app): riceve le giornate di lavoro
+   già preparate e restituisce un indice di rendimento per operatore. Pensato per essere
+   riusato da Auto-pianifica (priorità «urgente») e da una Edge Function, come autoplan-solver.
+
+   Il problema che risolve. Nelle squadre la produzione del giorno è quasi sempre divisa in
+   parti uguali fra i membri (un tablet per coppia): il Km/Cad «di un operatore» misura la
+   squadra, non lui. Però le coppie ruotano: confrontando le giornate della stessa persona con
+   compagni diversi (e su comuni diversi) si separa il suo contributo.
+
+   Modello. Per ogni osservazione g (una squadra con la stessa composizione su un comune e
+   un'attività in una settimana; peso w_g = numero di giornate):
+     l_g = ln(resa_g / mediana dell'attività)                  resa = produzione per ora-uomo
+     l_g ≈ media(θ_i dei membri) + φ_comune(g) + rumore        varianza del rumore ∝ 1/w_g
+   Perché la settimana e non il giorno: i km della board QField arrivano nel giorno in cui il
+   tablet sincronizza, non in quello del rilievo (una giornata gonfia, la successiva vuota).
+   Sui dati di Sinfi (Rilievo WO IP, nov. 2026) sommare la settimana ha dimezzato lo scarto
+   (0,53 → 0,28 in log) senza cambiare l'ordine (correlazione di rango 0,81); le coppie
+   restano quasi sempre insieme tutta la settimana, quindi non si perde separabilità.
+   θ_i = contributo dell'operatore, φ = difficoltà del comune (facoltativa). Stima ai minimi
+   quadrati con penalità (ridge) che tira θ e φ verso 0: con pochi dati l'indice resta vicino
+   a 100, così una giornata fortunata non porta nessuno in cima. Risolto per discesa a
+   coordinate, ordine fisso: deterministico. Indice = 100 · e^θ (100 = nella norma
+   dell'attività, 125 = +25%).
+   Un'osservazione «individuale» (tablet QField proprio, raro) ha un solo membro e pesa
+   quanto quattro giornate in coppia: la penalità lo gestisce da sola.
+
+   Limite dichiarato: due persone che lavorano SEMPRE insieme non sono separabili; la stima
+   le divide a metà. Per questo ogni operatore porta compagnoTop/quotaTop e il flag
+   `inseparabile`. */
+
+const PRF_OPZ_DEFAULT = {
+  lambdaOp: 2,         // penalità sul contributo dell'operatore (≈ 2 giornate da solo di "prior" a 100)
+  lambdaComune: 4,     // penalità sull'effetto del comune; null/0 = effetto comune spento
+  clip: Math.log(4),   // un'osservazione vale al massimo ×4 o ÷4 rispetto alla mediana
+  iter: 400,
+  tol: 1e-6,
+  z: 1.2816,           // intervallo all'80%
+  quotaInseparabile: 0.8,
+  minGiorniSquadraPerFlag: 3,
+};
+
+function prfMediana(valori) {
+  const v = valori.filter(x => isFinite(x)).sort((a, b) => a - b);
+  if (!v.length) return null;
+  const m = Math.floor(v.length / 2);
+  return v.length % 2 ? v[m] : (v[m - 1] + v[m]) / 2;
+}
+
+/* Mediana pesata: coppie [valore, peso]. */
+function prfMedianaPesata(coppie) {
+  const v = coppie.filter(x => isFinite(x[0]) && x[1] > 0).sort((a, b) => a[0] - b[0]);
+  if (!v.length) return null;
+  const tot = v.reduce((s, x) => s + x[1], 0);
+  let acc = 0;
+  for (let i = 0; i < v.length; i++) {
+    acc += v[i][1];
+    if (acc > tot / 2) return v[i][0];
+    if (acc === tot / 2) return i + 1 < v.length ? (v[i][0] + v[i + 1][0]) / 2 : v[i][0];
+  }
+  return v[v.length - 1][0];
+}
+
+/* Affidabilità di una stima dall'informazione raccolta (somma di 1/n² sulle giornate:
+   una giornata da solo vale 1, una in coppia 0,25). */
+function prfAffidabilita(info) {
+  if (info >= 3.75) return 'alta';      // ≈ 15 giornate in coppia
+  if (info >= 1.5) return 'media';      // ≈ 6 giornate in coppia
+  return 'bassa';
+}
+
+/* osservazioni: [{ pool, att, comune, membri: [nomi], resa, peso (giornate, default 1), individuale, rif }]
+   → { pools: { [pool]: { pool, nOss, nGiorni, mediane: { att: resa }, sd, operatori, comuni } },
+       scartate: n } */
+function prfStima(osservazioni, opzioni) {
+  const o = Object.assign({}, PRF_OPZ_DEFAULT, opzioni || {});
+  const conComune = !!(o.lambdaComune && o.lambdaComune > 0);
+
+  // 1. Mediana della resa per attività (sulle giornate di squadra, se ce ne sono).
+  const perAtt = {};
+  osservazioni.forEach(g => {
+    if (!(g.resa > 0) || !g.membri || !g.membri.length) return;
+    const a = perAtt[g.att] || (perAtt[g.att] = { squadra: [], tutte: [] });
+    const w = g.peso > 0 ? g.peso : 1;
+    a.tutte.push([g.resa, w]);
+    if (!g.individuale) a.squadra.push([g.resa, w]);
+  });
+  const mediane = {};
+  Object.keys(perAtt).forEach(k => {
+    mediane[k] = prfMedianaPesata(perAtt[k].squadra.length ? perAtt[k].squadra : perAtt[k].tutte);
+  });
+
+  // 2. Valore relativo di ogni giornata, raggruppato per pool.
+  const pools = {};
+  let scartate = 0;
+  osservazioni.forEach(g => {
+    const med = mediane[g.att];
+    if (!(g.resa > 0) || !(med > 0) || !g.membri || !g.membri.length) { scartate++; return; }
+    const l = Math.max(-o.clip, Math.min(o.clip, Math.log(g.resa / med)));
+    const p = pools[g.pool] || (pools[g.pool] = { pool: g.pool, oss: [] });
+    p.oss.push({ g, l, n: g.membri.length, w: g.peso > 0 ? g.peso : 1, pred: 0 });
+  });
+
+  const out = {};
+  Object.keys(pools).sort().forEach(k => { out[k] = _prfStimaPool(pools[k], mediane, o, conComune); });
+  return { pools: out, mediane, scartate };
+}
+
+function _prfStimaPool(p, mediane, o, conComune) {
+  const oss = p.oss;
+  const nomi = [...new Set(oss.flatMap(x => x.g.membri))].sort();
+  const ossDi = {};
+  nomi.forEach(n => { ossDi[n] = []; });
+  oss.forEach((x, i) => x.g.membri.forEach(n => ossDi[n].push(i)));
+  const comuni = conComune ? [...new Set(oss.map(x => x.g.comune || ''))].filter(Boolean).sort() : [];
+  const ossCom = {};
+  comuni.forEach(c => { ossCom[c] = []; });
+  if (conComune) oss.forEach((x, i) => { if (x.g.comune) ossCom[x.g.comune].push(i); });
+
+  const theta = {}, phi = {}, den = {};
+  nomi.forEach(n => {
+    theta[n] = 0;
+    den[n] = o.lambdaOp + ossDi[n].reduce((s, i) => s + oss[i].w / (oss[i].n * oss[i].n), 0);
+  });
+  comuni.forEach(c => { phi[c] = 0; });
+
+  for (let it = 0; it < o.iter; it++) {
+    let maxd = 0;
+    nomi.forEach(n => {
+      let num = 0;
+      ossDi[n].forEach(i => { const x = oss[i]; num += x.w * (x.l - x.pred + theta[n] / x.n) / x.n; });
+      const nuovo = num / den[n];
+      const d = nuovo - theta[n];
+      if (d) { ossDi[n].forEach(i => { oss[i].pred += d / oss[i].n; }); theta[n] = nuovo; }
+      if (Math.abs(d) > maxd) maxd = Math.abs(d);
+    });
+    comuni.forEach(c => {
+      const idx = ossCom[c];
+      let num = 0;
+      let pesi = 0;
+      idx.forEach(i => { num += oss[i].w * (oss[i].l - oss[i].pred + phi[c]); pesi += oss[i].w; });
+      const nuovo = num / (o.lambdaComune + pesi);
+      const d = nuovo - phi[c];
+      if (d) { idx.forEach(i => { oss[i].pred += d; }); phi[c] = nuovo; }
+      if (Math.abs(d) > maxd) maxd = Math.abs(d);
+    });
+    if (maxd < o.tol) break;
+  }
+
+  // Varianza per unità di peso (un'osservazione di w giornate ha varianza σ²/w).
+  const sse = oss.reduce((s, x) => s + x.w * (x.l - x.pred) * (x.l - x.pred), 0);
+  const sd = Math.max(0.1, Math.sqrt(sse / Math.max(1, oss.length)));
+
+  const operatori = {};
+  nomi.forEach(n => {
+    const idx = ossDi[n];
+    const compagni = {};
+    let giorni = 0, giorniSquadra = 0, giorniInd = 0, sommaL = 0;
+    idx.forEach(i => {
+      const x = oss[i];
+      giorni += x.w;
+      sommaL += x.w * x.l;
+      if (x.g.individuale) giorniInd += x.w;
+      if (x.n > 1) {
+        giorniSquadra += x.w;
+        x.g.membri.forEach(m => { if (m !== n) compagni[m] = (compagni[m] || 0) + x.w; });
+      }
+    });
+    let compagnoTop = '', nTop = 0;
+    Object.keys(compagni).sort().forEach(m => { if (compagni[m] > nTop) { compagnoTop = m; nTop = compagni[m]; } });
+    const quotaTop = giorniSquadra ? nTop / giorniSquadra : 0;
+    const info = den[n] - o.lambdaOp;
+    const se = sd / Math.sqrt(den[n]);
+    const t = theta[n];
+    operatori[n] = {
+      nome: n,
+      theta: t,
+      indice: 100 * Math.exp(t),
+      basso: 100 * Math.exp(t - o.z * se),
+      alto: 100 * Math.exp(t + o.z * se),
+      grezzo: giorni ? 100 * Math.exp(sommaL / giorni) : null,  // senza togliere compagni e comuni
+      giorni,
+      giorniInd,
+      giorniSquadra,
+      info,
+      affidabilita: prfAffidabilita(info),
+      compagni,
+      compagnoTop,
+      quotaTop,
+      inseparabile: giorniSquadra >= o.minGiorniSquadraPerFlag && quotaTop >= o.quotaInseparabile,
+      oss: idx.map(i => ({ rif: oss[i].g.rif, l: oss[i].l, peso: oss[i].w, membri: oss[i].g.membri, individuale: !!oss[i].g.individuale, comune: oss[i].g.comune, att: oss[i].g.att })),
+    };
+  });
+
+  const comuniOut = {};
+  comuni.forEach(c => { comuniOut[c] = { phi: phi[c], indice: 100 * Math.exp(phi[c]), n: ossCom[c].length }; });
+  const atts = [...new Set(oss.map(x => x.g.att))];
+  const med = {};
+  atts.forEach(a => { med[a] = mediane[a]; });
+  return { pool: p.pool, nOss: oss.length, nGiorni: oss.reduce((s, x) => s + x.w, 0), mediane: med, sd, operatori, comuni: comuniOut };
+}
+/* ==================== PRESTAZIONI OPERATORI (prf*) ==================== */
+/* Tab «⚡ Prestazioni» di Pianificazione Settimanale (since v18.280.0): rendimento di ogni
+   operatore per attività (o per tipo di WO), per scegliere i più adatti quando c'è urgenza.
+   Visibile solo ad admin/responsabile (sbCanSeePage) e nascondibile da «🧩 Funzioni».
+   Sola lettura: non scrive né Supabase né Jira, e non salva gli indici da nessuna parte
+   (restano in memoria nella sessione).
+
+   Dati. Le giornate vengono da controllo_produzione attribuite a comune e attività con lo
+   stesso codice di Avanzamento comuni (_avCalcola: ticket → sottotask della Griglia), così
+   le due viste non possono dare numeri diversi. Un'osservazione = una squadra, un giorno, un
+   comune, un'attività: produzione (Km/Cad, somma dei membri) diviso le ore Jira dei membri
+   sui loro ticket = resa per ora-uomo. Escluse (e contate): produzione non verificata
+   (fonte «jira», di solito il segnaposto «1», se «Solo verificata» è attivo), produzione
+   zero, un membro senza ore o con ore anomale. Oggi e il futuro non contano.
+   Misura individuale: quando nella giornata ci sono ≥2 tablet QField con km propri e ognuno
+   si abbina (qfuAbbina) a un membro diverso, la giornata diventa un'osservazione per
+   membro. Nelle squadre WO c'è quasi sempre un tablet per coppia, quindi è rara: la fonte
+   resta indicata accanto a ogni indice.
+   Il calcolo vero è in prestazioni-core.js (puro).
+
+   Griglia. prfIndiceGriglia() dà alla finestra di scelta operatore l'indice per l'attività
+   prevalente della squadra (poi per il tipo di WO): chip «⚡ 125» e ordinamento «⚡ Rendimento
+   in cima». Il calcolo per la Griglia usa sempre le opzioni di base (tutto il periodo, solo
+   verificata, con effetto comune), non quelle scelte nella tab. */
+
+const PRF_PAGE = 1000;
+const PRF_MAX_PAGES = 40;
+const PRF_PREF_KEY = 'prf_pref_v1';
+const PRF_ORE_MIN = 0.5;           // ore minime di ciascun membro sulla giornata
+const PRF_ORE_MAX = 13;            // oltre: ore anomale
+const PRF_ORE_GIORNATA = 8;        // per mostrare la resa «a giornata»
+const PRF_MIN_GIORNI_COLONNA = 15; // giornate di squadra minime perché un'attività abbia una colonna nella matrice
+const PRF_MIN_GIORNI_CHIP = 3;     // giornate minime per il chip in Griglia
+const PRF_VITA_CACHE_MS = 6 * 3600 * 1000;
+const PRF_FONTI_VERIFICATE = ['report', 'manuale'];
+
+const _prf = {
+  modo: 'att',                     // 'att' = attività della commessa · 'wo' = tipo di WO
+  commessa: '',                    // '' = tutte
+  per: { tipo: 'tutto', dal: '', al: '' },
+  soloVer: true,
+  comune: true,
+  minGiorni: 5,
+  q: '',
+  focus: '',                       // pool aperto in classifica ('' = matrice)
+  aperto: '',                      // operatore espanso nella classifica
+  righe: null,                     // { rows, ts, troncato } (cache di sessione, condivisa con la Griglia)
+  caricando: null,                 // promise del caricamento in corso
+  ris: null,                       // risultato con le opzioni della tab
+  griglia: null,                   // { ts, pools } con le opzioni di base, per la finestra operatore
+  errore: '',
+  uiPronta: false,
+};
+
+(function _prfPrefLoad() {
+  try {
+    const p = JSON.parse(localStorage.getItem(PRF_PREF_KEY) || '{}');
+    if (p.modo === 'att' || p.modo === 'wo') _prf.modo = p.modo;
+    if (typeof p.commessa === 'string') _prf.commessa = p.commessa;
+    if (p.per && p.per.tipo) Object.assign(_prf.per, p.per);
+    if (typeof p.soloVer === 'boolean') _prf.soloVer = p.soloVer;
+    if (typeof p.comune === 'boolean') _prf.comune = p.comune;
+    if ([3, 5, 10, 15].includes(p.minGiorni)) _prf.minGiorni = p.minGiorni;
+  } catch (_) { /* preferenze illeggibili: default */ }
+})();
+
+function _prfPrefSave() {
+  try {
+    localStorage.setItem(PRF_PREF_KEY, JSON.stringify({ modo: _prf.modo, commessa: _prf.commessa, per: _prf.per, soloVer: _prf.soloVer, comune: _prf.comune, minGiorni: _prf.minGiorni }));
+  } catch (_) {}
+}
+
+function prfPuo() {
+  return typeof sbCanSeePage === 'function' && sbCanSeePage('weekly:prestazioni');
+}
+
+/* ----- Periodo ----- */
+
+function _prfIeri() { return _avSpostaIso(_avOggi(), -1); }
+
+function _prfRange(per) {
+  const p = per || _prf.per, ieri = _prfIeri();
+  let dal = null, al = ieri;
+  if (p.tipo === '30' || p.tipo === '90' || p.tipo === '180') dal = _avSpostaIso(_avOggi(), -Number(p.tipo));
+  else if (p.tipo === 'date') { dal = p.dal || null; if (p.al && p.al < ieri) al = p.al; }
+  return { dal, al };
+}
+
+function _prfPerLabel() {
+  const p = _prf.per;
+  if (p.tipo === '30' || p.tipo === '90' || p.tipo === '180') return 'Ultimi ' + p.tipo + ' giorni';
+  if (p.tipo === 'date' && (p.dal || p.al)) return (p.dal ? 'dal ' + _avDataBreve(p.dal) : '') + (p.dal && p.al ? ' ' : '') + (p.al ? 'al ' + _avDataBreve(p.al) : '');
+  return 'Tutto';
+}
+
+/* ----- Dati ----- */
+
+async function _prfCaricaRighe(forza) {
+  if (!forza && _prf.righe) return _prf.righe;
+  if (_prf.caricando) return _prf.caricando;
+  _prf.caricando = (async () => {
+    if (!_sbClient || !_sbUser) return { rows: [], ts: Date.now(), troncato: false };
+    const rows = [];
+    let troncato = false;
+    for (let p = 0; p < PRF_MAX_PAGES; p++) {
+      const { data, error } = await _sbClient
+        .from('controllo_produzione')
+        .select('commessa,' + AV_COLONNE)
+        .order('commessa').order('anno').order('week').order('giorno').order('squadra').order('operatore').order('id')
+        .range(p * PRF_PAGE, p * PRF_PAGE + PRF_PAGE - 1);
+      if (error) throw error;
+      const blocco = data || [];
+      blocco.forEach(r => rows.push(r));
+      if (blocco.length < PRF_PAGE) break;
+      if (p === PRF_MAX_PAGES - 1) troncato = true;
+    }
+    _prf.righe = { rows, ts: Date.now(), troncato };
+    _prf.griglia = null;
+    return _prf.righe;
+  })();
+  try { return await _prf.caricando; }
+  finally { _prf.caricando = null; }
+}
+
+/* Giornate di squadra (osservazioni per prfStima) da tutte le righe di controllo_produzione.
+   opz: { modo, commessa, range, soloVer } → { oss, esclusi, etichette } */
+function prfOsservazioni(rows, opz) {
+  const perCommessa = {};
+  (rows || []).forEach(r => { if (r && r.commessa) (perCommessa[r.commessa] = perCommessa[r.commessa] || []).push(r); });
+  // reportUtenze per giorno+operatore+ticket (per la misura individuale)
+  const ru = {};
+  (rows || []).forEach(r => {
+    const meta = r.km_meta_by_ticket && typeof r.km_meta_by_ticket === 'object' ? r.km_meta_by_ticket : {};
+    Object.keys(meta).forEach(k => {
+      const u = meta[k] && meta[k].reportUtenze;
+      if (u && typeof u === 'object') ru[(r.data_giorno || '') + '|' + r.operatore + '|' + k] = u;
+    });
+  });
+
+  const oss = [];
+  const esclusi = { membroSenzaDati: 0, nonVerificata: 0, produzioneZero: 0, oreMancanti: 0, oreAnomale: 0 };
+  const etichette = {};              // pool -> { label, unita, commessa, attivita }
+  const attEtichette = {};           // att -> { commessa, nome, unita }
+  const r = opz.range || {};
+
+  Object.keys(perCommessa).sort().forEach(commessa => {
+    if (opz.commessa && commessa !== opz.commessa) return;
+    let mod;
+    try { mod = _avCalcola(commessa, perCommessa[commessa]); } catch (e) { console.error('prestazioni: attribuzione ' + commessa, e); return; }
+    Object.values(mod.comuni).forEach(c => {
+      Object.values(c.att || {}).forEach(a => {
+        if (a.servizio || a.nome === AV_SENZA_ATT) return;
+        const att = commessa + '|' + a.key;
+        let pool, label;
+        if (opz.modo === 'wo') {
+          const tipo = woTipoDiAttivita(commessa, a.nome);
+          if (!tipo) return;
+          pool = 'w|' + tipo; label = tipo;
+          if (!etichette[pool]) etichette[pool] = { label, unita: '', commessa: '', attivita: '' };
+        } else {
+          pool = 'a|' + att; label = a.nome;
+          if (!etichette[pool]) etichette[pool] = { label, unita: a.unita, commessa, attivita: a.nome };
+        }
+        attEtichette[att] = { commessa, nome: a.nome, unita: a.unita };
+
+        const gruppi = {};
+        a.voci.forEach(v => {
+          if (r.dal && v.dataISO < r.dal) return;
+          if (r.al && v.dataISO > r.al) return;
+          const k = v.dataISO + '|' + v.squadra;
+          const g = gruppi[k] || (gruppi[k] = { dataISO: v.dataISO, anno: v.anno, week: v.week, squadra: v.squadra, membri: {} });
+          const m = g.membri[v.operatore] || (g.membri[v.operatore] = { km: 0, ore: 0, tickets: [], nonVer: false });
+          m.km += v.km; m.ore += v.ore;
+          if (v.ticket) m.tickets.push(v.ticket);
+          if (v.km && PRF_FONTI_VERIFICATE.indexOf(v.fonte) === -1) m.nonVer = true;
+        });
+
+        // Giornate valide della stessa composizione nella stessa settimana: un'osservazione
+        // sola, pesata col numero di giornate (i km della board arrivano nel giorno in cui il
+        // tablet sincronizza: il giorno da solo è troppo rumoroso, vedi prestazioni-core.js).
+        // Chi era in squadra quel giorno secondo la Griglia: se un membro pianificato non ha
+        // dati (ha dimenticato Jira), la giornata non è «da solo» per l'altro: si scarta.
+        const pianificati = {};
+        a.pian.forEach(p => { const k = p.dataISO + '|' + p.squadra; (pianificati[k] = pianificati[k] || new Set()).add(p.operatore); });
+        const settimane = {};
+        Object.values(gruppi).sort((x, y) => x.dataISO.localeCompare(y.dataISO)).forEach(g => {
+          const nomi = Object.keys(g.membri).sort();
+          const ms = nomi.map(n => g.membri[n]);
+          const P = ms.reduce((s, m) => s + m.km, 0);
+          const H = ms.reduce((s, m) => s + m.ore, 0);
+          const pian = pianificati[g.dataISO + '|' + g.squadra];
+          if (pian && [...pian].some(n => !g.membri[n])) { esclusi.membroSenzaDati++; return; }
+          if (opz.soloVer && ms.some(m => m.nonVer)) { esclusi.nonVerificata++; return; }
+          if (!(P > 0)) { esclusi.produzioneZero++; return; }
+          if (ms.some(m => m.ore < PRF_ORE_MIN)) { esclusi.oreMancanti++; return; }
+          if (ms.some(m => m.ore > PRF_ORE_MAX)) { esclusi.oreAnomale++; return; }
+          const base = { anno: g.anno, week: g.week, squadra: g.squadra, comune: c.nome, commessa, attivita: a.nome, unita: a.unita };
+
+          const ind = nomi.length > 1 ? _prfQuote(g, nomi, ru) : null;
+          if (ind) {
+            nomi.forEach(n => {
+              const kmN = P * ind[n];
+              oss.push({ pool, att, comune: commessa + '|' + c.key, membri: [n], resa: kmN / g.membri[n].ore, peso: 1, individuale: true,
+                rif: Object.assign({}, base, { dataISO: g.dataISO, giorni: [g.dataISO], km: kmN, ore: g.membri[n].ore, membri: nomi, kmSquadra: P, oreSquadra: H }) });
+            });
+            return;
+          }
+          const ks = g.anno + '|' + g.week + '|' + nomi.join('\u0001');
+          const s = settimane[ks] || (settimane[ks] = Object.assign({}, base, { dataISO: g.dataISO, giorni: [], km: 0, ore: 0, membri: nomi }));
+          s.giorni.push(g.dataISO); s.km += P; s.ore += H;
+        });
+        Object.values(settimane).forEach(s => {
+          oss.push({ pool, att, comune: commessa + '|' + c.key, membri: s.membri, resa: s.km / s.ore, peso: s.giorni.length, individuale: s.membri.length === 1, rif: s });
+        });
+      });
+    });
+  });
+  return { oss, esclusi, etichette, attEtichette };
+}
+
+/* Quota di produzione di ciascun membro dai tablet QField, solo se ogni tablet con km si
+   abbina a un solo membro e ogni membro ha il suo: altrimenti null (giornata di squadra). */
+function _prfQuote(g, nomi, ru) {
+  const utenti = {};
+  nomi.forEach(n => g.membri[n].tickets.forEach(k => {
+    const u = ru[g.dataISO + '|' + n + '|' + k];
+    if (!u) return;
+    Object.keys(u).forEach(x => {
+      const km = Number(u[x] && u[x].km) || 0;
+      if (km > (utenti[x] || 0)) utenti[x] = km;
+    });
+  }));
+  const conKm = Object.keys(utenti).filter(u => utenti[u] > 0);
+  if (conKm.length < 2) return null;
+  let abb;
+  try { abb = qfuAbbina(conKm, nomi); } catch (_) { return null; }
+  const kmDi = {};
+  for (const u of conKm) {
+    const pu = abb.perUtente[u];
+    const chi = pu ? pu.nomi.filter(n => nomi.includes(n)) : [];
+    if (chi.length !== 1) return null;
+    kmDi[chi[0]] = (kmDi[chi[0]] || 0) + utenti[u];
+  }
+  if (nomi.some(n => !(kmDi[n] > 0))) return null;
+  const tot = nomi.reduce((s, n) => s + kmDi[n], 0);
+  const quote = {};
+  nomi.forEach(n => { quote[n] = kmDi[n] / tot; });
+  return quote;
+}
+
+function _prfCalcola(rows, opz) {
+  const prep = prfOsservazioni(rows, opz);
+  const stima = prfStima(prep.oss, { lambdaComune: opz.comune ? PRF_OPZ_DEFAULT.lambdaComune : 0 });
+  return Object.assign({ opz }, prep, stima);
+}
+
+/* ----- Griglia: indice per la finestra di scelta operatore ----- */
+
+/* Calcolo con le opzioni di base (entrambi i raggruppamenti), una volta per sessione o
+   dopo PRF_VITA_CACHE_MS. Non blocca: chi lo chiama ridisegna quando la promise si risolve. */
+async function prfPreparaGriglia() {
+  if (!prfPuo()) return null;
+  if (_prf.griglia && Date.now() - _prf.griglia.ts < PRF_VITA_CACHE_MS) return _prf.griglia;
+  if (_prf.righe && Date.now() - _prf.righe.ts > PRF_VITA_CACHE_MS) _prf.righe = null;
+  const dati = await _prfCaricaRighe(false);
+  const base = { commessa: '', range: _prfRange({ tipo: 'tutto' }), soloVer: true, comune: true };
+  const a = _prfCalcola(dati.rows, Object.assign({ modo: 'att' }, base));
+  const w = _prfCalcola(dati.rows, Object.assign({ modo: 'wo' }, base));
+  _prf.griglia = { ts: Date.now(), pools: Object.assign({}, a.pools, w.pools), etichette: Object.assign({}, a.etichette, w.etichette) };
+  return _prf.griglia;
+}
+
+function prfGrigliaPronta() { return !!_prf.griglia; }
+
+/* Indice di un operatore per la squadra aperta in Griglia: prima l'attività più frequente
+   della squadra sulla commessa (nome di catalogo), poi il tipo di WO. null = niente dati. */
+function prfIndiceGriglia(nome, commessa, attivitaElenco, tipoWo) {
+  const g = _prf.griglia;
+  if (!g || !nome) return null;
+  const conta = {};
+  (attivitaElenco || []).forEach(t => {
+    const v = commessa ? caTrova(commessa, t) : null;
+    const k = caNorm(v ? v.nome : t);
+    if (k) conta[k] = (conta[k] || 0) + 1;
+  });
+  const chiavi = Object.keys(conta).sort((x, y) => conta[y] - conta[x] || x.localeCompare(y)).map(k => 'a|' + commessa + '|' + k);
+  if (tipoWo) chiavi.push('w|' + tipoWo);
+  for (const k of chiavi) {
+    const p = g.pools[k];
+    const o = p && p.operatori[nome];
+    if (o && o.giorni >= PRF_MIN_GIORNI_CHIP) return { pool: k, label: (g.etichette[k] || {}).label || '', op: o };
+  }
+  return null;
+}
+
+function prfChipHtml(x) {
+  if (!x) return '';
+  const o = x.op, i = Math.round(o.indice);
+  const col = o.inseparabile ? 'bg-slate-50 text-slate-500 border-slate-200'
+    : i >= 110 ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+    : i <= 90 ? 'bg-rose-50 text-rose-700 border-rose-200' : 'bg-slate-50 text-slate-600 border-slate-200';
+  const tit = 'Rendimento su ' + x.label + ': ' + i + ' (100 = nella norma) · ' + o.giorni + ' giornate · affidabilità ' + o.affidabilita +
+    (o.inseparabile ? ' · lavora quasi sempre con ' + o.compagnoTop + ': non separabile' : '');
+  return '<span class="prf-griglia text-[9px] ' + col + ' border px-1 rounded" title="' + esc(tit) + '">⚡ ' + i + (o.affidabilita === 'bassa' ? '?' : '') + '</span>';
+}
+
+/* ----- Render della tab ----- */
+
+function _prfInitUi() {
+  if (_prf.uiPronta) return;
+  const view = document.getElementById('pw-view-prestazioni');
+  if (!view) return;
+  _prf.uiPronta = true;
+  const q = document.getElementById('prf-q');
+  if (q) q.oninput = () => { _prf.q = q.value; _prfRenderCorpo(); };
+  const azioni = {
+    'prf-modo-btn': _prfScegliModo,
+    'prf-commessa-btn': _prfScegliCommessa,
+    'prf-periodo-btn': _prfScegliPeriodo,
+    'prf-min-btn': _prfScegliMin,
+    'prf-ver-btn': () => { _prf.soloVer = !_prf.soloVer; _prfPrefSave(); _prfRicalcola(); },
+    'prf-comune-btn': () => { _prf.comune = !_prf.comune; _prfPrefSave(); _prfRicalcola(); },
+    'prf-refresh': () => prfRender(true),
+    'prf-export': prfEsporta,
+  };
+  Object.keys(azioni).forEach(id => { const el = document.getElementById(id); if (el) el.onclick = () => azioni[id](); });
+  view.addEventListener('click', ev => {
+    const el = ev.target.closest('[data-prf-pool],[data-prf-cella],[data-prf-op],[data-prf-back],[data-prf-cp]');
+    if (!el || !view.contains(el)) return;
+    if (el.hasAttribute('data-prf-cp')) {
+      const p = el.getAttribute('data-prf-cp').split('|');
+      pwAnno = Number(p[0]); pwWeek = Number(p[1]);
+      pwSwitchTab('controllo');
+    } else if (el.hasAttribute('data-prf-back')) {
+      _prf.focus = ''; _prf.aperto = ''; _prfRenderCorpo(); window.scrollTo(0, 0);
+    } else if (el.hasAttribute('data-prf-cella')) {
+      const p = el.getAttribute('data-prf-cella').split('\u0001');
+      _prf.focus = p[0]; _prf.aperto = p[1]; _prfRenderCorpo(); window.scrollTo(0, 0);
+    } else if (el.hasAttribute('data-prf-pool')) {
+      _prf.focus = el.getAttribute('data-prf-pool'); _prf.aperto = ''; _prfRenderCorpo(); window.scrollTo(0, 0);
+    } else if (el.hasAttribute('data-prf-op')) {
+      const n = el.getAttribute('data-prf-op');
+      _prf.aperto = _prf.aperto === n ? '' : n;
+      _prfRenderCorpo();
+    }
+  });
+}
+
+async function prfRender(forza) {
+  _prfInitUi();
+  const corpo = document.getElementById('prf-corpo');
+  if (!prfPuo()) { if (corpo) corpo.innerHTML = '<div class="av-vuoto">Vista riservata ad admin e responsabili.</div>'; return; }
+  _prfRenderBarra();
+  if (forza || !_prf.righe) {
+    _prfStatus('⏳ Leggo la produzione di tutte le commesse…');
+    if (corpo && !_prf.ris) corpo.innerHTML = '<div class="av-vuoto">Caricamento…</div>';
+  }
+  try {
+    await _prfCaricaRighe(!!forza);
+    _prf.errore = '';
+  } catch (e) {
+    _prf.errore = 'Produzione non caricata: ' + (e.message || String(e));
+  }
+  if (_pwActiveTab !== 'prestazioni') return;
+  _prfRicalcola();
+}
+
+function _prfRicalcola() {
+  if (_prf.errore || !_prf.righe) { _prfStatus(''); _prfRenderBarra(); _prfRenderCorpo(); return; }
+  const commesse = _prfCommesse();
+  if (_prf.commessa && !commesse.includes(_prf.commessa)) _prf.commessa = '';
+  const opz = { modo: _prf.modo, commessa: _prf.commessa, range: _prfRange(), soloVer: _prf.soloVer, comune: _prf.comune };
+  _prf.ris = _prfCalcola(_prf.righe.rows, opz);
+  if (_prf.focus && !_prf.ris.pools[_prf.focus]) { _prf.focus = ''; _prf.aperto = ''; }
+  _prfStatus('');
+  _prfRenderBarra();
+  _prfRenderCorpo();
+}
+
+function _prfCommesse() {
+  const s = new Set();
+  ((_prf.righe && _prf.righe.rows) || []).forEach(r => { if (r.commessa) s.add(r.commessa); });
+  return [...s].sort((a, b) => a.localeCompare(b));
+}
+
+function _prfStatus(txt) {
+  const el = document.getElementById('prf-status');
+  if (!el) return;
+  if (txt) { el.textContent = txt; return; }
+  el.textContent = _prf.righe && _prf.righe.ts ? 'Dati letti alle ' + new Date(_prf.righe.ts).toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' }) : '';
+}
+
+function _prfRenderBarra() {
+  _avChip('prf-modo-btn', 'Per', _prf.modo === 'wo' ? 'Tipo di WO' : 'Attività', false);
+  _avChip('prf-commessa-btn', 'Commessa', _prf.commessa || 'Tutte', !!_prf.commessa);
+  _avChip('prf-periodo-btn', 'Periodo', _prfPerLabel(), _prf.per.tipo !== 'tutto');
+  _avChip('prf-min-btn', 'Min. giornate', String(_prf.minGiorni), _prf.minGiorni !== 5);
+  const t = (id, on, testo) => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.innerHTML = (on ? '☑ ' : '☐ ') + esc(testo);
+    el.classList.toggle('on', on);
+  };
+  t('prf-ver-btn', _prf.soloVer, 'Solo produzione verificata');
+  t('prf-comune-btn', _prf.comune, 'Tiene conto del comune');
+}
+
+function _prfColore(i, debole) {
+  if (debole) return '';
+  const d = Math.log(i / 100);
+  const a = Math.min(1, Math.abs(d) / Math.log(1.4));
+  if (Math.abs(d) < Math.log(1.04)) return '';
+  return d > 0 ? 'background:rgba(16,185,129,' + (0.12 + 0.5 * a).toFixed(2) + ')' : 'background:rgba(244,63,94,' + (0.1 + 0.42 * a).toFixed(2) + ')';
+}
+
+function _prfNum(n, dec) { return _avNum(n, dec); }
+
+function _prfPoolLabel(key) {
+  const e = (_prf.ris && _prf.ris.etichette[key]) || {};
+  return e.label || key;
+}
+
+function _prfPoolSub(key) {
+  const e = (_prf.ris && _prf.ris.etichette[key]) || {};
+  return !_prf.commessa && e.commessa ? e.commessa : '';
+}
+
+function _prfColonne() {
+  const r = _prf.ris;
+  return Object.keys(r.pools).filter(k => r.pools[k].nGiorni >= PRF_MIN_GIORNI_COLONNA)
+    .sort((x, y) => r.pools[y].nGiorni - r.pools[x].nGiorni || x.localeCompare(y));
+}
+
+function _prfRenderCorpo() {
+  const box = document.getElementById('prf-corpo');
+  if (!box) return;
+  const q = document.getElementById('prf-q');
+  if (q && q.value !== _prf.q) q.value = _prf.q;
+  if (_prf.errore) { box.innerHTML = '<div class="av-vuoto av-err">' + esc(_prf.errore) + '</div>'; return; }
+  if (!_prf.ris) { box.innerHTML = '<div class="av-vuoto">Caricamento…</div>'; return; }
+  box.innerHTML = _prf.focus ? _prfHtmlClassifica(_prf.focus) : _prfHtmlMatrice();
+}
+
+function _prfEsclusiHtml() {
+  const e = _prf.ris.esclusi;
+  const pezzi = [];
+  if (e.membroSenzaDati) pezzi.push(e.membroSenzaDati + ' con un membro della squadra (da Griglia) senza dati in Controllo produzione');
+  if (e.nonVerificata) pezzi.push(e.nonVerificata + ' con produzione non verificata');
+  if (e.produzioneZero) pezzi.push(e.produzioneZero + ' senza produzione');
+  if (e.oreMancanti) pezzi.push(e.oreMancanti + ' con un membro senza ore Jira');
+  if (e.oreAnomale) pezzi.push(e.oreAnomale + ' con ore anomale (>' + PRF_ORE_MAX + ' h)');
+  return pezzi.length ? '<p class="av-nota" style="padding:6px 12px">Giornate di squadra escluse: ' + esc(pezzi.join(', ')) + '.</p>' : '';
+}
+
+function _prfHtmlMatrice() {
+  const r = _prf.ris;
+  const cols = _prfColonne();
+  const nascoste = Object.keys(r.pools).length - cols.length;
+  const n = document.getElementById('prf-n');
+  if (!cols.length) {
+    if (n) n.textContent = '';
+    return '<div class="av-vuoto">Nessuna attività con almeno ' + PRF_MIN_GIORNI_COLONNA + ' giornate di squadra con queste opzioni.</div>' + _prfEsclusiHtml();
+  }
+  const qn = caNorm(_prf.q);
+  const nomi = new Set();
+  cols.forEach(k => Object.keys(r.pools[k].operatori).forEach(o => nomi.add(o)));
+  const righe = [...nomi].filter(o => !qn || caNorm(o).indexOf(qn) !== -1).sort((a, b) => a.localeCompare(b));
+  if (n) n.textContent = righe.length + ' operatori · ' + cols.length + ' ' + (_prf.modo === 'wo' ? 'tipi di WO' : 'attività');
+
+  let h = '<div class="prf-tw"><table class="av-t prf-mat"><thead><tr><th class="prf-mat-op">Operatore</th>' + cols.map(k => {
+    const sub = _prfPoolSub(k);
+    return '<th class="prf-mat-col" data-prf-pool="' + esc(k) + '" data-help-key="prf-colonna" title="Apri la classifica di ' + esc(_prfPoolLabel(k)) + '">' +
+      esc(_prfPoolLabel(k)) + (sub ? '<small>' + esc(sub) + '</small>' : '') + '<small>' + r.pools[k].nGiorni + ' gg squadra</small></th>';
+  }).join('') + '</tr></thead><tbody>';
+  righe.forEach(o => {
+    h += '<tr><td class="prf-mat-op">' + esc(o) + '</td>' + cols.map(k => {
+      const x = r.pools[k].operatori[o];
+      if (!x) return '<td></td>';
+      const debole = x.giorni < _prf.minGiorni;
+      const tit = Math.round(x.indice) + ' · ' + x.giorni + ' giornate' + (x.giorniInd ? ' (' + x.giorniInd + ' individuali)' : '') + ' · affidabilità ' + x.affidabilita +
+        (x.inseparabile ? ' · quasi sempre con ' + x.compagnoTop : '');
+      return '<td class="prf-cella' + (debole ? ' prf-debole' : '') + '" style="' + _prfColore(x.indice, debole || x.inseparabile) + '" data-prf-cella="' + esc(k + '\u0001' + o) + '" data-help-key="prf-cella" title="' + esc(tit) + '">' +
+        (debole ? '<span class="av-muted">' + x.giorni + ' gg</span>' : '<b>' + Math.round(x.indice) + '</b>' + (x.inseparabile ? ' <span title="Lavora quasi sempre con ' + esc(x.compagnoTop) + ': indice non separabile">⚠</span>' : '') + '<small>' + x.giorni + '</small>') + '</td>';
+    }).join('') + '</tr>';
+  });
+  h += '</tbody></table></div>';
+  h += '<p class="av-nota" style="padding:6px 12px">100 = resa nella norma dell\'attività (mediana). Verde sopra, rosso sotto; in grigio chi ha meno di ' + _prf.minGiorni + ' giornate. Il numero piccolo è il numero di giornate. Clicca un\'intestazione per la classifica, una cella per il dettaglio.' +
+    (nascoste > 0 ? ' ' + nascoste + ' ' + (_prf.modo === 'wo' ? 'tipi' : 'attività') + ' con meno di ' + PRF_MIN_GIORNI_COLONNA + ' giornate di squadra non sono mostrati.' : '') + '</p>';
+  return h + _prfEsclusiHtml();
+}
+
+/* Barra dell'indice su scala logaritmica 50–200, con l'intervallo probabile. */
+function _prfBarra(o) {
+  const pos = v => Math.max(0, Math.min(100, Math.log(Math.max(1, v) / 50) / Math.log(4) * 100));
+  const col = o.inseparabile ? '#94a3b8' : o.indice >= 104 ? '#059669' : o.indice <= 96 ? '#e11d48' : '#64748b';
+  return '<div class="prf-bar"><div class="prf-bar-c"></div>' +
+    (o.inseparabile ? '' : '<div class="prf-bar-int" style="left:' + pos(o.basso).toFixed(1) + '%;width:' + Math.max(0.5, pos(o.alto) - pos(o.basso)).toFixed(1) + '%;background:' + col + '"></div>') +
+    '<div class="prf-bar-p" style="left:' + pos(o.indice).toFixed(1) + '%;background:' + col + '"></div></div>';
+}
+
+function _prfMedianaTesto(p) {
+  const r = _prf.ris;
+  const atts = Object.keys(p.mediane);
+  if (atts.length !== 1) return atts.length + ' attività, ognuna confrontata con la sua mediana';
+  const e = r.attEtichette[atts[0]] || {};
+  return 'mediana ' + _prfNum(p.mediane[atts[0]] * PRF_ORE_GIORNATA, 2) + ' ' + esc(e.unita || '') + ' per giornata-uomo da ' + PRF_ORE_GIORNATA + ' h';
+}
+
+function _prfHtmlClassifica(key) {
+  const r = _prf.ris, p = r.pools[key];
+  if (!p) return '';
+  const qn = caNorm(_prf.q);
+  const tutti = Object.values(p.operatori).filter(o => !qn || caNorm(o.nome).indexOf(qn) !== -1);
+  const ok = tutti.filter(o => o.giorni >= _prf.minGiorni).sort((a, b) => b.indice - a.indice || a.nome.localeCompare(b.nome));
+  const pochi = tutti.filter(o => o.giorni < _prf.minGiorni).sort((a, b) => b.giorni - a.giorni || a.nome.localeCompare(b.nome));
+  const n = document.getElementById('prf-n');
+  if (n) n.textContent = ok.length + ' in classifica';
+  const sub = _prfPoolSub(key);
+  const nComuni = Object.keys(p.comuni).length || new Set(Object.values(p.operatori).flatMap(o => o.oss.map(x => x.comune))).size;
+
+  let h = '<div class="av-card av-head">' +
+    '<button type="button" class="av-btn" data-prf-back="1" data-help-key="prf-back">← Tutte le attività</button>' +
+    '<div class="av-head-t"><div class="av-titolo">⚡ ' + esc(_prfPoolLabel(key)) + '</div><div class="av-sub">' + (sub ? esc(sub) + ' · ' : '') +
+    p.nGiorni + ' giornate di squadra · ' + nComuni + ' comuni · ' + _prfMedianaTesto(p) + ' · periodo: ' + esc(_prfPerLabel()) + '</div></div></div>';
+
+  h += '<div class="av-sintesi prf-spiega">Indice 100 = resa nella norma. Calcolato <b>togliendo l\'effetto dei compagni</b> (le coppie ruotano: si confronta la stessa persona con compagni diversi)' +
+    (_prf.comune ? ' e <b>della difficoltà dei comuni</b>' : '') + '. Con poche giornate l\'indice resta vicino a 100. La barra va da 50 a 200; la fascia è l\'intervallo probabile.</div>';
+
+  h += '<div class="prf-tw"><table class="av-t prf-cl"><thead><tr><th class="r">#</th><th>Operatore</th><th class="r">Indice</th><th style="min-width:180px">50 · 100 · 200</th><th>Intervallo</th><th class="r">Giornate</th><th>Affidabilità</th><th>Compagno più frequente</th><th class="r" title="Media semplice delle sue giornate, senza togliere compagni e comuni">Grezzo</th></tr></thead><tbody>';
+  const riga = (o, pos) => {
+    const aperto = _prf.aperto === o.nome;
+    let t = '<tr class="av-row-click' + (aperto ? ' av-aperta' : '') + (pos ? '' : ' prf-pochi') + '" data-prf-op="' + esc(o.nome) + '" data-help-key="prf-op">' +
+      '<td class="r av-muted">' + (pos || '') + '</td>' +
+      '<td><span class="av-chev">' + (aperto ? '▾' : '▸') + '</span> <b>' + esc(o.nome) + '</b></td>' +
+      '<td class="r"><b class="prf-ind">' + Math.round(o.indice) + '</b></td>' +
+      '<td>' + _prfBarra(o) + '</td>' +
+      '<td class="av-muted">' + (o.inseparabile ? 'non separabile' : Math.round(o.basso) + '–' + Math.round(o.alto)) + '</td>' +
+      '<td class="r">' + o.giorni + (o.giorniInd ? ' <span class="av-muted" title="Giornate con tablet proprio">(' + o.giorniInd + ' ind.)</span>' : '') + '</td>' +
+      '<td><span class="prf-aff prf-aff-' + o.affidabilita + '">' + o.affidabilita + '</span></td>' +
+      '<td>' + (o.compagnoTop ? esc(o.compagnoTop) + ' <span class="av-muted">' + Math.round(o.quotaTop * 100) + '% delle giornate</span>' + (o.inseparabile ? ' <span class="av-warn" title="Lavora quasi sempre con questa persona: il contributo dei due non si può separare">⚠</span>' : '') : '<span class="av-muted">da solo</span>') + '</td>' +
+      '<td class="r av-muted">' + (o.grezzo != null ? Math.round(o.grezzo) : '') + '</td></tr>';
+    if (aperto) t += _prfHtmlGiornate(o);
+    return t;
+  };
+  ok.forEach((o, i) => { h += riga(o, i + 1); });
+  if (pochi.length) {
+    h += '<tr class="prf-sez"><td colspan="9">Meno di ' + _prf.minGiorni + ' giornate: non in classifica</td></tr>';
+    pochi.forEach(o => { h += riga(o, 0); });
+  }
+  if (!ok.length && !pochi.length) h += '<tr><td colspan="9" class="av-vuoto">Nessun operatore.</td></tr>';
+  h += '</tbody></table></div>';
+  return h + _prfEsclusiHtml();
+}
+
+function _prfHtmlGiornate(o) {
+  const righe = o.oss.slice().sort((a, b) => b.rif.dataISO.localeCompare(a.rif.dataISO));
+  const wo = _prf.modo === 'wo';
+  let h = '<tr class="prf-giorni"><td></td><td colspan="8"><table class="av-t prf-gg"><thead><tr><th>Settimana</th><th>Comune</th>' + (wo ? '<th>Attività</th>' : '') +
+    '<th>Con</th><th class="r">Produzione</th><th class="r">Ore-uomo</th><th class="r">Resa / ' + PRF_ORE_GIORNATA + ' h</th><th class="r">Rispetto alla mediana</th><th></th></tr></thead><tbody>';
+  righe.forEach(x => {
+    const f = x.rif;
+    const rel = Math.exp(x.l) * 100;
+    const resa = f.ore > 0 ? f.km / f.ore * PRF_ORE_GIORNATA : 0;   // per giornata-uomo
+    const con = (f.membri || []).filter(m => m !== o.nome);
+    const gg = f.giorni || [f.dataISO];
+    h += '<tr><td title="' + esc(gg.map(d => _avData(d, true)).join(', ')) + '">' + esc(_avWeekLabel(f.anno, f.week)) + ' <span class="av-muted">' + gg.length + ' gg</span></td><td>' + esc(f.comune) + '</td>' + (wo ? '<td>' + esc(f.attivita) + '</td>' : '') +
+      '<td>' + (x.individuale && f.kmSquadra != null ? '<span title="Misura individuale dal tablet QField">📟 ' : '<span>') + esc(con.join(', ') || 'da solo') + '</span></td>' +
+      '<td class="r">' + _prfNum(f.km, 3) + ' <span class="av-muted">' + esc(f.unita || '') + '</span></td>' +
+      '<td class="r">' + _prfNum(f.ore, 1) + '</td>' +
+      '<td class="r">' + _prfNum(resa, 2) + '</td>' +
+      '<td class="r" style="' + _prfColore(rel, false) + '">' + Math.round(rel) + '</td>' +
+      '<td><button type="button" class="av-link" data-prf-cp="' + esc(f.anno + '|' + f.week) + '" data-help-key="prf-cp" title="Apri questa settimana in Controllo Produzione">↗</button></td></tr>';
+  });
+  h += '</tbody></table>';
+  return h + '<div class="av-nota">Una riga = la stessa squadra sullo stesso comune nella stessa settimana: produzione e ore sono sommate sulle giornate valide (passa il mouse sulla settimana per vederle); 📟 = giornata misurata sul tablet della persona. «Rispetto alla mediana» è la resa così com\'è, prima di togliere compagni e comuni.</div></td></tr>';
+}
+
+/* ----- Scelte ----- */
+
+async function _prfScegliModo() {
+  const v = await _avScegli('Raggruppa per', [
+    { v: 'att', label: 'Attività', sub: 'una colonna per attività di ciascuna commessa (es. Rilievo WO IP · Sinfi)' },
+    { v: 'wo', label: 'Tipo di WO', sub: 'WO I.P, WO Fognatura, … — unisce le attività dello stesso tipo anche fra commesse' },
+  ], _prf.modo);
+  if (v == null || v === _prf.modo) return;
+  _prf.modo = v; _prf.focus = ''; _prf.aperto = ''; _prfPrefSave(); _prfRicalcola();
+}
+
+async function _prfScegliCommessa() {
+  const v = await _avScegli('Commessa', [{ v: '', label: 'Tutte le commesse' }].concat(_prfCommesse().map(c => ({ v: c, label: c }))), _prf.commessa);
+  if (v == null || v === _prf.commessa) return;
+  _prf.commessa = v; _prf.focus = ''; _prf.aperto = ''; _prfPrefSave(); _prfRicalcola();
+}
+
+async function _prfScegliMin() {
+  const v = await _avScegli('Giornate minime per entrare in classifica', [3, 5, 10, 15].map(n => ({ v: String(n), label: n + ' giornate' })), String(_prf.minGiorni));
+  if (v == null) return;
+  _prf.minGiorni = Number(v); _prfPrefSave(); _prfRenderBarra(); _prfRenderCorpo();
+}
+
+async function _prfScegliPeriodo() {
+  const p = _prf.per;
+  const opz = [
+    { v: 'tutto', label: 'Tutto', sub: 'tutte le giornate in Controllo Produzione' },
+    { v: '30', label: 'Ultimi 30 giorni' },
+    { v: '90', label: 'Ultimi 90 giorni' },
+    { v: '180', label: 'Ultimi 180 giorni' },
+  ];
+  const pr = _avScegli('Periodo', opz, p.tipo === 'date' ? '' : p.tipo);
+  const body = document.getElementById('av-pick-body');
+  body.insertAdjacentHTML('beforeend', '<div class="av-pick-date"><div class="av-pick-sez" style="padding-left:0">Intervallo di date</div>' +
+    '<div class="av-pick-date-r"><label>Dal <input type="date" id="prf-per-dal" value="' + esc(p.tipo === 'date' ? p.dal : '') + '"></label>' +
+    '<label>Al <input type="date" id="prf-per-al" value="' + esc(p.tipo === 'date' ? p.al : '') + '"></label>' +
+    '<button type="button" id="prf-per-applica" class="av-btn av-btn-pri" data-help-key="av-per-applica">Applica</button></div></div>');
+  document.getElementById('prf-per-applica').onclick = () => {
+    const dal = document.getElementById('prf-per-dal').value, al = document.getElementById('prf-per-al').value;
+    if (!dal && !al) return;
+    _avModalChiudi(dal && al && dal > al ? 'd|' + al + '|' + dal : 'd|' + dal + '|' + al);
+  };
+  const v = await pr;
+  if (v == null) return;
+  if (v.indexOf('d|') === 0) { const x = v.split('|'); _prf.per = { tipo: 'date', dal: x[1], al: x[2] }; }
+  else _prf.per = { tipo: v, dal: '', al: '' };
+  _prfPrefSave(); _prfRicalcola();
+}
+
+/* ----- Export ----- */
+
+function prfEsporta() {
+  const r = _prf.ris;
+  if (!r) return;
+  if (typeof XLSX === 'undefined') { showAlertModal('Libreria Excel non disponibile.'); return; }
+  const ind = [['Periodo', _prfPerLabel(), 'Raggruppato per', _prf.modo === 'wo' ? 'Tipo di WO' : 'Attività', 'Solo verificata', _prf.soloVer ? 'sì' : 'no', 'Effetto comune', _prf.comune ? 'sì' : 'no'], [],
+    ['Attività / tipo', 'Commessa', 'Operatore', 'Indice', 'Intervallo da', 'Intervallo a', 'Giornate', 'Di cui individuali', 'Affidabilità', 'Compagno più frequente', 'Quota con lui %', 'Non separabile', 'Grezzo']];
+  const gg = [['Attività / tipo', 'Operatore', 'Settimana', 'Anno', 'Giornate', 'Giorni', 'Comune', 'Attività', 'Squadra', 'Con', 'Produzione', 'Unità', 'Ore-uomo', 'Rispetto alla mediana', 'Individuale']];
+  Object.keys(r.pools).sort((x, y) => _prfPoolLabel(x).localeCompare(_prfPoolLabel(y))).forEach(k => {
+    const p = r.pools[k], lab = _prfPoolLabel(k), comm = ((r.etichette[k] || {}).commessa) || '';
+    Object.values(p.operatori).sort((a, b) => b.indice - a.indice).forEach(o => {
+      ind.push([lab, comm, o.nome, Math.round(o.indice), o.inseparabile ? '' : Math.round(o.basso), o.inseparabile ? '' : Math.round(o.alto), o.giorni, o.giorniInd, o.affidabilita,
+        o.compagnoTop, o.compagnoTop ? Math.round(o.quotaTop * 100) : '', o.inseparabile ? 'sì' : '', o.grezzo != null ? Math.round(o.grezzo) : '']);
+      o.oss.forEach(x => {
+        const f = x.rif;
+        gg.push([lab, o.nome, f.week, f.anno, (f.giorni || [f.dataISO]).length, (f.giorni || [f.dataISO]).join(' '), f.comune, f.attivita, f.squadra, (f.membri || []).filter(m => m !== o.nome).join(', '), f.km, f.unita || '', f.ore, Math.round(Math.exp(x.l) * 100), x.individuale ? 'sì' : '']);
+      });
+    });
+  });
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(ind), 'Indici');
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(gg), 'Giornate');
+  XLSX.writeFile(wb, ('prestazioni_operatori' + (_prf.commessa ? '_' + _prf.commessa : '')).replace(/[^\w\-]+/g, '_') + '.xlsx');
 }
 /* ===================== ASSISTENTE AI (widget flottante) ===================== */
 // Widget di domande e risposte in sola lettura sui dati dell'app (operatori,

@@ -321,6 +321,7 @@
   #pw-tab-controllo        { --pwt-bg: #ecf3f3; --pwt-bg-hover: #d8e8e8; --pwt-ink: #33696b; }
   #pw-tab-meteo-storico    { --pwt-bg: #edf2f6; --pwt-bg-hover: #dae5ee; --pwt-ink: #3d6380; }
   #pw-tab-avanzamento      { --pwt-bg: #eef5f0; --pwt-bg-hover: #dcebe0; --pwt-ink: #2f6a46; }
+  #pw-tab-prestazioni      { --pwt-bg: #f6f3e9; --pwt-bg-hover: #ece5cf; --pwt-ink: #74602a; }
   #pw-tab-doppia           { --pwt-bg: #f5eff0; --pwt-bg-hover: #eadcdf; --pwt-ink: #7a4852; }
   .commessa-card summary { outline: none; }
   .commessa-card summary::-webkit-details-marker { display: none; }
@@ -1628,6 +1629,35 @@
   .av-ind { padding-left: 26px !important; color: #475569; }
   .av-futuro td { color: #94a3b8; }
   .av-senza td { background: #fffbeb; }
+  /* Prestazioni operatori (prf*) */
+  .prf-tw { overflow: auto; max-height: 70vh; }
+  .prf-mat th.prf-mat-col { cursor: pointer; text-align: center; white-space: normal; min-width: 92px; max-width: 140px; vertical-align: bottom; line-height: 1.25; }
+  .prf-mat th.prf-mat-col:hover { color: #0f766e; background: #f0fdfa; }
+  .prf-mat th small { display: block; font-weight: 400; color: #94a3b8; font-size: 10px; }
+  .prf-mat .prf-mat-op { position: sticky; left: 0; background: #fff; z-index: 2; white-space: nowrap; font-weight: 600; color: #334155; }
+  .prf-mat thead .prf-mat-op { background: #f8fafc; z-index: 3; }
+  .prf-cella { text-align: center; cursor: pointer; border-left: 1px solid #f1f5f9; }
+  .prf-cella:hover { outline: 2px solid #0d9488; outline-offset: -2px; }
+  .prf-cella b { font-size: 14px; color: #0f172a; }
+  .prf-cella small { display: block; font-size: 9px; color: #64748b; line-height: 1; }
+  .prf-debole { background: #fafafa; }
+  .prf-bar { position: relative; height: 14px; background: #f1f5f9; border-radius: 999px; min-width: 160px; }
+  .prf-bar-c { position: absolute; left: 50%; top: -2px; bottom: -2px; width: 1px; background: #94a3b8; }
+  .prf-bar-int { position: absolute; top: 4px; height: 6px; border-radius: 999px; opacity: .3; }
+  .prf-bar-p { position: absolute; top: 2px; width: 10px; height: 10px; margin-left: -5px; border-radius: 999px; border: 2px solid #fff; box-shadow: 0 0 0 1px rgba(15,23,42,.15); }
+  .prf-ind { font-size: 15px; }
+  .prf-aff { font-size: 11px; padding: 1px 7px; border-radius: 999px; }
+  .prf-aff-alta { background: #dcfce7; color: #166534; }
+  .prf-aff-media { background: #fef9c3; color: #854d0e; }
+  .prf-aff-bassa { background: #f1f5f9; color: #64748b; }
+  .prf-pochi td { color: #94a3b8; }
+  .prf-pochi .prf-ind { color: #94a3b8; }
+  .prf-sez td { background: #f8fafc; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .04em; color: #94a3b8; padding: 10px 8px 4px; }
+  .prf-giorni > td { background: #fcfcfd; padding: 4px 8px 12px; }
+  .prf-gg { font-size: 12px; }
+  .prf-gg th { position: static; }
+  .prf-spiega { font-size: 13px; color: #475569; }
+  .prf-toggle { font-size: 13px; }
   .ms-tbl { width: 100%; border-collapse: separate; border-spacing: 0; font-size: 13px; color: #1e293b; }
   .ms-tbl thead th { position: sticky; top: 0; z-index: 3; background: #f8fafc; border-bottom: 1px solid #e2e8f0;
     padding: 0; text-align: left; font-weight: 600; color: #475569; white-space: nowrap; }
@@ -2138,7 +2168,7 @@
       </span>
       <button id="btn-presentation" class="px-3 py-1.5 text-sm rounded hover:bg-white/10" style="border:1px solid var(--dark-border-strong);color:var(--dark-text);visibility:visible;">📊 Modalità presentazione</button>
       <div class="text-xs pl-2" style="border-left:1px solid var(--dark-border-strong);color:var(--dark-text-muted);">
-        <span id="app-version" class="font-medium" style="color:var(--accent);">v18.279.0</span> · Michele Marchetti
+        <span id="app-version" class="font-medium" style="color:var(--accent);">v18.280.0</span> · Michele Marchetti
         <span id="sb-role-badge" style="margin-left:8px;padding:1px 8px;border-radius:9999px;background:rgba(255,255,255,.1);color:var(--dark-text);font-weight:600;"></span>
       </div>
     </div>
@@ -2937,6 +2967,7 @@
     <button id="pw-tab-autoplan" class="tab-btn text-sm py-3">🤖 Auto-pianifica</button>
     <button id="pw-tab-controllo" class="tab-btn text-sm py-3">📊 Controllo produzione</button>
     <button id="pw-tab-avanzamento" class="tab-btn text-sm py-3">📍 Avanzamento comuni</button>
+    <button id="pw-tab-prestazioni" class="tab-btn text-sm py-3">⚡ Prestazioni</button>
     <button id="pw-tab-meteo-storico" class="tab-btn text-sm py-3">🌦️ Storico meteo</button>
     <button id="pw-tab-doppia" class="tab-btn text-sm py-3">🔁 Doppia Week</button>
   </div>
@@ -3083,6 +3114,33 @@
     </div>
     <section id="av-dettaglio" class="hidden"></section>
     <p class="text-xs text-slate-400 mt-2">Ore e produzione sono quelle salvate in Controllo Produzione (aggiornate con «Sincronizza da Jira» e il report di produzione) e si riferiscono al periodo scelto. Per comune, una riga per attività: attività diverse non si sommano. Clicca un comune o un'attività per il dettaglio. Sola lettura.</p>
+  </div>
+
+  <!-- Vista Prestazioni operatori (src/js/prestazioni.js, motore src/js/prestazioni-core.js) -->
+  <div id="pw-view-prestazioni" class="hidden">
+    <div class="av-barra no-print">
+      <span class="av-barra-tit">⚡ Prestazioni operatori</span>
+      <button type="button" id="prf-modo-btn" class="av-chip-btn">Per ▾</button>
+      <button type="button" id="prf-commessa-btn" class="av-chip-btn">Commessa ▾</button>
+      <button type="button" id="prf-periodo-btn" class="av-chip-btn">Periodo ▾</button>
+      <button type="button" id="prf-min-btn" class="av-chip-btn">Min. giornate ▾</button>
+      <button type="button" id="prf-ver-btn" class="av-chip-btn prf-toggle">Solo produzione verificata</button>
+      <button type="button" id="prf-comune-btn" class="av-chip-btn prf-toggle">Tiene conto del comune</button>
+      <button type="button" id="prf-refresh" class="av-btn">↻ Aggiorna</button>
+      <span id="prf-status" class="text-xs text-slate-400"></span>
+    </div>
+    <div class="bg-white border border-slate-200 rounded-lg">
+      <div class="av-filtri no-print">
+        <div class="relative" style="min-width:200px;flex:1;max-width:300px">
+          <span class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm pointer-events-none">🔍</span>
+          <input id="prf-q" type="text" placeholder="Cerca operatore…" class="w-full pl-8 pr-3 py-1.5 text-sm border border-slate-200 rounded-lg focus:outline-none focus:border-teal-400 bg-slate-50">
+        </div>
+        <span id="prf-n" class="text-xs text-slate-400"></span>
+        <button type="button" id="prf-export" class="av-btn" style="margin-left:auto">⬇ Excel</button>
+      </div>
+      <div id="prf-corpo"><div class="av-vuoto">Caricamento…</div></div>
+    </div>
+    <p class="text-xs text-slate-400 mt-2">Rendimento di ogni operatore rispetto alla norma dell'attività (100), dalle giornate salvate in Controllo Produzione: produzione della squadra diviso le ore Jira dei membri. Le squadre lavorano quasi sempre in coppia con un solo tablet, quindi il contributo del singolo è stimato confrontando le sue giornate con compagni diversi. Sola lettura, visibile solo ad admin e responsabili: è un aiuto alla pianificazione, non una valutazione del personale.</p>
   </div>
 
   <!-- Vista Doppia Week -->

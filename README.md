@@ -14,6 +14,7 @@ Applicazione web per la gestione dello staffing e della pipeline commerciale del
 - 📅 **Staffing mensile** — allocazione gg-uomo per commessa, saturazione e gap analysis
 - 🗓️ **Pianificazione settimanale** — composizione squadre, assegnazione cantieri, gestione ferie
 - 🗺️ **Mappa cantieri** — visualizzazione geografica delle commesse attive
+- ⚡ **Prestazioni operatori** — rendimento di ogni operatore per attività o tipo di WO rispetto alla norma (100), stimato separando il contributo del singolo da quello dei compagni; solo admin e responsabili, per scegliere i più adatti nelle urgenze
 - 🌦️ **Meteo cantieri** — previsioni e criticità (Open-Meteo + bollettino Protezione Civile) in Griglia e Mappa, e storico del meteo osservato nei giorni passati (tab "Storico meteo")
 - 📈 **Gantt** — timeline visiva pipeline e commesse attive
 - ☁️ **Sync automatico** — ogni modifica viene salvata su database cloud (Supabase) in tempo reale
@@ -113,6 +114,9 @@ Limite noto: il progetto Supabase è sul piano **Free**, che non include backup 
 ---
 
 ## Changelog
+
+## v18.280.0
+- feat: **Prestazioni operatori.** Nuova tab «⚡ Prestazioni» in Pianificazione settimanale, visibile solo ad admin e responsabili: quanto rende ogni operatore su ciascuna attività (o tipo di WO) rispetto alla norma, **100** (125 = +25%). Serve a mettere i più performanti sui cantieri urgenti. **Come si calcola:** le giornate salvate in Controllo Produzione, attribuite a comune e attività come in Avanzamento comuni; resa = produzione della squadra ÷ ore Jira dei membri. Le squadre lavorano quasi sempre in coppia con **un solo tablet**, quindi i km di un giorno sono della coppia: il contributo del singolo si stima confrontando le sue settimane con **compagni diversi** (le coppie ruotano) e togliendo la **difficoltà del comune** (spegnibile). Le giornate della stessa coppia sullo stesso comune si sommano per settimana, perché i km della board arrivano nel giorno in cui il tablet sincronizza. Con poche giornate l'indice resta vicino a 100; ogni indice ha intervallo probabile, numero di giornate e affidabilità (alta/media/bassa), e chi lavora quasi sempre con la stessa persona è segnato ⚠ «non separabile». Dove ci sono due tablet nella stessa squadra la giornata è misurata sul singolo (📟), oggi raro. Escluse e contate: produzione non verificata (opzione), giornate senza produzione, con un membro della squadra senza dati, senza ore o con ore anomale. **Vista:** matrice operatori × attività colorata (verde sopra, rosso sotto), clic su un'attività = classifica con barra 50–200, clic su un operatore = le sue settimane (comune, compagni, produzione, ore, resa) con link a Controllo Produzione; filtri per commessa, periodo, giornate minime; export Excel. **In Griglia:** nella scelta operatore chip «⚡ 125» sull'attività della squadra e pulsante «⚡ Rendimento in cima» (a parità di disponibilità). Sola lettura, indici non salvati. Nascondibile da «🧩 Funzioni». Nessuna modifica a Supabase o alle Edge Function.
 
 ## v18.279.0
 - fix: **Mappe, vista «Stradale» vuota.** Il servizio usato per la cartografia stradale (CARTO) ha iniziato a chiedere una chiave a pagamento e al posto della mappa mostrava riquadri con scritto «API KEY REQUIRED». Ora la vista Stradale usa la mappa stradale Esri (stesso fornitore di Satellite e Ibrida, gratuita, senza chiave), su tutte le mappe dell'app. Nessuna modifica a Supabase o alle Edge Function.

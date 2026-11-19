@@ -127,7 +127,7 @@ function switchScreen(screen) {
 let _pwActiveTab = (function(){ try { return localStorage.getItem('pw_last_tab') || 'griglia'; } catch(_) { return 'griglia'; } })();
 // Ricorda la posizione di scroll di ciascun tab (Griglia/Ferie/Mappa = scroll pagina,
 // Controllo Produzione = scroll interno alla tabella) finché non si fa il refresh.
-let _pwScrollY = { griglia: 0, ferie: 0, mappa: 0, spostamenti: 0, ricerca_squadre: 0, autoplan: 0, controllo: 0, doppia: 0, 'meteo-storico': 0, avanzamento: 0 };
+let _pwScrollY = { griglia: 0, ferie: 0, mappa: 0, spostamenti: 0, ricerca_squadre: 0, autoplan: 0, controllo: 0, doppia: 0, 'meteo-storico': 0, avanzamento: 0, prestazioni: 0 };
 let _cpTableScrollTop = 0;
 
 function pwSwitchTab(tab) {
@@ -176,6 +176,7 @@ function pwSwitchTab(tab) {
   const td = document.getElementById('pw-tab-doppia');
   const tms = document.getElementById('pw-tab-meteo-storico');
   const tav = document.getElementById('pw-tab-avanzamento');
+  const tpr = document.getElementById('pw-tab-prestazioni');
   const vg = document.getElementById('pw-view-griglia');
   const vf = document.getElementById('pw-view-ferie');
   const vm = document.getElementById('pw-view-mappa');
@@ -186,9 +187,10 @@ function pwSwitchTab(tab) {
   const vd = document.getElementById('pw-view-doppia');
   const vms = document.getElementById('pw-view-meteo-storico');
   const vav = document.getElementById('pw-view-avanzamento');
+  const vpr = document.getElementById('pw-view-prestazioni');
 
-  [tg, tf, tm, ts, trs, tap, tc, td, tms, tav].forEach(t => t && t.classList.remove('active'));
-  [vg, vf, vm, vs, vrs, vap, vc, vd, vms, vav].forEach(v => v && v.classList.add('hidden'));
+  [tg, tf, tm, ts, trs, tap, tc, td, tms, tav, tpr].forEach(t => t && t.classList.remove('active'));
+  [vg, vf, vm, vs, vrs, vap, vc, vd, vms, vav, vpr].forEach(v => v && v.classList.add('hidden'));
 
   if (tab === 'mappa') {
     tm.classList.add('active');
@@ -257,6 +259,12 @@ function pwSwitchTab(tab) {
     vav.classList.remove('hidden');
     avRender();
     window.scrollTo(0, _pwScrollY.avanzamento || 0);
+  } else if (tab === 'prestazioni') {
+    // Rendimento operatori (prestazioni.js): periodo e commessa propri, solo admin/responsabile.
+    tpr.classList.add('active');
+    vpr.classList.remove('hidden');
+    prfRender();
+    window.scrollTo(0, _pwScrollY.prestazioni || 0);
   } else {
     tg.classList.add('active');
     vg.classList.remove('hidden');

@@ -89,6 +89,8 @@ JS_FILES = [
     'meteo-storico.js',
     'mappa-live.js',
     'avanzamento-comuni.js',
+    'prestazioni-core.js',
+    'prestazioni.js',
     'ai-assistant.js',
 ]
 

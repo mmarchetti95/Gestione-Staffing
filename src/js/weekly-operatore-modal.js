@@ -158,6 +158,37 @@ function pwOpenOpModal(cidx, sidx, oidx) {
     buildList(search.value);
   };
   geoRow.appendChild(btnDw);
+
+  // Rendimento per attività (prestazioni.js, solo admin/responsabile): chip «⚡ 125» accanto
+  // al nome e, a richiesta, i più performanti in cima a parità di disponibilità. Gli indici
+  // si calcolano in sottofondo la prima volta: intanto la lista resta quella normale.
+  const prfOk = typeof prfPuo === 'function' && prfPuo();
+  let ordRend = false;
+  const prfDi = nome => prfOk ? prfIndiceGriglia(nome, commessa, attivitaSquadra, tipoSen) : null;
+  if (prfOk) {
+    const btnRend = document.createElement('button');
+    btnRend.type = 'button';
+    btnRend.className = 'op-modal-skill-btn prf-griglia';
+    btnRend.style.cssText = 'flex:0 0 auto;font-size:13px;padding:6px 12px;';
+    btnRend.dataset.helpKey = 'pw-opmodal-rendimento';
+    const testoRend = () => '⚡ Rendimento in cima' + (prfGrigliaPronta() ? '' : ' (calcolo…)');
+    btnRend.textContent = testoRend();
+    btnRend.title = 'Mette in cima chi rende di più sull\'attività della squadra, a parità di disponibilità';
+    btnRend.onclick = () => {
+      ordRend = !ordRend;
+      btnRend.style.background = ordRend ? '#ecfdf5' : '#fff';
+      btnRend.style.borderColor = ordRend ? '#10b981' : '#cbd5e1';
+      btnRend.style.color = ordRend ? '#047857' : '#475569';
+      btnRend.style.fontWeight = ordRend ? '700' : '400';
+      buildList(search.value);
+    };
+    geoRow.appendChild(btnRend);
+    if (!prfGrigliaPronta()) {
+      prfPreparaGriglia()
+        .then(() => { if (document.body.contains(btnRend)) { btnRend.textContent = testoRend(); buildList(search.value); } })
+        .catch(e => { console.error('prestazioni: indici per la Griglia', e); btnRend.textContent = '⚡ Rendimento non disponibile'; btnRend.disabled = true; });
+    }
+  }
   modal.appendChild(geoRow);
 
   // Seniority: se nella squadra non c'è ancora un senior (primo operatore, o finora solo
@@ -298,9 +329,14 @@ function pwOpenOpModal(cidx, sidx, oidx) {
       return 4; // non_disponibile
     };
     const senRango = nome => (serveSenior && opSenioritaPer(nome, tipoSen) === 'senior') ? 0 : 1;
+    const rendimento = new Map();
+    filtrati.forEach(n => rendimento.set(n, prfDi(n)));
+    // Senza dati = 100 (nella norma): in urgenza salgono solo i rendimenti provati.
+    const rendDi = nome => { const x = rendimento.get(nome); return x ? x.op.indice : 100; };
     const ordinati = [...filtrati].sort((a, b) => {
       const dRango = rangoDi(a) - rangoDi(b);
       if (dRango !== 0) return dRango;
+      if (ordRend) { const dRend = rendDi(b) - rendDi(a); if (dRend !== 0) return dRend; }
       const dSen = senRango(a) - senRango(b);
       if (dSen !== 0) return dSen;
       const dComm = (fromStaffing.has(a) ? 0 : 1) - (fromStaffing.has(b) ? 0 : 1);
@@ -337,6 +373,7 @@ function pwOpenOpModal(cidx, sidx, oidx) {
         inCommessa ? '<span>✅ in commessa</span>' : '<span>fuori commessa</span>',
         geoLabel ? '<span>📍 ' + esc(geoLabel) + '</span>' : '',
         senBadge,
+        prfOk ? prfChipHtml(rendimento.get(nome)) : '',
         dwBadge,
         fornNome ? '<span class="op-modal-forn" style="background:#e0e7ff;color:#4338ca;border-radius:3px;padding:0 5px;">🏢 ' + esc(fornNome) + '</span>' : ''
       ].filter(Boolean).join('');
