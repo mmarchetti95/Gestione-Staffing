@@ -115,6 +115,12 @@ Limite noto: il progetto Supabase è sul piano **Free**, che non include backup 
 
 ## Changelog
 
+## v18.283.0
+- **Auto-pianifica, composizione delle squadre**: ordine di preferenza senior+junior, poi senior+senior (nuova penalità leggera, così i senior si distribuiscono), poi junior+junior. Chi parte dallo stesso luogo (residenze entro 25 km) viene messo in squadra insieme, a parità di km. Ogni squadra si compone provando più capisquadra, non solo il singolo più vicino.
+- **Più squadre sullo stesso cantiere** (opzione «squadre per cantiere», 1–3, default 2): dopo aver dato una squadra a ogni cantiere, gli operatori rimasti liberi rinforzano i cantieri nei giorni di bel tempo, spostando il lavoro previsto con maltempo forte o oltre la scadenza, oppure finendo in settimana un cantiere che resterebbe a metà. Solo se conviene (km, composizione) e senza togliere nessuno agli altri cantieri. In bozza sono segnate con ➕.
+- **Meteo più pesante**: «maltempo forte» vale ora quanto ~300 km a testa (prima ~125), «pioggia probabile» poco di più di prima: il calcolo evita davvero i giorni brutti.
+- Calcolo più veloce (ad es. 25 cantieri e 60 operatori: da ~2 s a <0,1 s).
+
 ## v18.282.0
 - **Doppia Week, ricerca operatore**: nuovo campo «🔍 Cerca operatore…» nell'intestazione del prospetto. Mentre si scrive (anche solo il cognome o parte del nome, parole in qualsiasi ordine, accenti ignorati, con suggerimenti a tendina) il prospetto scorre fino alla riga dell'operatore e la evidenzia in giallo; con più risultati Invio passa al successivo (es. «2/3»), Esc svuota. Se l'operatore c'è ma è nascosto dal filtro regione/provincia compare «Mostra», che toglie il filtro. L'evidenza resta dopo un clic su una cella o un cambio mese. Solo vista, nessuna modifica Supabase.
 - **Auto-pianifica, inserimento guidato**: a sinistra restano solo «＋ Nuovo cantiere» e una casella per scrivere all'assistente in linguaggio naturale (apre la chat a destra e manda il messaggio). «＋ Nuovo cantiere» chiede a domande e risposte commessa (le ultime usate e quelle in Griglia in cima), attività (dal catalogo della commessa, con le persone per squadra), cantiere (ricerca della località con Nominatim mentre si scrive, mini mappa, grafia del comune) e giorni di lavoro; «Aggiungi e inserisci un altro» tiene commessa e attività. Tutto da tastiera (Invio). La posizione scelta va nella rubrica condivisa `geo_cache` solo se diversa da quella nota. Incolla da Excel, file, settimana precedente, riga vuota e modello Excel sono nel menu «⋯ Altre fonti».

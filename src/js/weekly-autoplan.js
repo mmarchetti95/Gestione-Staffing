@@ -21,7 +21,7 @@ let _ap = {
   bozza: null,          // { anno, week, risultato, righeSolver, creata }
   modello: null,
   modelloInfo: '',
-  opzioni: { sabato: false, maxKm: 250, meteo: true },
+  opzioni: { sabato: false, maxKm: 250, meteo: true, maxSquadre: 2 },
   precedenze: [],       // [[primaId, dopoId]] scelte dall'utente dai suggerimenti
   stato: { msg: '', err: false },
   toccate: new Set(),   // righe modificate dall'assistente nell'ultima risposta (evidenziate)
@@ -81,7 +81,7 @@ function _apCaricaLocale() {
     const s = all[_apWkKey(_ap.anno, _ap.week)];
     if (s) {
       _ap.righe = Array.isArray(s.righe) ? s.righe : [];
-      if (s.opzioni) _ap.opzioni = Object.assign({ sabato: false, maxKm: 250, meteo: true }, s.opzioni);
+      if (s.opzioni) _ap.opzioni = Object.assign({ sabato: false, maxKm: 250, meteo: true, maxSquadre: 2 }, s.opzioni);
       if (Array.isArray(s.precedenze)) _ap.precedenze = s.precedenze;
       if (Array.isArray(s.imprevisti)) _ap.imprevisti = s.imprevisti;
     }
@@ -524,7 +524,7 @@ function apBuildContesto(opts) {
   return {
     giorni, giorniISO, operatori, disp, posizione,
     modello: _ap.modello,
-    pesi: { maxKmTrasferta: _ap.opzioni.maxKm || 250 }
+    pesi: { maxKmTrasferta: _ap.opzioni.maxKm || 250, maxSquadreCantiere: _ap.opzioni.maxSquadre || 2 }
   };
 }
 
@@ -588,8 +588,12 @@ async function _apCaricaDistanze(origini, destinazioni) {
      penalità: il cantiere si sposta se c'è un altro giorno, altrimenti resta con avviso;
    - severità "media" o allerta gialla -> penalità lieve.
    Oltre l'orizzonte delle previsioni (15 giorni) non si considera nulla, e lo si dice. */
-const AP_METEO_PEN_ALTA = 250;
-const AP_METEO_PEN_MEDIA = 80;
+/* Scala: punti per giorno-squadra, confrontati con 1 punto per km per persona. Il maltempo
+   forte è quasi sempre una giornata di rilievo persa: vale ~300 km a testa, così il calcolo
+   preferisce un altro giorno o una squadra in più dove c'è bel tempo (rinforzo). La
+   pioggia solo probabile pesa poco: da sola non fa muovere una squadra da lontano. */
+const AP_METEO_PEN_ALTA = 600;
+const AP_METEO_PEN_MEDIA = 150;
 
 async function _apPreparaMeteo(righeSolver, ctx) {
   if (!_ap.opzioni.meteo) return { meteo: {}, info: 'meteo non considerato' };
@@ -1400,7 +1404,7 @@ async function apSvuota() {
 
 function apSetOpzione(el) {
   const k = el.dataset.opz;
-  _ap.opzioni[k] = el.type === 'checkbox' ? el.checked : (parseInt(el.value, 10) || 250);
+  _ap.opzioni[k] = el.type === 'checkbox' ? el.checked : (parseInt(el.value, 10) || (k === 'maxSquadre' ? 2 : 250));
   _apInvalidaBozza();
   _apSalvaLocale();
   apRender();
@@ -1450,6 +1454,7 @@ function apRender() {
             '<label data-help-key="ap-opz-sabato" class="text-xs text-slate-600 flex items-center gap-1"><input type="checkbox" data-opz="sabato" onchange="apSetOpzione(this)"' + (_ap.opzioni.sabato ? ' checked' : '') + '> anche sabato</label>' +
             '<label data-help-key="ap-opz-meteo" class="text-xs text-slate-600 flex items-center gap-1" title="Evita i giorni con allerta Protezione Civile e sposta, se possibile, quelli con maltempo previsto"><input type="checkbox" data-opz="meteo" onchange="apSetOpzione(this)"' + (_ap.opzioni.meteo ? ' checked' : '') + '> considera meteo</label>' +
             '<label data-help-key="ap-opz-maxkm" class="text-xs text-slate-600 flex items-center gap-1" title="Spostamento massimo da un cantiere all&#39;altro durante la settimana. Il viaggio da casa a inizio trasferta non ha limite: costa i suoi km e, oltre 200 km, vale mezza giornata produttiva.">max km fra cantieri <input type="number" min="20" step="10" data-opz="maxKm" onchange="apSetOpzione(this)" value="' + _apE(_ap.opzioni.maxKm) + '" class="w-16 border border-slate-300 rounded px-1 py-0.5 text-xs"></label>' +
+            '<label data-help-key="ap-opz-maxsq" class="text-xs text-slate-600 flex items-center gap-1" title="Squadre che possono lavorare insieme sullo stesso cantiere nello stesso giorno, con gli operatori rimasti liberi, per spostare il lavoro sui giorni di bel tempo o finire prima. 1 = una squadra per cantiere.">squadre per cantiere <select data-opz="maxSquadre" onchange="apSetOpzione(this)" class="border border-slate-300 rounded px-1 py-0.5 text-xs">' + [1, 2, 3].map(n => '<option value="' + n + '"' + ((_ap.opzioni.maxSquadre || 2) === n ? ' selected' : '') + '>' + n + '</option>').join('') + '</select></label>' +
             '<button type="button" onclick="apSvuota()" class="text-xs px-2 py-1 border border-slate-300 rounded hover:bg-slate-50">Svuota</button>' +
             '<button type="button" id="ap-calcola-btn" onclick="apCalcola()" class="text-xs px-3 py-1.5 rounded font-semibold text-white" style="background:var(--accent,#0d9488);">🤖 Calcola bozza</button>' +
             (typeof apcToggle === 'function' ? '<button type="button" onclick="apcToggle()" class="apc-toggle' + (chat ? ' on' : '') + '" title="Chiedi all\'assistente di modificare la bozza in linguaggio naturale"><span class="apc-spark">✦</span> Assistente</button>' : '') +
@@ -1932,7 +1937,7 @@ function _apBozzaHtml(puoAnnullare) {
     const e = es[r.id];
     const st = AP_STATO_STILE[e.stato];
     const ass = res.assegnazioni.filter(a => a.rigaId === r.id);
-    const quando = ass.map(a => PW_MAP_DAY_SHORT[a.giorno] + (a.quota < 1 ? '½' : '') + (a.viaggio ? ' 🚐' : '') + ': ' + a.operatori.join(' + ')).join(' · ');
+    const quando = ass.map(a => PW_MAP_DAY_SHORT[a.giorno] + (a.quota < 1 ? '½' : '') + (a.viaggio ? ' 🚐' : '') + (a.rinforzo ? ' ➕' : '') + ': ' + a.operatori.join(' + ')).join(' · ');
     lista += '<div class="text-[11px] border-l-4 pl-2 py-0.5" style="border-color:' + st.fg + ';' + (incluse.has(r.id) ? '' : 'opacity:.5;') + '">' +
       '<b>P' + r.priorita + ' · ' + _apE(r.cantiere) + '</b> <span class="text-slate-500">' + _apE(r.commessa) + (r.attivita ? ' · ' + _apE(r.attivita) : '') + '</span> ' +
       '<span style="color:' + st.fg + ';font-weight:700;">' + st.t + '</span>' +
@@ -1953,7 +1958,7 @@ function _apBozzaHtml(puoAnnullare) {
       '<div class="flex-1"></div>' + annullaBtn +
       '<button type="button" onclick="apApplica()" class="text-xs px-3 py-1.5 rounded font-semibold text-white" style="background:#15803d;"' + (nCelle ? '' : ' disabled') + '>✓ Applica alla Griglia</button>' +
     '</div>' +
-    '<div class="text-[11px] text-slate-500 mb-2">Grigio = già in Griglia (non viene toccato) · tratteggiato = proposta · 🚐 = viaggio da casa, mezza giornata produttiva. Togli la spunta a una riga della lista per escluderla dall\'applicazione.</div>' +
+    '<div class="text-[11px] text-slate-500 mb-2">Grigio = già in Griglia (non viene toccato) · tratteggiato = proposta · 🚐 = viaggio da casa, mezza giornata produttiva · ➕ = squadra in più sullo stesso cantiere (bel tempo / per finire prima). Togli la spunta a una riga della lista per escluderla dall\'applicazione.</div>' +
     '<div class="text-[11px] text-slate-500 mb-3">📏 ' + _apE(b.infoDistanze || '') + ' · 🌦️ ' + _apE(b.infoMeteo || '') + '</div>' +
     _apMiglioramentiHtml(b) +
     tab +

@@ -243,6 +243,10 @@ const AP_PESI_DEFAULT = {
   staffing: 30,          // bonus se allocato sulla commessa nello staffing del mese
   continuita: 60,        // bonus se ieri era sullo stesso cantiere
   soloJunior: 300,       // penalità per una squadra (2+ persone) di soli junior, senza un senior
+  soloSenior: 80,        // penalità (leggera) per una squadra di soli senior: senior+junior è meglio,
+                         // e un senior "sprecato" in coppia con un altro manca a un'altra squadra
+  stessaPartenza: 40,    // bonus coppia che parte dallo stesso luogo (residenze entro AP_STESSA_PARTENZA_KM)
+  maxSquadreCantiere: 2, // squadre in parallelo sullo stesso cantiere nello stesso giorno (1 = mai rinforzi)
   ritardoGiorno: 400,    // penalità per giorno oltre la scadenza (x peso priorità)
   attesaGiorno: 8,       // penalità per giorno di attesa prima di iniziare (x peso priorità)
   giornoFatto: 1000,     // valore di un giorno-squadra assegnato (x peso priorità): domina il resto
@@ -253,6 +257,25 @@ const AP_PESO_PRIORITA = { 1: 3, 2: 2, 3: 1 };
 const AP_FATTORE_STRADA = 1.3; // linea d'aria -> strada, stima prudente quando manca OSRM
 const AP_MAX_RICALCOLI = 80;   // tetto del miglioramento locale (ogni prova = un greedy completo)
 const AP_MAX_MS = 2500;
+const AP_STESSA_PARTENZA_KM = 25;
+const AP_SEMI_SQUADRA = 4;         // capisquadra provati per comporre ogni squadra (vedi scegliSquadra) // residenze più vicine di così = "stesso luogo di partenza"
+
+/* Coppie di operatori con la stessa partenza (residenza / provincia), calcolate una volta per
+   contesto: il greedy gira fino a 160 volte e l'affinità si valuta per ogni coppia. Cache
+   esterna (WeakMap), così ctx non viene toccato. */
+const _apCachePartenze = new WeakMap();
+function _apStessaPartenza(ctx, a, b) {
+  let m = _apCachePartenze.get(ctx);
+  if (!m) { m = new Map(); _apCachePartenze.set(ctx, m); }
+  const k = a < b ? a + '|||' + b : b + '|||' + a;
+  if (m.has(k)) return m.get(k);
+  const oa = ctx.operatori.find(o => o.nome === a);
+  const ob = ctx.operatori.find(o => o.nome === b);
+  const v = !!(oa && ob && oa.base && ob.base &&
+    haversineKm(oa.base.lat, oa.base.lng, ob.base.lat, ob.base.lng) <= AP_STESSA_PARTENZA_KM);
+  m.set(k, v);
+  return v;
+}
 
 /* Ordine di partenza: priorità (P1 prima), scadenza più vicina, impegno più lungo */
 function apOrdineBase(righe) {
@@ -424,6 +447,7 @@ function _apGreedy(ctx, pesi, ordinate) {
 
   const assegnazioni = [];
   const esiti = {};
+  const fatte = [];          // righe con un piano: { r, esito, peso, meteoRiga, giorniUtili, bloccati, candidati, piano, rinforzi }
   let valore = 0;
 
   /* Punto di partenza di un operatore il giorno d: l'ultimo luogo noto dal giorno d-1 in
@@ -485,10 +509,16 @@ function _apGreedy(ctx, pesi, ordinate) {
     return { s, km, viaggio };
   };
 
+  /* Affinità di una coppia: quante volte hanno già lavorato insieme (storico) e se partono
+     dallo stesso luogo (viaggiano insieme da casa e nei rientri) */
   const affinita = (a, b) => {
-    if (!ctx.modello) return 0;
-    const k = a < b ? a + '|||' + b : b + '|||' + a;
-    return pesi.coppia * Math.min(ctx.modello.coppie[k] || 0, 10) / 10;
+    let s = 0;
+    if (ctx.modello) {
+      const k = a < b ? a + '|||' + b : b + '|||' + a;
+      s += pesi.coppia * Math.min(ctx.modello.coppie[k] || 0, 10) / 10;
+    }
+    if (pesi.stessaPartenza && _apStessaPartenza(ctx, a, b)) s += pesi.stessaPartenza;
+    return s;
   };
 
   /* Seniority: una squadra di 2+ persone fatta di soli junior va evitata (senior+junior o
@@ -503,6 +533,8 @@ function _apGreedy(ctx, pesi, ordinate) {
     return s || o.seniorita || '';
   };
   const soloJunior = (nomi, r) => nomi.length >= 2 && nomi.every(n => livello(n, r) === 'junior');
+  /* Ordine di preferenza: senior+junior, poi senior+senior, poi junior+junior */
+  const soloSenior = (nomi, r) => nomi.length >= 2 && nomi.every(n => livello(n, r) === 'senior');
 
   /* Sceglie N operatori per la riga r nel giorno d: il migliore da solo, poi via via chi
      aggiunge più punteggio (individuale + affinità con i già scelti), completando se
@@ -517,32 +549,51 @@ function _apGreedy(ctx, pesi, ordinate) {
       if (p) valutati.push({ o, s: p.s, km: p.km, viaggio: p.viaggio });
     });
     if (valutati.length < r.nOp) return null;
-    const scelti = [];
     const skillReq = r.skills || [];
-    const coperte = new Set();
     const compagni = (r.compagni || []).filter(n => !(r.sostituisce || []).includes(n));
-    while (scelti.length < r.nOp) {
-      const chiude = scelti.length === r.nOp - 1;
-      const giaScelti = compagni.concat(scelti.map(x => x.o.nome));
-      let best = null, bestTot = -Infinity;
-      valutati.forEach(v => {
-        if (scelti.includes(v)) return;
-        let tot = v.s;
-        scelti.forEach(x => { tot += affinita(v.o.nome, x.o.nome); });
-        const nuoveSkill = skillReq.filter(sk => !coperte.has(sk) && v.o.skills.has(sk)).length;
-        tot += nuoveSkill * 80;
-        if (chiude && soloJunior(giaScelti.concat([v.o.nome]), r)) tot -= pesi.soloJunior;
-        if (tot > bestTot || (tot === bestTot && best && v.o.nome < best.o.nome)) { bestTot = tot; best = v; }
-      });
-      if (!best) break;
-      scelti.push(best);
-      skillReq.forEach(sk => { if (best.o.skills.has(sk)) coperte.add(sk); });
-    }
-    if (scelti.length < r.nOp) return null;
-    const skillMancanti = skillReq.filter(sk => !coperte.has(sk));
-    const junior = soloJunior(compagni.concat(scelti.map(v => v.o.nome)), r);
-    const punti = scelti.reduce((a, v) => a + v.s, 0) - (junior ? pesi.soloJunior : 0);
-    return { scelti, skillMancanti, punti, viaggio: scelti.some(v => v.viaggio), soloJunior: junior };
+    /* Costruisce la squadra partendo da "primo" e aggiungendo via via chi porta più punti
+       (individuali + affinità con i già scelti + skill nuove; il membro che chiude una
+       squadra di soli junior / soli senior paga la sua penalità). */
+    const costruisci = primo => {
+      const scelti = [primo];
+      const coperte = new Set(skillReq.filter(sk => primo.o.skills.has(sk)));
+      while (scelti.length < r.nOp) {
+        const chiude = scelti.length === r.nOp - 1;
+        const giaScelti = compagni.concat(scelti.map(x => x.o.nome));
+        let best = null, bestTot = -Infinity;
+        valutati.forEach(v => {
+          if (scelti.includes(v)) return;
+          let tot = v.s;
+          scelti.forEach(x => { tot += affinita(v.o.nome, x.o.nome); });
+          tot += skillReq.filter(sk => !coperte.has(sk) && v.o.skills.has(sk)).length * 80;
+          if (chiude && soloJunior(giaScelti.concat([v.o.nome]), r)) tot -= pesi.soloJunior;
+          if (chiude && soloSenior(giaScelti.concat([v.o.nome]), r)) tot -= pesi.soloSenior;
+          if (tot > bestTot || (tot === bestTot && best && v.o.nome < best.o.nome)) { bestTot = tot; best = v; }
+        });
+        if (!best) break;
+        scelti.push(best);
+        skillReq.forEach(sk => { if (best.o.skills.has(sk)) coperte.add(sk); });
+      }
+      if (scelti.length < r.nOp) return null;
+      const squadra = compagni.concat(scelti.map(v => v.o.nome));
+      const junior = soloJunior(squadra, r);
+      let punti = scelti.reduce((a, v) => a + v.s, 0) - (junior ? pesi.soloJunior : 0) - (soloSenior(squadra, r) ? pesi.soloSenior : 0);
+      for (let i = 0; i < scelti.length; i++) for (let j = i + 1; j < scelti.length; j++) punti += affinita(scelti[i].o.nome, scelti[j].o.nome);
+      const skillMancanti = skillReq.filter(sk => !coperte.has(sk));
+      return { scelti, skillMancanti, punti, viaggio: scelti.some(v => v.viaggio), soloJunior: junior,
+        confronto: punti + (skillReq.length - skillMancanti.length) * 80 };
+    };
+    /* Partire sempre dal migliore da solo non basta: due colleghi che partono dallo stesso
+       posto, o un senior+junior, possono valere più del singolo più vicino. Si provano i
+       primi AP_SEMI_SQUADRA come capisquadra e si tiene la squadra migliore nel complesso. */
+    const semi = valutati.slice().sort((a, b) => (b.s - a.s) || (a.o.nome < b.o.nome ? -1 : 1))
+      .slice(0, r.nOp > 1 ? AP_SEMI_SQUADRA : 1);
+    let migliore = null;
+    semi.forEach(v => {
+      const sq = costruisci(v);
+      if (sq && (!migliore || sq.confronto > migliore.confronto + 1e-9)) migliore = sq;
+    });
+    return migliore;
   };
 
   ordinate.forEach(r => {
@@ -627,38 +678,157 @@ function _apGreedy(ctx, pesi, ordinate) {
       return;
     }
 
+    /* Il piano vincente occupa subito gli operatori (le righe dopo devono vederli presi);
+       gli esiti si scrivono alla fine, dopo l'eventuale rinforzo con altre squadre. */
+    migliore.piano.forEach(p => occupa(r, p));
+    valore += migliore.fatto * pesi.giornoFatto * peso + migliore.punti;
+    fatte.push({ r, esito, peso, meteoRiga, giorniUtili, bloccati, candidati, piano: migliore.piano.slice(), rinforzi: [] });
+  });
+
+  /* RINFORZO CON PIÙ SQUADRE (dopo che tutte le righe hanno avuto la loro squadra, quindi
+     solo con gli operatori rimasti liberi: non toglie nessuno ai cantieri che seguono).
+     Per ogni cantiere, in ordine di priorità, si aggiunge una squadra in parallelo nei
+     giorni di BEL TEMPO (fino a maxSquadreCantiere squadre per giorno) quando serve a:
+     1. fare i giorni-squadra che altrimenti restano per la settimana dopo;
+     2. togliere il lavoro da un giorno con meteo sfavorevole o oltre la scadenza (quel
+        giorno la squadra non ci va più e torna libera).
+     Il caso 2 si fa solo se conviene davvero: la penalità meteo/ritardo evitata deve
+     superare quello che costa la squadra in più (km, junior...). */
+  const maxSq = Math.max(1, Math.round(pesi.maxSquadreCantiere || 1));
+  if (maxSq > 1) fatte.forEach(e => rinforza(e));
+
+  fatte.forEach(e => scriviEsito(e));
+
+  const doppie = Object.keys(commessaDi).filter(n => commessaDi[n].size > 1);
+  return { assegnazioni, esiti, operatoriSuPiuCommesse: doppie, capacitaResidua: cap, valore, distanze };
+
+  /* ---- funzioni del passaggio (dichiarate qui sotto, usate sopra) ---- */
+
+  function occupa(r, p) {
+    p.sq.scelti.forEach(v => {
+      const n = v.o.nome;
+      cap[n][p.giorno] = Math.max(0, cap[n][p.giorno] - (v.viaggio ? 1 : p.quota));
+      if (r.geo) pos[n][p.giorno] = { lat: r.geo.lat, lng: r.geo.lng, label: r.cantiere };
+      commessaDi[n].add(r.commessa);
+    });
+  }
+
+  function libera(r, p) {
+    p.sq.scelti.forEach(v => {
+      const n = v.o.nome;
+      cap[n][p.giorno] = Math.min(1, cap[n][p.giorno] + (v.viaggio ? 1 : p.quota));
+      if (cap[n][p.giorno] >= 1 - 1e-6) delete pos[n][p.giorno];
+    });
+  }
+
+  function rinforza(e) {
+    const r = e.r;
+    /* Righe di riparazione con compagni già sul cantiere: la squadra è quella, niente rinforzi */
+    if ((r.compagni || []).length || (r.sostituisce || []).length) return;
+    const M = e.meteoRiga;
+    const pen = d => (M[d] && M[d].pen) || 0;
+    const fuoriScad = d => r.scadenzaGiorno != null && d > r.scadenzaGiorno;
+    const bloccato = d => !!(M[d] && M[d].blocco);
+    const buono = d => !bloccato(d) && pen(d) <= 0 && !fuoriScad(d);
+    const nSq = d => e.piano.filter(p => p.giorno === d).length;
+    const fatto = () => e.piano.reduce((t, p) => t + p.prod, 0);
+    const capOf = (n, d) => cap[n][d];
+
+    for (let giro = 0; giro < 12; giro++) {
+      const residuo = r.giorni - fatto();
+      let daTogliere = null;
+      if (residuo <= 1e-6) {
+        /* Peggiore prima: oltre la scadenza, poi più pioggia, poi più tardi */
+        const cattivi = e.piano.filter(p => fuoriScad(p.giorno) || pen(p.giorno) > 0)
+          .sort((a, b) => (fuoriScad(b.giorno) - fuoriScad(a.giorno)) || (pen(b.giorno) - pen(a.giorno)) || (b.giorno - a.giorno));
+        if (!cattivi.length) return;
+        daTogliere = cattivi[0];
+      }
+      const quota = daTogliere ? daTogliere.quota : Math.min(1, residuo);
+      /* Giorni candidati: per spostare lavoro solo giorni buoni; per recuperare giorni
+         anche quelli col meteo incerto (meglio fatto con un po' di pioggia che non fatto),
+         ma mai con allerta. */
+      const giorni = e.giorniUtili.filter(d => !bloccato(d) && nSq(d) < maxSq &&
+        (daTogliere ? (buono(d) && d !== daTogliere.giorno) : true));
+      let scelta = null;
+      giorni.forEach(d => {
+        const ieri = new Set();
+        e.piano.forEach(p => { if (p.giorno === d - 1) p.sq.scelti.forEach(v => ieri.add(v.o.nome)); });
+        const sq = scegliSquadra(r, d, e.candidati, ieri, quota, capOf, null);
+        if (!sq) return;
+        const prod = sq.viaggio ? Math.min(quota, 0.5) : quota;
+        if (daTogliere && prod < daTogliere.prod - 1e-6) return;
+        /* Guadagno della mossa, nella stessa scala del valore del greedy */
+        let guadagno = sq.punti - pen(d) * quota;
+        if (daTogliere) {
+          guadagno += pen(daTogliere.giorno) * daTogliere.quota - daTogliere.sq.punti +
+            (fuoriScad(daTogliere.giorno) ? pesi.ritardoGiorno * e.peso : 0);
+        } else {
+          guadagno += prod * (pesi.giornoFatto + pesi.ritardoGiorno) * e.peso;
+        }
+        if (!buono(d)) guadagno -= 1;           // a parità, il giorno col bel tempo
+        if (nSq(d) > 0) guadagno += 20;          // e il cantiere compatto (squadre insieme)
+        if (guadagno <= 0) return;
+        if (!scelta || guadagno > scelta.guadagno || (guadagno === scelta.guadagno && d < scelta.giorno)) {
+          scelta = { giorno: d, quota, prod, sq, guadagno };
+        }
+      });
+      if (!scelta) return;
+      const nuovo = { giorno: scelta.giorno, quota: scelta.quota, prod: scelta.prod, sq: scelta.sq, rinforzo: true };
+      occupa(r, nuovo);
+      e.piano.push(nuovo);
+      valore += scelta.guadagno;
+      const gNome = AP_GIORNI[scelta.giorno];
+      if (daTogliere) {
+        libera(r, daTogliere);
+        e.piano.splice(e.piano.indexOf(daTogliere), 1);
+        e.rinforzi.push(gNome + ' al posto di ' + AP_GIORNI[daTogliere.giorno] + ' (' +
+          (fuoriScad(daTogliere.giorno) ? 'oltre la scadenza' : (M[daTogliere.giorno].motivo || 'meteo sfavorevole')) + ')');
+      } else {
+        e.rinforzi.push(gNome + ' per finire prima');
+      }
+    }
+  }
+
+  function scriviEsito(e) {
+    const { r, esito, meteoRiga, bloccati } = e;
+    const piano = e.piano.slice().sort((a, b) => a.giorno - b.giorno || (a.rinforzo ? 1 : 0) - (b.rinforzo ? 1 : 0));
+    const fatto = Math.min(r.giorni, piano.reduce((t, p) => t + p.prod, 0));
+    const residuo = Math.max(0, r.giorni - fatto);
     const skillMancanti = new Set();
     const kmTot = [];
     const viaggi = [];
     const giorniSoloJunior = [];
-    migliore.piano.forEach(p => {
+    const meteoVisti = new Set();
+    piano.forEach(p => {
       if (p.sq.soloJunior) giorniSoloJunior.push(AP_GIORNI[p.giorno]);
       const nomi = p.sq.scelti.map(v => v.o.nome);
       p.sq.scelti.forEach(v => {
-        const n = v.o.nome;
-        cap[n][p.giorno] = Math.max(0, cap[n][p.giorno] - (v.viaggio ? 1 : p.quota));
-        if (r.geo) pos[n][p.giorno] = { lat: r.geo.lat, lng: r.geo.lng, label: r.cantiere };
-        commessaDi[n].add(r.commessa);
-        if (v.viaggio) viaggi.push(AP_GIORNI[p.giorno] + ' ' + n + (v.km != null ? ' (' + Math.round(v.km) + ' km da casa)' : ''));
+        if (v.viaggio) viaggi.push(AP_GIORNI[p.giorno] + ' ' + v.o.nome + (v.km != null ? ' (' + Math.round(v.km) + ' km da casa)' : ''));
+        if (v.km != null) kmTot.push(v.km);
       });
-      p.sq.scelti.forEach(v => { if (v.km != null) kmTot.push(v.km); });
-      p.sq.skillMancanti.forEach(s => skillMancanti.add(s));
+      p.sq.skillMancanti.forEach(sk => skillMancanti.add(sk));
       const a = { rigaId: r.id, giorno: p.giorno, operatori: nomi, quota: p.quota };
       if (p.sq.viaggio) { a.viaggio = p.sq.scelti.filter(v => v.viaggio).map(v => v.o.nome); a.produttivo = p.prod; }
+      if (p.rinforzo) a.rinforzo = true;
       assegnazioni.push(a);
-      esito.giorniUsati.push(p.giorno);
+      if (!esito.giorniUsati.includes(p.giorno)) esito.giorniUsati.push(p.giorno);
       const mt = meteoRiga[p.giorno];
-      if (mt && mt.pen > 0) esito.meteo.push(AP_GIORNI[p.giorno] + ': ' + mt.motivo);
+      if (mt && mt.pen > 0 && !meteoVisti.has(p.giorno)) { meteoVisti.add(p.giorno); esito.meteo.push(AP_GIORNI[p.giorno] + ': ' + mt.motivo); }
     });
-    esito.giorniAssegnati = migliore.fatto;
+    esito.giorniAssegnati = fatto;
     esito.kmMedi = kmTot.length ? kmTot.reduce((a, b) => a + b, 0) / kmTot.length : null;
-    esito.stato = migliore.residuo > 1e-6 ? 'parziale' : 'assegnato';
-    if (migliore.residuo > 1e-6) esito.motivi.push('restano ' + apFmtNum(migliore.residuo) + ' gg-squadra per la settimana successiva');
-    const primo = migliore.piano[0].giorno;
-    const ultimo = migliore.piano[migliore.piano.length - 1].giorno;
+    esito.stato = residuo > 1e-6 ? 'parziale' : 'assegnato';
+    if (residuo > 1e-6) esito.motivi.push('restano ' + apFmtNum(residuo) + ' gg-squadra per la settimana successiva');
+    const primo = piano[0].giorno;
+    const ultimo = piano[piano.length - 1].giorno;
     if (r.scadenzaGiorno != null && ultimo > r.scadenzaGiorno) {
       esito.oltreScadenza = true;
       esito.avvisi.push('finisce oltre la scadenza');
+    }
+    if (e.rinforzi.length) {
+      esito.rinforzi = e.rinforzi.slice();
+      esito.avvisi.push('più squadre insieme: ' + e.rinforzi.join(', '));
     }
     if (skillMancanti.size) esito.avvisi.push('skill non coperte: ' + Array.from(skillMancanti).join(', '));
     if (giorniSoloJunior.length) esito.avvisi.push('solo junior insieme, nessun senior libero a distanza ragionevole: ' + giorniSoloJunior.join(', '));
@@ -668,11 +838,7 @@ function _apGreedy(ctx, pesi, ordinate) {
     const evitati = bloccati.filter(d => d <= ultimo || d < primo);
     if (evitati.length) esito.avvisi.push('evitati per allerta meteo: ' + evitati.map(d => AP_GIORNI[d] + ' (' + meteoRiga[d].motivo + ')').join(', '));
     if (esito.meteo.length) esito.avvisi.push('meteo sfavorevole: ' + esito.meteo.join(', '));
-    valore += migliore.fatto * pesi.giornoFatto * peso + migliore.punti;
-  });
-
-  const doppie = Object.keys(commessaDi).filter(n => commessaDi[n].size > 1);
-  return { assegnazioni, esiti, operatoriSuPiuCommesse: doppie, capacitaResidua: cap, valore, distanze };
+  }
 }
 
 const AP_GIORNI = ['Lun', 'Mar', 'Mer', 'Gio', 'Ven', 'Sab'];
