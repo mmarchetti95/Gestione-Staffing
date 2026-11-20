@@ -116,6 +116,9 @@ Limite noto: il progetto Supabase è sul piano **Free**, che non include backup 
 
 ## Changelog
 
+## v18.302.0
+- **Griglia, strumenti allineati all'assegnatario Jira.** L'elenco strumenti GAR porta ora chi ha in mano ogni strumento su Jira e il suo stato (IN USO / DISPONIBILE / KO / manutenzione), e si rilegge da solo aprendo la Griglia se ha più di 30 minuti. **Proposta automatica**: quando un operatore entra in una squadra (o si aggiorna l'elenco), gli strumenti IN USO che ha su Jira finiscono negli strumenti della sua squadra, se non sono già in un'altra squadra della settimana; mai nelle settimane passate; uno strumento tolto o sostituito a mano non viene più rimesso in quella squadra. **Assegnazione**: scegliendo dalla tendina uno strumento che non è già IN USO a un operatore della squadra, si sceglie a chi assegnarlo e su Jira cambiano assegnatario e stato (IN USO; per uno strumento KO o in manutenzione chiede conferma), oppure «Solo in Griglia». Accanto a ogni strumento il «👤» mostra chi lo ha su Jira (verde = un operatore della squadra, IN USO) e permette di riassegnarlo. Togliere uno strumento dalla squadra non cambia Jira. Edge Function: `jira-list-strumenti` aggiornata (assegnatario, stato, `emails` → accountId) e nuova `jira-strumento-assegna` (admin/responsabile, log in `activity_log`; l'account di servizio deve poter assegnare e cambiare stato nel progetto GAR). Nessuna modifica allo schema Supabase.
+
 ## v18.301.0
 - **Griglia, cambiare la commessa non cancella più le squadre.** Se dopo aver composto squadre, operatori, cantieri e attività ci si accorge di aver scelto la commessa sbagliata, cambiandola dal menu del blocco resta tutto com'era: cambia solo la commessa. I sottotask Jira già creati restano legati alla commessa precedente (il «🎫 Sottotask» li segnala). Nessuna modifica a Supabase.
 

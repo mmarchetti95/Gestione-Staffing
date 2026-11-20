@@ -50,6 +50,7 @@ JS_FILES = [
     'weekly-popover-stats.js',
     'weekly-clipboard-cantiere.js',
     'weekly-strumenti.js',
+    'weekly-strumenti-jira.js',
     'weekly-jira-subtask.js',
     'weekly-jira-subtask-db.js',
     'jira-struttura-comune.js',

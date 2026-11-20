@@ -439,6 +439,8 @@ async function pwConfirmOpModal(cidx, sidx, oidx, nome, fornNome) {
   if (op !== undefined) {
     op.nome = nome;
     if (fornNome) op.fornitore = fornNome; else delete op.fornitore;
+    // Strumenti IN USO che ha su Jira -> negli strumenti della squadra (v18.302.0)
+    if (nome) pwStrAutoDopoOperatore(cidx, sidx);
     await pwSave();
     pwRender();
   }
@@ -602,6 +604,7 @@ function pwRender() {
     if (_pwActiveTab === 'ferie') pwFerieRender();
     pwJchkRefresh();
     chsAggiorna();
+    pwStrAutoRefresh();
     return;
   }
 
@@ -761,7 +764,7 @@ function pwRender() {
               return `<span style="display:inline-flex;align-items:center;gap:2px;">
                 <button type="button" class="pw-str-trigger pw-write-action" data-cidx="${cIdx}" data-sidx="${sIdx}" data-idx="${idx}" onclick="pwStrOpen(this)"
                   title="${dup ? 'Attenzione: questo strumento e assegnato a piu squadre in questa settimana' : 'Clicca per cercare e scegliere lo strumento'}"
-                  style="font-size:11px;text-align:left;border:1px solid ${dup ? '#dc2626' : '#d1d5db'};border-radius:4px;padding:2px 6px;max-width:220px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;background:${dup ? '#fef2f2' : '#fff'};cursor:pointer;">${esc(pwStrLabel(k))} ▾</button>${dup ? '<span title="Doppia assegnazione" style="color:#dc2626;font-size:12px;">⚠</span>' : ''}<button class="pw-write-action" data-cidx="${cIdx}" data-sidx="${sIdx}" data-idx="${idx}" onclick="pwRemoveStrumento(this)" title="Rimuovi strumento" style="color:#b91c1c;font-size:12px;line-height:1;padding:0 2px;">✕</button>
+                  style="font-size:11px;text-align:left;border:1px solid ${dup ? '#dc2626' : '#d1d5db'};border-radius:4px;padding:2px 6px;max-width:220px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;background:${dup ? '#fef2f2' : '#fff'};cursor:pointer;">${esc(pwStrLabel(k))} ▾</button>${pwStrBadgeHtml(k, squadra, cIdx, sIdx, idx)}${dup ? '<span title="Doppia assegnazione" style="color:#dc2626;font-size:12px;">⚠</span>' : ''}<button class="pw-write-action" data-cidx="${cIdx}" data-sidx="${sIdx}" data-idx="${idx}" onclick="pwRemoveStrumento(this)" title="Rimuovi strumento" style="color:#b91c1c;font-size:12px;line-height:1;padding:0 2px;">✕</button>
               </span>`;
             }).join('')}
             <button class="pw-write-action" data-cidx="${cIdx}" data-sidx="${sIdx}" onclick="pwAddStrumento(this)" style="font-size:10px;font-weight:600;background:#fde68a;color:#92400e;border-radius:4px;padding:2px 7px;white-space:nowrap;">+ Strumento</button>
@@ -833,6 +836,8 @@ function pwRender() {
   pwNvUpdateButton();
   pwJchkRefresh();
   chsAggiorna();
+  // Elenco strumenti GAR con assegnatari più vecchio di 30 min: riletto in background (v18.302.0)
+  pwStrAutoRefresh();
 }
 
 /* ----- Statistiche settimana ----- */

@@ -3,21 +3,19 @@
 let pwStrumenti = [];
 try { const _c = localStorage.getItem('pw_strumenti_cache'); if (_c) pwStrumenti = JSON.parse(_c) || []; } catch (_) {}
 
-HELP_TEXTS['pw-strumenti-refresh'] = 'Ricarica dal progetto Jira "GAR" l\'elenco degli strumenti (Strumentazione) disponibili nella tendina di scelta strumenti in Griglia, e aggiorna la cache locale del browser.\n\nDa rifare quando in Jira vengono creati o rinominati strumenti che non compaiono ancora (o compaiono col nome vecchio) nell\'elenco a tendina.';
+HELP_TEXTS['pw-strumenti-refresh'] = 'Ricarica dal progetto Jira "GAR" l\'elenco degli strumenti (Strumentazione, Drone, Hard disk) con chi li ha in mano (assegnatario) e il loro stato, e aggiorna la cache del browser. L\'elenco si rilegge anche da solo aprendo la Griglia, se ha più di 30 minuti.\n\nDopo la lettura, nella settimana mostrata (se non è passata) ogni squadra riceve gli strumenti IN USO assegnati su Jira ai suoi operatori, se non sono già in un\'altra squadra e se non li hai tolti a mano da quella squadra. Questo si salva nella Griglia condivisa; su Jira non scrive nulla.';
 
 async function pwFetchStrumenti() {
   const st = document.getElementById('pw-strumenti-status');
   if (!_sbClient || !_sbUser) { showAlertModal('Non connesso: impossibile contattare Jira.'); return; }
   if (st) st.textContent = '⏳ Carico strumenti da Jira…';
   try {
-    const { data, error } = await _sbClient.functions.invoke('jira-list-strumenti', { body: {} });
-    if (error) throw new Error(await _cpEdgeErr(error, 'jira-list-strumenti'));
-    if (data && data.error) throw new Error(data.error);
-    pwStrumenti = Array.isArray(data && data.strumenti) ? data.strumenti : [];
-    try { localStorage.setItem('pw_strumenti_cache', JSON.stringify(pwStrumenti)); } catch (_) {}
-    if (st) st.textContent = `✓ ${pwStrumenti.length} strumenti caricati`;
+    await pwStrCarica();
+    const n = pwStrAutoSettimana();
+    if (n) await pwSave();
+    if (st) st.textContent = `✓ ${pwStrumenti.length} strumenti caricati` + (n ? ` · ${n} aggiunti alle squadre da Jira` : '');
     pwRender();
-    setTimeout(() => { if (st) st.textContent = ''; }, 4000);
+    setTimeout(() => { if (st) st.textContent = ''; }, 6000);
   } catch (e) {
     console.error('pwFetchStrumenti', e);
     if (st) st.textContent = '';
@@ -80,6 +78,8 @@ async function pwRemoveStrumento(btn) {
   const sq = pwGetWeekData()[cidx]?.squadre[sidx];
   if (!sq) return;
   const arr = pwSqStrumentiJira(sq);
+  // Tolto a mano: l'aggiunta automatica da Jira non lo rimette in questa squadra.
+  pwStrEscludi(sq, arr[parseInt(idx)]);
   arr.splice(parseInt(idx), 1);
   pwSetSqStrumentiJira(sq, arr);
   await pwSave();
@@ -115,13 +115,19 @@ function pwStrClose() {
 function pwStrOpen(btn) {
   const p = pwStrEnsurePanel();
   _pwStrTarget = { cidx: btn.dataset.cidx, sidx: btn.dataset.sidx, idx: parseInt(btn.dataset.idx) };
-  const r = btn.getBoundingClientRect();
-  p.style.display = 'block';
-  p.style.left = Math.max(6, Math.min(r.left, window.innerWidth - 290)) + 'px';
-
+  const cerca = p.querySelector('.pw-str-panel-search');
+  if (cerca) cerca.style.display = '';
   const search = p.querySelector('#pw-str-search');
   search.value = '';
   pwStrRenderList('');
+  pwStrPosiziona(btn);
+  setTimeout(() => search.focus(), 0);
+}
+function pwStrPosiziona(btn) {
+  const p = pwStrEnsurePanel();
+  const r = btn.getBoundingClientRect();
+  p.style.display = 'block';
+  p.style.left = Math.max(6, Math.min(r.left, window.innerWidth - 290)) + 'px';
 
   // Apre verso il basso se c'è abbastanza spazio (o comunque più che sopra),
   // altrimenti verso l'alto — evita che la tendina finisca tagliata fuori dal
@@ -139,8 +145,6 @@ function pwStrOpen(btn) {
     p.style.bottom = (window.innerHeight - r.top + 2) + 'px';
     list.style.maxHeight = Math.max(MIN_LIST_H, Math.min(MAX_LIST_H, spaceAbove - SEARCH_BAR_H)) + 'px';
   }
-
-  setTimeout(() => search.focus(), 0);
 }
 function pwStrRenderList(filter) {
   const list = document.getElementById('pw-str-list');
@@ -148,15 +152,31 @@ function pwStrRenderList(filter) {
   const f = (filter || '').toLowerCase().trim();
   let html = '<div class="pw-str-item empty" data-key="">— nessuno —</div>';
 
-  html += '<div style="padding:4px 8px;font-size:10px;font-weight:600;color:#94a3b8;text-transform:uppercase;">Jira / GAR</div>';
+  // Chi ha lo strumento su Jira e in che stato (v18.302.0); KO/manutenzione in grigio.
+  const t = _pwStrTarget;
+  const sqT = t ? pwGetWeekData()[t.cidx]?.squadre[t.sidx] : null;
+  const nomiSq = sqT ? pwStrNomiSquadra(sqT) : [];
+  const vocePw = s => {
+    const a = s.assignee;
+    const info = (a ? (a.displayName || 'utente Jira') : 'nessuno') + ' · ' + (s.stato || '?');
+    const off = pwStrBloccato(s) ? ' style="opacity:.55;"' : '';
+    return `<div class="pw-str-item" data-key="${esc(s.key)}"${off}><b>${esc(s.key)}</b> · ${esc(s.name)}`
+      + (s.stato || a ? `<div style="font-size:10px;color:#64748b;">👤 ${esc(info)}</div>` : '') + '</div>';
+  };
+
   if (pwStrumenti.length === 0) {
+    html += '<div style="padding:4px 8px;font-size:10px;font-weight:600;color:#94a3b8;text-transform:uppercase;">Jira / GAR</div>';
     html += '<div style="padding:8px;font-size:11px;color:#b45309;">Nessuno strumento in cache. Clicca "🔧 Aggiorna strumenti".</div>';
   } else {
-    const items = pwStrumenti.filter(s => !f || (s.key + ' ' + s.name).toLowerCase().includes(f));
+    const items = pwStrumenti.filter(s => !f || (s.key + ' ' + s.name + ' ' + ((s.assignee && s.assignee.displayName) || '')).toLowerCase().includes(f));
+    const diSquadra = nomiSq.length ? items.filter(s => !pwStrBloccato(s) && pwStrDetentore(s, nomiSq)) : [];
+    if (diSquadra.length) {
+      html += '<div style="padding:4px 8px;font-size:10px;font-weight:600;color:#166534;text-transform:uppercase;">Su Jira agli operatori di questa squadra</div>';
+      diSquadra.forEach(s => { html += vocePw(s); });
+    }
+    html += '<div style="padding:4px 8px;font-size:10px;font-weight:600;color:#94a3b8;text-transform:uppercase;">Jira / GAR</div>';
     if (items.length === 0) html += '<div style="padding:4px 8px;font-size:11px;color:#94a3b8;">Nessun risultato.</div>';
-    else items.forEach(s => {
-      html += `<div class="pw-str-item" data-key="${esc(s.key)}"><b>${esc(s.key)}</b> · ${esc(s.name)}</div>`;
-    });
+    else items.forEach(s => { if (!diSquadra.includes(s)) html += vocePw(s); });
   }
 
   // Strumenti messi a disposizione dai fornitori esterni (state.fornitori, vedi
@@ -183,9 +203,19 @@ async function pwStrPick(key) {
   const sq = pwGetWeekData()[cidx]?.squadre[sidx];
   if (sq) {
     const arr = pwSqStrumentiJira(sq);
+    // Sostituito o svuotato a mano: quello di prima non torna da solo (aggiunta da Jira).
+    if (arr[idx] && arr[idx] !== key) pwStrEscludi(sq, arr[idx]);
+    if (key) pwStrRiammetti(sq, key);
     arr[idx] = key;
     pwSetSqStrumentiJira(sq, arr);
     await pwSave();
+  }
+  // Strumento Jira non ancora in mano (IN USO) a un operatore della squadra: secondo
+  // passo della tendina per assegnarlo anche su Jira (v18.302.0).
+  if (sq && key && pwStrServeAssegnare(key, sq)) {
+    pwRender();
+    pwStrRenderAssegna(key);
+    return;
   }
   pwStrClose();
   pwRender();
