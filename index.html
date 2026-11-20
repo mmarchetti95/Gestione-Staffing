@@ -2565,7 +2565,7 @@
       </span>
       <button id="btn-presentation" class="px-3 py-1.5 text-sm rounded hover:bg-white/10" style="border:1px solid var(--dark-border-strong);color:var(--dark-text);visibility:visible;">📊 Modalità presentazione</button>
       <div class="text-xs pl-2" style="border-left:1px solid var(--dark-border-strong);color:var(--dark-text-muted);">
-        <span id="app-version" class="font-medium" style="color:var(--accent);">v18.307.0</span> · Michele Marchetti
+        <span id="app-version" class="font-medium" style="color:var(--accent);">v18.308.0</span> · Michele Marchetti
         <span id="sb-role-badge" style="margin-left:8px;padding:1px 8px;border-radius:9999px;background:rgba(255,255,255,.1);color:var(--dark-text);font-weight:600;"></span>
       </div>
     </div>
@@ -52256,14 +52256,17 @@ function prgDrawerStoricoHtml(b, el, w) {
   if (rows.errore) return '<div class="text-sm text-red-600 py-6 text-center">Errore: ' + prgEsc(rows.errore) + '</div>';
   // La «memoria» dello stato messo dalla Griglia (__auto_stato) non si mostra: serve a dire
   // quali cambi di stato sono automatici (scritta pochi istanti dopo, dallo stesso utente).
-  const auto = rows.filter(r => r.campo === PRG_AUTO);
-  const visibili = rows.filter(r => r.campo !== PRG_AUTO);
+  // Idem per la memoria dei nomi messi dalla Griglia nella colonna Squadra (__auto_squadra).
+  const AUTO = [PRG_AUTO, PRG_AUTO_SQ];
+  const auto = rows.filter(r => AUTO.includes(r.campo));
+  const visibili = rows.filter(r => !AUTO.includes(r.campo));
   if (!visibili.length) return '<div class="text-sm text-slate-400 py-6 text-center">Nessuna modifica registrata dopo la creazione.</div>';
   const daGriglia = r => {
     const t = new Date(r.created_at).getTime();
     const m = auto.find(a => a.autore_email === r.autore_email && Math.abs(new Date(a.created_at).getTime() - t) < 15000
       && ((a.dopo && a.dopo.col === r.campo) || (a.prima && a.prima.col === r.campo)));
     if (!m) return '';
+    if (m.campo === PRG_AUTO_SQ) return ' <span class="prg-badge" title="Nomi aggiunti o tolti in automatico dagli operatori in Griglia">⚙ dalla Griglia</span>';
     return m.dopo ? ' <span class="prg-badge" title="Cambiato in automatico: il comune è entrato in Griglia">⚙ dalla Griglia</span>'
       : ' <span class="prg-badge" title="Cambiato in automatico: il comune è stato tolto dalla Griglia">⚙ tolto dalla Griglia</span>';
   };
@@ -53497,6 +53500,7 @@ function _prgOrdinaChiavi(o) {
 const PRG_LINK = '__griglia';
 const PRG_APP_COLS = [
   { id: '__app_link', titolo: '🔗 Griglia', tipo: 'app', larghezza: 230 },
+  { id: '__app_tipo', titolo: '🏷️ Tipo attività', tipo: 'app', larghezza: 190 },
   { id: '__app_pian', titolo: '📅 In Griglia', tipo: 'app', larghezza: 160 },
   { id: '__app_avanz', titolo: '📈 Avanzamento', tipo: 'app', larghezza: 180 },
   { id: '__app_jira', titolo: '🎫 Jira', tipo: 'app', larghezza: 120 },
@@ -53507,6 +53511,7 @@ const PRG_RETE_TOK = new Set(['ip', 'fgn', 'acq', 'h2o', 'bianca', 'nera', 'mist
 
 const _prgApp = {};              // commessa -> { stato: ''|'carica'|'ok'|'errore', mod, errore, ts, jira, promessa }
 const _prgInfoCache = new Map(); // id elemento -> { k, info }
+const _prgTipoCache = new Map(); // id elemento -> { k, tipo }
 
 /* ---------- collegamento ---------- */
 function prgLink(el) {
@@ -53603,6 +53608,7 @@ function _prgAppAggiorna() {
   clearTimeout(_prgAppTimer);
   _prgAppTimer = setTimeout(() => {
     _prgInfoCache.clear();
+    _prgTipoCache.clear();
     const scr = document.getElementById('screen-programmazione');
     if (!scr || scr.classList.contains('hidden')) return;
     prgRenderTesta();
@@ -53658,6 +53664,26 @@ async function prgAppJira(commessa, forza) {
   _prgAppAggiorna();
 }
 
+/* Colonna della board con i km da fare (numero): «Km Stima Progetto» (SINFI WALKOUT), altrimenti
+   «Km Assegnati» (SINFI MMS/PEDESTRIAN). Se c'è, l'avanzamento dell'elemento è la produzione
+   registrata sul comune + attività collegati ÷ quel valore. In ordine di preferenza. */
+const PRG_STIMA_RE = [/^km stima progetto$/, /^km assegnati$/];
+function prgColonnaStima(b) {
+  const num = prgCols(b).filter(c => c.tipo === 'numero');
+  for (const re of PRG_STIMA_RE) {
+    const c = num.find(x => re.test(caNorm(x.titolo)));
+    if (c) return c;
+  }
+  return null;
+}
+function prgStimaDi(b, el) {
+  const c = prgColonnaStima(b);
+  if (!c) return undefined;
+  const v = (el.valori || {})[c.id];
+  const n = typeof v === 'number' ? v : prgParseNumero(v);
+  return n > 0 ? n : null;
+}
+
 // Gruppo di Avanzamento comuni per un collegamento (comune + attività), o null.
 function _prgAttDi(mod, commessa, link) {
   if (!mod || !link) return null;
@@ -53675,7 +53701,8 @@ function prgAppInfo(b, el) {
   if (!link || !b.commessa) return { link: null };
   const s = _prgApp[b.commessa];
   if (!s || !s.mod) return { link, carica: !s || s.stato !== 'errore', errore: s && s.errore };
-  const k = s.ts + '|' + JSON.stringify(link) + '|' + (s.jira || '');
+  const stima = prgStimaDi(b, el);
+  const k = s.ts + '|' + JSON.stringify(link) + '|' + (s.jira || '') + '|' + stima;
   const hit = _prgInfoCache.get(el.id);
   if (hit && hit.k === k) return hit.info;
   const c = s.mod.comuni[caNorm(link.cantiere)];
@@ -53689,7 +53716,9 @@ function prgAppInfo(b, el) {
     const st = _avStats(a.voci, a.pian, null);
     const tk = _avTasks(a);
     const kpi = s.mod.kpi && a.nome !== AV_SENZA_ATT ? _avKpiTarget(a.voci, a.nome, s.mod.blocchi) : null;
-    const av = kpi ? { kpi: true, pct: kpi.pct, fatto: kpi.fatto, target: kpi.target } : { kpi: false, pct: tk.pct, fatto: tk.fatto, target: tk.target };
+    // Board con i km da fare (prgColonnaStima): solo quella (vuota = niente %, non si mescolano due misure diverse).
+    const av = stima !== undefined ? { stima: prgColonnaStima(b).titolo, pct: stima ? st.km / stima * 100 : null, fatto: st.km, target: stima }
+      : kpi ? { kpi: true, pct: kpi.pct, fatto: kpi.fatto, target: kpi.target } : { kpi: false, pct: tk.pct, fatto: tk.fatto, target: tk.target };
     const passati = [...new Set(a.pian.filter(p => p.dataISO < oggi).map(p => p.dataISO))].sort();
     const futuri = [...new Set(st.futuri.map(p => p.dataISO))].sort();
     info = {
@@ -53714,10 +53743,56 @@ function _prgPctHtml(av, testo) {
     + (pct == null ? prgEsc(testo) : pct + '%' + (testo ? ' · ' + prgEsc(testo) : '')) + '</span></div>';
 }
 
+/* Tipo di attività (Rilievo MMS, Rilievo Wo Fognatura…) di un elemento, dalla Griglia.
+   Collegato con attività → quella del collegamento (nome di catalogo). Collegato senza attività →
+   le attività del comune in Griglia. Non collegato → la voce di Griglia proposta per il nome, o le
+   attività compatibili del comune con lo stesso nome: solo da vedere (dedotto = true), non scrive
+   nessun collegamento. null = niente da dire; { carica: true } = dati della Griglia non ancora letti. */
+function prgTipoAttivita(b, el) {
+  if (!b || !b.commessa || !el) return null;
+  const link = prgLink(el);
+  if (link && link.attivita) {
+    const v = caTrova(b.commessa, link.attivita);
+    return { nomi: [v ? v.nome : link.attivita], dedotto: false };
+  }
+  const s = _prgApp[b.commessa];
+  if (!s || !s.mod) return s && s.stato === 'errore' ? null : { carica: true };
+  const k = s.ts + '|' + JSON.stringify(link) + '|' + el.nome;
+  const hit = _prgTipoCache.get(el.id);
+  if (hit && hit.k === k) return hit.tipo;
+  const attDi = c => Object.values((c && c.att) || {}).filter(a => !a.servizio && a.nome && a.nome !== AV_SENZA_ATT).map(a => a.nome);
+  let tipo = null;
+  if (link) {
+    const nomi = attDi(s.mod.comuni[caNorm(link.cantiere)]);
+    if (nomi.length) tipo = { nomi, dedotto: false };
+  } else if (el.nome) {
+    const p = prgProponiLink(b, el);
+    if (p && p.fonte === 'griglia' && p.attivita) tipo = { nomi: [p.attivita], dedotto: true };
+    else {
+      const comuneTesto = prgComuneDalNome(el.nome, b.commessa);
+      const ck = cpBrdCompatta(comuneTesto);
+      const c = ck ? Object.values(s.mod.comuni).find(x => cpBrdCompatta(x.nome) === ck) : null;
+      const paroleComune = new Set(_prgTok(comuneTesto));
+      const nomi = attDi(c).filter(n => _prgPunteggioAtt(n, el.nome, paroleComune) !== null);
+      if (nomi.length) tipo = { nomi, dedotto: true };
+    }
+  }
+  _prgTipoCache.set(el.id, { k, tipo });
+  return tipo;
+}
+
 /* Contenuto di una colonna virtuale: { html, testo, ord }. */
 function prgAppValore(b, c, el) {
-  const info = prgAppInfo(b, el);
   const vuoto = { html: '', testo: '', ord: null };
+  if (c.id === '__app_tipo') {
+    const t = prgTipoAttivita(b, el);
+    if (!t) return vuoto;
+    if (t.carica) return { html: '<span class="text-slate-300">…</span>', testo: '', ord: null };
+    const testo = t.nomi.join(', ');
+    const tip = t.dedotto ? 'Dalla Griglia, comune con lo stesso nome: elemento non ancora collegato' : 'Dal collegamento alla Griglia';
+    return { html: '<span class="prg-trunc' + (t.dedotto ? ' text-slate-500 italic' : '') + '" title="' + prgEsc(testo + ' — ' + tip) + '">' + prgEsc(testo) + '</span>', testo, ord: testo.toLowerCase() };
+  }
+  const info = prgAppInfo(b, el);
   if (c.id === '__app_link') {
     if (info.link) {
       const ic = !info.ok ? '' : info.inGriglia ? '<span class="prg-app-ok" title="In Griglia o con lavoro registrato">✓</span>' : '<span class="prg-app-no" title="Non ancora in Griglia con questa attività">○</span>';
@@ -53741,7 +53816,10 @@ function prgAppValore(b, c, el) {
   if (c.id === '__app_avanz') {
     const st = info.st;
     if (!st.km && !st.ore && info.av.pct == null) return vuoto;
-    const t = prgFmtNumero(Math.round(st.km * 100) / 100) + ' ' + (info.unita || '') + ' · ' + st.giorni.size + ' gg';
+    const t = prgFmtNumero(Math.round(st.km * 100) / 100)
+      + (info.av.stima && info.av.target ? ' su ' + prgFmtNumero(Math.round(info.av.target * 100) / 100) : '')
+      + ' ' + (info.unita || '') + ' · ' + st.giorni.size + ' gg'
+      + (info.av.stima && !info.av.target ? ' · manca ' + info.av.stima : '');
     return { html: _prgPctHtml(info.av, t), testo: (info.av.pct != null ? Math.round(info.av.pct) + '% · ' : '') + t, ord: info.av.pct != null ? info.av.pct : st.km / 1e6 };
   }
   if (c.id === '__app_jira') {
@@ -54037,6 +54115,12 @@ function prgDrawerDashboardHtml(b, el, w) {
     const oa = (gcB.opzioni || []).find(o => o.id === mAuto.a), od = mAuto.da ? (gcB.opzioni || []).find(o => o.id === mAuto.da) : null;
     h += '<div class="text-xs text-slate-500 mt-2">⚙ Stato «' + prgEsc(oa ? oa.label : '') + '» messo dalla Griglia: se il comune viene tolto dalla Griglia torna a «' + prgEsc(od ? od.label : 'nessuno stato') + '». Cambiandolo a mano, la Griglia non lo tocca più.</div>';
   }
+  const csB = prgGColSquadra(b), mSq = (el.valori || {})[PRG_AUTO_SQ];
+  const nomiSq = csB && mSq && mSq.col === csB.id ? Object.values(mSq.nomi || {}).filter(e => e && !e.tolto).map(e => e.s) : [];
+  if (nomiSq.length) {
+    h += '<div class="text-xs text-slate-500 mt-2">⚙ In «' + prgEsc(csB.titolo) + '» dalla Griglia: ' + prgEsc(nomiSq.join(', '))
+      + '. Si tolgono da soli se l\'operatore lascia questo comune in Griglia; i nomi scritti a mano non si toccano.</div>';
+  }
   h += '</div>';
   if (!link) return h;
   const info = prgAppInfo(b, el);
@@ -54057,7 +54141,8 @@ function prgDrawerDashboardHtml(b, el, w) {
       + (info.passati.length ? '<div class="text-xs text-slate-500 mt-1">' + info.passati.length + ' giorni pianificati in passato, l\'ultimo ' + prgEsc(_prgDataCorta(info.ultimoPian)) + '</div>' : '')
       + '</div>';
     h += '<div class="prg-app-sez"><div class="prg-app-tit">📈 Avanzamento</div>'
-      + (info.av.pct != null ? _prgPctHtml(info.av, prgFmtNumero(Math.round(info.av.fatto * 100) / 100) + ' su ' + prgFmtNumero(Math.round(info.av.target * 100) / 100) + (info.av.kpi ? ' (KPI target delle giornate)' : ' (Target Production)')) : '')
+      + (info.av.pct != null ? _prgPctHtml(info.av, prgFmtNumero(Math.round(info.av.fatto * 100) / 100) + ' su ' + prgFmtNumero(Math.round(info.av.target * 100) / 100) + (info.av.stima ? ' (' + info.av.stima + ')' : info.av.kpi ? ' (KPI target delle giornate)' : ' (Target Production)'))
+        : info.av.stima ? '<div class="text-xs text-amber-700">' + prgEsc(info.av.stima) + ' vuoto: avanzamento non calcolabile.</div>' : '')
       + '<div class="text-sm mt-1">Produzione <b>' + prgEsc(prgFmtNumero(Math.round(st.km * 1000) / 1000)) + ' ' + prgEsc(info.unita || '') + '</b> · ore Jira <b>' + prgEsc(prgFmtNumero(Math.round(st.ore * 10) / 10)) + '</b> · ' + st.giorni.size + ' giorni lavorati</div>'
       + (st.ultima ? '<div class="text-xs text-slate-500">Dal ' + prgEsc(_prgDataCorta(st.prima)) + ' al ' + prgEsc(_prgDataCorta(st.ultima)) + ' · ' + prgEsc([...st.operatori].join(', ')) + '</div>' : '')
       + (st.kmDaVer ? '<div class="text-xs text-amber-700">' + prgEsc(prgFmtNumero(Math.round(st.kmDaVer * 100) / 100)) + ' ' + prgEsc(info.unita || '') + ' ancora da verificare (presi da Jira)</div>' : '')
@@ -54099,7 +54184,7 @@ async function prgDrawerDashboardClick(az, el) {
     if (ok) { _prgInfoCache.delete(el.id); prgAppJira(b.commessa); prgRenderDrawer(); prgOnGrigliaSalvata(); }
   } else if (az === 'lk-togli') {
     if (!(await showConfirmAsync('Scollegare «' + el.nome + '» dalla Griglia? Su Griglia e Jira non cambia nulla.', 'Scollega'))) return;
-    if (await prgSalvaValore(el, PRG_LINK, null)) { if ((el.valori || {})[PRG_AUTO]) await _prgGImposta(el, PRG_AUTO, null); prgRenderDrawer(); }
+    if (await prgSalvaValore(el, PRG_LINK, null)) { if ((el.valori || {})[PRG_AUTO]) await _prgGImposta(el, PRG_AUTO, null); prgRenderDrawer(); prgOnGrigliaSalvata(); }   // toglie i nomi messi dalla Griglia in «Squadra»
   } else if (az === 'ap') {
     if (_prg.boardId !== b.id) await prgScegliBoard(b.id);
     prgAutoplanApri([el.id]);
@@ -54188,10 +54273,18 @@ const PRG_AUTO = '__auto_stato';
 
 /* Voci (cantiere|attività) della commessa in Griglia dalla settimana `dal` ({ year, week },
    default questa) in poi, con le settimane in cui compaiono; .cantieri = solo i cantieri,
-   .elenco = chiave -> { cantiere come scritto in Griglia, attività di catalogo }. */
+   .elenco = chiave -> { cantiere come scritto in Griglia, attività di catalogo }; .ops = chiave ->
+   Map(operatore come in Griglia -> settimane), .opsCant = cantiere normalizzato -> idem. */
 function prgGVociGriglia(commessa, dal) {
   const oggi = dal || isoWeekYear(new Date());
-  const voci = new Map(), cantieri = new Set(), elenco = new Map();
+  const voci = new Map(), cantieri = new Set(), elenco = new Map(), ops = new Map(), opsCant = new Map();
+  const segna = (mappa, k, nome, sett) => {
+    if (!nome) return;
+    if (!mappa.has(k)) mappa.set(k, new Map());
+    const m = mappa.get(k);
+    if (!m.has(nome)) m.set(nome, new Set());
+    m.get(nome).add(sett);
+  };
   Object.keys(pwData || {}).forEach(anno => {
     if (!/^\d{4}$/.test(anno)) return;
     Object.keys(pwData[anno] || {}).forEach(week => {
@@ -54208,6 +54301,8 @@ function prgGVociGriglia(commessa, dal) {
               if (!voci.has(k)) voci.set(k, new Set());
               voci.get(k).add(anno + '|' + week);
               cantieri.add(caNorm(v.cantiere));
+              segna(ops, k, op.nome, anno + '|' + week);
+              segna(opsCant, caNorm(v.cantiere), op.nome, anno + '|' + week);
             });
           }
         }));
@@ -54216,7 +54311,103 @@ function prgGVociGriglia(commessa, dal) {
   });
   voci.cantieri = cantieri;
   voci.elenco = elenco;
+  voci.ops = ops;
+  voci.opsCant = opsCant;
   return voci;
+}
+
+// Operatori in Griglia sulla voce di un collegamento (senza attività: su tutto il cantiere).
+function _prgGOpsVoce(voci, commessa, link) {
+  if (!link || !voci.ops) return null;
+  return (link.attivita ? voci.ops.get(_prgGChiave(commessa, link.cantiere, link.attivita)) : voci.opsCant.get(caNorm(link.cantiere))) || null;
+}
+
+/* ---------- colonna «Squadra» della board dalla Griglia ---------- */
+const PRG_AUTO_SQ = '__auto_squadra';
+
+function prgGColSquadra(b) {
+  return prgCols(b).find(c => caNorm(c.titolo) === 'squadra' && (c.tipo === 'testo' || c.tipo === 'testo_lungo')) || null;
+}
+
+// Nome come lo scrivono le board («Nome Cognome»), dall'anagrafica; altrimenti come in Griglia.
+function prgGNomeSquadra(nomeGriglia) {
+  const op = (state.operatori || []).find(o => (o.nome_esteso || o.nome_breve || o.nome) === nomeGriglia);
+  if (!op) return nomeGriglia;
+  const nome = String(op.nome || '').trim(), cog = String(op.cognome || '').trim();
+  if (nome && cog) return nome + ' ' + cog;
+  if (cog) {
+    const parti = String(op.nome_esteso || nomeGriglia).trim().split(/\s+/);
+    const k = cog.split(/\s+/).length;
+    if (parti.length > k && caNorm(parti.slice(0, k).join(' ')) === caNorm(cog)) return parti.slice(k).join(' ') + ' ' + cog;
+  }
+  return nomeGriglia;
+}
+
+function _prgGTokPersona(s) {
+  return new Set(caNorm(s).replace(/[^a-z0-9 ]+/g, '').split(' ').filter(t => t.length >= 2));
+}
+// Stessa persona scritta in due modi («Cosentino Antonio» / «Antonio Cosentino», «Hazem Semry» /
+// «Semry Hazem Said Mohamed»): le parole del nome più corto (almeno due) stanno tutte nell'altro.
+function _prgGStessaPersona(a, b) {
+  const x = _prgGTokPersona(a), y = _prgGTokPersona(b);
+  const [p, g] = x.size <= y.size ? [x, y] : [y, x];
+  if (!p.size) return false;
+  if (p.size < 2) return g.size === 1 && [...p][0] === [...g][0];
+  return [...p].every(t => g.has(t));
+}
+function _prgGListaNomi(v) {
+  return String(v || '').split(/\s*[,;\n]\s*/).map(s => s.trim()).filter(Boolean);
+}
+
+/* Nuovo contenuto della colonna Squadra di un elemento, o null se non cambia nulla.
+   Memoria valori['__auto_squadra'] = { col, nomi: { operatore Griglia: { s: nome scritto, anno,
+   week (prima settimana in Griglia), tolto } } }: solo i nomi messi dalla Griglia si tolgono quando
+   l'operatore lascia la voce (da min(settimana della memoria, questa) in poi: una settimana finita
+   non li toglie); i nomi scritti a mano o già presenti non si toccano; un nome della Griglia tolto
+   a mano resta «tolto» e non si rimette finché l'operatore resta su quella voce. */
+function _prgGSquadraNuova(b, el, cs, oggi, vociDal) {
+  const l = prgLink(el);
+  const v = el.valori || {};
+  let m = v[PRG_AUTO_SQ];
+  if (m && (typeof m !== 'object' || m.col !== cs.id)) m = null;
+  if (!l && !m) return null;
+  const nomi = {};
+  Object.entries((m && m.nomi) || {}).forEach(([g, e]) => { if (e && e.s) nomi[g] = Object.assign({}, e); });
+  const lista = _prgGListaNomi(v[cs.id]);
+  let testoCambiato = false, memCambiata = false;
+  const aggiunti = [], tolti = [];
+  // a) nomi della Griglia tolti a mano dalla colonna
+  Object.values(nomi).forEach(e => { if (!e.tolto && !lista.includes(e.s)) { e.tolto = true; memCambiata = true; } });
+  // b) operatori che non sono più sulla voce
+  Object.keys(nomi).forEach(g => {
+    const e = nomi[g];
+    const dal = e.anno && e.week && (e.anno < oggi.year || (e.anno === oggi.year && e.week < oggi.week)) ? { year: e.anno, week: e.week } : oggi;
+    const ops = l ? _prgGOpsVoce(vociDal(b.commessa, dal), b.commessa, l) : null;
+    if (ops && ops.has(g)) return;
+    const i = e.tolto ? -1 : lista.indexOf(e.s);
+    if (i >= 0) { lista.splice(i, 1); testoCambiato = true; tolti.push(e.s); }
+    delete nomi[g];
+    memCambiata = true;
+  });
+  // c) operatori nuovi sulla voce da questa settimana in poi
+  const ops = l ? _prgGOpsVoce(vociDal(b.commessa, oggi), b.commessa, l) : null;
+  if (ops) [...ops.keys()].sort((x, y) => x.localeCompare(y, 'it')).forEach(g => {
+    if (nomi[g]) return;
+    const s = prgGNomeSquadra(g);
+    if (lista.some(x => _prgGStessaPersona(x, s) || _prgGStessaPersona(x, g))) return;
+    lista.push(s);
+    aggiunti.push(s);
+    const p = _prgGPrima(ops.get(g)) || oggi;
+    nomi[g] = { s, anno: p.year, week: p.week };
+    testoCambiato = true;
+    memCambiata = true;
+  });
+  if (!testoCambiato && !memCambiata) return null;
+  return {
+    testo: testoCambiato ? (lista.length ? lista.join(', ') : null) : undefined,
+    mem: Object.keys(nomi).length ? { col: cs.id, nomi } : null,
+    aggiunti, tolti,
+  };
 }
 
 // Prima settimana ({ year, week }) di un insieme di 'anno|week', o null.
@@ -54354,7 +54545,22 @@ async function _prgGAllinea() {
     }
     for (const el of scadute) await _prgGImposta(el, PRG_AUTO, null);
 
+    // 3. colonna «Squadra»: gli operatori della Griglia sulla voce collegata
+    const squadre = [];
+    for (const b of boards) {
+      const cs = prgGColSquadra(b);
+      if (!cs) continue;
+      for (const el of prgEls(b.id)) {
+        const n = _prgGSquadraNuova(b, el, cs, oggi, vociDal);
+        if (!n) continue;
+        if (n.testo !== undefined && !(await _prgGImposta(el, cs.id, n.testo))) continue;
+        await _prgGImposta(el, PRG_AUTO_SQ, n.mem);
+        if (n.aggiunti.length || n.tolti.length) squadre.push({ el, aggiunti: n.aggiunti, tolti: n.tolti });
+      }
+    }
+
     const parti = [];
+    if (squadre.length) parti.push('squadra aggiornata su ' + _prgGNomi(squadre));
     if (collegati.length) parti.push(_prgGNomi(collegati) + ' collegat' + (collegati.length === 1 ? 'o' : 'i') + ' alla Griglia in automatico');
     if (fattiA.length) parti.push(_prgGNomi(fattiA) + ' → «' + fattiA[0].opz.label + '»');
     if (fattiI.length) parti.push(_prgGNomi(fattiI) + ' tolt' + (fattiI.length === 1 ? 'o' : 'i') + ' dalla Griglia → ' + (fattiI.length === 1 ? '«' + (fattiI[0].verso ? fattiI[0].verso.label : 'senza stato') + '»' : 'stato di prima'));
@@ -54364,6 +54570,7 @@ async function _prgGAllinea() {
       if (collegati.length) sbLogActivity('Programmazione: collegamento automatico alla Griglia', { elementi: collegati.map(c => c.el.nome + ' → ' + prgLinkTesto(c.link)) });
       if (fattiA.length) sbLogActivity('Programmazione: stato da Griglia', { elementi: fattiA.map(c => c.el.nome), stato: fattiA[0].opz.label });
       if (fattiI.length) sbLogActivity('Programmazione: stato ripristinato (tolto dalla Griglia)', { elementi: fattiI.map(c => c.el.nome + ' → ' + (c.verso ? c.verso.label : 'vuoto')) });
+      if (squadre.length) sbLogActivity('Programmazione: squadra dalla Griglia', { elementi: squadre.map(c => c.el.nome + (c.aggiunti.length ? ' + ' + c.aggiunti.join(', ') : '') + (c.tolti.length ? ' − ' + c.tolti.join(', ') : '')) });
     }
     _prgInfoCache.clear();
     _prgRtRender();

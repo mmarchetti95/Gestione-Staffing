@@ -1181,14 +1181,17 @@ function prgDrawerStoricoHtml(b, el, w) {
   if (rows.errore) return '<div class="text-sm text-red-600 py-6 text-center">Errore: ' + prgEsc(rows.errore) + '</div>';
   // La «memoria» dello stato messo dalla Griglia (__auto_stato) non si mostra: serve a dire
   // quali cambi di stato sono automatici (scritta pochi istanti dopo, dallo stesso utente).
-  const auto = rows.filter(r => r.campo === PRG_AUTO);
-  const visibili = rows.filter(r => r.campo !== PRG_AUTO);
+  // Idem per la memoria dei nomi messi dalla Griglia nella colonna Squadra (__auto_squadra).
+  const AUTO = [PRG_AUTO, PRG_AUTO_SQ];
+  const auto = rows.filter(r => AUTO.includes(r.campo));
+  const visibili = rows.filter(r => !AUTO.includes(r.campo));
   if (!visibili.length) return '<div class="text-sm text-slate-400 py-6 text-center">Nessuna modifica registrata dopo la creazione.</div>';
   const daGriglia = r => {
     const t = new Date(r.created_at).getTime();
     const m = auto.find(a => a.autore_email === r.autore_email && Math.abs(new Date(a.created_at).getTime() - t) < 15000
       && ((a.dopo && a.dopo.col === r.campo) || (a.prima && a.prima.col === r.campo)));
     if (!m) return '';
+    if (m.campo === PRG_AUTO_SQ) return ' <span class="prg-badge" title="Nomi aggiunti o tolti in automatico dagli operatori in Griglia">⚙ dalla Griglia</span>';
     return m.dopo ? ' <span class="prg-badge" title="Cambiato in automatico: il comune è entrato in Griglia">⚙ dalla Griglia</span>'
       : ' <span class="prg-badge" title="Cambiato in automatico: il comune è stato tolto dalla Griglia">⚙ tolto dalla Griglia</span>';
   };
