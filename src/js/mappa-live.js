@@ -1676,10 +1676,6 @@ function mlOpenKpi(kind) {
     if (title) title.textContent = 'Cantieri senza stato Jira';
     body.innerHTML = mlKpiNoStatoHtml();
     mlBindGriglia(body);
-  } else if (kind === 'prgnostato') {
-    if (title) title.textContent = 'Elementi senza stato';
-    body.innerHTML = mlPrgKpiNoStatoHtml();
-    mlPrgBind(body, null);
   }
   body.scrollTop = 0;
 }

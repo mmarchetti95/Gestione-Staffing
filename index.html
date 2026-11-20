@@ -2565,7 +2565,7 @@
       </span>
       <button id="btn-presentation" class="px-3 py-1.5 text-sm rounded hover:bg-white/10" style="border:1px solid var(--dark-border-strong);color:var(--dark-text);visibility:visible;">📊 Modalità presentazione</button>
       <div class="text-xs pl-2" style="border-left:1px solid var(--dark-border-strong);color:var(--dark-text-muted);">
-        <span id="app-version" class="font-medium" style="color:var(--accent);">v18.306.0</span> · Michele Marchetti
+        <span id="app-version" class="font-medium" style="color:var(--accent);">v18.307.0</span> · Michele Marchetti
         <span id="sb-role-badge" style="margin-left:8px;padding:1px 8px;border-radius:9999px;background:rgba(255,255,255,.1);color:var(--dark-text);font-weight:600;"></span>
       </div>
     </div>
@@ -47893,10 +47893,6 @@ function mlOpenKpi(kind) {
     if (title) title.textContent = 'Cantieri senza stato Jira';
     body.innerHTML = mlKpiNoStatoHtml();
     mlBindGriglia(body);
-  } else if (kind === 'prgnostato') {
-    if (title) title.textContent = 'Elementi senza stato';
-    body.innerHTML = mlPrgKpiNoStatoHtml();
-    mlPrgBind(body, null);
   }
   body.scrollTop = 0;
 }
@@ -55210,17 +55206,16 @@ HELP_TEXTS['prg-vista-elimina'] = 'Elimina la vista attiva da questo browser. I 
 /* ==================== MAPPA · VISTA PROGRAMMAZIONE ====================
    Seconda fonte della Mappa (switch «🎫 Griglia e Jira | 📋 Programmazione» in toolbar,
    _mlFonte in mappa-live.js, scelta ricordata in localStorage.ml_fonte). Al posto dei cantieri
-   in Griglia nel giorno/settimana scelti mostra TUTTI gli elementi delle board della
-   Programmazione che hanno una colonna di stato (prgColonnaGruppoBoard), anche quelli non
-   ancora pianificati, colorati con il colore della loro etichetta di stato.
+   in Griglia nel giorno/settimana scelti mostra gli elementi delle board della Programmazione
+   che hanno una colonna di stato (prgColonnaGruppoBoard) e sono in uno degli stati della fase
+   di rilievo (ML_PRG_STATI), anche quelli non ancora pianificati, col colore del loro stato.
    - Comune dell'elemento: il cantiere del collegamento alla Griglia (__griglia) se c'è,
      altrimenti prgComuneDalNome (nome senza rete/parentesi). La posizione viene dalla stessa
-     rubrica luoghi della Griglia (_geoCache via mlGeo, geocodifica a blocchi); il riquadro
-     «Non localizzati» la corregge come per i cantieri.
+     rubrica luoghi della Griglia (_geoCache via mlGeo); i comuni nuovi si localizzano in
+     sottofondo senza bloccare il render (mlPrgGeoSfondo); «Non localizzati» corregge.
    - Un pin per comune: più elementi nello stesso comune (es. FGN + ACQ) = un pin a spicchi,
      uno per stato, col numero di elementi al centro.
-   - Filtro «Stato» = etichette delle board, con chiave l'etichetta normalizzata (caNorm), così
-     board diverse con la stessa etichetta si filtrano insieme; più «Senza stato».
+   - Filtro «Stato» = i 5 stati di ML_PRG_STATI (etichette riconosciute dall'inizio del testo).
    - Giorno/settimana non contano: la toolbar li nasconde.
    Sola lettura: niente Jira, niente pwData. Il Realtime della Programmazione ridisegna
    (mlPrgOnDataChanged, chiamata da _prgRtRender). «📋 Apri» porta alla board con il pannello
@@ -55228,7 +55223,20 @@ HELP_TEXTS['prg-vista-elimina'] = 'Elimina la vista attiva da questo browser. I 
 
 const ML_PRG_ND = 'nd';
 const ML_PRG_ND_COLORE = '#cbd5e1';
-let _mlPrgStati = [];          // [{ k, l, c }] etichette di stato di tutte le board, in ordine di board
+/* Stati mostrati: solo la fase del rilievo (v18.307.0, scelta dell'utente). Le etichette delle
+   board si riconoscono dall'inizio del testo normalizzato, così varianti come «Backlog
+   pianificazion» (refuso in una board) finiscono nella stessa chip. Gli elementi negli altri
+   stati (elaborazione, revisione, dato condiviso, consegnato…) o senza stato non vanno sulla
+   mappa: se ne dice solo il numero in testata. Colore = quello della prima board che ha lo stato. */
+const ML_PRG_STATI = [
+  { k: 'backlog', l: 'Backlog pianificazione', re: /^backlog pianific/, c: '#c4c4c4' },
+  { k: 'pianificazione', l: 'Pianificazione', re: /^pianificaz/, c: '#579bfc' },
+  { k: 'progress', l: 'In progress', re: /^in progress/, c: '#fdab3d' },
+  { k: 'pending', l: 'In pending', re: /^in pending/, c: '#ffcb00' },
+  { k: 'completato', l: 'Rilievo completato', re: /^rilievo complet/, c: '#037f4c' },
+];
+let _mlPrgStati = [];          // [{ k, l, c }] = ML_PRG_STATI con i colori delle board
+let _mlPrgEsclusi = 0;         // elementi in altri stati o senza stato, non mostrati
 
 function mlPrgPuo() {
   return typeof sbCanSeePage !== 'function' || sbCanSeePage('programmazione');
@@ -55267,32 +55275,39 @@ function mlPrgComune(b, el) {
 
 /* Una voce per elemento. Stessa forma minima delle voci della Griglia usata da filtri e
    rubrica (commessa, cantiere, operatori), più i dati dell'elemento. */
+function mlPrgStatoDi(label) {
+  const n = caNorm(label);
+  return ML_PRG_STATI.find(s => s.re.test(n)) || null;
+}
+
 function mlPrgBuildItems() {
   const items = [];
-  const stati = new Map();
+  const colori = {};
+  let esclusi = 0;
   _prg.boards.forEach(b => {
     const gc = prgColonnaGruppoBoard(b);
     if (!gc || !_prg.caricate[b.id]) return;
     const opz = gc.opzioni || [];
     opz.forEach(o => {
-      const k = caNorm(o.label);
-      if (k && !stati.has(k)) stati.set(k, { k, l: o.label, c: o.colore || ML_PRG_ND_COLORE });
+      const s = mlPrgStatoDi(o.label);
+      if (s && o.colore && !colori[s.k]) colori[s.k] = o.colore;
     });
     prgEls(b.id).forEach(el => {
+      const o = opz.find(x => x.id === (el.valori || {})[gc.id]);
+      const s = o ? mlPrgStatoDi(o.label) : null;
+      if (!s) { esclusi++; return; }
       const cantiere = String(mlPrgComune(b, el) || '').trim();
       if (!cantiere) return;
-      const o = opz.find(x => x.id === (el.valori || {})[gc.id]);
       items.push({
         prg: true, el, board: b, commessa: b.commessa || b.nome || 'Board', cantiere,
         nome: el.nome || '', operatori: [], link: prgLink(el),
-        stato: o ? caNorm(o.label) : null,
-        statoL: o ? o.label : 'Senza stato',
-        colore: o ? (o.colore || ML_PRG_ND_COLORE) : ML_PRG_ND_COLORE,
-        ordine: o ? opz.indexOf(o) : 999,
+        stato: s.k, statoL: s.l, colore: colori[s.k] || s.c,
+        ordine: ML_PRG_STATI.indexOf(s),
       });
     });
   });
-  _mlPrgStati = [...stati.values()];
+  _mlPrgStati = ML_PRG_STATI.map(s => ({ k: s.k, l: s.l, c: colori[s.k] || s.c }));
+  _mlPrgEsclusi = esclusi;
   return items;
 }
 
@@ -55360,21 +55375,23 @@ function mlPrgMarkerHtml(g) {
 
 /* Render della vista Programmazione: chiamata da mlRender (che gestisce _mlRendering e
    l'indicatore di caricamento). */
+/* Niente attese sulla geocodifica (v18.307.0): con centinaia di comuni mai cercati il render
+   restava fermo sotto «caricamento» per minuti. Si disegna subito con le posizioni già in
+   rubrica; i comuni nuovi si cercano in sottofondo (mlPrgGeoSfondo) e i pin compaiono man mano. */
 async function mlPrgRender(o) {
   const loading = document.getElementById('ml-loading');
-  if (loading) loading.style.display = 'flex';
+  const daLeggere = o.forcePrg === true || !_prg.pronto ||
+    _prg.boards.some(b => prgColonnaGruppoBoard(b) && !_prg.caricate[b.id]);
+  if (daLeggere && loading) loading.style.display = 'flex';
   try {
     await mlPrgCarica(o.forcePrg === true);
   } catch (e) {
     _prg.errore = e.message || String(e);
   }
-  const tutti = mlPrgBuildItems();
-  mlRenderFiltri(tutti);
-
-  // Geocodifica a blocchi su TUTTI i comuni (anche quelli esclusi dai filtri), come per la Griglia.
   await mlGeoAttendiRubrica();
-  const daGeocodificare = await mlGeocodificaGruppi(mlPrgRaggruppa(tutti));
+  if (loading) loading.style.display = 'none';
 
+  const tutti = mlPrgBuildItems();
   mlRenderFiltri(tutti);
   const items = mlPrgFiltra(tutti);
   const groups = mlPrgRaggruppa(items);
@@ -55383,16 +55400,62 @@ async function mlPrgRender(o) {
   mlDrawMarkers(groups, o.keepView === true);
   mlPrgRenderLista(groups, items);
   mlPrgRenderRiepilogo(groups, items);
+  mlPrgTestata();
 
   if (_mlSelCantiere) {
     const still = groups.findIndex(g => g.key === _mlSelCantiere);
     if (still >= 0) mlOpenDettaglio(still, true); else mlCloseDrawer();
   }
-  if (daGeocodificare > 0) {
-    setTimeout(() => {
-      if (mlIsActive() && _mlFonte === 'prg') mlRender({ keepView: true });
-    }, 1200);
+  // Tutti i comuni, anche quelli esclusi dai filtri: altrimenti non verrebbero mai localizzati.
+  mlPrgGeoSfondo(mlPrgRaggruppa(tutti));
+}
+
+const _mlPrgGeo = { attivo: false, resto: 0 };
+
+function mlPrgTestata() {
+  const lbl = document.getElementById('ml-header-dates');
+  if (!lbl || _mlFonte !== 'prg') return;
+  let t = '📋 Programmazione · fase di rilievo';
+  if (_mlPrgEsclusi) t += ' · ' + _mlPrgEsclusi + ' elementi in altri stati non mostrati';
+  if (_mlPrgGeo.attivo && _mlPrgGeo.resto) t += ' · 📍 localizzo ' + _mlPrgGeo.resto + ' comuni…';
+  lbl.textContent = t;
+}
+
+/* Geocodifica in sottofondo, una ricerca Nominatim al secondo (limite del servizio), con
+   ridisegno ogni 10 comuni trovati e alla fine. Si ferma cambiando fonte o screen; un solo
+   giro alla volta. I comuni non trovati finiscono in «Non localizzati». */
+async function mlPrgGeoSfondo(gruppi) {
+  if (_mlPrgGeo.attivo) return;
+  const coda = gruppi.filter(g => mlGeoPending(g.key));
+  if (!coda.length) return;
+  _mlPrgGeo.attivo = true;
+  _mlPrgGeo.resto = coda.length;
+  mlPrgTestata();
+  let nuovi = 0;
+  try {
+    for (const g of coda) {
+      if (_mlFonte !== 'prg' || !mlIsActive()) break;
+      if (mlGeoPending(g.key)) {
+        await geocodifica(g.cantiere);
+        if (!(g.key in _geoCache)) _mlGeoFailed.add(g.key);
+        nuovi++;
+        await new Promise(r => setTimeout(r, 1000));
+      }
+      _mlPrgGeo.resto--;
+      mlPrgTestata();
+      if (nuovi && nuovi % 10 === 0) mlPrgRidisegna();
+    }
+  } finally {
+    _mlPrgGeo.attivo = false;
+    _mlPrgGeo.resto = 0;
+    mlPrgTestata();
+    if (nuovi) mlPrgRidisegna();
   }
+}
+
+function mlPrgRidisegna() {
+  if (_mlFonte !== 'prg' || !mlIsActive() || _mlRendering) return;
+  mlRender({ keepView: true });
 }
 
 /* Chip «Stato»: le etichette di tutte le board (fisse, anche se nessun elemento è in quello
@@ -55400,14 +55463,12 @@ async function mlPrgRender(o) {
 function mlPrgRenderChipsStato() {
   const el = document.getElementById('ml-filtro-stati');
   if (!el) return;
-  const voci = _mlPrgStati.concat([{ k: ML_PRG_ND, l: 'Senza stato', c: ML_PRG_ND_COLORE }]);
-  if (_mlPrgStati.length) {
-    const valide = new Set(voci.map(v => v.k));
-    [..._mlFiltroStati].forEach(s => { if (!valide.has(s)) _mlFiltroStati.delete(s); });
-  }
+  const voci = _mlPrgStati.length ? _mlPrgStati : ML_PRG_STATI;
+  const valide = new Set(voci.map(v => v.k));
+  [..._mlFiltroStati].forEach(s => { if (!valide.has(s)) _mlFiltroStati.delete(s); });
   el.innerHTML = voci.map(s =>
     '<button class="ml-chip' + (_mlFiltroStati.has(s.k) ? ' active' : '') + '" style="--chip:' + esc(s.c) +
-    '" data-v="' + esc(s.k) + '" title="' + esc(s.k === ML_PRG_ND ? 'Elementi senza stato nella board' : 'Elementi nello stato «' + s.l + '»') + '">' +
+    '" data-v="' + esc(s.k) + '" title="' + esc('Elementi nello stato «' + s.l + '»') + '">' +
     esc(s.l) + '</button>').join('');
   el.querySelectorAll('.ml-chip').forEach(b => {
     b.onclick = () => { mlToggleSet(_mlFiltroStati, b.dataset.v); mlRender({ keepView: true }); };
@@ -55491,8 +55552,8 @@ function mlPrgRenderRiepilogo(groups, items) {
   const el = document.getElementById('ml-riepilogo');
   if (!el) return;
   const commesse = new Set(items.map(i => i.commessa));
-  const senzaGeo = groups.filter(g => !mlGeo(g.key)).length;
-  const senzaStato = items.filter(i => !i.stato).length;
+  // Solo i comuni già cercati e non trovati: quelli in coda di localizzazione arrivano da soli.
+  const senzaGeo = groups.filter(g => !mlGeo(g.key) && !mlGeoPending(g.key)).length;
   const box = (v, l, kind, titolo) =>
     '<button class="ml-kpi" data-ml-kpi="' + kind + '" title="' + esc(titolo) + '">' +
       '<span class="ml-kpi-v">' + v + '</span><span class="ml-kpi-l">' + esc(l) + '</span></button>';
@@ -55501,25 +55562,8 @@ function mlPrgRenderRiepilogo(groups, items) {
     box(groups.length, 'Comuni', 'cantieri', "Mostra l'elenco dei comuni") +
     box(commesse.size, 'Commesse', 'commesse', "Mostra l'elenco delle commesse");
   if (senzaGeo) html += box(senzaGeo, 'Non localizzati', 'nogeo', 'Comuni assenti dalla mappa: clicca per correggerne la posizione');
-  if (senzaStato) html += box(senzaStato, 'Senza stato', 'prgnostato', 'Elementi senza stato nella board: clicca per vedere quali');
   el.innerHTML = html;
   el.querySelectorAll('[data-ml-kpi]').forEach(b => { b.onclick = () => mlOpenKpi(b.dataset.mlKpi); });
-}
-
-/* Pannello «Senza stato»: elementi da sistemare, ognuno con «📋 Apri». */
-function mlPrgKpiNoStatoHtml() {
-  let n = 0;
-  const righe = [];
-  _mlGroups.forEach((g, gi) => g.items.forEach((it, ii) => {
-    if (it.stato) return;
-    n++;
-    righe.push('<div class="ml-cant"><div class="ml-cant-h"><b>' + esc(it.nome) + '</b>' +
-      (mlPrgPuo() ? '<span class="ml-griglia-btns"><button class="ml-link ml-griglia-link" data-ml-prg-g="' + gi + '" data-ml-prg="' + ii + '" title="Apri l\'elemento nella Programmazione">📋 Apri</button></span>' : '') +
-      '</div><div class="ml-cant-m">' + esc(g.cantiere + ' · ' + it.board.nome) + '</div></div>');
-  }));
-  if (!n) return '<div class="ml-note">Tutti gli elementi visibili hanno uno stato.</div>';
-  return '<div class="ml-note" style="margin-bottom:7px;">Elementi senza un valore nella colonna di stato della board: sulla mappa sono grigi.</div>' +
-    '<div class="ml-cant-list" style="max-height:none;">' + righe.join('') + '</div>';
 }
 
 /* Dettaglio di un comune: un riquadro per elemento con stato, board, collegamento alla
