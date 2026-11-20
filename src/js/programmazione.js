@@ -1493,6 +1493,8 @@ let _prgRtTimer = null;
 function _prgRtRender() {
   clearTimeout(_prgRtTimer);
   _prgRtTimer = setTimeout(() => {
+    // La Mappa in vista Programmazione mostra gli stessi elementi (mappa-programmazione.js).
+    if (typeof mlPrgOnDataChanged === 'function') mlPrgOnDataChanged();
     const scr = document.getElementById('screen-programmazione');
     if (!scr || scr.classList.contains('hidden')) return;
     if (_prg.boardId && !_prg.boards.some(x => x.id === _prg.boardId)) { prgRender(); return; }

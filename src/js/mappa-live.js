@@ -110,6 +110,9 @@ let _mlSearchRegioni = '';
 let _mlSearchCantieri = '';
 
 let _mlSideTab = 'cantieri';              // elenco laterale: 'cantieri' | 'commesse'
+// Fonte dei pin: 'jira' = cantieri in Griglia colorati dal Task Jira (giorno/settimana),
+// 'prg' = elementi delle board della Programmazione colorati dal loro stato (mappa-programmazione.js).
+let _mlFonte = 'jira';
 
 let _mlCp = {};                           // "commessa|||squadra|||operatore|||giorno" -> riga controllo_produzione (vista giorno/settimana)
 let _mlCpCantiere = {};                   // "commessa|||squadra|||cantiere" -> { ore, km } cumulati (vista storico)
@@ -858,7 +861,8 @@ function mlInit() {
    compare in dissolvenza quando è disegnato. Con i margini logo, timeline e
    legenda di Windy restano fuori vista: si vede l'ora attuale (l'embed non
    accetta un'ora di partenza: `calendar` è ignorato sia da embed.html sia da
-   embed2.html, verificato).
+   embed2.html, verificato). La legenda la ridisegniamo noi (ML_WINDY_LEGENDE,
+   #ml-windy-leg, v18.306.0).
    Zoom limitato a 3..11 (quelli dell'embed) finché Windy è aperto.
    Spento: Windy sopra la mappa, a misura e interattivo (timeline, clic per la
    previsione), senza cantieri. Livello e preferenza in localStorage per browser. */
@@ -870,6 +874,18 @@ const ML_WINDY_LIVELLI = [
   { v: 'snowAccu', l: '❄️ Neve' },
   { v: 'thunder', l: '⚡ Temporali' },
 ];
+// Legende dei livelli, copiate dall'embed (#legend-mobile, letto il 20/11/2026 con
+// rain mm, wind km/h, temp °C): prima etichetta = unità, una cella uguale per
+// etichetta, sfondo = il gradiente di Windy. Mostrate solo con i cantieri sopra,
+// dove quella di Windy resta fuori vista. Se Windy cambia scala vanno riallineate.
+const ML_WINDY_LEGENDE = {
+  rain: { e: 'mm,1.5,2,3,7,10,20,30', c: '#3b7ca2,#3b7ca2,#3b7ca2,#3b7ca2,#3b7ea2,#3b80a2,#3a85a2,#3a89a2,#3a99a2,#32a66f,#4aa439,#81a23b,#a2a23b,#a23c3b,#ab366b,#a43a9a,#a43a9a' },
+  wind: { e: 'km/h,0,10,20,35,55,70,100', c: '#6271b8,#6271b8,#6271b8,#6271b8,#3d6ea3,#4a94aa,#4a9294,#4d8e7c,#4ca44c,#67a436,#a28740,#a26d5c,#8d3f5c,#974b91,#5f64a0,#5b88a1,#5b88a1' },
+  temp: { e: '°C,-20,-10,0,10,20,30,40', c: '#9589d3,#9589d3,#9589d3,#9589d3,#96d1d8,#81ccc5,#67b4ba,#5f8fc5,#508c3e,#79921c,#aba10e,#dfb106,#f39606,#ec5f15,#be4112,#8a2b0a,#8a2b0a' },
+  clouds: { e: 'mm,1.5,2,3,7,10,20,30', c: '#417daa,#417daa,#417daa,#417daa,#3e94ab,#3ea9ac,#3eacac,#3eacac,#3eacac,#37a689,#44913d,#799c3c,#aaab3e,#aa403e,#b43972,#af3ca1,#af3ca1' },
+  snowAccu: { e: 'cm,2,5,10,50,1m,3m', c: '#465397,#465397,#465397,#465397,#4361a0,#4071a4,#3e8ba6,#41a3a7,#5f9a38,#a8a941,#ab863e,#ac5f3e,#ae3e56,#b13c74,#b13c74' },
+  thunder: { e: 'l/km²,0,.025,.1,1,10,20', c: '#898989,#898989,#898989,#898989,#898989,#89b529,#add100,#d6da00,#eb9d00,#f26000,#9b0a21,#c72d93,#de65ff,#de65ff,#de65ff' },
+};
 const ML_WINDY_ZOOM_MIN = 3;
 const ML_WINDY_ZOOM_MAX = 11;
 // Margine caricato oltre la parte visibile, per lato: un quarto di vista (iframe
@@ -1040,9 +1056,23 @@ function _mlWindyRenderLivelli() {
     b.onclick = () => {
       try { localStorage.setItem('ml_windy_livello', b.dataset.v); } catch (e) {}
       _mlWindyRenderLivelli();
+      _mlWindyRenderLegenda();
       _mlWindyCarica(true);
     };
   });
+}
+
+// Legenda del livello scelto, solo con i cantieri sopra il meteo (senza spunta
+// Windy è a misura e mostra la sua).
+function _mlWindyRenderLegenda() {
+  const el = document.getElementById('ml-windy-leg');
+  if (!el) return;
+  const leg = ML_WINDY_LEGENDE[_mlWindyLivello()];
+  const vis = _mlWindy.aperto && _mlWindy.cantieri && !!leg;
+  el.classList.toggle('hidden', !vis);
+  if (!vis) return;
+  el.style.background = 'linear-gradient(to right, ' + leg.c.split(',').join(', ') + ')';
+  el.innerHTML = leg.e.split(',').map(t => '<span>' + esc(t) + '</span>').join('');
 }
 
 function _mlWindyApplicaModo() {
@@ -1050,6 +1080,7 @@ function _mlWindyApplicaModo() {
   if (wrap) wrap.classList.toggle('ml-windy-libero', _mlWindy.aperto && !_mlWindy.cantieri);
   const cb = document.getElementById('ml-windy-pin');
   if (cb) cb.checked = _mlWindy.cantieri;
+  _mlWindyRenderLegenda();
 }
 
 function mlWindyCantieri(on) {
@@ -1220,6 +1251,7 @@ async function mlRender(opts) {
   const loading = document.getElementById('ml-loading');
   try {
     mlRenderToolbar();
+    if (_mlFonte === 'prg') { await mlPrgRender(o); return; }
     mlRenderDays();
 
     // mlRenderFiltri() va PRIMA di filtrare: è lì che i filtri rimasti su voci non
@@ -1238,27 +1270,12 @@ async function mlRender(opts) {
     // All'apertura dell'app la rubrica luoghi si sta ancora scaricando da Supabase:
     // senza attenderla ogni cantiere risulterebbe non localizzato (regione 'n/d')
     // e verrebbe ricercato di nuovo su Nominatim.
-    if (!_mlGeoCacheReady) {
-      if (!_geoCacheLoading) _geoCacheLoad();
-      await _geoCacheLoading;
-      _mlGeoCacheReady = true;
-    }
+    await mlGeoAttendiRubrica();
 
-    // Geocodifica sequenziale dei cantieri non ancora in rubrica (rate-limit Nominatim),
-    // a blocchi: quelli che avanzano vengono ripresi dal render di coda qui sotto.
     // Si scorrono TUTTI i cantieri dello scope, non solo quelli filtrati: con un
     // filtro Regione attivo un cantiere non ancora localizzato verrebbe escluso e
     // così non verrebbe mai localizzato, restando fuori per sempre.
-    let geocodificati = 0;
-    let daGeocodificare = 0;
-    for (const g of mlGroupByCantiere(tutti)) {
-      if (!mlGeoPending(g.key)) continue;
-      if (geocodificati >= ML_GEO_MAX_PER_RENDER) { daGeocodificare++; continue; }
-      await geocodifica(g.cantiere);
-      if (!(g.key in _geoCache)) _mlGeoFailed.add(g.key);
-      await new Promise(r => setTimeout(r, 300));
-      geocodificati++;
-    }
+    const daGeocodificare = await mlGeocodificaGruppi(mlGroupByCantiere(tutti));
 
     // Le regioni dipendono dalla geocodifica appena fatta: filtri ed elenco vanno
     // ricalcolati adesso, non al prossimo cambio data (prima restavano 'n/d').
@@ -1308,6 +1325,30 @@ async function mlRender(opts) {
   }
 }
 
+async function mlGeoAttendiRubrica() {
+  if (_mlGeoCacheReady) return;
+  if (!_geoCacheLoading) _geoCacheLoad();
+  await _geoCacheLoading;
+  _mlGeoCacheReady = true;
+}
+
+/* Geocodifica sequenziale dei luoghi non ancora in rubrica (rate-limit Nominatim), a
+   blocchi di ML_GEO_MAX_PER_RENDER: ritorna quanti ne restano, che il chiamante riprende
+   con un render di coda. Gruppi = { key, cantiere } (Griglia o Programmazione). */
+async function mlGeocodificaGruppi(gruppi) {
+  let fatti = 0;
+  let resto = 0;
+  for (const g of gruppi) {
+    if (!mlGeoPending(g.key)) continue;
+    if (fatti >= ML_GEO_MAX_PER_RENDER) { resto++; continue; }
+    await geocodifica(g.cantiere);
+    if (!(g.key in _geoCache)) _mlGeoFailed.add(g.key);
+    await new Promise(r => setTimeout(r, 300));
+    fatti++;
+  }
+  return resto;
+}
+
 function mlRenderToolbar() {
   const annoSel = document.getElementById('ml-anno');
   if (annoSel) annoSel.value = String(_mlAnno);
@@ -1326,9 +1367,29 @@ function mlRenderToolbar() {
   const days = mlDates();
   const range = _mlMode === 'range';
   const r = mlRangeBounds();
+  const prg = _mlFonte === 'prg';
+  const fJ = document.getElementById('ml-fonte-jira');
+  const fP = document.getElementById('ml-fonte-prg');
+  if (fJ) fJ.classList.toggle('active', !prg);
+  if (fP) fP.classList.toggle('active', prg);
+  const fBox = document.getElementById('ml-fonte');
+  if (fBox) fBox.style.display = mlPrgPuo() ? '' : 'none';
+  // Programmazione: niente date (gli elementi non sono legati a un giorno), niente Jira.
+  ['ml-mode-box', 'ml-jira-status', 'ml-auto-box'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.style.display = prg ? 'none' : '';
+  });
+  const colOp = document.getElementById('ml-col-operatori');
+  if (colOp) colOp.style.display = prg ? 'none' : '';
+  const hint = document.getElementById('ml-filtro-hint');
+  if (hint) hint.textContent = prg
+    ? 'Il colore del pin è lo stato dell\'elemento nella Programmazione (legenda «Stato»); più elementi nello stesso comune = pin a spicchi.'
+    : 'Il colore del pin indica solo lo stato del cantiere (legenda «Stato»).';
   const lbl = document.getElementById('ml-header-dates');
   if (lbl) {
-    lbl.textContent = range
+    lbl.textContent = prg
+      ? '📋 Programmazione · tutti gli elementi delle board, pianificati e non'
+      : range
       ? '📆 ' + mlIsoFmt(r.from) + ' — ' + mlIsoFmt(r.to) + ' · ' + mlRangeDays() + ' giorni · ' + mlScopeWeeks(ML_RANGE).length + ' settimane pianificate'
       : _mlDay === ML_ALL
       ? '🗂 Tutto lo storico · ' + mlScopeWeeks(ML_ALL).length + ' settimane pianificate'
@@ -1345,10 +1406,10 @@ function mlRenderToolbar() {
   if (mr) mr.classList.toggle('active', range);
   const wn = document.getElementById('ml-week-nav');
   const rn = document.getElementById('ml-range-nav');
-  if (wn) wn.style.display = range ? 'none' : 'flex';
-  if (rn) rn.style.display = range ? 'flex' : 'none';
+  if (wn) wn.style.display = range || prg ? 'none' : 'flex';
+  if (rn) rn.style.display = range && !prg ? 'flex' : 'none';
   const dd = document.getElementById('ml-days');
-  if (dd) dd.style.display = range ? 'none' : '';
+  if (dd) dd.style.display = range || prg ? 'none' : '';
   const rf = document.getElementById('ml-range-from');
   const rt = document.getElementById('ml-range-to');
   if (rf && document.activeElement !== rf) rf.value = r.from;
@@ -1433,7 +1494,7 @@ function mlRenderFiltri(tutti) {
     if (elReg) elReg.insertAdjacentHTML('beforeend', '<span class="ml-empty">⏳ in caricamento…</span>');
   }
   mlRenderChips('ml-filtro-cantieri', cantieri, _mlFiltroCantieri, _mlSearchCantieri, 'nessun cantiere pianificato', false);
-  mlRenderChipsStato();
+  if (_mlFonte === 'prg') mlPrgRenderChipsStato(); else mlRenderChipsStato();
 
   mlSetFiltroCount('ml-n-commesse', _mlFiltroCommesse.size);
   mlSetFiltroCount('ml-n-operatori', _mlFiltroOperatori.size);
@@ -1519,6 +1580,7 @@ function mlClearFiltri() {
    in alto a destra e numero di operatori al centro. Il colore della commessa non
    compare più sul pin: due codici colore insieme rendevano la mappa illeggibile. */
 function mlMarkerHtml(g, dateISO) {
+  if (g.prg) return mlPrgMarkerHtml(g);
   const stato = g.stato;
   const fill = stato ? ML_STATUS_COLORS[stato] : '#cbd5e1';
   const info = dateISO ? pwMeteoInfoFor(g.cantiere, dateISO) : null;
@@ -1614,6 +1676,10 @@ function mlOpenKpi(kind) {
     if (title) title.textContent = 'Cantieri senza stato Jira';
     body.innerHTML = mlKpiNoStatoHtml();
     mlBindGriglia(body);
+  } else if (kind === 'prgnostato') {
+    if (title) title.textContent = 'Elementi senza stato';
+    body.innerHTML = mlPrgKpiNoStatoHtml();
+    mlPrgBind(body, null);
   }
   body.scrollTop = 0;
 }
@@ -1890,6 +1956,12 @@ function mlOpenDettaglio(idx, silent) {
   if (!d || !body) return;
   d.classList.remove('hidden');
   if (title) title.textContent = g.cantiere;
+  if (g.prg) {
+    body.innerHTML = mlPrgDettaglioHtml(g);
+    mlPrgBind(body, g);
+    if (!silent) body.scrollTop = 0;
+    return;
+  }
   body.innerHTML = mlDettaglioHtml(g);
   // Handler agganciati via addEventListener e non con onclick="..." inline: i nomi
   // di commessa contengono apostrofi (vedi convenzione jsAttr/esc in CLAUDE.md) e
@@ -2460,6 +2532,7 @@ function mlOnDataChanged() {
 function mlEnter() {
   try { _mlAuto = localStorage.getItem('ml_auto') !== '0'; } catch (_) { _mlAuto = true; }
   try { _mlSideTab = localStorage.getItem('ml_side_tab') === 'commesse' ? 'commesse' : 'cantieri'; } catch (_) {}
+  try { _mlFonte = localStorage.getItem('ml_fonte') === 'prg' && mlPrgPuo() ? 'prg' : 'jira'; } catch (_) {}
   // pwData può essere cambiato mentre si era su un altro screen (modifiche in Griglia).
   mlInvalidateItems();
   mlJiraCacheLoad();
@@ -2499,8 +2572,14 @@ function mlBindToolbar() {
   if (auto) auto.onchange = () => mlToggleAuto(auto.checked);
   // "Aggiorna" forza la rilettura da Jira anche in vista storico, dove il ciclo
   // normale si limita a riempire i buchi usando la cache.
-  if (refresh) refresh.onclick = () => mlRender({ keepView: true, forceJira: true });
+  // In vista Programmazione rilegge invece board ed elementi.
+  if (refresh) refresh.onclick = () => mlRender({ keepView: true, forceJira: true, forcePrg: true });
   if (closeBtn) closeBtn.onclick = () => mlCloseDrawer();
+
+  const fonteJ = document.getElementById('ml-fonte-jira');
+  const fonteP = document.getElementById('ml-fonte-prg');
+  if (fonteJ) fonteJ.onclick = () => mlSetFonte('jira');
+  if (fonteP) fonteP.onclick = () => mlSetFonte('prg');
 
   const modeW = document.getElementById('ml-mode-week');
   const modeR = document.getElementById('ml-mode-range');

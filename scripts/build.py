@@ -100,6 +100,7 @@ JS_FILES = [
     'programmazione-import.js',
     'programmazione-dashboard.js',
     'programmazione-filtri.js',
+    'mappa-programmazione.js',
     'ai-assistant.js',
 ]
 

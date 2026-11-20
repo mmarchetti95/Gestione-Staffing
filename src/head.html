@@ -1877,6 +1877,8 @@
     border-radius: 999px; padding: 1px 7px; flex-shrink: 0;
   }
   .ml-row-st { width: 8px; height: 22px; border-radius: 3px; flex-shrink: 0; }
+  /* Switch fonte dei pin (Griglia e Jira | Programmazione), separato dalla navigazione date */
+  .ml-fonte { display: flex; align-items: center; gap: 4px; padding-right: 10px; margin-right: 2px; border-right: 1px solid var(--border); }
   .ml-warn { font-size: 10px; }
 
   /* Pin: cerchio colorato dallo stato del Task + icona meteo + eventuale allerta PC */
@@ -1959,6 +1961,20 @@
   .ml-windy-close { border-radius: 6px; font-weight: 600; }
   .ml-windy-pin { display: flex; align-items: center; gap: 5px; cursor: pointer; color: #e2e8f0; }
   .ml-windy-pin input { margin: 0; cursor: pointer; }
+  /* Legenda nostra (con i cantieri sopra quella di Windy resta fuori vista):
+     stessi colori ed etichette dell'embed, una cella per etichetta come in Windy. */
+  .ml-windy-leg {
+    position: absolute; left: 10px; bottom: 12px; z-index: 1060;
+    width: 420px; max-width: calc(100% - 20px);
+    display: flex; border-radius: 6px; overflow: hidden;
+    box-shadow: 0 2px 8px rgba(0,0,0,.35); pointer-events: none;
+  }
+  .ml-windy-leg.hidden { display: none; }
+  .ml-windy-leg span {
+    flex: 1 1 0; text-align: center; padding: 2px 0; color: white;
+    font-size: 11px; font-weight: 600; line-height: 14px; white-space: nowrap;
+    text-shadow: 0 0 3px rgba(0,0,0,.8);
+  }
 
   .ml-drawer {
     position: absolute; top: 0; right: 0; bottom: 0; width: 370px; max-width: 92%;
@@ -2549,7 +2565,7 @@
       </span>
       <button id="btn-presentation" class="px-3 py-1.5 text-sm rounded hover:bg-white/10" style="border:1px solid var(--dark-border-strong);color:var(--dark-text);visibility:visible;">📊 Modalità presentazione</button>
       <div class="text-xs pl-2" style="border-left:1px solid var(--dark-border-strong);color:var(--dark-text-muted);">
-        <span id="app-version" class="font-medium" style="color:var(--accent);">v18.305.0</span> · Michele Marchetti
+        <span id="app-version" class="font-medium" style="color:var(--accent);">v18.306.0</span> · Michele Marchetti
         <span id="sb-role-badge" style="margin-left:8px;padding:1px 8px;border-radius:9999px;background:rgba(255,255,255,.1);color:var(--dark-text);font-weight:600;"></span>
       </div>
     </div>
@@ -3898,7 +3914,11 @@
   <!-- Toolbar: settimana mostrata, indipendente da quella della Griglia -->
   <div class="bg-white border border-slate-200 rounded-lg p-4 mb-3 flex items-center justify-between flex-wrap gap-3">
     <div class="flex items-center gap-2 flex-wrap">
-      <div class="flex items-center gap-1" title="Scegli se navigare per settimana o per intervallo di date">
+      <div id="ml-fonte" class="ml-fonte" title="Cosa mostrano i pin: i cantieri in Griglia con lo stato del Task Jira, oppure tutti gli elementi delle board della Programmazione con il loro stato">
+        <button id="ml-fonte-jira" class="ml-day-btn">🎫 Griglia e Jira</button>
+        <button id="ml-fonte-prg" class="ml-day-btn">📋 Programmazione</button>
+      </div>
+      <div id="ml-mode-box" class="flex items-center gap-1" title="Scegli se navigare per settimana o per intervallo di date">
         <button id="ml-mode-week" class="ml-day-btn">📅 Per week</button>
         <button id="ml-mode-range" class="ml-day-btn">📆 Intervallo date</button>
       </div>
@@ -3930,7 +3950,7 @@
     <div id="ml-header-dates" class="text-sm font-semibold text-slate-700"></div>
     <div class="flex items-center gap-3">
       <span id="ml-jira-status" class="text-[11px] text-slate-400"></span>
-      <label class="flex items-center gap-1.5 text-xs text-slate-600 cursor-pointer" title="Rilegge lo stato dei Task Jira ogni 2 minuti mentre questa schermata è aperta">
+      <label id="ml-auto-box" class="flex items-center gap-1.5 text-xs text-slate-600 cursor-pointer" title="Rilegge lo stato dei Task Jira ogni 2 minuti mentre questa schermata è aperta">
         <input id="ml-auto" type="checkbox" class="cursor-pointer"> auto
       </label>
       <button id="ml-refresh" class="px-3 py-1.5 text-sm border border-slate-300 rounded hover:bg-slate-50">🔄 Aggiorna</button>
@@ -3954,7 +3974,7 @@
         <input id="ml-search-commesse" type="text" placeholder="filtra commesse&hellip;" class="ml-filtro-search">
         <div id="ml-filtro-commesse" class="ml-chips"></div>
       </div>
-      <div class="ml-filtro-col">
+      <div id="ml-col-operatori" class="ml-filtro-col">
         <div class="ml-filtro-h"><span>Operatore</span><span id="ml-n-operatori" class="ml-filtro-n" style="display:none;"></span></div>
         <input id="ml-search-operatori" type="text" placeholder="filtra operatori&hellip;" class="ml-filtro-search">
         <div id="ml-filtro-operatori" class="ml-chips"></div>
@@ -3975,7 +3995,7 @@
       </div>
     </div>
     <div class="ml-filtri-foot">
-      <span class="ml-filtro-hint">Il colore del pin indica solo lo stato del cantiere (legenda «Stato»).</span>
+      <span id="ml-filtro-hint" class="ml-filtro-hint">Il colore del pin indica solo lo stato del cantiere (legenda «Stato»).</span>
       <button id="ml-filtro-clear" class="text-[11px] text-slate-500 underline" style="display:none;">Azzera filtri</button>
     </div>
   </div>
@@ -4001,6 +4021,7 @@
         <span class="ml-radar-scala" title="Intensità della pioggia">debole <i></i> forte</span>
       </div>
       <div id="ml-windy" class="ml-windy hidden"></div>
+      <div id="ml-windy-leg" class="ml-windy-leg hidden"></div>
       <div id="ml-windy-bar" class="ml-windy-bar hidden">
         <div class="ml-windy-bar-top">
           <span class="ml-windy-lbl">🌦 Meteo live · Windy</span>
