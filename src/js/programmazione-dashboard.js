@@ -640,3 +640,327 @@ HELP_TEXTS['prg-stato-prop'] = 'Porta lo stato dell\'elemento a quello proposto.
 HELP_TEXTS['prg-link-salva'] = 'Salva il collegamento dell\'elemento alla voce della Griglia (cantiere + attività), per tutti i colleghi. Griglia e Jira non cambiano.';
 HELP_TEXTS['prg-link-togli'] = 'Toglie il collegamento alla Griglia. Su Griglia e Jira non cambia nulla; resta nello storico dell\'elemento.';
 HELP_TEXTS['prg-sel'] = 'Seleziona l\'elemento per le azioni in blocco: collegare alla Griglia, mandare in Auto-pianifica, creare la struttura Jira. Solo in questo browser.';
+
+/* ==================== PROGRAMMAZIONE → GRIGLIA (v18.303.0) ====================
+   Nelle commesse che hanno una board della Programmazione il cantiere in Griglia non si scrive
+   più a mano: il clic sul campo cantiere apre «Scegli il comune» con gli elementi delle board
+   della commessa (comune + sottoservizio, es. «Gubbio FGN (BIANCA)»). La scelta compila cantiere
+   e attività con gli handler della cella (pwUpdateCantiere / pwUpdateAttivitaCantiere: sottotask,
+   regione, meteo e Indietro/Avanti restano quelli di sempre) e salva il collegamento
+   dell'elemento se mancava o era diverso.
+   Stato: dopo ogni salvataggio della Griglia (prgOnGrigliaSalvata, chiamata da pwSave) un
+   elemento collegato che compare in Griglia da questa settimana in poi, e ha ancora uno stato
+   che precede «Pianificazione» (Backlog…), passa a Pianificazione. Solo in avanti, solo per chi
+   ha salvato (non per i colleghi che ricevono la Griglia), e resta nello storico dell'elemento.
+   Il collegamento si usa così com'è: mai abbinamenti per nome fatti di nascosto. */
+
+const PRG_G_GIORNI = ['Lun', 'Mar', 'Mer', 'Gio', 'Ven', 'Sab'];
+const _prgG = { prep: null, inp: null, bc: null, cerca: '', board: '', tutti: false, attPer: null };
+
+function prgGBoards(commessa) {
+  return _prg.boards.filter(b => b.commessa && b.commessa === commessa && prgColonnaGruppoBoard(b));
+}
+
+/* Board ed elementi di tutte le commesse collegate, all'avvio (servono alla Griglia anche se la
+   Programmazione non è mai stata aperta) e prima di ogni apertura della finestra. */
+async function prgGPrepara() {
+  if (!_sbClient || !_sbUser) return;
+  if (_prgG.prep) return _prgG.prep;
+  _prgG.prep = (async () => {
+    try {
+      await prgCarica();
+      for (const b of _prg.boards.filter(x => x.commessa)) {
+        if (!_prg.caricate[b.id]) await prgCaricaBoard(b.id);
+      }
+      prgSubscribe();
+    } catch (e) { console.warn('Programmazione per la Griglia:', e); }
+    _prgG.prep = null;
+  })();
+  return _prgG.prep;
+}
+
+function _prgGIdx(gc, re) { return (gc.opzioni || []).findIndex(o => re.test(caNorm(o.label))); }
+function prgGIdxPian(gc) { return _prgGIdx(gc, /^pianificaz/); }
+function prgGIdxChiuso(gc) { const i = _prgGIdx(gc, /rilievo complet/); return i >= 0 ? i : _prgGIdx(gc, /complet|consegn/); }
+function _prgGChiave(commessa, cant, att) {
+  const voce = att ? caTrova(commessa, att) : null;
+  return caNorm(cant) + '|' + caNorm(voce ? voce.nome : att);
+}
+
+/* Voci (cantiere|attività) della commessa in Griglia da questa settimana in poi, con le
+   settimane in cui compaiono; .cantieri = solo i cantieri. */
+function prgGVociGriglia(commessa) {
+  const oggi = isoWeekYear(new Date());
+  const voci = new Map(), cantieri = new Set();
+  Object.keys(pwData || {}).forEach(anno => {
+    if (!/^\d{4}$/.test(anno)) return;
+    Object.keys(pwData[anno] || {}).forEach(week => {
+      const data = pwData[anno][week];
+      if (!Array.isArray(data)) return;
+      if (Number(anno) < oggi.year || (Number(anno) === oggi.year && Number(week) < oggi.week)) return;
+      data.forEach(bc => {
+        if (!bc || bc.commessa !== commessa) return;
+        (bc.squadre || []).forEach(sq => (sq.operatori || []).forEach(op => {
+          for (let g = 0; g < 6; g++) {
+            pwCellVoci((op.giorni || {})[g]).forEach(v => {
+              const k = _prgGChiave(commessa, v.cantiere, v.attivita);
+              if (!voci.has(k)) voci.set(k, new Set());
+              voci.get(k).add(anno + '|' + week);
+              cantieri.add(caNorm(v.cantiere));
+            });
+          }
+        }));
+      });
+    });
+  });
+  voci.cantieri = cantieri;
+  return voci;
+}
+
+function _prgGInGriglia(voci, commessa, link) {
+  if (!link) return null;
+  if (!link.attivita) return voci.cantieri.has(caNorm(link.cantiere)) ? new Set(['?']) : null;
+  return voci.get(_prgGChiave(commessa, link.cantiere, link.attivita)) || null;
+}
+
+async function _prgGImposta(el, campo, valore) {
+  try {
+    const { data, error } = await _sbClient.rpc('prg_imposta', { p_id: el.id, p_campo: campo, p_valore: valore });
+    if (error) throw error;
+    if (data && data[0]) _prgAggiornaCache(data[0]);
+    return !!(data && data.length);
+  } catch (e) {
+    console.warn('Programmazione: modifica non salvata', e);
+    return false;
+  }
+}
+
+/* ---------- stato: Backlog → Pianificazione quando il comune entra in Griglia ---------- */
+let _prgGTimer = null;
+function prgOnGrigliaSalvata() {
+  if (!sbCanWrite() || !_prg.pronto) return;
+  clearTimeout(_prgGTimer);
+  _prgGTimer = setTimeout(_prgGAllinea, 1200);
+}
+
+async function _prgGAllinea() {
+  const cambi = [], indici = {};
+  _prg.boards.forEach(b => {
+    if (!b.commessa || !_prg.caricate[b.id]) return;
+    const gc = prgColonnaGruppoBoard(b);
+    const iPian = gc ? prgGIdxPian(gc) : -1;
+    if (iPian < 0) return;
+    const voci = indici[b.commessa] || (indici[b.commessa] = prgGVociGriglia(b.commessa));
+    prgEls(b.id).forEach(el => {
+      const l = prgLink(el);
+      if (!l) return;
+      const cur = (gc.opzioni || []).findIndex(o => o.id === (el.valori || {})[gc.id]);
+      if (cur >= iPian) return;                      // solo in avanti
+      if (!_prgGInGriglia(voci, b.commessa, l)) return;
+      cambi.push({ el, gc, opz: gc.opzioni[iPian] });
+    });
+  });
+  if (!cambi.length) return;
+  const fatti = [];
+  for (const c of cambi) { if (await _prgGImposta(c.el, c.gc.id, c.opz.id)) fatti.push(c); }
+  if (!fatti.length) return;
+  undoToast('Programmazione: ' + (fatti.length === 1 ? '«' + fatti[0].el.nome + '»' : fatti.length + ' comuni') + ' passat' + (fatti.length === 1 ? 'o' : 'i') + ' a «' + fatti[0].opz.label + '»');
+  if (typeof sbLogActivity === 'function') sbLogActivity('Programmazione: stato da Griglia', { elementi: fatti.map(c => c.el.nome), stato: fatti[0].opz.label });
+  _prgRtRender();
+}
+
+/* ---------- finestra «Scegli il comune» sul campo cantiere della Griglia ---------- */
+function _prgGIntercetta(e) {
+  const inp = e.target && e.target.closest && e.target.closest('#pw-grid .pw-cantiere-input');
+  if (!inp || inp.dataset.prgLibero === '1' || !sbCanWrite()) return;
+  const bc = pwGetWeekData()[Number(inp.dataset.cidx)];
+  if (!bc || !bc.commessa || !prgGBoards(bc.commessa).length) return;
+  e.preventDefault();
+  if (e.type === 'focusin') inp.blur();
+  prgGApri(inp, bc);
+}
+document.addEventListener('mousedown', _prgGIntercetta, true);
+document.addEventListener('focusin', _prgGIntercetta, true);
+
+function _prgGSel(inp, cls) {
+  const d = inp.dataset;
+  return '#pw-grid .' + cls + '[data-cidx="' + d.cidx + '"][data-sidx="' + d.sidx + '"][data-oidx="' + d.oidx + '"][data-day="' + d.day + '"][data-idx="' + d.idx + '"]';
+}
+
+async function prgGApri(inp, bc) {
+  _prgG.inp = inp;
+  _prgG.bc = bc;
+  _prgG.cerca = '';
+  _prgG.attPer = null;
+  let m = document.getElementById('prgg-modal');
+  if (!m) {
+    m = document.createElement('div');
+    m.id = 'prgg-modal';
+    m.className = 'prgg-bg';
+    document.body.appendChild(m);
+    m.addEventListener('mousedown', e => { if (e.target === m) prgGChiudi(); });
+    m.addEventListener('click', prgGClick);
+    m.addEventListener('input', e => { if (e.target.id === 'prgg-cerca') { _prgG.cerca = e.target.value; prgGRenderLista(); } });
+    m.addEventListener('change', e => {
+      if (e.target.id === 'prgg-tutti') { _prgG.tutti = e.target.checked; prgGRenderLista(); }
+      else if (e.target.id === 'prgg-board') { _prgG.board = e.target.value; prgGRenderLista(); }
+    });
+    m.addEventListener('keydown', e => {
+      if (e.key === 'Escape') { e.stopPropagation(); prgGChiudi(); }
+      else if (e.key === 'Enter' && e.target.id === 'prgg-cerca') {
+        const primo = m.querySelector('[data-prgg-el]');
+        if (primo) { e.preventDefault(); prgGScegli(Number(primo.dataset.prggEl)); }
+      }
+    });
+  }
+  m.style.display = 'flex';
+  prgGRender();
+  await prgGPrepara();        // board o elementi nuovi arrivati nel frattempo
+  if (m.style.display === 'flex') prgGRenderLista();
+}
+
+function prgGChiudi() {
+  const m = document.getElementById('prgg-modal');
+  if (m) m.style.display = 'none';
+  _prgG.inp = null;
+}
+
+function prgGRender() {
+  const m = document.getElementById('prgg-modal');
+  const inp = _prgG.inp, bc = _prgG.bc;
+  if (!m || !inp || !bc) return;
+  const boards = prgGBoards(bc.commessa);
+  if (_prgG.board && !boards.some(b => String(b.id) === _prgG.board)) _prgG.board = '';
+  const giorno = Number(inp.dataset.day);
+  const data = isoWeekToMonday(pwAnno, pwWeek);
+  data.setUTCDate(data.getUTCDate() + giorno);
+  const op = ((((bc.squadre || [])[Number(inp.dataset.sidx)] || {}).operatori || [])[Number(inp.dataset.oidx)] || {}).nome || '';
+  m.innerHTML = '<div class="prgg-box" role="dialog" aria-modal="true">'
+    + '<div class="prgg-head"><div><div class="prgg-tit">Scegli il comune · ' + prgEsc(bc.commessa) + '</div>'
+    + '<div class="prgg-sub">' + prgEsc((op ? op + ' · ' : '') + PRG_G_GIORNI[giorno] + ' ' + formatDate(data) + ' · W' + pwWeek) + '</div></div>'
+    + '<button class="prg-dr-x" data-prgg="chiudi" title="Chiudi (Esc)">✕</button></div>'
+    + '<div class="prgg-bar"><input id="prgg-cerca" class="prg-f-inp" placeholder="🔍 Cerca comune o sottoservizio…" autocomplete="off" value="' + prgEsc(_prgG.cerca) + '">'
+    + (boards.length > 1 ? '<select id="prgg-board" class="prg-f-inp"><option value="">Tutte le board</option>' + boards.map(b =>
+      '<option value="' + b.id + '"' + (String(b.id) === _prgG.board ? ' selected' : '') + '>' + prgEsc(b.nome) + '</option>').join('') + '</select>' : '')
+    + '<label class="prgg-tutti"><input type="checkbox" id="prgg-tutti"' + (_prgG.tutti ? ' checked' : '') + '> anche i rilievi completati</label></div>'
+    + '<div id="prgg-lista" class="prgg-lista"></div>'
+    + '<div class="prgg-foot">'
+    + (inp.value ? '<button class="prg-btn" data-prgg="svuota" data-help-key="prgg-svuota">🗑 Togli il cantiere</button>' : '')
+    + '<button class="prgg-libero" data-prgg="libero" data-help-key="prgg-libero">✍️ Cantiere fuori Programmazione</button></div></div>';
+  prgGRenderLista();
+  const c = m.querySelector('#prgg-cerca');
+  if (c) c.focus();
+}
+
+function _prgGVoce(b, el) {
+  const l = prgLink(el);
+  if (l) return { cantiere: l.cantiere, attivita: l.attivita || '', collegato: true };
+  const p = prgProponiLink(b, el) || { cantiere: '', attivita: '' };
+  return { cantiere: p.cantiere, attivita: p.attivita || '', collegato: false };
+}
+
+function prgGRenderLista() {
+  const box = document.getElementById('prgg-lista');
+  const bc = _prgG.bc;
+  if (!box || !bc) return;
+  const commessa = bc.commessa;
+  const q = caNorm(_prgG.cerca);
+  const voci = prgGVociGriglia(commessa);
+  const attivita = prgAttivitaCommessa(commessa);
+  const boards = prgGBoards(commessa).filter(b => !_prgG.board || String(b.id) === _prgG.board);
+  let h = '', n = 0;
+  boards.forEach(b => {
+    const gc = prgColonnaGruppoBoard(b);
+    const iChiuso = prgGIdxChiuso(gc);
+    const gruppi = new Map();
+    prgEls(b.id).forEach(el => {
+      const idx = (gc.opzioni || []).findIndex(o => o.id === (el.valori || {})[gc.id]);
+      if (!_prgG.tutti && iChiuso >= 0 && idx >= iChiuso) return;
+      const v = _prgGVoce(b, el);
+      if (q && !caNorm(el.nome + ' ' + v.cantiere + ' ' + v.attivita).includes(q)) return;
+      if (!gruppi.has(idx)) gruppi.set(idx, []);
+      gruppi.get(idx).push({ el, v });
+    });
+    const chiavi = [...gruppi.keys()].sort((a, c) => (a < 0 ? 999 : a) - (c < 0 ? 999 : c));
+    if (!chiavi.length) return;
+    if (boards.length > 1 || prgGBoards(commessa).length > 1) h += '<div class="prgg-board">' + prgEsc(b.nome) + '</div>';
+    chiavi.forEach(idx => {
+      const o = idx >= 0 ? gc.opzioni[idx] : { label: 'Senza stato', colore: '#c4c4c4' };
+      const righe = gruppi.get(idx).sort((x, y) => String(x.el.nome).localeCompare(String(y.el.nome), 'it'));
+      h += '<div class="prgg-grp" style="--g:' + prgEsc(o.colore || '#c4c4c4') + '"><span>' + prgEsc(o.label) + '</span> <i>' + righe.length + '</i></div>';
+      righe.forEach(({ el, v }) => {
+        n++;
+        const sett = _prgGInGriglia(voci, commessa, v.cantiere ? v : null);
+        const weeks = sett ? [...sett].filter(x => x !== '?').map(x => Number(x.split('|')[1])).sort((a, c) => a - c) : [];
+        const tag = sett ? '<span class="prgg-tag" title="Già in Griglia da questa settimana in poi">📅 ' + (weeks.length ? weeks.map(w => 'W' + w).join(' ') : 'in Griglia') + '</span>' : '';
+        const chiede = _prgG.attPer === el.id;
+        h += '<div class="prgg-it' + (chiede ? ' on' : '') + '" style="--g:' + prgEsc(o.colore || '#c4c4c4') + '">'
+          + '<button class="prgg-it-btn" data-prgg-el="' + el.id + '" title="Metti questo comune nella cella">'
+          + '<span class="prgg-nome">' + prgEsc(el.nome) + '</span>' + tag
+          + '<span class="prgg-voce">' + (v.cantiere ? '→ ' + prgEsc(v.cantiere) + (v.attivita ? ' · ' + prgEsc(v.attivita) : ' · <b>attività da scegliere</b>')
+            + (v.collegato ? '' : ' <span class="prgg-prop" title="Proposta dal nome: verrà salvata come collegamento">💡 proposta</span>')
+            : '<b>comune non riconosciuto dal nome</b>') + '</span></button>';
+        if (chiede) {
+          h += '<div class="prgg-att"><select class="prg-f-inp" id="prgg-att-sel"><option value="">— scegli l\'attività —</option>'
+            + attivita.map(a => '<option>' + prgEsc(a) + '</option>').join('') + '</select>'
+            + '<button class="prg-btn prg-btn-pri" data-prgg="att-ok" data-id="' + el.id + '">Metti nella cella</button></div>';
+        }
+        h += '</div>';
+      });
+    });
+  });
+  box.innerHTML = n ? h : '<div class="prgg-vuoto">' + (q ? 'Nessun comune corrisponde a «' + prgEsc(_prgG.cerca) + '».' : 'Nessun comune da pianificare nelle board di ' + prgEsc(commessa) + '.')
+    + (!_prgG.tutti ? ' Spunta «anche i rilievi completati» per vederli tutti.' : '') + '</div>';
+}
+
+async function prgGClick(e) {
+  const it = e.target.closest('[data-prgg-el]');
+  if (it) { prgGScegli(Number(it.dataset.prggEl)); return; }
+  const a = e.target.closest('[data-prgg]');
+  if (!a) return;
+  const az = a.dataset.prgg;
+  if (az === 'chiudi') prgGChiudi();
+  else if (az === 'att-ok') {
+    const att = (document.getElementById('prgg-att-sel') || {}).value || '';
+    if (!att) { undoToast('Scegli l\'attività del comune.'); return; }
+    prgGScegli(Number(a.dataset.id), att);
+  } else if (az === 'svuota') {
+    const inp = _prgG.inp;
+    prgGChiudi();
+    if (!inp) return;
+    const att = document.querySelector(_prgGSel(inp, 'pw-attivita-input'));
+    inp.value = '';
+    await pwUpdateCantiere(inp);
+    if (att && att.value) { att.value = ''; await pwUpdateAttivitaCantiere(att); }
+  } else if (az === 'libero') {
+    const inp = _prgG.inp;
+    prgGChiudi();
+    if (!inp) return;
+    inp.dataset.prgLibero = '1';        // solo questo campo, fino al prossimo ridisegno della Griglia
+    inp.focus();
+    undoToast('Scrivi il cantiere a mano: non sarà collegato alla Programmazione.');
+  }
+}
+
+async function prgGScegli(elId, attScelta) {
+  const el = prgEl(elId);
+  const inp = _prgG.inp, bc = _prgG.bc;
+  if (!el || !inp || !bc) return;
+  const b = _prg.boards.find(x => x.id === el.board_id);
+  const v = _prgGVoce(b, el);
+  if (!v.cantiere) { undoToast('Collega prima «' + el.nome + '» alla Griglia dalla Programmazione (scheda «🔗 Dashboard»).'); return; }
+  const att = attScelta != null ? attScelta : v.attivita;
+  if (!att && caHaCatalogo(bc.commessa)) { _prgG.attPer = el.id; prgGRenderLista(); return; }
+  const selCant = _prgGSel(inp, 'pw-cantiere-input'), selAtt = _prgGSel(inp, 'pw-attivita-input');
+  prgGChiudi();
+  const nuovo = { cantiere: v.cantiere, attivita: att || '' };
+  if (JSON.stringify(prgLink(el)) !== JSON.stringify(nuovo)) await _prgGImposta(el, PRG_LINK, nuovo);
+  const i2 = document.querySelector(selCant) || inp;
+  i2.value = v.cantiere;
+  await pwUpdateCantiere(i2);
+  const a2 = document.querySelector(selAtt);
+  if (a2 && a2.value !== att) { a2.value = att; await pwUpdateAttivitaCantiere(a2); }
+}
+
+HELP_TEXTS['prgg-svuota'] = 'Toglie il cantiere (e la sua attività) da questa cella della Griglia. Lo stato del comune in Programmazione non torna indietro.';
+HELP_TEXTS['prgg-libero'] = 'Per un cantiere che non è nella Programmazione (es. un sopralluogo o un comune non ancora importato): sblocca la scrittura a mano di questo campo. Il cantiere scritto così non è collegato alla Programmazione e non ne cambia gli stati.';

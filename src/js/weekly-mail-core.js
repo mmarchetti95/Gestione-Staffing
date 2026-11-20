@@ -1297,6 +1297,8 @@ async function pwSave() {
   pwUndoRegistra();
   _sbDirty.planning = true;
   try { await sset('pw_data', pwData); } catch(e) { console.warn('pwSave error', e); }
+  // Programmazione: un comune collegato che entra in Griglia passa da Backlog a Pianificazione.
+  if (typeof prgOnGrigliaSalvata === 'function') prgOnGrigliaSalvata();
   // Push immediato su Supabase con debounce breve (500ms) per evitare perdita dati al refresh
   if (typeof _sbUser !== 'undefined' && _sbUser) {
     clearTimeout(_sbPwPushTimer);

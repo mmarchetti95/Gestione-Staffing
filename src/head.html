@@ -2474,6 +2474,33 @@
   .prg-imp-tab select { width: 200px; }
   /* Programmazione · collegamento con la dashboard (v18.298.0) */
   .prg-grp-cols th.prg-sticky .prg-th-t { display: inline-block; vertical-align: middle; }
+  /* Griglia: «Scegli il comune» dalla Programmazione (v18.303.0) */
+  .prgg-bg { position: fixed; inset: 0; z-index: 99980; background: var(--backdrop); display: none; align-items: flex-start; justify-content: center; padding-top: 6vh; }
+  .prgg-box { background: #fff; border-radius: 10px; box-shadow: 0 20px 50px rgba(0,0,0,.25); width: 620px; max-width: calc(100vw - 32px); max-height: 84vh; display: flex; flex-direction: column; }
+  .prgg-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 8px; padding: 14px 16px 10px; border-bottom: 1px solid #e2e8f0; }
+  .prgg-tit { font-weight: 600; font-size: 15px; color: #0f172a; }
+  .prgg-sub { font-size: 12px; color: #64748b; margin-top: 2px; }
+  .prgg-bar { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; padding: 10px 16px; border-bottom: 1px solid #f1f5f9; }
+  .prgg-bar #prgg-cerca { flex: 1; min-width: 200px; }
+  .prgg-tutti { font-size: 12px; color: #475569; display: flex; align-items: center; gap: 4px; }
+  .prgg-lista { overflow: auto; padding: 6px 10px 12px; flex: 1; }
+  .prgg-board { font-size: 11px; font-weight: 700; color: #475569; text-transform: uppercase; letter-spacing: .04em; margin: 12px 6px 2px; }
+  .prgg-grp { margin: 10px 6px 4px; font-size: 13px; font-weight: 600; color: var(--g); filter: brightness(.8); }
+  .prgg-grp i { font-style: normal; font-weight: 400; color: #94a3b8; filter: none; font-size: 12px; }
+  .prgg-it { border-left: 5px solid var(--g); border-radius: 6px; margin: 2px 0; background: #fff; }
+  .prgg-it.on { background: #f8fafc; box-shadow: inset 0 0 0 1px #cbd5e1; }
+  .prgg-it-btn { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 10px; width: 100%; text-align: left; padding: 7px 10px; border-radius: 0 6px 6px 0; }
+  .prgg-it-btn:hover { background: #f1f5f9; }
+  .prgg-nome { font-weight: 600; font-size: 13.5px; color: #0f172a; }
+  .prgg-voce { flex-basis: 100%; font-size: 12px; color: #475569; }
+  .prgg-prop { color: #b45309; }
+  .prgg-tag { font-size: 11px; color: #1d4ed8; background: #eff6ff; border-radius: 9999px; padding: 0 7px; }
+  .prgg-att { display: flex; gap: 6px; align-items: center; padding: 0 10px 8px; }
+  .prgg-att select { flex: 1; }
+  .prgg-vuoto { padding: 24px 10px; text-align: center; font-size: 13px; color: #64748b; }
+  .prgg-foot { display: flex; justify-content: space-between; align-items: center; gap: 8px; padding: 10px 16px; border-top: 1px solid #e2e8f0; }
+  .prgg-libero { margin-left: auto; font-size: 12px; color: #64748b; text-decoration: underline; }
+  .prgg-libero:hover { color: #334155; }
   .prg-app-barra { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin: -4px 0 10px; padding: 6px 10px; background: #fff; border: 1px solid #e2e8f0; border-radius: 8px; }
   .prg-app-sep { width: 1px; height: 20px; background: #e2e8f0; }
   .prg-btn-mini { padding: 2px 8px; }
@@ -2522,7 +2549,7 @@
       </span>
       <button id="btn-presentation" class="px-3 py-1.5 text-sm rounded hover:bg-white/10" style="border:1px solid var(--dark-border-strong);color:var(--dark-text);visibility:visible;">📊 Modalità presentazione</button>
       <div class="text-xs pl-2" style="border-left:1px solid var(--dark-border-strong);color:var(--dark-text-muted);">
-        <span id="app-version" class="font-medium" style="color:var(--accent);">v18.302.0</span> · Michele Marchetti
+        <span id="app-version" class="font-medium" style="color:var(--accent);">v18.303.0</span> · Michele Marchetti
         <span id="sb-role-badge" style="margin-left:8px;padding:1px 8px;border-radius:9999px;background:rgba(255,255,255,.1);color:var(--dark-text);font-weight:600;"></span>
       </div>
     </div>

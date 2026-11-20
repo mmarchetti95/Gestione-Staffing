@@ -1522,6 +1522,8 @@ function prgSubscribe() {
 function prgDopoLogin() {
   const scr = document.getElementById('screen-programmazione');
   if (scr && !scr.classList.contains('hidden')) prgEnter();
+  // La Griglia sceglie i cantieri dalle board (programmazione-dashboard.js): servono subito.
+  prgGPrepara();
 }
 
 function prgUnsubscribe() {
