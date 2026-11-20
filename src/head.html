@@ -1169,9 +1169,13 @@
   a.cptl-bar, .cptl-bar.edit { cursor:pointer; }
   a.cptl-bar:hover, .cptl-bar.edit:hover { z-index:2; filter:brightness(1.12); box-shadow:0 0 0 2px #0f172a; }
   .cptl-op.con-add { position:relative; padding-right:26px; }
-  .cptl-add { position:absolute; right:0; top:50%; transform:translateY(-50%); width:20px; height:20px; border-radius:5px; border:1px solid #99f6e4; background:#f0fdfa; color:#0f766e; font-size:13px; line-height:17px; font-weight:700; cursor:pointer; opacity:.5; }
+  .cptl-azioni { position:absolute; right:0; top:50%; transform:translateY(-50%); display:flex; gap:3px; }
+  .cptl-add { width:20px; height:20px; padding:0; border-radius:5px; border:1px solid #99f6e4; background:#f0fdfa; color:#0f766e; font-size:12px; line-height:17px; font-weight:700; cursor:pointer; opacity:.5; }
   .cptl-r:hover .cptl-add { opacity:1; }
   .cptl-add:hover { background:#ccfbf1; }
+  .cptl-add.incolla { opacity:1; border-color:#fcd34d; background:#fffbeb; color:#b45309; }
+  .cptl-add.incolla:hover { background:#fef3c7; }
+  .cptl-bar.altro { outline:2px dashed #f59e0b; outline-offset:-1px; }
   .cptl-bar.fuori, .cptl-leg i.fuori { outline:2px dashed #b91c1c; outline-offset:-1px; }
   .cptl-now { position:absolute; top:-2px; bottom:-2px; border-left:2px solid #e11d48; }
   .cptl-vuoto { position:absolute; inset:0; display:flex; align-items:center; padding-left:8px; font-size:11px; font-style:italic; color:#94a3b8; }
@@ -2476,7 +2480,7 @@
       </span>
       <button id="btn-presentation" class="px-3 py-1.5 text-sm rounded hover:bg-white/10" style="border:1px solid var(--dark-border-strong);color:var(--dark-text);visibility:visible;">📊 Modalità presentazione</button>
       <div class="text-xs pl-2" style="border-left:1px solid var(--dark-border-strong);color:var(--dark-text-muted);">
-        <span id="app-version" class="font-medium" style="color:var(--accent);">v18.298.0</span> · Michele Marchetti
+        <span id="app-version" class="font-medium" style="color:var(--accent);">v18.299.0</span> · Michele Marchetti
         <span id="sb-role-badge" style="margin-left:8px;padding:1px 8px;border-radius:9999px;background:rgba(255,255,255,.1);color:var(--dark-text);font-weight:600;"></span>
       </div>
     </div>
@@ -2654,6 +2658,11 @@
 <!-- Editor worklog Jira della Timeline (sopra #cptl-modal, sotto .modal-backdrop) -->
 <div id="cptl-wl-modal" class="no-print" style="display:none;position:fixed;inset:0;z-index:99995;background:var(--backdrop);align-items:center;justify-content:center;" onclick="if (event.target === this) cpTlWlChiudi()">
   <div id="cptl-wl-root" style="background:#fff;border-radius:var(--radius-lg);width:540px;max-width:94vw;max-height:90vh;overflow:auto;box-shadow:var(--shadow-lg);"></div>
+</div>
+<!-- Copia e incolla dei worklog fra sottotask dalla Timeline (src/js/produzione-timeline-copia.js).
+     Sopra #cptl-modal, sotto .modal-backdrop: le conferme compaiono sopra. -->
+<div id="cptl-cp-modal" class="no-print" style="display:none;position:fixed;inset:0;z-index:99995;background:var(--backdrop);align-items:center;justify-content:center;" onclick="if (event.target === this) cpTlCpChiudi()">
+  <div id="cptl-cp-root" style="background:#fff;border-radius:var(--radius-lg);width:880px;max-width:96vw;max-height:90vh;overflow:auto;box-shadow:var(--shadow-lg);"></div>
 </div>
 
 <!-- Sistema stato e ore di un sottotask dal badge Stato di Controllo Produzione

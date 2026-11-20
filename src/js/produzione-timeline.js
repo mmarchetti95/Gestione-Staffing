@@ -119,6 +119,7 @@ document.addEventListener('keydown', e => {
   if (e.key !== 'Escape' || !_cpTl.aperto) return;
   const mr = document.getElementById('modal-root');
   if (mr && mr.children.length) return;   // c'è una conferma/avviso aperto sopra
+  if (_cpTlCp.aperto) { cpTlCpChiudi(); return; }   // prima si chiude «📋 Incolla»
   if (cpTlWlAperto()) { cpTlWlChiudi(); return; }   // prima si chiude l'editor del worklog
   cpTlChiudi();
 });
@@ -309,6 +310,18 @@ function _cpTlCalcola(x, ctx, oggi) {
   if (x.sovrapposti) x.avvisi.push(x.sovrapposti === 1 ? '1 sovrapposizione' : x.sovrapposti + ' sovrapposizioni');
   if (x.live && x.live.vecchio) x.avvisi.push('IN PROGRESS dal giorno prima');
   if (x.senzaOrari.length) x.avvisi.push('Orari mancanti: risincronizza');
+  // Sottotask giornaliero dell'operatore ma di un altro giorno: ha attivato quello sbagliato
+  // (si sposta con «⧉» e «📋», produzione-timeline-copia.js)
+  const altri = [];
+  x.interventi.concat(x.senzaOrari).forEach(o => {
+    const s = ctx.indice[o.t.key];
+    if (!s || s.operatore !== x.nome || s.giorno == null) return;
+    const stessa = s.anno === pwAnno && s.week === pwWeek;
+    if (stessa && Number(s.giorno) === Number(x.g)) return;
+    o.altroGiorno = CPA_GIORNI[s.giorno] + (stessa ? '' : ' sett. ' + s.week);
+    altri.push(o.t.key + ' è di ' + o.altroGiorno);
+  });
+  if (altri.length) x.avvisi.push('Sottotask di un altro giorno: ' + _cpTlUnici(altri).join(', '));
   x.fuori = _cpTlUnici(x.interventi.concat(x.senzaOrari).map(o => o.fuori ? o.fuori.etichetta : ''));
   if (x.fuori.length) x.avvisi.push('Commessa non in dashboard: ' + x.fuori.join(', '));
 }
@@ -489,7 +502,7 @@ function _cpTlIntestazione(V) {
         '<div style="font-weight:700;font-size:16px;color:#0f172a;font-family:var(--font-display);">🕘 Timeline worklog</div>' +
         '<div class="text-xs text-slate-500 mt-0.5">Settimana ' + pwWeek + ' · ' + V.d.ddmm[0] + ' – ' + V.d.ddmm[5] + '/' + pwAnno +
           ' · quando ogni operatore ha attivato e chiuso i worklog Jira, pause e totale del giorno. Passa il mouse su un segmento per i dettagli, ' +
-          (cpTlWlPuo() ? 'clicca per correggerlo o eliminarlo su Jira; «＋» sulla riga aggiunge un worklog.' : 'clicca per aprire il ticket su Jira.') + '</div>' +
+          (cpTlWlPuo() ? 'clicca per correggerlo o eliminarlo su Jira; «＋» sulla riga aggiunge un worklog, «⧉» li copia per incollarli con «📋» su un altro sottotask.' : 'clicca per aprire il ticket su Jira.') + '</div>' +
         '<div class="text-[11px] mt-0.5" style="color:' + (V.lettura && V.lettura.ts ? '#0f766e' : '#64748b') + ';">' + esc(_cpTlFonteTesto(V)) + '</div>' +
       '</div>' +
       '<div class="flex-1"></div>' +
@@ -499,6 +512,7 @@ function _cpTlIntestazione(V) {
       '<button type="button" onclick="cpTlChiudi()" class="' + btn + '">Chiudi</button>' +
     '</div>' +
     (_cpTl.msg ? '<div class="text-xs mt-1.5 ' + (_cpTl.msg.startsWith('⚠') ? 'text-amber-700' : 'text-slate-600') + '">' + esc(_cpTl.msg) + '</div>' : '') +
+    cpTlCpAppuntiHtml() +
   '</div>';
 }
 
@@ -574,6 +588,7 @@ function _cpTlTitoloBarra(iv, modifica) {
     _cpOjOra(iv.inizio) + '–' + (iv.inCorso ? 'ora' : _cpOjOra(iv.fine)) + ' (' + _cpOjDurata(iv.fine - iv.inizio) + ')' +
     (iv.commessa ? '\n' + iv.commessa : '') +
     (iv.fuori ? '\n⚠ Commessa non in dashboard: ' + iv.fuori.etichetta + ' (nessuna commessa ha il codice progetto Jira ' + iv.fuori.progetto + ')' : '') +
+    (iv.altroGiorno ? '\n⚠ È il sottotask di ' + iv.altroGiorno + ': spostalo con «⧉» e «📋» sulla riga' : '') +
     (iv.commento ? '\n“' + iv.commento + '”' : '') +
     (modifica ? '\nClic: correggi o elimina il worklog su Jira' : iv.t.url ? '\nClic: apre il ticket su Jira' : '');
 }
@@ -595,7 +610,7 @@ function _cpTlTrackHtml(x, V) {
     h += '<' + tag + (modifica ? ' data-op="' + esc(x.nome) + '" data-g="' + x.g + '" data-k="' + esc(iv.t.key || '') + '" data-wl="' + esc(String(iv.w.id)) +
         '" data-help-key="cpTlWlApri" onclick="cpTlWlApri(this)"'
         : iv.t.url ? ' href="' + esc(iv.t.url) + '" target="_blank" rel="noopener"' : '') +
-      ' class="cptl-bar' + (modifica ? ' edit' : '') + (iv.inCorso ? ' cp-oj-bar-live' : '') + (iv.fuori ? ' fuori' : '') + '" title="' + esc(_cpTlTitoloBarra(iv, modifica)) + '" style="left:' + _cpTlPct(iv.inizio, V.asse) +
+      ' class="cptl-bar' + (modifica ? ' edit' : '') + (iv.inCorso ? ' cp-oj-bar-live' : '') + (iv.fuori ? ' fuori' : '') + (iv.altroGiorno ? ' altro' : '') + '" title="' + esc(_cpTlTitoloBarra(iv, modifica)) + '" style="left:' + _cpTlPct(iv.inizio, V.asse) +
       ';width:' + ((iv.fine - iv.inizio) / ((V.asse.a - V.asse.da) * 60) * 100).toFixed(3) + '%;top:' + (3 + corsie[i] * CPTL_CORSIA_PX) +
       'px;background-color:' + iv.colore + '">' + esc(iv.t.key || '') + '</' + tag + '>';
   });
@@ -632,11 +647,17 @@ function _cpTlSotto(x, conNome) {
 }
 
 function _cpTlRigaHtml(x, V, conNome, alt) {
-  const piu = cpTlWlPuo() && x.iso <= V.oggi
-    ? '<button type="button" class="cptl-add" data-op="' + esc(x.nome) + '" data-g="' + x.g + '" onclick="cpTlWlNuovo(this)" title="Aggiungi un worklog su Jira per ' +
-      esc(x.nome) + ' (' + esc(x.label) + ')">＋</button>' : '';
+  // Azioni della riga: «＋» nuovo worklog, «⧉» copia, «📋» incolla (produzione-timeline-copia.js)
+  const az = [];
+  if (cpTlWlPuo() && x.iso <= V.oggi) {
+    az.push('<button type="button" class="cptl-add" data-op="' + esc(x.nome) + '" data-g="' + x.g + '" onclick="cpTlWlNuovo(this)" title="Aggiungi un worklog su Jira per ' +
+      esc(x.nome) + ' (' + esc(x.label) + ')">＋</button>');
+  }
+  cpTlCpBottoni(x, V).forEach(b => az.push(b));
+  const azioni = az.length ? '<span class="cptl-azioni">' + az.join('') + '</span>' : '';
   return '<div class="cptl-r' + (alt ? ' alt' : '') + (x.avvisi.length ? ' warn' : '') + '">' +
-    '<div class="cptl-op' + (piu ? ' con-add' : '') + '">' + _cpTlSotto(x, conNome) + piu + '</div>' +
+    '<div class="cptl-op' + (az.length ? ' con-add' : '') + '"' + (az.length ? ' style="padding-right:' + (az.length * 23 + 3) + 'px"' : '') + '>' +
+      _cpTlSotto(x, conNome) + azioni + '</div>' +
     _cpTlTrackHtml(x, V) + _cpTlNumeri(x) + '</div>';
 }
 

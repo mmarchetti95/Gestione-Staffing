@@ -552,17 +552,26 @@ async function _cpCwInvocaProd(body) {
    un Km/Cad per quel ticket non si tocca nulla (lo invia «Sincronizza»).
    → { esito: 'gia' | 'scritto' | 'locale' | 'errore', testo } */
 async function _cpCwProduzioneMinima(key) {
-  const C = _cpCw, nome = C.a;
-  const dst = C.membri.find(m => m.nome === nome);
+  const C = _cpCw;
+  const dst = C.membri.find(m => m.nome === C.a);
   const v = (dst ? dst.voci : []).find(x => x.key === key);
-  const commessa = v ? v.commessa : C.commessa;
-  const cella = v ? v.cella : { squadra: C.squadra, cantiere: '', attivita: '' };
-  const ck = commessa + '|||' + cella.squadra + '|||' + nome + '|||' + C.g;
+  return cpProduzioneMinima(key, {
+    nome: C.a, g: C.g, iso: C.iso, commessa: v ? v.commessa : C.commessa,
+    cella: v ? v.cella : { squadra: C.squadra, cantiere: '', attivita: '' },
+  });
+}
+
+/* Stessa cosa per chiunque porti un sottotask in DONE (Copia worklog, Copia/incolla della
+   Timeline). dove = { nome, g, iso, commessa, cella: { squadra, cantiere, attivita } | null }:
+   senza cella (sottotask non in Griglia) scrive solo su Jira. Riga = settimana mostrata. */
+async function cpProduzioneMinima(key, dove) {
+  const nome = dove.nome, commessa = dove.commessa || '', cella = dove.cella || null;
+  const ck = cella ? commessa + '|||' + cella.squadra + '|||' + nome + '|||' + dove.g : '';
   await cpCampoProdLoad();
   // Il validatore verso DONE controlla l'Actual Production, anche sulle commesse che tengono la
   // produzione su KPI_Quantità lavorata (v18.268.0): lì si scrive solo su Jira, la riga non si tocca
   // (il suo storico a delta è sul KPI e «Sincronizza» non scrive l'Actual Production).
-  const campo = CP_CAMPO_AP, inRiga = cpCampoProduzione(commessa) === CP_CAMPO_AP;
+  const campo = CP_CAMPO_AP, inRiga = !!cella && !!commessa && cpCampoProduzione(commessa) === CP_CAMPO_AP;
   const loc = inRiga && _cpData[ck] && _cpData[ck].km_by_ticket ? _cpData[ck].km_by_ticket[key] : null;
   if (loc != null) return { esito: 'locale', testo: 'in Controllo Produzione c\'è già un Km/Cad (' + loc + ') per ' + key + ': lo invia «Sincronizza squadra», poi chiudilo con «✎» se è rimasto IN PENDING' };
   const r = await _cpCwInvocaProd({ reads: [{ issueKey: key, campo }] });
@@ -580,7 +589,7 @@ async function _cpCwProduzioneMinima(key) {
   cell.km_last_by_ticket[key] = 1;
   cpKmMetaSet(cell, key, { fonte: 'jira', campoLast: ris.campo || campo });
   cell.km_cad = cpSumKm(cell.km_by_ticket);
-  const rec = cpBuildRecordDa(cell, pwAnno, pwWeek, commessa, cella.squadra, nome, C.g, C.iso, cella.cantiere, cella.attivita);
+  const rec = cpBuildRecordDa(cell, pwAnno, pwWeek, commessa, cella.squadra, nome, dove.g, dove.iso, cella.cantiere, cella.attivita);
   const { error } = await _sbClient.from('controllo_produzione').upsert([rec], { onConflict: 'anno,week,commessa,squadra,operatore,giorno' });
   return { esito: 'scritto', testo: 'produzione messa a 1 su «' + campo + '»' + (error ? ' ⚠ ma non salvata in Controllo Produzione: ' + (error.message || error) : ' (👁 da verificare)') };
 }

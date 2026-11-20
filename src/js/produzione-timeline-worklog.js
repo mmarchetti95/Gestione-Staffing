@@ -167,6 +167,9 @@ function _cpTlWlRender() {
     '</div>' +
     '<div class="flex flex-wrap items-center gap-2" style="padding:10px 20px 14px;border-top:1px solid #e2e8f0;background:#f8fafc;">' +
       (mod ? '<button type="button" onclick="cpTlWlElimina()" class="text-xs px-3 py-1.5 rounded border" style="color:#b91c1c;border-color:#fca5a5;background:#fff;">🗑 Elimina da Jira</button>' : '') +
+      (mod && !_cpTlCpFornitore(W.nome) ? '<button type="button" data-op="' + esc(W.nome) + '" data-g="' + W.g + '" data-k="' + esc(W.t.key) +
+        '" data-help-key="cpTlCpCopiaTicket" onclick="cpTlCpCopia(this)" class="text-xs px-3 py-1.5 rounded border border-slate-300 bg-white" title="Copia negli appunti tutti i worklog di ' +
+        esc(W.t.key) + ' di questo giorno, per incollarli con «📋» su un altro sottotask">⧉ Copia worklog del sottotask</button>' : '') +
       '<div class="flex-1"></div>' +
       '<button type="button" onclick="cpTlWlChiudi()" class="text-xs px-3 py-1.5 rounded border border-slate-300 bg-white">Annulla</button>' +
       '<button type="button" id="cptl-wl-salva" onclick="cpTlWlSalva()" class="text-xs px-3 py-1.5 rounded font-semibold text-white" style="background:#0f766e;">Salva su Jira</button>' +
