@@ -116,6 +116,9 @@ Limite noto: il progetto Supabase è sul piano **Free**, che non include backup 
 
 ## Changelog
 
+## v18.301.0
+- **Griglia, cambiare la commessa non cancella più le squadre.** Se dopo aver composto squadre, operatori, cantieri e attività ci si accorge di aver scelto la commessa sbagliata, cambiandola dal menu del blocco resta tutto com'era: cambia solo la commessa. I sottotask Jira già creati restano legati alla commessa precedente (il «🎫 Sottotask» li segnala). Nessuna modifica a Supabase.
+
 ## v18.300.0
 - **Programmazione, filtri come Monday.** «▽ Filtro» accanto alla ricerca apre un pannello con due modalità. **Filtri rapidi**: una colonna per ogni colonna della board (anche il nome e i dati della dashboard) con i valori presenti e quanti elementi li hanno; date e timeline con valori relativi (Oggi, Domani, Ieri, Questa settimana, La settimana scorsa/prossima, Questo mese, Attuale, Da consegnare oggi, Futuro, Scaduti) e «Vuoto»; un clic aggiunge o toglie il valore. **Filtri avanzati**: righe Colonna / Condizione / Valore unite da «e» o «o» e sottogruppi con il loro «e/o»; condizioni secondo il tipo (è / non è, contiene, è vuoto, maggiore/minore/tra per i numeri, il/prima/dopo/tra per le date, inizia/finisce per la timeline). Il pulsante mostra quanti filtri sono attivi, «✕» li toglie; i gruppi vuoti si nascondono come con la ricerca.
 - **Viste personali**: «Salva come nuova vista» ricorda filtri, ricerca, ordinamento, raggruppamento e colonne visibili con un nome; si scelgono dal menu «Vista:» accanto a «▽ Filtro», si aggiornano o si eliminano dal pannello. Filtri e viste restano in questo browser e non cambiano nulla per i colleghi. Nessuna modifica a Supabase.

@@ -204,9 +204,13 @@ async function pwUpdateCommessa(sel) {
   const cidx = parseInt(sel.dataset.cidx);
   const data = pwGetWeekData();
   if (data[cidx]) {
+    // Cambiare commessa NON azzera più le squadre (fix v18.301.0): chi corregge la
+    // commessa dopo aver composto squadre, operatori e cantieri perdeva tutto.
+    // Si cambia solo l'etichetta del blocco; se fosse vuoto si crea la squadra iniziale.
     data[cidx].commessa = sel.value;
-    // Reset squadre se la commessa cambia
-    data[cidx].squadre = [{ nome: 'Squadra 1', operatori: [{ nome: '', giorni: {} }] }];
+    if (!Array.isArray(data[cidx].squadre) || !data[cidx].squadre.length) {
+      data[cidx].squadre = [{ nome: 'Squadra 1', operatori: [{ nome: '', giorni: {} }] }];
+    }
     await pwSave(); pwRender();
   }
 }
