@@ -98,6 +98,7 @@ JS_FILES = [
     'programmazione-colonne.js',
     'programmazione-import.js',
     'programmazione-dashboard.js',
+    'programmazione-filtri.js',
     'ai-assistant.js',
 ]
 

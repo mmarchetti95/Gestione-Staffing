@@ -2370,6 +2370,48 @@
   .prg-pop-tit { font-size: 12px; font-weight: 600; color: #475569; margin-bottom: 6px; }
   .prg-pop-lab { display: flex; align-items: center; justify-content: space-between; gap: 8px; font-size: 13px; margin-bottom: 6px; }
   .prg-pop-lab input { border: 1px solid #cbd5e1; border-radius: 4px; padding: 3px 6px; }
+  /* Programmazione · filtri rapidi/avanzati (programmazione-filtri.js) */
+  .prg-btn-on { background: #ccfbf1; border-color: var(--accent); color: #115e59; }
+  .prg-btn-on:hover:not(:disabled) { background: #99f6e4; }
+  .prg-f-badge { display: inline-block; min-width: 18px; padding: 0 5px; margin-left: 2px; border-radius: 9px; background: var(--accent); color: #fff; font-size: 11px; line-height: 18px; text-align: center; }
+  .prg-fpan { width: min(900px, calc(100vw - 32px)); font-size: 13px; color: #1e293b; }
+  .prg-fpan-head { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; padding: 4px 4px 10px; border-bottom: 1px solid #f1f5f9; }
+  .prg-fpan-conta { font-size: 12px; color: #64748b; }
+  .prg-fpan-azioni { margin-left: auto; display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+  .prg-fpan-foot { display: flex; justify-content: flex-end; padding: 8px 4px 2px; border-top: 1px solid #f1f5f9; }
+  .prg-fpan-link { font-size: 13px; color: #334155; padding: 3px 6px; border-radius: 4px; }
+  .prg-fpan-link:hover { background: #f1f5f9; }
+  .prg-fq-nota { margin: 8px 4px 0; font-size: 12px; color: #92400e; background: #fffbeb; border: 1px solid #fde68a; border-radius: 5px; padding: 4px 8px; }
+  .prg-fq { display: flex; gap: 14px; overflow-x: auto; padding: 10px 4px 8px; }
+  .prg-fq-col { flex: 0 0 160px; min-width: 0; }
+  .prg-fq-tit { font-size: 12px; font-weight: 600; color: #475569; margin-bottom: 6px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .prg-fq-list { display: flex; flex-direction: column; gap: 4px; max-height: 214px; overflow-y: auto; padding-right: 4px; }
+  .prg-fq-chip { display: flex; align-items: center; gap: 6px; width: 100%; padding: 5px 8px; border-radius: 5px; background: #f1f5f9; border: 1px solid transparent; text-align: left; }
+  .prg-fq-chip:hover { background: #e2e8f0; }
+  .prg-fq-chip.on { background: #ccfbf1; border-color: var(--accent); }
+  .prg-fq-dot { flex: 0 0 auto; width: 10px; height: 10px; border-radius: 50%; }
+  .prg-fq-l { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .prg-fq-n { flex: 0 0 auto; font-size: 11px; color: #94a3b8; }
+  .prg-fa { padding: 10px 4px 4px; display: flex; flex-direction: column; gap: 8px; }
+  .prg-fa-riga { display: flex; align-items: center; gap: 8px; }
+  .prg-fa-riga-g { align-items: flex-start; }
+  .prg-fa-pre { flex: 0 0 64px; font-size: 13px; color: #475569; }
+  .prg-fa-pre-t { padding-left: 10px; }
+  .prg-fa-op { width: 60px; }
+  .prg-fa-col { width: 180px; }
+  .prg-fa-cond { width: 170px; }
+  .prg-fa-val { flex: 1 1 auto; display: flex; align-items: center; gap: 6px; min-width: 0; }
+  .prg-fa-val input[type=text] { flex: 1 1 auto; min-width: 80px; }
+  .prg-fa-lista { flex: 1 1 auto; display: flex; align-items: center; gap: 6px; min-width: 0; text-align: left; }
+  .prg-fa-lista.on { border-color: var(--accent); }
+  .prg-fa-vuoto { color: #94a3b8; }
+  .prg-fa-del { flex: 0 0 auto; width: 24px; height: 24px; border-radius: 4px; color: #94a3b8; }
+  .prg-fa-del:hover { background: #fef2f2; color: #b91c1c; }
+  .prg-fa-gruppo { flex: 1 1 auto; display: flex; flex-direction: column; gap: 8px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px; padding: 8px; }
+  .prg-fa-check { margin-left: 72px; display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 4px; max-height: 220px; overflow-y: auto; padding: 6px; border: 1px solid #e2e8f0; border-radius: 6px; background: #fff; }
+  .prg-fa-ck { display: flex; align-items: center; gap: 6px; padding: 3px 6px; border-radius: 4px; cursor: pointer; }
+  .prg-fa-ck:hover { background: #f1f5f9; }
+  .prg-fa-add { display: flex; gap: 10px; }
   .prg-ta { width: 100%; border: 1px solid #cbd5e1; border-radius: 6px; padding: 6px 8px; font-size: 13px; }
   .prg-drawer { position: fixed; top: 0; right: 0; bottom: 0; width: 540px; max-width: 100vw; z-index: 99970; background: #fff; box-shadow: -10px 0 30px rgba(15,23,42,.15); display: none; flex-direction: column; }
   .prg-dr-head { padding: 16px 18px 0; border-top: 5px solid var(--g); border-bottom: 1px solid #e2e8f0; }
@@ -2480,7 +2522,7 @@
       </span>
       <button id="btn-presentation" class="px-3 py-1.5 text-sm rounded hover:bg-white/10" style="border:1px solid var(--dark-border-strong);color:var(--dark-text);visibility:visible;">📊 Modalità presentazione</button>
       <div class="text-xs pl-2" style="border-left:1px solid var(--dark-border-strong);color:var(--dark-text-muted);">
-        <span id="app-version" class="font-medium" style="color:var(--accent);">v18.299.0</span> · Michele Marchetti
+        <span id="app-version" class="font-medium" style="color:var(--accent);">v18.300.0</span> · Michele Marchetti
         <span id="sb-role-badge" style="margin-left:8px;padding:1px 8px;border-radius:9999px;background:rgba(255,255,255,.1);color:var(--dark-text);font-weight:600;"></span>
       </div>
     </div>

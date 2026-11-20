@@ -255,6 +255,7 @@ function prgRenderTesta() {
     + '</div></div>'
     + (b ? '<div class="flex items-center gap-2 flex-wrap mb-3">'
       + '<input id="prg-cerca" type="search" class="prg-cerca" placeholder="🔍 Cerca in questa board…" value="' + prgEsc(pb.cerca) + '" data-help-key="prg-cerca">'
+      + prgFiltroBarraHtml(b)
       + '<span id="prg-conta" class="text-xs text-slate-500"></span>'
       + '<div class="ml-auto flex items-center gap-2 flex-wrap">'
       + '<button class="prg-btn" data-prg-azione="vista" data-help-key="prg-vista">👁 Colonne visibili</button>'
@@ -293,6 +294,8 @@ function prgElementiFiltrati(b) {
       return cols.some(c => prgTesto(c, el.valori && el.valori[c.id], el).toLowerCase().includes(q));
     });
   }
+  // filtri rapidi/avanzati (programmazione-filtri.js)
+  if (prgFiltroAttivo(b)) els = els.filter(el => prgFiltroPassa(b, el));
   return els;
 }
 
@@ -348,7 +351,7 @@ function prgRenderTabella() {
   if (b.commessa && !_prgApp[b.commessa]) prgAppCarica(b.commessa);   // in sottofondo, poi ridisegna
   const gruppi = prgGruppi(b);
   const tutti = prgElementiFiltrati(b);
-  const cerca = !!(pb.cerca || '').trim();
+  const cerca = !!(pb.cerca || '').trim() || prgFiltroAttivo(b);   // ricerca o filtri attivi
   const perGruppo = {};
   gruppi.forEach(g => { perGruppo[g.id] = []; });
   prgOrdina(b, tutti).forEach(el => { const g = prgGruppoDi(b, el); (perGruppo[g] || (perGruppo[g] = [])).push(el); });
@@ -399,7 +402,7 @@ function prgRenderTabella() {
   });
   h += '</table></div>';
   if (!mostrati) h = '<div class="bg-white border border-slate-200 rounded-lg p-10 text-center text-sm text-slate-500">'
-    + (cerca ? 'Nessun elemento corrisponde alla ricerca.' : 'La board non ha ancora elementi.') + '</div>';
+    + (cerca ? 'Nessun elemento corrisponde alla ricerca o ai filtri.' : 'La board non ha ancora elementi.') + '</div>';
   box.innerHTML = h;
   const conta = document.getElementById('prg-conta');
   if (conta) {
@@ -1406,6 +1409,7 @@ function prgBind() {
     if (e.target.dataset && e.target.dataset.prgAdd !== undefined && e.key === 'Enter') { e.preventDefault(); prgAggiungiElemento(e.target); }
   });
   root.addEventListener('change', e => {
+    if (e.target.id === 'prg-vista-sel') { const b = prgBoard(); if (b) prgFVistaApplica(b, e.target.value); return; }
     if (e.target.id !== 'prg-raggruppa') return;
     const b = prgBoard(); if (!b) return;
     const def = prgColonnaGruppoBoard(b);
@@ -1438,6 +1442,8 @@ function prgAzione(a) {
   else if (a === 'nuova-board') prgNuovaBoard();
   else if (a === 'importa') prgImpScegliFile();
   else if (a === 'vista') prgVista();
+  else if (a === 'filtro') prgFiltroApri();
+  else if (a === 'filtro-via' && b) prgFiltroCancella(b);
   else if (a === 'esporta') prgEsporta();
   else if (a === 'colonne') prgColonneApri();
   else if (a === 'board') prgImpostazioniBoard();
