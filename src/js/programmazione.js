@@ -40,7 +40,8 @@ const _prg = {
   channel: null,
   editing: null,      // { id, col } della cella in modifica
   renderPending: false,
-  drawer: null,       // { id, tab: 'dettagli'|'commenti'|'storico', commenti, storico }
+  drawer: null,       // { id, tab: 'dettagli'|'commenti'|'storico'|'dashboard', commenti, storico }
+  sel: new Set(),     // elementi spuntati per le azioni in blocco (solo questo browser, non salvati)
   pref: (function () { try { return JSON.parse(localStorage.getItem(PRG_PREF_KEY) || '{}') || {}; } catch (_) { return {}; } })(),
 };
 
@@ -206,6 +207,7 @@ function prgEnter() {
 async function prgScegliBoard(id) {
   if (id === _prg.boardId) return;
   _prg.boardId = id;
+  _prg.sel = new Set();
   _prg.pref.board = id;
   prgSalvaPref();
   prgChiudiDrawer();
@@ -263,7 +265,7 @@ function prgRenderTesta() {
       + '<button class="prg-btn" data-prg-azione="esporta" data-help-key="prg-esporta">📤 Esporta Excel</button>'
       + (w ? '<button class="prg-btn" data-prg-azione="colonne" data-help-key="prg-colonne">⚙️ Colonne</button>'
         + '<button class="prg-btn" data-prg-azione="board" data-help-key="prg-board">✎ Board</button>' : '')
-      + '</div></div>' : '');
+      + '</div></div>' + prgAppBarraHtml(b) : '');
 }
 
 function prgRaggruppaHtml(b) {
@@ -283,7 +285,7 @@ function prgRaggruppaHtml(b) {
 function prgElementiFiltrati(b) {
   const pb = prgPrefB(b.id);
   const q = (pb.cerca || '').trim().toLowerCase();
-  const cols = prgCols(b);
+  const cols = prgColsTutte(b);
   let els = prgEls(b.id);
   if (q) {
     els = els.filter(el => {
@@ -299,7 +301,7 @@ function prgOrdina(b, els) {
   const ord = pb.ord;
   if (!ord || !ord.col) return els;
   const dir = ord.dir === 'desc' ? -1 : 1;
-  const col = ord.col === '__nome' ? null : prgCol(b, ord.col);
+  const col = ord.col === '__nome' ? null : prgColsTutte(b).find(c => c.id === ord.col) || null;
   if (ord.col !== '__nome' && !col) return els;
   const chiave = el => {
     if (!col) return String(el.nome || '').toLowerCase();
@@ -310,6 +312,7 @@ function prgOrdina(b, els) {
       case 'check': return v ? 1 : 0;
       case 'timeline': return v && v.inizio ? v.inizio : null;
       case 'settimane': { const t = el.valori && el.valori[col.da]; return t && t.inizio ? t.inizio : null; }
+      case 'app': return prgAppValore(b, col, el).ord;
       default: return v === undefined || v === null || v === '' ? null : String(v).toLowerCase();
     }
   };
@@ -341,7 +344,8 @@ function prgRenderTabella() {
   const scroll = vecchio ? { t: vecchio.scrollTop, l: vecchio.scrollLeft } : null;
   const w = sbCanWrite();
   const pb = prgPrefB(b.id);
-  const cols = prgCols(b).filter(c => !pb.nascoste.includes(c.id));
+  const cols = prgColsTutte(b).filter(c => !pb.nascoste.includes(c.id));
+  if (b.commessa && !_prgApp[b.commessa]) prgAppCarica(b.commessa);   // in sottofondo, poi ridisegna
   const gruppi = prgGruppi(b);
   const tutti = prgElementiFiltrati(b);
   const cerca = !!(pb.cerca || '').trim();
@@ -357,7 +361,10 @@ function prgRenderTabella() {
   const rs = id => '<span class="prg-rs" data-prg-rs="' + prgEsc(id) + '" title="Trascina per cambiare la larghezza · doppio clic: torna automatica"></span>';
   // Intestazione delle colonne ripetuta in ogni gruppo (come Monday), appiccicata in alto mentre
   // si scorre il gruppo: quella del gruppo successivo la copre quando arriva.
-  const intestazione = '<tr class="prg-grp-cols"><th class="prg-sticky" data-prg-sort="__nome"><span class="prg-th-t">' + prgEsc(titoloNome) + freccia('__nome') + '</span>' + rs('__nome') + '</th>'
+  const intestazione = (gid, els) => '<tr class="prg-grp-cols"><th class="prg-sticky" data-prg-sort="__nome">'
+    + (w ? '<input type="checkbox" class="prg-selc" data-prg-selg="' + prgEsc(gid) + '" title="Seleziona tutto il gruppo" data-help-key="prg-sel"'
+      + (els.length && els.every(e => _prg.sel.has(e.id)) ? ' checked' : '') + '>' : '')
+    + '<span class="prg-th-t">' + prgEsc(titoloNome) + freccia('__nome') + '</span>' + rs('__nome') + '</th>'
     + cols.map(c => '<th data-prg-sort="' + prgEsc(c.id) + '" title="' + prgEsc(c.titolo + ' · ' + prgEtichettaTipo(c.tipo) + ' · clic per ordinare') + '">'
       + '<span class="prg-th-t">' + prgEsc(c.titolo) + freccia(c.id) + '</span>' + rs(c.id) + '</th>').join('')
     + '</tr>';
@@ -380,7 +387,7 @@ function prgRenderTabella() {
       + '<span class="prg-grp-n">' + els.length + ' element' + (els.length === 1 ? 'o' : 'i') + '</span>'
       + '</div></td></tr>';
     if (!chiuso) {
-      h += intestazione;
+      h += intestazione(g.id, els);
       els.forEach(el => { h += prgRigaHtml(b, cols, el, g.colore, w); });
       if (w && !cerca) {
         h += '<tr class="prg-add"><td class="prg-sticky"><input class="prg-add-inp" placeholder="＋ Aggiungi elemento" data-prg-add="' + prgEsc(g.id) + '">'
@@ -532,10 +539,15 @@ function prgRigaHtml(b, cols, el, colore, w) {
   const nCom = prgNumCommenti(b.id, el.id);
   let h = '<tr class="prg-row" data-id="' + el.id + '">'
     + '<td class="prg-sticky prg-nome" style="--g:' + prgEsc(colore) + '" data-prg-apri="' + el.id + '" title="Apri l\'elemento">'
+    + (w ? '<input type="checkbox" class="prg-selc" data-prg-sel="' + el.id + '"' + (_prg.sel.has(el.id) ? ' checked' : '') + ' data-help-key="prg-sel">' : '')
     + '<span class="prg-nome-t">' + (el.nome ? prgEsc(el.nome) : '<i class="text-slate-400">senza nome</i>') + '</span>'
     + '<span class="prg-com' + (nCom ? ' on' : '') + '" title="' + (nCom ? nCom + ' aggiornamenti' : 'Nessun aggiornamento') + '">💬' + (nCom ? ' ' + nCom : '') + '</span>'
     + '</td>';
   cols.forEach(c => {
+    if (c.tipo === 'app') {
+      h += '<td class="prg-c prg-c-app" data-prg-apri="' + el.id + '" data-prg-tab="dashboard" title="Apri i dati della dashboard">' + prgAppValore(b, c, el).html + '</td>';
+      return;
+    }
     const v = el.valori ? el.valori[c.id] : undefined;
     h += '<td class="prg-c prg-c-' + c.tipo + (w && c.tipo !== 'settimane' ? ' prg-ed' : '') + '" data-col="' + prgEsc(c.id) + '">' + prgCellaHtml(c, v, el) + '</td>';
   });
@@ -607,6 +619,7 @@ function prgTimelineHtml(v) {
 function prgTesto(c, v, el) {
   if (!c) return v === undefined || v === null ? '' : (typeof v === 'object' ? JSON.stringify(v) : String(v));
   if (c.tipo === 'settimane') return prgSettimane(el && el.valori && el.valori[c.da]);
+  if (c.tipo === 'app') { const b = el && _prg.boards.find(x => x.id === el.board_id); return b ? prgAppValore(b, c, el).testo : ''; }
   if (v === undefined || v === null || v === '') return '';
   switch (c.tipo) {
     case 'stato': { const o = (c.opzioni || []).find(x => x.id === v); return o ? o.label : '?'; }
@@ -874,6 +887,7 @@ async function prgAggiungiElemento(inp) {
 /* ---------- pannello elemento (drawer) ---------- */
 function prgApriDrawer(id, tab) {
   _prg.drawer = { id, tab: tab || (_prg.drawer && _prg.drawer.id === id ? _prg.drawer.tab : 'dettagli'), commenti: null, storico: null };
+  if (_prg.drawer.tab === 'dashboard') { const e0 = prgEl(id); const b0 = e0 && _prg.boards.find(x => x.id === e0.board_id); if (!b0 || !b0.commessa) _prg.drawer.tab = 'dettagli'; }
   let d = document.getElementById('prg-drawer');
   if (!d) {
     d = document.createElement('div');
@@ -923,9 +937,11 @@ function prgRenderDrawer() {
     + '<button data-prg-dtab="dettagli" class="' + (tab === 'dettagli' ? 'on' : '') + '">Dettagli</button>'
     + '<button data-prg-dtab="commenti" class="' + (tab === 'commenti' ? 'on' : '') + '">💬 Aggiornamenti' + (nCom ? ' (' + nCom + ')' : '') + '</button>'
     + '<button data-prg-dtab="storico" class="' + (tab === 'storico' ? 'on' : '') + '">🕘 Storico</button>'
+    + (b.commessa ? '<button data-prg-dtab="dashboard" class="' + (tab === 'dashboard' ? 'on' : '') + '">🔗 Dashboard' + (prgLink(el) ? '' : ' <span class="prg-app-dot" title="Non collegato alla Griglia"></span>') + '</button>' : '')
     + '</div></div><div class="prg-dr-body">';
   if (tab === 'dettagli') h += prgDrawerDettagliHtml(b, el, w);
   else if (tab === 'commenti') h += prgDrawerCommentiHtml(el, w);
+  else if (tab === 'dashboard') h += prgDrawerDashboardHtml(b, el, w);
   else h += prgDrawerStoricoHtml(b, el, w);
   h += '</div>';
   d.innerHTML = h;
@@ -1025,6 +1041,7 @@ async function prgDrawerClick(e) {
   const el = prgEl(_prg.drawer.id);
   if (az === 'chiudi') { prgChiudiDrawer(); return; }
   if (!el) return;
+  if (/^(lk-salva|lk-togli|ap|jst|stato-prop)$/.test(az)) { prgDrawerDashboardClick(az, el); return; }
   if (az === 'elimina') prgEliminaElemento(el);
   else if (az === 'pubblica') prgPubblicaCommento(el);
   else if (az === 'del-com') prgEliminaCommento(Number(a.dataset.id));
@@ -1033,8 +1050,10 @@ async function prgDrawerClick(e) {
     if (!r) return;
     const b = _prg.boards.find(x => x.id === el.board_id);
     const c = prgCol(b, r.campo);
-    const nomeCampo = r.campo === '__nome' ? 'Nome' : (c ? c.titolo : r.campo);
-    if (!(await showConfirmAsync('Riportare «' + nomeCampo + '» al valore «' + (prgTesto(c, r.prima, el) || 'vuoto') + '»?', 'Ripristina'))) return;
+    const link = r.campo === PRG_LINK;
+    const nomeCampo = r.campo === '__nome' ? 'Nome' : link ? 'Collegamento alla Griglia' : (c ? c.titolo : r.campo);
+    const testoPrima = link ? prgLinkTesto(r.prima && r.prima.cantiere ? r.prima : null) : prgTesto(c, r.prima, el);
+    if (!(await showConfirmAsync('Riportare «' + nomeCampo + '» al valore «' + (testoPrima || 'vuoto') + '»?', 'Ripristina'))) return;
     const ok = await prgSalvaValore(el, r.campo, r.prima === undefined ? null : r.prima);
     if (ok) prgCaricaStorico();
   }
@@ -1158,16 +1177,17 @@ function prgDrawerStoricoHtml(b, el, w) {
   if (rows.errore) return '<div class="text-sm text-red-600 py-6 text-center">Errore: ' + prgEsc(rows.errore) + '</div>';
   if (!rows.length) return '<div class="text-sm text-slate-400 py-6 text-center">Nessuna modifica registrata dopo la creazione.</div>';
   return rows.map(r => {
-    const c = r.campo === '__nome' ? null : prgCol(b, r.campo);
-    const titolo = r.campo === '__nome' ? 'Nome' : (c ? c.titolo : r.campo + ' (colonna eliminata)');
+    const link = r.campo === PRG_LINK;
+    const c = r.campo === '__nome' || link ? null : prgCol(b, r.campo);
+    const titolo = r.campo === '__nome' ? 'Nome' : link ? 'Collegamento alla Griglia' : (c ? c.titolo : r.campo + ' (colonna eliminata)');
     const val = x => {
-      const t = r.campo === '__nome' ? (x || '') : prgTesto(c, x, el);
+      const t = r.campo === '__nome' ? (x || '') : link ? prgLinkTesto(x && x.cantiere ? x : null) : prgTesto(c, x, el);
       return t ? prgEsc(t) : '<i class="text-slate-400">vuoto</i>';
     };
     return '<div class="prg-sto-row">'
       + '<div class="text-xs text-slate-400">' + prgEsc(prgDataOraTs(r.created_at)) + ' · ' + prgEsc(prgNomeDaEmail(r.autore_email) || 'sistema') + '</div>'
       + '<div class="text-sm"><b>' + prgEsc(titolo) + '</b>: ' + val(r.prima) + ' → ' + val(r.dopo)
-      + (w && (c || r.campo === '__nome') ? ' <button class="prg-sto-rip" data-prg-d="ripristina" data-id="' + r.id + '" title="Riporta il campo al valore di prima" data-help-key="prg-ripristina">↶ ripristina</button>' : '')
+      + (w && (c || link || r.campo === '__nome') ? ' <button class="prg-sto-rip" data-prg-d="ripristina" data-id="' + r.id + '" title="Riporta il campo al valore di prima" data-help-key="prg-ripristina">↶ ripristina</button>' : '')
       + '</div></div>';
   }).join('');
 }
@@ -1186,6 +1206,8 @@ function prgModalApri(titolo, corpo, piede, largo) {
     + '<button class="prg-dr-x" data-prg-m="chiudi" title="Chiudi">✕</button></div>'
     + '<div class="prg-modal-body" id="prg-modal-body">' + corpo + '</div>'
     + '<div class="prg-modal-foot" id="prg-modal-foot">' + (piede || '') + '</div></div>';
+  m.onchange = null;      // la finestra è riusata: niente gestori rimasti dalla precedente
+  m.oninput = null;
   m.style.display = 'flex';
   m.querySelector('[data-prg-m="chiudi"]').onclick = prgModalChiudi;
   return m;
@@ -1291,9 +1313,9 @@ function prgVista() {
   const pb = prgPrefB(b.id);
   const m = prgModalApri('Colonne visibili · ' + b.nome,
     '<p class="text-xs text-slate-500 mb-3">Vale solo per te, in questo browser. Per cambiare le colonne della board per tutti usa «⚙️ Colonne».</p>'
-    + '<div class="prg-vista-list">' + prgCols(b).map(c =>
+    + '<div class="prg-vista-list">' + prgColsTutte(b).map(c =>
       '<label class="prg-vista-it"><input type="checkbox" data-prg-vis="' + prgEsc(c.id) + '"' + (pb.nascoste.includes(c.id) ? '' : ' checked') + '> '
-      + prgEsc(c.titolo) + ' <span class="text-xs text-slate-400">' + prgEsc(prgEtichettaTipo(c.tipo)) + '</span></label>').join('') + '</div>',
+      + prgEsc(c.titolo) + ' <span class="text-xs text-slate-400">' + prgEsc(c.tipo === 'app' ? 'dalla dashboard' : prgEtichettaTipo(c.tipo)) + '</span></label>').join('') + '</div>',
     '<button class="prg-btn" id="prg-vis-tutte">Mostra tutte</button><button class="prg-btn prg-btn-pri" data-prg-m="chiudi2">Fatto</button>');
   m.querySelector('[data-prg-m="chiudi2"]').onclick = prgModalChiudi;
   m.querySelectorAll('[data-prg-vis]').forEach(cb => cb.addEventListener('change', () => {
@@ -1317,10 +1339,12 @@ function prgEsporta() {
   if (!b || typeof XLSX === 'undefined') return;
   const cols = prgCols(b);
   const gruppi = prgGruppi(b);
-  const righe = [['Gruppo', (b.config && b.config.titoloNome) || 'Elemento'].concat(cols.map(c => c.titolo))];
+  const conLink = !!b.commessa;
+  const righe = [['Gruppo', (b.config && b.config.titoloNome) || 'Elemento'].concat(conLink ? ['Cantiere Griglia', 'Attività Griglia'] : [], cols.map(c => c.titolo))];
   gruppi.forEach(g => {
     prgOrdina(b, prgEls(b.id).filter(el => prgGruppoDi(b, el) === g.id)).forEach(el => {
-      righe.push([g.label, el.nome].concat(cols.map(c => {
+      const l = prgLink(el);
+      righe.push([g.label, el.nome].concat(conLink ? [l ? l.cantiere : '', l ? l.attivita || '' : ''] : [], cols.map(c => {
         const v = el.valori && el.valori[c.id];
         return c.tipo === 'numero' && typeof v === 'number' ? v : prgTesto(c, v, el);
       })));
@@ -1342,6 +1366,17 @@ function prgBind() {
     // fine di un trascinamento della larghezza: non è un clic per ordinare
     if (t.closest('[data-prg-rs]') || Date.now() - (_prg.ridimFine || 0) < 300) return;
     let x;
+    if ((x = t.closest('[data-prg-sel]'))) {
+      const id = Number(x.dataset.prgSel);
+      if (x.checked) _prg.sel.add(id); else _prg.sel.delete(id);
+      prgRenderTesta(); return;
+    }
+    if ((x = t.closest('[data-prg-selg]'))) {
+      const b = prgBoard(); if (!b) return;
+      const ids = prgElementiFiltrati(b).filter(el => prgGruppoDi(b, el) === x.dataset.prgSelg).map(el => el.id);
+      ids.forEach(id => { if (x.checked) _prg.sel.add(id); else _prg.sel.delete(id); });
+      prgRenderTesta(); prgRenderTabella(); return;
+    }
     if ((x = t.closest('[data-prg-board]'))) { prgScegliBoard(Number(x.dataset.prgBoard)); return; }
     if ((x = t.closest('[data-prg-azione]'))) { prgAzione(x.dataset.prgAzione); return; }
     if ((x = t.closest('[data-prg-grp]'))) {
@@ -1357,7 +1392,7 @@ function prgBind() {
       pb.ord = !o ? { col, dir: 'asc' } : (o.dir === 'asc' ? { col, dir: 'desc' } : null);
       prgSalvaPref(); prgRenderTabella(); return;
     }
-    if ((x = t.closest('[data-prg-apri]'))) { prgApriDrawer(Number(x.dataset.prgApri)); return; }
+    if ((x = t.closest('[data-prg-apri]'))) { prgApriDrawer(Number(x.dataset.prgApri), x.dataset.prgTab); return; }
     if ((x = t.closest('td.prg-ed'))) { prgCellaClick(x); return; }
   });
   root.addEventListener('input', e => {
@@ -1412,6 +1447,12 @@ function prgAzione(a) {
     pb.chiusi = a === 'comprimi' ? Array.from(new Set(pb.chiusi.concat(ids))) : pb.chiusi.filter(id => !ids.includes(id));
     prgSalvaPref(); prgRenderTabella();
   }
+  else if (a === 'app-ricarica' && b && b.commessa) { _prgInfoCache.clear(); prgAppCarica(b.commessa, true); }
+  else if (a === 'collega' && b) prgCollegaApri(prgSelezionati(b).map(e => e.id));
+  else if (a === 'autoplan' && b) prgAutoplanApri(prgSelezionati(b).map(e => e.id));
+  else if (a === 'struttura' && b) prgStrutturaApri(prgSelezionati(b).map(e => e.id));
+  else if (a === 'stati') prgStatiApri();
+  else if (a === 'desel') { _prg.sel = new Set(); prgRenderTesta(); prgRenderTabella(); }
   else if (a === 'larghezze' && b) {
     prgPrefB(b.id).larg = {};
     prgSalvaPref(); prgRenderTesta(); prgRenderTabella();

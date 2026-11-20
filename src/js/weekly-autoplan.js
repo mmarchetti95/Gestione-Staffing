@@ -257,6 +257,45 @@ function _apAggiungiRighe(nuove, fonte) {
   _apStatus(nuove.length + ' righe aggiunte da ' + fonte + '.');
 }
 
+/* Fonte «Programmazione» (v18.298.0): accoda righe alla lista di una settimana anche se la tab
+   non è aperta su quella settimana (la lista è in localStorage per settimana). Le righe già in
+   lista (stessa commessa + cantiere + attività) non si duplicano. Ritorna { nuove, gia }. */
+function apAccodaRighe(anno, week, oggetti, fonte) {
+  const stessa = _ap.anno === anno && _ap.week === week;
+  let all = {}, righe;
+  if (stessa) righe = _ap.righe;
+  else {
+    try { all = JSON.parse(localStorage.getItem(AP_STORAGE_KEY) || '{}') || {}; } catch (_) { all = {}; }
+    const s0 = all[_apWkKey(anno, week)];
+    righe = s0 && Array.isArray(s0.righe) ? s0.righe : [];
+    righe.forEach(r => { const n = parseInt(String(r.id).replace('r', ''), 10); if (n > _apSeq) _apSeq = n; });
+  }
+  const chiave = r => _apNorm(r.commessa) + '|' + _apNorm(r.cantiere) + '|' + _apNorm(r.attivita);
+  const visti = new Set(righe.map(chiave));
+  const nuove = [], gia = [];
+  (oggetti || []).forEach(o => {
+    const r = apNormRiga(o, fonte);
+    if (!r.cantiere) return;
+    if (visti.has(chiave(r))) { gia.push(r); return; }
+    visti.add(chiave(r));
+    nuove.push(r);
+  });
+  if (!nuove.length) return { nuove, gia };
+  if (stessa) {
+    _ap.righe = _ap.righe.concat(nuove);
+    _apInvalidaBozza();
+    _apSalvaLocale();
+  } else {
+    const k = _apWkKey(anno, week);
+    all[k] = Object.assign({}, all[k] || {}, { righe: righe.concat(nuove), ts: Date.now() });
+    const keys = Object.keys(all).sort((a, b) => (all[b].ts || 0) - (all[a].ts || 0));
+    keys.slice(8).forEach(x => delete all[x]);
+    try { localStorage.setItem(AP_STORAGE_KEY, JSON.stringify(all)); }
+    catch (e) { throw new Error('lista di Auto-pianifica non salvata (spazio del browser esaurito?)'); }
+  }
+  return { nuove, gia };
+}
+
 /* Fonte 1: testo incollato (celle copiate da Excel = TAB; CSV con ; o ,) */
 function apImportaTesto() {
   const ta = document.getElementById('ap-incolla');

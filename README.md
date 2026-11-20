@@ -116,6 +116,12 @@ Limite noto: il progetto Supabase è sul piano **Free**, che non include backup 
 
 ## Changelog
 
+## v18.298.0
+- **Programmazione, secondo rilascio: collegata alla dashboard.** Ogni elemento di una board si **collega a una voce della Griglia** (cantiere + attività del catalogo della commessa): «🔗 Collega alla Griglia» propone il collegamento dal nome («Gubbio FGN (BIANCA)» → Gubbio · Rilievo Wo Fognatura Bianca; «in Griglia» se è già pianificato, «dal nome» se il comune non c'è ancora) e salva solo le righe confermate. Si cambia o si toglie dal pannello dell'elemento, nuova scheda «🔗 Dashboard», e resta nello storico.
+- **Dati della dashboard in tabella** (sola lettura, nascondibili da «👁 Colonne visibili»): «🔗 Griglia», «📅 In Griglia» (prossimi giorni pianificati o ultimo), «📈 Avanzamento» (% sul target, produzione e giorni lavorati, stessi numeri di Avanzamento comuni), «🎫 Jira» (stato dei Task). Nel pannello: giorni pianificati con gli operatori, produzione e ore, Task Jira, struttura Jira registrata. «↻» li rilegge.
+- **Azioni dalla riga o da una selezione** (caselle a sinistra del nome, «seleziona tutto il gruppo» nell'intestazione): «➕ Auto-pianifica» aggiunge i comuni alla lista di Auto-pianifica della settimana scelta (cantiere, attività, km da una colonna della board, priorità, scadenza) e la apre — la Griglia cambia solo applicando la bozza; «🏗️ Struttura Jira» apre la creazione strutture con i comuni già scritti (anteprima obbligatoria).
+- **«💡 Stati da aggiornare»**: dalla Griglia e da Jira propone di portare avanti lo stato (in Griglia → Pianificazione, lavoro registrato → In progress, Task chiusi → Rilievo completato), mai indietro e mai da solo; si applicano con un clic, uno per uno o in blocco. Nessuna modifica a Supabase (il collegamento sta nei valori dell'elemento).
+
 ## v18.297.0
 - **Programmazione, fix gruppi**: il titolo di ogni gruppo (stato e numero di elementi) finiva al centro della tabella, fuori schermo a destra, e si vedeva solo scorrendo; ora è sopra le sue righe, sempre sul bordo sinistro anche scorrendo in orizzontale, come su Monday. Righe più compatte ed etichette di stato che riempiono la cella (una regola generale dell'app aggiungeva margini a tutte le celle), intestazioni bianche e fascia colorata del gruppo lungo tutte le sue righe.
 

@@ -244,7 +244,8 @@ function _jstCantieriDallaGriglia(commessa) {
    Anteprima obbligatoria (dryRun) prima di "Crea". Nell'anteprima ogni issue da creare ha una
    spunta (v18.234.0): spuntarne una spunta i livelli sopra mancanti, toglierla toglie quelli
    sotto. Le escluse vanno all'Edge Function come "escludi" (chiavi del modello). */
-function jstOpenCreaModal(commessa, modello) {
+/* comuni (facoltativo): elenco già scritto nella finestra, es. dalla Programmazione. */
+function jstOpenCreaModal(commessa, modello, comuni) {
   if (!sbGuardWrite()) return;
   if (!modello) { showAlertModal('Imposta prima il modello della struttura Jira nella scheda commessa.'); return; }
   const root = document.getElementById('modal-root');
@@ -374,7 +375,8 @@ function jstOpenCreaModal(commessa, modello) {
   }
 
   function disegnaCrea() {
-    const testo = (layer.querySelector('#jst-comuni') || {}).value || '';
+    const taCom = layer.querySelector('#jst-comuni');
+    const testo = taCom ? taCom.value : (comuni || []).join('\n');
     leggiDate();
     const lista = fatto || anteprima;
     layer.innerHTML = '<div class="bg-white rounded-lg shadow-xl w-full max-w-2xl mx-4 my-8 p-5 max-h-[90vh] overflow-y-auto">'
