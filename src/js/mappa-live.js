@@ -108,6 +108,8 @@ let _mlSearchCommesse = '';               // ricerca DENTRO l'elenco chip, non s
 let _mlSearchOperatori = '';
 let _mlSearchRegioni = '';
 let _mlSearchCantieri = '';
+let _mlFiltroTipi = new Set();            // solo fonte Programmazione: tipo attività (mappa-programmazione.js)
+let _mlSearchTipi = '';
 
 let _mlSideTab = 'cantieri';              // elenco laterale: 'cantieri' | 'commesse'
 // Fonte dei pin: 'jira' = cantieri in Griglia colorati dal Task Jira (giorno/settimana),
@@ -1381,6 +1383,8 @@ function mlRenderToolbar() {
   });
   const colOp = document.getElementById('ml-col-operatori');
   if (colOp) colOp.style.display = prg ? 'none' : '';
+  const colTipi = document.getElementById('ml-col-tipi');
+  if (colTipi) colTipi.style.display = prg ? '' : 'none';
   const hint = document.getElementById('ml-filtro-hint');
   if (hint) hint.textContent = prg
     ? 'Il colore del pin è lo stato dell\'elemento nella Programmazione (legenda «Stato»); più elementi nello stesso comune = pin a spicchi.'
@@ -1459,7 +1463,9 @@ function mlRenderDays() {
    applicare i filtri, altrimenti selezionare una commessa farebbe sparire le
    altre dall'elenco e non si potrebbe più deselezionare. */
 function mlRenderFiltri(tutti) {
-  const all = tutti || mlBuildItemsCached(_mlDay);
+  // Senza elementi passati (ricerca di colonna) si ricostruiscono dalla fonte mostrata:
+  // in vista Programmazione le chip della Griglia sarebbero di un'altra mappa.
+  const all = tutti || (_mlFonte === 'prg' ? mlPrgBuildItems() : mlBuildItemsCached(_mlDay));
   const commesse = [...new Set(all.map(i => i.commessa))].sort((a, b) => a.localeCompare(b));
   const operatori = [...new Set(all.reduce((acc, i) => acc.concat(i.operatori), []))]
     .sort((a, b) => a.localeCompare(b));
@@ -1494,7 +1500,7 @@ function mlRenderFiltri(tutti) {
     if (elReg) elReg.insertAdjacentHTML('beforeend', '<span class="ml-empty">⏳ in caricamento…</span>');
   }
   mlRenderChips('ml-filtro-cantieri', cantieri, _mlFiltroCantieri, _mlSearchCantieri, 'nessun cantiere pianificato', false);
-  if (_mlFonte === 'prg') mlPrgRenderChipsStato(); else mlRenderChipsStato();
+  if (_mlFonte === 'prg') { mlPrgRenderChipsStato(); mlPrgRenderChipsTipi(all); } else mlRenderChipsStato();
 
   mlSetFiltroCount('ml-n-commesse', _mlFiltroCommesse.size);
   mlSetFiltroCount('ml-n-operatori', _mlFiltroOperatori.size);
@@ -1503,7 +1509,7 @@ function mlRenderFiltri(tutti) {
   mlSetFiltroCount('ml-n-stati', _mlFiltroStati.size);
 
   const nAttivi = _mlFiltroCommesse.size + _mlFiltroOperatori.size + _mlFiltroRegioni.size +
-    _mlFiltroCantieri.size + _mlFiltroStati.size;
+    _mlFiltroCantieri.size + _mlFiltroStati.size + (_mlFonte === 'prg' ? _mlFiltroTipi.size : 0);
   const btnClear = document.getElementById('ml-filtro-clear');
   if (btnClear) btnClear.style.display = nAttivi ? '' : 'none';
 }
@@ -1564,11 +1570,13 @@ function mlClearFiltri() {
   _mlFiltroStati.clear();
   _mlFiltroRegioni.clear();
   _mlFiltroCantieri.clear();
+  _mlFiltroTipi.clear();
+  _mlSearchTipi = '';
   _mlSearchCommesse = '';
   _mlSearchOperatori = '';
   _mlSearchRegioni = '';
   _mlSearchCantieri = '';
-  ['ml-search-commesse', 'ml-search-operatori', 'ml-search-regioni', 'ml-search-cantieri'].forEach(id => {
+  ['ml-search-commesse', 'ml-search-operatori', 'ml-search-regioni', 'ml-search-cantieri', 'ml-search-tipi'].forEach(id => {
     const inp = document.getElementById(id);
     if (inp) inp.value = '';
   });
@@ -2598,6 +2606,7 @@ function mlBindToolbar() {
   mlBindSearchColonna('ml-search-operatori', v => { _mlSearchOperatori = v; });
   mlBindSearchColonna('ml-search-regioni', v => { _mlSearchRegioni = v; });
   mlBindSearchColonna('ml-search-cantieri', v => { _mlSearchCantieri = v; });
+  mlBindSearchColonna('ml-search-tipi', v => { _mlSearchTipi = v; });
 }
 
 function mlBindSearchColonna(id, setter) {

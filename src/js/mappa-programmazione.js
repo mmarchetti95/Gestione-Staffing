@@ -12,6 +12,11 @@
    - Un pin per comune: più elementi nello stesso comune (es. FGN + ACQ) = un pin a spicchi,
      uno per stato, col numero di elementi al centro.
    - Filtro «Stato» = i 5 stati di ML_PRG_STATI (etichette riconosciute dall'inizio del testo).
+   - Filtro «Tipo attività» (v18.309.0, al posto di «Operatore») = la colonna virtuale
+     «🏷️ Tipo attività» della Programmazione (prgTipoAttivita: attività del collegamento alla
+     Griglia, o del comune in Griglia se non collegato). Servono i dati della dashboard della
+     commessa (_prgApp, letti in sottofondo da mlPrgAppSfondo): finché mancano il tipo è «da
+     leggere» e la chip lo dice.
    - Giorno/settimana non contano: la toolbar li nasconde.
    Sola lettura: niente Jira, niente pwData. Il Realtime della Programmazione ridisegna
    (mlPrgOnDataChanged, chiamata da _prgRtRender). «📋 Apri» porta alla board con il pannello
@@ -33,6 +38,7 @@ const ML_PRG_STATI = [
 ];
 let _mlPrgStati = [];          // [{ k, l, c }] = ML_PRG_STATI con i colori delle board
 let _mlPrgEsclusi = 0;         // elementi in altri stati o senza stato, non mostrati
+const ML_PRG_TIPO_ND = '— senza tipo';
 
 function mlPrgPuo() {
   return typeof sbCanSeePage !== 'function' || sbCanSeePage('programmazione');
@@ -47,6 +53,7 @@ function mlSetFonte(f) {
   // sarebbe invisibile (nessuna chip corrispondente) e svuoterebbe la mappa.
   _mlFiltroStati.clear();
   _mlFiltroOperatori.clear();
+  _mlFiltroTipi.clear();
   mlCloseDrawer();
   mlRender({});
 }
@@ -95,6 +102,7 @@ function mlPrgBuildItems() {
       const cantiere = String(mlPrgComune(b, el) || '').trim();
       if (!cantiere) return;
       items.push({
+        tipi: mlPrgTipiDi(b, el),
         prg: true, el, board: b, commessa: b.commessa || b.nome || 'Board', cantiere,
         nome: el.nome || '', operatori: [], link: prgLink(el),
         stato: s.k, statoL: s.l, colore: colori[s.k] || s.c,
@@ -107,10 +115,70 @@ function mlPrgBuildItems() {
   return items;
 }
 
+/* Tipi di attività di un elemento: array di nomi ([] = nessun tipo trovato), null = non ancora
+   noto (dati della dashboard della commessa da leggere, o non leggibili). */
+function mlPrgTipiDi(b, el) {
+  const t = prgTipoAttivita(b, el);
+  if (t && t.carica) return null;
+  if (t) return t.nomi.slice();
+  const s = b.commessa ? _prgApp[b.commessa] : null;
+  return b.commessa && (!s || s.stato === 'errore') ? null : [];
+}
+
+function mlPrgPassaTipo(it) {
+  if (!_mlFiltroTipi.size) return true;
+  if (!it.tipi) return false;   // tipo non ancora noto: non si può dire che corrisponda
+  if (!it.tipi.length) return _mlFiltroTipi.has(ML_PRG_TIPO_ND);
+  return it.tipi.some(t => _mlFiltroTipi.has(t));
+}
+
 function mlPrgFiltra(tutti) {
   let items = mlApplyFilters(tutti);
   if (_mlFiltroStati.size) items = items.filter(it => _mlFiltroStati.has(it.stato || ML_PRG_ND));
+  if (_mlFiltroTipi.size) items = items.filter(mlPrgPassaTipo);
   return items;
+}
+
+/* Chip «Tipo attività»: i tipi presenti negli elementi, in ordine alfabetico, poi «senza tipo».
+   Una scelta non più presente si scarta solo quando i tipi sono tutti noti (durante la lettura
+   potrebbe solo non essere ancora arrivata). */
+function mlPrgRenderChipsTipi(all) {
+  const tipi = new Set();
+  let nd = false, ignoti = 0;
+  all.forEach(it => {
+    if (!it.tipi) { ignoti++; return; }
+    if (!it.tipi.length) nd = true;
+    it.tipi.forEach(t => tipi.add(t));
+  });
+  const valori = [...tipi].sort((a, b) => a.localeCompare(b, 'it'));
+  if (nd) valori.push(ML_PRG_TIPO_ND);
+  if (!ignoti) [..._mlFiltroTipi].forEach(t => { if (!valori.includes(t)) _mlFiltroTipi.delete(t); });
+  const inLettura = _prg.boards.some(b => b.commessa && _prgApp[b.commessa] && _prgApp[b.commessa].stato === 'carica');
+  const msg = inLettura ? '⏳ leggo la Griglia…' : ignoti ? '⚠️ Griglia non leggibile per ' + ignoti + ' elementi' : '';
+  mlRenderChips('ml-filtro-tipi', valori, _mlFiltroTipi, _mlSearchTipi, msg || 'nessun tipo di attività', false);
+  const el = document.getElementById('ml-filtro-tipi');
+  if (el) {
+    el.querySelectorAll('.ml-chip').forEach(b => {
+      b.title = b.dataset.v === ML_PRG_TIPO_ND
+        ? 'Elementi senza attività: non collegati alla Griglia e senza un comune con lo stesso nome in Griglia'
+        : 'Elementi con attività «' + b.dataset.v + '» (dal collegamento alla Griglia, o dal comune in Griglia se non collegato)';
+    });
+    if (msg && valori.length) el.insertAdjacentHTML('beforeend', '<span class="ml-empty">' + esc(msg) + '</span>');
+  }
+  mlSetFiltroCount('ml-n-tipi', _mlFiltroTipi.size);
+}
+
+/* Dati della dashboard (Griglia + produzione, modello di Avanzamento comuni) delle commesse delle
+   board, letti in sottofondo una volta per sessione (come nella Programmazione): servono al tipo
+   di attività. A lettura finita si ridisegna. `forza` = «🔄 Aggiorna». */
+function mlPrgAppSfondo(forza) {
+  const commesse = new Set(_prg.boards.filter(b => b.commessa && prgColonnaGruppoBoard(b)).map(b => b.commessa));
+  commesse.forEach(c => {
+    const s = _prgApp[c];
+    if (s && s.promessa) return;
+    if (!forza && s && s.stato) return;   // già letta, in lettura o in errore: niente giri a vuoto
+    prgAppCarica(c, !!forza).then(() => mlPrgOnDataChanged()).catch(() => {});
+  });
 }
 
 /* Un gruppo per comune (stessa chiave della rubrica luoghi), comuni in ordine alfabetico,
@@ -186,6 +254,7 @@ async function mlPrgRender(o) {
   }
   await mlGeoAttendiRubrica();
   if (loading) loading.style.display = 'none';
+  mlPrgAppSfondo(o.forcePrg === true);
 
   const tutti = mlPrgBuildItems();
   mlRenderFiltri(tutti);
@@ -379,6 +448,7 @@ function mlPrgDettaglioHtml(g) {
     if (b.commessa) {
       h += kv('Commessa', b.commessa);
       h += kv('Griglia', it.link ? prgLinkTesto(it.link) : 'non collegato');
+      h += kv('Tipo attività', it.tipi ? (it.tipi.length ? it.tipi.join(', ') : '—') : '…');
     }
     prgCols(b).forEach(c => {
       if (gc && c.id === gc.id) return;
