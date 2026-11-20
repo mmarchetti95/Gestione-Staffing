@@ -3,7 +3,7 @@
 let pwStrumenti = [];
 try { const _c = localStorage.getItem('pw_strumenti_cache'); if (_c) pwStrumenti = JSON.parse(_c) || []; } catch (_) {}
 
-HELP_TEXTS['pw-strumenti-refresh'] = 'Ricarica dal progetto Jira "GAR" l\'elenco degli strumenti (Strumentazione, Drone, Hard disk) con chi li ha in mano (assegnatario) e il loro stato, e aggiorna la cache del browser. L\'elenco si rilegge anche da solo aprendo la Griglia, se ha più di 30 minuti.\n\nDopo la lettura, nella settimana mostrata (se non è passata) ogni squadra riceve gli strumenti IN USO assegnati su Jira ai suoi operatori, se non sono già in un\'altra squadra e se non li hai tolti a mano da quella squadra. Questo si salva nella Griglia condivisa; su Jira non scrive nulla.';
+HELP_TEXTS['pw-strumenti-refresh'] = 'Ricarica dal progetto Jira "GAR" l\'elenco degli strumenti (Strumentazione, Drone, Hard disk) con chi li ha in mano (assegnatario) e il loro stato, e aggiorna la cache del browser. L\'elenco si rilegge anche da solo aprendo la Griglia, se ha più di 30 minuti.\n\nCon l\'elenco aggiornato, in Griglia ogni operatore mostra i «🔧» degli strumenti che ha su Jira e la riga Strumenti della squadra propone («💡») quelli IN USO non ancora in nessuna squadra: si aggiungono solo confermandoli. Non scrive nulla, né in Griglia né su Jira.';
 
 async function pwFetchStrumenti() {
   const st = document.getElementById('pw-strumenti-status');
@@ -11,9 +11,7 @@ async function pwFetchStrumenti() {
   if (st) st.textContent = '⏳ Carico strumenti da Jira…';
   try {
     await pwStrCarica();
-    const n = pwStrAutoSettimana();
-    if (n) await pwSave();
-    if (st) st.textContent = `✓ ${pwStrumenti.length} strumenti caricati` + (n ? ` · ${n} aggiunti alle squadre da Jira` : '');
+    if (st) st.textContent = `✓ ${pwStrumenti.length} strumenti caricati`;
     pwRender();
     setTimeout(() => { if (st) st.textContent = ''; }, 6000);
   } catch (e) {
@@ -152,31 +150,15 @@ function pwStrRenderList(filter) {
   const f = (filter || '').toLowerCase().trim();
   let html = '<div class="pw-str-item empty" data-key="">— nessuno —</div>';
 
-  // Chi ha lo strumento su Jira e in che stato (v18.302.0); KO/manutenzione in grigio.
-  const t = _pwStrTarget;
-  const sqT = t ? pwGetWeekData()[t.cidx]?.squadre[t.sidx] : null;
-  const nomiSq = sqT ? pwStrNomiSquadra(sqT) : [];
-  const vocePw = s => {
-    const a = s.assignee;
-    const info = (a ? (a.displayName || 'utente Jira') : 'nessuno') + ' · ' + (s.stato || '?');
-    const off = pwStrBloccato(s) ? ' style="opacity:.55;"' : '';
-    return `<div class="pw-str-item" data-key="${esc(s.key)}"${off}><b>${esc(s.key)}</b> · ${esc(s.name)}`
-      + (s.stato || a ? `<div style="font-size:10px;color:#64748b;">👤 ${esc(info)}</div>` : '') + '</div>';
-  };
-
+  // Strumenti GAR raggruppati per chi li ha su Jira (v18.304.0); KO/manutenzione in fondo.
+  let _fuori = '';
   if (pwStrumenti.length === 0) {
     html += '<div style="padding:4px 8px;font-size:10px;font-weight:600;color:#94a3b8;text-transform:uppercase;">Jira / GAR</div>';
-    html += '<div style="padding:8px;font-size:11px;color:#b45309;">Nessuno strumento in cache. Clicca "🔧 Aggiorna strumenti".</div>';
+    html += '<div style="padding:8px;font-size:11px;color:#b45309;">Nessuno strumento in cache. Clicca "🔧 Strumenti" in alto.</div>';
   } else {
-    const items = pwStrumenti.filter(s => !f || (s.key + ' ' + s.name + ' ' + ((s.assignee && s.assignee.displayName) || '')).toLowerCase().includes(f));
-    const diSquadra = nomiSq.length ? items.filter(s => !pwStrBloccato(s) && pwStrDetentore(s, nomiSq)) : [];
-    if (diSquadra.length) {
-      html += '<div style="padding:4px 8px;font-size:10px;font-weight:600;color:#166534;text-transform:uppercase;">Su Jira agli operatori di questa squadra</div>';
-      diSquadra.forEach(s => { html += vocePw(s); });
-    }
-    html += '<div style="padding:4px 8px;font-size:10px;font-weight:600;color:#94a3b8;text-transform:uppercase;">Jira / GAR</div>';
-    if (items.length === 0) html += '<div style="padding:4px 8px;font-size:11px;color:#94a3b8;">Nessun risultato.</div>';
-    else items.forEach(s => { if (!diSquadra.includes(s)) html += vocePw(s); });
+    const v = pwStrVociJiraHtml(f);
+    html += v.html;
+    _fuori = v.fuori;
   }
 
   // Strumenti messi a disposizione dai fornitori esterni (state.fornitori, vedi
@@ -190,6 +172,7 @@ function pwStrRenderList(filter) {
     });
   });
 
+  html += _fuori;
   list.innerHTML = html;
   list.querySelectorAll('.pw-str-item').forEach(el => {
     el.dataset.helpKey = 'pw-str-voce';

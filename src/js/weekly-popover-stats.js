@@ -393,7 +393,6 @@ async function pwUpdateOpNome(sel) {
   const op = data[cidx]?.squadre[sidx]?.operatori[oidx];
   if (op) {
     op.nome = sel.value;
-    if (op.nome) pwStrAutoDopoOperatore(cidx, sidx);   // strumenti che ha su Jira (v18.302.0)
     await pwSave(); pwRender();
   }
 }
