@@ -457,6 +457,7 @@ async function prgImpEsegui() {
     _prg.boardId = null;
     await prgScegliBoard(b.id);
     prgRender();
+    if (typeof prgOnGrigliaSalvata === 'function') prgOnGrigliaSalvata();   // collegamenti certi e stati dalla Griglia
     showAlertModal('Import completato nella board «' + b.nome + '».\n'
       + '• ' + nuovi + ' elementi nuovi, ' + aggiornati + ' aggiornati, ' + invariati + ' già uguali\n'
       + (an.aggiornamenti.length ? '• ' + commenti + ' aggiornamenti importati' + (an.aggiornamenti.length - commenti - commentiSaltati > 0 ? ' (' + (an.aggiornamenti.length - commenti - commentiSaltati) + ' già presenti)' : '') + '\n' : '')

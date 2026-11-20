@@ -116,6 +116,11 @@ Limite noto: il progetto Supabase è sul piano **Free**, che non include backup 
 
 ## Changelog
 
+## v18.305.0
+- **Programmazione e Griglia, lo stato torna indietro se il comune viene tolto.** Quando la Griglia porta un comune in «Pianificazione», l'elemento si ricorda lo stato di prima; se poi il comune viene tolto dalla Griglia (da quella settimana in avanti, giorni passati compresi) e lo stato è ancora quello messo dalla Griglia, torna allo stato di prima, con avviso e riga nello storico. Uno stato cambiato a mano dopo non viene più toccato. Spostare un comune fra settimane può farlo passare un attimo indietro e di nuovo avanti. Nello storico i cambi automatici sono segnati «⚙ dalla Griglia» / «⚙ tolto dalla Griglia»; nel pannello «🔗 Dashboard» si vede se lo stato l'ha messo la Griglia. I passaggi fatti prima di questa versione non hanno la memoria e restano come sono.
+- **Collegamento automatico nei casi certi**: un elemento non collegato si collega da solo alla Griglia quando lì, da questa settimana in poi, c'è una sola voce con lo stesso comune (uguale, non solo l'inizio del nome) e un'attività confermata dal nome (IP/FGN/ACQ, Auto/Pedestrian…), e nessun altro elemento la reclama. Avviso a comparsa e riga nel registro attività. Negli altri casi resta la proposta da confermare.
+- Lo stato si allinea anche subito dopo un collegamento fatto nella Programmazione, un elemento nuovo o un import, non solo al salvataggio della Griglia.
+
 ## v18.304.0
 - **Griglia, strumenti: si vede chi ha cosa e niente più aggiunte automatiche.** Nella cella di ogni operatore compaiono i «🔧» degli strumenti che ha su Jira: verde se è già fra gli strumenti della squadra, tratteggiato se è solo proposto (cliccando si aggiunge), grigio se è in un'altra squadra della settimana. Gli strumenti IN USO agli operatori non vengono più messi da soli nella squadra (un drone non serve a chi fa un rilievo walkout): compaiono sotto la riga Strumenti come «💡 Su Jira hanno anche», con ✓ per aggiungerli e ✕ per non proporli più a quella squadra. Nella riga Strumenti ogni strumento mostra nome, codice e a chi è su Jira (verde = un operatore della squadra). La tendina raggruppa gli strumenti per chi li ha: operatori della squadra, disponibili, in uso ad altri e, in fondo, KO/manutenzione. Nessuna modifica a Supabase o alle Edge Function.
 

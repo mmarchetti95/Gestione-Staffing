@@ -879,6 +879,7 @@ async function prgAggiungiElemento(inp) {
     if (error) throw error;
     _prgAggiornaCache(data);
     prgRenderTabella();
+    if (typeof prgOnGrigliaSalvata === 'function') prgOnGrigliaSalvata();   // collegamento certo, se già in Griglia
     const nuovo = document.querySelector('#prg-corpo [data-prg-add="' + CSS.escape(g) + '"]');
     if (nuovo) nuovo.focus();
   } catch (e) {
@@ -1178,8 +1179,20 @@ function prgDrawerStoricoHtml(b, el, w) {
   const rows = _prg.drawer.storico;
   if (!rows) return '<div class="text-sm text-slate-400 py-6 text-center">Caricamento…</div>';
   if (rows.errore) return '<div class="text-sm text-red-600 py-6 text-center">Errore: ' + prgEsc(rows.errore) + '</div>';
-  if (!rows.length) return '<div class="text-sm text-slate-400 py-6 text-center">Nessuna modifica registrata dopo la creazione.</div>';
-  return rows.map(r => {
+  // La «memoria» dello stato messo dalla Griglia (__auto_stato) non si mostra: serve a dire
+  // quali cambi di stato sono automatici (scritta pochi istanti dopo, dallo stesso utente).
+  const auto = rows.filter(r => r.campo === PRG_AUTO);
+  const visibili = rows.filter(r => r.campo !== PRG_AUTO);
+  if (!visibili.length) return '<div class="text-sm text-slate-400 py-6 text-center">Nessuna modifica registrata dopo la creazione.</div>';
+  const daGriglia = r => {
+    const t = new Date(r.created_at).getTime();
+    const m = auto.find(a => a.autore_email === r.autore_email && Math.abs(new Date(a.created_at).getTime() - t) < 15000
+      && ((a.dopo && a.dopo.col === r.campo) || (a.prima && a.prima.col === r.campo)));
+    if (!m) return '';
+    return m.dopo ? ' <span class="prg-badge" title="Cambiato in automatico: il comune è entrato in Griglia">⚙ dalla Griglia</span>'
+      : ' <span class="prg-badge" title="Cambiato in automatico: il comune è stato tolto dalla Griglia">⚙ tolto dalla Griglia</span>';
+  };
+  return visibili.map(r => {
     const link = r.campo === PRG_LINK;
     const c = r.campo === '__nome' || link ? null : prgCol(b, r.campo);
     const titolo = r.campo === '__nome' ? 'Nome' : link ? 'Collegamento alla Griglia' : (c ? c.titolo : r.campo + ' (colonna eliminata)');
@@ -1189,7 +1202,7 @@ function prgDrawerStoricoHtml(b, el, w) {
     };
     return '<div class="prg-sto-row">'
       + '<div class="text-xs text-slate-400">' + prgEsc(prgDataOraTs(r.created_at)) + ' · ' + prgEsc(prgNomeDaEmail(r.autore_email) || 'sistema') + '</div>'
-      + '<div class="text-sm"><b>' + prgEsc(titolo) + '</b>: ' + val(r.prima) + ' → ' + val(r.dopo)
+      + '<div class="text-sm"><b>' + prgEsc(titolo) + '</b>: ' + val(r.prima) + ' → ' + val(r.dopo) + daGriglia(r)
       + (w && (c || link || r.campo === '__nome') ? ' <button class="prg-sto-rip" data-prg-d="ripristina" data-id="' + r.id + '" title="Riporta il campo al valore di prima" data-help-key="prg-ripristina">↶ ripristina</button>' : '')
       + '</div></div>';
   }).join('');

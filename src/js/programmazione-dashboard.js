@@ -399,6 +399,7 @@ function prgCollegaApri(soloIds) {
     prgModalChiudi();
     _prgAppAggiorna();
     prgAppJira(b.commessa);
+    prgOnGrigliaSalvata();
     showAlertModal((modifiche.size - errori) + ' elementi collegati alla Griglia' + (errori ? '; ' + errori + ' non salvati (permessi o rete).' : '.'));
   };
 }
@@ -475,7 +476,7 @@ function prgAutoplanApri(ids) {
     let esito;
     try { esito = apAccodaRighe(anno, week, oggetti, 'Programmazione'); }
     catch (e) { showAlertModal('Righe non aggiunte: ' + (e.message || String(e))); return; }
-    if (daCollegare.size) await prgApplicaValori(daCollegare);
+    if (daCollegare.size) { await prgApplicaValori(daCollegare); prgOnGrigliaSalvata(); }
     prgModalChiudi();
     _prg.sel = new Set();
     pwAnno = anno; pwWeek = week;
@@ -553,6 +554,12 @@ function prgDrawerDashboardHtml(b, el, w) {
       + (link ? '<button class="prg-btn" data-prg-d="lk-togli" data-help-key="prg-link-togli">Scollega</button>' : '') + '</div>'
       + (prop ? '<div class="text-xs text-amber-700 mt-1">💡 Proposta ricavata dal nome' + (prop.fonte === 'griglia' ? ' (già in Griglia)' : ' (comune non ancora in Griglia)') + ': controlla e premi «Collega».</div>' : '');
   } else h += '<div class="text-sm">' + (link ? prgEsc(prgLinkTesto(link)) : '<span class="text-slate-400">Non collegato</span>') + '</div>';
+  const mAuto = (el.valori || {})[PRG_AUTO];
+  const gcB = prgColonnaGruppoBoard(b);
+  if (mAuto && gcB && mAuto.col === gcB.id && (el.valori || {})[gcB.id] === mAuto.a) {
+    const oa = (gcB.opzioni || []).find(o => o.id === mAuto.a), od = mAuto.da ? (gcB.opzioni || []).find(o => o.id === mAuto.da) : null;
+    h += '<div class="text-xs text-slate-500 mt-2">⚙ Stato «' + prgEsc(oa ? oa.label : '') + '» messo dalla Griglia: se il comune viene tolto dalla Griglia torna a «' + prgEsc(od ? od.label : 'nessuno stato') + '». Cambiandolo a mano, la Griglia non lo tocca più.</div>';
+  }
   h += '</div>';
   if (!link) return h;
   const info = prgAppInfo(b, el);
@@ -612,10 +619,10 @@ async function prgDrawerDashboardClick(az, el) {
     const cantiere = (document.getElementById('prg-lk-cant').value || '').replace(/\s+/g, ' ').trim();
     if (!cantiere) { showAlertModal('Scrivi il cantiere (comune) come compare in Griglia.'); return; }
     const ok = await prgSalvaValore(el, PRG_LINK, { cantiere, attivita: document.getElementById('prg-lk-att').value || '' });
-    if (ok) { _prgInfoCache.delete(el.id); prgAppJira(b.commessa); prgRenderDrawer(); }
+    if (ok) { _prgInfoCache.delete(el.id); prgAppJira(b.commessa); prgRenderDrawer(); prgOnGrigliaSalvata(); }
   } else if (az === 'lk-togli') {
     if (!(await showConfirmAsync('Scollegare «' + el.nome + '» dalla Griglia? Su Griglia e Jira non cambia nulla.', 'Scollega'))) return;
-    if (await prgSalvaValore(el, PRG_LINK, null)) prgRenderDrawer();
+    if (await prgSalvaValore(el, PRG_LINK, null)) { if ((el.valori || {})[PRG_AUTO]) await _prgGImposta(el, PRG_AUTO, null); prgRenderDrawer(); }
   } else if (az === 'ap') {
     if (_prg.boardId !== b.id) await prgScegliBoard(b.id);
     prgAutoplanApri([el.id]);
@@ -648,11 +655,24 @@ HELP_TEXTS['prg-sel'] = 'Seleziona l\'elemento per le azioni in blocco: collegar
    e attività con gli handler della cella (pwUpdateCantiere / pwUpdateAttivitaCantiere: sottotask,
    regione, meteo e Indietro/Avanti restano quelli di sempre) e salva il collegamento
    dell'elemento se mancava o era diverso.
-   Stato: dopo ogni salvataggio della Griglia (prgOnGrigliaSalvata, chiamata da pwSave) un
-   elemento collegato che compare in Griglia da questa settimana in poi, e ha ancora uno stato
-   che precede «Pianificazione» (Backlog…), passa a Pianificazione. Solo in avanti, solo per chi
-   ha salvato (non per i colleghi che ricevono la Griglia), e resta nello storico dell'elemento.
-   Il collegamento si usa così com'è: mai abbinamenti per nome fatti di nascosto. */
+   Allineamento (_prgGAllinea), dopo ogni salvataggio della Griglia (prgOnGrigliaSalvata, da
+   pwSave) e dopo ogni collegamento fatto nella Programmazione; solo chi ha salvato, solo
+   admin/responsabile, tutto nello storico dell'elemento:
+   1. COLLEGAMENTO AUTOMATICO, solo nei casi certi (v18.305.0, prgGLinkCerto): elemento non
+      collegato, in Griglia da questa settimana in poi c'è UNA sola voce con lo stesso comune
+      (uguale, non prefisso) e un'attività che il nome conferma (rete IP/FGN/ACQ o parola come
+      Auto/Pedestrian), e nessun altro elemento della commessa la reclama.
+   2. AVANTI: un elemento collegato in Griglia da questa settimana in poi, con uno stato prima di
+      «Pianificazione», passa a Pianificazione e si ricorda come ci è arrivato:
+      valori['__auto_stato'] = { col, da (stato di prima, null = vuoto), a, anno, week (prima
+      settimana in Griglia) }.
+   3. INDIETRO (v18.305.0): se lo stato è ancora quello messo dalla Griglia e il comune non c'è
+      più in Griglia dalla min(settimana registrata, questa) in avanti — i giorni già passati
+      contano, così una settimana finita non lo rimanda in Backlog — torna allo stato di prima.
+      Spostare un comune fra settimane può farlo «rimbalzare» (indietro e di nuovo avanti):
+      accettato, lo storico lo racconta.
+   Uno stato cambiato da una persona dopo l'automatismo fa cadere la memoria: la Griglia non lo
+   tocca più. Gli stati messi a mano non si toccano mai. */
 
 const PRG_G_GIORNI = ['Lun', 'Mar', 'Mer', 'Gio', 'Ven', 'Sab'];
 const _prgG = { prep: null, inp: null, bc: null, cerca: '', board: '', tutti: false, attPer: null };
@@ -687,11 +707,14 @@ function _prgGChiave(commessa, cant, att) {
   return caNorm(cant) + '|' + caNorm(voce ? voce.nome : att);
 }
 
-/* Voci (cantiere|attività) della commessa in Griglia da questa settimana in poi, con le
-   settimane in cui compaiono; .cantieri = solo i cantieri. */
-function prgGVociGriglia(commessa) {
-  const oggi = isoWeekYear(new Date());
-  const voci = new Map(), cantieri = new Set();
+const PRG_AUTO = '__auto_stato';
+
+/* Voci (cantiere|attività) della commessa in Griglia dalla settimana `dal` ({ year, week },
+   default questa) in poi, con le settimane in cui compaiono; .cantieri = solo i cantieri,
+   .elenco = chiave -> { cantiere come scritto in Griglia, attività di catalogo }. */
+function prgGVociGriglia(commessa, dal) {
+  const oggi = dal || isoWeekYear(new Date());
+  const voci = new Map(), cantieri = new Set(), elenco = new Map();
   Object.keys(pwData || {}).forEach(anno => {
     if (!/^\d{4}$/.test(anno)) return;
     Object.keys(pwData[anno] || {}).forEach(week => {
@@ -704,6 +727,7 @@ function prgGVociGriglia(commessa) {
           for (let g = 0; g < 6; g++) {
             pwCellVoci((op.giorni || {})[g]).forEach(v => {
               const k = _prgGChiave(commessa, v.cantiere, v.attivita);
+              if (!elenco.has(k)) { const vc = v.attivita ? caTrova(commessa, v.attivita) : null; elenco.set(k, { cantiere: v.cantiere, attivita: vc ? vc.nome : (v.attivita || '') }); }
               if (!voci.has(k)) voci.set(k, new Set());
               voci.get(k).add(anno + '|' + week);
               cantieri.add(caNorm(v.cantiere));
@@ -714,7 +738,41 @@ function prgGVociGriglia(commessa) {
     });
   });
   voci.cantieri = cantieri;
+  voci.elenco = elenco;
   return voci;
+}
+
+// Prima settimana ({ year, week }) di un insieme di 'anno|week', o null.
+function _prgGPrima(sett) {
+  let min = null;
+  (sett ? [...sett] : []).forEach(x => {
+    const p = String(x).split('|').map(Number);
+    if (p.length !== 2 || !p[0]) return;
+    if (!min || p[0] < min.year || (p[0] === min.year && p[1] < min.week)) min = { year: p[0], week: p[1] };
+  });
+  return min;
+}
+
+/* Collegamento certo di un elemento non collegato a una voce già in Griglia: stesso comune
+   (uguale, non prefisso), attività confermata dal nome (punteggio ≥ 1: rete o parola in comune),
+   un solo candidato migliore. null = non certo: resta alla proposta da confermare. */
+function prgGLinkCerto(b, el, voci) {
+  if (!el.nome || !voci.elenco) return null;
+  const comuneTesto = prgComuneDalNome(el.nome, b.commessa);
+  const k = cpBrdCompatta(comuneTesto);
+  if (k.length < 3) return null;
+  const parole = new Set(_prgTok(comuneTesto));
+  const cand = [];
+  voci.elenco.forEach(v => {
+    if (!v.attivita || cpBrdCompatta(v.cantiere) !== k) return;
+    const s = _prgPunteggioAtt(v.attivita, el.nome, parole);
+    if (s === null || s < 1) return;
+    cand.push({ v, s });
+  });
+  if (!cand.length) return null;
+  const max = Math.max(...cand.map(c => c.s));
+  const best = cand.filter(c => c.s === max);
+  return best.length === 1 ? { cantiere: best[0].v.cantiere, attivita: best[0].v.attivita } : null;
 }
 
 function _prgGInGriglia(voci, commessa, link) {
@@ -735,7 +793,7 @@ async function _prgGImposta(el, campo, valore) {
   }
 }
 
-/* ---------- stato: Backlog → Pianificazione quando il comune entra in Griglia ---------- */
+/* ---------- allineamento con la Griglia (collegamenti certi, stato avanti e indietro) ---------- */
 let _prgGTimer = null;
 function prgOnGrigliaSalvata() {
   if (!sbCanWrite() || !_prg.pronto) return;
@@ -743,30 +801,99 @@ function prgOnGrigliaSalvata() {
   _prgGTimer = setTimeout(_prgGAllinea, 1200);
 }
 
+function _prgGNomi(arr) {
+  return arr.length === 1 ? '«' + arr[0].el.nome + '»' : arr.length + ' comuni';
+}
+
 async function _prgGAllinea() {
-  const cambi = [], indici = {};
-  _prg.boards.forEach(b => {
-    if (!b.commessa || !_prg.caricate[b.id]) return;
-    const gc = prgColonnaGruppoBoard(b);
-    const iPian = gc ? prgGIdxPian(gc) : -1;
-    if (iPian < 0) return;
-    const voci = indici[b.commessa] || (indici[b.commessa] = prgGVociGriglia(b.commessa));
-    prgEls(b.id).forEach(el => {
+  if (_prgG.inCorso) { _prgG.ancora = true; return; }
+  _prgG.inCorso = true;
+  try {
+    const oggi = isoWeekYear(new Date());
+    const indici = {};
+    const vociDal = (commessa, dal) => {
+      const k = commessa + '|' + dal.year + '|' + dal.week;
+      return indici[k] || (indici[k] = prgGVociGriglia(commessa, dal));
+    };
+    const boards = _prg.boards.filter(b => b.commessa && _prg.caricate[b.id]);
+
+    // 1. collegamenti certi (una voce reclamata da più elementi non si collega a nessuno)
+    const proposte = [], reclami = {};
+    boards.forEach(b => prgEls(b.id).forEach(el => {
       const l = prgLink(el);
-      if (!l) return;
-      const cur = (gc.opzioni || []).findIndex(o => o.id === (el.valori || {})[gc.id]);
-      if (cur >= iPian) return;                      // solo in avanti
-      if (!_prgGInGriglia(voci, b.commessa, l)) return;
-      cambi.push({ el, gc, opz: gc.opzioni[iPian] });
+      if (l) {
+        const k = b.commessa + '|' + _prgGChiave(b.commessa, l.cantiere, l.attivita);
+        reclami[k] = (reclami[k] || 0) + 1;
+        return;
+      }
+      const c = prgGLinkCerto(b, el, vociDal(b.commessa, oggi));
+      if (!c) return;
+      const k = b.commessa + '|' + _prgGChiave(b.commessa, c.cantiere, c.attivita);
+      reclami[k] = (reclami[k] || 0) + 1;
+      proposte.push({ el, link: c, k });
+    }));
+    const collegati = [];
+    for (const x of proposte) {
+      if (reclami[x.k] !== 1) continue;
+      if (await _prgGImposta(x.el, PRG_LINK, x.link)) collegati.push(x);
+    }
+
+    // 2. stati: avanti, indietro, memorie scadute
+    const avanti = [], indietro = [], scadute = [];
+    boards.forEach(b => {
+      const gc = prgColonnaGruppoBoard(b);
+      if (!gc) return;
+      const opz = gc.opzioni || [];
+      const iPian = prgGIdxPian(gc);
+      prgEls(b.id).forEach(el => {
+        const l = prgLink(el);
+        if (!l) return;
+        const v = el.valori || {};
+        const cur = v[gc.id] || null;
+        const m = v[PRG_AUTO];
+        if (m && typeof m === 'object') {
+          if (m.col !== gc.id || cur !== m.a) { scadute.push(el); return; }   // l'ha cambiato una persona
+          const dalM = m.anno && m.week && (m.anno < oggi.year || (m.anno === oggi.year && m.week < oggi.week)) ? { year: m.anno, week: m.week } : oggi;
+          if (!_prgGInGriglia(vociDal(b.commessa, dalM), b.commessa, l)) {
+            const verso = m.da ? opz.find(o => o.id === m.da) : null;
+            indietro.push({ el, gc, m, verso });
+          }
+          return;
+        }
+        if (iPian < 0 || opz.findIndex(o => o.id === cur) >= iPian) return;     // solo in avanti
+        const sett = _prgGInGriglia(vociDal(b.commessa, oggi), b.commessa, l);
+        if (!sett) return;
+        const prima = _prgGPrima(sett) || oggi;
+        avanti.push({ el, gc, opz: opz[iPian], marca: { col: gc.id, da: cur, a: opz[iPian].id, anno: prima.year, week: prima.week } });
+      });
     });
-  });
-  if (!cambi.length) return;
-  const fatti = [];
-  for (const c of cambi) { if (await _prgGImposta(c.el, c.gc.id, c.opz.id)) fatti.push(c); }
-  if (!fatti.length) return;
-  undoToast('Programmazione: ' + (fatti.length === 1 ? '«' + fatti[0].el.nome + '»' : fatti.length + ' comuni') + ' passat' + (fatti.length === 1 ? 'o' : 'i') + ' a «' + fatti[0].opz.label + '»');
-  if (typeof sbLogActivity === 'function') sbLogActivity('Programmazione: stato da Griglia', { elementi: fatti.map(c => c.el.nome), stato: fatti[0].opz.label });
-  _prgRtRender();
+
+    const fattiA = [], fattiI = [];
+    for (const c of avanti) {
+      if (await _prgGImposta(c.el, c.gc.id, c.opz.id)) { await _prgGImposta(c.el, PRG_AUTO, c.marca); fattiA.push(c); }
+    }
+    for (const c of indietro) {
+      if (await _prgGImposta(c.el, c.gc.id, c.m.da || null)) { await _prgGImposta(c.el, PRG_AUTO, null); fattiI.push(c); }
+    }
+    for (const el of scadute) await _prgGImposta(el, PRG_AUTO, null);
+
+    const parti = [];
+    if (collegati.length) parti.push(_prgGNomi(collegati) + ' collegat' + (collegati.length === 1 ? 'o' : 'i') + ' alla Griglia in automatico');
+    if (fattiA.length) parti.push(_prgGNomi(fattiA) + ' → «' + fattiA[0].opz.label + '»');
+    if (fattiI.length) parti.push(_prgGNomi(fattiI) + ' tolt' + (fattiI.length === 1 ? 'o' : 'i') + ' dalla Griglia → ' + (fattiI.length === 1 ? '«' + (fattiI[0].verso ? fattiI[0].verso.label : 'senza stato') + '»' : 'stato di prima'));
+    if (!parti.length) return;
+    undoToast('Programmazione: ' + parti.join(' · '));
+    if (typeof sbLogActivity === 'function') {
+      if (collegati.length) sbLogActivity('Programmazione: collegamento automatico alla Griglia', { elementi: collegati.map(c => c.el.nome + ' → ' + prgLinkTesto(c.link)) });
+      if (fattiA.length) sbLogActivity('Programmazione: stato da Griglia', { elementi: fattiA.map(c => c.el.nome), stato: fattiA[0].opz.label });
+      if (fattiI.length) sbLogActivity('Programmazione: stato ripristinato (tolto dalla Griglia)', { elementi: fattiI.map(c => c.el.nome + ' → ' + (c.verso ? c.verso.label : 'vuoto')) });
+    }
+    _prgInfoCache.clear();
+    _prgRtRender();
+  } finally {
+    _prgG.inCorso = false;
+    if (_prgG.ancora) { _prgG.ancora = false; prgOnGrigliaSalvata(); }
+  }
 }
 
 /* ---------- finestra «Scegli il comune» sul campo cantiere della Griglia ---------- */
