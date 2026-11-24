@@ -1065,6 +1065,12 @@ async function pwControlloSyncJira(scopeCommessa, scopeSquadra, btnEl, opts) {
       }
     }
 
+    // === Tratti IN PROGRESS senza worklog (v18.313.0) ===
+    // Jira ha registrato il cambio di stato ma non il worklog (23/11/2026): sola lettura qui,
+    // l'inserimento è nella finestra «⏱ Worklog mancanti», con conferma.
+    if (status) status.textContent = '⏳ Controllo dei tratti IN PROGRESS senza worklog…';
+    const tw = await cpTwRileva(anno, week, data, cells, celle, isoDates);
+
     // Ancora sulla stessa week: rimette in _cpData le celle sincronizzate (un ricaricamento
     // partito durante la sync può averle sostituite con la versione precedente del database).
     // Su un'altra week non si tocca nulla: quella mostrata ha i suoi dati.
@@ -1090,7 +1096,9 @@ async function pwControlloSyncJira(scopeCommessa, scopeSquadra, btnEl, opts) {
     if (nonVerificati > 0) {
       msg += `\n\n👁 ${nonVerificati} Km/Cad letti da Jira e non ancora verificati: non inviati. Carica il report o confermali (clic su "👁 Verifica").`;
     }
+    msg += cpTwMessaggio(tw);
     if (status) status.textContent = `${updated} record sincronizzati`;
+    cpTwApri(tw, scoped ? { commessa: scopeCommessa, squadra: scopeSquadra } : null, anno, week);
     showAlertModal(prefisso + msg);
   } catch (e) {
     console.error('pwControlloSyncJira error:', e);

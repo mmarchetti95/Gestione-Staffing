@@ -81,6 +81,17 @@
 // Risposta in piu':
 //   "trovati": [{ key, url, summary, status, project, assignee (accountId), duedate, start,
 //                 parentKey, parentSummary }]
+//
+// "tratti" (dalla v18.313.0, controllo «worklog mancanti» di Sincronizza in Controllo
+// Produzione): per ogni sottotask anche i periodi passati in IN PROGRESS, dal changelog, e
+// tutti i suoi worklog. Il worklog lo crea un'automazione Jira/Tempo all'uscita da IN
+// PROGRESS; il 23/11/2026 (Jira instabile) le uscite verso DONE non l'hanno creato e le
+// ore sono andate perse: confrontando i due elenchi il client trova i tratti scoperti.
+//   "tratti": true
+// In piu' in ogni "subtasks[key]":
+//   "trattiIP": [{ "da": ISO, "a": ISO | null, "daAutore": "...", "aAutore": "...", "verso": "DONE" }]
+//               (a = null: ancora IN PROGRESS)
+//   "worklogs": [{ "id": "257867", "started": "2026-11-24T08:00:39.000+0100", "seconds": 21600 }]
 
 const JIRA_BASE_URL  = (Deno.env.get("JIRA_BASE_URL")  || "").replace(/\/+$/, "");
 const JIRA_EMAIL     =  Deno.env.get("JIRA_EMAIL")     || "";
@@ -210,6 +221,51 @@ async function changelogPerIssue(issues: { id: string; key: string }[], out: Rec
       out[i.key] = data.values || [];
     } catch { /* senza statoDa */ }
   }
+}
+
+function msHistory(h: any): number {
+  return typeof h.created === "number"
+    ? h.created
+    : Date.parse(String(h.created || "").replace(/([+-]\d{2})(\d{2})$/, "$1:$2"));
+}
+
+// Periodi in IN PROGRESS di un sottotask, dalle transizioni di stato (nome dello stato,
+// lo stesso in tutti i workflow dei sottotask: TO DO → IN PROGRESS ⇄ IN PENDING → DONE).
+function trattiInProgress(histories: any[]): any[] {
+  const ip = (s: unknown) => typeof s === "string" && s.trim().toLowerCase() === "in progress";
+  const ordinate = (histories || []).map((h) => ({ h, t: msHistory(h) })).filter((x) => !isNaN(x.t)).sort((a, b) => a.t - b.t);
+  const out: any[] = [];
+  let aperto: any = null;
+  for (const { h, t } of ordinate) {
+    for (const it of h.items || []) {
+      if (it.fieldId !== "status" && it.field !== "status") continue;
+      const verso = typeof it.toString === "string" ? it.toString : "";
+      const da = typeof it.fromString === "string" ? it.fromString : "";
+      if (ip(verso) && !aperto) aperto = { da: new Date(t).toISOString(), a: null, daAutore: h.author?.displayName || "", aAutore: "", verso: "" };
+      else if (ip(da) && !ip(verso) && aperto) {
+        aperto.a = new Date(t).toISOString();
+        aperto.aAutore = h.author?.displayName || "";
+        aperto.verso = verso;
+        out.push(aperto);
+        aperto = null;
+      }
+    }
+  }
+  if (aperto) out.push(aperto);
+  return out;
+}
+
+// Tutti i worklog di un'issue: quelli della search (max 20) bastano quasi sempre, altrimenti
+// si rileggono dall'endpoint dedicato.
+async function worklogTutti(key: string, campo: any): Promise<any[]> {
+  let lista: any[] = Array.isArray(campo?.worklogs) ? campo.worklogs : [];
+  if (Number(campo?.total) > lista.length) {
+    try {
+      const res = await jiraGet(`/rest/api/3/issue/${encodeURIComponent(key)}/worklog?maxResults=5000`);
+      if (res.ok) lista = (await res.json()).worklogs || lista;
+    } catch { /* restano quelli della search */ }
+  }
+  return lista.map((w: any) => ({ id: String(w.id), started: w.started, seconds: Number(w.timeSpentSeconds) || 0 }));
 }
 
 const MAX_EMAILS = 300;
@@ -365,7 +421,9 @@ Deno.serve(async (req: Request) => {
   try {
     // Passo 1: sottotask -> chiave del Task padre, piu' lo stato del sottotask stesso.
     const [subIssues, accountByEmail] = await Promise.all([
-      subtaskKeys.length ? jiraSearch(subtaskKeys, ["parent", "status", "summary", "assignee"]) : Promise.resolve([]),
+      subtaskKeys.length
+        ? jiraSearch(subtaskKeys, ["parent", "status", "summary", "assignee"].concat(payload?.tratti === true ? ["worklog"] : []))
+        : Promise.resolve([]),
       emails.length ? accountIdDaEmail(emails) : Promise.resolve(undefined),
     ]);
     const trovati = cerca.length ? await cercaSottotask(cerca, accountByEmail || {}) : undefined;
@@ -401,6 +459,19 @@ Deno.serve(async (req: Request) => {
             .map((it: any) => `${it.fromString}(${it.from})->${it.toString}(${it.to})`).join(",")).join(" | ");
           console.warn(`[jira-task-status] ${iss.key}: nessuna transizione verso ${iss.fields.status.name}(${iss.fields.status.id}) fra ${h.length} history; ultime: ${recenti}`);
         });
+      }
+    }
+
+    if (payload?.tratti === true) {
+      const conId = subIssues.filter((iss: any) => iss.key && iss.id && subtasks[iss.key]);
+      if (conId.length) {
+        const logs = await changelogStato(conId.map((iss: any) => ({ id: String(iss.id), key: iss.key })));
+        for (const group of chunked(conId, 8)) {
+          await Promise.all(group.map(async (iss: any) => {
+            subtasks[iss.key].trattiIP = trattiInProgress(logs[iss.key] || []);
+            subtasks[iss.key].worklogs = await worklogTutti(iss.key, iss.fields?.worklog);
+          }));
+        }
       }
     }
 

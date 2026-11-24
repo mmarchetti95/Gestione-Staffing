@@ -116,6 +116,11 @@ Limite noto: il progetto Supabase è sul piano **Free**, che non include backup 
 
 ## Changelog
 
+## v18.313.0
+- **Controllo Produzione: «Sincronizza» trova le ore perse quando Jira non crea il worklog.** Il worklog di un sottotask lo crea l'automazione Jira/Tempo quando il sottotask esce da IN PROGRESS; il 23/11/2026 Jira era instabile (all'app arrivavano errori) e i passaggi a DONE, poi anche alcuni a IN PENDING, non l'hanno creato: cambio di stato registrato, ore no. Ora «🔄 Sincronizza squadra» e «Sincronizza da Jira», dopo la lettura dei worklog, leggono i periodi IN PROGRESS di ogni sottotask della squadra/settimana e li confrontano con i worklog: i tratti scoperti (almeno 5 minuti, chiusi da più di 15) compaiono nella finestra «⏱ Worklog mancanti», con orari proposti dall'ingresso all'uscita da IN PROGRESS e modificabili. «Inserisci» (admin/responsabili, dopo conferma) li scrive su Jira a nome dell'assegnatario, come la Timeline worklog, rileggendo prima il sottotask per non duplicare ore comparse nel frattempo; «🗄 Ignora» non lo ripropone (solo in questo browser). I ritorni a TO DO (sottotask attivato per sbaglio) non contano. Senza conferma non si scrive niente.
+- Bonifica del 24/11: inseriti 23 worklog (≈70 h) ricostruiti dalle transizioni del 23/11 (commento «Ricostruito dalle transizioni di stato…»).
+- Edge Function `jira-task-status`: nuova opzione `tratti` (periodi IN PROGRESS dal changelog + worklog di ogni sottotask). Già pubblicata (versione 10); senza l'opzione risponde come prima.
+
 ## v18.312.0
 - **Timeline worklog: un intervento aggiunto, corretto o eliminato compare subito senza rileggere a mano.** Tempo copia il worklog su Jira con qualche secondo di ritardo e la ricerca di Jira lo trova ancora più tardi, quindi la rilettura fatta subito dopo il salvataggio spesso non lo vedeva (soprattutto su un sottotask senza altre ore quel giorno) e bisognava usare «↻ Rileggi da Jira». Ora la timeline rilegge l'operatore ogni 3 secondi, fino a 6 volte, e si ferma appena la modifica si vede; dal secondo tentativo legge solo il giorno toccato, quindi è più veloce. Se dopo i tentativi Jira non la mostra ancora, lo dice (la modifica è comunque scritta). Vale anche per «📋 Incolla» (worklog aggiunti e originali eliminati). Nessuna modifica a Supabase o alle Edge Function.
 
