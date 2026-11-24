@@ -598,8 +598,14 @@ async function cpTlCpApplica() {
       (problemi.length ? '\n\n⚠ Da controllare:\n• ' + problemi.join('\n• ') : '') +
       '\n\nPer aggiornare «Ore Jira» del Controllo Produzione usa «🔄 Sincronizza da Jira».');
     if (fatti.length && k === _cpaKey(pwAnno, pwWeek)) {
-      _cpTlWlRileggiOperatore(nome, k, d, esito);
-      if (A.nome !== nome && A.k === k) _cpTlWlRileggiOperatore(A.nome, k, d, esito);
+      // Rilegge finché Jira mostra le aggiunte e non mostra più gli originali eliminati (v18.312.0)
+      const aggiunti = [...creati].map(r => ({ g: C.g, key: r.dst, inizio: r.inizio, fine: r.fine, id: '' }));
+      const tolti = A.k === k ? [...eliminati].map(r => ({ g: A.g, id: String(r.orig.id) })) : [];
+      if (A.nome === nome) _cpTlWlRileggiOperatore(nome, k, d, esito, { aggiunti, tolti });
+      else {
+        _cpTlWlRileggiOperatore(nome, k, d, esito, { aggiunti, tolti: [] });
+        if (A.k === k) _cpTlWlRileggiOperatore(A.nome, k, d, esito, { aggiunti: [], tolti });
+      }
     } else {
       _cpTl.msg = esito;
       cpTlRender();

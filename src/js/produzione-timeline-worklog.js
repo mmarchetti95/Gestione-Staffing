@@ -13,7 +13,8 @@
    - Prima di modificare/eliminare manda "atteso" (started + seconds visti qui): se su Jira il
      worklog è cambiato nel frattempo la funzione non tocca nulla e si rilegge l'operatore.
    - Dopo ogni scrittura rilegge da Jira (sola lettura) i worklog della settimana del solo
-     operatore, anche se la settimana non era mai stata letta tutta (v18.250.0).
+     operatore, anche se la settimana non era mai stata letta tutta (v18.250.0), e ripete la
+     lettura dei giorni toccati finché Jira mostra la modifica (v18.312.0, _cpTlWlVisibile).
      Non aggiorna controllo_produzione: la colonna «Ore Jira» si aggiorna con «🔄 Sincronizza
      da Jira», come per ogni correzione fatta direttamente su Jira.
    Modal #cptl-wl-modal (z-index 99995: sopra la timeline, sotto conferme e avvisi). */
@@ -238,13 +239,43 @@ async function _cpTlWlInvoca(body) {
   return { errore: (j && j.error) || await _cpEdgeErr(error, CPTL_WL_FN), codice: j && j.codice };
 }
 
-/* Rilegge da Jira (sola lettura) la settimana del SOLO operatore corretto e aggiorna la
-   timeline. Se la settimana non è mai stata letta tutta crea una lettura parziale (ts null):
-   gli altri operatori restano sui dati salvati. Se è in corso un'altra lettura lo mette in
-   coda (_cpTl.coda): quella lettura può aver letto l'operatore prima della correzione. */
-async function _cpTlWlRileggiOperatore(nome, k, d, esito) {
+/* La modifica scritta è già visibile nei worklog letti dell'operatore?
+   wl = { g: { tickets } }; attesa = { aggiunti: [{ g, key, inizio, fine, id }], tolti: [{ g, id }] }.
+   Un aggiunto si riconosce dall'id Jira restituito dalla scrittura, oppure da ticket + orari
+   (±1 min: Tempo può ricreare il worklog con un altro id). */
+function _cpTlWlVisibile(wl, d, attesa) {
+  const iv = g => cpOreJiraInterventi(((wl || {})[g] || {}).tickets || [], d.iso[g]).interventi;
+  const ok = (attesa.aggiunti || []).every(a => iv(a.g).some(e => e.t.key === a.key &&
+    ((a.id && e.w && String(e.w.id) === String(a.id)) || (Math.abs(e.inizio - a.inizio) <= 1 && Math.abs(e.fine - a.fine) <= 1))));
+  return ok && (attesa.tolti || []).every(x => !iv(x.g).some(e => e.w && String(e.w.id) === String(x.id)));
+}
+
+/* Giorni toccati da un'attesa (sono gli unici da rileggere mentre si aspetta Jira) */
+function _cpTlWlGiorniAttesa(attesa) {
+  return [...new Set([...(attesa.aggiunti || []), ...(attesa.tolti || [])].map(x => x.g))];
+}
+
+/* Rilegge da Jira (sola lettura) i worklog del SOLO operatore corretto e aggiorna la timeline.
+   Se la settimana non è mai stata letta tutta crea una lettura parziale (ts null): gli altri
+   operatori restano sui dati salvati. Se è in corso un'altra lettura lo mette in coda
+   (_cpTl.coda): quella lettura può aver letto l'operatore prima della correzione.
+   attesa (v18.312.0, facoltativa, vedi _cpTlWlVisibile): Tempo copia i worklog su Jira qualche
+   secondo dopo e la ricerca di Jira (worklogDate) indicizza in ritardo, quindi una sola
+   rilettura subito dopo la scrittura spesso non trova il worklog nuovo. Con un'attesa rilegge
+   ogni CPTL_WL_PAUSA_MS, al massimo CPTL_WL_TENTATIVI volte, finché la modifica si vede; i
+   tentativi dopo il primo leggono solo i giorni toccati (se l'operatore era già letto tutto). */
+const CPTL_WL_TENTATIVI = 6;
+const CPTL_WL_PAUSA_MS = 3000;
+async function _cpTlWlRileggiOperatore(nome, k, d, esito, attesa) {
   if (_cpTl.inCorso) {
-    if (!_cpTl.coda.some(p => p.nome === nome && p.k === k)) _cpTl.coda.push({ nome, k, d, esito });
+    const p = _cpTl.coda.find(x => x.nome === nome && x.k === k);
+    if (!p) _cpTl.coda.push({ nome, k, d, esito, attesa: attesa || null });
+    else if (attesa) {
+      // stesso operatore già in coda: si aspettano entrambe le modifiche
+      const a = p.attesa || { aggiunti: [], tolti: [] };
+      p.attesa = { aggiunti: (a.aggiunti || []).concat(attesa.aggiunti || []), tolti: (a.tolti || []).concat(attesa.tolti || []) };
+      p.esito = esito;
+    }
     _cpTl.msg = esito + ' Rileggo ' + nome + ' appena finisce la lettura in corso.';
     cpTlRender();
     return;
@@ -253,14 +284,34 @@ async function _cpTlWlRileggiOperatore(nome, k, d, esito) {
   _cpTl.msg = esito + ' ⏳ Rileggo da Jira i worklog di ' + nome + '…';
   cpTlRender();
   let avviso = '';
+  const t0 = Date.now();
   try {
-    const r = await _cpTlLeggiWorklog([nome], d);
-    if (r.verificati.includes(nome)) {
+    for (let t = 0; t < (attesa ? CPTL_WL_TENTATIVI : 1); t++) {
+      const lett0 = _cpTl.letture[k];
+      const giaLetto = !!(lett0 && lett0.verificati.includes(nome) && lett0.worklog[nome]);
+      let msg = esito + ' ⏳ Rileggo da Jira i worklog di ' + nome + '…';
+      if (t) {
+        msg = esito + ' ⏳ Jira non mostra ancora la modifica (Tempo la copia con qualche secondo di ritardo): riprovo ' +
+          (t + 1) + '/' + CPTL_WL_TENTATIVI + '…';
+        _cpTl.msg = msg;
+        cpTlRender();
+        await new Promise(r => setTimeout(r, CPTL_WL_PAUSA_MS));
+      }
+      const giorni = attesa && giaLetto ? _cpTlWlGiorniAttesa(attesa) : null;
+      const r = await _cpTlLeggiWorklog([nome], d, { giorni, msg });
+      if (!r.verificati.includes(nome)) { avviso = ' ⚠ ' + r.avvisi.join(' '); break; }
       const lett = _cpTl.letture[k] || (_cpTl.letture[k] = { worklog: {}, verificati: [], avvisi: [], ts: null, tsOp: {} });
-      lett.worklog[nome] = r.worklog[nome] || {};
+      if (giorni && lett.worklog[nome]) {
+        giorni.forEach(g => { if (r.worklog[nome][g]) lett.worklog[nome][g] = r.worklog[nome][g]; else delete lett.worklog[nome][g]; });
+      } else lett.worklog[nome] = r.worklog[nome] || {};
       if (!lett.verificati.includes(nome)) lett.verificati.push(nome);
       lett.tsOp[nome] = new Date();
-    } else avviso = ' ⚠ ' + r.avvisi.join(' ');
+      if (!attesa || _cpTlWlVisibile(lett.worklog[nome], d, attesa)) break;
+      if (t === CPTL_WL_TENTATIVI - 1) {
+        avviso = ' ⚠ Dopo ' + Math.round((Date.now() - t0) / 1000) + ' secondi Jira non mostra ancora la modifica: ' +
+          'è scritta, ma per vederla usa «↻ Rileggi da Jira» tra qualche minuto.';
+      } else cpTlRender();   // intanto si vede quello che Jira mostra già
+    }
   } catch (e) {
     avviso = ' ⚠ Rilettura non riuscita: ' + (e && e.message ? e.message : e) + '. Usa «↻ Rileggi da Jira».';
   } finally {
@@ -275,11 +326,11 @@ async function _cpTlWlRileggiOperatore(nome, k, d, esito) {
 /* Rilegge il prossimo operatore in coda (uno alla volta: ogni rilettura richiama la successiva) */
 function _cpTlWlCoda() {
   const p = _cpTl.coda.shift();
-  if (p) _cpTlWlRileggiOperatore(p.nome, p.k, p.d, p.esito);
+  if (p) _cpTlWlRileggiOperatore(p.nome, p.k, p.d, p.esito, p.attesa);
 }
 
 async function _cpTlWlEsegui(body, esito) {
-  const W = _cpTlWl, nome = W.nome, k = W.k, d = W.d;
+  const W = _cpTlWl, nome = W.nome, k = W.k, d = W.d, gOrig = W.g, wOrig = W.w;
   W.salvando = true;
   W.salvaT0 = Date.now();
   cpTlWlControlla();
@@ -300,9 +351,21 @@ async function _cpTlWlEsegui(body, esito) {
     cpTlWlChiudi();
     const autore = res.dopo && res.dopo.autore ? ' Autore su Jira: ' + res.dopo.autore +
       (res.prima && res.prima.autore && res.prima.autore !== res.dopo.autore ? ' (prima: ' + res.prima.autore + ')' : '') + '.' : '';
-    if (res.avviso) showAlertModal(res.avviso);
-    await _cpTlWlRileggiOperatore(nome, k, d, '✓ ' + esito + autore + (res.avviso ? ' ⚠ ' + res.avviso : '') +
-      ' Per aggiornare «Ore Jira» del Controllo Produzione usa «🔄 Sincronizza da Jira».');
+    // L'avviso «non ancora visibile su Jira» lo gestisce l'attesa qui sotto: niente popup
+    const nonVisibile = res.avviso && /non ancora visibile|ancora visibile su Jira/i.test(res.avviso);
+    if (res.avviso && !nonVisibile) showAlertModal(res.avviso);
+    // Cosa deve comparire/sparire su Jira prima di considerare aggiornata la timeline
+    let attesa;
+    if (body.action === 'delete') attesa = { aggiunti: [], tolti: [{ g: gOrig, id: wOrig.id }] };
+    else {
+      const g = d.iso.indexOf(body.data);
+      attesa = g < 0 ? null : { aggiunti: [{ g, key: body.issueKey, inizio: body.inizioMin, fine: body.inizioMin + body.durataMin,
+        id: res.dopo && res.dopo.id ? res.dopo.id : '' }], tolti: [] };
+      // spostato su un altro giorno: anche quello va riletto, il worklog (stesso id o no) deve sparire da lì
+      if (attesa && body.action === 'update' && g !== gOrig) attesa.tolti.push({ g: gOrig, id: wOrig.id });
+    }
+    await _cpTlWlRileggiOperatore(nome, k, d, '✓ ' + esito + autore + (res.avviso && !nonVisibile ? ' ⚠ ' + res.avviso : '') +
+      ' Per aggiornare «Ore Jira» del Controllo Produzione usa «🔄 Sincronizza da Jira».', attesa);
   } finally {
     W.salvando = false;
     cpTlWlControlla();

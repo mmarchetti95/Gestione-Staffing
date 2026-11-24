@@ -399,7 +399,11 @@ function _cpTlEmailPerNome() {
   return opEmailMappa();
 }
 
-async function _cpTlLeggiWorklog(nomi, date) {
+/* opz.giorni: legge solo quei giorni (indici 0..5; il risultato ha solo quelli) invece di tutta
+   la settimana; opz.msg: testo da mostrare al posto del contatore operatori. */
+async function _cpTlLeggiWorklog(nomi, date, opz) {
+  opz = opz || {};
+  const giorni = Array.isArray(opz.giorni) && opz.giorni.length ? opz.giorni : [0, 1, 2, 3, 4, 5];
   const emailByNome = _cpTlEmailPerNome();
   const avvisi = [];
   const senzaEmail = nomi.filter(n => !emailByNome[n]);
@@ -410,10 +414,10 @@ async function _cpTlLeggiWorklog(nomi, date) {
   const worklog = {}, verificati = [];
   for (let i = 0; i < emails.length; i += CPA_EMAIL_CHUNK) {
     const blocco = emails.slice(i, i + CPA_EMAIL_CHUNK);
-    _cpTl.msg = '⏳ Leggo i worklog da Jira (' + Math.min(i + CPA_EMAIL_CHUNK, emails.length) + '/' + emails.length + ' operatori)…';
+    _cpTl.msg = opz.msg || ('⏳ Leggo i worklog da Jira (' + Math.min(i + CPA_EMAIL_CHUNK, emails.length) + '/' + emails.length + ' operatori)…');
     cpTlRender();
     const { data: fn, error } = await _sbClient.functions.invoke('jira-sync-worklogs', {
-      body: { emails: blocco, startDate: date.iso[0], endDate: date.iso[5] },
+      body: { emails: blocco, startDate: date.iso[Math.min(...giorni)], endDate: date.iso[Math.max(...giorni)] },
     });
     if (error) throw new Error(await _cpEdgeErr(error, 'jira-sync-worklogs'));
     const res = (fn && fn.results) || {}, errs = (fn && fn.errors) || {};
@@ -423,7 +427,7 @@ async function _cpTlLeggiWorklog(nomi, date) {
       verificati.push(nome);
       const perData = res[em] || {};
       worklog[nome] = {};
-      date.iso.forEach((iso, g) => { if (perData[iso]) worklog[nome][g] = { hours: perData[iso].hours, tickets: perData[iso].tickets || [] }; });
+      giorni.forEach(g => { const iso = date.iso[g]; if (perData[iso]) worklog[nome][g] = { hours: perData[iso].hours, tickets: perData[iso].tickets || [] }; });
     });
   }
   return { worklog, verificati, avvisi };
