@@ -930,6 +930,24 @@ function _prgGSquadraNuova(b, el, cs, oggi, vociDal) {
   };
 }
 
+/* Import da Monday (prgImpUnisci): la Squadra presa da Monday riprende i nomi messi dalla
+   Griglia (memoria __auto_squadra, non tolti a mano) che Monday non ha, così l'import non li
+   cancella e il prossimo allineamento non li segna come «tolti a mano». Se alla fine le persone
+   sono le stesse di qui, scritte in un altro modo o in un altro ordine, resta il testo di qui. */
+function prgGSquadraConGriglia(cs, el, testo) {
+  const m = (el.valori || {})[PRG_AUTO_SQ];
+  const lista = _prgGListaNomi(testo);
+  if (m && typeof m === 'object' && m.col === cs.id) Object.values(m.nomi || {}).forEach(e => {
+    if (!e || !e.s || e.tolto || lista.some(x => _prgGStessaPersona(x, e.s))) return;
+    lista.push(e.s);
+  });
+  const quiTesto = (el.valori || {})[cs.id];
+  const qui = _prgGListaNomi(quiTesto);
+  const dentro = (a, b) => a.every(x => b.some(y => _prgGStessaPersona(x, y)));
+  if (qui.length && qui.length === lista.length && dentro(lista, qui) && dentro(qui, lista)) return quiTesto;
+  return lista.length ? lista.join(', ') : null;
+}
+
 // Prima settimana ({ year, week }) di un insieme di 'anno|week', o null.
 function _prgGPrima(sett) {
   let min = null;
