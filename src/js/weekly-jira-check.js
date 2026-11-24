@@ -33,7 +33,11 @@
      non pianifica più. Tipico con i giornalieri: l'operatore spostato da martedì a mercoledì
      lascia orfano il sottotask di martedì e scopre il mercoledì;
    - commessa: blocco senza commessa o commessa senza "Codice progetto Jira" — le sue
-     celle non si possono controllare una per una.
+     celle non si possono controllare una per una;
+   - struttura (v18.311.0): sulle commesse con il modello della struttura Jira, cantiere della
+     settimana senza struttura nel registro jira_struttura_comune (letto da
+     _pwJchkStruttureCarica), senza alcun sottotask e con almeno un'attività produttiva. Serve
+     a creare le strutture in blocco prima dei sottotask (pwJchkCreaStrutture).
    Sottotask fatti a mano (v18.239.0): per le giornate mancanti/in errore la verifica cerca
    anche su Jira i sottotask della settimana dei loro operatori (_pwJchkCercaManuali) e li
    abbina per progetto + accountId + giorno (+ nome del cantiere fra più candidati); la
@@ -43,7 +47,7 @@
    vedi _pwJchkEliminabili / jira-subtask-delete.
    Gli operatori di un fornitore esterno (op.fornitore) non hanno sottotask: restano fuori. */
 
-HELP_TEXTS['pw-jchk'] = 'Controlla in un colpo tutte le celle della settimana mostrata: per ogni operatore + cantiere + attività, giorno per giorno, verifica che ci sia il sottotask Jira di quel giorno (indicatore 🎫 in cella). I sottotask settimanali creati prima della v18.229.0 valgono ancora per tutti i giorni della loro settimana.\n\nVerde = tutto a posto. Rosso = assegnazioni senza sottotask, con creazione fallita, con il sottotask cancellato su Jira o riassegnato a un\'altra persona. Ambra = sottotask ancora in stato CREATED, sottotask non più collegati a nessuna cella, o commesse senza codice progetto Jira.\n\nClicca una riga (o un giorno) per andare alla cella. Il controllo è immediato sugli indicatori della Griglia; all\'apertura e con «Ricontrolla» verifica anche su Jira quali sottotask sono stati cancellati, a chi sono assegnati e in che stato sono, e cerca i sottotask creati a mano su Jira per le giornate che ne sono senza («🔗 collega»). Su Jira si scrive solo con «🗑️ elimina su Jira», che cancella i sottotask non più in Griglia mai iniziati.';
+HELP_TEXTS['pw-jchk'] = 'Controlla in un colpo tutte le celle della settimana mostrata: per ogni operatore + cantiere + attività, giorno per giorno, verifica che ci sia il sottotask Jira di quel giorno (indicatore 🎫 in cella). I sottotask settimanali creati prima della v18.229.0 valgono ancora per tutti i giorni della loro settimana.\n\nVerde = tutto a posto. Rosso = assegnazioni senza sottotask, con creazione fallita, con il sottotask cancellato su Jira o riassegnato a un\'altra persona. Ambra = sottotask ancora in stato CREATED, sottotask non più collegati a nessuna cella, commesse senza codice progetto Jira, o comuni senza struttura Jira (Iniziativa / Epic / Task del modello della commessa), da creare prima dei sottotask con «🏗️ Crea strutture».\n\nClicca una riga (o un giorno) per andare alla cella. Il controllo è immediato sugli indicatori della Griglia; all\'apertura e con «Ricontrolla» verifica anche su Jira quali sottotask sono stati cancellati, a chi sono assegnati e in che stato sono, e cerca i sottotask creati a mano su Jira per le giornate che ne sono senza («🔗 collega»). Su Jira si scrive solo con «🗑️ elimina su Jira», che cancella i sottotask non più in Griglia mai iniziati.';
 
 const PW_JCHK_GIORNI = ['Lun', 'Mar', 'Mer', 'Gio', 'Ven', 'Sab'];
 const PW_JCHK_TIPI = {
@@ -54,8 +58,9 @@ const PW_JCHK_TIPI = {
   mancante: { sev: 'ko',   ico: '❌', label: 'senza sottotask', plur: 'senza sottotask' },
   creato:   { sev: 'warn', ico: '🆕', label: 'sottotask in stato CREATED', plur: 'sottotask in stato CREATED' },
   orfano:   { sev: 'warn', ico: '🔗', label: 'sottotask non più in Griglia', plur: 'sottotask non più in Griglia' },
+  struttura: { sev: 'warn', ico: '🏗️', label: 'comune senza struttura Jira', plur: 'comuni senza struttura Jira' },
 };
-const PW_JCHK_ORDINE = ['commessa', 'errore', 'cancellato', 'riassegnato', 'mancante', 'creato', 'orfano'];
+const PW_JCHK_ORDINE = ['commessa', 'struttura', 'errore', 'cancellato', 'riassegnato', 'mancante', 'creato', 'orfano'];
 // Stato Jira da segnalare (nome dello stato, non la categoria: CREATED e TO DO sono entrambi "new").
 const PW_JCHK_STATO_CREATED = /^(created|creato)$/i;
 
@@ -65,6 +70,7 @@ const _pwJchk = {
   jira: {},         // 'anno|week' -> { cancellati: Set(chiavi), info: {chiave: {status, assignee}}, n, ts, errore, inflight }
   acc: {},          // email operatore (minuscola) -> accountId Jira | null (non risolta), per la sessione
   esitoElimina: null, // { testo, ko, inCorso }: ultima eliminazione su Jira, mostrata nel modal
+  jstTentate: new Set(), // commesse di cui si è già provato a leggere il registro strutture (v18.311.0)
 };
 
 function _pwJchkWeekKey() { return pwAnno + '|' + pwWeek; }
@@ -299,6 +305,7 @@ function pwJchkAnalizza() {
   const usatiPerCommessa = new Map(); // commessa -> Set(mapKey) usati da una cella di qualunque suo blocco
   const visti = new Map();            // commessa -> Set(mapKey) già esaminati (blocchi della stessa commessa condividono i giornalieri)
   const blocchi = [];                 // { bc, cIdx, gruppi, mappa, offriSposta } per gli orfani
+  const strutture = new Map();        // commessa -> Map(caNorm cantiere -> { a, coperto, produttiva }) (v18.311.0)
   const setDi = (m, k) => { if (!m.has(k)) m.set(k, new Set()); return m.get(k); };
 
   data.forEach((bc, cIdx) => {
@@ -360,6 +367,33 @@ function pwJchkAnalizza() {
       a.sposta = { da: mapKey, operatore: dest.operatore, cantiere: dest.cantiere, attivita: dest.attivita, giorno };
       dest.daSpostare = { key: e.key, da: a.operatore };
     };
+
+    // Struttura Jira del comune (v18.311.0): sulle commesse con il modello, un cantiere della
+    // settimana senza struttura nel registro dell'app (jira_struttura_comune) va segnalato
+    // PRIMA dei sottotask, che senza Epic/Task del comune non si possono creare. Fuori: i
+    // cantieri con almeno un sottotask (su Jira la struttura c'è) e quelli con sole attività
+    // non produttive. Registro non ancora letto = nessun avviso (pwJchkRefresh lo legge).
+    // Prima del ciclo sotto, che sostituisce gr.celle con le sole giornate mancanti.
+    if (jstModelloDi(meta) && _jst.righe[bc.commessa]) {
+      if (!strutture.has(bc.commessa)) strutture.set(bc.commessa, new Map());
+      const perComune = strutture.get(bc.commessa);
+      gruppi.forEach(gr => {
+        const n = caNorm(gr.cantiere);
+        if (!n) return;
+        let x = perComune.get(n);
+        if (!x) {
+          x = { a: { tipo: 'struttura', cIdx, sIdx: gr.sIdx, commessa: bc.commessa, cantiere: gr.cantiere, operatore: '', attivita: '', squadra: '', celle: [] }, coperto: false, produttiva: false };
+          perComune.set(n, x);
+        }
+        const voce = gr.attivita ? caTrova(bc.commessa, gr.attivita) : null;
+        if (!(voce && (voce.servizio || voce.produttiva === false))) x.produttiva = true;
+        gr.celle.forEach(c => {
+          const f = pwJiraSubtaskLookup(bc, gr.cantiere, gr.operatore, gr.attivita, c.day);
+          if (f && pwJiraSubtaskIsResolved(f.entry)) x.coperto = true;
+        });
+        if (x.a.cIdx === cIdx) x.a.celle.push(...gr.celle);
+      });
+    }
 
     const usati = setDi(usatiPerCommessa, bc.commessa);
     gruppi.forEach(gr => {
@@ -448,6 +482,12 @@ function pwJchkAnalizza() {
     });
   });
 
+  strutture.forEach(perComune => perComune.forEach(x => {
+    if (!x.produttiva || x.coperto || jstStrutturaDi(x.a.commessa, x.a.cantiere)) return;
+    x.a.celle.sort((a, b) => a.day - b.day);
+    out.anomalie.push(x.a);
+  }));
+
   _pwJchkAbbinaManuali(out.anomalie, data);
   out.anomalie.sort((a, b) => (a.cIdx - b.cIdx)
     || (PW_JCHK_ORDINE.indexOf(a.tipo) - PW_JCHK_ORDINE.indexOf(b.tipo))
@@ -464,6 +504,14 @@ function pwJchkRefresh() {
   pwJchkUpdateButton(r);
   pwJchkApplyHighlight(r);
   const wk = _pwJchkWeekKey();
+  // Registro strutture Jira delle commesse con modello mai lette in sessione (v18.311.0).
+  _pwJchkStruttureCarica(false).then(letto => {
+    if (!letto || _pwJchkWeekKey() !== wk) return;
+    const r3 = pwJchkAnalizza();
+    pwJchkUpdateButton(r3);
+    pwJchkApplyHighlight(r3);
+    _pwJchkRidisegnaSeAperto();
+  });
   if (!_pwJchk.jira[wk]) {
     pwJchkVerificaJira().then(() => {
       if (_pwJchkWeekKey() !== wk) return;
@@ -518,9 +566,56 @@ function pwOpenJiraCheck() {
   const wk = _pwJchkWeekKey();
   _pwJchk.esitoElimina = null;
   const verifica = pwJchkVerificaJira(true);
+  const strutture = _pwJchkStruttureCarica(true); // un collega può averle create nel frattempo
   _pwJchkRenderModal(true);
   verifica.then(() => {
     if (_pwJchkWeekKey() === wk && document.getElementById('pw-jchk-modal')) _pwJchkRenderModal(true);
+  });
+  strutture.then(letto => { if (letto && _pwJchkWeekKey() === wk) _pwJchkRidisegnaSeAperto(); });
+}
+
+/* Registro delle strutture Jira (jira_struttura_comune, v18.311.0) delle commesse della
+   settimana che hanno il modello. Senza forza legge solo quelle mai tentate in sessione
+   (pwRender gira a ogni modifica); con forza rilegge (apertura del controllo, Ricontrolla).
+   Risolve true se ha letto qualcosa. Un errore lascia il registro com'era: nessun avviso. */
+function _pwJchkStruttureCarica(forza) {
+  if (!_sbClient || !_sbUser) return Promise.resolve(false);
+  const metaDi = c => (state.commesse_attive_meta || {})[c];
+  const commesse = [...new Set(pwGetWeekData()
+    .filter(bc => bc && bc.commessa && jstModelloDi(metaDi(bc.commessa)))
+    .map(bc => bc.commessa))];
+  const daLeggere = commesse.filter(c => forza || (!_jst.righe[c] && !_pwJchk.jstTentate.has(c)));
+  if (!daLeggere.length) return Promise.resolve(false);
+  daLeggere.forEach(c => _pwJchk.jstTentate.add(c));
+  return Promise.all(daLeggere.map(c => jstCarica(c, !!forza)
+    .catch(e => console.warn('Registro strutture Jira non letto: ' + c, e)))).then(() => true);
+}
+
+// Ridisegna il controllo se è aperto e non ha finestre impilate sopra (la creazione
+// strutture, un avviso): _pwJchkRenderModal riscrive #modal-root e le chiuderebbe.
+function _pwJchkRidisegnaSeAperto() {
+  const root = document.getElementById('modal-root');
+  if (!root || !document.getElementById('pw-jchk-modal') || root.children.length > 1) return;
+  _pwJchkRenderModal(false);
+}
+
+/* «🏗️ Crea strutture» del controllo (v18.311.0): apre la creazione strutture della commessa
+   sopra il controllo, coi comuni segnalati (tutti quelli del blocco cIdx, o solo la riga i)
+   e l'anteprima già avviata. Su Jira si scrive solo con «Crea» di quella finestra. */
+function pwJchkCreaStrutture(cIdx, i) {
+  const r = _pwJchk.ultimo;
+  if (!r || !sbGuardWrite()) return;
+  const sel = (i !== undefined && i !== null) ? [r.anomalie[i]] : r.anomalie.filter(a => a.cIdx === cIdx);
+  const lista = sel.filter(a => a && a.tipo === 'struttura');
+  if (!lista.length) return;
+  const commessa = lista[0].commessa;
+  const modello = jstModelloDi((state.commesse_attive_meta || {})[commessa]);
+  if (!modello) return;
+  const comuni = [...new Map(lista.map(a => [caNorm(a.cantiere), a.cantiere])).values()]
+    .sort((a, b) => a.localeCompare(b, 'it'));
+  jstOpenCreaModal(commessa, modello, comuni, {
+    anteprima: true,
+    onChiuso: () => { pwJchkRefresh(); _pwJchkRidisegnaSeAperto(); },
   });
 }
 
@@ -591,9 +686,13 @@ function _pwJchkRenderModal(accendi) {
     const creaBtn = collegata && sbCanWrite() && idxs.some(i => r.anomalie[i].tipo === 'mancante' || r.anomalie[i].tipo === 'errore')
       ? '<button type="button" class="pw-jchk-crea" data-help-key="pw-jchk-crea" onclick="closeModal();pwJiraSubtaskInit(' + cIdx + ')" title="Apre la creazione sottotask per questa commessa">🎫 Crea sottotask</button>'
       : '';
+    const nStrutt = idxs.filter(i => r.anomalie[i].tipo === 'struttura').length;
+    const struttBtn = nStrutt && sbCanWrite()
+      ? '<button type="button" class="pw-jchk-crea" data-help-key="pw-jchk-strutture" onclick="pwJchkCreaStrutture(' + cIdx + ')" title="Apre la creazione delle strutture Jira per i comuni segnalati (prima l\'anteprima)">🏗️ Crea strutture (' + nStrutt + ')</button>'
+      : '';
     return '<div class="pw-jchk-blocco">'
       + '<div class="pw-jchk-blocco-head"><span class="truncate">' + esc(primo.commessa || '(blocco senza commessa)') + '</span>'
-      + '<span class="text-slate-400 font-normal text-xs ml-1">' + idxs.length + '</span>' + creaBtn + '</div>'
+      + '<span class="text-slate-400 font-normal text-xs ml-1">' + idxs.length + '</span>' + struttBtn + creaBtn + '</div>'
       + idxs.map(i => pwJchkRigaHtml(r.anomalie[i], i)).join('')
       + '</div>';
   }).join('');
@@ -643,6 +742,17 @@ function _pwJchkRenderModal(accendi) {
 function pwJchkRigaHtml(a, i) {
   const t = PW_JCHK_TIPI[a.tipo];
   const cls = 'pw-jchk-row pw-jchk-row-' + t.sev;
+  if (a.tipo === 'struttura') {
+    const giorni = [...new Set(a.celle.map(c => c.day))].sort((x, y) => x - y).map(d => PW_JCHK_GIORNI[d]).join(', ');
+    const btn = sbCanWrite()
+      ? '<button type="button" class="pw-jchk-azione pw-jchk-azione-ok" data-help-key="pw-jchk-struttura" onclick="event.stopPropagation();pwJchkCreaStrutture(' + a.cIdx + ',' + i + ')" title="Apre la creazione della struttura Jira di questo comune (prima l\'anteprima)">🏗️ crea struttura</button>'
+      : '';
+    return '<div class="' + cls + '" onclick="pwJchkVai(' + i + ')" title="Vai al cantiere in Griglia">'
+      + '<span class="pw-jchk-ico">' + t.ico + '</span>'
+      + '<div class="min-w-0 flex-1"><div><b>' + esc(a.cantiere) + '</b>' + (giorni ? ' <span class="text-slate-500">· ' + esc(giorni) + '</span>' : '') + '</div>'
+      + '<div class="pw-jchk-det">Nessuna struttura Jira (Iniziativa / Epic / Task del modello) registrata per questo comune: creala prima dei sottotask. Se esiste già, fatta a mano, l\'anteprima la trova e «Crea» la registra senza creare nulla.</div></div>'
+      + btn + '</div>';
+  }
   if (a.tipo === 'commessa') {
     return '<div class="' + cls + '" onclick="pwJchkVai(' + i + ')" title="Vai al blocco commessa">'
       + '<span class="pw-jchk-ico">' + t.ico + '</span>'

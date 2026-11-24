@@ -2567,7 +2567,7 @@
       </span>
       <button id="btn-presentation" class="px-3 py-1.5 text-sm rounded hover:bg-white/10" style="border:1px solid var(--dark-border-strong);color:var(--dark-text);visibility:visible;">📊 Modalità presentazione</button>
       <div class="text-xs pl-2" style="border-left:1px solid var(--dark-border-strong);color:var(--dark-text-muted);">
-        <span id="app-version" class="font-medium" style="color:var(--accent);">v18.310.0</span> · Michele Marchetti
+        <span id="app-version" class="font-medium" style="color:var(--accent);">v18.311.0</span> · Michele Marchetti
         <span id="sb-role-badge" style="margin-left:8px;padding:1px 8px;border-radius:9999px;background:rgba(255,255,255,.1);color:var(--dark-text);font-weight:600;"></span>
       </div>
     </div>
@@ -20003,6 +20003,10 @@ function pwJiraSubtaskOpenComuniModal(cIdx, commessaNome, meta, gruppi, squadreO
   // saltare a mano. Resta comunque deselezionabile per rifare la verifica.
   const bcForBadges = pwGetWeekData()[cIdx];
   const entryOf = (gr, op, g) => pwJiraSubtaskEntry(bcForBadges, gr.comune, op, gr.attivita, g);
+  // Struttura Jira del comune (v18.311.0): con il modello impostato, ogni riga dice se il
+  // comune ha la struttura registrata e la fa creare da qui, senza uscire dal flusso.
+  const commessaVera = (bcForBadges && bcForBadges.commessa) || '';
+  const modelloStrutt = jstModelloDi(meta);
 
   const bySquadra = {};
   (squadreOrder || []).forEach(sq => { bySquadra[sq] = []; });
@@ -20057,6 +20061,7 @@ function pwJiraSubtaskOpenComuniModal(cIdx, commessaNome, meta, gruppi, squadreO
       ${doneNote}
       ${errorNote}
       ${noEmailNote}
+      ${modelloStrutt ? '<div class="pw-jira-strutt text-[11px] mb-1" data-idx="' + i + '"></div>' : ''}
       <div class="grid grid-cols-2 gap-2">
         <button type="button" data-help-key="pw-jira-epic" class="pw-jira-panel-trigger pw-jira-epic-trigger w-full text-left border border-slate-300 rounded px-2 py-1.5 text-sm bg-white hover:bg-slate-50 truncate block" data-idx="${i}"${allDone ? ' disabled style="opacity:0.5;"' : ''}>— scegli Epic —</button>
         <button type="button" data-help-key="pw-jira-task" class="pw-jira-panel-trigger pw-jira-task-trigger w-full text-left border border-slate-300 rounded px-2 py-1.5 text-sm bg-white hover:bg-slate-50 truncate block" data-idx="${i}" disabled style="opacity:0.5;">— scegli prima l'Epic —</button>
@@ -20118,6 +20123,7 @@ function pwJiraSubtaskOpenComuniModal(cIdx, commessaNome, meta, gruppi, squadreO
         <button type="button" id="pw-jira-collapse-all" class="text-[11px] text-slate-500 hover:underline whitespace-nowrap">Comprimi tutto</button>
       </div>
     </div>
+    ${modelloStrutt ? '<div id="pw-jira-strutt-head"></div>' : ''}
     <div id="pw-jira-comuni-list">${groupsHtml}</div>
     <div class="flex justify-end gap-2 mt-4">
       <button onclick="closeModal()" class="px-3 py-1.5 text-sm border border-slate-300 rounded">Annulla</button>
@@ -20158,6 +20164,65 @@ function pwJiraSubtaskOpenComuniModal(cIdx, commessaNome, meta, gruppi, squadreO
   const chosenTasks = {}; // idx -> {key, summary}
   const existingReqIds = {}; // idx -> ultimo numero di richiesta (per scartare risposte superate)
   const chiaviModello = jstChiaviModello(meta);
+
+  /* ----- Struttura Jira dei comuni (v18.311.0) -----
+     Stato dal registro dell'app (jstStatoComune), letto all'apertura. Non si dice niente per
+     i cantieri già coperti dai sottotask (la struttura su Jira c'è per forza) e per le
+     attività non produttive (Viaggio, Riposo…). «Crea struttura» apre la creazione strutture
+     SOPRA questo modal (che resta com'è, con le scelte già fatte) con l'anteprima già
+     avviata; alla chiusura le etichette si aggiornano e la ricerca Task trova i nuovi. */
+  const modalEl = root.firstElementChild;
+  let struttLettura = !!modelloStrutt;
+  function gruppoSenzaStruttura(i) {
+    const gr = gruppi[i];
+    if (completo[i]) return false;
+    const voce = gr.attivita ? caTrova(commessaVera, gr.attivita) : null;
+    return !(voce && (voce.servizio || voce.produttiva === false));
+  }
+  function apriCreaStrutture(comuni) {
+    pwJiraSearchPanelClose();
+    jstOpenCreaModal(commessaVera, modelloStrutt, comuni, {
+      anteprima: true,
+      onChiuso: () => { if (modalEl && modalEl.isConnected) aggiornaStrutture(); },
+    });
+  }
+  function aggiornaStrutture() {
+    if (!modelloStrutt || !modalEl) return;
+    const daCreare = {}; // caNorm(comune) -> comune (mancanti o parziali)
+    modalEl.querySelectorAll('.pw-jira-strutt').forEach(el => {
+      const i = Number(el.dataset.idx);
+      const gr = gruppi[i];
+      if (!gr || !gruppoSenzaStruttura(i)) { el.innerHTML = ''; return; }
+      if (struttLettura) { el.innerHTML = '<span class="text-slate-400">⏳ controllo struttura Jira…</span>'; return; }
+      const st = jstStatoComune(commessaVera, gr.comune);
+      if (!st) { el.innerHTML = ''; return; }
+      if (st.stato === 'completa') {
+        el.innerHTML = '<span class="text-slate-500">🏗️ Struttura Jira registrata (<a href="' + esc(_jstUrl(st.riga.radice_key, modelloStrutt)) + '" target="_blank" rel="noopener" class="text-teal-700 hover:underline">' + esc(st.riga.radice_key) + '</a>)</span>';
+        return;
+      }
+      daCreare[caNorm(gr.comune)] = gr.comune;
+      el.innerHTML = '<span class="text-amber-700">🏗️ ' + (st.stato === 'parziale' ? 'Struttura Jira parziale' : 'Nessuna struttura Jira registrata per questo comune') + '</span> '
+        + '<button type="button" data-help-key="pw-jira-strutt-crea" class="pw-jira-strutt-crea ml-1 px-1.5 py-0.5 border border-amber-300 bg-amber-50 text-amber-800 rounded hover:bg-amber-100">'
+        + (st.stato === 'parziale' ? '🏗️ Completa struttura' : '🏗️ Crea struttura') + '</button>';
+      el.querySelector('.pw-jira-strutt-crea').onclick = () => apriCreaStrutture([gr.comune]);
+    });
+    const head = modalEl.querySelector('#pw-jira-strutt-head');
+    if (!head) return;
+    const lista = Object.values(daCreare).sort((a, b) => a.localeCompare(b, 'it'));
+    head.innerHTML = lista.length > 1
+      ? '<div class="flex items-center justify-between gap-2 mb-3 px-2.5 py-2 rounded border border-amber-200 bg-amber-50 text-xs text-amber-800">'
+        + '<span>🏗️ ' + lista.length + ' comuni senza struttura Jira registrata: creala prima di scegliere Epic e Task.</span>'
+        + '<button type="button" data-help-key="pw-jira-strutt-crea-tutte" class="pw-jira-strutt-tutte shrink-0 px-2 py-1 border border-amber-300 bg-white rounded hover:bg-amber-100">🏗️ Crea strutture (' + lista.length + ')</button></div>'
+      : '';
+    const tutte = head.querySelector('.pw-jira-strutt-tutte');
+    if (tutte) tutte.onclick = () => apriCreaStrutture(lista);
+  }
+  if (modelloStrutt) {
+    aggiornaStrutture();
+    jstCarica(commessaVera)
+      .catch(e => console.warn('Registro strutture Jira non letto', e))
+      .then(() => { struttLettura = false; aggiornaStrutture(); });
+  }
 
   function taskTriggerFor(idx) {
     return root.querySelector(`.pw-jira-task-trigger[data-idx="${idx}"]`);
@@ -21459,14 +21524,21 @@ function _jstCantieriDallaGriglia(commessa) {
    Anteprima obbligatoria (dryRun) prima di "Crea". Nell'anteprima ogni issue da creare ha una
    spunta (v18.234.0): spuntarne una spunta i livelli sopra mancanti, toglierla toglie quelli
    sotto. Le escluse vanno all'Edge Function come "escludi" (chiavi del modello). */
-/* comuni (facoltativo): elenco già scritto nella finestra, es. dalla Programmazione. */
-function jstOpenCreaModal(commessa, modello, comuni) {
+/* comuni (facoltativo): elenco già scritto nella finestra, es. dalla Programmazione.
+   opts (facoltativo, v18.311.0): { anteprima: true = parte subito l'anteprima dei comuni dati
+   (sola lettura), onChiuso() = chiamata dopo la chiusura (es. per riaggiornare chi l'ha aperta
+   impilata sopra di sé: il modal dei sottotask, il Controllo sottotask). */
+function jstOpenCreaModal(commessa, modello, comuni, opts) {
+  opts = opts || {};
   if (!sbGuardWrite()) return;
   if (!modello) { showAlertModal('Imposta prima il modello della struttura Jira nella scheda commessa.'); return; }
   const root = document.getElementById('modal-root');
   const layer = document.createElement('div');
   layer.className = 'modal-backdrop';
-  const chiudi = () => layer.remove();
+  const chiudi = () => {
+    layer.remove();
+    if (typeof opts.onChiuso === 'function') { try { opts.onChiuso(); } catch (e) { console.warn('jstOpenCreaModal onChiuso', e); } }
+  };
   let anteprima = null;  // [{ comune, esito?, errore?, escludi: Set(chiave modello) }]
   let fatto = null;      // [{ comune, esito?, errore? }] dopo "Crea"
   let inCorso = '';
@@ -21691,6 +21763,21 @@ function jstOpenCreaModal(commessa, modello, comuni) {
   disegnaCrea();
   root.appendChild(layer);
   jstCarica(commessa).then(() => { if (layer.isConnected && !inCorso) disegnaCrea(); }).catch(() => {});
+  if (opts.anteprima && (comuni || []).length) esegui(true);
+}
+
+/* Stato della struttura di un comune per chi deve creare sottotask (v18.311.0), dal solo
+   registro dell'app (tabella jira_struttura_comune, già caricata con jstCarica):
+   null = commessa senza modello o registro non ancora letto (non si dice niente);
+   'mancante' = nessuna struttura registrata; 'parziale' / 'completa' come registrata.
+   Una struttura fatta a mano e mai passata dalla creazione risulta 'mancante': l'anteprima
+   della creazione la trova («già presenti») e «Crea» la registra senza creare nulla. */
+function jstStatoComune(commessa, comune) {
+  const meta = (state.commesse_attive_meta || {})[commessa];
+  if (!jstModelloDi(meta) || !_jst.righe[commessa] || !caNorm(comune)) return null;
+  const r = jstStrutturaDi(commessa, comune);
+  if (!r) return { stato: 'mancante' };
+  return { stato: r.stato === 'parziale' ? 'parziale' : 'completa', riga: r };
 }
 
 /* Dalla Griglia (v18.235.0): bottone "🏗️ Strutture comuni" nell'header del blocco commessa,
@@ -42450,7 +42537,11 @@ document.addEventListener('keydown', (e) => {
      non pianifica più. Tipico con i giornalieri: l'operatore spostato da martedì a mercoledì
      lascia orfano il sottotask di martedì e scopre il mercoledì;
    - commessa: blocco senza commessa o commessa senza "Codice progetto Jira" — le sue
-     celle non si possono controllare una per una.
+     celle non si possono controllare una per una;
+   - struttura (v18.311.0): sulle commesse con il modello della struttura Jira, cantiere della
+     settimana senza struttura nel registro jira_struttura_comune (letto da
+     _pwJchkStruttureCarica), senza alcun sottotask e con almeno un'attività produttiva. Serve
+     a creare le strutture in blocco prima dei sottotask (pwJchkCreaStrutture).
    Sottotask fatti a mano (v18.239.0): per le giornate mancanti/in errore la verifica cerca
    anche su Jira i sottotask della settimana dei loro operatori (_pwJchkCercaManuali) e li
    abbina per progetto + accountId + giorno (+ nome del cantiere fra più candidati); la
@@ -42460,7 +42551,7 @@ document.addEventListener('keydown', (e) => {
    vedi _pwJchkEliminabili / jira-subtask-delete.
    Gli operatori di un fornitore esterno (op.fornitore) non hanno sottotask: restano fuori. */
 
-HELP_TEXTS['pw-jchk'] = 'Controlla in un colpo tutte le celle della settimana mostrata: per ogni operatore + cantiere + attività, giorno per giorno, verifica che ci sia il sottotask Jira di quel giorno (indicatore 🎫 in cella). I sottotask settimanali creati prima della v18.229.0 valgono ancora per tutti i giorni della loro settimana.\n\nVerde = tutto a posto. Rosso = assegnazioni senza sottotask, con creazione fallita, con il sottotask cancellato su Jira o riassegnato a un\'altra persona. Ambra = sottotask ancora in stato CREATED, sottotask non più collegati a nessuna cella, o commesse senza codice progetto Jira.\n\nClicca una riga (o un giorno) per andare alla cella. Il controllo è immediato sugli indicatori della Griglia; all\'apertura e con «Ricontrolla» verifica anche su Jira quali sottotask sono stati cancellati, a chi sono assegnati e in che stato sono, e cerca i sottotask creati a mano su Jira per le giornate che ne sono senza («🔗 collega»). Su Jira si scrive solo con «🗑️ elimina su Jira», che cancella i sottotask non più in Griglia mai iniziati.';
+HELP_TEXTS['pw-jchk'] = 'Controlla in un colpo tutte le celle della settimana mostrata: per ogni operatore + cantiere + attività, giorno per giorno, verifica che ci sia il sottotask Jira di quel giorno (indicatore 🎫 in cella). I sottotask settimanali creati prima della v18.229.0 valgono ancora per tutti i giorni della loro settimana.\n\nVerde = tutto a posto. Rosso = assegnazioni senza sottotask, con creazione fallita, con il sottotask cancellato su Jira o riassegnato a un\'altra persona. Ambra = sottotask ancora in stato CREATED, sottotask non più collegati a nessuna cella, commesse senza codice progetto Jira, o comuni senza struttura Jira (Iniziativa / Epic / Task del modello della commessa), da creare prima dei sottotask con «🏗️ Crea strutture».\n\nClicca una riga (o un giorno) per andare alla cella. Il controllo è immediato sugli indicatori della Griglia; all\'apertura e con «Ricontrolla» verifica anche su Jira quali sottotask sono stati cancellati, a chi sono assegnati e in che stato sono, e cerca i sottotask creati a mano su Jira per le giornate che ne sono senza («🔗 collega»). Su Jira si scrive solo con «🗑️ elimina su Jira», che cancella i sottotask non più in Griglia mai iniziati.';
 
 const PW_JCHK_GIORNI = ['Lun', 'Mar', 'Mer', 'Gio', 'Ven', 'Sab'];
 const PW_JCHK_TIPI = {
@@ -42471,8 +42562,9 @@ const PW_JCHK_TIPI = {
   mancante: { sev: 'ko',   ico: '❌', label: 'senza sottotask', plur: 'senza sottotask' },
   creato:   { sev: 'warn', ico: '🆕', label: 'sottotask in stato CREATED', plur: 'sottotask in stato CREATED' },
   orfano:   { sev: 'warn', ico: '🔗', label: 'sottotask non più in Griglia', plur: 'sottotask non più in Griglia' },
+  struttura: { sev: 'warn', ico: '🏗️', label: 'comune senza struttura Jira', plur: 'comuni senza struttura Jira' },
 };
-const PW_JCHK_ORDINE = ['commessa', 'errore', 'cancellato', 'riassegnato', 'mancante', 'creato', 'orfano'];
+const PW_JCHK_ORDINE = ['commessa', 'struttura', 'errore', 'cancellato', 'riassegnato', 'mancante', 'creato', 'orfano'];
 // Stato Jira da segnalare (nome dello stato, non la categoria: CREATED e TO DO sono entrambi "new").
 const PW_JCHK_STATO_CREATED = /^(created|creato)$/i;
 
@@ -42482,6 +42574,7 @@ const _pwJchk = {
   jira: {},         // 'anno|week' -> { cancellati: Set(chiavi), info: {chiave: {status, assignee}}, n, ts, errore, inflight }
   acc: {},          // email operatore (minuscola) -> accountId Jira | null (non risolta), per la sessione
   esitoElimina: null, // { testo, ko, inCorso }: ultima eliminazione su Jira, mostrata nel modal
+  jstTentate: new Set(), // commesse di cui si è già provato a leggere il registro strutture (v18.311.0)
 };
 
 function _pwJchkWeekKey() { return pwAnno + '|' + pwWeek; }
@@ -42716,6 +42809,7 @@ function pwJchkAnalizza() {
   const usatiPerCommessa = new Map(); // commessa -> Set(mapKey) usati da una cella di qualunque suo blocco
   const visti = new Map();            // commessa -> Set(mapKey) già esaminati (blocchi della stessa commessa condividono i giornalieri)
   const blocchi = [];                 // { bc, cIdx, gruppi, mappa, offriSposta } per gli orfani
+  const strutture = new Map();        // commessa -> Map(caNorm cantiere -> { a, coperto, produttiva }) (v18.311.0)
   const setDi = (m, k) => { if (!m.has(k)) m.set(k, new Set()); return m.get(k); };
 
   data.forEach((bc, cIdx) => {
@@ -42777,6 +42871,33 @@ function pwJchkAnalizza() {
       a.sposta = { da: mapKey, operatore: dest.operatore, cantiere: dest.cantiere, attivita: dest.attivita, giorno };
       dest.daSpostare = { key: e.key, da: a.operatore };
     };
+
+    // Struttura Jira del comune (v18.311.0): sulle commesse con il modello, un cantiere della
+    // settimana senza struttura nel registro dell'app (jira_struttura_comune) va segnalato
+    // PRIMA dei sottotask, che senza Epic/Task del comune non si possono creare. Fuori: i
+    // cantieri con almeno un sottotask (su Jira la struttura c'è) e quelli con sole attività
+    // non produttive. Registro non ancora letto = nessun avviso (pwJchkRefresh lo legge).
+    // Prima del ciclo sotto, che sostituisce gr.celle con le sole giornate mancanti.
+    if (jstModelloDi(meta) && _jst.righe[bc.commessa]) {
+      if (!strutture.has(bc.commessa)) strutture.set(bc.commessa, new Map());
+      const perComune = strutture.get(bc.commessa);
+      gruppi.forEach(gr => {
+        const n = caNorm(gr.cantiere);
+        if (!n) return;
+        let x = perComune.get(n);
+        if (!x) {
+          x = { a: { tipo: 'struttura', cIdx, sIdx: gr.sIdx, commessa: bc.commessa, cantiere: gr.cantiere, operatore: '', attivita: '', squadra: '', celle: [] }, coperto: false, produttiva: false };
+          perComune.set(n, x);
+        }
+        const voce = gr.attivita ? caTrova(bc.commessa, gr.attivita) : null;
+        if (!(voce && (voce.servizio || voce.produttiva === false))) x.produttiva = true;
+        gr.celle.forEach(c => {
+          const f = pwJiraSubtaskLookup(bc, gr.cantiere, gr.operatore, gr.attivita, c.day);
+          if (f && pwJiraSubtaskIsResolved(f.entry)) x.coperto = true;
+        });
+        if (x.a.cIdx === cIdx) x.a.celle.push(...gr.celle);
+      });
+    }
 
     const usati = setDi(usatiPerCommessa, bc.commessa);
     gruppi.forEach(gr => {
@@ -42865,6 +42986,12 @@ function pwJchkAnalizza() {
     });
   });
 
+  strutture.forEach(perComune => perComune.forEach(x => {
+    if (!x.produttiva || x.coperto || jstStrutturaDi(x.a.commessa, x.a.cantiere)) return;
+    x.a.celle.sort((a, b) => a.day - b.day);
+    out.anomalie.push(x.a);
+  }));
+
   _pwJchkAbbinaManuali(out.anomalie, data);
   out.anomalie.sort((a, b) => (a.cIdx - b.cIdx)
     || (PW_JCHK_ORDINE.indexOf(a.tipo) - PW_JCHK_ORDINE.indexOf(b.tipo))
@@ -42881,6 +43008,14 @@ function pwJchkRefresh() {
   pwJchkUpdateButton(r);
   pwJchkApplyHighlight(r);
   const wk = _pwJchkWeekKey();
+  // Registro strutture Jira delle commesse con modello mai lette in sessione (v18.311.0).
+  _pwJchkStruttureCarica(false).then(letto => {
+    if (!letto || _pwJchkWeekKey() !== wk) return;
+    const r3 = pwJchkAnalizza();
+    pwJchkUpdateButton(r3);
+    pwJchkApplyHighlight(r3);
+    _pwJchkRidisegnaSeAperto();
+  });
   if (!_pwJchk.jira[wk]) {
     pwJchkVerificaJira().then(() => {
       if (_pwJchkWeekKey() !== wk) return;
@@ -42935,9 +43070,56 @@ function pwOpenJiraCheck() {
   const wk = _pwJchkWeekKey();
   _pwJchk.esitoElimina = null;
   const verifica = pwJchkVerificaJira(true);
+  const strutture = _pwJchkStruttureCarica(true); // un collega può averle create nel frattempo
   _pwJchkRenderModal(true);
   verifica.then(() => {
     if (_pwJchkWeekKey() === wk && document.getElementById('pw-jchk-modal')) _pwJchkRenderModal(true);
+  });
+  strutture.then(letto => { if (letto && _pwJchkWeekKey() === wk) _pwJchkRidisegnaSeAperto(); });
+}
+
+/* Registro delle strutture Jira (jira_struttura_comune, v18.311.0) delle commesse della
+   settimana che hanno il modello. Senza forza legge solo quelle mai tentate in sessione
+   (pwRender gira a ogni modifica); con forza rilegge (apertura del controllo, Ricontrolla).
+   Risolve true se ha letto qualcosa. Un errore lascia il registro com'era: nessun avviso. */
+function _pwJchkStruttureCarica(forza) {
+  if (!_sbClient || !_sbUser) return Promise.resolve(false);
+  const metaDi = c => (state.commesse_attive_meta || {})[c];
+  const commesse = [...new Set(pwGetWeekData()
+    .filter(bc => bc && bc.commessa && jstModelloDi(metaDi(bc.commessa)))
+    .map(bc => bc.commessa))];
+  const daLeggere = commesse.filter(c => forza || (!_jst.righe[c] && !_pwJchk.jstTentate.has(c)));
+  if (!daLeggere.length) return Promise.resolve(false);
+  daLeggere.forEach(c => _pwJchk.jstTentate.add(c));
+  return Promise.all(daLeggere.map(c => jstCarica(c, !!forza)
+    .catch(e => console.warn('Registro strutture Jira non letto: ' + c, e)))).then(() => true);
+}
+
+// Ridisegna il controllo se è aperto e non ha finestre impilate sopra (la creazione
+// strutture, un avviso): _pwJchkRenderModal riscrive #modal-root e le chiuderebbe.
+function _pwJchkRidisegnaSeAperto() {
+  const root = document.getElementById('modal-root');
+  if (!root || !document.getElementById('pw-jchk-modal') || root.children.length > 1) return;
+  _pwJchkRenderModal(false);
+}
+
+/* «🏗️ Crea strutture» del controllo (v18.311.0): apre la creazione strutture della commessa
+   sopra il controllo, coi comuni segnalati (tutti quelli del blocco cIdx, o solo la riga i)
+   e l'anteprima già avviata. Su Jira si scrive solo con «Crea» di quella finestra. */
+function pwJchkCreaStrutture(cIdx, i) {
+  const r = _pwJchk.ultimo;
+  if (!r || !sbGuardWrite()) return;
+  const sel = (i !== undefined && i !== null) ? [r.anomalie[i]] : r.anomalie.filter(a => a.cIdx === cIdx);
+  const lista = sel.filter(a => a && a.tipo === 'struttura');
+  if (!lista.length) return;
+  const commessa = lista[0].commessa;
+  const modello = jstModelloDi((state.commesse_attive_meta || {})[commessa]);
+  if (!modello) return;
+  const comuni = [...new Map(lista.map(a => [caNorm(a.cantiere), a.cantiere])).values()]
+    .sort((a, b) => a.localeCompare(b, 'it'));
+  jstOpenCreaModal(commessa, modello, comuni, {
+    anteprima: true,
+    onChiuso: () => { pwJchkRefresh(); _pwJchkRidisegnaSeAperto(); },
   });
 }
 
@@ -43008,9 +43190,13 @@ function _pwJchkRenderModal(accendi) {
     const creaBtn = collegata && sbCanWrite() && idxs.some(i => r.anomalie[i].tipo === 'mancante' || r.anomalie[i].tipo === 'errore')
       ? '<button type="button" class="pw-jchk-crea" data-help-key="pw-jchk-crea" onclick="closeModal();pwJiraSubtaskInit(' + cIdx + ')" title="Apre la creazione sottotask per questa commessa">🎫 Crea sottotask</button>'
       : '';
+    const nStrutt = idxs.filter(i => r.anomalie[i].tipo === 'struttura').length;
+    const struttBtn = nStrutt && sbCanWrite()
+      ? '<button type="button" class="pw-jchk-crea" data-help-key="pw-jchk-strutture" onclick="pwJchkCreaStrutture(' + cIdx + ')" title="Apre la creazione delle strutture Jira per i comuni segnalati (prima l\'anteprima)">🏗️ Crea strutture (' + nStrutt + ')</button>'
+      : '';
     return '<div class="pw-jchk-blocco">'
       + '<div class="pw-jchk-blocco-head"><span class="truncate">' + esc(primo.commessa || '(blocco senza commessa)') + '</span>'
-      + '<span class="text-slate-400 font-normal text-xs ml-1">' + idxs.length + '</span>' + creaBtn + '</div>'
+      + '<span class="text-slate-400 font-normal text-xs ml-1">' + idxs.length + '</span>' + struttBtn + creaBtn + '</div>'
       + idxs.map(i => pwJchkRigaHtml(r.anomalie[i], i)).join('')
       + '</div>';
   }).join('');
@@ -43060,6 +43246,17 @@ function _pwJchkRenderModal(accendi) {
 function pwJchkRigaHtml(a, i) {
   const t = PW_JCHK_TIPI[a.tipo];
   const cls = 'pw-jchk-row pw-jchk-row-' + t.sev;
+  if (a.tipo === 'struttura') {
+    const giorni = [...new Set(a.celle.map(c => c.day))].sort((x, y) => x - y).map(d => PW_JCHK_GIORNI[d]).join(', ');
+    const btn = sbCanWrite()
+      ? '<button type="button" class="pw-jchk-azione pw-jchk-azione-ok" data-help-key="pw-jchk-struttura" onclick="event.stopPropagation();pwJchkCreaStrutture(' + a.cIdx + ',' + i + ')" title="Apre la creazione della struttura Jira di questo comune (prima l\'anteprima)">🏗️ crea struttura</button>'
+      : '';
+    return '<div class="' + cls + '" onclick="pwJchkVai(' + i + ')" title="Vai al cantiere in Griglia">'
+      + '<span class="pw-jchk-ico">' + t.ico + '</span>'
+      + '<div class="min-w-0 flex-1"><div><b>' + esc(a.cantiere) + '</b>' + (giorni ? ' <span class="text-slate-500">· ' + esc(giorni) + '</span>' : '') + '</div>'
+      + '<div class="pw-jchk-det">Nessuna struttura Jira (Iniziativa / Epic / Task del modello) registrata per questo comune: creala prima dei sottotask. Se esiste già, fatta a mano, l\'anteprima la trova e «Crea» la registra senza creare nulla.</div></div>'
+      + btn + '</div>';
+  }
   if (a.tipo === 'commessa') {
     return '<div class="' + cls + '" onclick="pwJchkVai(' + i + ')" title="Vai al blocco commessa">'
       + '<span class="pw-jchk-ico">' + t.ico + '</span>'
@@ -44927,6 +45124,9 @@ HELP_TEXTS['pwJchkVai'] = 'Chiude il controllo e porta alla Griglia, aprendo com
 HELP_TEXTS['pwOpenJiraCheck'] = 'Rifà il controllo dei sottotask della settimana mostrata. Rilegge gli indicatori 🎫 della Griglia e richiede a Jira, solo in lettura, quali sottotask esistono ancora, a chi sono assegnati e in che stato sono. Ritenta anche le email operatore non risolte la volta prima. Per le giornate senza sottotask cerca anche su Jira quelli creati a mano (stesso progetto, assegnati all\'operatore, di quel giorno) e propone di collegarli con «🔗 collega».\n\nUtile dopo aver creato, cancellato o riassegnato sottotask su Jira. Non scrive niente, né su Jira né in Griglia: il collegamento lo fai tu.';
 // 🎫 Crea sottotask
 HELP_TEXTS['pw-jchk-crea'] = 'Chiude il controllo e apre la creazione guidata dei sottotask Jira per questa commessa (tutte le sue squadre), la stessa del bottone «🎫 Sottotask Jira» in Griglia.\n\nCompare solo se nella commessa ci sono assegnazioni senza sottotask o con creazione fallita, e solo per admin e responsabili. Aprirla non scrive niente: su Jira si crea solo all\'ultimo passo, dopo l\'anteprima.';
+// 🏗️ Crea strutture (controllo sottotask, v18.311.0)
+HELP_TEXTS['pw-jchk-strutture'] = 'Apre, sopra il controllo, la creazione delle strutture Jira (Iniziativa / Epic / Task copiati dal modello della commessa) per tutti i comuni di questa commessa segnalati «senza struttura Jira», con l\'anteprima già avviata.\n\nServe a preparare la settimana: prima le strutture, poi i sottotask. L\'anteprima non scrive niente; su Jira si crea solo con «Crea», e le issue create non si cancellano da qui. Un comune che ha già la struttura fatta a mano risulta «già presente»: «Crea» la registra nell\'app senza creare nulla. Solo admin e responsabili.';
+HELP_TEXTS['pw-jchk-struttura'] = 'Come «🏗️ Crea strutture» nell\'intestazione della commessa, ma solo per questo comune: apre la creazione della struttura Jira con l\'anteprima già avviata. Su Jira si scrive solo con «Crea».';
 // Evidenzia in Griglia
 HELP_TEXTS['pw-jchk-evidenzia'] = 'Accende o spegne l\'evidenziazione in Griglia delle celle con anomalie: rosse le gravi (senza sottotask, creazione fallita, cancellato o riassegnato su Jira), ambra le altre.\n\nSi accende da sola quando apri il controllo e ci sono anomalie. Vale solo sul tuo schermo e non salva nulla.';
 // ✕ indicatore 🎫
@@ -44937,6 +45137,9 @@ HELP_TEXTS['pwJiraStepBack'] = 'Torna al passo precedente della creazione sottot
 HELP_TEXTS['#pw-jira-retry'] = 'Rifà l\'anteprima su Jira (solo verifica, nessuna creazione) per i sottotask selezionati non ancora creati. Quelli già creati nel frattempo risultano «già esistenti» e non vengono duplicati.\n\nPer creare davvero bisogna poi premere di nuovo «Crea N sottotask». L\'anteprima aggiorna in Griglia gli indicatori dei sottotask già esistenti e degli errori.';
 // Scegli Epic
 HELP_TEXTS['pw-jira-epic'] = 'Apre l\'elenco con ricerca degli Epic del progetto Jira della commessa, letti da Jira in quel momento, e fa scegliere l\'Epic per questo cantiere/attività.\n\nLa scelta vale solo per questa creazione e non viene ricordata. Cambiando Epic, il Task già scelto si azzera. Su Jira non scrive niente.';
+// 🏗️ Crea struttura (creazione sottotask, v18.311.0)
+HELP_TEXTS['pw-jira-strutt-crea'] = 'Questo comune non ha la struttura Jira registrata nell\'app (Iniziativa / Epic / Task del modello della commessa), quindi probabilmente non troverai la sua Epic o il suo Task.\n\nApre la creazione della struttura sopra questa finestra, con l\'anteprima già avviata: le scelte di Epic e Task già fatte qui restano. Su Jira si crea solo con «Crea»; chiusa la finestra, cerca di nuovo Epic e Task. Se la struttura c\'è già, fatta a mano, l\'anteprima la mostra «già presente» e «Crea» la registra senza creare nulla.';
+HELP_TEXTS['pw-jira-strutt-crea-tutte'] = 'Come «🏗️ Crea struttura» sulla riga, ma per tutti i comuni di questa finestra senza struttura Jira registrata, in un colpo solo (prima l\'anteprima). Su Jira si crea solo con «Crea».';
 // Scegli Task
 HELP_TEXTS['pw-jira-task'] = 'Apre l\'elenco con ricerca dei Task sotto l\'Epic scelto, letti da Jira, e fa scegliere il Task sotto cui creare i sottotask di questo cantiere/attività. Si attiva solo dopo aver scelto l\'Epic.\n\nAppena scelto, parte una verifica su Jira senza creare nulla, che mostra quanti sottotask sono già esistenti, da creare o in errore. Gli indicatori in Griglia di quelli già esistenti, in errore o senza email vengono aggiornati.';
 // salta

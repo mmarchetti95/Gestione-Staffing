@@ -244,14 +244,21 @@ function _jstCantieriDallaGriglia(commessa) {
    Anteprima obbligatoria (dryRun) prima di "Crea". Nell'anteprima ogni issue da creare ha una
    spunta (v18.234.0): spuntarne una spunta i livelli sopra mancanti, toglierla toglie quelli
    sotto. Le escluse vanno all'Edge Function come "escludi" (chiavi del modello). */
-/* comuni (facoltativo): elenco già scritto nella finestra, es. dalla Programmazione. */
-function jstOpenCreaModal(commessa, modello, comuni) {
+/* comuni (facoltativo): elenco già scritto nella finestra, es. dalla Programmazione.
+   opts (facoltativo, v18.311.0): { anteprima: true = parte subito l'anteprima dei comuni dati
+   (sola lettura), onChiuso() = chiamata dopo la chiusura (es. per riaggiornare chi l'ha aperta
+   impilata sopra di sé: il modal dei sottotask, il Controllo sottotask). */
+function jstOpenCreaModal(commessa, modello, comuni, opts) {
+  opts = opts || {};
   if (!sbGuardWrite()) return;
   if (!modello) { showAlertModal('Imposta prima il modello della struttura Jira nella scheda commessa.'); return; }
   const root = document.getElementById('modal-root');
   const layer = document.createElement('div');
   layer.className = 'modal-backdrop';
-  const chiudi = () => layer.remove();
+  const chiudi = () => {
+    layer.remove();
+    if (typeof opts.onChiuso === 'function') { try { opts.onChiuso(); } catch (e) { console.warn('jstOpenCreaModal onChiuso', e); } }
+  };
   let anteprima = null;  // [{ comune, esito?, errore?, escludi: Set(chiave modello) }]
   let fatto = null;      // [{ comune, esito?, errore? }] dopo "Crea"
   let inCorso = '';
@@ -476,6 +483,21 @@ function jstOpenCreaModal(commessa, modello, comuni) {
   disegnaCrea();
   root.appendChild(layer);
   jstCarica(commessa).then(() => { if (layer.isConnected && !inCorso) disegnaCrea(); }).catch(() => {});
+  if (opts.anteprima && (comuni || []).length) esegui(true);
+}
+
+/* Stato della struttura di un comune per chi deve creare sottotask (v18.311.0), dal solo
+   registro dell'app (tabella jira_struttura_comune, già caricata con jstCarica):
+   null = commessa senza modello o registro non ancora letto (non si dice niente);
+   'mancante' = nessuna struttura registrata; 'parziale' / 'completa' come registrata.
+   Una struttura fatta a mano e mai passata dalla creazione risulta 'mancante': l'anteprima
+   della creazione la trova («già presenti») e «Crea» la registra senza creare nulla. */
+function jstStatoComune(commessa, comune) {
+  const meta = (state.commesse_attive_meta || {})[commessa];
+  if (!jstModelloDi(meta) || !_jst.righe[commessa] || !caNorm(comune)) return null;
+  const r = jstStrutturaDi(commessa, comune);
+  if (!r) return { stato: 'mancante' };
+  return { stato: r.stato === 'parziale' ? 'parziale' : 'completa', riga: r };
 }
 
 /* Dalla Griglia (v18.235.0): bottone "🏗️ Strutture comuni" nell'header del blocco commessa,

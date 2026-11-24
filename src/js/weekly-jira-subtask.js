@@ -801,6 +801,10 @@ function pwJiraSubtaskOpenComuniModal(cIdx, commessaNome, meta, gruppi, squadreO
   // saltare a mano. Resta comunque deselezionabile per rifare la verifica.
   const bcForBadges = pwGetWeekData()[cIdx];
   const entryOf = (gr, op, g) => pwJiraSubtaskEntry(bcForBadges, gr.comune, op, gr.attivita, g);
+  // Struttura Jira del comune (v18.311.0): con il modello impostato, ogni riga dice se il
+  // comune ha la struttura registrata e la fa creare da qui, senza uscire dal flusso.
+  const commessaVera = (bcForBadges && bcForBadges.commessa) || '';
+  const modelloStrutt = jstModelloDi(meta);
 
   const bySquadra = {};
   (squadreOrder || []).forEach(sq => { bySquadra[sq] = []; });
@@ -855,6 +859,7 @@ function pwJiraSubtaskOpenComuniModal(cIdx, commessaNome, meta, gruppi, squadreO
       ${doneNote}
       ${errorNote}
       ${noEmailNote}
+      ${modelloStrutt ? '<div class="pw-jira-strutt text-[11px] mb-1" data-idx="' + i + '"></div>' : ''}
       <div class="grid grid-cols-2 gap-2">
         <button type="button" data-help-key="pw-jira-epic" class="pw-jira-panel-trigger pw-jira-epic-trigger w-full text-left border border-slate-300 rounded px-2 py-1.5 text-sm bg-white hover:bg-slate-50 truncate block" data-idx="${i}"${allDone ? ' disabled style="opacity:0.5;"' : ''}>— scegli Epic —</button>
         <button type="button" data-help-key="pw-jira-task" class="pw-jira-panel-trigger pw-jira-task-trigger w-full text-left border border-slate-300 rounded px-2 py-1.5 text-sm bg-white hover:bg-slate-50 truncate block" data-idx="${i}" disabled style="opacity:0.5;">— scegli prima l'Epic —</button>
@@ -916,6 +921,7 @@ function pwJiraSubtaskOpenComuniModal(cIdx, commessaNome, meta, gruppi, squadreO
         <button type="button" id="pw-jira-collapse-all" class="text-[11px] text-slate-500 hover:underline whitespace-nowrap">Comprimi tutto</button>
       </div>
     </div>
+    ${modelloStrutt ? '<div id="pw-jira-strutt-head"></div>' : ''}
     <div id="pw-jira-comuni-list">${groupsHtml}</div>
     <div class="flex justify-end gap-2 mt-4">
       <button onclick="closeModal()" class="px-3 py-1.5 text-sm border border-slate-300 rounded">Annulla</button>
@@ -956,6 +962,65 @@ function pwJiraSubtaskOpenComuniModal(cIdx, commessaNome, meta, gruppi, squadreO
   const chosenTasks = {}; // idx -> {key, summary}
   const existingReqIds = {}; // idx -> ultimo numero di richiesta (per scartare risposte superate)
   const chiaviModello = jstChiaviModello(meta);
+
+  /* ----- Struttura Jira dei comuni (v18.311.0) -----
+     Stato dal registro dell'app (jstStatoComune), letto all'apertura. Non si dice niente per
+     i cantieri già coperti dai sottotask (la struttura su Jira c'è per forza) e per le
+     attività non produttive (Viaggio, Riposo…). «Crea struttura» apre la creazione strutture
+     SOPRA questo modal (che resta com'è, con le scelte già fatte) con l'anteprima già
+     avviata; alla chiusura le etichette si aggiornano e la ricerca Task trova i nuovi. */
+  const modalEl = root.firstElementChild;
+  let struttLettura = !!modelloStrutt;
+  function gruppoSenzaStruttura(i) {
+    const gr = gruppi[i];
+    if (completo[i]) return false;
+    const voce = gr.attivita ? caTrova(commessaVera, gr.attivita) : null;
+    return !(voce && (voce.servizio || voce.produttiva === false));
+  }
+  function apriCreaStrutture(comuni) {
+    pwJiraSearchPanelClose();
+    jstOpenCreaModal(commessaVera, modelloStrutt, comuni, {
+      anteprima: true,
+      onChiuso: () => { if (modalEl && modalEl.isConnected) aggiornaStrutture(); },
+    });
+  }
+  function aggiornaStrutture() {
+    if (!modelloStrutt || !modalEl) return;
+    const daCreare = {}; // caNorm(comune) -> comune (mancanti o parziali)
+    modalEl.querySelectorAll('.pw-jira-strutt').forEach(el => {
+      const i = Number(el.dataset.idx);
+      const gr = gruppi[i];
+      if (!gr || !gruppoSenzaStruttura(i)) { el.innerHTML = ''; return; }
+      if (struttLettura) { el.innerHTML = '<span class="text-slate-400">⏳ controllo struttura Jira…</span>'; return; }
+      const st = jstStatoComune(commessaVera, gr.comune);
+      if (!st) { el.innerHTML = ''; return; }
+      if (st.stato === 'completa') {
+        el.innerHTML = '<span class="text-slate-500">🏗️ Struttura Jira registrata (<a href="' + esc(_jstUrl(st.riga.radice_key, modelloStrutt)) + '" target="_blank" rel="noopener" class="text-teal-700 hover:underline">' + esc(st.riga.radice_key) + '</a>)</span>';
+        return;
+      }
+      daCreare[caNorm(gr.comune)] = gr.comune;
+      el.innerHTML = '<span class="text-amber-700">🏗️ ' + (st.stato === 'parziale' ? 'Struttura Jira parziale' : 'Nessuna struttura Jira registrata per questo comune') + '</span> '
+        + '<button type="button" data-help-key="pw-jira-strutt-crea" class="pw-jira-strutt-crea ml-1 px-1.5 py-0.5 border border-amber-300 bg-amber-50 text-amber-800 rounded hover:bg-amber-100">'
+        + (st.stato === 'parziale' ? '🏗️ Completa struttura' : '🏗️ Crea struttura') + '</button>';
+      el.querySelector('.pw-jira-strutt-crea').onclick = () => apriCreaStrutture([gr.comune]);
+    });
+    const head = modalEl.querySelector('#pw-jira-strutt-head');
+    if (!head) return;
+    const lista = Object.values(daCreare).sort((a, b) => a.localeCompare(b, 'it'));
+    head.innerHTML = lista.length > 1
+      ? '<div class="flex items-center justify-between gap-2 mb-3 px-2.5 py-2 rounded border border-amber-200 bg-amber-50 text-xs text-amber-800">'
+        + '<span>🏗️ ' + lista.length + ' comuni senza struttura Jira registrata: creala prima di scegliere Epic e Task.</span>'
+        + '<button type="button" data-help-key="pw-jira-strutt-crea-tutte" class="pw-jira-strutt-tutte shrink-0 px-2 py-1 border border-amber-300 bg-white rounded hover:bg-amber-100">🏗️ Crea strutture (' + lista.length + ')</button></div>'
+      : '';
+    const tutte = head.querySelector('.pw-jira-strutt-tutte');
+    if (tutte) tutte.onclick = () => apriCreaStrutture(lista);
+  }
+  if (modelloStrutt) {
+    aggiornaStrutture();
+    jstCarica(commessaVera)
+      .catch(e => console.warn('Registro strutture Jira non letto', e))
+      .then(() => { struttLettura = false; aggiornaStrutture(); });
+  }
 
   function taskTriggerFor(idx) {
     return root.querySelector(`.pw-jira-task-trigger[data-idx="${idx}"]`);
