@@ -39,6 +39,62 @@ function mlPerClic(ev, g) {
   return true;
 }
 
+/* ---------- punti liberi (v18.321.0) ----------
+   Ctrl/Cmd+clic su un punto della mappa dove non c'è un pin: diventa una tappa della
+   catena come un comune (chiave «__punto:lat,lng», `libero: true`). Il nome arriva dalla
+   ricerca inversa di Nominatim (comune/località), una richiesta alla volta e al massimo
+   una al secondo (limite del servizio); finché manca o se fallisce resta «Punto N».
+   Ctrl+clic sul numero del punto lo toglie. Clic sui pin: non arrivano qui (Leaflet non
+   propaga il clic di un marker alla mappa). */
+let _mlPerNPunti = 0;
+let _mlPerInversa = Promise.resolve();
+
+function mlPerAggancia(map) {
+  map.on('click', e => {
+    const ev = e && e.originalEvent;
+    if (!ev || !(ev.ctrlKey || ev.metaKey) || !e.latlng) return;
+    mlPerAggiungiPunto(e.latlng.lat, e.latlng.lng);
+  });
+}
+
+function mlPerAggiungiPunto(lat, lng) {
+  if (_mlPer.tappe.length >= ML_PER_MAX) {
+    showAlertModal('Massimo ' + ML_PER_MAX + ' tappe per catena (limite del servizio di routing).');
+    return;
+  }
+  lat = Math.round(lat * 1e5) / 1e5;
+  lng = Math.round(lng * 1e5) / 1e5;
+  const key = '__punto:' + lat + ',' + lng;
+  if (_mlPer.tappe.some(t => t.key === key)) return;
+  const p = { key, nome: 'Punto ' + (++_mlPerNPunti), lat, lng, libero: true, label: '' };
+  _mlPer.tappe.push(p);
+  mlPerAggiorna();
+  _mlPerNomina(p);
+}
+
+function _mlPerNomina(p) {
+  _mlPerInversa = _mlPerInversa.then(async () => {
+    if (!_mlPer.tappe.includes(p)) return;
+    try {
+      const url = 'https://nominatim.openstreetmap.org/reverse?format=jsonv2&zoom=14&accept-language=it&lat=' +
+        encodeURIComponent(p.lat) + '&lon=' + encodeURIComponent(p.lng);
+      const res = await fetch(url);
+      if (res.ok) {
+        const d = await res.json();
+        const a = (d && d.address) || {};
+        const luogo = a.village || a.town || a.city || a.municipality || a.hamlet || a.suburb ||
+          (d && d.name) || '';
+        if (luogo) {
+          p.nome = luogo + ' (punto)';
+          p.label = (d && d.display_name) || '';
+          _mlPerRender();
+        }
+      }
+    } catch (_) { /* resta «Punto N» */ }
+    await new Promise(r => setTimeout(r, 1000));
+  });
+}
+
 function mlPerToggle(g) {
   const i = _mlPer.tappe.findIndex(t => t.key === g.key);
   if (i >= 0) {
@@ -199,8 +255,8 @@ function mlPerApriSpostamenti() {
   const D = _mlPerSotto('dist'), T = _mlPerSotto('dur');
   if (!D || !T) { showAlertModal('Attendi la fine del calcolo delle distanze.'); return; }
   const punto = p => {
-    const g = mlGeo(p.key);
-    return { nome: p.nome, lat: p.lat, lng: p.lng, label: g && g.label ? g.label : '' };
+    const g = p.libero ? null : mlGeo(p.key);
+    return { nome: p.nome, lat: p.lat, lng: p.lng, label: p.libero ? (p.label || '') : (g && g.label ? g.label : '') };
   };
   const ordine = [];
   for (let i = 1; i < t.length; i++) ordine.push(i);
@@ -280,7 +336,7 @@ function _mlPerRender() {
     html += '<div class="ml-per-tot">' +
       '<span class="ml-per-chip km">' + (calcolo ? '⏳' : km(ultima && ultima.cumM)) + '</span>' +
       '<span class="ml-per-chip t">🚗 ' + (calcolo ? '⏳' : dur(ultima && ultima.cumS)) + '</span>' +
-      '<span class="ml-per-chip n">' + t.length + ' comuni' + (_mlPer.chiuso ? ' · giro chiuso' : '') + '</span></div>';
+      '<span class="ml-per-chip n">' + t.length + (t.some(p => p.libero) ? ' tappe' : ' comuni') + (_mlPer.chiuso ? ' · giro chiuso' : '') + '</span></div>';
   }
 
   html += '<div class="ml-per-list"><table class="ml-per-tab"><thead><tr>' +
@@ -289,7 +345,9 @@ function _mlPerRender() {
     const tr = i > 0 ? tratte[i - 1] : null;
     html += '<tr>' +
       '<td class="n">' + (i + 1) + '</td>' +
-      '<td class="c"><button class="ml-per-nome" data-ml-per="vai" data-pos="' + i + '" title="Centra la mappa su questo comune">' + esc(p.nome) + '</button></td>' +
+      '<td class="c"><button class="ml-per-nome" data-ml-per="vai" data-pos="' + i + '" title="' +
+        esc(p.libero ? 'Punto scelto sulla mappa (' + p.lat + ', ' + p.lng + ')' + (p.label ? '\n' + p.label : '') + ' — centra la mappa'
+          : 'Centra la mappa su questo comune') + '">' + (p.libero ? '📍 ' : '') + esc(p.nome) + '</button></td>' +
       '<td class="r">' + (tr ? (calcolo ? '⏳' : km(tr.m) + '<span>' + dur(tr.s) + '</span>') : '<span>partenza</span>') + '</td>' +
       '<td class="r">' + (tr ? (calcolo ? '' : km(tr.cumM) + '<span>' + dur(tr.cumS) + '</span>') : '') + '</td>' +
       '<td class="a">' +
@@ -308,7 +366,7 @@ function _mlPerRender() {
   if (_mlPer.errore) html += '<div class="ml-per-err">⚠ ' + esc(_mlPer.errore) + '</div>';
 
   if (t.length === 1) {
-    html += '<div class="ml-per-hint">Ctrl+clic su un altro comune per vedere la distanza.</div>';
+    html += '<div class="ml-per-hint">Ctrl+clic su un altro comune o su un punto della mappa per vedere la distanza.</div>';
   } else {
     const puoSpost = typeof sbCanSeePage !== 'function' || sbCanSeePage('weekly:spostamenti');
     html += '<div class="ml-per-opz">' +
@@ -316,7 +374,7 @@ function _mlPerRender() {
       (t.length >= 3 ? '<button data-ml-per="ottimizza" title="Riordina i comuni per fare meno km, tenendo fermo il primo">⚡ Ordine più breve</button>' : '') +
       (puoSpost ? '<button data-ml-per="apri" title="Copia la catena nel tab «Pianifica spostamenti» (export Excel/PDF, strategie di ordinamento)">↗ Pianifica spostamenti</button>' : '') +
       '</div>' +
-      '<div class="ml-per-hint">Ctrl+clic su un pin per aggiungere o togliere un comune. Km e tempi di guida su strada (OSRM), indicativi.</div>';
+      '<div class="ml-per-hint">Ctrl+clic su un pin o su un punto qualsiasi della mappa per aggiungerlo, di nuovo per toglierlo. Km e tempi di guida su strada (OSRM), indicativi.</div>';
   }
   box.innerHTML = html;
 }
@@ -342,6 +400,28 @@ function _mlPerDisegna() {
     }
   }
   t.forEach((p, i) => {
+    if (p.libero) {
+      const m = L.marker([p.lat, p.lng], {
+        icon: L.divIcon({
+          className: 'ml-per-punto-wrap',
+          html: '<div class="ml-per-punto">' + (i + 1) + '</div>',
+          iconSize: [22, 22],
+          iconAnchor: [11, 11]
+        }),
+        title: p.nome + ' — Ctrl+clic per togliere',
+        keyboard: false,
+        zIndexOffset: 1000
+      });
+      m.on('click', e => {
+        const ev = e && e.originalEvent;
+        if (!ev || !(ev.ctrlKey || ev.metaKey)) return;
+        if (ev.preventDefault) ev.preventDefault();
+        const pos = _mlPer.tappe.indexOf(p);
+        if (pos >= 0) mlPerTogli(pos);
+      });
+      m.addTo(_mlPerLayer);
+      return;
+    }
     L.marker([p.lat, p.lng], {
       icon: L.divIcon({
         className: 'ml-per-badge-wrap',

@@ -1939,12 +1939,25 @@
     border: 2px solid white; box-shadow: 0 1px 3px rgba(15,23,42,.5);
     font-size: 11px; font-weight: 700; line-height: 16px; text-align: center;
   }
-
-  .ml-loading {
-    position: absolute; inset: 0; background: rgba(255,255,255,.7);
-    display: none; align-items: center; justify-content: center;
-    font-size: 13px; color: #475569; z-index: 500;
+  /* Punto libero della catena (Ctrl+clic su un punto qualsiasi): non c'è un pin sotto,
+     quindi il numero sta proprio sul punto ed è cliccabile (Ctrl+clic = toglie). */
+  .ml-per-punto-wrap { background: transparent; border: none; }
+  .ml-per-punto {
+    width: 22px; height: 22px; border-radius: 50%; background: white; color: #4f46e5;
+    border: 3px solid #4f46e5; box-shadow: 0 1px 4px rgba(15,23,42,.45);
+    font-size: 11px; font-weight: 800; line-height: 16px; text-align: center; cursor: pointer;
   }
+
+  /* Avviso di lettura in corso (v18.321.0): pillola in alto sulla mappa, non blocca i clic
+     (prima era un velo bianco su tutta la mappa con un testo fisso). */
+  .ml-loading {
+    position: absolute; top: 10px; left: 50%; transform: translateX(-50%);
+    display: none; align-items: center; gap: 6px; max-width: calc(100% - 140px);
+    padding: 5px 12px; border-radius: 999px; background: rgba(15,23,42,.82); color: white;
+    font-size: 12px; font-weight: 500; z-index: 1000; pointer-events: none;
+    box-shadow: 0 2px 8px rgba(15,23,42,.25); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .ml-chip-n { font-size: 10px; opacity: .7; margin-left: 2px; }
 
   /* Meteo live (Windy): pulsante sotto lo zoom Leaflet, pannello che copre la mappa
      dei cantieri (sotto il drawer di dettaglio, sopra i controlli Leaflet a 1000). */
@@ -2611,7 +2624,7 @@
       </span>
       <button id="btn-presentation" class="px-3 py-1.5 text-sm rounded hover:bg-white/10" style="border:1px solid var(--dark-border-strong);color:var(--dark-text);visibility:visible;">📊 Modalità presentazione</button>
       <div class="text-xs pl-2" style="border-left:1px solid var(--dark-border-strong);color:var(--dark-text-muted);">
-        <span id="app-version" class="font-medium" style="color:var(--accent);">v18.320.0</span> · Michele Marchetti
+        <span id="app-version" class="font-medium" style="color:var(--accent);">v18.322.0</span> · Michele Marchetti
         <span id="sb-role-badge" style="margin-left:8px;padding:1px 8px;border-radius:9999px;background:rgba(255,255,255,.1);color:var(--dark-text);font-weight:600;"></span>
       </div>
     </div>
@@ -4036,6 +4049,11 @@
         <input id="ml-search-tipi" type="text" placeholder="filtra tipi&hellip;" class="ml-filtro-search">
         <div id="ml-filtro-tipi" class="ml-chips"></div>
       </div>
+      <!-- Solo Programmazione, solo con commessa Sinfi + tipo Rilievo MMS/Pedestrian selezionati (mlPrgRenderChipsValid) -->
+      <div id="ml-col-valid" class="ml-filtro-col" style="display:none;">
+        <div class="ml-filtro-h"><span>Validazione SINFI</span><span id="ml-n-valid" class="ml-filtro-n" style="display:none;"></span></div>
+        <div id="ml-filtro-valid" class="ml-chips ml-chips-col"></div>
+      </div>
       <div class="ml-filtro-col">
         <div class="ml-filtro-h"><span>Regione</span><span id="ml-n-regioni" class="ml-filtro-n" style="display:none;"></span></div>
         <input id="ml-search-regioni" type="text" placeholder="filtra regioni&hellip;" class="ml-filtro-search">
@@ -4052,7 +4070,7 @@
       </div>
     </div>
     <div class="ml-filtri-foot">
-      <span id="ml-filtro-hint" class="ml-filtro-hint">Il colore del pin indica solo lo stato del cantiere (legenda «Stato»). Ctrl+clic su più pin: distanze e tempi in auto fra i comuni.</span>
+      <span id="ml-filtro-hint" class="ml-filtro-hint">Il colore del pin indica solo lo stato del cantiere (legenda «Stato»). Ctrl+clic su più pin o su un punto qualsiasi della mappa: distanze e tempi in auto.</span>
       <button id="ml-filtro-clear" class="text-[11px] text-slate-500 underline" style="display:none;">Azzera filtri</button>
     </div>
   </div>
@@ -4090,7 +4108,7 @@
         </label>
         <span class="ml-windy-fonte">Ora attuale · per le altre ore togli la spunta · <a href="https://www.windy.com" target="_blank" rel="noopener">© Windy.com</a></span>
       </div>
-      <div id="ml-loading" class="ml-loading">⏳ Localizzazione cantieri…</div>
+      <div id="ml-loading" class="ml-loading"></div>
       <div id="ml-drawer" class="ml-drawer hidden">
         <div class="ml-drawer-head">
           <b id="ml-drawer-title"></b>

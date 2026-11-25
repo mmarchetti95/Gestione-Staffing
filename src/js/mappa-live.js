@@ -132,8 +132,13 @@ let _mlItems = [];                        // voci filtrate dell'ultimo render, u
 let _mlSelCantiere = null;                // cantiere aperto nel drawer, per ridisegnarlo dopo un refresh
 let _mlTimer = null;
 let _mlAuto = true;
-let _mlBusyJira = false;
-let _mlRendering = false;
+let _mlJiraInCorso = null;                // promessa della lettura stati Task in corso (una alla volta)
+/* Generazione del render (v18.321.0): ogni mlRender la incrementa e un render più vecchio,
+   alla prima attesa, vede di non essere più l'ultimo e si ferma senza disegnare. Prima un
+   render chiesto mentre un altro era in corso (Jira, meteo, localizzazioni) veniva scartato e
+   nessuno lo rilanciava: il cambio «Griglia e Jira» ↔ «Programmazione» restava senza effetto
+   finché non finiva il precedente, e la schermata sembrava bloccata. */
+let _mlGen = 0;
 
 /* ----- Settimana/giorno ----- */
 
@@ -580,24 +585,32 @@ function mlJiraCacheSave() {
 /* Ore/km reali della settimana mostrata. Query dedicata e non riuso di _cpData,
    che è legato alla settimana del Controllo Produzione (pwAnno/pwWeek) e verrebbe
    sovrascritto navigando qui. */
+let _mlCpDi = '';                         // "anno|week" di _mlCp
+
 async function mlLoadProduzione() {
   if (!_sbClient || !_sbUser) return;
   if (_mlDay === ML_ALL) { await mlLoadProduzioneStorico(); return; }
   if (_mlDay === ML_RANGE) { await mlLoadProduzioneRange(); return; }
-  _mlCp = {};
+  // Settimana fissata all'inizio e risultato scritto solo se è ancora quella mostrata: con
+  // due render sovrapposti (v18.321.0) la risposta di una settimana lasciata arriverebbe dopo.
+  const anno = _mlAnno, week = _mlWeek;
+  // Un'altra settimana in memoria: si svuota subito, i suoi numeri non valgono per questa.
+  if (_mlCpDi !== anno + '|' + week) { _mlCp = {}; _mlCpDi = ''; }
+  const cp = {};
   try {
     const { data, error } = await _sbClient
       .from('controllo_produzione')
       .select('commessa,squadra,operatore,giorno,cantiere,ore_jira,ore_report,km_cad,verificato')
-      .eq('anno', _mlAnno)
-      .eq('week', _mlWeek);
+      .eq('anno', anno)
+      .eq('week', week);
     if (error) throw error;
     (data || []).forEach(r => {
-      _mlCp[r.commessa + '|||' + r.squadra + '|||' + r.operatore + '|||' + r.giorno] = r;
+      cp[r.commessa + '|||' + r.squadra + '|||' + r.operatore + '|||' + r.giorno] = r;
     });
   } catch (e) {
     console.error('mlLoadProduzione error:', e);
   }
+  if (anno === _mlAnno && week === _mlWeek) { _mlCp = cp; _mlCpDi = anno + '|' + week; }
 }
 
 /* Vista storico: ore/km cumulati per commessa+squadra+cantiere su TUTTE le
@@ -706,8 +719,10 @@ async function mlLoadProduzioneRange() {
    (campo "parent"): è l'unico legame certo cantiere->Task, vedi il commento in
    supabase/functions/jira-task-status/index.ts. */
 async function mlRefreshTaskStatus(items, force) {
-  if (_mlBusyJira) return;
   if (!_sbClient || !_sbUser) return;
+  // Una lettura di un render precedente ancora in corso: si aspetta che finisca (le sue
+  // risposte finiscono nelle cache) e poi si chiede quel che serve a questo render.
+  while (_mlJiraInCorso) { try { await _mlJiraInCorso; } catch (_) {} }
   const keys = [...new Set(items.flatMap(it => it.subtaskKeys || []))];
   if (!keys.length) { mlSetJiraStatus('Nessun sottotask Jira nei cantieri visibili.'); return; }
 
@@ -720,10 +735,10 @@ async function mlRefreshTaskStatus(items, force) {
   const daChiedere = (soloBuchi && !force) ? keys.filter(k => !(k in _mlTaskBySubtask)) : keys;
   if (!daChiedere.length) { mlSetJiraStatus('Stato Jira già aggiornato per lo storico.'); return; }
 
-  _mlBusyJira = true;
   mlSetJiraStatus('⏳ Aggiornamento stato Jira…');
+  _mlJiraInCorso = mlFetchTaskStatus(daChiedere);
   try {
-    const completo = await mlFetchTaskStatus(daChiedere);
+    const completo = await _mlJiraInCorso;
     const ora = new Date().toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' });
     mlSetJiraStatus(completo
       ? 'Jira aggiornato alle ' + ora
@@ -732,7 +747,7 @@ async function mlRefreshTaskStatus(items, force) {
     console.error('mlRefreshTaskStatus error:', e);
     mlSetJiraStatus('⚠ Jira non raggiungibile');
   } finally {
-    _mlBusyJira = false;
+    _mlJiraInCorso = null;
   }
 }
 
@@ -815,6 +830,7 @@ async function mlRefreshMeteo(groups) {
 
   const now = Date.now();
   const seenPos = new Set();
+  const coda = [];
   for (const g of groups) {
     const geo = mlGeo(g.key);
     if (!geo) continue;
@@ -824,9 +840,17 @@ async function mlRefreshMeteo(groups) {
     const cached = _meteoCache[posKey + '|' + fetchStartISO];
     const isFresh = cached && Array.isArray(cached.hourly) && cached.hourly.length && (now - cached.fetchedAt) < METEO_TTL_MS;
     if (isFresh) continue;
-    await pwFetchMeteoRange(geo.lat, geo.lng, fetchStartISO, fetchEndISO);
+    coda.push(geo);
   }
-  await pcRefreshBollettino();
+  // Qualche richiesta in parallelo (v18.321.0): una alla volta, con decine di cantieri
+  // da aggiornare, il meteo da solo teneva ferma la Mappa per molti secondi.
+  const lavora = async () => {
+    while (coda.length) {
+      const geo = coda.shift();
+      await pwFetchMeteoRange(geo.lat, geo.lng, fetchStartISO, fetchEndISO);
+    }
+  };
+  await Promise.all([lavora(), lavora(), lavora(), lavora(), pcRefreshBollettino()]);
 }
 
 /* ----- Render ----- */
@@ -838,6 +862,8 @@ function mlInit() {
   const street = mapStreetLayer().addTo(_mlMap);
   mapAddSatelliteToggle(_mlMap, street);
   _mlLayer = L.layerGroup().addTo(_mlMap);
+  // Ctrl/Cmd+clic su un punto libero della mappa = tappa della catena distanze (mappa-percorso.js)
+  mlPerAggancia(_mlMap);
   // Pane del radar: sopra le tile (200) e le etichette dell'Ibrida (250), sotto i pin (600).
   _mlMap.createPane('mlRadar').style.zIndex = 350;
   _mlMap.getPane('mlRadar').style.pointerEvents = 'none';
@@ -1245,86 +1271,118 @@ function mlWindyToggle(forza) {
   }
 }
 
+/* Render della Mappa (v18.321.0, progressivo). Si disegna SUBITO con quel che si sa già
+   (rubrica luoghi, stati Task in cache, meteo in cache), poi in sottofondo: localizzazione
+   dei cantieri nuovi (a blocchi, ridisegnando dopo ognuno), produzione, stato dei Task da
+   Jira e meteo in parallelo; a ogni passo concluso si ridisegna. L'avviso sulla mappa
+   (mlAttesa) dice cosa si sta leggendo. Un render più recente ferma questo (vedi _mlGen). */
 async function mlRender(opts) {
   if (!_mlMap) return;
-  if (_mlRendering) return;
-  _mlRendering = true;
   const o = opts || {};
-  const loading = document.getElementById('ml-loading');
-  try {
-    mlRenderToolbar();
-    if (_mlFonte === 'prg') { await mlPrgRender(o); return; }
-    mlRenderDays();
+  const gen = ++_mlGen;
+  mlRenderToolbar();
+  if (_mlFonte === 'prg') { await mlPrgRender(o, gen); return; }
+  const vivo = () => gen === _mlGen && _mlFonte === 'jira' && mlIsActive();
+  mlRenderDays();
 
-    // mlRenderFiltri() va PRIMA di filtrare: è lì che i filtri rimasti su voci non
-    // più presenti (tipico dopo un cambio settimana) vengono scartati. Chiamandola
-    // dopo, quel render uscirebbe vuoto e solo il successivo tornerebbe corretto.
-    // Costruito una volta sola e riusato: in vista storico questa scansione tocca
-    // tutte le settimane di pwData, non conviene farla due volte per render.
-    const tutti = mlBuildItemsCached(_mlDay);
-    mlRenderFiltri(tutti);
-    let items = mlApplyFilters(tutti);
-
-    let groups = mlGroupByCantiere(items);
-
-    if (loading) loading.style.display = 'flex';
-
-    // All'apertura dell'app la rubrica luoghi si sta ancora scaricando da Supabase:
-    // senza attenderla ogni cantiere risulterebbe non localizzato (regione 'n/d')
-    // e verrebbe ricercato di nuovo su Nominatim.
+  // All'apertura dell'app la rubrica luoghi si sta ancora scaricando da Supabase: senza
+  // attenderla ogni cantiere risulterebbe non localizzato e verrebbe ricercato di nuovo.
+  if (!_mlGeoCacheReady) {
+    if (_mlLayer) _mlLayer.clearLayers();
+    mlAttesa(gen, 'carico la rubrica dei luoghi…');
     await mlGeoAttendiRubrica();
-
-    // Si scorrono TUTTI i cantieri dello scope, non solo quelli filtrati: con un
-    // filtro Regione attivo un cantiere non ancora localizzato verrebbe escluso e
-    // così non verrebbe mai localizzato, restando fuori per sempre.
-    const daGeocodificare = await mlGeocodificaGruppi(mlGroupByCantiere(tutti));
-
-    // Le regioni dipendono dalla geocodifica appena fatta: filtri ed elenco vanno
-    // ricalcolati adesso, non al prossimo cambio data (prima restavano 'n/d').
-    mlRenderFiltri(tutti);
-    items = mlApplyFilters(tutti);
-    groups = mlGroupByCantiere(items);
-
-    if (o.reloadProduzione !== false) await mlLoadProduzione();
-    if (o.reloadJira !== false) await mlRefreshTaskStatus(items, o.forceJira === true);
-    await mlRefreshMeteo(groups);
-
-    // Lo stato dei gruppi va ricalcolato DOPO mlRefreshTaskStatus: alla prima
-    // costruzione _mlTasks è ancora quello del render precedente.
-    groups.forEach(g => { g.stato = mlStatoGruppo(g); });
-
-    // Solo ora lo stato è attendibile: si può applicare il filtro e riallineare
-    // gli item (usati da elenco commesse, riepilogo e pannelli KPI) ai soli
-    // cantieri superstiti, altrimenti i conteggi contraddirebbero la mappa.
-    if (_mlFiltroStati.size) {
-      groups = mlApplyFiltroStato(groups);
-      items = groups.reduce((acc, g) => acc.concat(g.items), []);
-    }
-
-    _mlGroups = groups;
-    _mlItems = items;
-    mlDrawMarkers(groups, o.keepView === true);
-    mlRenderLista(groups, items);
-    mlRenderRiepilogo(groups, items);
-
-    // Se il drawer era aperto su un cantiere ancora visibile, lo ridisegna aggiornato.
-    // Quando è aperta una commessa _mlSelCantiere è null, così la vista commessa
-    // non viene sostituita dal dettaglio cantiere al primo refresh.
-    if (_mlSelCantiere) {
-      const still = groups.findIndex(g => g.key === _mlSelCantiere);
-      if (still >= 0) mlOpenDettaglio(still, true); else mlCloseDrawer();
-    }
-
-    // Restano cantieri da localizzare: si riprende fra poco, senza bloccare l'interfaccia.
-    if (daGeocodificare > 0) {
-      setTimeout(() => {
-        if (mlIsActive()) mlRender({ reloadJira: false, reloadProduzione: false, keepView: true });
-      }, 1200);
-    }
-  } finally {
-    if (loading) loading.style.display = 'none';
-    _mlRendering = false;
+    if (!vivo()) return;
   }
+  mlDisegnaJira(o.keepView === true);
+
+  const passi = {};
+  const avviso = () => {
+    if (!vivo()) return;
+    const t = Object.keys(passi).map(k => passi[k]).filter(Boolean);
+    mlAttesa(gen, t.length ? t.join(' · ') + '…' : null);
+  };
+  const passo = (k, testo, promessa) => {
+    passi[k] = testo;
+    avviso();
+    return Promise.resolve(promessa)
+      .catch(e => console.error('mlRender ' + k + ':', e))
+      .then(() => { passi[k] = ''; avviso(); });
+  };
+  try {
+    // Produzione e Jira non dipendono dalle posizioni: partono subito, in parallelo.
+    const prod = o.reloadProduzione !== false ? passo('prod', 'leggo la produzione', mlLoadProduzione()) : null;
+    const jira = o.reloadJira !== false
+      ? passo('jira', 'leggo lo stato dei Task da Jira',
+        mlRefreshTaskStatus(mlApplyFilters(mlBuildItemsCached(_mlDay)), o.forceJira === true))
+      : null;
+
+    // Localizzazione: TUTTI i cantieri dello scope, non solo i filtrati (con un filtro Regione
+    // un cantiere mai localizzato resterebbe fuori per sempre). A blocchi, ridisegnando dopo
+    // ognuno: le regioni e i pin dipendono da questa geocodifica.
+    for (;;) {
+      const gruppi = mlGroupByCantiere(mlBuildItemsCached(_mlDay)).filter(g => mlGeoPending(g.key));
+      if (!gruppi.length) break;
+      passi.geo = 'localizzo ' + gruppi.length + (gruppi.length === 1 ? ' cantiere' : ' cantieri');
+      avviso();
+      await mlGeocodificaGruppi(gruppi, vivo);
+      if (!vivo()) return;
+      mlDisegnaJira(true);
+    }
+    passi.geo = '';
+
+    const meteo = passo('meteo', 'leggo il meteo', mlRefreshMeteo(_mlGroups));
+    if (jira) {
+      await jira;
+      if (!vivo()) return;
+      mlDisegnaJira(true);
+    }
+    await Promise.all([prod, meteo]);
+    if (!vivo()) return;
+    mlDisegnaJira(true);
+  } finally {
+    if (gen === _mlGen) mlAttesa(gen, null);
+  }
+}
+
+/* Disegno della vista «Griglia e Jira» senza nessuna attesa di rete: voci, filtri, stato
+   dei gruppi dalle cache, pin, elenco, riepilogo e drawer aperto. */
+function mlDisegnaJira(keepView) {
+  // mlRenderFiltri() va PRIMA di filtrare: è lì che i filtri rimasti su voci non più
+  // presenti (tipico dopo un cambio settimana) vengono scartati. Voci costruite una volta
+  // sola: in vista storico la scansione tocca tutte le settimane di pwData.
+  const tutti = mlBuildItemsCached(_mlDay);
+  mlRenderFiltri(tutti);
+  let items = mlApplyFilters(tutti);
+  let groups = mlGroupByCantiere(items);
+  groups.forEach(g => { g.stato = mlStatoGruppo(g); });
+  // Il filtro Stato riallinea anche gli item (elenco commesse, riepilogo, pannelli KPI),
+  // altrimenti i conteggi contraddirebbero la mappa.
+  if (_mlFiltroStati.size) {
+    groups = mlApplyFiltroStato(groups);
+    items = groups.reduce((acc, g) => acc.concat(g.items), []);
+  }
+  _mlGroups = groups;
+  _mlItems = items;
+  mlDrawMarkers(groups, keepView);
+  mlRenderLista(groups, items);
+  mlRenderRiepilogo(groups, items);
+  // Drawer aperto su un cantiere ancora visibile: ridisegnato aggiornato. Con una commessa
+  // aperta _mlSelCantiere è null, così la vista commessa non viene sostituita.
+  if (_mlSelCantiere) {
+    const still = groups.findIndex(g => g.key === _mlSelCantiere);
+    if (still >= 0) mlOpenDettaglio(still, true); else mlCloseDrawer();
+  }
+}
+
+/* Avviso sulla mappa di cosa si sta leggendo: una pillola in alto che non blocca i clic
+   (prima un velo bianco su tutta la mappa con scritto sempre «Localizzazione cantieri»).
+   Solo il render più recente lo scrive. */
+function mlAttesa(gen, testo) {
+  if (gen !== _mlGen) return;
+  const el = document.getElementById('ml-loading');
+  if (!el) return;
+  el.textContent = testo ? '⏳ ' + testo : '';
+  el.style.display = testo ? 'flex' : 'none';
 }
 
 async function mlGeoAttendiRubrica() {
@@ -1337,12 +1395,12 @@ async function mlGeoAttendiRubrica() {
 /* Geocodifica sequenziale dei luoghi non ancora in rubrica (rate-limit Nominatim), a
    blocchi di ML_GEO_MAX_PER_RENDER: ritorna quanti ne restano, che il chiamante riprende
    con un render di coda. Gruppi = { key, cantiere } (Griglia o Programmazione). */
-async function mlGeocodificaGruppi(gruppi) {
+async function mlGeocodificaGruppi(gruppi, vivo) {
   let fatti = 0;
   let resto = 0;
   for (const g of gruppi) {
     if (!mlGeoPending(g.key)) continue;
-    if (fatti >= ML_GEO_MAX_PER_RENDER) { resto++; continue; }
+    if (fatti >= ML_GEO_MAX_PER_RENDER || (vivo && !vivo())) { resto++; continue; }
     await geocodifica(g.cantiere);
     if (!(g.key in _geoCache)) _mlGeoFailed.add(g.key);
     await new Promise(r => setTimeout(r, 300));
@@ -1385,11 +1443,14 @@ function mlRenderToolbar() {
   if (colOp) colOp.style.display = prg ? 'none' : '';
   const colTipi = document.getElementById('ml-col-tipi');
   if (colTipi) colTipi.style.display = prg ? '' : 'none';
+  // «Validazione SINFI»: solo Programmazione, e lì la mostra mlPrgRenderChipsValid.
+  const colValid = document.getElementById('ml-col-valid');
+  if (colValid && !prg) colValid.style.display = 'none';
   const hint = document.getElementById('ml-filtro-hint');
   if (hint) hint.textContent = (prg
     ? 'Il colore del pin è lo stato dell\'elemento nella Programmazione (legenda «Stato»); più elementi nello stesso comune = pin a spicchi.'
     : 'Il colore del pin indica solo lo stato del cantiere (legenda «Stato»).') +
-    ' Ctrl+clic su più pin: distanze e tempi in auto fra i comuni.';
+    ' Ctrl+clic su più pin o su un punto qualsiasi della mappa: distanze e tempi in auto.';
   const lbl = document.getElementById('ml-header-dates');
   if (lbl) {
     lbl.textContent = prg
@@ -1501,7 +1562,11 @@ function mlRenderFiltri(tutti) {
     if (elReg) elReg.insertAdjacentHTML('beforeend', '<span class="ml-empty">⏳ in caricamento…</span>');
   }
   mlRenderChips('ml-filtro-cantieri', cantieri, _mlFiltroCantieri, _mlSearchCantieri, 'nessun cantiere pianificato', false);
-  if (_mlFonte === 'prg') { mlPrgRenderChipsStato(); mlPrgRenderChipsTipi(all); } else mlRenderChipsStato();
+  if (_mlFonte === 'prg') {
+    mlPrgRenderChipsStato();
+    mlPrgRenderChipsTipi(all);
+    mlPrgRenderChipsValid(all);   // dopo i tipi: dipende da quali restano selezionati
+  } else mlRenderChipsStato();
 
   mlSetFiltroCount('ml-n-commesse', _mlFiltroCommesse.size);
   mlSetFiltroCount('ml-n-operatori', _mlFiltroOperatori.size);
@@ -1510,7 +1575,7 @@ function mlRenderFiltri(tutti) {
   mlSetFiltroCount('ml-n-stati', _mlFiltroStati.size);
 
   const nAttivi = _mlFiltroCommesse.size + _mlFiltroOperatori.size + _mlFiltroRegioni.size +
-    _mlFiltroCantieri.size + _mlFiltroStati.size + (_mlFonte === 'prg' ? _mlFiltroTipi.size : 0);
+    _mlFiltroCantieri.size + _mlFiltroStati.size + (_mlFonte === 'prg' ? _mlFiltroTipi.size + _mlFiltroValid.size : 0);
   const btnClear = document.getElementById('ml-filtro-clear');
   if (btnClear) btnClear.style.display = nAttivi ? '' : 'none';
 }
@@ -1572,6 +1637,7 @@ function mlClearFiltri() {
   _mlFiltroRegioni.clear();
   _mlFiltroCantieri.clear();
   _mlFiltroTipi.clear();
+  _mlFiltroValid.clear();
   _mlSearchTipi = '';
   _mlSearchCommesse = '';
   _mlSearchOperatori = '';
@@ -1763,17 +1829,14 @@ async function mlGeoFixSubmit(cantiere, inp) {
     const precedente = inp.value;
     inp.value = 'Ricerca…';
     try {
-      const url = 'https://nominatim.openstreetmap.org/search?format=json&limit=1&q=' + encodeURIComponent(query);
-      const res = await fetch(url, { headers: { 'Accept-Language': 'it', 'User-Agent': 'StaffingDashboard/1.0' } });
-      const data = await res.json();
+      result = await geoCercaComune(query, geoNominatimCerca);
       inp.disabled = false;
       inp.value = precedente;
-      if (!data || !data.length) {
+      if (!result) {
         inp.style.borderColor = '#ef4444';
         inp.placeholder = 'Non trovato, riprova…';
         return;
       }
-      result = { lat: parseFloat(data[0].lat), lng: parseFloat(data[0].lon), label: data[0].display_name };
       inp.style.borderColor = '';
     } catch (e) {
       inp.disabled = false;

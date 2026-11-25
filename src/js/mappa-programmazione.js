@@ -40,6 +40,54 @@ let _mlPrgStati = [];          // [{ k, l, c }] = ML_PRG_STATI con i colori dell
 let _mlPrgEsclusi = 0;         // elementi in altri stati o senza stato, non mostrati
 const ML_PRG_TIPO_ND = '— senza tipo';
 
+/* Filtro «Validazione SINFI» (v18.321.0, scelta dell'utente): la colonna spunta
+   «Validazione SINFI» della board SINFI MMS/PEDESTRIAN. La colonna di filtro compare (ed è
+   cliccabile) solo quando sono selezionati INSIEME la commessa Sinfi e il tipo attività
+   Rilievo MMS e/o Rilievo Pedestrian; se una delle due condizioni cade il filtro si azzera,
+   così non resta attivo e invisibile. Colonna trovata per titolo (spunta), mai per id di
+   board: gli elementi delle board che non l'hanno (es. SINFI WALKOUT) sono «senza colonna». */
+const ML_PRG_VALID_COL = /^validazione sinfi/;
+const ML_PRG_VALID_COMMESSA = 'sinfi';
+const ML_PRG_VALID_TIPI = /^rilievo (mms|pedestrian)/;
+const ML_PRG_VALID = [
+  { k: 'si', l: '✓ Validato', c: '#037f4c', t: 'Elementi con «Validazione SINFI» spuntata' },
+  { k: 'no', l: '✗ Non validato', c: '#e2445c', t: 'Elementi con «Validazione SINFI» non spuntata' },
+  { k: 'nd', l: '— senza colonna', c: '#cbd5e1', t: 'Elementi di board senza la colonna «Validazione SINFI» (es. SINFI WALKOUT)' },
+];
+let _mlFiltroValid = new Set();
+
+function mlPrgColValid(b) {
+  return prgCols(b).find(c => c.tipo === 'check' && ML_PRG_VALID_COL.test(caNorm(c.titolo || ''))) || null;
+}
+
+function mlPrgValidAttiva() {
+  if (_mlFonte !== 'prg') return false;
+  const commessa = [..._mlFiltroCommesse].some(c => caNorm(c) === ML_PRG_VALID_COMMESSA);
+  const tipo = [..._mlFiltroTipi].some(t => ML_PRG_VALID_TIPI.test(caNorm(t)));
+  return commessa && tipo;
+}
+
+/* Colonna «Validazione SINFI»: visibile solo con le due condizioni; numeri sulle chip =
+   elementi che passano tutti gli altri filtri. */
+function mlPrgRenderChipsValid(all) {
+  const col = document.getElementById('ml-col-valid');
+  const el = document.getElementById('ml-filtro-valid');
+  const on = mlPrgValidAttiva();
+  if (col) col.style.display = on ? '' : 'none';
+  if (!on) { _mlFiltroValid.clear(); mlSetFiltroCount('ml-n-valid', 0); return; }
+  const n = { si: 0, no: 0, nd: 0 };
+  mlPrgFiltra(all, true).forEach(it => { n[it.valid] = (n[it.valid] || 0) + 1; });
+  if (el) {
+    el.innerHTML = ML_PRG_VALID.filter(v => v.k !== 'nd' || n.nd || _mlFiltroValid.has('nd')).map(v =>
+      '<button class="ml-chip' + (_mlFiltroValid.has(v.k) ? ' active' : '') + '" style="--chip:' + esc(v.c) +
+      '" data-v="' + esc(v.k) + '" title="' + esc(v.t) + '">' + esc(v.l) + ' <span class="ml-chip-n">' + (n[v.k] || 0) + '</span></button>').join('');
+    el.querySelectorAll('.ml-chip').forEach(b => {
+      b.onclick = () => { mlToggleSet(_mlFiltroValid, b.dataset.v); mlRender({ keepView: true }); };
+    });
+  }
+  mlSetFiltroCount('ml-n-valid', _mlFiltroValid.size);
+}
+
 function mlPrgPuo() {
   return typeof sbCanSeePage !== 'function' || sbCanSeePage('programmazione');
 }
@@ -54,20 +102,27 @@ function mlSetFonte(f) {
   _mlFiltroStati.clear();
   _mlFiltroOperatori.clear();
   _mlFiltroTipi.clear();
+  _mlFiltroValid.clear();
   mlCloseDrawer();
   mlRender({});
 }
 
 /* Board con colonna di stato ed elementi in memoria (stessi dati della Programmazione e
-   della Griglia: se già caricati non si rilegge nulla). `forza` = «🔄 Aggiorna». */
+   della Griglia: se già caricati non si rilegge nulla). `forza` = «🔄 Aggiorna».
+   Board lette in parallelo (v18.321.0: una alla volta le attese si sommavano) e una sola
+   lettura alla volta: un render che arriva durante la lettura aspetta la stessa. */
+let _mlPrgCaricando = null;
 async function mlPrgCarica(forza) {
   if (!_sbClient || !_sbUser) return;
-  await prgCarica();
-  for (const b of _prg.boards) {
-    if (!prgColonnaGruppoBoard(b)) continue;
-    if (forza || !_prg.caricate[b.id]) await prgCaricaBoard(b.id, forza);
-  }
-  prgSubscribe();
+  if (_mlPrgCaricando && !forza) return _mlPrgCaricando;
+  const p = (async () => {
+    await prgCarica();
+    const da = _prg.boards.filter(b => prgColonnaGruppoBoard(b) && (forza || !_prg.caricate[b.id]));
+    await Promise.all(da.map(b => prgCaricaBoard(b.id, forza)));
+    prgSubscribe();
+  })();
+  _mlPrgCaricando = p;
+  try { await p; } finally { if (_mlPrgCaricando === p) _mlPrgCaricando = null; }
 }
 
 function mlPrgComune(b, el) {
@@ -90,6 +145,7 @@ function mlPrgBuildItems() {
   _prg.boards.forEach(b => {
     const gc = prgColonnaGruppoBoard(b);
     if (!gc || !_prg.caricate[b.id]) return;
+    const cv = mlPrgColValid(b);
     const opz = gc.opzioni || [];
     opz.forEach(o => {
       const s = mlPrgStatoDi(o.label);
@@ -107,6 +163,7 @@ function mlPrgBuildItems() {
         nome: el.nome || '', operatori: [], link: prgLink(el),
         stato: s.k, statoL: s.l, colore: colori[s.k] || s.c,
         ordine: ML_PRG_STATI.indexOf(s),
+        valid: cv ? ((el.valori || {})[cv.id] ? 'si' : 'no') : 'nd',
       });
     });
   });
@@ -132,10 +189,12 @@ function mlPrgPassaTipo(it) {
   return it.tipi.some(t => _mlFiltroTipi.has(t));
 }
 
-function mlPrgFiltra(tutti) {
+/* `senzaValid` = tutti i filtri tranne «Validazione SINFI» (per i numeri sulle sue chip). */
+function mlPrgFiltra(tutti, senzaValid) {
   let items = mlApplyFilters(tutti);
   if (_mlFiltroStati.size) items = items.filter(it => _mlFiltroStati.has(it.stato || ML_PRG_ND));
   if (_mlFiltroTipi.size) items = items.filter(mlPrgPassaTipo);
+  if (!senzaValid && _mlFiltroValid.size && mlPrgValidAttiva()) items = items.filter(it => _mlFiltroValid.has(it.valid));
   return items;
 }
 
@@ -237,32 +296,46 @@ function mlPrgMarkerHtml(g) {
     '<span class="ml-pin-n">' + g.items.length + '</span></div>';
 }
 
-/* Render della vista Programmazione: chiamata da mlRender (che gestisce _mlRendering e
-   l'indicatore di caricamento). */
-/* Niente attese sulla geocodifica (v18.307.0): con centinaia di comuni mai cercati il render
+/* Render della vista Programmazione: chiamata da mlRender con la sua generazione (_mlGen):
+   un render più recente ferma questo alla prima attesa.
+   Niente attese sulla geocodifica (v18.307.0): con centinaia di comuni mai cercati il render
    restava fermo sotto «caricamento» per minuti. Si disegna subito con le posizioni già in
-   rubrica; i comuni nuovi si cercano in sottofondo (mlPrgGeoSfondo) e i pin compaiono man mano. */
-async function mlPrgRender(o) {
-  const loading = document.getElementById('ml-loading');
-  const daLeggere = o.forcePrg === true || !_prg.pronto ||
+   rubrica; i comuni nuovi si cercano in sottofondo (mlPrgGeoSfondo) e i pin compaiono man mano.
+   Board già in memoria (di solito: le precarica il login) = disegno immediato; quelle che
+   mancano si leggono con l'avviso sulla mappa e si ridisegna (v18.321.0). */
+async function mlPrgRender(o, gen) {
+  const vivo = () => gen === _mlGen && _mlFonte === 'prg' && mlIsActive();
+  const forza = o.forcePrg === true;
+  const daLeggere = forza || !_prg.pronto ||
     _prg.boards.some(b => prgColonnaGruppoBoard(b) && !_prg.caricate[b.id]);
-  if (daLeggere && loading) loading.style.display = 'flex';
-  try {
-    await mlPrgCarica(o.forcePrg === true);
-  } catch (e) {
-    _prg.errore = e.message || String(e);
+  // Nulla in memoria: niente disegno a vuoto (scarterebbe i filtri di commessa/cantiere come
+  // «non più presenti»), ma via i pin dell'altra fonte finché arrivano le board.
+  if (_mlGeoCacheReady && _prg.boards.some(b => _prg.caricate[b.id])) mlPrgDisegna(o.keepView === true);
+  else if (_mlLayer) _mlLayer.clearLayers();
+  if (daLeggere || !_mlGeoCacheReady) {
+    mlAttesa(gen, daLeggere ? (forza ? 'rileggo' : 'leggo') + ' le board della Programmazione…' : 'carico la rubrica dei luoghi…');
+    try {
+      await mlPrgCarica(forza);
+    } catch (e) {
+      _prg.errore = e.message || String(e);
+    }
+    await mlGeoAttendiRubrica();
+    if (gen === _mlGen) mlAttesa(gen, null);
+    if (!vivo()) return;
+    mlPrgDisegna(o.keepView === true);
   }
-  await mlGeoAttendiRubrica();
-  if (loading) loading.style.display = 'none';
-  mlPrgAppSfondo(o.forcePrg === true);
+  mlPrgAppSfondo(forza);
+}
 
+/* Disegno della vista Programmazione con i dati in memoria, senza attese di rete. */
+function mlPrgDisegna(keepView) {
   const tutti = mlPrgBuildItems();
   mlRenderFiltri(tutti);
   const items = mlPrgFiltra(tutti);
   const groups = mlPrgRaggruppa(items);
   _mlGroups = groups;
   _mlItems = items;
-  mlDrawMarkers(groups, o.keepView === true);
+  mlDrawMarkers(groups, keepView);
   mlPrgRenderLista(groups, items);
   mlPrgRenderRiepilogo(groups, items);
   mlPrgTestata();
@@ -318,9 +391,10 @@ async function mlPrgGeoSfondo(gruppi) {
   }
 }
 
+/* Ridisegno senza riletture: dati già in memoria, nessun render da interrompere. */
 function mlPrgRidisegna() {
-  if (_mlFonte !== 'prg' || !mlIsActive() || _mlRendering) return;
-  mlRender({ keepView: true });
+  if (_mlFonte !== 'prg' || !mlIsActive() || !_mlMap || !_mlGeoCacheReady) return;
+  mlPrgDisegna(true);
 }
 
 /* Chip «Stato»: le etichette di tutte le board (fisse, anche se nessun elemento è in quello
@@ -489,10 +563,8 @@ function mlPrgApri(it) {
   prgApriDrawer(it.el.id, 'dettagli');
 }
 
-/* Realtime della Programmazione (da _prgRtRender, già con debounce): ridisegna la Mappa se
-   è aperta su questa fonte. Durante un render in corso riprova poco dopo. */
+/* Realtime della Programmazione (da _prgRtRender, già con debounce) e fine lettura dei tipi
+   di attività: ridisegna la Mappa se è aperta su questa fonte. */
 function mlPrgOnDataChanged() {
-  if (_mlFonte !== 'prg' || !mlIsActive()) return;
-  if (_mlRendering) { setTimeout(mlPrgOnDataChanged, 600); return; }
-  mlRender({ keepView: true });
+  mlPrgRidisegna();
 }

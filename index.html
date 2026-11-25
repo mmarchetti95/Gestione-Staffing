@@ -1939,12 +1939,25 @@
     border: 2px solid white; box-shadow: 0 1px 3px rgba(15,23,42,.5);
     font-size: 11px; font-weight: 700; line-height: 16px; text-align: center;
   }
-
-  .ml-loading {
-    position: absolute; inset: 0; background: rgba(255,255,255,.7);
-    display: none; align-items: center; justify-content: center;
-    font-size: 13px; color: #475569; z-index: 500;
+  /* Punto libero della catena (Ctrl+clic su un punto qualsiasi): non c'è un pin sotto,
+     quindi il numero sta proprio sul punto ed è cliccabile (Ctrl+clic = toglie). */
+  .ml-per-punto-wrap { background: transparent; border: none; }
+  .ml-per-punto {
+    width: 22px; height: 22px; border-radius: 50%; background: white; color: #4f46e5;
+    border: 3px solid #4f46e5; box-shadow: 0 1px 4px rgba(15,23,42,.45);
+    font-size: 11px; font-weight: 800; line-height: 16px; text-align: center; cursor: pointer;
   }
+
+  /* Avviso di lettura in corso (v18.321.0): pillola in alto sulla mappa, non blocca i clic
+     (prima era un velo bianco su tutta la mappa con un testo fisso). */
+  .ml-loading {
+    position: absolute; top: 10px; left: 50%; transform: translateX(-50%);
+    display: none; align-items: center; gap: 6px; max-width: calc(100% - 140px);
+    padding: 5px 12px; border-radius: 999px; background: rgba(15,23,42,.82); color: white;
+    font-size: 12px; font-weight: 500; z-index: 1000; pointer-events: none;
+    box-shadow: 0 2px 8px rgba(15,23,42,.25); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .ml-chip-n { font-size: 10px; opacity: .7; margin-left: 2px; }
 
   /* Meteo live (Windy): pulsante sotto lo zoom Leaflet, pannello che copre la mappa
      dei cantieri (sotto il drawer di dettaglio, sopra i controlli Leaflet a 1000). */
@@ -2611,7 +2624,7 @@
       </span>
       <button id="btn-presentation" class="px-3 py-1.5 text-sm rounded hover:bg-white/10" style="border:1px solid var(--dark-border-strong);color:var(--dark-text);visibility:visible;">📊 Modalità presentazione</button>
       <div class="text-xs pl-2" style="border-left:1px solid var(--dark-border-strong);color:var(--dark-text-muted);">
-        <span id="app-version" class="font-medium" style="color:var(--accent);">v18.320.0</span> · Michele Marchetti
+        <span id="app-version" class="font-medium" style="color:var(--accent);">v18.322.0</span> · Michele Marchetti
         <span id="sb-role-badge" style="margin-left:8px;padding:1px 8px;border-radius:9999px;background:rgba(255,255,255,.1);color:var(--dark-text);font-weight:600;"></span>
       </div>
     </div>
@@ -4036,6 +4049,11 @@
         <input id="ml-search-tipi" type="text" placeholder="filtra tipi&hellip;" class="ml-filtro-search">
         <div id="ml-filtro-tipi" class="ml-chips"></div>
       </div>
+      <!-- Solo Programmazione, solo con commessa Sinfi + tipo Rilievo MMS/Pedestrian selezionati (mlPrgRenderChipsValid) -->
+      <div id="ml-col-valid" class="ml-filtro-col" style="display:none;">
+        <div class="ml-filtro-h"><span>Validazione SINFI</span><span id="ml-n-valid" class="ml-filtro-n" style="display:none;"></span></div>
+        <div id="ml-filtro-valid" class="ml-chips ml-chips-col"></div>
+      </div>
       <div class="ml-filtro-col">
         <div class="ml-filtro-h"><span>Regione</span><span id="ml-n-regioni" class="ml-filtro-n" style="display:none;"></span></div>
         <input id="ml-search-regioni" type="text" placeholder="filtra regioni&hellip;" class="ml-filtro-search">
@@ -4052,7 +4070,7 @@
       </div>
     </div>
     <div class="ml-filtri-foot">
-      <span id="ml-filtro-hint" class="ml-filtro-hint">Il colore del pin indica solo lo stato del cantiere (legenda «Stato»). Ctrl+clic su più pin: distanze e tempi in auto fra i comuni.</span>
+      <span id="ml-filtro-hint" class="ml-filtro-hint">Il colore del pin indica solo lo stato del cantiere (legenda «Stato»). Ctrl+clic su più pin o su un punto qualsiasi della mappa: distanze e tempi in auto.</span>
       <button id="ml-filtro-clear" class="text-[11px] text-slate-500 underline" style="display:none;">Azzera filtri</button>
     </div>
   </div>
@@ -4090,7 +4108,7 @@
         </label>
         <span class="ml-windy-fonte">Ora attuale · per le altre ore togli la spunta · <a href="https://www.windy.com" target="_blank" rel="noopener">© Windy.com</a></span>
       </div>
-      <div id="ml-loading" class="ml-loading">⏳ Localizzazione cantieri…</div>
+      <div id="ml-loading" class="ml-loading"></div>
       <div id="ml-drawer" class="ml-drawer hidden">
         <div class="ml-drawer-head">
           <b id="ml-drawer-title"></b>
@@ -33577,6 +33595,109 @@ function _cpFornWlRender() {
       : '<div style="padding:24px;text-align:center;color:#94a3b8;font-size:13px;">' + (r ? 'Nessun sottotask di dipendenti fornitore nel periodo.' : '') + '</div>')
     + '</div>';
 }
+/* ===== GEOCODIFICA COMUNI (modulo puro) ===== */
+/* Sceglie, fra i risultati di Nominatim, il COMUNE (o centro abitato) che corrisponde
+   al nome di un cantiere. Modulo puro: niente DOM, niente fetch, niente globali — la
+   ricerca in rete la passa chi chiama (`cerca`), così lo stesso codice gira nell'app
+   (geocodifica() in weekly-mappa.js, Pianifica spostamenti) e negli script di verifica
+   della rubrica luoghi.
+
+   Perché (v18.322.0): la vecchia ricerca prendeva il primo risultato di
+   `q=<nome>&limit=1`, senza filtro di nazione. Per i capoluoghi il primo risultato è
+   la PROVINCIA (più «importante»), il cui punto è il baricentro del territorio:
+   Sondrio finiva a 35 km dalla città, in alta Valtellina; Livorno in mare. In più
+   omonimi esteri (Sarre → Saarland, Ossasco → Svizzera), nomi con «Auto»/«IP»
+   trovati come officine o distributori (Malo Auto → Camerun) e casi come
+   Temù → fiume Temo in Sardegna. Qui: solo Italia, mai aree amministrative più grandi
+   del comune, nome esatto prima, sigla provincia facoltativa, e parole finali tolte
+   una alla volta se il nome intero non è un luogo abitato. */
+
+const GEO_NOMINATIM_URL = 'https://nominatim.openstreetmap.org/search?format=jsonv2&addressdetails=1&limit=10' +
+                          '&countrycodes=it&accept-language=it&q=';
+const GEO_TIPI_COMUNE = ['city', 'town', 'village', 'municipality'];
+const GEO_TIPI_FRAZIONE = ['hamlet', 'suburb', 'quarter', 'neighbourhood', 'isolated_dwelling', 'locality', 'croft', 'city_district'];
+/* Un tentativo accorciato che finisce con una di queste non è un nome di luogo */
+const GEO_PAROLE_MONCHE = ['di', 'del', 'della', 'delle', 'dei', 'degli', 'dello', 'da', 'la', 'le', 'lo', 'il', 'i', 'in',
+                           'sul', 'sulla', 'al', 'alla', 'san', 'santa', 'sant', 'santo', 'monte', 'val', 'e'];
+
+function geoNorm(s) {
+  return String(s || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '')
+    .replace(/[''`´_.\-\/]/g, ' ').replace(/\s+/g, ' ').trim();
+}
+
+/* "Ivrea (TO)" / "Montefortino, FM" → sigla 'TO'/'FM'; poi i nomi da provare in ordine:
+   intero, prima parte di "A - B", e il nome con le parole finali tolte una alla volta
+   (al massimo 3: «San Quirino Auto» → «San Quirino»). */
+function geoTentativi(nome) {
+  let base = String(nome || '').trim();
+  let sigla = '';
+  const m = base.match(/^(.*?)\s*(?:\(\s*([A-Za-z]{2})\s*\)|,\s*([A-Za-z]{2}))\s*$/);
+  if (m && m[1]) { base = m[1].trim(); sigla = (m[2] || m[3]).toUpperCase(); }
+  const tentativi = [];
+  const aggiungi = t => {
+    t = t.replace(/\s+/g, ' ').replace(/[\s\-–,;:\/_.]+$/, '').trim();
+    if (geoNorm(t).length >= 2 && tentativi.indexOf(t) < 0) tentativi.push(t);
+  };
+  aggiungi(base);
+  const parti = base.split(/\s+-\s+|_|\s+\/\s+/);
+  if (parti.length > 1) aggiungi(parti[0]);
+  const parole = base.split(/\s+/);
+  for (let k = parole.length - 1; k >= Math.max(1, parole.length - 3); k--) {
+    const ultima = geoNorm(parole[k - 1]);
+    if (GEO_PAROLE_MONCHE.indexOf(ultima) >= 0) continue;
+    aggiungi(parole.slice(0, k).join(' '));
+  }
+  return { sigla, tentativi };
+}
+
+function _geoStessoNome(r, qn) {
+  const n = geoNorm(r.name || '');
+  return n === qn || n.replace(/ /g, '') === qn.replace(/ /g, '');
+}
+
+function _geoPunto(r) {
+  return { lat: parseFloat(r.lat), lng: parseFloat(r.lon), label: r.display_name };
+}
+
+/* Fra i risultati di UNA ricerca: comuni e centri abitati soltanto. Ordine: nome
+   identico prima, poi comune prima di frazione, poi l'ordine di Nominatim. Con la
+   sigla restano i risultati di quella provincia (se ce ne sono). Nomi di 1-2 lettere
+   («Ne», «Re») solo se identici, altrimenti «p» o «da» trovano qualunque cosa. */
+function geoScegli(risultati, q, sigla) {
+  if (!Array.isArray(risultati) || !risultati.length) return null;
+  const qn = geoNorm(q);
+  let cand = risultati;
+  if (sigla) {
+    const inProv = cand.filter(r => r.address && r.address['ISO3166-2-lvl6'] === 'IT-' + sigla);
+    if (inProv.length) cand = inProv;
+  }
+  const valutati = [];
+  cand.forEach((r, i) => {
+    const tipo = GEO_TIPI_COMUNE.indexOf(r.addresstype) >= 0 ? 0
+               : GEO_TIPI_FRAZIONE.indexOf(r.addresstype) >= 0 ? 1 : -1;
+    if (tipo < 0) return;
+    const nome = _geoStessoNome(r, qn) ? 0 : 1;
+    if (qn.length < 3 && nome) return;
+    valutati.push({ r, i, tipo, nome });
+  });
+  if (!valutati.length) return null;
+  valutati.sort((a, b) => a.nome - b.nome || a.tipo - b.tipo || a.i - b.i);
+  return _geoPunto(valutati[0].r);
+}
+
+/* → {lat,lng,label} | null (non trovato). `cerca(q)` = async, restituisce l'array di
+   risultati Nominatim per GEO_NOMINATIM_URL + q; un suo errore (rete) si propaga, così
+   chi chiama non scambia un guasto per un «non trovato». Nessun ripiego su strade,
+   ponti, esercizi: un cantiere è un comune, e un nome che non lo è («Viaggio» →
+   Punta Viaggio a Ponza) è meglio «non trovato» e corretto a mano con la ✏️. */
+async function geoCercaComune(nome, cerca) {
+  const { sigla, tentativi } = geoTentativi(nome);
+  for (let i = 0; i < tentativi.length; i++) {
+    const g = geoScegli(await cerca(tentativi[i]), tentativi[i], sigla);
+    if (g) return g;
+  }
+  return null;
+}
 /* ==================== MAPPA LEAFLET + NOMINATIM ==================== */
 const MAP_COLORS = ['#0d9488','#6366f1','#f59e0b','#ef4444','#10b981','#8b5cf6','#ec4899','#0ea5e9','#f97316','#84cc16'];
 const MAP_COLOR_SCONOSCIUTA = '#94a3b8';
@@ -33654,7 +33775,27 @@ async function _geoCacheSave() {
   try { await sset('geo_cache_v1', _geoCache); } catch(e) {}
 }
 
-/* Geocodifica singolo nome via Nominatim */
+/* Una ricerca Nominatim alla volta, almeno 1,1 s fra l'una e l'altra (regole d'uso del
+   servizio). In coda unica perché geoCercaComune può fare più tentativi per un nome e
+   più moduli (Mappa, meteo, regione) geocodificano insieme. → array di risultati;
+   un errore HTTP/rete viene rilanciato. */
+let _geoNomCoda = Promise.resolve();
+let _geoNomUltima = 0;
+function geoNominatimCerca(q) {
+  const giro = _geoNomCoda.then(async () => {
+    const attesa = _geoNomUltima + 1100 - Date.now();
+    if (attesa > 0) await new Promise(r => setTimeout(r, attesa));
+    _geoNomUltima = Date.now();
+    const res = await fetch(GEO_NOMINATIM_URL + encodeURIComponent(q), { headers: { 'Accept-Language': 'it' } });
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    const data = await res.json();
+    return Array.isArray(data) ? data : [];
+  });
+  _geoNomCoda = giro.catch(() => {});
+  return giro;
+}
+
+/* Geocodifica singolo nome: comune italiano via geoCercaComune (geo-comune.js) */
 async function geocodifica(nome) {
   const key = nome.toLowerCase().trim().replace(/\s+/g, ' ');
   if (!key) return null;
@@ -33662,11 +33803,7 @@ async function geocodifica(nome) {
   const statusEl = document.getElementById('pw-map-geocoding-status');
   if (statusEl) statusEl.textContent = 'Ricerca: ' + nome + '…';
   try {
-    const url = 'https://nominatim.openstreetmap.org/search?format=json&limit=1&q=' + encodeURIComponent(nome);
-    const res = await fetch(url, { headers: { 'Accept-Language': 'it', 'User-Agent': 'StaffingDashboard/1.0' } });
-    if (!res.ok) throw new Error('HTTP ' + res.status);
-    const data = await res.json();
-    const val = (data && data.length > 0) ? { lat: parseFloat(data[0].lat), lng: parseFloat(data[0].lon), label: data[0].display_name } : null;
+    const val = await geoCercaComune(nome, geoNominatimCerca);
     _geoCache[key] = val;
     await _geoCacheSaveSingle(key, val);
     if (statusEl) statusEl.textContent = '';
@@ -34353,15 +34490,12 @@ async function pwMapGeoEditSubmit(inp) {
   } else {
     inp.disabled = true; inp.value = 'Ricerca…';
     try {
-      const url = 'https://nominatim.openstreetmap.org/search?format=json&limit=1&q=' + encodeURIComponent(query);
-      const res = await fetch(url, { headers: { 'Accept-Language': 'it', 'User-Agent': 'StaffingDashboard/1.0' } });
-      const data = await res.json();
-      if (!data || !data.length) {
+      result = await geoCercaComune(query, geoNominatimCerca);
+      if (!result) {
         inp.disabled = false; inp.value = ''; inp.style.borderColor = '#ef4444';
         inp.placeholder = 'Non trovato, riprova…';
         return;
       }
-      result = { lat: parseFloat(data[0].lat), lng: parseFloat(data[0].lon), label: data[0].display_name };
       inp.disabled = false; inp.value = query; inp.style.borderColor = '';
     } catch (e) {
       inp.disabled = false; inp.placeholder = 'Errore rete';
@@ -34696,17 +34830,12 @@ function _pwSpostLoad() {
 }
 
 /* ---------- geocodifica ---------- */
-/* Le tappe sono comuni italiani, ma geocodifica() della Mappa interroga Nominatim
-   senza filtro di nazione e con limit=1: omonimi esteri vincevano (Ossasco → Svizzera,
-   Pont Boset → Francia, Cava → Spagna) e restavano in rubrica. In più la riga
-   SENTINELLA "[non trovato]" riletta da Supabase sembra una coordinata valida (0,0)
-   e la tappa finiva nel Golfo di Guinea. Qui: rubrica usata solo se valida e in
-   Italia, altrimenti ricerca limitata all'Italia preferendo i centri abitati, con
-   sigla provincia facoltativa ("Ivrea (TO)"). Un risultato migliore aggiorna la
-   rubrica condivisa, così si corregge anche la Mappa. */
-const PW_SPOST_GEO_COMUNI = ['city', 'town', 'village', 'municipality'];
-const PW_SPOST_GEO_FRAZIONI = ['hamlet', 'suburb', 'quarter', 'neighbourhood', 'isolated_dwelling', 'locality'];
-
+/* La riga SENTINELLA "[non trovato]" riletta da Supabase sembra una coordinata valida
+   (0,0) e la tappa finiva nel Golfo di Guinea; voci vecchie della rubrica potevano
+   essere omonimi esteri. Qui: rubrica usata solo se valida e in Italia, altrimenti la
+   ricerca comuni condivisa (geoCercaComune, geo-comune.js — dalla v18.322.0 la stessa
+   di geocodifica()), con sigla provincia facoltativa ("Ivrea (TO)"). Un risultato
+   migliore aggiorna la rubrica condivisa, così si corregge anche la Mappa. */
 function _pwSpostGeoValida(g) {
   if (!g || g.label === '[non trovato]' || (!g.lat && !g.lng)) return null;
   return g;
@@ -34716,30 +34845,8 @@ function _pwSpostInItalia(g) {
   return g.lat >= 35.4 && g.lat <= 47.2 && g.lng >= 6.5 && g.lng <= 18.7;
 }
 
-async function _pwSpostNominatim(q, sigla) {
-  const url = 'https://nominatim.openstreetmap.org/search?format=jsonv2&addressdetails=1&limit=8' +
-              '&countrycodes=it&accept-language=it&q=' + encodeURIComponent(q);
-  const res = await fetch(url, { headers: { 'Accept-Language': 'it' } });
-  if (!res.ok) throw new Error('HTTP ' + res.status);
-  const data = await res.json();
-  if (!Array.isArray(data) || !data.length) return null;
-  let cand = data;
-  if (sigla) {
-    const inProv = data.filter(r => r.address && r.address['ISO3166-2-lvl6'] === 'IT-' + sigla);
-    if (inProv.length) cand = inProv;
-  }
-  const r = cand.find(x => PW_SPOST_GEO_COMUNI.indexOf(x.addresstype) >= 0) ||
-            cand.find(x => PW_SPOST_GEO_FRAZIONI.indexOf(x.addresstype) >= 0) ||
-            cand.find(x => x.category === 'place' || x.category === 'boundary') ||
-            cand[0];
-  return { lat: parseFloat(r.lat), lng: parseFloat(r.lon), label: r.display_name };
-}
-
 /* → { geo: {lat,lng,label}|null, rete: bool } — rete=true se è stato interrogato Nominatim */
 async function _pwSpostGeocodifica(nome) {
-  const m = nome.match(/^(.*?)\s*\(\s*([A-Za-z]{2})\s*\)\s*$/);
-  const base  = (m ? m[1] : nome).trim();
-  const sigla = m ? m[2].toUpperCase() : '';
   const key = nome.toLowerCase().trim().replace(/\s+/g, ' ');
   const cached = _pwSpostGeoValida(_geoCache[key]);
   if (cached && (_pwSpostInItalia(cached) || /^Coordinate manuali/.test(cached.label || ''))) {
@@ -34747,7 +34854,7 @@ async function _pwSpostGeocodifica(nome) {
   }
   let g;
   try {
-    g = await _pwSpostNominatim(base, sigla);
+    g = await geoCercaComune(nome, geoNominatimCerca);
   } catch (e) {
     return { geo: null, rete: true };
   }
@@ -47473,8 +47580,13 @@ let _mlItems = [];                        // voci filtrate dell'ultimo render, u
 let _mlSelCantiere = null;                // cantiere aperto nel drawer, per ridisegnarlo dopo un refresh
 let _mlTimer = null;
 let _mlAuto = true;
-let _mlBusyJira = false;
-let _mlRendering = false;
+let _mlJiraInCorso = null;                // promessa della lettura stati Task in corso (una alla volta)
+/* Generazione del render (v18.321.0): ogni mlRender la incrementa e un render più vecchio,
+   alla prima attesa, vede di non essere più l'ultimo e si ferma senza disegnare. Prima un
+   render chiesto mentre un altro era in corso (Jira, meteo, localizzazioni) veniva scartato e
+   nessuno lo rilanciava: il cambio «Griglia e Jira» ↔ «Programmazione» restava senza effetto
+   finché non finiva il precedente, e la schermata sembrava bloccata. */
+let _mlGen = 0;
 
 /* ----- Settimana/giorno ----- */
 
@@ -47921,24 +48033,32 @@ function mlJiraCacheSave() {
 /* Ore/km reali della settimana mostrata. Query dedicata e non riuso di _cpData,
    che è legato alla settimana del Controllo Produzione (pwAnno/pwWeek) e verrebbe
    sovrascritto navigando qui. */
+let _mlCpDi = '';                         // "anno|week" di _mlCp
+
 async function mlLoadProduzione() {
   if (!_sbClient || !_sbUser) return;
   if (_mlDay === ML_ALL) { await mlLoadProduzioneStorico(); return; }
   if (_mlDay === ML_RANGE) { await mlLoadProduzioneRange(); return; }
-  _mlCp = {};
+  // Settimana fissata all'inizio e risultato scritto solo se è ancora quella mostrata: con
+  // due render sovrapposti (v18.321.0) la risposta di una settimana lasciata arriverebbe dopo.
+  const anno = _mlAnno, week = _mlWeek;
+  // Un'altra settimana in memoria: si svuota subito, i suoi numeri non valgono per questa.
+  if (_mlCpDi !== anno + '|' + week) { _mlCp = {}; _mlCpDi = ''; }
+  const cp = {};
   try {
     const { data, error } = await _sbClient
       .from('controllo_produzione')
       .select('commessa,squadra,operatore,giorno,cantiere,ore_jira,ore_report,km_cad,verificato')
-      .eq('anno', _mlAnno)
-      .eq('week', _mlWeek);
+      .eq('anno', anno)
+      .eq('week', week);
     if (error) throw error;
     (data || []).forEach(r => {
-      _mlCp[r.commessa + '|||' + r.squadra + '|||' + r.operatore + '|||' + r.giorno] = r;
+      cp[r.commessa + '|||' + r.squadra + '|||' + r.operatore + '|||' + r.giorno] = r;
     });
   } catch (e) {
     console.error('mlLoadProduzione error:', e);
   }
+  if (anno === _mlAnno && week === _mlWeek) { _mlCp = cp; _mlCpDi = anno + '|' + week; }
 }
 
 /* Vista storico: ore/km cumulati per commessa+squadra+cantiere su TUTTE le
@@ -48047,8 +48167,10 @@ async function mlLoadProduzioneRange() {
    (campo "parent"): è l'unico legame certo cantiere->Task, vedi il commento in
    supabase/functions/jira-task-status/index.ts. */
 async function mlRefreshTaskStatus(items, force) {
-  if (_mlBusyJira) return;
   if (!_sbClient || !_sbUser) return;
+  // Una lettura di un render precedente ancora in corso: si aspetta che finisca (le sue
+  // risposte finiscono nelle cache) e poi si chiede quel che serve a questo render.
+  while (_mlJiraInCorso) { try { await _mlJiraInCorso; } catch (_) {} }
   const keys = [...new Set(items.flatMap(it => it.subtaskKeys || []))];
   if (!keys.length) { mlSetJiraStatus('Nessun sottotask Jira nei cantieri visibili.'); return; }
 
@@ -48061,10 +48183,10 @@ async function mlRefreshTaskStatus(items, force) {
   const daChiedere = (soloBuchi && !force) ? keys.filter(k => !(k in _mlTaskBySubtask)) : keys;
   if (!daChiedere.length) { mlSetJiraStatus('Stato Jira già aggiornato per lo storico.'); return; }
 
-  _mlBusyJira = true;
   mlSetJiraStatus('⏳ Aggiornamento stato Jira…');
+  _mlJiraInCorso = mlFetchTaskStatus(daChiedere);
   try {
-    const completo = await mlFetchTaskStatus(daChiedere);
+    const completo = await _mlJiraInCorso;
     const ora = new Date().toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' });
     mlSetJiraStatus(completo
       ? 'Jira aggiornato alle ' + ora
@@ -48073,7 +48195,7 @@ async function mlRefreshTaskStatus(items, force) {
     console.error('mlRefreshTaskStatus error:', e);
     mlSetJiraStatus('⚠ Jira non raggiungibile');
   } finally {
-    _mlBusyJira = false;
+    _mlJiraInCorso = null;
   }
 }
 
@@ -48156,6 +48278,7 @@ async function mlRefreshMeteo(groups) {
 
   const now = Date.now();
   const seenPos = new Set();
+  const coda = [];
   for (const g of groups) {
     const geo = mlGeo(g.key);
     if (!geo) continue;
@@ -48165,9 +48288,17 @@ async function mlRefreshMeteo(groups) {
     const cached = _meteoCache[posKey + '|' + fetchStartISO];
     const isFresh = cached && Array.isArray(cached.hourly) && cached.hourly.length && (now - cached.fetchedAt) < METEO_TTL_MS;
     if (isFresh) continue;
-    await pwFetchMeteoRange(geo.lat, geo.lng, fetchStartISO, fetchEndISO);
+    coda.push(geo);
   }
-  await pcRefreshBollettino();
+  // Qualche richiesta in parallelo (v18.321.0): una alla volta, con decine di cantieri
+  // da aggiornare, il meteo da solo teneva ferma la Mappa per molti secondi.
+  const lavora = async () => {
+    while (coda.length) {
+      const geo = coda.shift();
+      await pwFetchMeteoRange(geo.lat, geo.lng, fetchStartISO, fetchEndISO);
+    }
+  };
+  await Promise.all([lavora(), lavora(), lavora(), lavora(), pcRefreshBollettino()]);
 }
 
 /* ----- Render ----- */
@@ -48179,6 +48310,8 @@ function mlInit() {
   const street = mapStreetLayer().addTo(_mlMap);
   mapAddSatelliteToggle(_mlMap, street);
   _mlLayer = L.layerGroup().addTo(_mlMap);
+  // Ctrl/Cmd+clic su un punto libero della mappa = tappa della catena distanze (mappa-percorso.js)
+  mlPerAggancia(_mlMap);
   // Pane del radar: sopra le tile (200) e le etichette dell'Ibrida (250), sotto i pin (600).
   _mlMap.createPane('mlRadar').style.zIndex = 350;
   _mlMap.getPane('mlRadar').style.pointerEvents = 'none';
@@ -48586,86 +48719,118 @@ function mlWindyToggle(forza) {
   }
 }
 
+/* Render della Mappa (v18.321.0, progressivo). Si disegna SUBITO con quel che si sa già
+   (rubrica luoghi, stati Task in cache, meteo in cache), poi in sottofondo: localizzazione
+   dei cantieri nuovi (a blocchi, ridisegnando dopo ognuno), produzione, stato dei Task da
+   Jira e meteo in parallelo; a ogni passo concluso si ridisegna. L'avviso sulla mappa
+   (mlAttesa) dice cosa si sta leggendo. Un render più recente ferma questo (vedi _mlGen). */
 async function mlRender(opts) {
   if (!_mlMap) return;
-  if (_mlRendering) return;
-  _mlRendering = true;
   const o = opts || {};
-  const loading = document.getElementById('ml-loading');
-  try {
-    mlRenderToolbar();
-    if (_mlFonte === 'prg') { await mlPrgRender(o); return; }
-    mlRenderDays();
+  const gen = ++_mlGen;
+  mlRenderToolbar();
+  if (_mlFonte === 'prg') { await mlPrgRender(o, gen); return; }
+  const vivo = () => gen === _mlGen && _mlFonte === 'jira' && mlIsActive();
+  mlRenderDays();
 
-    // mlRenderFiltri() va PRIMA di filtrare: è lì che i filtri rimasti su voci non
-    // più presenti (tipico dopo un cambio settimana) vengono scartati. Chiamandola
-    // dopo, quel render uscirebbe vuoto e solo il successivo tornerebbe corretto.
-    // Costruito una volta sola e riusato: in vista storico questa scansione tocca
-    // tutte le settimane di pwData, non conviene farla due volte per render.
-    const tutti = mlBuildItemsCached(_mlDay);
-    mlRenderFiltri(tutti);
-    let items = mlApplyFilters(tutti);
-
-    let groups = mlGroupByCantiere(items);
-
-    if (loading) loading.style.display = 'flex';
-
-    // All'apertura dell'app la rubrica luoghi si sta ancora scaricando da Supabase:
-    // senza attenderla ogni cantiere risulterebbe non localizzato (regione 'n/d')
-    // e verrebbe ricercato di nuovo su Nominatim.
+  // All'apertura dell'app la rubrica luoghi si sta ancora scaricando da Supabase: senza
+  // attenderla ogni cantiere risulterebbe non localizzato e verrebbe ricercato di nuovo.
+  if (!_mlGeoCacheReady) {
+    if (_mlLayer) _mlLayer.clearLayers();
+    mlAttesa(gen, 'carico la rubrica dei luoghi…');
     await mlGeoAttendiRubrica();
-
-    // Si scorrono TUTTI i cantieri dello scope, non solo quelli filtrati: con un
-    // filtro Regione attivo un cantiere non ancora localizzato verrebbe escluso e
-    // così non verrebbe mai localizzato, restando fuori per sempre.
-    const daGeocodificare = await mlGeocodificaGruppi(mlGroupByCantiere(tutti));
-
-    // Le regioni dipendono dalla geocodifica appena fatta: filtri ed elenco vanno
-    // ricalcolati adesso, non al prossimo cambio data (prima restavano 'n/d').
-    mlRenderFiltri(tutti);
-    items = mlApplyFilters(tutti);
-    groups = mlGroupByCantiere(items);
-
-    if (o.reloadProduzione !== false) await mlLoadProduzione();
-    if (o.reloadJira !== false) await mlRefreshTaskStatus(items, o.forceJira === true);
-    await mlRefreshMeteo(groups);
-
-    // Lo stato dei gruppi va ricalcolato DOPO mlRefreshTaskStatus: alla prima
-    // costruzione _mlTasks è ancora quello del render precedente.
-    groups.forEach(g => { g.stato = mlStatoGruppo(g); });
-
-    // Solo ora lo stato è attendibile: si può applicare il filtro e riallineare
-    // gli item (usati da elenco commesse, riepilogo e pannelli KPI) ai soli
-    // cantieri superstiti, altrimenti i conteggi contraddirebbero la mappa.
-    if (_mlFiltroStati.size) {
-      groups = mlApplyFiltroStato(groups);
-      items = groups.reduce((acc, g) => acc.concat(g.items), []);
-    }
-
-    _mlGroups = groups;
-    _mlItems = items;
-    mlDrawMarkers(groups, o.keepView === true);
-    mlRenderLista(groups, items);
-    mlRenderRiepilogo(groups, items);
-
-    // Se il drawer era aperto su un cantiere ancora visibile, lo ridisegna aggiornato.
-    // Quando è aperta una commessa _mlSelCantiere è null, così la vista commessa
-    // non viene sostituita dal dettaglio cantiere al primo refresh.
-    if (_mlSelCantiere) {
-      const still = groups.findIndex(g => g.key === _mlSelCantiere);
-      if (still >= 0) mlOpenDettaglio(still, true); else mlCloseDrawer();
-    }
-
-    // Restano cantieri da localizzare: si riprende fra poco, senza bloccare l'interfaccia.
-    if (daGeocodificare > 0) {
-      setTimeout(() => {
-        if (mlIsActive()) mlRender({ reloadJira: false, reloadProduzione: false, keepView: true });
-      }, 1200);
-    }
-  } finally {
-    if (loading) loading.style.display = 'none';
-    _mlRendering = false;
+    if (!vivo()) return;
   }
+  mlDisegnaJira(o.keepView === true);
+
+  const passi = {};
+  const avviso = () => {
+    if (!vivo()) return;
+    const t = Object.keys(passi).map(k => passi[k]).filter(Boolean);
+    mlAttesa(gen, t.length ? t.join(' · ') + '…' : null);
+  };
+  const passo = (k, testo, promessa) => {
+    passi[k] = testo;
+    avviso();
+    return Promise.resolve(promessa)
+      .catch(e => console.error('mlRender ' + k + ':', e))
+      .then(() => { passi[k] = ''; avviso(); });
+  };
+  try {
+    // Produzione e Jira non dipendono dalle posizioni: partono subito, in parallelo.
+    const prod = o.reloadProduzione !== false ? passo('prod', 'leggo la produzione', mlLoadProduzione()) : null;
+    const jira = o.reloadJira !== false
+      ? passo('jira', 'leggo lo stato dei Task da Jira',
+        mlRefreshTaskStatus(mlApplyFilters(mlBuildItemsCached(_mlDay)), o.forceJira === true))
+      : null;
+
+    // Localizzazione: TUTTI i cantieri dello scope, non solo i filtrati (con un filtro Regione
+    // un cantiere mai localizzato resterebbe fuori per sempre). A blocchi, ridisegnando dopo
+    // ognuno: le regioni e i pin dipendono da questa geocodifica.
+    for (;;) {
+      const gruppi = mlGroupByCantiere(mlBuildItemsCached(_mlDay)).filter(g => mlGeoPending(g.key));
+      if (!gruppi.length) break;
+      passi.geo = 'localizzo ' + gruppi.length + (gruppi.length === 1 ? ' cantiere' : ' cantieri');
+      avviso();
+      await mlGeocodificaGruppi(gruppi, vivo);
+      if (!vivo()) return;
+      mlDisegnaJira(true);
+    }
+    passi.geo = '';
+
+    const meteo = passo('meteo', 'leggo il meteo', mlRefreshMeteo(_mlGroups));
+    if (jira) {
+      await jira;
+      if (!vivo()) return;
+      mlDisegnaJira(true);
+    }
+    await Promise.all([prod, meteo]);
+    if (!vivo()) return;
+    mlDisegnaJira(true);
+  } finally {
+    if (gen === _mlGen) mlAttesa(gen, null);
+  }
+}
+
+/* Disegno della vista «Griglia e Jira» senza nessuna attesa di rete: voci, filtri, stato
+   dei gruppi dalle cache, pin, elenco, riepilogo e drawer aperto. */
+function mlDisegnaJira(keepView) {
+  // mlRenderFiltri() va PRIMA di filtrare: è lì che i filtri rimasti su voci non più
+  // presenti (tipico dopo un cambio settimana) vengono scartati. Voci costruite una volta
+  // sola: in vista storico la scansione tocca tutte le settimane di pwData.
+  const tutti = mlBuildItemsCached(_mlDay);
+  mlRenderFiltri(tutti);
+  let items = mlApplyFilters(tutti);
+  let groups = mlGroupByCantiere(items);
+  groups.forEach(g => { g.stato = mlStatoGruppo(g); });
+  // Il filtro Stato riallinea anche gli item (elenco commesse, riepilogo, pannelli KPI),
+  // altrimenti i conteggi contraddirebbero la mappa.
+  if (_mlFiltroStati.size) {
+    groups = mlApplyFiltroStato(groups);
+    items = groups.reduce((acc, g) => acc.concat(g.items), []);
+  }
+  _mlGroups = groups;
+  _mlItems = items;
+  mlDrawMarkers(groups, keepView);
+  mlRenderLista(groups, items);
+  mlRenderRiepilogo(groups, items);
+  // Drawer aperto su un cantiere ancora visibile: ridisegnato aggiornato. Con una commessa
+  // aperta _mlSelCantiere è null, così la vista commessa non viene sostituita.
+  if (_mlSelCantiere) {
+    const still = groups.findIndex(g => g.key === _mlSelCantiere);
+    if (still >= 0) mlOpenDettaglio(still, true); else mlCloseDrawer();
+  }
+}
+
+/* Avviso sulla mappa di cosa si sta leggendo: una pillola in alto che non blocca i clic
+   (prima un velo bianco su tutta la mappa con scritto sempre «Localizzazione cantieri»).
+   Solo il render più recente lo scrive. */
+function mlAttesa(gen, testo) {
+  if (gen !== _mlGen) return;
+  const el = document.getElementById('ml-loading');
+  if (!el) return;
+  el.textContent = testo ? '⏳ ' + testo : '';
+  el.style.display = testo ? 'flex' : 'none';
 }
 
 async function mlGeoAttendiRubrica() {
@@ -48678,12 +48843,12 @@ async function mlGeoAttendiRubrica() {
 /* Geocodifica sequenziale dei luoghi non ancora in rubrica (rate-limit Nominatim), a
    blocchi di ML_GEO_MAX_PER_RENDER: ritorna quanti ne restano, che il chiamante riprende
    con un render di coda. Gruppi = { key, cantiere } (Griglia o Programmazione). */
-async function mlGeocodificaGruppi(gruppi) {
+async function mlGeocodificaGruppi(gruppi, vivo) {
   let fatti = 0;
   let resto = 0;
   for (const g of gruppi) {
     if (!mlGeoPending(g.key)) continue;
-    if (fatti >= ML_GEO_MAX_PER_RENDER) { resto++; continue; }
+    if (fatti >= ML_GEO_MAX_PER_RENDER || (vivo && !vivo())) { resto++; continue; }
     await geocodifica(g.cantiere);
     if (!(g.key in _geoCache)) _mlGeoFailed.add(g.key);
     await new Promise(r => setTimeout(r, 300));
@@ -48726,11 +48891,14 @@ function mlRenderToolbar() {
   if (colOp) colOp.style.display = prg ? 'none' : '';
   const colTipi = document.getElementById('ml-col-tipi');
   if (colTipi) colTipi.style.display = prg ? '' : 'none';
+  // «Validazione SINFI»: solo Programmazione, e lì la mostra mlPrgRenderChipsValid.
+  const colValid = document.getElementById('ml-col-valid');
+  if (colValid && !prg) colValid.style.display = 'none';
   const hint = document.getElementById('ml-filtro-hint');
   if (hint) hint.textContent = (prg
     ? 'Il colore del pin è lo stato dell\'elemento nella Programmazione (legenda «Stato»); più elementi nello stesso comune = pin a spicchi.'
     : 'Il colore del pin indica solo lo stato del cantiere (legenda «Stato»).') +
-    ' Ctrl+clic su più pin: distanze e tempi in auto fra i comuni.';
+    ' Ctrl+clic su più pin o su un punto qualsiasi della mappa: distanze e tempi in auto.';
   const lbl = document.getElementById('ml-header-dates');
   if (lbl) {
     lbl.textContent = prg
@@ -48842,7 +49010,11 @@ function mlRenderFiltri(tutti) {
     if (elReg) elReg.insertAdjacentHTML('beforeend', '<span class="ml-empty">⏳ in caricamento…</span>');
   }
   mlRenderChips('ml-filtro-cantieri', cantieri, _mlFiltroCantieri, _mlSearchCantieri, 'nessun cantiere pianificato', false);
-  if (_mlFonte === 'prg') { mlPrgRenderChipsStato(); mlPrgRenderChipsTipi(all); } else mlRenderChipsStato();
+  if (_mlFonte === 'prg') {
+    mlPrgRenderChipsStato();
+    mlPrgRenderChipsTipi(all);
+    mlPrgRenderChipsValid(all);   // dopo i tipi: dipende da quali restano selezionati
+  } else mlRenderChipsStato();
 
   mlSetFiltroCount('ml-n-commesse', _mlFiltroCommesse.size);
   mlSetFiltroCount('ml-n-operatori', _mlFiltroOperatori.size);
@@ -48851,7 +49023,7 @@ function mlRenderFiltri(tutti) {
   mlSetFiltroCount('ml-n-stati', _mlFiltroStati.size);
 
   const nAttivi = _mlFiltroCommesse.size + _mlFiltroOperatori.size + _mlFiltroRegioni.size +
-    _mlFiltroCantieri.size + _mlFiltroStati.size + (_mlFonte === 'prg' ? _mlFiltroTipi.size : 0);
+    _mlFiltroCantieri.size + _mlFiltroStati.size + (_mlFonte === 'prg' ? _mlFiltroTipi.size + _mlFiltroValid.size : 0);
   const btnClear = document.getElementById('ml-filtro-clear');
   if (btnClear) btnClear.style.display = nAttivi ? '' : 'none';
 }
@@ -48913,6 +49085,7 @@ function mlClearFiltri() {
   _mlFiltroRegioni.clear();
   _mlFiltroCantieri.clear();
   _mlFiltroTipi.clear();
+  _mlFiltroValid.clear();
   _mlSearchTipi = '';
   _mlSearchCommesse = '';
   _mlSearchOperatori = '';
@@ -49104,17 +49277,14 @@ async function mlGeoFixSubmit(cantiere, inp) {
     const precedente = inp.value;
     inp.value = 'Ricerca…';
     try {
-      const url = 'https://nominatim.openstreetmap.org/search?format=json&limit=1&q=' + encodeURIComponent(query);
-      const res = await fetch(url, { headers: { 'Accept-Language': 'it', 'User-Agent': 'StaffingDashboard/1.0' } });
-      const data = await res.json();
+      result = await geoCercaComune(query, geoNominatimCerca);
       inp.disabled = false;
       inp.value = precedente;
-      if (!data || !data.length) {
+      if (!result) {
         inp.style.borderColor = '#ef4444';
         inp.placeholder = 'Non trovato, riprova…';
         return;
       }
-      result = { lat: parseFloat(data[0].lat), lng: parseFloat(data[0].lon), label: data[0].display_name };
       inp.style.borderColor = '';
     } catch (e) {
       inp.disabled = false;
@@ -56796,6 +56966,54 @@ let _mlPrgStati = [];          // [{ k, l, c }] = ML_PRG_STATI con i colori dell
 let _mlPrgEsclusi = 0;         // elementi in altri stati o senza stato, non mostrati
 const ML_PRG_TIPO_ND = '— senza tipo';
 
+/* Filtro «Validazione SINFI» (v18.321.0, scelta dell'utente): la colonna spunta
+   «Validazione SINFI» della board SINFI MMS/PEDESTRIAN. La colonna di filtro compare (ed è
+   cliccabile) solo quando sono selezionati INSIEME la commessa Sinfi e il tipo attività
+   Rilievo MMS e/o Rilievo Pedestrian; se una delle due condizioni cade il filtro si azzera,
+   così non resta attivo e invisibile. Colonna trovata per titolo (spunta), mai per id di
+   board: gli elementi delle board che non l'hanno (es. SINFI WALKOUT) sono «senza colonna». */
+const ML_PRG_VALID_COL = /^validazione sinfi/;
+const ML_PRG_VALID_COMMESSA = 'sinfi';
+const ML_PRG_VALID_TIPI = /^rilievo (mms|pedestrian)/;
+const ML_PRG_VALID = [
+  { k: 'si', l: '✓ Validato', c: '#037f4c', t: 'Elementi con «Validazione SINFI» spuntata' },
+  { k: 'no', l: '✗ Non validato', c: '#e2445c', t: 'Elementi con «Validazione SINFI» non spuntata' },
+  { k: 'nd', l: '— senza colonna', c: '#cbd5e1', t: 'Elementi di board senza la colonna «Validazione SINFI» (es. SINFI WALKOUT)' },
+];
+let _mlFiltroValid = new Set();
+
+function mlPrgColValid(b) {
+  return prgCols(b).find(c => c.tipo === 'check' && ML_PRG_VALID_COL.test(caNorm(c.titolo || ''))) || null;
+}
+
+function mlPrgValidAttiva() {
+  if (_mlFonte !== 'prg') return false;
+  const commessa = [..._mlFiltroCommesse].some(c => caNorm(c) === ML_PRG_VALID_COMMESSA);
+  const tipo = [..._mlFiltroTipi].some(t => ML_PRG_VALID_TIPI.test(caNorm(t)));
+  return commessa && tipo;
+}
+
+/* Colonna «Validazione SINFI»: visibile solo con le due condizioni; numeri sulle chip =
+   elementi che passano tutti gli altri filtri. */
+function mlPrgRenderChipsValid(all) {
+  const col = document.getElementById('ml-col-valid');
+  const el = document.getElementById('ml-filtro-valid');
+  const on = mlPrgValidAttiva();
+  if (col) col.style.display = on ? '' : 'none';
+  if (!on) { _mlFiltroValid.clear(); mlSetFiltroCount('ml-n-valid', 0); return; }
+  const n = { si: 0, no: 0, nd: 0 };
+  mlPrgFiltra(all, true).forEach(it => { n[it.valid] = (n[it.valid] || 0) + 1; });
+  if (el) {
+    el.innerHTML = ML_PRG_VALID.filter(v => v.k !== 'nd' || n.nd || _mlFiltroValid.has('nd')).map(v =>
+      '<button class="ml-chip' + (_mlFiltroValid.has(v.k) ? ' active' : '') + '" style="--chip:' + esc(v.c) +
+      '" data-v="' + esc(v.k) + '" title="' + esc(v.t) + '">' + esc(v.l) + ' <span class="ml-chip-n">' + (n[v.k] || 0) + '</span></button>').join('');
+    el.querySelectorAll('.ml-chip').forEach(b => {
+      b.onclick = () => { mlToggleSet(_mlFiltroValid, b.dataset.v); mlRender({ keepView: true }); };
+    });
+  }
+  mlSetFiltroCount('ml-n-valid', _mlFiltroValid.size);
+}
+
 function mlPrgPuo() {
   return typeof sbCanSeePage !== 'function' || sbCanSeePage('programmazione');
 }
@@ -56810,20 +57028,27 @@ function mlSetFonte(f) {
   _mlFiltroStati.clear();
   _mlFiltroOperatori.clear();
   _mlFiltroTipi.clear();
+  _mlFiltroValid.clear();
   mlCloseDrawer();
   mlRender({});
 }
 
 /* Board con colonna di stato ed elementi in memoria (stessi dati della Programmazione e
-   della Griglia: se già caricati non si rilegge nulla). `forza` = «🔄 Aggiorna». */
+   della Griglia: se già caricati non si rilegge nulla). `forza` = «🔄 Aggiorna».
+   Board lette in parallelo (v18.321.0: una alla volta le attese si sommavano) e una sola
+   lettura alla volta: un render che arriva durante la lettura aspetta la stessa. */
+let _mlPrgCaricando = null;
 async function mlPrgCarica(forza) {
   if (!_sbClient || !_sbUser) return;
-  await prgCarica();
-  for (const b of _prg.boards) {
-    if (!prgColonnaGruppoBoard(b)) continue;
-    if (forza || !_prg.caricate[b.id]) await prgCaricaBoard(b.id, forza);
-  }
-  prgSubscribe();
+  if (_mlPrgCaricando && !forza) return _mlPrgCaricando;
+  const p = (async () => {
+    await prgCarica();
+    const da = _prg.boards.filter(b => prgColonnaGruppoBoard(b) && (forza || !_prg.caricate[b.id]));
+    await Promise.all(da.map(b => prgCaricaBoard(b.id, forza)));
+    prgSubscribe();
+  })();
+  _mlPrgCaricando = p;
+  try { await p; } finally { if (_mlPrgCaricando === p) _mlPrgCaricando = null; }
 }
 
 function mlPrgComune(b, el) {
@@ -56846,6 +57071,7 @@ function mlPrgBuildItems() {
   _prg.boards.forEach(b => {
     const gc = prgColonnaGruppoBoard(b);
     if (!gc || !_prg.caricate[b.id]) return;
+    const cv = mlPrgColValid(b);
     const opz = gc.opzioni || [];
     opz.forEach(o => {
       const s = mlPrgStatoDi(o.label);
@@ -56863,6 +57089,7 @@ function mlPrgBuildItems() {
         nome: el.nome || '', operatori: [], link: prgLink(el),
         stato: s.k, statoL: s.l, colore: colori[s.k] || s.c,
         ordine: ML_PRG_STATI.indexOf(s),
+        valid: cv ? ((el.valori || {})[cv.id] ? 'si' : 'no') : 'nd',
       });
     });
   });
@@ -56888,10 +57115,12 @@ function mlPrgPassaTipo(it) {
   return it.tipi.some(t => _mlFiltroTipi.has(t));
 }
 
-function mlPrgFiltra(tutti) {
+/* `senzaValid` = tutti i filtri tranne «Validazione SINFI» (per i numeri sulle sue chip). */
+function mlPrgFiltra(tutti, senzaValid) {
   let items = mlApplyFilters(tutti);
   if (_mlFiltroStati.size) items = items.filter(it => _mlFiltroStati.has(it.stato || ML_PRG_ND));
   if (_mlFiltroTipi.size) items = items.filter(mlPrgPassaTipo);
+  if (!senzaValid && _mlFiltroValid.size && mlPrgValidAttiva()) items = items.filter(it => _mlFiltroValid.has(it.valid));
   return items;
 }
 
@@ -56993,32 +57222,46 @@ function mlPrgMarkerHtml(g) {
     '<span class="ml-pin-n">' + g.items.length + '</span></div>';
 }
 
-/* Render della vista Programmazione: chiamata da mlRender (che gestisce _mlRendering e
-   l'indicatore di caricamento). */
-/* Niente attese sulla geocodifica (v18.307.0): con centinaia di comuni mai cercati il render
+/* Render della vista Programmazione: chiamata da mlRender con la sua generazione (_mlGen):
+   un render più recente ferma questo alla prima attesa.
+   Niente attese sulla geocodifica (v18.307.0): con centinaia di comuni mai cercati il render
    restava fermo sotto «caricamento» per minuti. Si disegna subito con le posizioni già in
-   rubrica; i comuni nuovi si cercano in sottofondo (mlPrgGeoSfondo) e i pin compaiono man mano. */
-async function mlPrgRender(o) {
-  const loading = document.getElementById('ml-loading');
-  const daLeggere = o.forcePrg === true || !_prg.pronto ||
+   rubrica; i comuni nuovi si cercano in sottofondo (mlPrgGeoSfondo) e i pin compaiono man mano.
+   Board già in memoria (di solito: le precarica il login) = disegno immediato; quelle che
+   mancano si leggono con l'avviso sulla mappa e si ridisegna (v18.321.0). */
+async function mlPrgRender(o, gen) {
+  const vivo = () => gen === _mlGen && _mlFonte === 'prg' && mlIsActive();
+  const forza = o.forcePrg === true;
+  const daLeggere = forza || !_prg.pronto ||
     _prg.boards.some(b => prgColonnaGruppoBoard(b) && !_prg.caricate[b.id]);
-  if (daLeggere && loading) loading.style.display = 'flex';
-  try {
-    await mlPrgCarica(o.forcePrg === true);
-  } catch (e) {
-    _prg.errore = e.message || String(e);
+  // Nulla in memoria: niente disegno a vuoto (scarterebbe i filtri di commessa/cantiere come
+  // «non più presenti»), ma via i pin dell'altra fonte finché arrivano le board.
+  if (_mlGeoCacheReady && _prg.boards.some(b => _prg.caricate[b.id])) mlPrgDisegna(o.keepView === true);
+  else if (_mlLayer) _mlLayer.clearLayers();
+  if (daLeggere || !_mlGeoCacheReady) {
+    mlAttesa(gen, daLeggere ? (forza ? 'rileggo' : 'leggo') + ' le board della Programmazione…' : 'carico la rubrica dei luoghi…');
+    try {
+      await mlPrgCarica(forza);
+    } catch (e) {
+      _prg.errore = e.message || String(e);
+    }
+    await mlGeoAttendiRubrica();
+    if (gen === _mlGen) mlAttesa(gen, null);
+    if (!vivo()) return;
+    mlPrgDisegna(o.keepView === true);
   }
-  await mlGeoAttendiRubrica();
-  if (loading) loading.style.display = 'none';
-  mlPrgAppSfondo(o.forcePrg === true);
+  mlPrgAppSfondo(forza);
+}
 
+/* Disegno della vista Programmazione con i dati in memoria, senza attese di rete. */
+function mlPrgDisegna(keepView) {
   const tutti = mlPrgBuildItems();
   mlRenderFiltri(tutti);
   const items = mlPrgFiltra(tutti);
   const groups = mlPrgRaggruppa(items);
   _mlGroups = groups;
   _mlItems = items;
-  mlDrawMarkers(groups, o.keepView === true);
+  mlDrawMarkers(groups, keepView);
   mlPrgRenderLista(groups, items);
   mlPrgRenderRiepilogo(groups, items);
   mlPrgTestata();
@@ -57074,9 +57317,10 @@ async function mlPrgGeoSfondo(gruppi) {
   }
 }
 
+/* Ridisegno senza riletture: dati già in memoria, nessun render da interrompere. */
 function mlPrgRidisegna() {
-  if (_mlFonte !== 'prg' || !mlIsActive() || _mlRendering) return;
-  mlRender({ keepView: true });
+  if (_mlFonte !== 'prg' || !mlIsActive() || !_mlMap || !_mlGeoCacheReady) return;
+  mlPrgDisegna(true);
 }
 
 /* Chip «Stato»: le etichette di tutte le board (fisse, anche se nessun elemento è in quello
@@ -57245,12 +57489,10 @@ function mlPrgApri(it) {
   prgApriDrawer(it.el.id, 'dettagli');
 }
 
-/* Realtime della Programmazione (da _prgRtRender, già con debounce): ridisegna la Mappa se
-   è aperta su questa fonte. Durante un render in corso riprova poco dopo. */
+/* Realtime della Programmazione (da _prgRtRender, già con debounce) e fine lettura dei tipi
+   di attività: ridisegna la Mappa se è aperta su questa fonte. */
 function mlPrgOnDataChanged() {
-  if (_mlFonte !== 'prg' || !mlIsActive()) return;
-  if (_mlRendering) { setTimeout(mlPrgOnDataChanged, 600); return; }
-  mlRender({ keepView: true });
+  mlPrgRidisegna();
 }
 /* ==================== MAPPA: DISTANZE IN AUTO (Ctrl+clic sui pin) ====================
    Stima al volo di quanto sono distanti, su strada, i comuni della Mappa e quanto ci
@@ -57291,6 +57533,62 @@ function mlPerClic(ev, g) {
   if (ev.preventDefault) ev.preventDefault();
   if (g) mlPerToggle(g);
   return true;
+}
+
+/* ---------- punti liberi (v18.321.0) ----------
+   Ctrl/Cmd+clic su un punto della mappa dove non c'è un pin: diventa una tappa della
+   catena come un comune (chiave «__punto:lat,lng», `libero: true`). Il nome arriva dalla
+   ricerca inversa di Nominatim (comune/località), una richiesta alla volta e al massimo
+   una al secondo (limite del servizio); finché manca o se fallisce resta «Punto N».
+   Ctrl+clic sul numero del punto lo toglie. Clic sui pin: non arrivano qui (Leaflet non
+   propaga il clic di un marker alla mappa). */
+let _mlPerNPunti = 0;
+let _mlPerInversa = Promise.resolve();
+
+function mlPerAggancia(map) {
+  map.on('click', e => {
+    const ev = e && e.originalEvent;
+    if (!ev || !(ev.ctrlKey || ev.metaKey) || !e.latlng) return;
+    mlPerAggiungiPunto(e.latlng.lat, e.latlng.lng);
+  });
+}
+
+function mlPerAggiungiPunto(lat, lng) {
+  if (_mlPer.tappe.length >= ML_PER_MAX) {
+    showAlertModal('Massimo ' + ML_PER_MAX + ' tappe per catena (limite del servizio di routing).');
+    return;
+  }
+  lat = Math.round(lat * 1e5) / 1e5;
+  lng = Math.round(lng * 1e5) / 1e5;
+  const key = '__punto:' + lat + ',' + lng;
+  if (_mlPer.tappe.some(t => t.key === key)) return;
+  const p = { key, nome: 'Punto ' + (++_mlPerNPunti), lat, lng, libero: true, label: '' };
+  _mlPer.tappe.push(p);
+  mlPerAggiorna();
+  _mlPerNomina(p);
+}
+
+function _mlPerNomina(p) {
+  _mlPerInversa = _mlPerInversa.then(async () => {
+    if (!_mlPer.tappe.includes(p)) return;
+    try {
+      const url = 'https://nominatim.openstreetmap.org/reverse?format=jsonv2&zoom=14&accept-language=it&lat=' +
+        encodeURIComponent(p.lat) + '&lon=' + encodeURIComponent(p.lng);
+      const res = await fetch(url);
+      if (res.ok) {
+        const d = await res.json();
+        const a = (d && d.address) || {};
+        const luogo = a.village || a.town || a.city || a.municipality || a.hamlet || a.suburb ||
+          (d && d.name) || '';
+        if (luogo) {
+          p.nome = luogo + ' (punto)';
+          p.label = (d && d.display_name) || '';
+          _mlPerRender();
+        }
+      }
+    } catch (_) { /* resta «Punto N» */ }
+    await new Promise(r => setTimeout(r, 1000));
+  });
 }
 
 function mlPerToggle(g) {
@@ -57453,8 +57751,8 @@ function mlPerApriSpostamenti() {
   const D = _mlPerSotto('dist'), T = _mlPerSotto('dur');
   if (!D || !T) { showAlertModal('Attendi la fine del calcolo delle distanze.'); return; }
   const punto = p => {
-    const g = mlGeo(p.key);
-    return { nome: p.nome, lat: p.lat, lng: p.lng, label: g && g.label ? g.label : '' };
+    const g = p.libero ? null : mlGeo(p.key);
+    return { nome: p.nome, lat: p.lat, lng: p.lng, label: p.libero ? (p.label || '') : (g && g.label ? g.label : '') };
   };
   const ordine = [];
   for (let i = 1; i < t.length; i++) ordine.push(i);
@@ -57534,7 +57832,7 @@ function _mlPerRender() {
     html += '<div class="ml-per-tot">' +
       '<span class="ml-per-chip km">' + (calcolo ? '⏳' : km(ultima && ultima.cumM)) + '</span>' +
       '<span class="ml-per-chip t">🚗 ' + (calcolo ? '⏳' : dur(ultima && ultima.cumS)) + '</span>' +
-      '<span class="ml-per-chip n">' + t.length + ' comuni' + (_mlPer.chiuso ? ' · giro chiuso' : '') + '</span></div>';
+      '<span class="ml-per-chip n">' + t.length + (t.some(p => p.libero) ? ' tappe' : ' comuni') + (_mlPer.chiuso ? ' · giro chiuso' : '') + '</span></div>';
   }
 
   html += '<div class="ml-per-list"><table class="ml-per-tab"><thead><tr>' +
@@ -57543,7 +57841,9 @@ function _mlPerRender() {
     const tr = i > 0 ? tratte[i - 1] : null;
     html += '<tr>' +
       '<td class="n">' + (i + 1) + '</td>' +
-      '<td class="c"><button class="ml-per-nome" data-ml-per="vai" data-pos="' + i + '" title="Centra la mappa su questo comune">' + esc(p.nome) + '</button></td>' +
+      '<td class="c"><button class="ml-per-nome" data-ml-per="vai" data-pos="' + i + '" title="' +
+        esc(p.libero ? 'Punto scelto sulla mappa (' + p.lat + ', ' + p.lng + ')' + (p.label ? '\n' + p.label : '') + ' — centra la mappa'
+          : 'Centra la mappa su questo comune') + '">' + (p.libero ? '📍 ' : '') + esc(p.nome) + '</button></td>' +
       '<td class="r">' + (tr ? (calcolo ? '⏳' : km(tr.m) + '<span>' + dur(tr.s) + '</span>') : '<span>partenza</span>') + '</td>' +
       '<td class="r">' + (tr ? (calcolo ? '' : km(tr.cumM) + '<span>' + dur(tr.cumS) + '</span>') : '') + '</td>' +
       '<td class="a">' +
@@ -57562,7 +57862,7 @@ function _mlPerRender() {
   if (_mlPer.errore) html += '<div class="ml-per-err">⚠ ' + esc(_mlPer.errore) + '</div>';
 
   if (t.length === 1) {
-    html += '<div class="ml-per-hint">Ctrl+clic su un altro comune per vedere la distanza.</div>';
+    html += '<div class="ml-per-hint">Ctrl+clic su un altro comune o su un punto della mappa per vedere la distanza.</div>';
   } else {
     const puoSpost = typeof sbCanSeePage !== 'function' || sbCanSeePage('weekly:spostamenti');
     html += '<div class="ml-per-opz">' +
@@ -57570,7 +57870,7 @@ function _mlPerRender() {
       (t.length >= 3 ? '<button data-ml-per="ottimizza" title="Riordina i comuni per fare meno km, tenendo fermo il primo">⚡ Ordine più breve</button>' : '') +
       (puoSpost ? '<button data-ml-per="apri" title="Copia la catena nel tab «Pianifica spostamenti» (export Excel/PDF, strategie di ordinamento)">↗ Pianifica spostamenti</button>' : '') +
       '</div>' +
-      '<div class="ml-per-hint">Ctrl+clic su un pin per aggiungere o togliere un comune. Km e tempi di guida su strada (OSRM), indicativi.</div>';
+      '<div class="ml-per-hint">Ctrl+clic su un pin o su un punto qualsiasi della mappa per aggiungerlo, di nuovo per toglierlo. Km e tempi di guida su strada (OSRM), indicativi.</div>';
   }
   box.innerHTML = html;
 }
@@ -57596,6 +57896,28 @@ function _mlPerDisegna() {
     }
   }
   t.forEach((p, i) => {
+    if (p.libero) {
+      const m = L.marker([p.lat, p.lng], {
+        icon: L.divIcon({
+          className: 'ml-per-punto-wrap',
+          html: '<div class="ml-per-punto">' + (i + 1) + '</div>',
+          iconSize: [22, 22],
+          iconAnchor: [11, 11]
+        }),
+        title: p.nome + ' — Ctrl+clic per togliere',
+        keyboard: false,
+        zIndexOffset: 1000
+      });
+      m.on('click', e => {
+        const ev = e && e.originalEvent;
+        if (!ev || !(ev.ctrlKey || ev.metaKey)) return;
+        if (ev.preventDefault) ev.preventDefault();
+        const pos = _mlPer.tappe.indexOf(p);
+        if (pos >= 0) mlPerTogli(pos);
+      });
+      m.addTo(_mlPerLayer);
+      return;
+    }
     L.marker([p.lat, p.lng], {
       icon: L.divIcon({
         className: 'ml-per-badge-wrap',
