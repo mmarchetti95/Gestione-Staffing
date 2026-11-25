@@ -116,6 +116,15 @@ Limite noto: il progetto Supabase è sul piano **Free**, che non include backup 
 
 ## Changelog
 
+## v18.319.0
+- **Controllo Produzione: niente più falsi allarmi in «⏱ Worklog mancanti» (ora «⏱ Ore non registrate da Jira»).** Il controllo proponeva come mancanti ore che c'erano: quando un worklog era stato corretto a mano (accorciato, o spostato su un altro sottotask dalla Timeline worklog), il pezzo tolto risultava «scoperto» e «Inserisci» lo avrebbe rimesso, duplicando le ore. Ora una riga compare solo se, alla chiusura del sottotask (uscita da IN PROGRESS), Jira **non** ha creato il worklog (lo si legge dallo storico del tempo speso): se l'aveva creato, quello che c'è oggi è una correzione voluta e non viene più toccata. In più dal periodo si tolgono anche le ore che l'operatore ha su altri sottotask, e prima di «Inserisci» si rilegge da Jira tutta la sua giornata: una riga che si sovrappone a ore già presenti, su qualunque sottotask, viene saltata. La finestra spiega riga per riga cosa è successo su Jira (periodo in corso, chi l'ha chiuso, ore già registrate dentro). Più veloce: i sottotask mai attivati non si leggono più e le richieste partono in parallelo. Edge Function `jira-task-status` aggiornata e già pubblicata (campo `wlUscita` nei tratti); nessuna modifica al database.
+
+## v18.318.0
+- **Mappa: distanze in auto fra comuni con Ctrl+clic sui pin.** Ctrl+clic (Cmd+clic su Mac) su un pin o su una riga dell'elenco cantieri aggiunge il comune a una catena; un secondo Ctrl+clic lo toglie (il clic normale apre sempre il dettaglio). Un pannello in basso a sinistra mostra per ogni tratta km e tempo di guida su strada (OSRM, come «Pianifica spostamenti») e i progressivi; sulla mappa i comuni sono numerati e collegati dal percorso. Si può riordinare (▲▼), togliere, chiedere «⚡ Ordine più breve» (il primo comune resta fermo), aggiungere il «Ritorno al primo» e passare la catena a «Pianifica spostamenti» per export Excel/PDF. Vale sia con la fonte Griglia sia con la fonte Programmazione. Solo memoria della sessione, nessuna scrittura. Nessuna modifica a Supabase.
+
+## v18.317.0
+- **Controllo Produzione: tolta la colonna «Verificato» con la spunta**, non più usata; tolta anche dall'export Excel. I flag già salvati restano in `controllo_produzione.verificato` (la Griglia continua a colorare in verde le celle spuntate in passato). Nessuna modifica a Supabase.
+
 ## v18.316.0
 - **Griglia: tolta la ✕ grigia «Rimuovi indicatore sottotask Jira» accanto al codice del sottotask.** Si confondeva con la ✕ rossa «Rimuovi cantiere» e, togliendo l'indicatore, l'app perdeva il sottotask: il ticket restava su Jira in TO DO e il controllo «🎫 Sottotask» non poteva più segnalarlo come «non più in Griglia» né proporre «🗑️ elimina su Jira». Ora, se un cantiere non è più previsto, si toglie solo il cantiere e si elimina il sottotask dal controllo. L'indicatore si può ancora togliere dal controllo (righe orfane o cancellate su Jira, con conferma). Nessuna modifica a Supabase.
 

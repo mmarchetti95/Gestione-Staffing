@@ -89,8 +89,10 @@
 // ore sono andate perse: confrontando i due elenchi il client trova i tratti scoperti.
 //   "tratti": true
 // In piu' in ogni "subtasks[key]":
-//   "trattiIP": [{ "da": ISO, "a": ISO | null, "daAutore": "...", "aAutore": "...", "verso": "DONE" }]
-//               (a = null: ancora IN PROGRESS)
+//   "trattiIP": [{ "da": ISO, "a": ISO | null, "daAutore": "...", "aAutore": "...", "verso": "DONE", "wlUscita": true }]
+//               (a = null: ancora IN PROGRESS; wlUscita = all'uscita Jira ha registrato del tempo
+//               speso, cioe' il worklog e' stato creato: dalla v18.319.0)
+//   Sottotask mai attivati (categoria "new"): trattiIP e worklogs vuoti, senza leggerli.
 //   "worklogs": [{ "id": "257867", "started": "2026-11-24T08:00:39.000+0100", "seconds": 21600 }]
 
 const JIRA_BASE_URL  = (Deno.env.get("JIRA_BASE_URL")  || "").replace(/\/+$/, "");
@@ -172,22 +174,22 @@ function ultimaTransizione(histories: any[], statusId: string, statusName: strin
 // Changelog (solo campo status) delle issue indicate: chiave issue -> history.
 // Prima la bulkfetch (una chiamata per tutte); le issue che non ne escono con
 // almeno una history passano dal changelog per issue.
-async function changelogStato(issues: { id: string; key: string }[]): Promise<Record<string, any[]>> {
+async function changelogStato(issues: { id: string; key: string }[], campi: string[] = ["status"]): Promise<Record<string, any[]>> {
   const out: Record<string, any[]> = {};
-  await changelogBulk(issues, out);
+  await changelogBulk(issues, out, campi);
   const mancanti = issues.filter((i) => !(out[i.key] || []).length);
   if (mancanti.length) await changelogPerIssue(mancanti, out);
   return out;
 }
 
-async function changelogBulk(issues: { id: string; key: string }[], out: Record<string, any[]>): Promise<void> {
+async function changelogBulk(issues: { id: string; key: string }[], out: Record<string, any[]>, campi: string[]): Promise<void> {
   try {
     const keyById: Record<string, string> = {};
     issues.forEach((i) => { keyById[i.id] = i.key; });
     let nextPageToken: string | undefined = undefined;
     do {
       const body: Record<string, unknown> = {
-        issueIdsOrKeys: issues.map((i) => i.key), fieldIds: ["status"], maxResults: 1000,
+        issueIdsOrKeys: issues.map((i) => i.key), fieldIds: campi, maxResults: 1000,
       };
       if (nextPageToken) body.nextPageToken = nextPageToken;
       const res = await jiraPost(`/rest/api/3/changelog/bulkfetch`, body);
@@ -231,19 +233,35 @@ function msHistory(h: any): number {
 
 // Periodi in IN PROGRESS di un sottotask, dalle transizioni di stato (nome dello stato,
 // lo stesso in tutti i workflow dei sottotask: TO DO → IN PROGRESS ⇄ IN PENDING → DONE).
+// "wlUscita" (v18.319.0): all'uscita il tempo speso e' salito, cioe' l'automazione Jira/Tempo
+// HA creato il worklog. Quel tratto non va mai riproposto, anche se oggi le sue ore non ci sono
+// piu' o sono diverse: vuol dire che qualcuno le ha corrette a mano (accorciate, spostate su un
+// altro sottotask, cancellate). Il controllo «worklog mancanti» cerca solo le uscite senza worklog.
+const WL_USCITA_PRIMA_MS = 60 * 1000;          // la history di Tempo arriva qualche secondo dopo
+const WL_USCITA_DOPO_MS = 60 * 60 * 1000;      // ...ma con Jira lento anche molti minuti dopo
 function trattiInProgress(histories: any[]): any[] {
   const ip = (s: unknown) => typeof s === "string" && s.trim().toLowerCase() === "in progress";
   const ordinate = (histories || []).map((h) => ({ h, t: msHistory(h) })).filter((x) => !isNaN(x.t)).sort((a, b) => a.t - b.t);
   const out: any[] = [];
+  const ingressi: number[] = [];
+  const aumentiTempo: number[] = [];
   let aperto: any = null;
   for (const { h, t } of ordinate) {
     for (const it of h.items || []) {
-      if (it.fieldId !== "status" && it.field !== "status") continue;
+      const campo = it.fieldId || it.field;
+      if (campo === "timespent") {
+        if ((Number(it.to) || 0) > (Number(it.from) || 0)) aumentiTempo.push(t);
+        continue;
+      }
+      if (campo !== "status") continue;
       const verso = typeof it.toString === "string" ? it.toString : "";
       const da = typeof it.fromString === "string" ? it.fromString : "";
-      if (ip(verso) && !aperto) aperto = { da: new Date(t).toISOString(), a: null, daAutore: h.author?.displayName || "", aAutore: "", verso: "" };
-      else if (ip(da) && !ip(verso) && aperto) {
+      if (ip(verso) && !aperto) {
+        aperto = { da: new Date(t).toISOString(), a: null, daAutore: h.author?.displayName || "", aAutore: "", verso: "", _a: 0 };
+        ingressi.push(t);
+      } else if (ip(da) && !ip(verso) && aperto) {
         aperto.a = new Date(t).toISOString();
+        aperto._a = t;
         aperto.aAutore = h.author?.displayName || "";
         aperto.verso = verso;
         out.push(aperto);
@@ -252,6 +270,14 @@ function trattiInProgress(histories: any[]): any[] {
     }
   }
   if (aperto) out.push(aperto);
+  for (const tr of out) {
+    if (tr._a) {
+      const prossimo = ingressi.find((x) => x > tr._a);
+      const fino = Math.min(tr._a + WL_USCITA_DOPO_MS, prossimo == null ? Infinity : prossimo);
+      tr.wlUscita = aumentiTempo.some((x) => x >= tr._a - WL_USCITA_PRIMA_MS && x <= fino);
+    }
+    delete tr._a;
+  }
   return out;
 }
 
@@ -463,9 +489,17 @@ Deno.serve(async (req: Request) => {
     }
 
     if (payload?.tratti === true) {
-      const conId = subIssues.filter((iss: any) => iss.key && iss.id && subtasks[iss.key]);
+      // Un sottotask mai attivato (CREATED/TO DO, categoria "new") non ha tratti da controllare:
+      // niente changelog ne' worklog. Uno rimesso in TO DO dopo un'attivazione sbagliata non conta
+      // comunque (il client salta le uscite verso TO DO).
+      const conId = subIssues.filter((iss: any) => iss.key && iss.id && subtasks[iss.key] &&
+        iss.fields?.status?.statusCategory?.key !== "new");
+      for (const iss of subIssues) if (iss.key && subtasks[iss.key] && !conId.includes(iss)) {
+        subtasks[iss.key].trattiIP = [];
+        subtasks[iss.key].worklogs = [];
+      }
       if (conId.length) {
-        const logs = await changelogStato(conId.map((iss: any) => ({ id: String(iss.id), key: iss.key })));
+        const logs = await changelogStato(conId.map((iss: any) => ({ id: String(iss.id), key: iss.key })), ["status", "timespent"]);
         for (const group of chunked(conId, 8)) {
           await Promise.all(group.map(async (iss: any) => {
             subtasks[iss.key].trattiIP = trattiInProgress(logs[iss.key] || []);

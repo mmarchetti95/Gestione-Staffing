@@ -1386,9 +1386,10 @@ function mlRenderToolbar() {
   const colTipi = document.getElementById('ml-col-tipi');
   if (colTipi) colTipi.style.display = prg ? '' : 'none';
   const hint = document.getElementById('ml-filtro-hint');
-  if (hint) hint.textContent = prg
+  if (hint) hint.textContent = (prg
     ? 'Il colore del pin è lo stato dell\'elemento nella Programmazione (legenda «Stato»); più elementi nello stesso comune = pin a spicchi.'
-    : 'Il colore del pin indica solo lo stato del cantiere (legenda «Stato»).';
+    : 'Il colore del pin indica solo lo stato del cantiere (legenda «Stato»).') +
+    ' Ctrl+clic su più pin: distanze e tempi in auto fra i comuni.';
   const lbl = document.getElementById('ml-header-dates');
   if (lbl) {
     lbl.textContent = prg
@@ -1613,8 +1614,9 @@ function mlDrawMarkers(groups, keepView) {
       iconSize: [38, 38],
       iconAnchor: [19, 19],
     });
-    const m = L.marker([geo.lat, geo.lng], { icon, title: g.cantiere });
-    m.on('click', () => mlOpenDettaglio(idx));
+    const m = L.marker([geo.lat, geo.lng], { icon, title: g.cantiere + ' — Ctrl+clic: distanze in auto' });
+    // Ctrl/Cmd+clic = aggiunge/toglie il comune dalla catena delle distanze (mappa-percorso.js)
+    m.on('click', e => { if (mlPerClic(e.originalEvent, g)) return; mlOpenDettaglio(idx); });
     m.addTo(_mlLayer);
     bounds.push([geo.lat, geo.lng]);
   });
@@ -1870,7 +1872,11 @@ function mlRenderLista(groups, items) {
     '</button>';
   }).join('');
   el.querySelectorAll('.ml-row').forEach(b => {
-    b.onclick = () => mlFocusGruppo(parseInt(b.dataset.idx, 10));
+    b.onclick = ev => {
+      const i = parseInt(b.dataset.idx, 10);
+      if (mlPerClic(ev, _mlGroups[i])) return;
+      mlFocusGruppo(i);
+    };
   });
 }
 

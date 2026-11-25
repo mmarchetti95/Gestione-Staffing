@@ -249,7 +249,6 @@ function pwControlloRender() {
   let html = `<table class="cp-table">
     <thead><tr>
       <th style="max-width:80px">Commessa</th><th style="max-width:70px">Squadra</th><th style="max-width:90px">Operatore</th>
-      <th style="text-align:center;min-width:44px;max-width:44px">Verificato</th>
       <th>Giorno</th><th>Data</th><th style="max-width:80px">Cantiere</th><th style="max-width:80px">Attività</th>
       <th style="text-align:center;min-width:70px;max-width:96px" title="Stato Jira dei sottotask della riga, nello stesso ordine della colonna Ticket (aggiornato ogni 30 secondi e a ogni Sincronizza da Jira)">Stato</th>
       <th style="text-align:center;min-width:44px;max-width:56px" title="Meteo osservato nel giorno sul cantiere (passa il mouse per il dettaglio)">Meteo</th>
@@ -262,14 +261,14 @@ function pwControlloRender() {
   const ctxTk = cpCtxTicketCommessa();
 
   blocks.forEach((bl, blIdx) => {
-    html += `<tr class="cp-tr-commessa" data-comm-idx="${blIdx}"><td colspan="19"><span class="cp-carr" style="cursor:pointer;user-select:none;margin-right:5px;font-size:11px;display:inline-block;width:10px;text-align:center;" onclick="cpToggleComm(${blIdx})">▼</span>📁 ${esc(bl.commessa)}${cpCampoSelectHtml(bl.commessa)}${cpBrdAggBtnHtml(bl.commessa)}</td></tr>`;
+    html += `<tr class="cp-tr-commessa" data-comm-idx="${blIdx}"><td colspan="18"><span class="cp-carr" style="cursor:pointer;user-select:none;margin-right:5px;font-size:11px;display:inline-block;width:10px;text-align:center;" onclick="cpToggleComm(${blIdx})">▼</span>📁 ${esc(bl.commessa)}${cpCampoSelectHtml(bl.commessa)}${cpBrdAggBtnHtml(bl.commessa)}</td></tr>`;
     bl.squadre.forEach((sq, sqIdx) => {
       const sqKey = blIdx + '-' + sqIdx;
-      html += `<tr class="cp-tr-squadra" data-comm-idx="${blIdx}" data-sq-idx="${sqKey}"><td colspan="19">&nbsp;&nbsp;&nbsp;<span class="cp-sarr" style="cursor:pointer;user-select:none;margin-right:5px;font-size:11px;display:inline-block;width:10px;text-align:center;" onclick="cpToggleSq('${jsAttr(sqKey)}')">▼</span>👥 ${esc(sq.nome)}<button class="no-print pw-write-action" style="margin-left:10px;font-size:11px;font-weight:600;background:#4f46e5;color:#fff;border:none;border-radius:5px;padding:2px 8px;cursor:pointer;" onclick="event.stopPropagation();pwControlloSyncJira('${jsesc(bl.commessa)}','${jsesc(sq.nome)}',this)">🔄 Sincronizza squadra</button><button class="no-print pw-write-action" style="margin-left:6px;font-size:11px;font-weight:600;background:#0ea5e9;color:#fff;border:none;border-radius:5px;padding:2px 8px;cursor:pointer;" data-help-key="cp-carica-report" title="Click destro per la guida" onclick="event.stopPropagation();cpCaricaReportSquadra('${jsesc(bl.commessa)}','${jsesc(sq.nome)}')">📄 Carica Report</button>${cpBrdBtnHtml(bl.commessa, sq.nome)}<span class="cp-kmj-sum no-print" data-sq-idx="${sqKey}" onclick="event.stopPropagation();cpKmJiraVaiPrimo('${jsAttr(sqKey)}')"></span></td></tr>`;
+      html += `<tr class="cp-tr-squadra" data-comm-idx="${blIdx}" data-sq-idx="${sqKey}"><td colspan="18">&nbsp;&nbsp;&nbsp;<span class="cp-sarr" style="cursor:pointer;user-select:none;margin-right:5px;font-size:11px;display:inline-block;width:10px;text-align:center;" onclick="cpToggleSq('${jsAttr(sqKey)}')">▼</span>👥 ${esc(sq.nome)}<button class="no-print pw-write-action" style="margin-left:10px;font-size:11px;font-weight:600;background:#4f46e5;color:#fff;border:none;border-radius:5px;padding:2px 8px;cursor:pointer;" onclick="event.stopPropagation();pwControlloSyncJira('${jsesc(bl.commessa)}','${jsesc(sq.nome)}',this)">🔄 Sincronizza squadra</button><button class="no-print pw-write-action" style="margin-left:6px;font-size:11px;font-weight:600;background:#0ea5e9;color:#fff;border:none;border-radius:5px;padding:2px 8px;cursor:pointer;" data-help-key="cp-carica-report" title="Click destro per la guida" onclick="event.stopPropagation();cpCaricaReportSquadra('${jsesc(bl.commessa)}','${jsesc(sq.nome)}')">📄 Carica Report</button>${cpBrdBtnHtml(bl.commessa, sq.nome)}<span class="cp-kmj-sum no-print" data-sq-idx="${sqKey}" onclick="event.stopPropagation();cpKmJiraVaiPrimo('${jsAttr(sqKey)}')"></span></td></tr>`;
       sq.giorni.forEach((gBlock, gIdx) => {
         const g   = gBlock.giornoIdx;
         const sep = gIdx > 0 ? ' cp-day-sep' : '';
-        html += `<tr class="cp-tr-day${sep}" data-comm-idx="${blIdx}" data-sq-idx="${sqKey}" data-giorno="${g}" data-lbl="${DAY_NAMES[g]} ${dates[g]}"><td colspan="19">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;📅 ${DAY_NAMES[g]} ${dates[g]}${cpCwBtnHtml(bl.commessa, sq.nome, g, gBlock.ops.length, dateISOs[g])}</td></tr>`;
+        html += `<tr class="cp-tr-day${sep}" data-comm-idx="${blIdx}" data-sq-idx="${sqKey}" data-giorno="${g}" data-lbl="${DAY_NAMES[g]} ${dates[g]}"><td colspan="18">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;📅 ${DAY_NAMES[g]} ${dates[g]}${cpCwBtnHtml(bl.commessa, sq.nome, g, gBlock.ops.length, dateISOs[g])}</td></tr>`;
 
         gBlock.ops.forEach(op => {
           const k     = `${bl.commessa}|||${sq.nome}|||${op.nome}|||${g}`;
@@ -317,7 +316,6 @@ function pwControlloRender() {
             : esc(String(jRiga)) + (jRiga !== jVal
               ? '<div style="font-size:9px;font-weight:400;color:#64748b;line-height:1.1;white-space:nowrap">di ' + esc(String(jVal)) + ' nel giorno</div>'
               : '');
-          const verificato = saved.verificato === true;
 
           const jNum = parseFloat(String(jRiga)), rNum = parseFloat(String(rVal));
           let deltaHtml;
@@ -337,7 +335,6 @@ function pwControlloRender() {
       <td class="cp-wrap" title="${esc(bl.commessa)}">${esc(bl.commessa)}</td>
       <td class="cp-wrap" title="${esc(sq.nome)}">${esc(sq.nome)}</td>
       <td class="cp-wrap" title="${esc(op.nome)}"><button type="button" class="no-print cp-griglia-btn" title="Apri questo intervento nella Griglia settimanale" onclick="cpApriInGriglia(${op.cIdx},${op.sIdx},${op.oIdx},${g})">🗓️</button><strong>${esc(op.nome)}</strong>${isOperatoreLicenziato(op.nome) ? '<span class="op-ex-tag">ex</span>' : ''}${cpPermessoTag(op.nome, g)}</td>
-      <td data-help-key="cp-verificato" style="text-align:center"><input type="checkbox" class="pw-write-action" ${verificato ? 'checked' : ''} title="Verificato" style="width:16px;height:16px;cursor:pointer;" onchange="pwControlloSaveCell('${ci}','${si}','${oi}',${g},'${dt}','${ca}','${at}','verificato',this.checked)"></td>
       <td>${DAY_NAMES[g]}</td>
       <td>${dates[g]}</td>
       <td class="cp-wrap" style="color:#64748b" title="${esc(op.cantiere)}">${esc(op.cantiere)}</td>

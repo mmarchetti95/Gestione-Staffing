@@ -1889,6 +1889,57 @@
   .ml-pc-arancione { color: #f97316; }
   .ml-pc-rossa { color: #dc2626; }
 
+  /* Distanze in auto (Ctrl+clic sui pin, mappa-percorso.js): pannello in basso a
+     sinistra, sotto il drawer (1100) e sopra i controlli Leaflet (1000); numero
+     della catena sul bordo in alto a sinistra del pin, che resta cliccabile. */
+  .ml-per {
+    position: absolute; left: 10px; bottom: 10px; z-index: 1001;
+    width: 380px; max-width: calc(100% - 20px); max-height: calc(100% - 160px);
+    display: flex; flex-direction: column;
+    background: white; border: 1px solid var(--border); border-radius: 8px;
+    box-shadow: 0 4px 16px rgba(15,23,42,.18); font-size: 12px; color: #1e293b;
+  }
+  .ml-per.hidden { display: none; }
+  .ml-radar-bar:not(.hidden) ~ .ml-per { bottom: 58px; }
+  .ml-per-head {
+    display: flex; align-items: center; justify-content: space-between; gap: 8px;
+    padding: 7px 10px; background: #4f46e5; color: white; border-radius: 7px 7px 0 0; flex-shrink: 0;
+  }
+  .ml-per-head b { font-size: 12.5px; }
+  .ml-per-head button { background: none; border: none; color: white; font-size: 15px; cursor: pointer; line-height: 1; }
+  .ml-per-tot { display: flex; flex-wrap: wrap; gap: 5px; padding: 7px 10px 2px; flex-shrink: 0; }
+  .ml-per-chip { padding: 2px 8px; border-radius: 5px; font-weight: 700; border: 1px solid; }
+  .ml-per-chip.km { background: #eef2ff; color: #3730a3; border-color: #c7d2fe; }
+  .ml-per-chip.t { background: #f0fdfa; color: #115e59; border-color: #99f6e4; }
+  .ml-per-chip.n { background: #f8fafc; color: #475569; border-color: #e2e8f0; font-weight: 500; }
+  .ml-per-list { overflow-y: auto; min-height: 0; padding: 4px 6px; }
+  .ml-per-tab { width: 100%; border-collapse: collapse; }
+  .ml-per-tab th { font-size: 10px; text-transform: uppercase; letter-spacing: .03em; color: #94a3b8; font-weight: 600; text-align: left; padding: 2px 4px !important; }
+  .ml-per-tab td { padding: 4px !important; border-top: 1px solid #eef2f6; vertical-align: top; }
+  .ml-per-tab .r { text-align: right; white-space: nowrap; }
+  .ml-per-tab td.r span, .ml-per-tab td.c span { display: block; font-size: 10.5px; color: #94a3b8; }
+  .ml-per-tab td.c span { display: inline; }
+  .ml-per-tab td.n { width: 20px; text-align: center; font-weight: 700; color: #4f46e5; }
+  .ml-per-tab td.a { white-space: nowrap; text-align: right; width: 58px; }
+  .ml-per-tab td.a button { background: none; border: none; cursor: pointer; color: #94a3b8; padding: 0 2px; font-size: 11px; }
+  .ml-per-tab td.a button:hover:not([disabled]) { color: #4f46e5; }
+  .ml-per-tab td.a button[disabled] { opacity: .3; cursor: default; }
+  .ml-per-tab tr.rientro td { background: #f8fafc; }
+  .ml-per-nome { background: none; border: none; padding: 0; cursor: pointer; font-weight: 600; color: #1e293b; text-align: left; font-size: 12px; }
+  .ml-per-nome:hover { color: #4f46e5; text-decoration: underline; }
+  .ml-per-opz { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; padding: 6px 10px; border-top: 1px solid #eef2f6; flex-shrink: 0; }
+  .ml-per-opz label { display: inline-flex; align-items: center; gap: 4px; cursor: pointer; color: #475569; }
+  .ml-per-opz button { border: 1px solid #c7d2fe; background: #eef2ff; color: #3730a3; border-radius: 5px; padding: 2px 8px; cursor: pointer; font-size: 11.5px; font-weight: 600; }
+  .ml-per-opz button:hover { background: #e0e7ff; }
+  .ml-per-hint { padding: 4px 10px 7px; font-size: 10.5px; color: #94a3b8; flex-shrink: 0; }
+  .ml-per-err { margin: 4px 10px; padding: 4px 8px; font-size: 11px; color: #be123c; background: #fff1f2; border: 1px solid #fecdd3; border-radius: 5px; }
+  .ml-per-badge-wrap { background: transparent; border: none; pointer-events: none !important; }
+  .ml-per-badge {
+    width: 20px; height: 20px; border-radius: 50%; background: #4f46e5; color: white;
+    border: 2px solid white; box-shadow: 0 1px 3px rgba(15,23,42,.5);
+    font-size: 11px; font-weight: 700; line-height: 16px; text-align: center;
+  }
+
   .ml-loading {
     position: absolute; inset: 0; background: rgba(255,255,255,.7);
     display: none; align-items: center; justify-content: center;
@@ -2560,7 +2611,7 @@
       </span>
       <button id="btn-presentation" class="px-3 py-1.5 text-sm rounded hover:bg-white/10" style="border:1px solid var(--dark-border-strong);color:var(--dark-text);visibility:visible;">📊 Modalità presentazione</button>
       <div class="text-xs pl-2" style="border-left:1px solid var(--dark-border-strong);color:var(--dark-text-muted);">
-        <span id="app-version" class="font-medium" style="color:var(--accent);">v18.316.0</span> · Michele Marchetti
+        <span id="app-version" class="font-medium" style="color:var(--accent);">v18.319.0</span> · Michele Marchetti
         <span id="sb-role-badge" style="margin-left:8px;padding:1px 8px;border-radius:9999px;background:rgba(255,255,255,.1);color:var(--dark-text);font-weight:600;"></span>
       </div>
     </div>
@@ -4001,7 +4052,7 @@
       </div>
     </div>
     <div class="ml-filtri-foot">
-      <span id="ml-filtro-hint" class="ml-filtro-hint">Il colore del pin indica solo lo stato del cantiere (legenda «Stato»).</span>
+      <span id="ml-filtro-hint" class="ml-filtro-hint">Il colore del pin indica solo lo stato del cantiere (legenda «Stato»). Ctrl+clic su più pin: distanze e tempi in auto fra i comuni.</span>
       <button id="ml-filtro-clear" class="text-[11px] text-slate-500 underline" style="display:none;">Azzera filtri</button>
     </div>
   </div>
@@ -22995,7 +23046,6 @@ function pwControlloRender() {
   let html = `<table class="cp-table">
     <thead><tr>
       <th style="max-width:80px">Commessa</th><th style="max-width:70px">Squadra</th><th style="max-width:90px">Operatore</th>
-      <th style="text-align:center;min-width:44px;max-width:44px">Verificato</th>
       <th>Giorno</th><th>Data</th><th style="max-width:80px">Cantiere</th><th style="max-width:80px">Attività</th>
       <th style="text-align:center;min-width:70px;max-width:96px" title="Stato Jira dei sottotask della riga, nello stesso ordine della colonna Ticket (aggiornato ogni 30 secondi e a ogni Sincronizza da Jira)">Stato</th>
       <th style="text-align:center;min-width:44px;max-width:56px" title="Meteo osservato nel giorno sul cantiere (passa il mouse per il dettaglio)">Meteo</th>
@@ -23008,14 +23058,14 @@ function pwControlloRender() {
   const ctxTk = cpCtxTicketCommessa();
 
   blocks.forEach((bl, blIdx) => {
-    html += `<tr class="cp-tr-commessa" data-comm-idx="${blIdx}"><td colspan="19"><span class="cp-carr" style="cursor:pointer;user-select:none;margin-right:5px;font-size:11px;display:inline-block;width:10px;text-align:center;" onclick="cpToggleComm(${blIdx})">▼</span>📁 ${esc(bl.commessa)}${cpCampoSelectHtml(bl.commessa)}${cpBrdAggBtnHtml(bl.commessa)}</td></tr>`;
+    html += `<tr class="cp-tr-commessa" data-comm-idx="${blIdx}"><td colspan="18"><span class="cp-carr" style="cursor:pointer;user-select:none;margin-right:5px;font-size:11px;display:inline-block;width:10px;text-align:center;" onclick="cpToggleComm(${blIdx})">▼</span>📁 ${esc(bl.commessa)}${cpCampoSelectHtml(bl.commessa)}${cpBrdAggBtnHtml(bl.commessa)}</td></tr>`;
     bl.squadre.forEach((sq, sqIdx) => {
       const sqKey = blIdx + '-' + sqIdx;
-      html += `<tr class="cp-tr-squadra" data-comm-idx="${blIdx}" data-sq-idx="${sqKey}"><td colspan="19">&nbsp;&nbsp;&nbsp;<span class="cp-sarr" style="cursor:pointer;user-select:none;margin-right:5px;font-size:11px;display:inline-block;width:10px;text-align:center;" onclick="cpToggleSq('${jsAttr(sqKey)}')">▼</span>👥 ${esc(sq.nome)}<button class="no-print pw-write-action" style="margin-left:10px;font-size:11px;font-weight:600;background:#4f46e5;color:#fff;border:none;border-radius:5px;padding:2px 8px;cursor:pointer;" onclick="event.stopPropagation();pwControlloSyncJira('${jsesc(bl.commessa)}','${jsesc(sq.nome)}',this)">🔄 Sincronizza squadra</button><button class="no-print pw-write-action" style="margin-left:6px;font-size:11px;font-weight:600;background:#0ea5e9;color:#fff;border:none;border-radius:5px;padding:2px 8px;cursor:pointer;" data-help-key="cp-carica-report" title="Click destro per la guida" onclick="event.stopPropagation();cpCaricaReportSquadra('${jsesc(bl.commessa)}','${jsesc(sq.nome)}')">📄 Carica Report</button>${cpBrdBtnHtml(bl.commessa, sq.nome)}<span class="cp-kmj-sum no-print" data-sq-idx="${sqKey}" onclick="event.stopPropagation();cpKmJiraVaiPrimo('${jsAttr(sqKey)}')"></span></td></tr>`;
+      html += `<tr class="cp-tr-squadra" data-comm-idx="${blIdx}" data-sq-idx="${sqKey}"><td colspan="18">&nbsp;&nbsp;&nbsp;<span class="cp-sarr" style="cursor:pointer;user-select:none;margin-right:5px;font-size:11px;display:inline-block;width:10px;text-align:center;" onclick="cpToggleSq('${jsAttr(sqKey)}')">▼</span>👥 ${esc(sq.nome)}<button class="no-print pw-write-action" style="margin-left:10px;font-size:11px;font-weight:600;background:#4f46e5;color:#fff;border:none;border-radius:5px;padding:2px 8px;cursor:pointer;" onclick="event.stopPropagation();pwControlloSyncJira('${jsesc(bl.commessa)}','${jsesc(sq.nome)}',this)">🔄 Sincronizza squadra</button><button class="no-print pw-write-action" style="margin-left:6px;font-size:11px;font-weight:600;background:#0ea5e9;color:#fff;border:none;border-radius:5px;padding:2px 8px;cursor:pointer;" data-help-key="cp-carica-report" title="Click destro per la guida" onclick="event.stopPropagation();cpCaricaReportSquadra('${jsesc(bl.commessa)}','${jsesc(sq.nome)}')">📄 Carica Report</button>${cpBrdBtnHtml(bl.commessa, sq.nome)}<span class="cp-kmj-sum no-print" data-sq-idx="${sqKey}" onclick="event.stopPropagation();cpKmJiraVaiPrimo('${jsAttr(sqKey)}')"></span></td></tr>`;
       sq.giorni.forEach((gBlock, gIdx) => {
         const g   = gBlock.giornoIdx;
         const sep = gIdx > 0 ? ' cp-day-sep' : '';
-        html += `<tr class="cp-tr-day${sep}" data-comm-idx="${blIdx}" data-sq-idx="${sqKey}" data-giorno="${g}" data-lbl="${DAY_NAMES[g]} ${dates[g]}"><td colspan="19">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;📅 ${DAY_NAMES[g]} ${dates[g]}${cpCwBtnHtml(bl.commessa, sq.nome, g, gBlock.ops.length, dateISOs[g])}</td></tr>`;
+        html += `<tr class="cp-tr-day${sep}" data-comm-idx="${blIdx}" data-sq-idx="${sqKey}" data-giorno="${g}" data-lbl="${DAY_NAMES[g]} ${dates[g]}"><td colspan="18">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;📅 ${DAY_NAMES[g]} ${dates[g]}${cpCwBtnHtml(bl.commessa, sq.nome, g, gBlock.ops.length, dateISOs[g])}</td></tr>`;
 
         gBlock.ops.forEach(op => {
           const k     = `${bl.commessa}|||${sq.nome}|||${op.nome}|||${g}`;
@@ -23063,7 +23113,6 @@ function pwControlloRender() {
             : esc(String(jRiga)) + (jRiga !== jVal
               ? '<div style="font-size:9px;font-weight:400;color:#64748b;line-height:1.1;white-space:nowrap">di ' + esc(String(jVal)) + ' nel giorno</div>'
               : '');
-          const verificato = saved.verificato === true;
 
           const jNum = parseFloat(String(jRiga)), rNum = parseFloat(String(rVal));
           let deltaHtml;
@@ -23083,7 +23132,6 @@ function pwControlloRender() {
       <td class="cp-wrap" title="${esc(bl.commessa)}">${esc(bl.commessa)}</td>
       <td class="cp-wrap" title="${esc(sq.nome)}">${esc(sq.nome)}</td>
       <td class="cp-wrap" title="${esc(op.nome)}"><button type="button" class="no-print cp-griglia-btn" title="Apri questo intervento nella Griglia settimanale" onclick="cpApriInGriglia(${op.cIdx},${op.sIdx},${op.oIdx},${g})">🗓️</button><strong>${esc(op.nome)}</strong>${isOperatoreLicenziato(op.nome) ? '<span class="op-ex-tag">ex</span>' : ''}${cpPermessoTag(op.nome, g)}</td>
-      <td data-help-key="cp-verificato" style="text-align:center"><input type="checkbox" class="pw-write-action" ${verificato ? 'checked' : ''} title="Verificato" style="width:16px;height:16px;cursor:pointer;" onchange="pwControlloSaveCell('${ci}','${si}','${oi}',${g},'${dt}','${ca}','${at}','verificato',this.checked)"></td>
       <td>${DAY_NAMES[g]}</td>
       <td>${dates[g]}</td>
       <td class="cp-wrap" style="color:#64748b" title="${esc(op.cantiere)}">${esc(op.cantiere)}</td>
@@ -25407,7 +25455,7 @@ function pwControlloExport() {
     dates.push(`${String(d.getUTCDate()).padStart(2,'0')}/${String(d.getUTCMonth()+1).padStart(2,'0')}`);
   }
 
-  const headers = ['Commessa','Squadra','Operatore','Verificato','Giorno','Data','Cantiere','Attività',
+  const headers = ['Commessa','Squadra','Operatore','Giorno','Data','Cantiere','Attività',
                    'Ore Jira','Ticket','Epic','Ore Report Prod.','Δ Ore','Km / Cad','Note'];
   const wsData = [headers];
 
@@ -25433,7 +25481,6 @@ function pwControlloExport() {
           const epicStr = [...new Set(tkSep.propri.filter(t => t.epic && t.epic.name).map(t => t.epic.name))].join(', ');
           wsData.push([
             bc.commessa, sqNome, op.nome,
-            saved.verificato === true ? 'Sì' : '',
             DAY_NAMES[g], dates[g],
             pwCellCantieri(opG).join(', '), opG.attivita || '',
             jVal === '' ? '' : jVal,
@@ -32891,12 +32938,16 @@ async function cpCwApplica() {
 // Dalla v18.313.0. Il worklog di un sottotask lo crea un'automazione Jira/Tempo quando il
 // sottotask esce da IN PROGRESS. Il 23/11/2026 Jira era instabile e le uscite verso DONE non
 // l'hanno creato: 25 sottotask chiusi senza ore, ~70 h perse (bonificate a mano il 24/11).
-// A ogni «Sincronizza» (squadra o settimana) si leggono i periodi IN PROGRESS di ogni sottotask
-// della Griglia e dei ticket delle righe (jira-task-status con "tratti") e si confrontano con i
-// worklog: i tratti chiusi che restano scoperti compaiono nel modal #cptw-modal, con la proposta
-// di worklog (orari modificabili). Si scrive su Jira solo con «Inserisci», dopo una conferma,
-// con jira-worklog-edit (autore = assegnatario del sottotask, activity_log), rileggendo prima i
-// worklog del sottotask per non duplicare ore comparse nel frattempo.
+// A ogni «Sincronizza» (squadra o settimana) si leggono i periodi IN PROGRESS dei sottotask
+// della Griglia e dei ticket delle righe (jira-task-status con "tratti") e si cercano le ore
+// perse. Si scrive su Jira solo con «Inserisci», dopo una conferma, con jira-worklog-edit
+// (autore = assegnatario del sottotask, activity_log).
+// Regole (v18.319.0, dopo i falsi allarmi del 25/11 su worklog corretti a mano):
+//  1. un tratto la cui uscita ha creato il worklog (tratto.wlUscita, dallo storico del tempo
+//     speso) non si propone MAI: se oggi le ore sono diverse le ha corrette qualcuno, apposta;
+//  2. dal tratto si tolgono tutti i worklog dell'operatore, anche su altri sottotask: se in
+//     quell'orario lavorava su un altro sottotask il tempo non è perso;
+//  3. prima di «Inserisci» si rileggono da Jira il sottotask e la giornata dell'operatore.
 // Il calcolo dei buchi (cpTwBuchi) è puro: tratti e worklog in, intervalli scoperti out.
 
 const CPTW_SOGLIA_MIN = 5;      // buchi più corti: arrotondamenti di Tempo, clic veloci
@@ -32909,7 +32960,7 @@ let _cpTw = {
   aperto: false,
   scope: null,          // { commessa, squadra } della sincronizzazione (null = settimana intera)
   anno: null, week: null,
-  voci: [],             // [{ id, key, url, summary, operatore, commessa, squadra, data, inizio, fine, daAutore, aAutore, verso, sel, esito, nota }]
+  voci: [],             // [{ id, key, url, summary, operatore, email, commessa, squadra, data, inizio, fine, trDa, trA, presenti, daAutore, aAutore, verso, sel, esito, nota }]
   salvando: false,
   finito: false,
   inseriti: new Set(),  // id già inseriti in questa sessione: Tempo li mostra in ritardo, non riproporli
@@ -32920,9 +32971,11 @@ function _cpTwMs(iso) {
   return isNaN(t) ? null : t;
 }
 
-/* Puro. tratti [{ da, a, ... }] (ISO; a = null se ancora aperto), worklogs [{ started, seconds }],
+/* Puro. tratti [{ da, a, verso, wlUscita }] (ISO; a = null se ancora aperto), worklogs [{ started, seconds }]
+   = tutti quelli da sottrarre (del sottotask e dell'operatore su altri sottotask),
    opz { sogliaMin, attesaMin, oraMs } → [{ inizioMs, fineMs, minuti, tratto }]: le parti dei tratti
-   IN PROGRESS chiusi non coperte da nessun worklog del sottotask, lunghe almeno la soglia. */
+   IN PROGRESS chiusi, la cui uscita NON ha creato il worklog, non coperte da nessun worklog,
+   lunghe almeno la soglia. */
 function cpTwBuchi(tratti, worklogs, opz) {
   opz = opz || {};
   const soglia = (opz.sogliaMin == null ? CPTW_SOGLIA_MIN : opz.sogliaMin) * 60000;
@@ -32933,11 +32986,12 @@ function cpTwBuchi(tratti, worklogs, opz) {
   }).filter(Boolean);
   const out = [];
   (tratti || []).forEach(t => {
-    const da = _cpTwMs(t && t.da), a = _cpTwMs(t && t.a);
+    if (!t || t.wlUscita === true) return;   // l'automazione il worklog l'ha creato: ciò che c'è oggi è voluto
+    const da = _cpTwMs(t.da), a = _cpTwMs(t.a);
     if (da == null || a == null || a <= da || a > limite) return;
     // Rimesso in TO DO (attivato per sbaglio, annullato dall'ufficio o dall'operatore): quel tempo
     // non è lavoro su questo sottotask, e l'automazione stessa cancella il suo worklog.
-    if (CPTW_VERSO_ANNULLO.test(String((t && t.verso) || '').trim())) return;
+    if (CPTW_VERSO_ANNULLO.test(String(t.verso || '').trim())) return;
     let pezzi = [[da, a]];
     wl.forEach(([s, e]) => {
       pezzi = pezzi.flatMap(([x, y]) => (e <= x || s >= y) ? [[x, y]]
@@ -32966,10 +33020,10 @@ function _cpTwIgnoraSalva(id) {
 }
 
 /* Sottotask da controllare: quelli della Griglia (giornalieri del giorno o settimanali) e i ticket
-   letti sulle righe. → { key: { operatore, commessa, squadra } } */
+   letti sulle righe. → { key: { operatore, email, commessa, squadra } } */
 function _cpTwChiavi(anno, week, blocchi, cells, celle) {
   const out = {};
-  const add = (key, c) => { if (key && !out[key]) out[key] = { operatore: c.operatore, commessa: c.commessa, squadra: c.squadra }; };
+  const add = (key, c) => { if (key && !out[key]) out[key] = { operatore: c.operatore, email: c.email || '', commessa: c.commessa, squadra: c.squadra }; };
   const mappe = {};
   (blocchi || []).forEach(bc => { if (bc && bc.commessa) mappe[bc.commessa] = pwJiraSubtaskMappa(bc, anno, week); });
   const ctx = cpCtxTicketCommessa();
@@ -32983,6 +33037,39 @@ function _cpTwChiavi(anno, week, blocchi, cells, celle) {
   return out;
 }
 
+/* Tutti i worklog di ogni operatore nella settimana, su qualunque sottotask e commessa, dalla
+   lettura appena fatta da «Sincronizza» (ogni riga porta tutti i worklog del giorno
+   dell'operatore: si uniscono per id). → { operatore: [{ key, started, seconds }] } */
+function _cpTwWorklogOperatori(cells, celle) {
+  const out = {}, visti = {};
+  (cells || []).forEach(c => {
+    const lista = out[c.operatore] || (out[c.operatore] = []);
+    const v = visti[c.operatore] || (visti[c.operatore] = new Set());
+    ((celle[c.k] || {}).jira_tickets || []).forEach(t => {
+      (t && Array.isArray(t.worklogs) ? t.worklogs : []).forEach(w => {
+        const id = (w && w.id) || (t.key + '|' + (w && w.started));
+        if (!w || v.has(id)) return;
+        v.add(id);
+        lista.push({ key: t.key, started: w.started, seconds: Number(w.seconds) || 0 });
+      });
+    });
+  });
+  return out;
+}
+
+/* Ore già presenti (worklog in [daMs, aMs]) ritagliate sul periodo, in minuti del giorno */
+function _cpTwPresenti(worklogs, daMs, aMs) {
+  return (worklogs || []).map(w => {
+    const s0 = _cpTwMs(w.started);
+    if (s0 == null) return null;
+    const e0 = s0 + (Number(w.seconds) || 0) * 1000;
+    if (e0 <= daMs || s0 >= aMs) return null;
+    const x = _cpOjParti(new Date(Math.max(s0, daMs)).toISOString());
+    const y = _cpOjParti(new Date(Math.min(e0, aMs)).toISOString());
+    return x && y ? { key: w.key, inizio: x.min, fine: y.data === x.data ? y.min : 1439 } : null;
+  }).filter(Boolean).sort((m, n) => m.inizio - n.inizio);
+}
+
 /* Chiamata da pwControlloSyncJira dopo la lettura dei worklog. Sola lettura.
    → { voci, controllati, errore } */
 async function cpTwRileva(anno, week, blocchi, cells, celle, isoDates) {
@@ -32991,34 +33078,43 @@ async function cpTwRileva(anno, week, blocchi, cells, celle, isoDates) {
   const res = { voci: [], controllati: keys.length, errore: '' };
   if (!keys.length) return res;
   const ign = _cpTwIgnorati();
+  const wlOp = _cpTwWorklogOperatori(cells, celle);
+  const parti = [];
+  for (let i = 0; i < keys.length; i += CPTW_MAX_CHIAVI) parti.push(keys.slice(i, i + CPTW_MAX_CHIAVI));
   try {
-    for (let i = 0; i < keys.length; i += CPTW_MAX_CHIAVI) {
+    const risposte = await Promise.all(parti.map(async parte => {
       const { data, error } = await _sbClient.functions.invoke('jira-task-status', {
-        body: { subtaskKeys: keys.slice(i, i + CPTW_MAX_CHIAVI), soloSottotask: true, tratti: true },
+        body: { subtaskKeys: parte, soloSottotask: true, tratti: true },
       });
       if (error) throw new Error(await _cpEdgeErr(error, 'jira-task-status'));
       if (data && data.error) throw new Error(data.error);
-      Object.values((data && data.subtasks) || {}).forEach(s => {
-        if (!s || !Array.isArray(s.trattiIP)) return;   // Edge Function non aggiornata: niente controllo
-        const info = chiavi[s.key] || {};
-        cpTwBuchi(s.trattiIP, s.worklogs).forEach(b => {
-          const p = _cpOjParti(new Date(b.inizioMs).toISOString());
-          const q = _cpOjParti(new Date(b.fineMs).toISOString());
-          if (!p || !q || !isoDates.includes(p.data)) return;
-          const id = s.key + '|' + b.inizioMs;
-          if (ign[id] || _cpTw.inseriti.has(id)) return;
-          const fine = q.data === p.data ? q.min : 1439;
-          if (fine - p.min < CPTW_SOGLIA_MIN) return;
-          res.voci.push({
-            id, key: s.key, url: s.url || '', summary: s.summary || '',
-            operatore: info.operatore || '', commessa: info.commessa || '', squadra: info.squadra || '',
-            data: p.data, inizio: p.min, fine,
-            daAutore: b.tratto.daAutore || '', aAutore: b.tratto.aAutore || '', verso: b.tratto.verso || '',
-            sel: true, esito: '', nota: '',
-          });
+      return data;
+    }));
+    risposte.forEach(data => Object.values((data && data.subtasks) || {}).forEach(s => {
+      if (!s || !Array.isArray(s.trattiIP) || !s.trattiIP.length) return;   // mai attivato, o Edge Function vecchia
+      const info = chiavi[s.key] || {};
+      const propri = (s.worklogs || []).map(w => ({ key: s.key, started: w.started, seconds: w.seconds }));
+      const tutti = propri.concat((wlOp[info.operatore] || []).filter(w => w.key !== s.key));
+      cpTwBuchi(s.trattiIP, tutti).forEach(b => {
+        const p = _cpOjParti(new Date(b.inizioMs).toISOString());
+        const q = _cpOjParti(new Date(b.fineMs).toISOString());
+        if (!p || !q || !isoDates.includes(p.data)) return;
+        const id = s.key + '|' + b.inizioMs;
+        if (ign[id] || _cpTw.inseriti.has(id)) return;
+        const fine = q.data === p.data ? q.min : 1439;
+        if (fine - p.min < CPTW_SOGLIA_MIN) return;
+        const trDa = _cpOjParti(b.tratto.da), trA = _cpOjParti(b.tratto.a);
+        res.voci.push({
+          id, key: s.key, url: s.url || '', summary: s.summary || '',
+          operatore: info.operatore || '', email: info.email || '', commessa: info.commessa || '', squadra: info.squadra || '',
+          data: p.data, inizio: p.min, fine,
+          trDa: trDa && trDa.data === p.data ? trDa.min : null, trA: trA && trA.data === p.data ? trA.min : null,
+          presenti: _cpTwPresenti(tutti, _cpTwMs(b.tratto.da), _cpTwMs(b.tratto.a)),
+          daAutore: b.tratto.daAutore || '', aAutore: b.tratto.aAutore || '', verso: b.tratto.verso || '',
+          sel: true, esito: '', nota: '',
         });
       });
-    }
+    }));
   } catch (e) {
     res.errore = (e && e.message) || String(e);
   }
@@ -33029,13 +33125,14 @@ async function cpTwRileva(anno, week, blocchi, cells, celle, isoDates) {
 /* Riga per il riepilogo della sincronizzazione */
 function cpTwMessaggio(tw) {
   if (!tw) return '';
-  if (tw.errore) return '\n\n⚠ Controllo dei tratti IN PROGRESS senza worklog non riuscito: ' + tw.errore + '.';
+  if (tw.errore) return '\n\n⚠ Controllo delle ore non registrate da Jira non riuscito: ' + tw.errore + '.';
   if (!tw.voci.length) return '';
   const min = tw.voci.reduce((s, v) => s + (v.fine - v.inizio), 0);
-  return '\n\n⏱ ' + tw.voci.length + ' tratt' + (tw.voci.length === 1 ? 'o' : 'i') + ' IN PROGRESS senza worklog su Jira (' + _cpOjDurata(min) + ' in tutto): ' +
-    'Jira ha registrato il cambio di stato ma non le ore. ' +
-    (cpTlWlPuo() ? 'Li trovi nella finestra «⏱ Worklog mancanti», dietro questo messaggio: controlla gli orari e inseriscili.'
-      : 'Li trovi nella finestra «⏱ Worklog mancanti»: per inserirli serve un admin o un responsabile.');
+  const n = tw.voci.length;
+  return '\n\n⏱ ' + n + (n === 1 ? ' periodo di lavoro senza ore' : ' periodi di lavoro senza ore') + ' su Jira (' + _cpOjDurata(min) + ' in tutto): ' +
+    'il sottotask è stato chiuso ma Jira non ha creato il worklog. ' +
+    (cpTlWlPuo() ? 'Li trovi nella finestra «⏱ Ore non registrate da Jira», dietro questo messaggio.'
+      : 'Li trovi nella finestra «⏱ Ore non registrate da Jira»: per inserirli serve un admin o un responsabile.');
 }
 
 function cpTwApri(tw, scope, anno, week) {
@@ -33108,6 +33205,21 @@ function _cpTwPiede() {
   btn.textContent = 'Inserisci ' + n + ' worklog su Jira';
 }
 
+/* «Cosa è successo su Jira» di una riga: il periodo IN PROGRESS e le ore che ci sono già dentro */
+function _cpTwSpiegazione(v) {
+  const periodo = (v.trDa != null ? _cpTwHHMM(v.trDa) : '…') + ' → ' + (v.trA != null ? _cpTwHHMM(v.trA) : '…');
+  let h = '<div>▶ In corso ' + periodo + ', chiuso in <b>' + esc(v.verso || '?') + '</b>' + (v.aAutore ? ' da ' + esc(v.aAutore) : '') + '</div>';
+  h += '<div style="color:#b45309;">✕ Jira non ha creato il worklog alla chiusura</div>';
+  if (v.presenti && v.presenti.length) {
+    h += '<div style="color:#64748b;">Già registrate in quel periodo: ' + v.presenti.map(x =>
+      _cpTwHHMM(x.inizio) + '–' + _cpTwHHMM(x.fine) + ' ' + (x.key === v.key ? 'su questo sottotask' : 'su ' + esc(x.key))).join(', ') +
+      '. Si propone solo il resto.</div>';
+  } else {
+    h += '<div style="color:#64748b;">Nessuna ora registrata in quel periodo, su nessun sottotask.</div>';
+  }
+  return h;
+}
+
 function _cpTwRender() {
   const modal = document.getElementById('cptw-modal');
   const root = document.getElementById('cptw-root');
@@ -33117,29 +33229,33 @@ function _cpTwRender() {
   const T = _cpTw, puo = cpTlWlPuo();
   const scope = T.scope && T.scope.commessa ? esc(T.scope.commessa) + ' · 👥 ' + esc(T.scope.squadra) : 'tutta la settimana';
   let h = '<div style="padding:16px 20px 8px;">' +
-    '<div style="font-weight:700;font-size:15px;color:#0f172a;font-family:var(--font-display);">⏱ Worklog mancanti dalle transizioni</div>' +
+    '<div style="font-weight:700;font-size:15px;color:#0f172a;font-family:var(--font-display);">⏱ Ore non registrate da Jira</div>' +
     '<div class="text-xs text-slate-500 mt-0.5">' + scope + ' · Week ' + T.week + ' ' + T.anno + '</div>' +
-    '<div class="text-xs text-slate-600 mt-2" style="line-height:1.5;">Su Jira questi sottotask sono stati in <b>IN PROGRESS</b> ma per quel tempo non c\'è nessun worklog: il cambio di stato è registrato, le ore no. ' +
-    'La proposta va dall\'ingresso all\'uscita da IN PROGRESS; se l\'uscita l\'ha fatta l\'ufficio, la fine è l\'ora del clic: correggila se serve.</div></div>';
+    '<div class="text-xs text-slate-600 mt-2" style="line-height:1.55;">' +
+    'Quando un operatore chiude un sottotask (esce da <b>IN PROGRESS</b>), Jira crea da solo il worklog con le ore. ' +
+    'Per queste righe <b>non l\'ha fatto</b> (succede quando Jira è instabile) e in quell\'orario l\'operatore non ha ore su nessun altro sottotask: quel tempo oggi manca.</div>' +
+    '<div class="text-xs text-slate-500 mt-1" style="line-height:1.55;">Qui non compaiono le chiusure in cui il worklog Jira l\'aveva creato, anche se poi è stato corretto a mano, né gli orari già coperti da altri worklog dell\'operatore. ' +
+    'Se l\'ha chiuso l\'ufficio, la fine proposta è l\'ora del clic: correggila se serve.</div></div>';
   h += '<div style="padding:0 20px 8px;overflow:auto;"><table class="w-full text-xs" style="border-collapse:collapse;"><thead><tr class="text-left text-slate-500" style="border-bottom:1px solid #e2e8f0;">' +
     '<th style="padding:4px;"></th><th style="padding:4px;">Giorno</th><th style="padding:4px;">Operatore</th><th style="padding:4px;">Sottotask</th>' +
-    '<th style="padding:4px;">Dalle</th><th style="padding:4px;">Alle</th><th style="padding:4px;">Durata</th><th style="padding:4px;">Uscita da IN PROGRESS</th><th style="padding:4px;"></th></tr></thead><tbody>';
+    '<th style="padding:4px;">Ore da inserire</th><th style="padding:4px;">Cosa è successo su Jira</th><th style="padding:4px;"></th></tr></thead><tbody>';
   T.voci.forEach((v, i) => {
     const blocc = T.salvando || !!v.esito || !puo;
-    const esito = v.esito === 'ok' ? '<span style="color:#047857;">✓ inserito</span>'
+    const esito = v.esito === 'ok' ? '<span style="color:#047857;">✓ inserito' + (v.nota ? ' · ' + esc(v.nota) : '') + '</span>'
       : v.esito === 'ko' ? '<span style="color:#b91c1c;">✕ ' + esc(v.nota) + '</span>'
-      : v.esito === 'salto' ? '<span style="color:#b45309;">⚠ ' + esc(v.nota) + '</span>'
+      : v.esito === 'salto' ? '<span style="color:#b45309;">⚠ saltato: ' + esc(v.nota) + '</span>'
       : v.esito === 'corso' ? '<span style="color:#64748b;">⏳ in corso…</span>' : '';
-    h += '<tr style="border-bottom:1px solid #f1f5f9;">' +
-      '<td style="padding:4px;"><input type="checkbox" data-i="' + i + '"' + (v.sel ? ' checked' : '') + (blocc ? ' disabled' : '') + ' onchange="cpTwSel(this)"></td>' +
-      '<td style="padding:4px;white-space:nowrap;">' + esc(_cpTwGiorno(v.data)) + '</td>' +
-      '<td style="padding:4px;">' + esc(v.operatore) + '</td>' +
-      '<td style="padding:4px;"><a href="' + esc(v.url) + '" target="_blank" rel="noopener" title="' + esc(v.summary) + '" style="color:#2563eb;">' + esc(v.key) + '</a></td>' +
-      '<td style="padding:4px;"><input type="time" step="60" data-i="' + i + '" data-c="inizio" value="' + _cpTwHHMM(v.inizio) + '"' + (blocc ? ' disabled' : '') + ' oninput="cpTwOra(this)" class="border border-slate-300 rounded px-1"></td>' +
-      '<td style="padding:4px;"><input type="time" step="60" data-i="' + i + '" data-c="fine" value="' + _cpTwHHMM(v.fine) + '"' + (blocc ? ' disabled' : '') + ' oninput="cpTwOra(this)" class="border border-slate-300 rounded px-1"></td>' +
-      '<td style="padding:4px;white-space:nowrap;" id="cptw-dur-' + i + '">' + (v.fine > v.inizio ? _cpOjDurata(v.fine - v.inizio) : '—') + '</td>' +
-      '<td style="padding:4px;color:#475569;">' + esc((v.verso || '?') + (v.aAutore ? ' · ' + v.aAutore : '')) + '</td>' +
-      '<td style="padding:4px;white-space:nowrap;">' + (esito || (blocc ? '' : '<button type="button" data-i="' + i + '" data-help-key="cp-tw-ignora" onclick="cpTwIgnora(this)" style="font-size:11px;border:1px solid #cbd5e1;background:#fff;border-radius:5px;padding:1px 6px;cursor:pointer;">🗄 Ignora</button>')) + '</td>' +
+    h += '<tr style="border-bottom:1px solid #f1f5f9;vertical-align:top;">' +
+      '<td style="padding:6px 4px;"><input type="checkbox" data-i="' + i + '"' + (v.sel ? ' checked' : '') + (blocc ? ' disabled' : '') + ' onchange="cpTwSel(this)"></td>' +
+      '<td style="padding:6px 4px;white-space:nowrap;">' + esc(_cpTwGiorno(v.data)) + '</td>' +
+      '<td style="padding:6px 4px;">' + esc(v.operatore) + '</td>' +
+      '<td style="padding:6px 4px;"><a href="' + esc(v.url) + '" target="_blank" rel="noopener" title="' + esc(v.summary) + '" style="color:#2563eb;">' + esc(v.key) + '</a></td>' +
+      '<td style="padding:6px 4px;white-space:nowrap;">' +
+      '<input type="time" step="60" data-i="' + i + '" data-c="inizio" value="' + _cpTwHHMM(v.inizio) + '"' + (blocc ? ' disabled' : '') + ' oninput="cpTwOra(this)" class="border border-slate-300 rounded px-1"> – ' +
+      '<input type="time" step="60" data-i="' + i + '" data-c="fine" value="' + _cpTwHHMM(v.fine) + '"' + (blocc ? ' disabled' : '') + ' oninput="cpTwOra(this)" class="border border-slate-300 rounded px-1">' +
+      '<div style="margin-top:2px;"><b id="cptw-dur-' + i + '">' + (v.fine > v.inizio ? _cpOjDurata(v.fine - v.inizio) : '—') + '</b></div></td>' +
+      '<td style="padding:6px 4px;color:#475569;line-height:1.45;">' + _cpTwSpiegazione(v) + (esito ? '<div style="margin-top:2px;">' + esito + '</div>' : '') + '</td>' +
+      '<td style="padding:6px 4px;white-space:nowrap;">' + (blocc ? '' : '<button type="button" data-i="' + i + '" data-help-key="cp-tw-ignora" onclick="cpTwIgnora(this)" style="font-size:11px;border:1px solid #cbd5e1;background:#fff;border-radius:5px;padding:1px 6px;cursor:pointer;">🗄 Ignora</button>') + '</td>' +
       '</tr>';
   });
   h += '</tbody></table></div>';
@@ -33147,13 +33263,49 @@ function _cpTwRender() {
     '<div class="text-xs text-slate-500" style="flex:1;min-width:200px;">' +
     (!puo ? 'Solo admin e responsabili possono inserire i worklog.'
       : T.finito ? 'Fatto. Le ore nuove compaiono in «Ore Jira» alla prossima sincronizzazione (Tempo le copia su Jira con qualche minuto di ritardo).'
-      : 'I worklog vanno su Jira a nome dell\'assegnatario del sottotask. Prima di ognuno rileggo il sottotask: se nel frattempo ci sono ore in quell\'intervallo lo salto.') + '</div>' +
+      : 'I worklog vanno su Jira a nome dell\'assegnatario del sottotask. Prima di scrivere rileggo da Jira il sottotask e la giornata dell\'operatore: se nel frattempo in quell\'orario ci sono ore, su qualunque sottotask, la riga viene saltata.') + '</div>' +
     '<button type="button" onclick="cpTwChiudi()" style="font-size:12px;font-weight:600;border:1px solid #cbd5e1;background:#fff;border-radius:6px;padding:5px 12px;cursor:pointer;">Chiudi</button>' +
     (puo && T.finito ? '<button type="button" data-help-key="cp-tw-risincronizza" onclick="cpTwRisincronizza()" style="font-size:12px;font-weight:600;border:none;background:#4f46e5;color:#fff;border-radius:6px;padding:5px 12px;cursor:pointer;">🔄 Risincronizza</button>' : '') +
     (puo && !T.finito ? '<button type="button" id="cptw-inserisci" class="pw-write-action" data-help-key="cp-tw-inserisci" onclick="cpTwInserisci()" style="font-size:12px;font-weight:600;border:none;background:#0d9488;color:#fff;border-radius:6px;padding:5px 12px;cursor:pointer;"></button>' : '') +
     '</div>';
   root.innerHTML = h;
   _cpTwPiede();
+}
+
+/* Rilettura prima di scrivere: worklog di ogni operatore nei giorni delle righe (su qualunque
+   sottotask, una sola chiamata) e di ogni sottotask (in parallelo).
+   → { perOp: { 'email|data': [{ key, inizio, fine }] }, perKey: { key: { ok, errore, wl: [{ data, inizio, fine }] } }, errori: { email: msg } } */
+async function _cpTwRileggi(voci) {
+  const emails = [...new Set(voci.map(v => (v.email || '').toLowerCase()).filter(Boolean))];
+  const date = voci.map(v => v.data).sort();
+  const intervallo = (started, seconds) => {
+    const p = _cpOjParti(started);
+    return p ? { data: p.data, inizio: p.min, fine: p.min + Math.round((Number(seconds) || 0) / 60) } : null;
+  };
+  const [giornate, sottotask] = await Promise.all([
+    emails.length ? _sbClient.functions.invoke('jira-sync-worklogs', { body: { emails, startDate: date[0], endDate: date[date.length - 1] } }) : Promise.resolve({ data: { results: {} } }),
+    Promise.all([...new Set(voci.map(v => v.key))].map(async key => [key, await _cpTlWlInvoca({ action: 'giornata', issueKey: key })])),
+  ]);
+  if (giornate.error) throw new Error(await _cpEdgeErr(giornate.error, 'jira-sync-worklogs'));
+  const perOp = {};
+  Object.entries((giornate.data && giornate.data.results) || {}).forEach(([email, giorni]) => {
+    Object.entries(giorni || {}).forEach(([data, g]) => {
+      const lista = perOp[email.toLowerCase() + '|' + data] = [];
+      ((g && g.tickets) || []).forEach(t => (t.worklogs || []).forEach(w => {
+        const x = intervallo(w.started, w.seconds);
+        if (x) lista.push({ key: t.key, inizio: x.inizio, fine: x.fine });
+      }));
+    });
+  });
+  const errori = {};
+  Object.entries((giornate.data && giornate.data.errors) || {}).forEach(([email, msg]) => { errori[email.toLowerCase()] = String(msg || 'errore'); });
+  const perKey = {};
+  sottotask.forEach(([key, g]) => {
+    perKey[key] = (g && g.ok && !g.errore)
+      ? { ok: true, wl: (g.worklogs || []).map(w => intervallo(w.started, w.seconds)).filter(Boolean) }
+      : { ok: false, errore: (g && g.errore) || 'rilettura non riuscita' };
+  });
+  return { perOp, perKey, errori };
 }
 
 async function cpTwInserisci() {
@@ -33169,31 +33321,49 @@ async function cpTwInserisci() {
     '\n\nA nome dell\'assegnatario del sottotask; la stima residua non cambia. Da qui non si torna indietro con «Indietro»: per togliere un worklog usa la Timeline worklog.', 'Inserisci');
   if (!ok || !T.aperto) return;
   T.salvando = true;
+  voci.forEach(v => { v.esito = 'corso'; });
   _cpTwRender();
   let fatti = 0;
-  for (const v of voci) {
-    v.esito = 'corso';
+  let letti;
+  try {
+    letti = await _cpTwRileggi(voci);
+  } catch (e) {
+    voci.forEach(v => { v.esito = ''; });
+    T.salvando = false;
     _cpTwRender();
+    showAlertModal('Non riesco a rileggere i worklog da Jira, non ho scritto niente: ' + ((e && e.message) || e));
+    return;
+  }
+  for (const v of voci) {
     try {
-      // Rilettura: ore comparse nel frattempo nello stesso intervallo (operatore, collega, Tempo in ritardo)
-      const g = await _cpTlWlInvoca({ action: 'giornata', issueKey: v.key });
-      if (g.errore || !g.ok) { v.esito = 'ko'; v.nota = g.errore || 'rilettura non riuscita'; continue; }
-      const sovr = (g.worklogs || []).some(w => {
-        const p = _cpOjParti(w.started);
-        if (!p || p.data !== v.data) return false;
-        const f = p.min + Math.round((Number(w.seconds) || 0) / 60);
-        return p.min < v.fine && f > v.inizio;
-      });
-      if (sovr) { v.esito = 'salto'; v.nota = 'nel frattempo su Jira ci sono ore in quell\'intervallo'; continue; }
+      const sub = letti.perKey[v.key];
+      if (!sub || !sub.ok) { v.esito = 'ko'; v.nota = (sub && sub.errore) || 'rilettura non riuscita'; continue; }
+      const errOp = letti.errori[(v.email || '').toLowerCase()];
+      if (errOp) { v.esito = 'ko'; v.nota = 'giornata dell\'operatore non riletta (' + errOp + ')'; continue; }
+      const giorno = (letti.perOp[(v.email || '').toLowerCase() + '|' + v.data] || []);
+      const propri = sub.wl.filter(w => w.data === v.data).map(w => ({ key: v.key, inizio: w.inizio, fine: w.fine }));
+      const sovr = propri.concat(giorno).find(w => w.inizio < v.fine && w.fine > v.inizio);
+      if (sovr) {
+        v.esito = 'salto';
+        v.nota = 'su Jira ci sono già ore ' + _cpTwHHMM(sovr.inizio) + '–' + _cpTwHHMM(Math.min(sovr.fine, 1439)) + (sovr.key === v.key ? ' su questo sottotask' : ' su ' + sovr.key);
+        _cpTwRender();
+        continue;
+      }
+      _cpTwRender();
       const r = await _cpTlWlInvoca({
         action: 'create', issueKey: v.key, data: v.data, inizioMin: v.inizio, durataMin: v.fine - v.inizio, operatore: v.operatore,
         commento: 'Ricostruito dalle transizioni di stato (IN PROGRESS ' + _cpTwHHMM(v.inizio) + '-' + _cpTwHHMM(v.fine) + '): Jira non aveva creato il worklog',
       });
-      if (r.ok) { v.esito = 'ok'; v.nota = r.avviso || ''; T.inseriti.add(v.id); fatti++; }
-      else { v.esito = 'ko'; v.nota = r.errore || 'non riuscito'; }
+      if (r.ok) {
+        v.esito = 'ok'; v.nota = r.avviso || ''; T.inseriti.add(v.id); fatti++;
+        // Le righe successive dello stesso operatore non devono sovrapporsi a questa
+        const k = (v.email || '').toLowerCase() + '|' + v.data;
+        (letti.perOp[k] || (letti.perOp[k] = [])).push({ key: v.key, inizio: v.inizio, fine: v.fine });
+      } else { v.esito = 'ko'; v.nota = r.errore || 'non riuscito'; }
     } catch (e) {
       v.esito = 'ko'; v.nota = (e && e.message) || String(e);
     }
+    _cpTwRender();
   }
   T.salvando = false;
   T.finito = true;
@@ -33208,7 +33378,7 @@ function cpTwRisincronizza() {
   else pwControlloSyncJira(null, null, null, { senzaConferma: true });
 }
 
-HELP_TEXTS['cp-tw-inserisci'] = 'Scrive SU JIRA un worklog per ogni riga spuntata, con gli orari mostrati (modificabili), a nome dell\'assegnatario del sottotask, come «＋» nella Timeline worklog. Prima di ognuno rilegge il sottotask: se nel frattempo ci sono ore in quell\'intervallo, la riga viene saltata.\n\nServe quando Jira ha registrato il passaggio IN PROGRESS → DONE/IN PENDING ma non ha creato il worklog (succede quando Jira è instabile). Non si annulla con «Indietro»: un worklog sbagliato si toglie dalla Timeline worklog. Riservato ad admin e responsabili.';
+HELP_TEXTS['cp-tw-inserisci'] = 'Scrive SU JIRA un worklog per ogni riga spuntata, con gli orari mostrati (modificabili), a nome dell\'assegnatario del sottotask, come «＋» nella Timeline worklog. Prima di scrivere rilegge da Jira il sottotask e la giornata dell\'operatore: se in quell\'intervallo ci sono già ore, su qualunque sottotask, la riga viene saltata (niente doppioni).\n\nServe quando Jira ha registrato la chiusura del sottotask (IN PROGRESS → DONE/IN PENDING) ma non ha creato il worklog (succede quando Jira è instabile). Le chiusure in cui il worklog era stato creato e poi corretto a mano non vengono mai proposte. Non si annulla con «Indietro»: un worklog sbagliato si toglie dalla Timeline worklog. Riservato ad admin e responsabili.';
 HELP_TEXTS['cp-tw-ignora'] = 'Toglie questo tratto dall\'elenco e non lo propone più alle prossime sincronizzazioni, solo in questo browser (es. un tratto già coperto da ore messe su un altro sottotask). Su Jira non cambia niente.';
 HELP_TEXTS['cp-tw-risincronizza'] = 'Rilancia «Sincronizza» sulla stessa squadra (o settimana) senza la domanda iniziale, per leggere in «Ore Jira» i worklog appena inseriti. Tempo li copia su Jira con qualche minuto di ritardo: se non compaiono ancora, riprova poco dopo.';
 /* ===== WORKLOG FORNITORI (cpFornWl*, v18.251.0) =====
@@ -45427,7 +45597,7 @@ HELP_TEXTS['#cp-search-op-clear'] = 'Cancella la ricerca operatore/cantiere del 
 // Collassa / Espandi
 HELP_TEXTS['#cp-collapse-all'] = 'Chiude tutte le commesse e le squadre della tabella Controllo produzione. Se sono già tutte chiuse, le riapre.\n\nCambia solo la visualizzazione in questo browser e non modifica dati.';
 // ⬇ Esporta Excel
-HELP_TEXTS['pwControlloExport'] = 'Scarica in Excel il Controllo produzione della settimana selezionata, con una riga per operatore e giorno: commessa, squadra, cantiere, attività, verificato, Ore Jira, ticket ed Epic, Ore Report Prod., differenza ore, Km/Cad e note.\n\nEsporta i valori così come sono salvati: se ti servono le ore aggiornate, sincronizza prima da Jira. Non modifica nessun dato.';
+HELP_TEXTS['pwControlloExport'] = 'Scarica in Excel il Controllo produzione della settimana selezionata, con una riga per operatore e giorno: commessa, squadra, cantiere, attività, Ore Jira, ticket ed Epic, Ore Report Prod., differenza ore, Km/Cad e note.\n\nEsporta i valori così come sono salvati: se ti servono le ore aggiornate, sincronizza prima da Jira. Non modifica nessun dato.';
 // 📄 Report PDF
 HELP_TEXTS['pwControlloExportPDF'] = 'Scarica un PDF orizzontale con il report di produzione della settimana selezionata, pensato per l\'invio al PM. È organizzato per giorno e per ogni operatore riporta cantiere, Ore Jira, Ore Report Prod., ticket, Epic e altre informazioni (per esempio le ferie).\n\nUsa i valori salvati, quindi conviene sincronizzare prima da Jira. Non modifica nessun dato.';
 // 🔀 Variazione
@@ -45814,8 +45984,6 @@ HELP_TEXTS['cpRereadTicket'] = 'Rilegge ora da Jira, solo in lettura, il valore 
 HELP_TEXTS['cpApriInGriglia'] = 'Passa alla Griglia settimanale sulla cella di questo operatore in questo giorno, per un controllo rapido della pianificazione. Compare un bottone «⬅ Torna al Controllo Produzione» per tornare indietro.\n\nSolo navigazione: non modifica nulla.';
 // ⬅ Torna al Controllo Produzione
 HELP_TEXTS['#cp-torna-btn'] = 'Torna al Controllo Produzione nel punto in cui eri, dopo essere passato alla Griglia con 🗓️. Solo navigazione.';
-// Verificato
-HELP_TEXTS['cp-verificato'] = 'Segna la riga (operatore + giorno) come controllata dall\'ufficio. Il flag viene salvato subito nel Controllo Produzione condiviso.\n\nNon scrive niente su Jira e non cambia il Km/Cad. Riservato ad admin e responsabili.';
 // Produzione su
 HELP_TEXTS['cp-campo-produzione'] = 'Sceglie in quale campo Jira dei sottotask va scritto il Km/Cad di questa commessa: Actual Production (predefinito) o KPI_Quantità lavorata (commesse col nuovo formato, per ora SINFI). Jira non permette di ricavarlo da solo, quindi va impostato qui.\n\nCambiandolo, con conferma, la scelta viene salvata per tutti. I valori già scritti sul campo precedente restano dove sono. Alla prossima «🔄 Sincronizza» ogni Km/Cad verificato viene scritto per intero sul nuovo campo; su KPI_Quantità lavorata solo sul sottotask, non sul Task padre.\n\nCambiare il campo non scrive niente su Jira. Riservato ad admin e responsabili.';
 // Ore MySond
@@ -45987,8 +46155,8 @@ HELP_TEXTS['#cpfw-allinea'] = 'Fa subito un giro sulla settimana mostrata (fino 
 HELP_TEXTS['cpfw-sorgente'] = 'Il collega interno da cui copiare stato e worklog per questo sottotask. «auto» sceglie chi ha la stessa attività, poi il primo della squadra. Una scelta a mano vale dal prossimo giro, ed è condivisa con i colleghi. Le copie fatte dal collega precedente vengono tolte e rifatte dal nuovo. Serve il ruolo admin o responsabile.';
 HELP_TEXTS['cp-sync-jira'] += '\n\nPrima di leggere, allinea i sottotask dei dipendenti fornitore della settimana (stato e worklog copiati dal collega Eagle, vedi «🏢 Worklog fornitori»).';
 HELP_TEXTS['pwControlloSyncJira'] += '\n\nPrima di leggere, allinea i sottotask dei dipendenti fornitore di tutta la settimana (vedi «🏢 Worklog fornitori»).';
-HELP_TEXTS['cp-sync-jira'] += '\n\nAlla fine controlla anche i tratti in cui i sottotask sono stati IN PROGRESS senza che Jira abbia creato il worklog (succede quando Jira è instabile): se ne trova, apre «⏱ Worklog mancanti» con la proposta di ore da inserire. Senza conferma non scrive niente.';
-HELP_TEXTS['pwControlloSyncJira'] += '\n\nAlla fine controlla anche i tratti in cui i sottotask della squadra sono stati IN PROGRESS senza che Jira abbia creato il worklog (succede quando Jira è instabile): se ne trova, apre «⏱ Worklog mancanti» con la proposta di ore da inserire. Senza conferma non scrive niente.';
+HELP_TEXTS['cp-sync-jira'] += '\n\nAlla fine controlla anche i tratti in cui i sottotask sono stati IN PROGRESS senza che Jira abbia creato il worklog (succede quando Jira è instabile): se ne trova, apre «⏱ Ore non registrate da Jira» con la proposta di ore da inserire. Le chiusure in cui il worklog era stato creato e poi corretto a mano, e gli orari già coperti da ore su altri sottotask, non vengono proposti. Senza conferma non scrive niente.';
+HELP_TEXTS['pwControlloSyncJira'] += '\n\nAlla fine controlla anche i tratti in cui i sottotask della squadra sono stati IN PROGRESS senza che Jira abbia creato il worklog (succede quando Jira è instabile): se ne trova, apre «⏱ Ore non registrate da Jira» con la proposta di ore da inserire. Le chiusure in cui il worklog era stato creato e poi corretto a mano, e gli orari già coperti da ore su altri sottotask, non vengono proposti. Senza conferma non scrive niente.';
 
 /* Chiusura settimana guidata (weekly-chiusura.js, v18.259.0) */
 HELP_TEXTS['#pw-chs-btn'] = 'Apre «Chiusura settimana»: i passi per chiudere la settimana mostrata, nell\'ordine in cui conviene farli (sottotask, bonifica, ore da Jira, fornitori, MySond, controllo anomalie, solleciti, KM su Jira). Ogni passo dice quante cose restano aperte e apre con un clic lo strumento che le sistema.\n\nIl pannello di suo non scrive su Jira e non cambia la Griglia: legge il Controllo Produzione, le ore MySond, l\'ultimo giro dei worklog fornitori e verifica i sottotask su Jira (come «🎫 Sottotask»). Scrive solo i segni «fatto / non serve» dei passi e la chiusura, condivisi con tutti.\n\nVerde = settimana già chiusa.';
@@ -48439,9 +48607,10 @@ function mlRenderToolbar() {
   const colTipi = document.getElementById('ml-col-tipi');
   if (colTipi) colTipi.style.display = prg ? '' : 'none';
   const hint = document.getElementById('ml-filtro-hint');
-  if (hint) hint.textContent = prg
+  if (hint) hint.textContent = (prg
     ? 'Il colore del pin è lo stato dell\'elemento nella Programmazione (legenda «Stato»); più elementi nello stesso comune = pin a spicchi.'
-    : 'Il colore del pin indica solo lo stato del cantiere (legenda «Stato»).';
+    : 'Il colore del pin indica solo lo stato del cantiere (legenda «Stato»).') +
+    ' Ctrl+clic su più pin: distanze e tempi in auto fra i comuni.';
   const lbl = document.getElementById('ml-header-dates');
   if (lbl) {
     lbl.textContent = prg
@@ -48666,8 +48835,9 @@ function mlDrawMarkers(groups, keepView) {
       iconSize: [38, 38],
       iconAnchor: [19, 19],
     });
-    const m = L.marker([geo.lat, geo.lng], { icon, title: g.cantiere });
-    m.on('click', () => mlOpenDettaglio(idx));
+    const m = L.marker([geo.lat, geo.lng], { icon, title: g.cantiere + ' — Ctrl+clic: distanze in auto' });
+    // Ctrl/Cmd+clic = aggiunge/toglie il comune dalla catena delle distanze (mappa-percorso.js)
+    m.on('click', e => { if (mlPerClic(e.originalEvent, g)) return; mlOpenDettaglio(idx); });
     m.addTo(_mlLayer);
     bounds.push([geo.lat, geo.lng]);
   });
@@ -48923,7 +49093,11 @@ function mlRenderLista(groups, items) {
     '</button>';
   }).join('');
   el.querySelectorAll('.ml-row').forEach(b => {
-    b.onclick = () => mlFocusGruppo(parseInt(b.dataset.idx, 10));
+    b.onclick = ev => {
+      const i = parseInt(b.dataset.idx, 10);
+      if (mlPerClic(ev, _mlGroups[i])) return;
+      mlFocusGruppo(i);
+    };
   });
 }
 
@@ -56830,7 +57004,11 @@ function mlPrgRenderLista(groups, items) {
     '</button>';
   }).join('');
   el.querySelectorAll('.ml-row').forEach(b => {
-    b.onclick = () => mlFocusGruppo(parseInt(b.dataset.idx, 10));
+    b.onclick = ev => {
+      const i = parseInt(b.dataset.idx, 10);
+      if (mlPerClic(ev, _mlGroups[i])) return;
+      mlFocusGruppo(i);
+    };
   });
 }
 
@@ -56953,6 +57131,363 @@ function mlPrgOnDataChanged() {
   if (_mlFonte !== 'prg' || !mlIsActive()) return;
   if (_mlRendering) { setTimeout(mlPrgOnDataChanged, 600); return; }
   mlRender({ keepView: true });
+}
+/* ==================== MAPPA: DISTANZE IN AUTO (Ctrl+clic sui pin) ====================
+   Stima al volo di quanto sono distanti, su strada, i comuni della Mappa e quanto ci
+   mette una squadra a spostarsi dall'uno all'altro. Prefisso mlPer*.
+   - Ctrl+clic (Cmd+clic su Mac) su un pin, o su una riga dell'elenco laterale, aggiunge
+     il comune in coda alla catena; un secondo Ctrl+clic lo toglie. Il clic normale resta
+     il dettaglio del cantiere.
+   - La catena è nell'ordine dei clic: tratta per tratta km e tempo di guida, più i
+     progressivi. «⚡ Ordine più breve» riordina tenendo fermo il primo comune; «Ritorno
+     al primo» chiude il giro.
+   - Distanze e tempi dal servizio OSRM, con le stesse funzioni di «Pianifica spostamenti»
+     (_pwSpostOsrmTable/_pwSpostOsrmRoute in weekly-spostamenti.js): la matrice si rilegge
+     solo quando entra un comune nuovo, riordinare o togliere non fa chiamate per i km.
+   - Coordinate da mlGeo() (rubrica condivisa, sentinella «non trovato» esclusa).
+   - Solo memoria della sessione: non scrive nulla, né Supabase né Jira. «↗ Pianifica
+     spostamenti» copia la catena in quel tab (localStorage pw_spost_v1, come lì). */
+
+const ML_PER_MAX = 40;            // stesso limite di Pianifica spostamenti (demo OSRM)
+const ML_PER_RITARDO_MS = 350;    // Ctrl+clic in rapida successione = una sola chiamata OSRM
+
+let _mlPer = {
+  tappe: [],        // [{ key, nome, lat, lng }] nell'ordine della catena
+  mat: null,        // { keys: [], dist: [][] metri, dur: [][] secondi } — può contenere comuni già tolti
+  chiuso: false,
+  calcolo: false,
+  errore: '',
+  gen: 0,
+  rotta: null,      // [[lat,lng]] del percorso stradale
+  rottaSig: ''      // sequenza di chiavi a cui si riferisce `rotta`
+};
+let _mlPerLayer = null;
+let _mlPerTimer = null;
+
+/* ---------- ingresso dai pin e dall'elenco ---------- */
+/* true = il clic era un Ctrl/Cmd+clic ed è stato gestito qui (niente dettaglio). */
+function mlPerClic(ev, g) {
+  if (!ev || !(ev.ctrlKey || ev.metaKey)) return false;
+  if (ev.preventDefault) ev.preventDefault();
+  if (g) mlPerToggle(g);
+  return true;
+}
+
+function mlPerToggle(g) {
+  const i = _mlPer.tappe.findIndex(t => t.key === g.key);
+  if (i >= 0) {
+    _mlPer.tappe.splice(i, 1);
+  } else {
+    const geo = mlGeo(g.key);
+    if (!geo) {
+      showAlertModal('«' + g.cantiere + '» non è localizzato sulla mappa: correggine la posizione prima di calcolare le distanze.');
+      return;
+    }
+    if (_mlPer.tappe.length >= ML_PER_MAX) {
+      showAlertModal('Massimo ' + ML_PER_MAX + ' comuni per catena (limite del servizio di routing).');
+      return;
+    }
+    _mlPer.tappe.push({ key: g.key, nome: g.cantiere, lat: geo.lat, lng: geo.lng });
+  }
+  mlPerAggiorna();
+}
+
+/* Ridisegna subito (pannello, numeri sui pin, linea d'aria) e ricalcola poco dopo. */
+function mlPerAggiorna() {
+  _mlPerRender();
+  _mlPerDisegna();
+  clearTimeout(_mlPerTimer);
+  _mlPerTimer = setTimeout(_mlPerCalcola, ML_PER_RITARDO_MS);
+}
+
+function mlPerSvuota() {
+  clearTimeout(_mlPerTimer);
+  _mlPer.tappe = [];
+  _mlPer.errore = '';
+  _mlPer.calcolo = false;
+  _mlPer.gen++;
+  _mlPerRender();
+  _mlPerDisegna();
+}
+
+/* ---------- matrice ---------- */
+function _mlPerIdx(key) {
+  const m = _mlPer.mat;
+  if (!m) return -1;
+  return m.keys.indexOf(key);
+}
+
+/* Tratta fra due comuni: { m, s } (null se OSRM non conosce il collegamento). */
+function _mlPerTratta(a, b) {
+  const i = _mlPerIdx(a.key), j = _mlPerIdx(b.key);
+  if (i < 0 || j < 0) return { m: null, s: null };
+  const m = _mlPer.mat.dist[i] ? _mlPer.mat.dist[i][j] : null;
+  const s = _mlPer.mat.dur[i] ? _mlPer.mat.dur[i][j] : null;
+  return { m: (m == null || isNaN(m)) ? null : m, s: (s == null || isNaN(s)) ? null : s };
+}
+
+/* Sotto-matrice nell'ordine della catena (indice 0 = primo comune), null se incompleta. */
+function _mlPerSotto(campo) {
+  const t = _mlPer.tappe;
+  if (!_mlPer.mat || t.some(p => _mlPerIdx(p.key) < 0)) return null;
+  const M = _mlPer.mat[campo];
+  return t.map(a => t.map(b => {
+    const v = M[_mlPerIdx(a.key)][_mlPerIdx(b.key)];
+    return v == null || isNaN(v) ? null : v;
+  }));
+}
+
+function _mlPerSequenza() {
+  const t = _mlPer.tappe;
+  return (_mlPer.chiuso && t.length >= 2) ? t.concat([t[0]]) : t.slice();
+}
+
+/* Tratte della catena: [{ da, a, m, s, cumM, cumS, rientro }]; i progressivi
+   diventano null dalla prima tratta sconosciuta in poi. */
+function _mlPerTratte() {
+  const seq = _mlPerSequenza();
+  const out = [];
+  let cumM = 0, cumS = 0;
+  for (let i = 1; i < seq.length; i++) {
+    const tr = _mlPerTratta(seq[i - 1], seq[i]);
+    cumM = (cumM == null || tr.m == null) ? null : cumM + tr.m;
+    cumS = (cumS == null || tr.s == null) ? null : cumS + tr.s;
+    out.push({ da: seq[i - 1], a: seq[i], m: tr.m, s: tr.s, cumM, cumS, rientro: i === seq.length - 1 && _mlPer.chiuso });
+  }
+  return out;
+}
+
+/* ---------- calcolo OSRM ---------- */
+async function _mlPerCalcola() {
+  const gen = ++_mlPer.gen;
+  const tappe = _mlPer.tappe.slice();
+  if (tappe.length < 2) { _mlPer.calcolo = false; _mlPerRender(); _mlPerDisegna(); return; }
+
+  if (tappe.some(t => _mlPerIdx(t.key) < 0)) {
+    _mlPer.calcolo = true;
+    _mlPerRender();
+    try {
+      const m = await _pwSpostOsrmTable(tappe);
+      if (gen !== _mlPer.gen) return;
+      _mlPer.mat = { keys: tappe.map(t => t.key), dist: m.dist, dur: m.dur };
+      _mlPer.errore = '';
+    } catch (e) {
+      if (gen !== _mlPer.gen) return;
+      _mlPer.calcolo = false;
+      _mlPer.errore = 'Servizio di routing OSRM non raggiungibile (' + (e && e.message ? e.message : e) + ').';
+      _mlPerRender();
+      return;
+    }
+  }
+  _mlPer.calcolo = false;
+  _mlPerRender();
+
+  const seq = _mlPerSequenza();
+  const sig = seq.map(t => t.key).join('|');
+  if (sig !== _mlPer.rottaSig) {
+    try {
+      const geo = await _pwSpostOsrmRoute(seq);
+      if (gen !== _mlPer.gen) return;
+      _mlPer.rotta = geo;
+      _mlPer.rottaSig = geo ? sig : '';
+    } catch (_) {
+      if (gen !== _mlPer.gen) return;
+      _mlPer.rotta = null;
+      _mlPer.rottaSig = '';
+    }
+  }
+  _mlPerDisegna();
+}
+
+/* ---------- azioni del pannello ---------- */
+function mlPerSposta(pos, delta) {
+  const t = _mlPer.tappe, to = pos + delta;
+  if (pos < 0 || pos >= t.length || to < 0 || to >= t.length) return;
+  const x = t[pos]; t[pos] = t[to]; t[to] = x;
+  mlPerAggiorna();
+}
+
+function mlPerTogli(pos) {
+  if (pos < 0 || pos >= _mlPer.tappe.length) return;
+  _mlPer.tappe.splice(pos, 1);
+  mlPerAggiorna();
+}
+
+/* Ordine più breve tenendo fermo il primo comune (stesso algoritmo di Pianifica
+   spostamenti, strategia «Percorso più breve»). */
+function mlPerOttimizza() {
+  const t = _mlPer.tappe;
+  if (t.length < 3) return;
+  const D = _mlPerSotto('dist');
+  if (!D) { showAlertModal('Attendi la fine del calcolo delle distanze.'); return; }
+  const Dn = D.map(r => r.map(v => v == null ? 1e12 : v));
+  const ordine = _pwSpostBuildOrder(Dn, t.length, 'ottimale', _mlPer.chiuso);
+  _mlPer.tappe = [t[0]].concat(ordine.map(i => t[i]));
+  mlPerAggiorna();
+}
+
+/* Copia la catena in «Pianifica spostamenti» (ordine attuale, «Ordine inserito») e ci va. */
+function mlPerApriSpostamenti() {
+  const t = _mlPer.tappe;
+  if (t.length < 2) return;
+  const D = _mlPerSotto('dist'), T = _mlPerSotto('dur');
+  if (!D || !T) { showAlertModal('Attendi la fine del calcolo delle distanze.'); return; }
+  const punto = p => {
+    const g = mlGeo(p.key);
+    return { nome: p.nome, lat: p.lat, lng: p.lng, label: g && g.label ? g.label : '' };
+  };
+  const ordine = [];
+  for (let i = 1; i < t.length; i++) ordine.push(i);
+  _pwSpost = {
+    partenza: punto(t[0]),
+    tappe: t.slice(1).map(punto),
+    dist: D.map(r => r.map(v => v == null ? 0 : v)),
+    dur: T.map(r => r.map(v => v == null ? 0 : v)),
+    order: ordine,
+    chiuso: _mlPer.chiuso,
+    strategia: 'inserito',
+    nonTrovati: []
+  };
+  _pwSpostSave();
+  const pEl = document.getElementById('pw-spost-partenza');
+  const tEl = document.getElementById('pw-spost-tappe');
+  const sEl = document.getElementById('pw-spost-strategia');
+  if (pEl) pEl.value = t[0].nome;
+  if (tEl) tEl.value = t.slice(1).map(p => p.nome).join('\n');
+  if (sEl) sEl.value = 'inserito';
+  _pwActiveTab = 'spostamenti';
+  switchScreen('weekly');
+}
+
+/* ---------- pannello ---------- */
+function _mlPerBox() {
+  let box = document.getElementById('ml-per');
+  if (box) return box;
+  const wrap = document.querySelector('#screen-mappa .ml-map-wrap');
+  if (!wrap) return null;
+  box = document.createElement('div');
+  box.id = 'ml-per';
+  box.className = 'ml-per hidden';
+  wrap.appendChild(box);
+  box.addEventListener('click', ev => {
+    const b = ev.target.closest('[data-ml-per]');
+    if (!b) return;
+    const az = b.getAttribute('data-ml-per');
+    const pos = parseInt(b.getAttribute('data-pos'), 10);
+    if (az === 'chiudi') mlPerSvuota();
+    else if (az === 'su') mlPerSposta(pos, -1);
+    else if (az === 'giu') mlPerSposta(pos, 1);
+    else if (az === 'togli') mlPerTogli(pos);
+    else if (az === 'ottimizza') mlPerOttimizza();
+    else if (az === 'apri') mlPerApriSpostamenti();
+    else if (az === 'vai') {
+      const p = _mlPer.tappe[pos];
+      if (p && _mlMap) _mlMap.setView([p.lat, p.lng], Math.max(_mlMap.getZoom(), 10));
+    }
+  });
+  box.addEventListener('change', ev => {
+    if (ev.target && ev.target.getAttribute('data-ml-per') === 'chiuso') {
+      _mlPer.chiuso = !!ev.target.checked;
+      mlPerAggiorna();
+    }
+  });
+  return box;
+}
+
+function _mlPerRender() {
+  const box = _mlPerBox();
+  if (!box) return;
+  const t = _mlPer.tappe;
+  box.classList.toggle('hidden', !t.length);
+  if (!t.length) { box.innerHTML = ''; return; }
+
+  const tratte = _mlPerTratte();
+  const ultima = tratte.length ? tratte[tratte.length - 1] : null;
+  const km = v => (v == null ? '—' : _pwSpostKm(v));
+  const dur = v => (v == null ? '—' : _pwSpostDur(v));
+  const calcolo = _mlPer.calcolo;
+
+  let html = '<div class="ml-per-head"><b>🚐 Distanze in auto</b>' +
+    '<button data-ml-per="chiudi" title="Svuota la catena e chiudi">✕</button></div>';
+
+  if (t.length >= 2) {
+    html += '<div class="ml-per-tot">' +
+      '<span class="ml-per-chip km">' + (calcolo ? '⏳' : km(ultima && ultima.cumM)) + '</span>' +
+      '<span class="ml-per-chip t">🚗 ' + (calcolo ? '⏳' : dur(ultima && ultima.cumS)) + '</span>' +
+      '<span class="ml-per-chip n">' + t.length + ' comuni' + (_mlPer.chiuso ? ' · giro chiuso' : '') + '</span></div>';
+  }
+
+  html += '<div class="ml-per-list"><table class="ml-per-tab"><thead><tr>' +
+    '<th>#</th><th>Comune</th><th class="r">Tratta</th><th class="r">Progressivo</th><th></th></tr></thead><tbody>';
+  t.forEach((p, i) => {
+    const tr = i > 0 ? tratte[i - 1] : null;
+    html += '<tr>' +
+      '<td class="n">' + (i + 1) + '</td>' +
+      '<td class="c"><button class="ml-per-nome" data-ml-per="vai" data-pos="' + i + '" title="Centra la mappa su questo comune">' + esc(p.nome) + '</button></td>' +
+      '<td class="r">' + (tr ? (calcolo ? '⏳' : km(tr.m) + '<span>' + dur(tr.s) + '</span>') : '<span>partenza</span>') + '</td>' +
+      '<td class="r">' + (tr ? (calcolo ? '' : km(tr.cumM) + '<span>' + dur(tr.cumS) + '</span>') : '') + '</td>' +
+      '<td class="a">' +
+        '<button data-ml-per="su" data-pos="' + i + '" title="Sposta prima"' + (i === 0 ? ' disabled' : '') + '>▲</button>' +
+        '<button data-ml-per="giu" data-pos="' + i + '" title="Sposta dopo"' + (i === t.length - 1 ? ' disabled' : '') + '>▼</button>' +
+        '<button data-ml-per="togli" data-pos="' + i + '" title="Togli dalla catena">✕</button>' +
+      '</td></tr>';
+  });
+  if (_mlPer.chiuso && ultima && ultima.rientro) {
+    html += '<tr class="rientro"><td class="n">↩</td><td class="c">' + esc(t[0].nome) + ' <span>rientro</span></td>' +
+      '<td class="r">' + (calcolo ? '⏳' : km(ultima.m) + '<span>' + dur(ultima.s) + '</span>') + '</td>' +
+      '<td class="r">' + (calcolo ? '' : km(ultima.cumM) + '<span>' + dur(ultima.cumS) + '</span>') + '</td><td></td></tr>';
+  }
+  html += '</tbody></table></div>';
+
+  if (_mlPer.errore) html += '<div class="ml-per-err">⚠ ' + esc(_mlPer.errore) + '</div>';
+
+  if (t.length === 1) {
+    html += '<div class="ml-per-hint">Ctrl+clic su un altro comune per vedere la distanza.</div>';
+  } else {
+    const puoSpost = typeof sbCanSeePage !== 'function' || sbCanSeePage('weekly:spostamenti');
+    html += '<div class="ml-per-opz">' +
+      '<label title="Aggiunge il ritorno dall\'ultimo comune al primo"><input type="checkbox" data-ml-per="chiuso"' + (_mlPer.chiuso ? ' checked' : '') + '> Ritorno al primo</label>' +
+      (t.length >= 3 ? '<button data-ml-per="ottimizza" title="Riordina i comuni per fare meno km, tenendo fermo il primo">⚡ Ordine più breve</button>' : '') +
+      (puoSpost ? '<button data-ml-per="apri" title="Copia la catena nel tab «Pianifica spostamenti» (export Excel/PDF, strategie di ordinamento)">↗ Pianifica spostamenti</button>' : '') +
+      '</div>' +
+      '<div class="ml-per-hint">Ctrl+clic su un pin per aggiungere o togliere un comune. Km e tempi di guida su strada (OSRM), indicativi.</div>';
+  }
+  box.innerHTML = html;
+}
+
+/* ---------- disegno sulla mappa ---------- */
+/* Layer proprio, separato da _mlLayer: i render della Mappa (refresh Jira, Realtime,
+   cambio giorno) non cancellano la catena. */
+function _mlPerDisegna() {
+  if (!_mlMap) return;
+  if (!_mlPerLayer) _mlPerLayer = L.layerGroup().addTo(_mlMap);
+  _mlPerLayer.clearLayers();
+  const t = _mlPer.tappe;
+  if (!t.length) return;
+
+  if (t.length >= 2) {
+    const seq = _mlPerSequenza();
+    const sig = seq.map(p => p.key).join('|');
+    if (_mlPer.rotta && _mlPer.rottaSig === sig) {
+      L.polyline(_mlPer.rotta, { color: '#4f46e5', weight: 4, opacity: 0.85, interactive: false }).addTo(_mlPerLayer);
+    } else {
+      L.polyline(seq.map(p => [p.lat, p.lng]),
+        { color: '#4f46e5', weight: 2, opacity: 0.8, dashArray: '4,6', interactive: false }).addTo(_mlPerLayer);
+    }
+  }
+  t.forEach((p, i) => {
+    L.marker([p.lat, p.lng], {
+      icon: L.divIcon({
+        className: 'ml-per-badge-wrap',
+        html: '<div class="ml-per-badge">' + (i + 1) + '</div>',
+        iconSize: [20, 20],
+        iconAnchor: [26, 26]
+      }),
+      interactive: false,
+      keyboard: false,
+      zIndexOffset: 1000
+    }).addTo(_mlPerLayer);
+  });
 }
 /* ===================== ASSISTENTE AI (widget flottante) ===================== */
 // Widget di domande e risposte in sola lettura sui dati dell'app (operatori,

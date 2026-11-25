@@ -1889,6 +1889,57 @@
   .ml-pc-arancione { color: #f97316; }
   .ml-pc-rossa { color: #dc2626; }
 
+  /* Distanze in auto (Ctrl+clic sui pin, mappa-percorso.js): pannello in basso a
+     sinistra, sotto il drawer (1100) e sopra i controlli Leaflet (1000); numero
+     della catena sul bordo in alto a sinistra del pin, che resta cliccabile. */
+  .ml-per {
+    position: absolute; left: 10px; bottom: 10px; z-index: 1001;
+    width: 380px; max-width: calc(100% - 20px); max-height: calc(100% - 160px);
+    display: flex; flex-direction: column;
+    background: white; border: 1px solid var(--border); border-radius: 8px;
+    box-shadow: 0 4px 16px rgba(15,23,42,.18); font-size: 12px; color: #1e293b;
+  }
+  .ml-per.hidden { display: none; }
+  .ml-radar-bar:not(.hidden) ~ .ml-per { bottom: 58px; }
+  .ml-per-head {
+    display: flex; align-items: center; justify-content: space-between; gap: 8px;
+    padding: 7px 10px; background: #4f46e5; color: white; border-radius: 7px 7px 0 0; flex-shrink: 0;
+  }
+  .ml-per-head b { font-size: 12.5px; }
+  .ml-per-head button { background: none; border: none; color: white; font-size: 15px; cursor: pointer; line-height: 1; }
+  .ml-per-tot { display: flex; flex-wrap: wrap; gap: 5px; padding: 7px 10px 2px; flex-shrink: 0; }
+  .ml-per-chip { padding: 2px 8px; border-radius: 5px; font-weight: 700; border: 1px solid; }
+  .ml-per-chip.km { background: #eef2ff; color: #3730a3; border-color: #c7d2fe; }
+  .ml-per-chip.t { background: #f0fdfa; color: #115e59; border-color: #99f6e4; }
+  .ml-per-chip.n { background: #f8fafc; color: #475569; border-color: #e2e8f0; font-weight: 500; }
+  .ml-per-list { overflow-y: auto; min-height: 0; padding: 4px 6px; }
+  .ml-per-tab { width: 100%; border-collapse: collapse; }
+  .ml-per-tab th { font-size: 10px; text-transform: uppercase; letter-spacing: .03em; color: #94a3b8; font-weight: 600; text-align: left; padding: 2px 4px !important; }
+  .ml-per-tab td { padding: 4px !important; border-top: 1px solid #eef2f6; vertical-align: top; }
+  .ml-per-tab .r { text-align: right; white-space: nowrap; }
+  .ml-per-tab td.r span, .ml-per-tab td.c span { display: block; font-size: 10.5px; color: #94a3b8; }
+  .ml-per-tab td.c span { display: inline; }
+  .ml-per-tab td.n { width: 20px; text-align: center; font-weight: 700; color: #4f46e5; }
+  .ml-per-tab td.a { white-space: nowrap; text-align: right; width: 58px; }
+  .ml-per-tab td.a button { background: none; border: none; cursor: pointer; color: #94a3b8; padding: 0 2px; font-size: 11px; }
+  .ml-per-tab td.a button:hover:not([disabled]) { color: #4f46e5; }
+  .ml-per-tab td.a button[disabled] { opacity: .3; cursor: default; }
+  .ml-per-tab tr.rientro td { background: #f8fafc; }
+  .ml-per-nome { background: none; border: none; padding: 0; cursor: pointer; font-weight: 600; color: #1e293b; text-align: left; font-size: 12px; }
+  .ml-per-nome:hover { color: #4f46e5; text-decoration: underline; }
+  .ml-per-opz { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; padding: 6px 10px; border-top: 1px solid #eef2f6; flex-shrink: 0; }
+  .ml-per-opz label { display: inline-flex; align-items: center; gap: 4px; cursor: pointer; color: #475569; }
+  .ml-per-opz button { border: 1px solid #c7d2fe; background: #eef2ff; color: #3730a3; border-radius: 5px; padding: 2px 8px; cursor: pointer; font-size: 11.5px; font-weight: 600; }
+  .ml-per-opz button:hover { background: #e0e7ff; }
+  .ml-per-hint { padding: 4px 10px 7px; font-size: 10.5px; color: #94a3b8; flex-shrink: 0; }
+  .ml-per-err { margin: 4px 10px; padding: 4px 8px; font-size: 11px; color: #be123c; background: #fff1f2; border: 1px solid #fecdd3; border-radius: 5px; }
+  .ml-per-badge-wrap { background: transparent; border: none; pointer-events: none !important; }
+  .ml-per-badge {
+    width: 20px; height: 20px; border-radius: 50%; background: #4f46e5; color: white;
+    border: 2px solid white; box-shadow: 0 1px 3px rgba(15,23,42,.5);
+    font-size: 11px; font-weight: 700; line-height: 16px; text-align: center;
+  }
+
   .ml-loading {
     position: absolute; inset: 0; background: rgba(255,255,255,.7);
     display: none; align-items: center; justify-content: center;
@@ -2560,7 +2611,7 @@
       </span>
       <button id="btn-presentation" class="px-3 py-1.5 text-sm rounded hover:bg-white/10" style="border:1px solid var(--dark-border-strong);color:var(--dark-text);visibility:visible;">📊 Modalità presentazione</button>
       <div class="text-xs pl-2" style="border-left:1px solid var(--dark-border-strong);color:var(--dark-text-muted);">
-        <span id="app-version" class="font-medium" style="color:var(--accent);">v18.316.0</span> · Michele Marchetti
+        <span id="app-version" class="font-medium" style="color:var(--accent);">v18.319.0</span> · Michele Marchetti
         <span id="sb-role-badge" style="margin-left:8px;padding:1px 8px;border-radius:9999px;background:rgba(255,255,255,.1);color:var(--dark-text);font-weight:600;"></span>
       </div>
     </div>
@@ -4001,7 +4052,7 @@
       </div>
     </div>
     <div class="ml-filtri-foot">
-      <span id="ml-filtro-hint" class="ml-filtro-hint">Il colore del pin indica solo lo stato del cantiere (legenda «Stato»).</span>
+      <span id="ml-filtro-hint" class="ml-filtro-hint">Il colore del pin indica solo lo stato del cantiere (legenda «Stato»). Ctrl+clic su più pin: distanze e tempi in auto fra i comuni.</span>
       <button id="ml-filtro-clear" class="text-[11px] text-slate-500 underline" style="display:none;">Azzera filtri</button>
     </div>
   </div>

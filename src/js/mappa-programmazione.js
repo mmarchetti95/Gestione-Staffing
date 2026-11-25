@@ -368,7 +368,11 @@ function mlPrgRenderLista(groups, items) {
     '</button>';
   }).join('');
   el.querySelectorAll('.ml-row').forEach(b => {
-    b.onclick = () => mlFocusGruppo(parseInt(b.dataset.idx, 10));
+    b.onclick = ev => {
+      const i = parseInt(b.dataset.idx, 10);
+      if (mlPerClic(ev, _mlGroups[i])) return;
+      mlFocusGruppo(i);
+    };
   });
 }
 

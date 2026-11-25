@@ -575,7 +575,7 @@ function pwControlloExport() {
     dates.push(`${String(d.getUTCDate()).padStart(2,'0')}/${String(d.getUTCMonth()+1).padStart(2,'0')}`);
   }
 
-  const headers = ['Commessa','Squadra','Operatore','Verificato','Giorno','Data','Cantiere','Attività',
+  const headers = ['Commessa','Squadra','Operatore','Giorno','Data','Cantiere','Attività',
                    'Ore Jira','Ticket','Epic','Ore Report Prod.','Δ Ore','Km / Cad','Note'];
   const wsData = [headers];
 
@@ -601,7 +601,6 @@ function pwControlloExport() {
           const epicStr = [...new Set(tkSep.propri.filter(t => t.epic && t.epic.name).map(t => t.epic.name))].join(', ');
           wsData.push([
             bc.commessa, sqNome, op.nome,
-            saved.verificato === true ? 'Sì' : '',
             DAY_NAMES[g], dates[g],
             pwCellCantieri(opG).join(', '), opG.attivita || '',
             jVal === '' ? '' : jVal,
