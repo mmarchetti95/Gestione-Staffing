@@ -81,6 +81,9 @@
 // Risposta in piu':
 //   "trovati": [{ key, url, summary, status, project, assignee (accountId), duedate, start,
 //                 parentKey, parentSummary }]
+// "daFare": true su una voce di "cerca" (dalla v18.320.0, sottotask "sconosciuti" del
+// controllo): solo sottotask in categoria To Do e solo per scadenza / Start date nella
+// settimana (niente "creati da poco"), cosi' su un progetto grande non si supera MAX_TROVATI.
 //
 // "tratti" (dalla v18.313.0, controllo «worklog mancanti» di Sincronizza in Controllo
 // Produzione): per ogni sottotask anche i periodi passati in IN PROGRESS, dal changelog, e
@@ -343,7 +346,7 @@ const START_DATE_FIELD = "customfield_13093"; // Start date pianificato
 const MAX_CERCA = 20;
 const MAX_TROVATI = 500;
 
-type Cerca = { project: string; emails: string[]; dal: string; al: string };
+type Cerca = { project: string; emails: string[]; dal: string; al: string; daFare?: boolean };
 
 function giorniPrima(iso: string, n: number): string {
   const d = new Date(iso + "T00:00:00Z");
@@ -374,8 +377,10 @@ async function cercaSottotask(richieste: Cerca[], accountByEmail: Record<string,
   for (const r of richieste) {
     const acc = [...new Set(r.emails.map((e) => accountByEmail[e]).filter(Boolean))] as string[];
     if (!acc.length || out.length >= MAX_TROVATI) continue;
-    const base = `project = "${jqlEscape(r.project)}" AND issuetype in subTaskIssueTypes() AND assignee in (${acc.map((a) => `"${jqlEscape(a)}"`).join(",")})`;
-    const periodo = [`(duedate >= "${r.dal}" AND duedate <= "${r.al}")`, `created >= "${giorniPrima(r.dal, 21)}"`];
+    const base = `project = "${jqlEscape(r.project)}" AND issuetype in subTaskIssueTypes() AND assignee in (${acc.map((a) => `"${jqlEscape(a)}"`).join(",")})`
+      + (r.daFare ? ` AND statusCategory = "To Do"` : "");
+    const periodo = [`(duedate >= "${r.dal}" AND duedate <= "${r.al}")`];
+    if (!r.daFare) periodo.push(`created >= "${giorniPrima(r.dal, 21)}"`);
     let issues: any[];
     try {
       issues = await jiraSearchJql(`${base} AND (${periodo.join(" OR ")} OR (cf[13093] >= "${r.dal}" AND cf[13093] <= "${r.al}")) ORDER BY created DESC`, fields, MAX_TROVATI);
@@ -429,7 +434,7 @@ Deno.serve(async (req: Request) => {
     .map((c: any) => ({
       project: String(c?.project || "").trim().toUpperCase(),
       emails: [...new Set((Array.isArray(c?.emails) ? c.emails : []).map(normEmail).filter((e: string) => e.includes("@")))] as string[],
-      dal: String(c?.dal || ""), al: String(c?.al || ""),
+      dal: String(c?.dal || ""), al: String(c?.al || ""), daFare: c?.daFare === true,
     }))
     .filter((c: Cerca) => /^[A-Z][A-Z0-9_]*$/.test(c.project) && c.emails.length && isoOk(c.dal) && isoOk(c.al))
     .slice(0, MAX_CERCA);
