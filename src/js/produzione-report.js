@@ -378,7 +378,8 @@ async function cpProcessReport(csvText, commessa, squadra) {
   const cellaDi = u => _cpData[`${commessa}|||${squadra}|||${u.operatore}|||${u.giorno}`] || {};
   const precedenteSenzaUtenza = u => {
     const c = cellaDi(u), m = cpKmMeta(c, u.ticketKey);
-    if (m.reportUtenze || (m.fonte !== 'report' && m.fonte !== 'manuale')) return false;
+    // Le correzioni a mano hanno una regola loro (sotto, v18.314.0).
+    if (m.reportUtenze || m.fonte !== 'report') return false;
     const km = c.km_by_ticket && c.km_by_ticket[u.ticketKey];
     return Number(km) > 0 || Number(c.ore_report) > 0;
   };
@@ -443,6 +444,28 @@ async function cpProcessReport(csvText, commessa, squadra) {
   }
   const azzeraTutto = daysWithData === 0;
 
+  // Km/Cad corretti a mano (v18.314.0): restano, il report aggiorna solo i dati per utenza (orari).
+  // Se il file porta un valore diverso da quello che la correzione aveva sostituito si chiede.
+  const kmDaFile = u => {
+    const ru = { ...(cpKmMeta(cellaDi(u), u.ticketKey).reportUtenze || {}) };
+    ru[u.utente] = { km: u.km };
+    return Math.round(Object.values(ru).reduce((t, v) => t + (Number(v.km) || 0), 0) * 1000) / 1000;
+  };
+  const manuali = conDati.map(u => cpKmManualeDi(cellaDi(u), u.ticketKey, kmDaFile(u))).filter(Boolean);
+  let tieniManuali = true;
+  const manDiversi = manuali.filter(m => m.datiNuovi);
+  if (manDiversi.length) {
+    const scelta = await cpSelectModal(
+      'Km/Cad corretti a mano',
+      `${manuali.length} Km/Cad di questo report ${manuali.length === 1 ? 'è stato corretto' : 'sono stati corretti'} a mano; ` +
+      `su ${manDiversi.length} il file ha un valore diverso (es. ${cpBrdKm(manDiversi[0].km)} a mano, ${cpBrdKm(manDiversi[0].nuovo)} dal report).\n` +
+      `Mantenendo le correzioni il report aggiorna solo gli orari; sostituendole su Jira andrà la differenza con il valore del report.`,
+      [{ value: 'tieni', label: 'Mantieni le correzioni a mano' }, { value: 'sostituisci', label: 'Sostituisci con i valori del report' }]);
+    if (!scelta) return;
+    tieniManuali = scelta === 'tieni';
+  }
+  let manTenuti = 0;
+
   // Applica: aggiorna cache locale (ore per cella, km sul ticket del comune) e persisti
   const touched = new Map();
   const nessunaSet = new Set(nessunaProd);
@@ -478,10 +501,13 @@ async function cpProcessReport(csvText, commessa, squadra) {
       const vals = Object.values(reportUtenze);
       km  = Math.round(vals.reduce((t, v) => t + (Number(v.km) || 0), 0) * 1000) / 1000;
     }
-    if (u.ticketKey) {
+    if (u.ticketKey && tieniManuali && cpKmMeta(cell, u.ticketKey).fonte === 'manuale') {
+      cpKmMetaSet(cell, u.ticketKey, { reportUtenze });
+      manTenuti++;
+    } else if (u.ticketKey) {
       if (!cell.km_by_ticket || typeof cell.km_by_ticket !== 'object') cell.km_by_ticket = {};
       cell.km_by_ticket[u.ticketKey] = km;
-      cpKmMetaSet(cell, u.ticketKey, { fonte: 'report', reportUtenze });
+      cpKmMetaSet(cell, u.ticketKey, { fonte: 'report', reportUtenze, kmReport: null });
       cell.km_cad = cpSumKm(cell.km_by_ticket);
     }
     // Ore della giornata su tutti i ticket della cella (cpOreReportDaMeta), non del solo report.
@@ -515,6 +541,9 @@ async function cpProcessReport(csvText, commessa, squadra) {
   }
   if (giorniNessuna.length) {
     msg += `\n\n✓ Nessuna produzione (giorno compilato): ${giorniNessuna.join(', ')}.`;
+  }
+  if (manTenuti > 0) {
+    msg += `\n\n✋ ${manTenuti} Km/Cad corrett${manTenuti === 1 ? 'o' : 'i'} a mano mantenut${manTenuti === 1 ? 'o' : 'i'} (aggiornati solo gli orari).`;
   }
   if (giorniZeroSaltati > 0) {
     msg += `\n\nℹ ${giorniZeroSaltati} operatore/giorno senza dati in questo file lasciati com'erano (già compilati da un altro report).`;

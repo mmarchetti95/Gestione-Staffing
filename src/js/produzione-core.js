@@ -1224,26 +1224,53 @@ async function cpSaveKmTicket(commessa, squadra, operatore, giorno, dataGiorno, 
   if (!_cpData[k].km_by_ticket || typeof _cpData[k].km_by_ticket !== 'object') _cpData[k].km_by_ticket = {};
 
   const v = (value === '' || value == null) ? null : parseFloat(value);
-  const nuovo = (v == null || isNaN(v)) ? null : Math.round(v * 1000) / 1000;
+  let nuovo = (v == null || isNaN(v)) ? null : Math.round(v * 1000) / 1000;
   const prima = _cpData[k].km_by_ticket[ticketKey] == null ? null : Number(_cpData[k].km_by_ticket[ticketKey]);
   if (nuovo === prima) return;   // uscita dal campo senza modifiche
-  // Un valore scritto a mano conta come verificato dall'ufficio solo dopo una conferma esplicita.
-  if (nuovo != null) {
+  const ripristina = () => {
+    const inp = document.querySelector('.cp-km-in[data-cpk="' + CSS.escape(k) + '"][data-tk="' + CSS.escape(ticketKey) + '"]');
+    if (inp) inp.value = prima == null ? '' : String(prima);
+  };
+  const campo = cpCampoProduzione(commessa);
+  const meta0 = cpKmMeta(_cpData[k], ticketKey);
+  // Valore della board/report che la correzione sostituisce (v18.314.0): ai reimport serve a capire
+  // se dopo la correzione sono arrivati dati nuovi.
+  const kmReport = meta0.fonte === 'manuale' ? (meta0.kmReport == null ? null : Number(meta0.kmReport))
+    : meta0.fonte === 'report' ? prima : null;
+  // Svuotare un valore (v18.314.0) = nessuna produzione: diventa 0 corretto a mano, così la
+  // sincronizzazione toglie da Jira quanto già inviato (delta negativo) e i reimport non lo
+  // rimettono. Cancellarlo davvero lo farebbe rileggere da Jira alla sincronizzazione successiva.
+  // Solo uno 0 svuotato di nuovo viene cancellato davvero.
+  if (nuovo == null && prima != null && prima !== 0) {
+    const lastEff = cpKmLastSulCampo(_cpData[k], ticketKey, campo);
+    const ok = await showConfirmAsync(lastEff != null
+      ? `Togliere da Jira la produzione del ticket ${ticketKey} (${operatore})?\n\n` +
+        `Il Km/Cad diventa 0 (nessuna produzione). Con 🔄 Sincronizza su Jira viene sottratto ${lastEff}, il valore già inviato, dal campo "${campo}"` +
+        (campo === CP_CAMPO_AP ? ' (e dal Task padre)' : '') + `.\n\nÈ una correzione a mano: i prossimi import dalla board o dal report non la sovrascrivono.`
+      : `Azzerare il Km/Cad del ticket ${ticketKey} (${operatore})?\n\n` +
+        `Diventa 0 (nessuna produzione). Non era ancora stato inviato, quindi su Jira non cambia niente.\n\nÈ una correzione a mano: i prossimi import dalla board o dal report non la sovrascrivono.`,
+      lastEff != null ? 'Togli da Jira' : 'Azzera');
+    if (!ok) { ripristina(); return; }
+    nuovo = 0;
+    const inp = document.querySelector('.cp-km-in[data-cpk="' + CSS.escape(k) + '"][data-tk="' + CSS.escape(ticketKey) + '"]');
+    if (inp) inp.value = '0';
+  } else if (nuovo != null) {
+    // Un valore scritto a mano conta come verificato dall'ufficio solo dopo una conferma esplicita.
     const ok = await showConfirmAsync(
       `Confermi Km/Cad ${nuovo} per il ticket ${ticketKey} (${operatore})?\n\n` +
-      `Il valore sarà considerato verificato dall'ufficio e, con 🔄 Sincronizza, scritto su Jira nel campo "${cpCampoProduzione(commessa)}".`,
+      `Il valore sarà considerato verificato dall'ufficio e, con 🔄 Sincronizza, su Jira andrà solo la differenza rispetto a quanto già inviato (campo "${campo}").\n\n` +
+      `È una correzione a mano: i prossimi import dalla board o dal report non la sovrascrivono.`,
       'Conferma');
-    if (!ok) {
-      const inp = document.querySelector('.cp-km-in[data-cpk="' + CSS.escape(k) + '"][data-tk="' + CSS.escape(ticketKey) + '"]');
-      if (inp) inp.value = prima == null ? '' : String(prima);
-      return;
-    }
+    if (!ok) { ripristina(); return; }
+  }
+  if (nuovo != null) {
     _cpData[k].km_by_ticket[ticketKey] = nuovo;
-    // Un valore corretto a mano non è più la somma dei report: un report caricato dopo lo sostituisce.
-    cpKmMetaSet(_cpData[k], ticketKey, { fonte: 'manuale', reportUtenze: null });
+    // Correzione a mano: i reimport tengono questo valore e aggiornano solo reportUtenze (orari
+    // per le Ore Report Prod.), vedi cpKmManualeDi.
+    cpKmMetaSet(_cpData[k], ticketKey, { fonte: 'manuale', kmReport });
   } else {
     delete _cpData[k].km_by_ticket[ticketKey];
-    cpKmMetaSet(_cpData[k], ticketKey, { fonte: null, reportUtenze: null });
+    cpKmMetaSet(_cpData[k], ticketKey, { fonte: null, reportUtenze: null, kmReport: null });
   }
 
   // Aggiorna lo specchio km_cad (somma) per colorazione griglia/export
@@ -1311,6 +1338,21 @@ function cpKmMetaSet(cell, key, patch) {
 function cpKmVerificato(cell, key) {
   const f = cpKmMeta(cell, key).fonte;
   return f === 'report' || f === 'manuale';
+}
+/* Correzione a mano davanti a un reimport (board o «Carica Report», v18.314.0): il valore a mano
+   resta, salvo scelta esplicita. → null se il ticket non è corretto a mano, altrimenti
+   { km, kmReport, nuovo, datiNuovi }: kmReport = valore della board/report che la correzione aveva
+   sostituito (null = non noto), nuovo = quello che il reimport scriverebbe, datiNuovi = la
+   board/report è cambiata dopo la correzione (da far vedere: forse vanno presi). */
+function cpKmManualeDi(cell, key, nuovo) {
+  const m = cpKmMeta(cell, key);
+  if (m.fonte !== 'manuale') return null;
+  const by = cell && cell.km_by_ticket;
+  const km = by && by[key] != null ? Number(by[key]) : null;
+  const kmReport = m.kmReport == null ? null : Number(m.kmReport);
+  const diverso = (a, b) => a == null || b == null || Math.abs(a - b) > 0.0005;
+  const datiNuovi = nuovo != null && (kmReport != null ? diverso(nuovo, kmReport) : diverso(nuovo, km));
+  return { km, kmReport, nuovo: nuovo == null ? null : Number(nuovo), datiNuovi };
 }
 // Ultimo valore scritto sul campo indicato, o null se l'ultimo invio era su un altro campo.
 function cpKmLastSulCampo(cell, key, campo) {
@@ -1422,8 +1464,8 @@ function cpKmJiraTitolo(st, ticketKey) {
     case 'da_inviare': return `${ticketKey}: Km/Cad ${f(st.km)} non ancora inviato a Jira` +
       (st.altroCampo ? ` su questo campo (l'ultimo invio, ${f(st.last)}, era su "${st.campoLast}")` : '') + `.${campo}\nPremi 🔄 Sincronizza squadra per inviarlo.`;
     case 'senza_email': return `${ticketKey}: Km/Cad ${f(st.km)} non inviabile, l'operatore non ha un'email assegnata (la sincronizzazione lo salta).`;
-    case 'nessuna': return `${ticketKey}: nessuna produzione (es. maltempo), Km/Cad 0 dal report.\nGiorno compilato: non c'è niente da inviare a Jira. Se la produzione c'è, scrivi il valore nel campo Km/Cad o carica il report.`;
-    case 'orfano': return `${ticketKey}: Km/Cad vuoto qui, ma su Jira resta l'ultimo valore inviato (${f(st.last)}): la sincronizzazione non lo toglie.\nClic per azzerare lo storico (con conferma).`;
+    case 'nessuna': return `${ticketKey}: nessuna produzione (es. maltempo), Km/Cad 0.\nGiorno compilato: non c'è niente da inviare a Jira. Se la produzione c'è, scrivi il valore nel campo Km/Cad o carica il report.`;
+    case 'orfano': return `${ticketKey}: Km/Cad vuoto qui, ma su Jira resta l'ultimo valore inviato (${f(st.last)}).\nPer toglierlo da Jira scrivi 0 nel campo Km/Cad e premi 🔄 Sincronizza squadra. Se invece su Jira l'hai già tolto a mano, clic per azzerare lo storico (con conferma).`;
     default: return `${ticketKey}: nessun Km/Cad da inviare.`;
   }
 }
@@ -1451,6 +1493,10 @@ function cpKmJiraRefreshDom() {
     inp.classList.toggle('cp-km-agg', stato === 'da_aggiornare');
     inp.classList.toggle('cp-km-inv', stato === 'da_inviare' || stato === 'senza_email');
     inp.classList.toggle('cp-km-ver', stato === 'da_verificare');
+    // Correzione a mano (v18.314.0): i reimport da board/report non la sovrascrivono.
+    const man = cpKmMeta(_cpData[inp.dataset.cpk], inp.dataset.tk).fonte === 'manuale';
+    inp.classList.toggle('cp-km-man', man);
+    inp.title = (inp.dataset.tk || '') + (man ? ' · ✋ corretto a mano: i reimport dalla board o dal report non lo sovrascrivono' : '');
   });
   const giorniSq = cpKmJiraGiorniMancanti();
   document.querySelectorAll('.cp-table .cp-kmj-sum').forEach(el => {

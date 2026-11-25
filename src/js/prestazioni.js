@@ -148,7 +148,8 @@ function prfOsservazioni(rows, opz) {
     const meta = r.km_meta_by_ticket && typeof r.km_meta_by_ticket === 'object' ? r.km_meta_by_ticket : {};
     Object.keys(meta).forEach(k => {
       const u = meta[k] && meta[k].reportUtenze;
-      if (u && typeof u === 'object') ru[(r.data_giorno || '') + '|' + r.operatore + '|' + k] = u;
+      // Su un Km/Cad corretto a mano (v18.314.0) i dati per utenza sono quelli del tablet, non il valore vero.
+      if (u && typeof u === 'object' && meta[k].fonte !== 'manuale') ru[(r.data_giorno || '') + '|' + r.operatore + '|' + k] = u;
     });
   });
 

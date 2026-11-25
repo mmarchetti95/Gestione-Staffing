@@ -1133,6 +1133,7 @@
   .cp-kmj-vuoto { background:transparent; color:#cbd5e1; font-weight:400; }
   .cp-km-in.cp-km-agg { border-color:#f59e0b !important; box-shadow:inset 0 0 0 1px #f59e0b; }
   .cp-km-in.cp-km-inv { border-color:#ef4444 !important; box-shadow:inset 0 0 0 1px #ef4444; }
+  .cp-km-in.cp-km-man { font-style:italic; text-decoration:underline dotted #64748b; }
   .cp-kmj-sum { margin-left:10px; font-size:11px; font-weight:600; border-radius:5px; padding:2px 8px; cursor:pointer; }
   .cp-kmj-sum.pend { background:#fff7ed; color:#c2410c; border:1px solid #fdba74; }
   .cp-kmj-sum.ok { background:#f0fdf4; color:#15803d; border:1px solid #bbf7d0; cursor:default; }
@@ -2567,7 +2568,7 @@
       </span>
       <button id="btn-presentation" class="px-3 py-1.5 text-sm rounded hover:bg-white/10" style="border:1px solid var(--dark-border-strong);color:var(--dark-text);visibility:visible;">📊 Modalità presentazione</button>
       <div class="text-xs pl-2" style="border-left:1px solid var(--dark-border-strong);color:var(--dark-text-muted);">
-        <span id="app-version" class="font-medium" style="color:var(--accent);">v18.313.0</span> · Michele Marchetti
+        <span id="app-version" class="font-medium" style="color:var(--accent);">v18.314.0</span> · Michele Marchetti
         <span id="sb-role-badge" style="margin-left:8px;padding:1px 8px;border-radius:9999px;background:rgba(255,255,255,.1);color:var(--dark-text);font-weight:600;"></span>
       </div>
     </div>
@@ -23975,26 +23976,53 @@ async function cpSaveKmTicket(commessa, squadra, operatore, giorno, dataGiorno, 
   if (!_cpData[k].km_by_ticket || typeof _cpData[k].km_by_ticket !== 'object') _cpData[k].km_by_ticket = {};
 
   const v = (value === '' || value == null) ? null : parseFloat(value);
-  const nuovo = (v == null || isNaN(v)) ? null : Math.round(v * 1000) / 1000;
+  let nuovo = (v == null || isNaN(v)) ? null : Math.round(v * 1000) / 1000;
   const prima = _cpData[k].km_by_ticket[ticketKey] == null ? null : Number(_cpData[k].km_by_ticket[ticketKey]);
   if (nuovo === prima) return;   // uscita dal campo senza modifiche
-  // Un valore scritto a mano conta come verificato dall'ufficio solo dopo una conferma esplicita.
-  if (nuovo != null) {
+  const ripristina = () => {
+    const inp = document.querySelector('.cp-km-in[data-cpk="' + CSS.escape(k) + '"][data-tk="' + CSS.escape(ticketKey) + '"]');
+    if (inp) inp.value = prima == null ? '' : String(prima);
+  };
+  const campo = cpCampoProduzione(commessa);
+  const meta0 = cpKmMeta(_cpData[k], ticketKey);
+  // Valore della board/report che la correzione sostituisce (v18.314.0): ai reimport serve a capire
+  // se dopo la correzione sono arrivati dati nuovi.
+  const kmReport = meta0.fonte === 'manuale' ? (meta0.kmReport == null ? null : Number(meta0.kmReport))
+    : meta0.fonte === 'report' ? prima : null;
+  // Svuotare un valore (v18.314.0) = nessuna produzione: diventa 0 corretto a mano, così la
+  // sincronizzazione toglie da Jira quanto già inviato (delta negativo) e i reimport non lo
+  // rimettono. Cancellarlo davvero lo farebbe rileggere da Jira alla sincronizzazione successiva.
+  // Solo uno 0 svuotato di nuovo viene cancellato davvero.
+  if (nuovo == null && prima != null && prima !== 0) {
+    const lastEff = cpKmLastSulCampo(_cpData[k], ticketKey, campo);
+    const ok = await showConfirmAsync(lastEff != null
+      ? `Togliere da Jira la produzione del ticket ${ticketKey} (${operatore})?\n\n` +
+        `Il Km/Cad diventa 0 (nessuna produzione). Con 🔄 Sincronizza su Jira viene sottratto ${lastEff}, il valore già inviato, dal campo "${campo}"` +
+        (campo === CP_CAMPO_AP ? ' (e dal Task padre)' : '') + `.\n\nÈ una correzione a mano: i prossimi import dalla board o dal report non la sovrascrivono.`
+      : `Azzerare il Km/Cad del ticket ${ticketKey} (${operatore})?\n\n` +
+        `Diventa 0 (nessuna produzione). Non era ancora stato inviato, quindi su Jira non cambia niente.\n\nÈ una correzione a mano: i prossimi import dalla board o dal report non la sovrascrivono.`,
+      lastEff != null ? 'Togli da Jira' : 'Azzera');
+    if (!ok) { ripristina(); return; }
+    nuovo = 0;
+    const inp = document.querySelector('.cp-km-in[data-cpk="' + CSS.escape(k) + '"][data-tk="' + CSS.escape(ticketKey) + '"]');
+    if (inp) inp.value = '0';
+  } else if (nuovo != null) {
+    // Un valore scritto a mano conta come verificato dall'ufficio solo dopo una conferma esplicita.
     const ok = await showConfirmAsync(
       `Confermi Km/Cad ${nuovo} per il ticket ${ticketKey} (${operatore})?\n\n` +
-      `Il valore sarà considerato verificato dall'ufficio e, con 🔄 Sincronizza, scritto su Jira nel campo "${cpCampoProduzione(commessa)}".`,
+      `Il valore sarà considerato verificato dall'ufficio e, con 🔄 Sincronizza, su Jira andrà solo la differenza rispetto a quanto già inviato (campo "${campo}").\n\n` +
+      `È una correzione a mano: i prossimi import dalla board o dal report non la sovrascrivono.`,
       'Conferma');
-    if (!ok) {
-      const inp = document.querySelector('.cp-km-in[data-cpk="' + CSS.escape(k) + '"][data-tk="' + CSS.escape(ticketKey) + '"]');
-      if (inp) inp.value = prima == null ? '' : String(prima);
-      return;
-    }
+    if (!ok) { ripristina(); return; }
+  }
+  if (nuovo != null) {
     _cpData[k].km_by_ticket[ticketKey] = nuovo;
-    // Un valore corretto a mano non è più la somma dei report: un report caricato dopo lo sostituisce.
-    cpKmMetaSet(_cpData[k], ticketKey, { fonte: 'manuale', reportUtenze: null });
+    // Correzione a mano: i reimport tengono questo valore e aggiornano solo reportUtenze (orari
+    // per le Ore Report Prod.), vedi cpKmManualeDi.
+    cpKmMetaSet(_cpData[k], ticketKey, { fonte: 'manuale', kmReport });
   } else {
     delete _cpData[k].km_by_ticket[ticketKey];
-    cpKmMetaSet(_cpData[k], ticketKey, { fonte: null, reportUtenze: null });
+    cpKmMetaSet(_cpData[k], ticketKey, { fonte: null, reportUtenze: null, kmReport: null });
   }
 
   // Aggiorna lo specchio km_cad (somma) per colorazione griglia/export
@@ -24062,6 +24090,21 @@ function cpKmMetaSet(cell, key, patch) {
 function cpKmVerificato(cell, key) {
   const f = cpKmMeta(cell, key).fonte;
   return f === 'report' || f === 'manuale';
+}
+/* Correzione a mano davanti a un reimport (board o «Carica Report», v18.314.0): il valore a mano
+   resta, salvo scelta esplicita. → null se il ticket non è corretto a mano, altrimenti
+   { km, kmReport, nuovo, datiNuovi }: kmReport = valore della board/report che la correzione aveva
+   sostituito (null = non noto), nuovo = quello che il reimport scriverebbe, datiNuovi = la
+   board/report è cambiata dopo la correzione (da far vedere: forse vanno presi). */
+function cpKmManualeDi(cell, key, nuovo) {
+  const m = cpKmMeta(cell, key);
+  if (m.fonte !== 'manuale') return null;
+  const by = cell && cell.km_by_ticket;
+  const km = by && by[key] != null ? Number(by[key]) : null;
+  const kmReport = m.kmReport == null ? null : Number(m.kmReport);
+  const diverso = (a, b) => a == null || b == null || Math.abs(a - b) > 0.0005;
+  const datiNuovi = nuovo != null && (kmReport != null ? diverso(nuovo, kmReport) : diverso(nuovo, km));
+  return { km, kmReport, nuovo: nuovo == null ? null : Number(nuovo), datiNuovi };
 }
 // Ultimo valore scritto sul campo indicato, o null se l'ultimo invio era su un altro campo.
 function cpKmLastSulCampo(cell, key, campo) {
@@ -24173,8 +24216,8 @@ function cpKmJiraTitolo(st, ticketKey) {
     case 'da_inviare': return `${ticketKey}: Km/Cad ${f(st.km)} non ancora inviato a Jira` +
       (st.altroCampo ? ` su questo campo (l'ultimo invio, ${f(st.last)}, era su "${st.campoLast}")` : '') + `.${campo}\nPremi 🔄 Sincronizza squadra per inviarlo.`;
     case 'senza_email': return `${ticketKey}: Km/Cad ${f(st.km)} non inviabile, l'operatore non ha un'email assegnata (la sincronizzazione lo salta).`;
-    case 'nessuna': return `${ticketKey}: nessuna produzione (es. maltempo), Km/Cad 0 dal report.\nGiorno compilato: non c'è niente da inviare a Jira. Se la produzione c'è, scrivi il valore nel campo Km/Cad o carica il report.`;
-    case 'orfano': return `${ticketKey}: Km/Cad vuoto qui, ma su Jira resta l'ultimo valore inviato (${f(st.last)}): la sincronizzazione non lo toglie.\nClic per azzerare lo storico (con conferma).`;
+    case 'nessuna': return `${ticketKey}: nessuna produzione (es. maltempo), Km/Cad 0.\nGiorno compilato: non c'è niente da inviare a Jira. Se la produzione c'è, scrivi il valore nel campo Km/Cad o carica il report.`;
+    case 'orfano': return `${ticketKey}: Km/Cad vuoto qui, ma su Jira resta l'ultimo valore inviato (${f(st.last)}).\nPer toglierlo da Jira scrivi 0 nel campo Km/Cad e premi 🔄 Sincronizza squadra. Se invece su Jira l'hai già tolto a mano, clic per azzerare lo storico (con conferma).`;
     default: return `${ticketKey}: nessun Km/Cad da inviare.`;
   }
 }
@@ -24202,6 +24245,10 @@ function cpKmJiraRefreshDom() {
     inp.classList.toggle('cp-km-agg', stato === 'da_aggiornare');
     inp.classList.toggle('cp-km-inv', stato === 'da_inviare' || stato === 'senza_email');
     inp.classList.toggle('cp-km-ver', stato === 'da_verificare');
+    // Correzione a mano (v18.314.0): i reimport da board/report non la sovrascrivono.
+    const man = cpKmMeta(_cpData[inp.dataset.cpk], inp.dataset.tk).fonte === 'manuale';
+    inp.classList.toggle('cp-km-man', man);
+    inp.title = (inp.dataset.tk || '') + (man ? ' · ✋ corretto a mano: i reimport dalla board o dal report non lo sovrascrivono' : '');
   });
   const giorniSq = cpKmJiraGiorniMancanti();
   document.querySelectorAll('.cp-table .cp-kmj-sum').forEach(el => {
@@ -25169,7 +25216,8 @@ async function cpProcessReport(csvText, commessa, squadra) {
   const cellaDi = u => _cpData[`${commessa}|||${squadra}|||${u.operatore}|||${u.giorno}`] || {};
   const precedenteSenzaUtenza = u => {
     const c = cellaDi(u), m = cpKmMeta(c, u.ticketKey);
-    if (m.reportUtenze || (m.fonte !== 'report' && m.fonte !== 'manuale')) return false;
+    // Le correzioni a mano hanno una regola loro (sotto, v18.314.0).
+    if (m.reportUtenze || m.fonte !== 'report') return false;
     const km = c.km_by_ticket && c.km_by_ticket[u.ticketKey];
     return Number(km) > 0 || Number(c.ore_report) > 0;
   };
@@ -25234,6 +25282,28 @@ async function cpProcessReport(csvText, commessa, squadra) {
   }
   const azzeraTutto = daysWithData === 0;
 
+  // Km/Cad corretti a mano (v18.314.0): restano, il report aggiorna solo i dati per utenza (orari).
+  // Se il file porta un valore diverso da quello che la correzione aveva sostituito si chiede.
+  const kmDaFile = u => {
+    const ru = { ...(cpKmMeta(cellaDi(u), u.ticketKey).reportUtenze || {}) };
+    ru[u.utente] = { km: u.km };
+    return Math.round(Object.values(ru).reduce((t, v) => t + (Number(v.km) || 0), 0) * 1000) / 1000;
+  };
+  const manuali = conDati.map(u => cpKmManualeDi(cellaDi(u), u.ticketKey, kmDaFile(u))).filter(Boolean);
+  let tieniManuali = true;
+  const manDiversi = manuali.filter(m => m.datiNuovi);
+  if (manDiversi.length) {
+    const scelta = await cpSelectModal(
+      'Km/Cad corretti a mano',
+      `${manuali.length} Km/Cad di questo report ${manuali.length === 1 ? 'è stato corretto' : 'sono stati corretti'} a mano; ` +
+      `su ${manDiversi.length} il file ha un valore diverso (es. ${cpBrdKm(manDiversi[0].km)} a mano, ${cpBrdKm(manDiversi[0].nuovo)} dal report).\n` +
+      `Mantenendo le correzioni il report aggiorna solo gli orari; sostituendole su Jira andrà la differenza con il valore del report.`,
+      [{ value: 'tieni', label: 'Mantieni le correzioni a mano' }, { value: 'sostituisci', label: 'Sostituisci con i valori del report' }]);
+    if (!scelta) return;
+    tieniManuali = scelta === 'tieni';
+  }
+  let manTenuti = 0;
+
   // Applica: aggiorna cache locale (ore per cella, km sul ticket del comune) e persisti
   const touched = new Map();
   const nessunaSet = new Set(nessunaProd);
@@ -25269,10 +25339,13 @@ async function cpProcessReport(csvText, commessa, squadra) {
       const vals = Object.values(reportUtenze);
       km  = Math.round(vals.reduce((t, v) => t + (Number(v.km) || 0), 0) * 1000) / 1000;
     }
-    if (u.ticketKey) {
+    if (u.ticketKey && tieniManuali && cpKmMeta(cell, u.ticketKey).fonte === 'manuale') {
+      cpKmMetaSet(cell, u.ticketKey, { reportUtenze });
+      manTenuti++;
+    } else if (u.ticketKey) {
       if (!cell.km_by_ticket || typeof cell.km_by_ticket !== 'object') cell.km_by_ticket = {};
       cell.km_by_ticket[u.ticketKey] = km;
-      cpKmMetaSet(cell, u.ticketKey, { fonte: 'report', reportUtenze });
+      cpKmMetaSet(cell, u.ticketKey, { fonte: 'report', reportUtenze, kmReport: null });
       cell.km_cad = cpSumKm(cell.km_by_ticket);
     }
     // Ore della giornata su tutti i ticket della cella (cpOreReportDaMeta), non del solo report.
@@ -25306,6 +25379,9 @@ async function cpProcessReport(csvText, commessa, squadra) {
   }
   if (giorniNessuna.length) {
     msg += `\n\n✓ Nessuna produzione (giorno compilato): ${giorniNessuna.join(', ')}.`;
+  }
+  if (manTenuti > 0) {
+    msg += `\n\n✋ ${manTenuti} Km/Cad corrett${manTenuti === 1 ? 'o' : 'i'} a mano mantenut${manTenuti === 1 ? 'o' : 'i'} (aggiornati solo gli orari).`;
   }
   if (giorniZeroSaltati > 0) {
     msg += `\n\nℹ ${giorniZeroSaltati} operatore/giorno senza dati in questo file lasciati com'erano (già compilati da un altro report).`;
@@ -25951,11 +26027,14 @@ function cpBrdPiano() {
     return righe.get(k);
   };
   const utentiSquadra = new Set(st.utenti);
+  const usaBoard = st.usaBoard || {};
+  const manuali = new Map();   // 'k|||ticket' → cpKmManualeDi + { usaBoard }
   // 1. Note della board precedente: si tolgono ovunque e si riscrivono sotto.
   Object.keys(st.perGiorno).forEach(g => st.perGiorno[g].forEach(op => get(op, Number(g))));
   // 2. Km e ore dei progetti abbinati.
   Object.values(calc.celle).forEach(c => {
-    const cell = get(c.op, c.g).dopo;
+    const riga = get(c.op, c.g);
+    const cell = riga.dopo;
     if (!cell.km_by_ticket || typeof cell.km_by_ticket !== 'object') cell.km_by_ticket = {};
     Object.keys(c.tickets).forEach(key => {
       const t = c.tickets[key];
@@ -25969,8 +26048,17 @@ function cpBrdPiano() {
         ru[u] = { km: cpBrdR3(d.km), ore: int ? cpBrdR2((d.fin - d.ini) / 60) : 0,
           inizio: int ? d.ini : null, fine: int ? d.fin : null };
       });
-      cell.km_by_ticket[key] = cpBrdR3(Object.values(ru).reduce((s, v) => s + (Number(v.km) || 0), 0));
-      cpKmMetaSet(cell, key, { fonte: 'report', reportUtenze: ru });
+      const nuovo = cpBrdR3(Object.values(ru).reduce((s, v) => s + (Number(v.km) || 0), 0));
+      // Km/Cad corretto a mano (v18.314.0): resta com'è, salvo «usa board» nell'anteprima; si
+      // aggiornano solo i dati per utenza (orari delle Ore Report Prod.).
+      const man = cpKmManualeDi(riga.prima, key, nuovo);
+      if (man) {
+        const mk = riga.k + '|||' + key;
+        manuali.set(mk, Object.assign({ usaBoard: !!usaBoard[mk] }, man));
+        if (!usaBoard[mk]) { cpKmMetaSet(cell, key, { reportUtenze: ru }); return; }
+      }
+      cell.km_by_ticket[key] = nuovo;
+      cpKmMetaSet(cell, key, { fonte: 'report', reportUtenze: ru, kmReport: null });
     });
     cell.km_cad = cpSumKm(cell.km_by_ticket);
     const ore = cpOreReportDaMeta(cell);
@@ -26012,10 +26100,19 @@ function cpBrdPiano() {
   const firma = c => JSON.stringify([num(c.ore_report), c.km_by_ticket || {}, c.km_meta_by_ticket || {}, c.note || '']);
   const out = [...righe.values()];
   out.forEach(r => { r.cambiata = firma(r.prima) !== firma(r.dopo); });
-  return { calc, righe: out };
+  return { calc, righe: out, manuali };
 }
 
-HELP_TEXTS['cp-board-import'] = 'Importa la produzione di QUESTA squadra direttamente dalla board QField della commessa (oggi SINFI), senza scaricare il CSV: stessi valori di «📄 Carica Report» (Ore Report Prod. e Km/Cad dei sottotask), per i soli giorni della settimana mostrata.\n\nPrima di scrivere mostra un\'anteprima: ogni progetto QField del tablet della squadra (es. Moena_ACQ, Moena_FGN) va abbinato a una voce cantiere + attività della Griglia. L\'app lo propone dal nome e tu lo confermi o lo cambi (la scelta viene ricordata in questo browser). I Km di un progetto si dividono fra gli operatori della squadra che quel giorno hanno quella voce in Griglia e vanno sul loro sottotask; le ore vanno dalla prima all\'ultima registrazione della giornata, su tutti i progetti.\n\nI Km che non trovano posto (progetto non abbinato, voce assente in Griglia quel giorno, sottotask mancante) NON vengono scritti: finiscono nel campo Note delle righe di quel giorno come «⟦Board: …⟧», che viene tolto e ricalcolato a ogni nuova importazione. Correggi la Griglia o crea il sottotask e reimporta.\n\nI giorni già passati senza nessun dato della squadra vengono segnati «✓ Nessuna» produzione; oggi e i giorni futuri restano da compilare. Reimportare sostituisce i valori del tablet della squadra, non li somma. Scrive solo nel Controllo Produzione condiviso: su Jira i Km arrivano con «🔄 Sincronizza squadra».\n\nGli utenti QField della squadra si riconoscono dall\'email; se l\'utenza del tablet è diversa (es. hsemry con email hsmsemry@) l\'app la abbina da sola dal nome della persona e lo segnala in un riquadro blu. Se non ci riesce o trova più persone possibili, imposta «Utente QField» in Operatori → ✉ Email/operatore.';
+// Anteprima: prende il valore della board al posto di una correzione a mano (solo per questa importazione).
+function cpBrdUsaBoard(inp) {
+  if (!_cpBrd) return;
+  const mk = inp.getAttribute('data-mk');
+  if (!_cpBrd.usaBoard) _cpBrd.usaBoard = {};
+  if (inp.checked) _cpBrd.usaBoard[mk] = true; else delete _cpBrd.usaBoard[mk];
+  cpBrdRender();
+}
+
+HELP_TEXTS['cp-board-import'] = 'Importa la produzione di QUESTA squadra direttamente dalla board QField della commessa (oggi SINFI), senza scaricare il CSV: stessi valori di «📄 Carica Report» (Ore Report Prod. e Km/Cad dei sottotask), per i soli giorni della settimana mostrata.\n\nPrima di scrivere mostra un\'anteprima: ogni progetto QField del tablet della squadra (es. Moena_ACQ, Moena_FGN) va abbinato a una voce cantiere + attività della Griglia. L\'app lo propone dal nome e tu lo confermi o lo cambi (la scelta viene ricordata in questo browser). I Km di un progetto si dividono fra gli operatori della squadra che quel giorno hanno quella voce in Griglia e vanno sul loro sottotask; le ore vanno dalla prima all\'ultima registrazione della giornata, su tutti i progetti.\n\nI Km che non trovano posto (progetto non abbinato, voce assente in Griglia quel giorno, sottotask mancante) NON vengono scritti: finiscono nel campo Note delle righe di quel giorno come «⟦Board: …⟧», che viene tolto e ricalcolato a ogni nuova importazione. Correggi la Griglia o crea il sottotask e reimporta.\n\nI giorni già passati senza nessun dato della squadra vengono segnati «✓ Nessuna» produzione; oggi e i giorni futuri restano da compilare. Reimportare sostituisce i valori del tablet della squadra, non li somma: puoi importare ogni giorno, i giorni già importati si riallineano alla board e su Jira con «Sincronizza» va solo la differenza. Un Km/Cad corretto a mano (✋, anche 0) non viene sovrascritto: la board ne aggiorna solo gli orari, e se dopo la correzione ha dati diversi l\'anteprima lo segnala in arancio con «usa board» per prenderli. Scrive solo nel Controllo Produzione condiviso: su Jira i Km arrivano con «🔄 Sincronizza squadra».\n\nGli utenti QField della squadra si riconoscono dall\'email; se l\'utenza del tablet è diversa (es. hsemry con email hsmsemry@) l\'app la abbina da sola dal nome della persona e lo segnala in un riquadro blu. Se non ci riesce o trova più persone possibili, imposta «Utente QField» in Operatori → ✉ Email/operatore.';
 
 HELP_TEXTS['cp-board-aggiorna'] = 'Fa scaricare subito alla board QField della commessa i dati nuovi da QFieldCloud, come il pulsante «Aggiorna ora» della board. Ci vogliono 2-3 minuti: il tasto mostra a che punto è e alla fine l\'ora dei dati pubblicati. Se un aggiornamento è già in corso (quello automatico o lanciato da un collega) aspetta quello invece di avviarne un altro.\n\nServe per i dati appena sincronizzati dai tablet: da sola la board si aggiorna ogni 30 minuti, dal lunedì al sabato, circa dalle 5 alle 21. Il lavoro che un tablet non ha ancora sincronizzato non arriva comunque.\n\nSe la finestra «📡 Importa da board» è aperta, a fine aggiornamento rilegge i dati da sola e tiene gli abbinamenti già scelti. Non scrive niente nel Controllo Produzione né su Jira.';
 
@@ -26183,6 +26280,14 @@ function cpBrdRender() {
   const piano = cpBrdPiano();
   st.piano = piano;
   const nCambi = piano.righe.filter(r => r.cambiata).length;
+  const manL = [...piano.manuali.values()];
+  if (manL.length) {
+    const nNuovi = manL.filter(m => m.datiNuovi && !m.usaBoard).length;
+    h += '<div style="background:#f8fafc;border:1px solid #cbd5e1;border-radius:8px;padding:8px 10px;margin-bottom:12px;color:#334155;">✋ '
+      + manL.length + ' Km/Cad ' + (manL.length === 1 ? 'è stato corretto' : 'sono stati corretti') + ' a mano: restano come sono, la board aggiorna solo gli orari.'
+      + (nNuovi ? ' <b style="color:#b45309;">Su ' + nNuovi + ' la board ha dati diversi da quando li hai corretti</b>: controlla la colonna «Nuovo» e spunta «usa board» dove vanno presi.' : '')
+      + '</div>';
+  }
   h += '<div style="font-weight:700;margin-bottom:6px;">Anteprima</div>';
   for (let g = 0; g < 6; g++) {
     const ops = st.perGiorno[g] || [];
@@ -26209,11 +26314,21 @@ function cpBrdRender() {
           const kD = v.ticket && dopo.km_by_ticket ? dopo.km_by_ticket[v.ticket] : null;
           const cambia = (kP == null ? null : Number(kP)) !== (kD == null ? null : Number(kD));
           const col = cambia ? 'color:#0f766e;font-weight:700;' : 'color:#94a3b8;';
+          // Correzione a mano: valore tenuto, valore della board e scelta «usa board».
+          const mk = r && v.ticket ? r.k + '|||' + v.ticket : '';
+          const man = mk ? piano.manuali.get(mk) : null;
+          let manHtml = '';
+          if (man) {
+            manHtml = '<div style="font-size:11px;font-weight:400;color:' + (man.datiNuovi && !man.usaBoard ? '#b45309' : '#64748b') + ';white-space:nowrap;">'
+              + (man.usaBoard ? 'era ✋ ' + cpBrdKm(man.km) + ' a mano' : '✋ a mano · board ' + cpBrdKm(man.nuovo)
+                + (man.datiNuovi && man.kmReport != null ? ' (era ' + cpBrdKm(man.kmReport) + ')' : ''))
+              + ' <label style="cursor:pointer;"><input type="checkbox" class="pw-write-action" data-mk="' + esc(mk) + '" onchange="cpBrdUsaBoard(this)"' + (man.usaBoard ? ' checked' : '') + '> usa board</label></div>';
+          }
           h += '<tr>' + (vi === 0 ? '<td rowspan="' + vv.length + '" style="font-weight:600;">' + esc(op.nome) + '</td>' : '')
             + '<td>' + esc(v.cantiere + ' · ' + (v.etichetta || '—')) + '</td>'
             + '<td>' + (v.ticket ? esc(v.ticket) : '<span style="color:#b91c1c;">manca</span>') + '</td>'
             + '<td style="text-align:right;">' + (kP == null ? '—' : cpBrdKm(kP)) + '</td>'
-            + '<td style="text-align:right;' + col + '">' + (kD == null ? '—' : cpBrdKm(kD)) + '</td>'
+            + '<td style="text-align:right;' + col + '">' + (kD == null ? '—' : cpBrdKm(kD)) + manHtml + '</td>'
             + (vi === 0 ? '<td rowspan="' + vv.length + '" style="text-align:right;">' + cpBrdOre(oreP) + '</td>'
               + '<td rowspan="' + vv.length + '" style="text-align:right;' + (oreCambia ? 'color:#0f766e;font-weight:700;' : 'color:#94a3b8;') + '">' + cpBrdOre(oreD) + '</td>' : '')
             + '</tr>';
@@ -45595,7 +45710,7 @@ HELP_TEXTS['pwControlloSyncJira'] = 'Come «Sincronizza da Jira», ma solo per q
 // KM su Jira
 HELP_TEXTS['cpKmJiraVaiPrimo'] = 'Riepilogo dello stato dei Km/Cad della squadra rispetto a Jira: quanti allineati, da verificare, da aggiornare, da inviare, senza email.\n\nIl clic apre la squadra se era chiusa e porta alla prima riga ancora in sospeso. Non modifica nulla.';
 // Stato Km/Cad su Jira
-HELP_TEXTS['cpJiraFlagTicketClick'] = 'Stato del Km/Cad di questo ticket rispetto a Jira. Il clic dipende dallo stato:\n- 👁 Verifica: il valore è stato letto da Jira, di solito messo dall\'operatore per chiudere il ticket. Il clic chiede di confermarlo come produzione reale, e da lì potrà essere inviato.\n- ⬆ Invia, ↻ Agg., ⚠ Email: il clic spiega solo cosa manca. L\'invio si fa con «🔄 Sincronizza squadra».\n- ✓ Jira e ○ Jira: il clic, con conferma, azzera lo storico di scrittura del ticket. Alla sincronizzazione successiva l\'INTERO valore verrà risommato su Jira: usalo solo se hai azzerato il campo su Jira a mano.\n\nLe modifiche vanno nel Controllo Produzione condiviso; il clic in sé non scrive su Jira. Riservato ad admin e responsabili.';
+HELP_TEXTS['cpJiraFlagTicketClick'] = 'Stato del Km/Cad di questo ticket rispetto a Jira. Il clic dipende dallo stato:\n- 👁 Verifica: il valore è stato letto da Jira, di solito messo dall\'operatore per chiudere il ticket. Il clic chiede di confermarlo come produzione reale, e da lì potrà essere inviato.\n- ⬆ Invia, ↻ Agg., ⚠ Email: il clic spiega solo cosa manca. L\'invio si fa con «🔄 Sincronizza squadra».\n- ✓ Jira e ○ Jira: il clic, con conferma, azzera lo storico di scrittura del ticket. Alla sincronizzazione successiva l\'INTERO valore verrà risommato su Jira: usalo solo se hai azzerato il campo su Jira a mano.\n- ○ Jira vuol dire Km/Cad vuoto qui ma un valore inviato prima ancora su Jira: per toglierlo scrivi 0 nel campo e sincronizza.\n\nCorreggere a mano il Km/Cad: con la sincronizzazione su Jira va solo la differenza rispetto a quanto già inviato (anche negativa). Svuotare un valore lo porta a 0, cioè nessuna produzione, e toglie da Jira quanto inviato. Un valore corretto a mano (✋) resta anche quando reimporti dalla board o dal report: l\'anteprima della board dice se dopo la correzione sono arrivati dati nuovi e permette di prenderli.\n\nLe modifiche vanno nel Controllo Produzione condiviso; il clic in sé non scrive su Jira. Riservato ad admin e responsabili.';
 // 🔄 Rileggi da Jira
 HELP_TEXTS['cpRereadTicket'] = 'Rilegge ora da Jira, solo in lettura, il valore di produzione di questo ticket, nel campo scelto per la commessa. Sostituisce il Km/Cad locale e lo considera verificato e già allineato: la sincronizzazione successiva non invierà nulla per questo ticket.\n\nServe quando il valore è stato corretto a mano su Jira dopo che l\'app l\'aveva già letto o scritto. Chiede conferma, salva nel Controllo Produzione condiviso ed è riservato ad admin e responsabili. Compare solo sui ticket già scritti dall\'app.';
 // 🗓️ Apri in Griglia
@@ -51065,7 +51180,8 @@ function prfOsservazioni(rows, opz) {
     const meta = r.km_meta_by_ticket && typeof r.km_meta_by_ticket === 'object' ? r.km_meta_by_ticket : {};
     Object.keys(meta).forEach(k => {
       const u = meta[k] && meta[k].reportUtenze;
-      if (u && typeof u === 'object') ru[(r.data_giorno || '') + '|' + r.operatore + '|' + k] = u;
+      // Su un Km/Cad corretto a mano (v18.314.0) i dati per utenza sono quelli del tablet, non il valore vero.
+      if (u && typeof u === 'object' && meta[k].fonte !== 'manuale') ru[(r.data_giorno || '') + '|' + r.operatore + '|' + k] = u;
     });
   });
 

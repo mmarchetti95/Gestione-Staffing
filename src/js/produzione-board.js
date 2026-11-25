@@ -363,11 +363,14 @@ function cpBrdPiano() {
     return righe.get(k);
   };
   const utentiSquadra = new Set(st.utenti);
+  const usaBoard = st.usaBoard || {};
+  const manuali = new Map();   // 'k|||ticket' → cpKmManualeDi + { usaBoard }
   // 1. Note della board precedente: si tolgono ovunque e si riscrivono sotto.
   Object.keys(st.perGiorno).forEach(g => st.perGiorno[g].forEach(op => get(op, Number(g))));
   // 2. Km e ore dei progetti abbinati.
   Object.values(calc.celle).forEach(c => {
-    const cell = get(c.op, c.g).dopo;
+    const riga = get(c.op, c.g);
+    const cell = riga.dopo;
     if (!cell.km_by_ticket || typeof cell.km_by_ticket !== 'object') cell.km_by_ticket = {};
     Object.keys(c.tickets).forEach(key => {
       const t = c.tickets[key];
@@ -381,8 +384,17 @@ function cpBrdPiano() {
         ru[u] = { km: cpBrdR3(d.km), ore: int ? cpBrdR2((d.fin - d.ini) / 60) : 0,
           inizio: int ? d.ini : null, fine: int ? d.fin : null };
       });
-      cell.km_by_ticket[key] = cpBrdR3(Object.values(ru).reduce((s, v) => s + (Number(v.km) || 0), 0));
-      cpKmMetaSet(cell, key, { fonte: 'report', reportUtenze: ru });
+      const nuovo = cpBrdR3(Object.values(ru).reduce((s, v) => s + (Number(v.km) || 0), 0));
+      // Km/Cad corretto a mano (v18.314.0): resta com'è, salvo «usa board» nell'anteprima; si
+      // aggiornano solo i dati per utenza (orari delle Ore Report Prod.).
+      const man = cpKmManualeDi(riga.prima, key, nuovo);
+      if (man) {
+        const mk = riga.k + '|||' + key;
+        manuali.set(mk, Object.assign({ usaBoard: !!usaBoard[mk] }, man));
+        if (!usaBoard[mk]) { cpKmMetaSet(cell, key, { reportUtenze: ru }); return; }
+      }
+      cell.km_by_ticket[key] = nuovo;
+      cpKmMetaSet(cell, key, { fonte: 'report', reportUtenze: ru, kmReport: null });
     });
     cell.km_cad = cpSumKm(cell.km_by_ticket);
     const ore = cpOreReportDaMeta(cell);
@@ -424,10 +436,19 @@ function cpBrdPiano() {
   const firma = c => JSON.stringify([num(c.ore_report), c.km_by_ticket || {}, c.km_meta_by_ticket || {}, c.note || '']);
   const out = [...righe.values()];
   out.forEach(r => { r.cambiata = firma(r.prima) !== firma(r.dopo); });
-  return { calc, righe: out };
+  return { calc, righe: out, manuali };
 }
 
-HELP_TEXTS['cp-board-import'] = 'Importa la produzione di QUESTA squadra direttamente dalla board QField della commessa (oggi SINFI), senza scaricare il CSV: stessi valori di «📄 Carica Report» (Ore Report Prod. e Km/Cad dei sottotask), per i soli giorni della settimana mostrata.\n\nPrima di scrivere mostra un\'anteprima: ogni progetto QField del tablet della squadra (es. Moena_ACQ, Moena_FGN) va abbinato a una voce cantiere + attività della Griglia. L\'app lo propone dal nome e tu lo confermi o lo cambi (la scelta viene ricordata in questo browser). I Km di un progetto si dividono fra gli operatori della squadra che quel giorno hanno quella voce in Griglia e vanno sul loro sottotask; le ore vanno dalla prima all\'ultima registrazione della giornata, su tutti i progetti.\n\nI Km che non trovano posto (progetto non abbinato, voce assente in Griglia quel giorno, sottotask mancante) NON vengono scritti: finiscono nel campo Note delle righe di quel giorno come «⟦Board: …⟧», che viene tolto e ricalcolato a ogni nuova importazione. Correggi la Griglia o crea il sottotask e reimporta.\n\nI giorni già passati senza nessun dato della squadra vengono segnati «✓ Nessuna» produzione; oggi e i giorni futuri restano da compilare. Reimportare sostituisce i valori del tablet della squadra, non li somma. Scrive solo nel Controllo Produzione condiviso: su Jira i Km arrivano con «🔄 Sincronizza squadra».\n\nGli utenti QField della squadra si riconoscono dall\'email; se l\'utenza del tablet è diversa (es. hsemry con email hsmsemry@) l\'app la abbina da sola dal nome della persona e lo segnala in un riquadro blu. Se non ci riesce o trova più persone possibili, imposta «Utente QField» in Operatori → ✉ Email/operatore.';
+// Anteprima: prende il valore della board al posto di una correzione a mano (solo per questa importazione).
+function cpBrdUsaBoard(inp) {
+  if (!_cpBrd) return;
+  const mk = inp.getAttribute('data-mk');
+  if (!_cpBrd.usaBoard) _cpBrd.usaBoard = {};
+  if (inp.checked) _cpBrd.usaBoard[mk] = true; else delete _cpBrd.usaBoard[mk];
+  cpBrdRender();
+}
+
+HELP_TEXTS['cp-board-import'] = 'Importa la produzione di QUESTA squadra direttamente dalla board QField della commessa (oggi SINFI), senza scaricare il CSV: stessi valori di «📄 Carica Report» (Ore Report Prod. e Km/Cad dei sottotask), per i soli giorni della settimana mostrata.\n\nPrima di scrivere mostra un\'anteprima: ogni progetto QField del tablet della squadra (es. Moena_ACQ, Moena_FGN) va abbinato a una voce cantiere + attività della Griglia. L\'app lo propone dal nome e tu lo confermi o lo cambi (la scelta viene ricordata in questo browser). I Km di un progetto si dividono fra gli operatori della squadra che quel giorno hanno quella voce in Griglia e vanno sul loro sottotask; le ore vanno dalla prima all\'ultima registrazione della giornata, su tutti i progetti.\n\nI Km che non trovano posto (progetto non abbinato, voce assente in Griglia quel giorno, sottotask mancante) NON vengono scritti: finiscono nel campo Note delle righe di quel giorno come «⟦Board: …⟧», che viene tolto e ricalcolato a ogni nuova importazione. Correggi la Griglia o crea il sottotask e reimporta.\n\nI giorni già passati senza nessun dato della squadra vengono segnati «✓ Nessuna» produzione; oggi e i giorni futuri restano da compilare. Reimportare sostituisce i valori del tablet della squadra, non li somma: puoi importare ogni giorno, i giorni già importati si riallineano alla board e su Jira con «Sincronizza» va solo la differenza. Un Km/Cad corretto a mano (✋, anche 0) non viene sovrascritto: la board ne aggiorna solo gli orari, e se dopo la correzione ha dati diversi l\'anteprima lo segnala in arancio con «usa board» per prenderli. Scrive solo nel Controllo Produzione condiviso: su Jira i Km arrivano con «🔄 Sincronizza squadra».\n\nGli utenti QField della squadra si riconoscono dall\'email; se l\'utenza del tablet è diversa (es. hsemry con email hsmsemry@) l\'app la abbina da sola dal nome della persona e lo segnala in un riquadro blu. Se non ci riesce o trova più persone possibili, imposta «Utente QField» in Operatori → ✉ Email/operatore.';
 
 HELP_TEXTS['cp-board-aggiorna'] = 'Fa scaricare subito alla board QField della commessa i dati nuovi da QFieldCloud, come il pulsante «Aggiorna ora» della board. Ci vogliono 2-3 minuti: il tasto mostra a che punto è e alla fine l\'ora dei dati pubblicati. Se un aggiornamento è già in corso (quello automatico o lanciato da un collega) aspetta quello invece di avviarne un altro.\n\nServe per i dati appena sincronizzati dai tablet: da sola la board si aggiorna ogni 30 minuti, dal lunedì al sabato, circa dalle 5 alle 21. Il lavoro che un tablet non ha ancora sincronizzato non arriva comunque.\n\nSe la finestra «📡 Importa da board» è aperta, a fine aggiornamento rilegge i dati da sola e tiene gli abbinamenti già scelti. Non scrive niente nel Controllo Produzione né su Jira.';
 
@@ -595,6 +616,14 @@ function cpBrdRender() {
   const piano = cpBrdPiano();
   st.piano = piano;
   const nCambi = piano.righe.filter(r => r.cambiata).length;
+  const manL = [...piano.manuali.values()];
+  if (manL.length) {
+    const nNuovi = manL.filter(m => m.datiNuovi && !m.usaBoard).length;
+    h += '<div style="background:#f8fafc;border:1px solid #cbd5e1;border-radius:8px;padding:8px 10px;margin-bottom:12px;color:#334155;">✋ '
+      + manL.length + ' Km/Cad ' + (manL.length === 1 ? 'è stato corretto' : 'sono stati corretti') + ' a mano: restano come sono, la board aggiorna solo gli orari.'
+      + (nNuovi ? ' <b style="color:#b45309;">Su ' + nNuovi + ' la board ha dati diversi da quando li hai corretti</b>: controlla la colonna «Nuovo» e spunta «usa board» dove vanno presi.' : '')
+      + '</div>';
+  }
   h += '<div style="font-weight:700;margin-bottom:6px;">Anteprima</div>';
   for (let g = 0; g < 6; g++) {
     const ops = st.perGiorno[g] || [];
@@ -621,11 +650,21 @@ function cpBrdRender() {
           const kD = v.ticket && dopo.km_by_ticket ? dopo.km_by_ticket[v.ticket] : null;
           const cambia = (kP == null ? null : Number(kP)) !== (kD == null ? null : Number(kD));
           const col = cambia ? 'color:#0f766e;font-weight:700;' : 'color:#94a3b8;';
+          // Correzione a mano: valore tenuto, valore della board e scelta «usa board».
+          const mk = r && v.ticket ? r.k + '|||' + v.ticket : '';
+          const man = mk ? piano.manuali.get(mk) : null;
+          let manHtml = '';
+          if (man) {
+            manHtml = '<div style="font-size:11px;font-weight:400;color:' + (man.datiNuovi && !man.usaBoard ? '#b45309' : '#64748b') + ';white-space:nowrap;">'
+              + (man.usaBoard ? 'era ✋ ' + cpBrdKm(man.km) + ' a mano' : '✋ a mano · board ' + cpBrdKm(man.nuovo)
+                + (man.datiNuovi && man.kmReport != null ? ' (era ' + cpBrdKm(man.kmReport) + ')' : ''))
+              + ' <label style="cursor:pointer;"><input type="checkbox" class="pw-write-action" data-mk="' + esc(mk) + '" onchange="cpBrdUsaBoard(this)"' + (man.usaBoard ? ' checked' : '') + '> usa board</label></div>';
+          }
           h += '<tr>' + (vi === 0 ? '<td rowspan="' + vv.length + '" style="font-weight:600;">' + esc(op.nome) + '</td>' : '')
             + '<td>' + esc(v.cantiere + ' · ' + (v.etichetta || '—')) + '</td>'
             + '<td>' + (v.ticket ? esc(v.ticket) : '<span style="color:#b91c1c;">manca</span>') + '</td>'
             + '<td style="text-align:right;">' + (kP == null ? '—' : cpBrdKm(kP)) + '</td>'
-            + '<td style="text-align:right;' + col + '">' + (kD == null ? '—' : cpBrdKm(kD)) + '</td>'
+            + '<td style="text-align:right;' + col + '">' + (kD == null ? '—' : cpBrdKm(kD)) + manHtml + '</td>'
             + (vi === 0 ? '<td rowspan="' + vv.length + '" style="text-align:right;">' + cpBrdOre(oreP) + '</td>'
               + '<td rowspan="' + vv.length + '" style="text-align:right;' + (oreCambia ? 'color:#0f766e;font-weight:700;' : 'color:#94a3b8;') + '">' + cpBrdOre(oreD) + '</td>' : '')
             + '</tr>';
