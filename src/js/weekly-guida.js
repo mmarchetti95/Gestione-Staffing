@@ -453,7 +453,6 @@ HELP_TEXTS['pw-jchk-struttura'] = 'Come «🏗️ Crea strutture» nell\'intesta
 // Evidenzia in Griglia
 HELP_TEXTS['pw-jchk-evidenzia'] = 'Accende o spegne l\'evidenziazione in Griglia delle celle con anomalie: rosse le gravi (senza sottotask, creazione fallita, cancellato o riassegnato su Jira), ambra le altre.\n\nSi accende da sola quando apri il controllo e ci sono anomalie. Vale solo sul tuo schermo e non salva nulla.';
 // ✕ indicatore 🎫
-HELP_TEXTS['pwJiraSubtaskBadgeRemove'] = 'Toglie dalla cella della Griglia l\'indicatore del sottotask Jira (🎫 creato/già esistente o ⚠️ creazione fallita) di quel giorno. Lo toglie subito, senza conferma. Per un sottotask settimanale (creato prima della v18.229.0) l\'indicatore sparisce da tutti i giorni della settimana.\n\nSu Jira il sottotask NON viene cancellato: si perde solo il collegamento in Griglia, e il Controllo sottotask segnalerà la cella come «senza sottotask».\n\nLa modifica è condivisa con i colleghi. Riservato ad admin e responsabili.';
 // ← Indietro
 HELP_TEXTS['pwJiraStepBack'] = 'Torna al passo precedente della creazione sottotask Jira, con tutte le scelte com\'erano: Epic e Task scelti, spunte, valori digitati.\n\nNon scrive niente su Jira.';
 // Riprova

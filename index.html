@@ -495,17 +495,6 @@
   }
   .pw-jira-sub-link:hover { text-decoration: underline; }
   .pw-jira-sub-link-error { color: #b91c1c; }
-  .pw-jira-sub-remove {
-    flex-shrink: 0;
-    font-size: 9px;
-    line-height: 1;
-    color: #94a3b8;
-    background: transparent;
-    border: none;
-    cursor: pointer;
-    padding: 0 1px;
-  }
-  .pw-jira-sub-remove:hover { color: #b91c1c; }
   .pw-cantiere-add {
     align-self: flex-start;
     font-size: 9px;
@@ -2571,7 +2560,7 @@
       </span>
       <button id="btn-presentation" class="px-3 py-1.5 text-sm rounded hover:bg-white/10" style="border:1px solid var(--dark-border-strong);color:var(--dark-text);visibility:visible;">📊 Modalità presentazione</button>
       <div class="text-xs pl-2" style="border-left:1px solid var(--dark-border-strong);color:var(--dark-text-muted);">
-        <span id="app-version" class="font-medium" style="color:var(--accent);">v18.315.0</span> · Michele Marchetti
+        <span id="app-version" class="font-medium" style="color:var(--accent);">v18.316.0</span> · Michele Marchetti
         <span id="sb-role-badge" style="margin-left:8px;padding:1px 8px;border-radius:9999px;background:rgba(255,255,255,.1);color:var(--dark-text);font-weight:600;"></span>
       </div>
     </div>
@@ -19817,8 +19806,10 @@ function pwJiraSubtaskBadgeInnerHtml(cIdx, bc, operatoreNome, cantiere, attivita
   const linkHtml = entry.url
     ? `<a href="${esc(entry.url)}" target="_blank" rel="noopener" class="${linkClass}" title="${esc(title)}" onclick="event.stopPropagation()">${body}</a>`
     : `<span class="${linkClass}" title="${esc(title)}">${body}</span>`;
-  const rimuoviTitle = entry._db ? 'Rimuovi indicatore sottotask Jira di questo giorno' : 'Rimuovi indicatore sottotask Jira settimanale (tutti i giorni)';
-  return `${linkHtml}<button type="button" class="pw-jira-sub-remove" title="${rimuoviTitle}" onclick="event.stopPropagation();pwJiraSubtaskBadgeRemove(${cIdx},'${jsAttr(mapKey)}')">✕</button>`;
+  // Niente ✕ «Rimuovi indicatore» in cella (tolta in v18.316.0): togliendo l'indicatore
+  // l'app perdeva il sottotask e il Controllo sottotask non poteva più proporre di
+  // eliminarlo su Jira. Si toglie solo da lì (righe orfano/cancellato, con conferma).
+  return linkHtml;
 }
 
 // Wrapper con data-* usato in pwRender() (weekly-operatore-modal.js): stesso
@@ -45763,7 +45754,6 @@ HELP_TEXTS['pw-jchk-struttura'] = 'Come «🏗️ Crea strutture» nell\'intesta
 // Evidenzia in Griglia
 HELP_TEXTS['pw-jchk-evidenzia'] = 'Accende o spegne l\'evidenziazione in Griglia delle celle con anomalie: rosse le gravi (senza sottotask, creazione fallita, cancellato o riassegnato su Jira), ambra le altre.\n\nSi accende da sola quando apri il controllo e ci sono anomalie. Vale solo sul tuo schermo e non salva nulla.';
 // ✕ indicatore 🎫
-HELP_TEXTS['pwJiraSubtaskBadgeRemove'] = 'Toglie dalla cella della Griglia l\'indicatore del sottotask Jira (🎫 creato/già esistente o ⚠️ creazione fallita) di quel giorno. Lo toglie subito, senza conferma. Per un sottotask settimanale (creato prima della v18.229.0) l\'indicatore sparisce da tutti i giorni della settimana.\n\nSu Jira il sottotask NON viene cancellato: si perde solo il collegamento in Griglia, e il Controllo sottotask segnalerà la cella come «senza sottotask».\n\nLa modifica è condivisa con i colleghi. Riservato ad admin e responsabili.';
 // ← Indietro
 HELP_TEXTS['pwJiraStepBack'] = 'Torna al passo precedente della creazione sottotask Jira, con tutte le scelte com\'erano: Epic e Task scelti, spunte, valori digitati.\n\nNon scrive niente su Jira.';
 // Riprova

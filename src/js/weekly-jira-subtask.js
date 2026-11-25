@@ -605,8 +605,10 @@ function pwJiraSubtaskBadgeInnerHtml(cIdx, bc, operatoreNome, cantiere, attivita
   const linkHtml = entry.url
     ? `<a href="${esc(entry.url)}" target="_blank" rel="noopener" class="${linkClass}" title="${esc(title)}" onclick="event.stopPropagation()">${body}</a>`
     : `<span class="${linkClass}" title="${esc(title)}">${body}</span>`;
-  const rimuoviTitle = entry._db ? 'Rimuovi indicatore sottotask Jira di questo giorno' : 'Rimuovi indicatore sottotask Jira settimanale (tutti i giorni)';
-  return `${linkHtml}<button type="button" class="pw-jira-sub-remove" title="${rimuoviTitle}" onclick="event.stopPropagation();pwJiraSubtaskBadgeRemove(${cIdx},'${jsAttr(mapKey)}')">✕</button>`;
+  // Niente ✕ «Rimuovi indicatore» in cella (tolta in v18.316.0): togliendo l'indicatore
+  // l'app perdeva il sottotask e il Controllo sottotask non poteva più proporre di
+  // eliminarlo su Jira. Si toglie solo da lì (righe orfano/cancellato, con conferma).
+  return linkHtml;
 }
 
 // Wrapper con data-* usato in pwRender() (weekly-operatore-modal.js): stesso

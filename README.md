@@ -116,6 +116,9 @@ Limite noto: il progetto Supabase è sul piano **Free**, che non include backup 
 
 ## Changelog
 
+## v18.316.0
+- **Griglia: tolta la ✕ grigia «Rimuovi indicatore sottotask Jira» accanto al codice del sottotask.** Si confondeva con la ✕ rossa «Rimuovi cantiere» e, togliendo l'indicatore, l'app perdeva il sottotask: il ticket restava su Jira in TO DO e il controllo «🎫 Sottotask» non poteva più segnalarlo come «non più in Griglia» né proporre «🗑️ elimina su Jira». Ora, se un cantiere non è più previsto, si toglie solo il cantiere e si elimina il sottotask dal controllo. L'indicatore si può ancora togliere dal controllo (righe orfane o cancellate su Jira, con conferma). Nessuna modifica a Supabase.
+
 ## v18.315.0
 - **Controllo anomalie ⇄ Controllo Produzione.** Da ogni scheda si va alle righe corrispondenti del Controllo Produzione e si torna indietro: «↘ Vai alla riga» (la cella), «↘ Vai alla squadra» (ore diverse in squadra, tutta la squadra quel giorno) e, quando l'operatore quel giorno non è in Griglia (es. ore MySond senza cantiere), «↘ Righe di …» che evidenzia le sue righe degli altri giorni. Commessa e squadra chiuse si riaprono e le righe lampeggiano. In basso a sinistra resta «🔍 Torna al controllo anomalie», che riapre il controllo nello stesso punto e fa lampeggiare la scheda di partenza. Solo navigazione, nessuna modifica a Supabase.
 
