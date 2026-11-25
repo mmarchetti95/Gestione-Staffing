@@ -116,6 +116,9 @@ Limite noto: il progetto Supabase è sul piano **Free**, che non include backup 
 
 ## Changelog
 
+## v18.315.0
+- **Controllo anomalie ⇄ Controllo Produzione.** Da ogni scheda si va alle righe corrispondenti del Controllo Produzione e si torna indietro: «↘ Vai alla riga» (la cella), «↘ Vai alla squadra» (ore diverse in squadra, tutta la squadra quel giorno) e, quando l'operatore quel giorno non è in Griglia (es. ore MySond senza cantiere), «↘ Righe di …» che evidenzia le sue righe degli altri giorni. Commessa e squadra chiuse si riaprono e le righe lampeggiano. In basso a sinistra resta «🔍 Torna al controllo anomalie», che riapre il controllo nello stesso punto e fa lampeggiare la scheda di partenza. Solo navigazione, nessuna modifica a Supabase.
+
 ## v18.314.0
 - **Controllo Produzione: svuotare un Km/Cad toglie da Jira la produzione già inviata.** Il campo svuotato diventa 0 (nessuna produzione) corretto a mano, con conferma che dice quanto verrà sottratto: con «🔄 Sincronizza» su Jira va la differenza negativa (anche sul Task padre per Actual Production). Prima il valore restava su Jira e la sincronizzazione successiva lo rileggeva in tabella. Solo uno 0 svuotato di nuovo viene cancellato davvero. Per i vecchi «○ Jira» basta scrivere 0.
 - **Le correzioni a mano non vengono più sovrascritte dai reimport.** Un Km/Cad corretto a mano (corsivo sottolineato, ✋ nel tooltip) resta quando si reimporta dalla board QField o con «Carica Report»: si aggiornano solo i dati per utenza, cioè gli orari delle Ore Report Prod. Si può quindi importare ogni giorno l'intera settimana. Se dopo la correzione la board ha un valore diverso, l'anteprima lo segnala in arancio e offre «usa board»; «Carica Report» chiede se mantenere o sostituire. Prestazioni operatori ignora i dati per utenza dei valori corretti a mano. Nessuna modifica a Supabase né alle Edge Function (`km_meta_by_ticket[key].kmReport` = valore della board che la correzione ha sostituito).

@@ -1033,6 +1033,9 @@
   /* ===== RICERCA OPERATORE/CANTIERE IN CONTROLLO PRODUZIONE ===== */
   @keyframes cpaFlash { 0%,100% { background: transparent; } 30% { background: #fde68a; } }
   .cp-table tr.cpa-flash td { animation: cpaFlash 1.8s ease-in-out 2; }
+  [data-cpa-id].cpa-flash-card { animation: cpaFlash 1.8s ease-in-out 2; }
+  #cpa-torna-btn { position:fixed; left:20px; bottom:108px; z-index:4400; background:#b45309; color:#fff; border:none; border-radius:8px; padding:8px 14px; font-size:13px; font-weight:600; cursor:pointer; box-shadow:0 4px 14px rgba(0,0,0,.25); }
+  #cpa-torna-btn:hover { background:#92400e; }
   .cp-griglia-btn { border:none; background:transparent; cursor:pointer; font-size:12px; line-height:1; padding:0 3px 0 0; opacity:.55; }
   .cp-griglia-btn:hover { opacity:1; }
   #cp-torna-btn { position:fixed; left:20px; bottom:20px; z-index:4400; background:#4f46e5; color:#fff; border:none; border-radius:8px; padding:8px 14px; font-size:13px; font-weight:600; cursor:pointer; box-shadow:0 4px 14px rgba(0,0,0,.25); }
@@ -2568,7 +2571,7 @@
       </span>
       <button id="btn-presentation" class="px-3 py-1.5 text-sm rounded hover:bg-white/10" style="border:1px solid var(--dark-border-strong);color:var(--dark-text);visibility:visible;">📊 Modalità presentazione</button>
       <div class="text-xs pl-2" style="border-left:1px solid var(--dark-border-strong);color:var(--dark-text-muted);">
-        <span id="app-version" class="font-medium" style="color:var(--accent);">v18.314.0</span> · Michele Marchetti
+        <span id="app-version" class="font-medium" style="color:var(--accent);">v18.315.0</span> · Michele Marchetti
         <span id="sb-role-badge" style="margin-left:8px;padding:1px 8px;border-radius:9999px;background:rgba(255,255,255,.1);color:var(--dark-text);font-weight:600;"></span>
       </div>
     </div>
@@ -5632,7 +5635,7 @@ const SB_FN_FUNZIONI = [
   { gruppo: 'Griglia', chiave: 'griglia:chiusura-settimana', label: '🏁 Chiusura settimana', sel: '#pw-chs-btn, #cp-chs-btn, #chs-modal, #chs-torna-btn' },
   { gruppo: 'Griglia', chiave: 'griglia:genera-mail', label: '📧 Genera mail', sel: '#pw-gen-mail' },
   { gruppo: 'Ferie', chiave: 'ferie:import', label: '📥 Importa Excel ferie', sel: '#pw-ferie-import-btn' },
-  { gruppo: 'Controllo produzione', chiave: 'controllo:anomalie', label: '🔍 Controllo anomalie', sel: '#cpa-toggle, #cpa-modal' },
+  { gruppo: 'Controllo produzione', chiave: 'controllo:anomalie', label: '🔍 Controllo anomalie', sel: '#cpa-toggle, #cpa-modal, #cpa-torna-btn' },
   { gruppo: 'Controllo produzione', chiave: 'controllo:timeline', label: '🕘 Timeline worklog', sel: '#cptl-toggle, #cptl-modal' },
   { gruppo: 'Controllo produzione', chiave: 'controllo:timeline-modifica', label: '✎ Timeline: correggi/aggiungi/elimina worklog Jira', sel: '.cptl-add, .cptl-appunti, #cptl-wl-modal, #cptl-cp-modal' },
   { gruppo: 'Controllo produzione', chiave: 'controllo:copia-worklog', label: '⧉ Copia worklog Jira da un operatore a un compagno di squadra', sel: '.cp-cw-btn, #cpcw-modal' },
@@ -27512,6 +27515,8 @@ let _cpa = {
   esito: null,                // { ok, testo } dell'ultimo ricontrollo singolo
   soll: null,                 // vista solleciti aperta (produzione-anomalie-solleciti.js)
   registro: null,             // vista registro solleciti aperta ({ tutte, aperti })
+  torna: null,                // { id, anno, week, scroll } della scheda lasciata con «↘ Vai alla riga»
+  opCp: null,                 // Set degli operatori con righe nel Controllo Produzione (calcolato a ogni cpaRender)
 };
 
 /* Le anomalie ignorate (_cpaIgnorate, cpaIgnora) stanno nella tabella condivisa
@@ -27643,6 +27648,7 @@ function cpaToggle() {
 }
 
 function cpaApri() {
+  _cpaTogliTorna();
   _cpa.aperto = true;
   _cpaAllinea();
   _cpaRicalcola();   // la Griglia può essere cambiata mentre il modal era chiuso
@@ -27980,19 +27986,99 @@ function cpaIgnora(el) {
   if (a) _cpaIgnCambia(a);
 }
 
-/* Chiude il modal e porta in vista la riga del Controllo Produzione (riapre commessa/squadra collassate). */
+/* Righe della tabella del Controllo Produzione (la classe .cp-table non è unica: le anteprime
+   della board la riusano). cpk = commessa|||squadra|||operatore|||giorno. */
+function _cpaRigheTabella() {
+  return [...document.querySelectorAll('#cp-table-container .cp-table tbody tr[data-cpk]')];
+}
+
+function _cpaGiornoRiga(tr) { return String(tr.dataset.cpk || '').split('|||').pop(); }
+
+/* Righe del Controllo Produzione di un'anomalia, dalla più precisa:
+   'cella' = la cella dell'anomalia (cpKey) · 'squadra' = la squadra quel giorno (ore diverse in squadra) ·
+   'giorno' = l'operatore quel giorno su qualunque commessa · 'settimana' = l'operatore negli altri giorni
+   (quel giorno non è in Griglia, quindi non ha una riga). */
+function _cpaRigheCp(a, cpKey) {
+  const righe = _cpaRigheTabella();
+  if (cpKey) {
+    const t = righe.filter(x => x.dataset.cpk === cpKey);
+    if (t.length) return { righe: t, livello: 'cella' };
+  }
+  if (!a) return { righe: [], livello: '' };
+  const g = String(a.giorno);
+  if (a.tipo === 'ore_squadra') {
+    const pre = a.commessa + '|||' + a.squadra + '|||';
+    const t = righe.filter(x => x.dataset.cpk.startsWith(pre) && _cpaGiornoRiga(x) === g);
+    if (t.length) return { righe: t, livello: 'squadra' };
+  }
+  if (!a.operatore) return { righe: [], livello: '' };
+  const dellOp = righe.filter(x => x.dataset.operatore === a.operatore);
+  const delGiorno = dellOp.filter(x => _cpaGiornoRiga(x) === g);
+  if (delGiorno.length) return { righe: delGiorno, livello: 'giorno' };
+  return { righe: dellOp, livello: 'settimana' };
+}
+
+/* Chiude il modal e porta in vista le righe del Controllo Produzione dell'anomalia (riapre
+   commessa/squadra collassate). Lascia il bottone «Torna al controllo anomalie», che riapre
+   il modal sulla stessa scheda. */
 function cpaVaiAllaRiga(el) {
   const a = _cpaTrova(el);
   const cpKey = (el && el.dataset.cpk) || (a && a.cpKey);
-  if (!cpKey) return;
-  const tr = [...document.querySelectorAll('.cp-table tbody tr[data-cpk]')].find(x => x.dataset.cpk === cpKey);
-  if (!tr) { showAlertModal('Riga non trovata nella tabella (la cella potrebbe essere stata modificata in Griglia).'); return; }
+  const { righe, livello } = _cpaRigheCp(el && el.dataset.cpk ? null : a, cpKey);
+  if (!righe.length) {
+    const chi = a && a.operatore ? a.operatore : 'L\'operatore';
+    showAlertModal(chi + ' non ha righe nel Controllo Produzione di questa settimana: le righe ci sono solo per chi è in Griglia. Per vedere i suoi worklog usa «🕘 Timeline worklog».');
+    return;
+  }
+  const body = document.getElementById('cpa-body');
+  _cpa.torna = { id: a ? a.id : null, anno: pwAnno, week: pwWeek, scroll: body ? body.scrollTop : 0 };
   cpaChiudi();
-  const ci = tr.dataset.commIdx, si = tr.dataset.sqIdx;
-  _collapseSets('cp').comm.delete(ci); _collapseSets('cp').comm.delete(Number(ci)); _collapseSets('cp').sq.delete(si);
+  _cpaMostraTorna();
+  const sets = _collapseSets('cp');
+  righe.forEach(tr => {
+    const ci = tr.dataset.commIdx, si = tr.dataset.sqIdx;
+    sets.comm.delete(ci); sets.comm.delete(Number(ci)); sets.sq.delete(si);
+  });
   cpApplyCollapse();
-  tr.scrollIntoView({ behavior: 'smooth', block: 'center' });
-  tr.classList.remove('cpa-flash'); void tr.offsetWidth; tr.classList.add('cpa-flash');
+  righe[0].scrollIntoView({ behavior: 'smooth', block: 'center' });
+  righe.forEach(tr => { tr.classList.remove('cpa-flash'); void tr.offsetWidth; tr.classList.add('cpa-flash'); });
+  const op = a && a.operatore ? a.operatore : '';
+  const gg = a && _cpa.risultato && _cpa.risultato.giorniLabel ? _cpa.risultato.giorniLabel[a.giorno] : '';
+  if (livello === 'settimana') undoToast(op + ' non è in Griglia ' + (gg || 'quel giorno') + ': evidenziate le sue righe degli altri giorni');
+  else if (livello === 'giorno' && righe.length > 1) undoToast(righe.length + ' righe di ' + op + (gg ? ' ' + gg : '') + ' (più commesse o squadre)');
+}
+
+/* Bottone fisso che riporta al controllo anomalie dopo «↘ Vai alla riga»: riapre il modal
+   sulla stessa vista e porta in vista la scheda da cui si era partiti (se c'è ancora:
+   dopo una correzione può essere sparita). */
+function _cpaMostraTorna() {
+  if (document.getElementById('cpa-torna-btn')) return;
+  const btn = document.createElement('button');
+  btn.id = 'cpa-torna-btn';
+  btn.type = 'button';
+  btn.className = 'no-print';
+  btn.textContent = '🔍 Torna al controllo anomalie';
+  btn.onclick = () => cpaTorna();
+  document.body.appendChild(btn);
+}
+
+function _cpaTogliTorna() {
+  const btn = document.getElementById('cpa-torna-btn');
+  if (btn) btn.remove();
+}
+
+function cpaTorna() {
+  const t = _cpa.torna;
+  cpaApri();
+  if (!t || t.anno !== pwAnno || t.week !== pwWeek) return;
+  const body = document.getElementById('cpa-body');
+  if (!body) return;
+  body.scrollTop = t.scroll || 0;
+  const card = t.id ? [...body.querySelectorAll('[data-cpa-id]')].find(x => x.dataset.cpaId === t.id) : null;
+  if (!card) return;
+  const rb = body.getBoundingClientRect(), rc = card.getBoundingClientRect();
+  if (rc.top < rb.top || rc.bottom > rb.bottom) card.scrollIntoView({ block: 'center' });
+  card.classList.remove('cpa-flash-card'); void card.offsetWidth; card.classList.add('cpa-flash-card');
 }
 
 /* ---------- Proposta di cella (worklog senza pianificazione), modificabile ---------- */
@@ -28331,6 +28417,26 @@ function _cpaTagSollecito(a) {
     ' il ' + new Date(inv[fatti[0].operatore].ts).toLocaleDateString('it-IT', { day: '2-digit', month: '2-digit' }) + '</span>';
 }
 
+/* «↘ Vai alla riga» del Controllo Produzione: la cella dell'anomalia, la squadra quel giorno
+   (ore diverse in squadra) o, se l'operatore quel giorno non è in Griglia, le sue righe degli
+   altri giorni. Niente bottone per chi non ha righe in tutta la settimana. */
+function _cpaBtnVaiHtml(a) {
+  const ops = _cpa.opCp || new Set();
+  let testo, titolo;
+  if (a.tipo === 'ore_squadra') {
+    testo = '↘ Vai alla squadra';
+    titolo = 'Porta alle righe della squadra quel giorno nel Controllo Produzione';
+  } else if (a.cpKey) {
+    testo = '↘ Vai alla riga';
+    titolo = 'Porta alla riga di ' + (a.operatore || '') + ' quel giorno nel Controllo Produzione';
+  } else if (a.operatore && ops.has(a.operatore)) {
+    testo = '↘ Righe di ' + a.operatore;
+    titolo = 'Quel giorno non è in Griglia: porta alle sue righe degli altri giorni nel Controllo Produzione';
+  } else return '';
+  return '<button type="button" onclick="cpaVaiAllaRiga(this)" class="text-xs px-2 py-0.5 border border-slate-300 rounded bg-white hover:bg-slate-50" title="' +
+    _cpaS(titolo + '. Poi «🔍 Torna al controllo anomalie» riporta qui.') + '">' + _cpaS(testo) + '</button>';
+}
+
 function _cpaSchedaHtml(a, r, ignorata) {
   const T = CPA_TIPI[a.tipo];
   const G = CPA_GRAVITA[a.gravita] || CPA_GRAVITA.bassa;
@@ -28341,7 +28447,7 @@ function _cpaSchedaHtml(a, r, ignorata) {
     (_cpa.ricontrollo && !inRic ? 'opacity:.5;' : '') + '"' + (_cpa.ricontrollo ? ' disabled' : '') +
     ' title="Rilegge da Jira solo le ore di ' + _cpaS(_cpaOperatoriDi(a).join(', ')) + ' e ricalcola (dopo una correzione fatta su Jira)">' +
     (inRic ? '⏳ Ricontrollo…' : '↻ Ricontrolla') + '</button>';
-  if (a.cpKey && a.tipo !== 'ore_squadra') bottoni += '<button type="button" onclick="cpaVaiAllaRiga(this)" class="text-xs px-2 py-0.5 border border-slate-300 rounded bg-white hover:bg-slate-50">↘ Vai alla riga</button>';
+  bottoni += _cpaBtnVaiHtml(a);
   bottoni += (a.link || []).filter(l => l.url).map(l =>
     '<a href="' + _cpaS(l.url) + '" target="_blank" rel="noopener" class="text-xs px-2 py-0.5 border border-slate-300 rounded bg-white hover:bg-slate-50" style="color:#2563eb;text-decoration:none;">' + _cpaS(l.label) + ' ↗</a>').join('');
   const inSalva = _cpaIgn.inCorso.has(a.id);
@@ -28534,6 +28640,7 @@ function cpaRender() {
   modal.style.display = _cpa.aperto ? 'flex' : 'none';
   if (!_cpa.aperto) return;
   if (r) _cpaMeteoCarica();
+  _cpa.opCp = new Set(_cpaRigheTabella().map(tr => tr.dataset.operatore).filter(Boolean));
 
   /* Il ridisegno non deve far perdere la posizione di lettura nella stessa vista */
   const vista = _cpa.registro ? 'registro' : (_cpa.soll && r && !_cpa.inCorso ? 'soll' : 'lista|' + _cpa.filtro + (_cpa.mostraIgnorate ? '|ign' : ''));
@@ -45801,7 +45908,8 @@ HELP_TEXTS['cpTlSet:colore'] = 'Sceglie come colorare i segmenti. «ticket»: un
 HELP_TEXTS['cpTlSet:soglia'] = 'Segnala, in giallo e tra le righe da controllare, le giornate già passate in cui un operatore pianificato ha meno ore di worklog di quelle scelte. Con «—» non segnala niente di questo tipo.\n\nGli altri avvisi restano sempre attivi: nessun worklog, sovrapposizioni, worklog senza pianificazione o in ferie, sottotask IN PROGRESS dal giorno prima.';
 HELP_TEXTS['cpTlSet:soloControllo'] = 'Se è spuntato, mostra solo le giornate con un avviso (righe gialle). Il filtro vale anche per l\'export PDF.';
 // ↘ Vai alla riga
-HELP_TEXTS['cpaVaiAllaRiga'] = 'Chiude il controllo anomalie e porta alla riga corrispondente nella tabella del Controllo Produzione. Se commessa e squadra erano chiuse le riapre, e la riga lampeggia per qualche istante. Nelle schede «Ore diverse in squadra» fa lo stesso un clic sul nome di un operatore.\n\nNon modifica nulla. Se nel frattempo la cella è stata cambiata in Griglia, la riga potrebbe non essere trovata.';
+HELP_TEXTS['cpaVaiAllaRiga'] = 'Chiude il controllo anomalie e porta alle righe corrispondenti nella tabella del Controllo Produzione, per guardarle meglio o correggerle lì. Se commessa e squadra erano chiuse le riapre, e le righe lampeggiano per qualche istante.\n\n«↘ Vai alla riga» = la cella dell\'anomalia; «↘ Vai alla squadra» = tutta la squadra quel giorno; «↘ Righe di …» compare quando l\'operatore quel giorno non è in Griglia: porta alle sue righe degli altri giorni della settimana. Nelle schede «Ore diverse in squadra» un clic sul nome di un operatore porta alla sua riga.\n\nIn basso a sinistra resta il bottone «🔍 Torna al controllo anomalie», che riapre il controllo sulla stessa scheda. Non modifica nulla.';
+HELP_TEXTS['#cpa-torna-btn'] = 'Riapre il controllo anomalie dove l\'avevi lasciato e fa lampeggiare la scheda da cui eri partito (se dopo le correzioni c\'è ancora). Le correzioni fatte nel Controllo Produzione sono già conteggiate; per le ore cambiate su Jira usa «↻ Ricontrolla» sulla scheda. Solo navigazione.';
 // Ignora / ↩ Ripristina
 HELP_TEXTS['cpaIgnora'] = '«🗄 Ignora» archivia questa anomalia nella linguetta «🗄 Ignorate»: esce dall\'elenco e dal totale e non torna più, anche dopo un nuovo controllo o su un altro PC. Resta fuori anche da «Copia elenco», dal PDF, dai solleciti e dalla Chiusura settimana. «↩ Ripristina» (nella linguetta Ignorate) la rimette fra quelle aperte.\n\nLa lista è condivisa con i colleghi e registra chi ha ignorato e quando; possono ignorare e ripristinare admin e responsabili. Non tocca né la Griglia né Jira.';
 // ✓ Aggiungi in Griglia
