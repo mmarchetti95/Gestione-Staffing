@@ -75,7 +75,27 @@ async function _geoCacheSave() {
   try { await sset('geo_cache_v1', _geoCache); } catch(e) {}
 }
 
-/* Geocodifica singolo nome via Nominatim */
+/* Una ricerca Nominatim alla volta, almeno 1,1 s fra l'una e l'altra (regole d'uso del
+   servizio). In coda unica perché geoCercaComune può fare più tentativi per un nome e
+   più moduli (Mappa, meteo, regione) geocodificano insieme. → array di risultati;
+   un errore HTTP/rete viene rilanciato. */
+let _geoNomCoda = Promise.resolve();
+let _geoNomUltima = 0;
+function geoNominatimCerca(q) {
+  const giro = _geoNomCoda.then(async () => {
+    const attesa = _geoNomUltima + 1100 - Date.now();
+    if (attesa > 0) await new Promise(r => setTimeout(r, attesa));
+    _geoNomUltima = Date.now();
+    const res = await fetch(GEO_NOMINATIM_URL + encodeURIComponent(q), { headers: { 'Accept-Language': 'it' } });
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    const data = await res.json();
+    return Array.isArray(data) ? data : [];
+  });
+  _geoNomCoda = giro.catch(() => {});
+  return giro;
+}
+
+/* Geocodifica singolo nome: comune italiano via geoCercaComune (geo-comune.js) */
 async function geocodifica(nome) {
   const key = nome.toLowerCase().trim().replace(/\s+/g, ' ');
   if (!key) return null;
@@ -83,11 +103,7 @@ async function geocodifica(nome) {
   const statusEl = document.getElementById('pw-map-geocoding-status');
   if (statusEl) statusEl.textContent = 'Ricerca: ' + nome + '…';
   try {
-    const url = 'https://nominatim.openstreetmap.org/search?format=json&limit=1&q=' + encodeURIComponent(nome);
-    const res = await fetch(url, { headers: { 'Accept-Language': 'it', 'User-Agent': 'StaffingDashboard/1.0' } });
-    if (!res.ok) throw new Error('HTTP ' + res.status);
-    const data = await res.json();
-    const val = (data && data.length > 0) ? { lat: parseFloat(data[0].lat), lng: parseFloat(data[0].lon), label: data[0].display_name } : null;
+    const val = await geoCercaComune(nome, geoNominatimCerca);
     _geoCache[key] = val;
     await _geoCacheSaveSingle(key, val);
     if (statusEl) statusEl.textContent = '';
@@ -774,15 +790,12 @@ async function pwMapGeoEditSubmit(inp) {
   } else {
     inp.disabled = true; inp.value = 'Ricerca…';
     try {
-      const url = 'https://nominatim.openstreetmap.org/search?format=json&limit=1&q=' + encodeURIComponent(query);
-      const res = await fetch(url, { headers: { 'Accept-Language': 'it', 'User-Agent': 'StaffingDashboard/1.0' } });
-      const data = await res.json();
-      if (!data || !data.length) {
+      result = await geoCercaComune(query, geoNominatimCerca);
+      if (!result) {
         inp.disabled = false; inp.value = ''; inp.style.borderColor = '#ef4444';
         inp.placeholder = 'Non trovato, riprova…';
         return;
       }
-      result = { lat: parseFloat(data[0].lat), lng: parseFloat(data[0].lon), label: data[0].display_name };
       inp.disabled = false; inp.value = query; inp.style.borderColor = '';
     } catch (e) {
       inp.disabled = false; inp.placeholder = 'Errore rete';

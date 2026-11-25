@@ -365,8 +365,10 @@ function prgRenderTabella() {
   // Intestazione delle colonne ripetuta in ogni gruppo (come Monday), appiccicata in alto mentre
   // si scorre il gruppo: quella del gruppo successivo la copre quando arriva.
   const intestazione = (gid, els) => '<tr class="prg-grp-cols"><th class="prg-sticky" data-prg-sort="__nome">'
-    + (w ? '<input type="checkbox" class="prg-selc" data-prg-selg="' + prgEsc(gid) + '" title="Seleziona tutto il gruppo" data-help-key="prg-sel"'
-      + (els.length && els.every(e => _prg.sel.has(e.id)) ? ' checked' : '') + '>' : '')
+    // Selezione per tutti (v18.323.0): «🗺️ Visualizza in mappa» è in sola lettura; le azioni
+    // che scrivono restano ai soli ruoli con scrittura (prgAppBarraHtml).
+    + ('<input type="checkbox" class="prg-selc" data-prg-selg="' + prgEsc(gid) + '" title="Seleziona tutto il gruppo" data-help-key="prg-sel"'
+      + (els.length && els.every(e => _prg.sel.has(e.id)) ? ' checked' : '') + '>')
     + '<span class="prg-th-t">' + prgEsc(titoloNome) + freccia('__nome') + '</span>' + rs('__nome') + '</th>'
     + cols.map(c => '<th data-prg-sort="' + prgEsc(c.id) + '" title="' + prgEsc(c.titolo + ' · ' + prgEtichettaTipo(c.tipo) + ' · clic per ordinare') + '">'
       + '<span class="prg-th-t">' + prgEsc(c.titolo) + freccia(c.id) + '</span>' + rs(c.id) + '</th>').join('')
@@ -542,7 +544,7 @@ function prgRigaHtml(b, cols, el, colore, w) {
   const nCom = prgNumCommenti(b.id, el.id);
   let h = '<tr class="prg-row" data-id="' + el.id + '">'
     + '<td class="prg-sticky prg-nome" style="--g:' + prgEsc(colore) + '" data-prg-apri="' + el.id + '" title="Apri l\'elemento">'
-    + (w ? '<input type="checkbox" class="prg-selc" data-prg-sel="' + el.id + '"' + (_prg.sel.has(el.id) ? ' checked' : '') + ' data-help-key="prg-sel">' : '')
+    + '<input type="checkbox" class="prg-selc" data-prg-sel="' + el.id + '"' + (_prg.sel.has(el.id) ? ' checked' : '') + ' data-help-key="prg-sel">'
     + '<span class="prg-nome-t">' + (el.nome ? prgEsc(el.nome) : '<i class="text-slate-400">senza nome</i>') + '</span>'
     + '<span class="prg-com' + (nCom ? ' on' : '') + '" title="' + (nCom ? nCom + ' aggiornamenti' : 'Nessun aggiornamento') + '">💬' + (nCom ? ' ' + nCom : '') + '</span>'
     + '</td>';
@@ -1473,6 +1475,7 @@ function prgAzione(a) {
   else if (a === 'collega' && b) prgCollegaApri(prgSelezionati(b).map(e => e.id));
   else if (a === 'autoplan' && b) prgAutoplanApri(prgSelezionati(b).map(e => e.id));
   else if (a === 'struttura' && b) prgStrutturaApri(prgSelezionati(b).map(e => e.id));
+  else if (a === 'mappa' && b) mlPrgMostraSelezione(prgSelezionati(b).map(e => e.id));
   else if (a === 'stati') prgStatiApri();
   else if (a === 'desel') { _prg.sel = new Set(); prgRenderTesta(); prgRenderTabella(); }
   else if (a === 'larghezze' && b) {

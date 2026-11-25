@@ -74,17 +74,12 @@ function _pwSpostLoad() {
 }
 
 /* ---------- geocodifica ---------- */
-/* Le tappe sono comuni italiani, ma geocodifica() della Mappa interroga Nominatim
-   senza filtro di nazione e con limit=1: omonimi esteri vincevano (Ossasco → Svizzera,
-   Pont Boset → Francia, Cava → Spagna) e restavano in rubrica. In più la riga
-   SENTINELLA "[non trovato]" riletta da Supabase sembra una coordinata valida (0,0)
-   e la tappa finiva nel Golfo di Guinea. Qui: rubrica usata solo se valida e in
-   Italia, altrimenti ricerca limitata all'Italia preferendo i centri abitati, con
-   sigla provincia facoltativa ("Ivrea (TO)"). Un risultato migliore aggiorna la
-   rubrica condivisa, così si corregge anche la Mappa. */
-const PW_SPOST_GEO_COMUNI = ['city', 'town', 'village', 'municipality'];
-const PW_SPOST_GEO_FRAZIONI = ['hamlet', 'suburb', 'quarter', 'neighbourhood', 'isolated_dwelling', 'locality'];
-
+/* La riga SENTINELLA "[non trovato]" riletta da Supabase sembra una coordinata valida
+   (0,0) e la tappa finiva nel Golfo di Guinea; voci vecchie della rubrica potevano
+   essere omonimi esteri. Qui: rubrica usata solo se valida e in Italia, altrimenti la
+   ricerca comuni condivisa (geoCercaComune, geo-comune.js — dalla v18.322.0 la stessa
+   di geocodifica()), con sigla provincia facoltativa ("Ivrea (TO)"). Un risultato
+   migliore aggiorna la rubrica condivisa, così si corregge anche la Mappa. */
 function _pwSpostGeoValida(g) {
   if (!g || g.label === '[non trovato]' || (!g.lat && !g.lng)) return null;
   return g;
@@ -94,30 +89,8 @@ function _pwSpostInItalia(g) {
   return g.lat >= 35.4 && g.lat <= 47.2 && g.lng >= 6.5 && g.lng <= 18.7;
 }
 
-async function _pwSpostNominatim(q, sigla) {
-  const url = 'https://nominatim.openstreetmap.org/search?format=jsonv2&addressdetails=1&limit=8' +
-              '&countrycodes=it&accept-language=it&q=' + encodeURIComponent(q);
-  const res = await fetch(url, { headers: { 'Accept-Language': 'it' } });
-  if (!res.ok) throw new Error('HTTP ' + res.status);
-  const data = await res.json();
-  if (!Array.isArray(data) || !data.length) return null;
-  let cand = data;
-  if (sigla) {
-    const inProv = data.filter(r => r.address && r.address['ISO3166-2-lvl6'] === 'IT-' + sigla);
-    if (inProv.length) cand = inProv;
-  }
-  const r = cand.find(x => PW_SPOST_GEO_COMUNI.indexOf(x.addresstype) >= 0) ||
-            cand.find(x => PW_SPOST_GEO_FRAZIONI.indexOf(x.addresstype) >= 0) ||
-            cand.find(x => x.category === 'place' || x.category === 'boundary') ||
-            cand[0];
-  return { lat: parseFloat(r.lat), lng: parseFloat(r.lon), label: r.display_name };
-}
-
 /* → { geo: {lat,lng,label}|null, rete: bool } — rete=true se è stato interrogato Nominatim */
 async function _pwSpostGeocodifica(nome) {
-  const m = nome.match(/^(.*?)\s*\(\s*([A-Za-z]{2})\s*\)\s*$/);
-  const base  = (m ? m[1] : nome).trim();
-  const sigla = m ? m[2].toUpperCase() : '';
   const key = nome.toLowerCase().trim().replace(/\s+/g, ' ');
   const cached = _pwSpostGeoValida(_geoCache[key]);
   if (cached && (_pwSpostInItalia(cached) || /^Coordinate manuali/.test(cached.label || ''))) {
@@ -125,7 +98,7 @@ async function _pwSpostGeocodifica(nome) {
   }
   let g;
   try {
-    g = await _pwSpostNominatim(base, sigla);
+    g = await geoCercaComune(nome, geoNominatimCerca);
   } catch (e) {
     return { geo: null, rete: true };
   }

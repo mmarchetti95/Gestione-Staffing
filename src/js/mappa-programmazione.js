@@ -56,6 +56,14 @@ const ML_PRG_VALID = [
 ];
 let _mlFiltroValid = new Set();
 
+/* «🗺️ Visualizza in mappa» dalla Programmazione (v18.323.0): Set degli id degli elementi
+   selezionati nella board, null = nessuna selezione. Con la selezione attiva la mappa mostra
+   SOLO quegli elementi, in qualunque stato (anche fuori dalla fase di rilievo e senza stato:
+   li si è scelti a mano), con una barra in testa che li conta e li toglie (#ml-prg-sel).
+   Memoria della sessione; si azzera cambiando fonte, con «Azzera filtri» o con la ✕. */
+let _mlPrgSoloIds = null;
+let _mlPrgSoloAssenti = 0;   // id selezionati che non sono (più) negli elementi in memoria
+
 function mlPrgColValid(b) {
   return prgCols(b).find(c => c.tipo === 'check' && ML_PRG_VALID_COL.test(caNorm(c.titolo || ''))) || null;
 }
@@ -103,8 +111,56 @@ function mlSetFonte(f) {
   _mlFiltroOperatori.clear();
   _mlFiltroTipi.clear();
   _mlFiltroValid.clear();
+  _mlPrgSoloIds = null;
+  mlPrgRenderSel([], []);   // la vista Griglia non ridisegna la barra: va nascosta qui
   mlCloseDrawer();
   mlRender({});
+}
+
+/* Dalla Programmazione: apre la Mappa sulla vista Programmazione con i soli elementi scelti.
+   Gli altri filtri si azzerano (un filtro rimasto da prima nasconderebbe parte della scelta)
+   e la vista si adatta ai pin (mlEnter disegna senza keepView). */
+function mlPrgMostraSelezione(ids) {
+  const set = new Set((ids || []).map(Number).filter(Boolean));
+  if (!set.size || !mlPrgPuo()) return;
+  if (typeof sbCanSeePage === 'function' && !sbCanSeePage('mappa')) {
+    showAlertModal('La schermata Mappa non è disponibile per il tuo utente.');
+    return;
+  }
+  _mlFiltroCommesse.clear(); _mlFiltroOperatori.clear(); _mlFiltroStati.clear();
+  _mlFiltroRegioni.clear(); _mlFiltroCantieri.clear(); _mlFiltroTipi.clear(); _mlFiltroValid.clear();
+  _mlPrgSoloIds = set;
+  _mlFonte = 'prg';
+  try { localStorage.setItem('ml_fonte', 'prg'); } catch (_) {}
+  mlCloseDrawer();
+  switchScreen('mappa');
+}
+
+function mlPrgSoloVia() {
+  if (!_mlPrgSoloIds) return;
+  _mlPrgSoloIds = null;
+  mlCloseDrawer();
+  mlRender({});
+}
+
+/* Barra della selezione: quanti elementi, su quanti comuni, quanti senza comune o non trovati. */
+function mlPrgRenderSel(tutti, groups) {
+  const el = document.getElementById('ml-prg-sel');
+  if (!el) return;
+  if (!_mlPrgSoloIds || _mlFonte !== 'prg') { el.style.display = 'none'; el.innerHTML = ''; return; }
+  const n = _mlPrgSoloIds.size;
+  const senzaComune = n - tutti.length - _mlPrgSoloAssenti;
+  const nonLoc = groups.filter(g => !mlGeo(g.key)).length;
+  let t = '📋 <b>' + n + '</b> element' + (n === 1 ? 'o selezionato' : 'i selezionati') + ' nella Programmazione · '
+    + groups.length + ' comun' + (groups.length === 1 ? 'e' : 'i');
+  if (senzaComune > 0) t += ' · <span title="Elementi senza comune: né collegamento alla Griglia né un nome da cui ricavarlo">' + senzaComune + ' senza comune</span>';
+  if (_mlPrgSoloAssenti) t += ' · <span title="Elementi non più presenti nelle board (eliminati) o di board non ancora lette">' + _mlPrgSoloAssenti + ' non trovati</span>';
+  if (nonLoc) t += ' · <span title="Comuni non ancora localizzati o non trovati: vedi «Non localizzati»">📍? ' + nonLoc + '</span>';
+  el.innerHTML = '<span class="ml-prg-sel-t">' + t + '</span>'
+    + '<button type="button" class="ml-prg-sel-x" data-help-key="ml-prg-sel" title="Togli la selezione e mostra tutti gli elementi della fase di rilievo">✕ Mostra tutti</button>';
+  el.style.display = '';
+  const b = el.querySelector('.ml-prg-sel-x');
+  if (b) b.onclick = () => mlPrgSoloVia();
 }
 
 /* Board con colonna di stato ed elementi in memoria (stessi dati della Programmazione e
@@ -142,33 +198,44 @@ function mlPrgBuildItems() {
   const items = [];
   const colori = {};
   let esclusi = 0;
+  const solo = _mlPrgSoloIds;
+  const trovati = new Set();
   _prg.boards.forEach(b => {
     const gc = prgColonnaGruppoBoard(b);
-    if (!gc || !_prg.caricate[b.id]) return;
+    if (!_prg.caricate[b.id]) return;
+    // Board senza colonna di stato: solo per gli elementi scelti a mano dalla Programmazione.
+    if (!gc && !solo) return;
     const cv = mlPrgColValid(b);
-    const opz = gc.opzioni || [];
+    const opz = gc ? gc.opzioni || [] : [];
     opz.forEach(o => {
       const s = mlPrgStatoDi(o.label);
       if (s && o.colore && !colori[s.k]) colori[s.k] = o.colore;
     });
     prgEls(b.id).forEach(el => {
-      const o = opz.find(x => x.id === (el.valori || {})[gc.id]);
+      if (solo && !solo.has(el.id)) return;
+      if (solo) trovati.add(el.id);
+      const o = gc ? opz.find(x => x.id === (el.valori || {})[gc.id]) : null;
       const s = o ? mlPrgStatoDi(o.label) : null;
-      if (!s) { esclusi++; return; }
+      if (!s && !solo) { esclusi++; return; }
       const cantiere = String(mlPrgComune(b, el) || '').trim();
       if (!cantiere) return;
-      items.push({
+      const it = {
         tipi: mlPrgTipiDi(b, el),
         prg: true, el, board: b, commessa: b.commessa || b.nome || 'Board', cantiere,
         nome: el.nome || '', operatori: [], link: prgLink(el),
-        stato: s.k, statoL: s.l, colore: colori[s.k] || s.c,
-        ordine: ML_PRG_STATI.indexOf(s),
         valid: cv ? ((el.valori || {})[cv.id] ? 'si' : 'no') : 'nd',
-      });
+      };
+      if (s) Object.assign(it, { stato: s.k, statoL: s.l, colore: colori[s.k] || s.c, ordine: ML_PRG_STATI.indexOf(s) });
+      // Fuori dalla fase di rilievo (solo con la selezione): etichetta e colore della board,
+      // una fetta per etichetta; senza stato = grigio.
+      else if (o) Object.assign(it, { stato: 'x:' + caNorm(o.label), statoL: o.label, colore: o.colore || ML_PRG_ND_COLORE, ordine: 50 });
+      else Object.assign(it, { stato: ML_PRG_ND, statoL: 'Senza stato', colore: ML_PRG_ND_COLORE, ordine: 99 });
+      items.push(it);
     });
   });
   _mlPrgStati = ML_PRG_STATI.map(s => ({ k: s.k, l: s.l, c: colori[s.k] || s.c }));
   _mlPrgEsclusi = esclusi;
+  _mlPrgSoloAssenti = solo ? [...solo].filter(id => !trovati.has(id)).length : 0;
   return items;
 }
 
@@ -231,7 +298,7 @@ function mlPrgRenderChipsTipi(all) {
    board, letti in sottofondo una volta per sessione (come nella Programmazione): servono al tipo
    di attività. A lettura finita si ridisegna. `forza` = «🔄 Aggiorna». */
 function mlPrgAppSfondo(forza) {
-  const commesse = new Set(_prg.boards.filter(b => b.commessa && prgColonnaGruppoBoard(b)).map(b => b.commessa));
+  const commesse = new Set(_prg.boards.filter(b => b.commessa && (prgColonnaGruppoBoard(b) || _mlPrgSoloIds)).map(b => b.commessa));
   commesse.forEach(c => {
     const s = _prgApp[c];
     if (s && s.promessa) return;
@@ -271,8 +338,10 @@ function mlPrgFette(items) {
     if (!cnt.has(k)) cnt.set(k, { k, n: 0, c: it.colore, l: it.statoL });
     cnt.get(k).n++;
   });
-  const ordine = _mlPrgStati.map(s => s.k).concat([ML_PRG_ND]);
-  return [...cnt.values()].sort((a, b) => ordine.indexOf(a.k) - ordine.indexOf(b.k));
+  // Stati fuori dalla fase di rilievo (solo con la selezione) dopo i 5, «senza stato» in fondo.
+  const ordine = _mlPrgStati.map(s => s.k);
+  const pos = k => k === ML_PRG_ND ? 1e4 : ordine.indexOf(k) < 0 ? 1e3 : ordine.indexOf(k);
+  return [...cnt.values()].sort((a, b) => pos(a.k) - pos(b.k) || String(a.l).localeCompare(String(b.l), 'it'));
 }
 
 /* Sfondo a spicchi (pin) o a fasce verticali (elenco), proporzionale al conteggio. */
@@ -338,6 +407,7 @@ function mlPrgDisegna(keepView) {
   mlDrawMarkers(groups, keepView);
   mlPrgRenderLista(groups, items);
   mlPrgRenderRiepilogo(groups, items);
+  mlPrgRenderSel(tutti, mlPrgRaggruppa(tutti));
   mlPrgTestata();
 
   if (_mlSelCantiere) {
@@ -353,7 +423,7 @@ const _mlPrgGeo = { attivo: false, resto: 0 };
 function mlPrgTestata() {
   const lbl = document.getElementById('ml-header-dates');
   if (!lbl || _mlFonte !== 'prg') return;
-  let t = '📋 Programmazione · fase di rilievo';
+  let t = _mlPrgSoloIds ? '📋 Programmazione · elementi selezionati' : '📋 Programmazione · fase di rilievo';
   if (_mlPrgEsclusi) t += ' · ' + _mlPrgEsclusi + ' elementi in altri stati non mostrati';
   if (_mlPrgGeo.attivo && _mlPrgGeo.resto) t += ' · 📍 localizzo ' + _mlPrgGeo.resto + ' comuni…';
   lbl.textContent = t;

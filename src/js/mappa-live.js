@@ -2606,6 +2606,8 @@ function mlEnter() {
   try { _mlAuto = localStorage.getItem('ml_auto') !== '0'; } catch (_) { _mlAuto = true; }
   try { _mlSideTab = localStorage.getItem('ml_side_tab') === 'commesse' ? 'commesse' : 'cantieri'; } catch (_) {}
   try { _mlFonte = localStorage.getItem('ml_fonte') === 'prg' && mlPrgPuo() ? 'prg' : 'jira'; } catch (_) {}
+  // Selezione dalla Programmazione («🗺️ Visualizza in mappa»): vale solo sulla sua fonte.
+  if (_mlFonte !== 'prg' && _mlPrgSoloIds) { _mlPrgSoloIds = null; mlPrgRenderSel([], []); }
   // pwData può essere cambiato mentre si era su un altro screen (modifiche in Griglia).
   mlInvalidateItems();
   mlJiraCacheLoad();

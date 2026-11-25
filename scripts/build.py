@@ -75,6 +75,7 @@ JS_FILES = [
     'produzione-copia-worklog.js',
     'produzione-worklog-transizioni.js',
     'produzione-fornitori-worklog.js',
+    'geo-comune.js',
     'weekly-mappa.js',
     'weekly-spostamenti.js',
     'weekly-ricerca-squadre.js',

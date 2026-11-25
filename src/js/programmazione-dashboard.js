@@ -378,12 +378,19 @@ function prgStatiProposti(b) {
 
 /* ---------- barra della dashboard e selezione ---------- */
 function prgAppBarraHtml(b) {
-  if (!b || !b.commessa) {
-    return b && sbCanWrite() ? '<div class="prg-app-barra text-xs text-slate-500">Collega la board a una commessa («✎ Board») per vedere Griglia, avanzamento e Jira e mandare i comuni in Auto-pianifica.</div>' : '';
-  }
-  const s = _prgApp[b.commessa] || {};
+  if (!b) return '';
   const w = sbCanWrite();
   const sel = _prg.sel ? [..._prg.sel].filter(id => prgEls(b.id).some(e => e.id === id)) : [];
+  const mappa = prgMappaPuo();
+  const btnMappa = mappa ? '<button class="prg-btn" data-prg-azione="mappa" data-help-key="prg-mappa">🗺️ Visualizza in mappa</button>' : '';
+  const selTesto = '<b class="text-xs text-slate-700">' + sel.length + ' selezionat' + (sel.length === 1 ? 'o' : 'i') + '</b>';
+  const btnDesel = '<button class="prg-btn" data-prg-azione="desel" title="Togli la selezione">✕</button>';
+  if (!b.commessa) {
+    // Board senza commessa: niente dati della dashboard, ma la selezione va comunque in mappa.
+    if (sel.length) return '<div class="prg-app-barra">' + selTesto + btnMappa + btnDesel + '</div>';
+    return w ? '<div class="prg-app-barra text-xs text-slate-500">Collega la board a una commessa («✎ Board») per vedere Griglia, avanzamento e Jira e mandare i comuni in Auto-pianifica.</div>' : '';
+  }
+  const s = _prgApp[b.commessa] || {};
   const nCol = prgEls(b.id).filter(e => prgLink(e)).length;
   let stato = '';
   if (s.stato === 'carica') stato = '⏳ Leggo Griglia e produzione di ' + prgEsc(b.commessa) + '…';
@@ -394,21 +401,29 @@ function prgAppBarraHtml(b) {
   let h = '<div class="prg-app-barra">'
     + '<span class="text-xs text-slate-500">' + nCol + '/' + prgEls(b.id).length + ' collegati alla Griglia · ' + stato + '</span>'
     + '<button class="prg-btn prg-btn-mini" data-prg-azione="app-ricarica" data-help-key="prg-app-ricarica" title="Rilegge Griglia, produzione e stato Jira">↻</button>';
-  if (w) {
-    h += '<span class="prg-app-sep"></span>';
-    if (sel.length) {
-      h += '<b class="text-xs text-slate-700">' + sel.length + ' selezionat' + (sel.length === 1 ? 'o' : 'i') + '</b>'
-        + '<button class="prg-btn" data-prg-azione="collega" data-help-key="prg-collega">🔗 Collega alla Griglia</button>'
+  if (sel.length || w || mappa) h += '<span class="prg-app-sep"></span>';
+  if (sel.length) {
+    h += selTesto + btnMappa;
+    if (w) {
+      h += '<button class="prg-btn" data-prg-azione="collega" data-help-key="prg-collega">🔗 Collega alla Griglia</button>'
         + '<button class="prg-btn" data-prg-azione="autoplan" data-help-key="prg-autoplan">➕ Auto-pianifica</button>'
-        + '<button class="prg-btn" data-prg-azione="struttura" data-help-key="prg-struttura">🏗️ Struttura Jira</button>'
-        + '<button class="prg-btn" data-prg-azione="desel" title="Togli la selezione">✕</button>';
-    } else {
-      h += '<button class="prg-btn" data-prg-azione="collega" data-help-key="prg-collega" title="Propone il collegamento per gli elementi non ancora collegati">🔗 Collega alla Griglia</button>'
-        + '<span class="text-xs text-slate-400">Spunta gli elementi per mandarli in Auto-pianifica o creare la struttura Jira</span>';
+        + '<button class="prg-btn" data-prg-azione="struttura" data-help-key="prg-struttura">🏗️ Struttura Jira</button>';
     }
-    if (proposti) h += '<button class="prg-btn prg-btn-prop" data-prg-azione="stati" data-help-key="prg-stati">💡 Stati da aggiornare (' + proposti + ')</button>';
+    h += btnDesel;
+  } else if (w) {
+    h += '<button class="prg-btn" data-prg-azione="collega" data-help-key="prg-collega" title="Propone il collegamento per gli elementi non ancora collegati">🔗 Collega alla Griglia</button>'
+      + '<span class="text-xs text-slate-400">Spunta gli elementi per vederli sulla mappa, mandarli in Auto-pianifica o creare la struttura Jira</span>';
+  } else if (mappa) {
+    h += '<span class="text-xs text-slate-400">Spunta gli elementi per vederli sulla mappa</span>';
   }
+  if (proposti) h += '<button class="prg-btn prg-btn-prop" data-prg-azione="stati" data-help-key="prg-stati">💡 Stati da aggiornare (' + proposti + ')</button>';
   return h + '</div>';
+}
+
+/* «🗺️ Visualizza in mappa» (v18.323.0): serve poter vedere la Mappa (mlPrgMostraSelezione,
+   in mappa-programmazione.js). */
+function prgMappaPuo() {
+  return typeof mlPrgMostraSelezione === 'function' && (typeof sbCanSeePage !== 'function' || sbCanSeePage('mappa'));
 }
 
 function prgSelezionati(b) {
@@ -728,7 +743,9 @@ HELP_TEXTS['prg-stati-ok'] = 'Cambia lo stato degli elementi spuntati, per tutti
 HELP_TEXTS['prg-stato-prop'] = 'Porta lo stato dell\'elemento a quello proposto. Resta nello storico e si può ripristinare.';
 HELP_TEXTS['prg-link-salva'] = 'Salva il collegamento dell\'elemento alla voce della Griglia (cantiere + attività), per tutti i colleghi. Griglia e Jira non cambiano.';
 HELP_TEXTS['prg-link-togli'] = 'Toglie il collegamento alla Griglia. Su Griglia e Jira non cambia nulla; resta nello storico dell\'elemento.';
-HELP_TEXTS['prg-sel'] = 'Seleziona l\'elemento per le azioni in blocco: collegare alla Griglia, mandare in Auto-pianifica, creare la struttura Jira. Solo in questo browser.';
+HELP_TEXTS['prg-sel'] = 'Seleziona l\'elemento per le azioni in blocco: vederlo sulla mappa, collegare alla Griglia, mandare in Auto-pianifica, creare la struttura Jira. La casella nell\'intestazione del gruppo seleziona tutti gli elementi visibili del gruppo (con un filtro o una ricerca, solo quelli che passano). La selezione è solo in questo browser e si perde ricaricando la pagina.';
+HELP_TEXTS['prg-mappa'] = 'Apre la Mappa sulla vista «📋 Programmazione» con solo gli elementi selezionati (uno spicchio per stato in ogni comune) e adatta lo zoom ai loro comuni.\n\nCompaiono anche gli elementi fuori dalla fase di rilievo o senza stato, che la mappa normalmente non mostra. Gli altri filtri della Mappa si azzerano. Il comune è quello del collegamento alla Griglia, altrimenti quello ricavato dal nome; i comuni mai cercati si localizzano in qualche secondo.\n\nNon scrive nulla. Sulla Mappa «✕ Mostra tutti» toglie la selezione.';
+HELP_TEXTS['ml-prg-sel'] = 'Toglie la selezione arrivata dalla Programmazione e torna a mostrare tutti gli elementi della fase di rilievo. La selezione nella Programmazione resta com\'è.';
 
 /* ==================== PROGRAMMAZIONE → GRIGLIA (v18.303.0) ====================
    Nelle commesse che hanno una board della Programmazione il cantiere in Griglia non si scrive

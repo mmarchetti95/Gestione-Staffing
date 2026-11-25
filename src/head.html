@@ -1777,6 +1777,10 @@
   .ml-empty { font-size: 11.5px; color: #94a3b8; }
 
   .ml-kpis { display: flex; gap: 10px; flex-wrap: wrap; }
+  .ml-prg-sel { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; padding: 7px 12px; border-radius: 8px; background: #eff6ff; border: 1px solid #bfdbfe; color: #1e3a8a; font-size: 12.5px; }
+  .ml-prg-sel-t { flex: 1; min-width: 0; }
+  .ml-prg-sel-x { font-size: 12px; padding: 3px 10px; border-radius: 6px; border: 1px solid #93c5fd; background: white; color: #1e40af; cursor: pointer; }
+  .ml-prg-sel-x:hover { background: #dbeafe; }
   /* I riquadri sono cliccabili: aprono nel drawer l'elenco corrispondente
      (operatori, cantieri non localizzati, cantieri senza stato Jira). */
   .ml-kpi {
@@ -2624,7 +2628,7 @@
       </span>
       <button id="btn-presentation" class="px-3 py-1.5 text-sm rounded hover:bg-white/10" style="border:1px solid var(--dark-border-strong);color:var(--dark-text);visibility:visible;">📊 Modalità presentazione</button>
       <div class="text-xs pl-2" style="border-left:1px solid var(--dark-border-strong);color:var(--dark-text-muted);">
-        <span id="app-version" class="font-medium" style="color:var(--accent);">v18.322.0</span> · Michele Marchetti
+        <span id="app-version" class="font-medium" style="color:var(--accent);">v18.323.0</span> · Michele Marchetti
         <span id="sb-role-badge" style="margin-left:8px;padding:1px 8px;border-radius:9999px;background:rgba(255,255,255,.1);color:var(--dark-text);font-weight:600;"></span>
       </div>
     </div>
@@ -4023,6 +4027,8 @@
   </div>
 
   <!-- Riepilogo numerico della selezione corrente -->
+  <!-- Elementi scelti nella Programmazione («🗺️ Visualizza in mappa»), mappa-programmazione.js -->
+  <div id="ml-prg-sel" class="ml-prg-sel mb-3" style="display:none;"></div>
   <div id="ml-riepilogo" class="ml-kpis mb-3"></div>
 
   <!-- Giorno mostrato -->
