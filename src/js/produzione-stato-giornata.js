@@ -17,7 +17,10 @@
         stesse della Timeline: autore = assegnatario via Tempo, "atteso" contro le modifiche
         concorrenti).
    Dopo rilegge lo stato della colonna e, se la Timeline ha già letto la settimana, l'operatore.
-   Non aggiorna controllo_produzione: «Ore Jira» si aggiorna con «🔄 Sincronizza da Jira».
+   Dopo l'applicazione (v18.324.0) rilegge l'operatore con la rilettura della Timeline
+   (_cpTlWlRileggiOperatore, anche a Timeline chiusa) finché Jira mostra la modifica, poi
+   aggiorna «Ore Jira» e ticket delle sue righe di quel giorno in controllo_produzione
+   (_cpTlWlAggiornaOreJira); Km/Cad restano a «🔄 Sincronizza da Jira».
    Modal #cpgs-modal (z-index 99995: sotto conferme e avvisi). */
 
 const CPGS_FN_NASCOSTA = 'controllo:stato-giornata';
@@ -510,6 +513,12 @@ async function cpGsApplica() {
   _cpGsRender();
   const fatti = [], problemi = [];
   let ricarica = false, prodScritta = false;
+  // Cosa deve comparire su Jira prima di aggiornare «Ore Jira» della riga (v18.324.0, vedi
+  // _cpTlWlVisibile): worklog aggiunti/corretti per ticket + orari, eliminati per id (anche
+  // quelli dell'automazione tolti dal cambio di stato). Il giorno della riga si aggiorna sempre.
+  const gRiga = G.d.iso.indexOf(G.iso);
+  const attesa = { aggiunti: [], tolti: [], giorni: gRiga >= 0 ? [gRiga] : [] };
+  const giornoDi = started => { const p = _cpOjParti(started); return p ? G.d.iso.indexOf(p.data) : -1; };
   try {
     // a0. Produzione prima di DONE (se non riesce, la funzione lo ferma in IN PENDING come prima)
     if (v.prod != null) {
@@ -543,6 +552,7 @@ async function cpGsApplica() {
       _cpGsFatto(ps, res.avviso ? 'warn' : 'ok', t + (res.avviso ? ' ⚠ ' + res.avviso : ''));
       fatti.push(t);
       if (res.avviso) problemi.push(res.avviso);
+      (res.rimossi || []).forEach(w => { const g = giornoDi(w.started); if (g >= 0 && w.id) attesa.tolti.push({ g, id: String(w.id) }); });
     }
     // b. Worklog: prima le eliminazioni (Tempo conta 12 h al giorno per autore), poi correzioni e aggiunte
     const email = _cpTlEmailPerNome()[G.nome] || '';
@@ -550,7 +560,10 @@ async function cpGsApplica() {
     for (const t of v.elimina) {
       const p = _cpGsPasso('Elimino il worklog ' + _cpGsDove(t.inizio, t.fine) + '…');
       const res = await _cpTlWlInvoca({ action: 'delete', issueKey: G.key, worklogId: t.id, operatore: G.nome, atteso: { started: t.orig.started, seconds: t.orig.seconds } });
-      if (res.ok) { fatti.push('Eliminato ' + _cpGsDove(t.inizio, t.fine)); _cpGsFatto(p, res.avviso ? 'warn' : 'ok', res.avviso || ''); }
+      if (res.ok) {
+        fatti.push('Eliminato ' + _cpGsDove(t.inizio, t.fine)); _cpGsFatto(p, res.avviso ? 'warn' : 'ok', res.avviso || '');
+        if (gRiga >= 0) attesa.tolti.push({ g: gRiga, id: String(t.id) });
+      }
       else { problemi.push('Eliminazione ' + _cpGsDove(t.inizio, t.fine) + ': ' + (res.errore || 'non riuscita')); _cpGsFatto(p, 'ko', res.errore || 'non riuscita'); }
     }
     for (const t of v.modifica) {
@@ -559,7 +572,11 @@ async function cpGsApplica() {
         operatore: G.nome, email, atteso: { started: t.orig.started, seconds: t.orig.seconds } };
       if ((t.commento || '').trim() !== (t.orig.commento || '').trim()) body.commento = (t.commento || '').trim();
       const res = await _cpTlWlInvoca(body);
-      if (res.ok) { fatti.push('Corretto → ' + _cpGsDove(t.inizio, t.fine) + (res.avviso ? ' ⚠ ' + res.avviso : '')); _cpGsFatto(p, res.avviso ? 'warn' : 'ok', res.avviso || ''); }
+      if (res.ok) {
+        fatti.push('Corretto → ' + _cpGsDove(t.inizio, t.fine) + (res.avviso ? ' ⚠ ' + res.avviso : '')); _cpGsFatto(p, res.avviso ? 'warn' : 'ok', res.avviso || '');
+        // per orari (senza id): con lo stesso id il worklog vecchio sembrerebbe già aggiornato
+        if (gRiga >= 0) attesa.aggiunti.push({ g: gRiga, key: G.key, inizio: t.inizio, fine: t.fine, id: '' });
+      }
       else { problemi.push('Correzione → ' + _cpGsDove(t.inizio, t.fine) + ': ' + (res.errore || 'non riuscita')); _cpGsFatto(p, 'ko', res.errore || 'non riuscita'); }
     }
     for (const t of v.crea) {
@@ -572,7 +589,10 @@ async function cpGsApplica() {
         if (forza) res = await _cpTlWlInvoca(Object.assign({}, body, { forza: true }));
       }
       const autore = res.dopo && res.dopo.autore ? ' (autore ' + res.dopo.autore + ')' : '';
-      if (res.ok) { fatti.push('Aggiunto ' + _cpGsDove(t.inizio, t.fine) + autore + (res.avviso ? ' ⚠ ' + res.avviso : '')); _cpGsFatto(p, res.avviso ? 'warn' : 'ok', (autore.trim() + ' ' + (res.avviso || '')).trim()); }
+      if (res.ok) {
+        fatti.push('Aggiunto ' + _cpGsDove(t.inizio, t.fine) + autore + (res.avviso ? ' ⚠ ' + res.avviso : '')); _cpGsFatto(p, res.avviso ? 'warn' : 'ok', (autore.trim() + ' ' + (res.avviso || '')).trim());
+        if (gRiga >= 0) attesa.aggiunti.push({ g: gRiga, key: G.key, inizio: t.inizio, fine: t.fine, id: res.dopo && res.dopo.id ? res.dopo.id : '' });
+      }
       else { problemi.push('Aggiunta ' + _cpGsDove(t.inizio, t.fine) + ': ' + (res.errore || 'non riuscita')); _cpGsFatto(p, 'ko', res.errore || 'non riuscita'); }
     }
   } finally {
@@ -581,17 +601,21 @@ async function cpGsApplica() {
     const nome = G.nome, k = G.k, d = G.d;
     const esito = (fatti.length ? '✓ ' + G.key + ': ' + fatti.join(' · ') + '.' : '') +
       (problemi.length ? ' ⚠ ' + problemi.join(' · ') : '');
+    const oreDaSole = fatti.length && k === _cpaKey(pwAnno, pwWeek);
+    const notaOre = oreDaSole ? '\n\n«Ore Jira» della riga si aggiornano da sole appena Jira mostra la modifica (di solito pochi secondi).'
+      : fatti.length ? '\n\nPer aggiornare «Ore Jira» usa «🔄 Sincronizza da Jira».' : '';
     if (ricarica) {
       await _cpGsCarica();
       if (problemi.length) showAlertModal('Jira non ha accettato la modifica.\n\n' + problemi.join('\n\n') + '\n\nHo riletto il sottotask: controlla e riprova.');
     } else {
       cpGsChiudi();
       showAlertModal((fatti.length ? 'Fatto su Jira (' + G.key + '):\n\n• ' + fatti.join('\n• ') : 'Nessuna modifica fatta.') +
-        (problemi.length ? '\n\n⚠ Da controllare:\n• ' + problemi.join('\n• ') : '') +
-        '\n\nPer aggiornare «Ore Jira» usa «🔄 Sincronizza da Jira».');
+        (problemi.length ? '\n\n⚠ Da controllare:\n• ' + problemi.join('\n• ') : '') + notaOre);
     }
     cpStatoRefresh(true);
     if (prodScritta) { try { pwControlloRender(); } catch (_) { /* tabella non aperta */ } }   // Km/Cad della riga
-    if (fatti.length && _cpTl.letture[k]) _cpTlWlRileggiOperatore(nome, k, d, esito + ' Per aggiornare «Ore Jira» usa «🔄 Sincronizza da Jira».');
+    // Rilegge l'operatore (anche a Timeline chiusa) finché Jira mostra la modifica, poi aggiorna
+    // «Ore Jira» e ticket delle sue righe di quel giorno (_cpTlWlAggiornaOreJira, v18.324.0)
+    if (fatti.length) _cpTlWlRileggiOperatore(nome, k, d, esito, attesa);
   }
 }

@@ -253,9 +253,11 @@ function _cpTlWlVisibile(wl, d, attesa) {
   return ok && (attesa.tolti || []).every(x => !iv(x.g).some(e => e.w && String(e.w.id) === String(x.id)));
 }
 
-/* Giorni toccati da un'attesa (sono gli unici da rileggere mentre si aspetta Jira) */
+/* Giorni toccati da un'attesa (sono gli unici da rileggere mentre si aspetta Jira).
+   attesa.giorni (facoltativo, «✎ Sistema giornata»): giorni da rileggere e aggiornare anche
+   senza worklog da aspettare (es. solo cambio di stato). */
 function _cpTlWlGiorniAttesa(attesa) {
-  return [...new Set([...(attesa.aggiunti || []), ...(attesa.tolti || [])].map(x => x.g))];
+  return [...new Set([...(attesa.aggiunti || []), ...(attesa.tolti || [])].map(x => x.g).concat(attesa.giorni || []))];
 }
 
 /* Rilegge da Jira (sola lettura) i worklog del SOLO operatore corretto e aggiorna la timeline.
@@ -275,8 +277,9 @@ async function _cpTlWlRileggiOperatore(nome, k, d, esito, attesa) {
     if (!p) _cpTl.coda.push({ nome, k, d, esito, attesa: attesa || null });
     else if (attesa) {
       // stesso operatore già in coda: si aspettano entrambe le modifiche
-      const a = p.attesa || { aggiunti: [], tolti: [] };
-      p.attesa = { aggiunti: (a.aggiunti || []).concat(attesa.aggiunti || []), tolti: (a.tolti || []).concat(attesa.tolti || []) };
+      const a = p.attesa || { aggiunti: [], tolti: [], giorni: [] };
+      p.attesa = { aggiunti: (a.aggiunti || []).concat(attesa.aggiunti || []), tolti: (a.tolti || []).concat(attesa.tolti || []),
+        giorni: (a.giorni || []).concat(attesa.giorni || []) };
       p.esito = esito;
     }
     _cpTl.msg = esito + ' Rileggo ' + nome + ' appena finisce la lettura in corso.';
@@ -286,7 +289,7 @@ async function _cpTlWlRileggiOperatore(nome, k, d, esito, attesa) {
   _cpTl.inCorso = true;
   _cpTl.msg = esito + ' ⏳ Rileggo da Jira i worklog di ' + nome + '…';
   cpTlRender();
-  let avviso = '', visto = false;
+  let avviso = '', visto = false, oreMsg = '';
   const t0 = Date.now();
   try {
     for (let t = 0; t < (attesa ? CPTL_WL_TENTATIVI : 1); t++) {
@@ -313,16 +316,26 @@ async function _cpTlWlRileggiOperatore(nome, k, d, esito, attesa) {
       if (_cpTlWlVisibile(lett.worklog[nome], d, attesa)) { visto = true; break; }
       if (t === CPTL_WL_TENTATIVI - 1) {
         avviso = ' ⚠ Dopo ' + Math.round((Date.now() - t0) / 1000) + ' secondi Jira non mostra ancora la modifica: ' +
-          'è scritta, ma per vederla usa «↻ Rileggi da Jira» tra qualche minuto.';
+          'è scritta, ma per vederla usa «↻ Rileggi da Jira» (e per «Ore Jira» «🔄 Sincronizza da Jira») tra qualche minuto.';
       } else cpTlRender();   // intanto si vede quello che Jira mostra già
     }
-    if (visto) avviso += await _cpTlWlAggiornaOreJira(nome, k, d, _cpTlWlGiorniAttesa(attesa));
+    if (visto) { oreMsg = await _cpTlWlAggiornaOreJira(nome, k, d, _cpTlWlGiorniAttesa(attesa)); avviso += oreMsg; }
   } catch (e) {
     avviso = ' ⚠ Rilettura non riuscita: ' + (e && e.message ? e.message : e) + '. Usa «↻ Rileggi da Jira».';
   } finally {
     _cpTl.inCorso = false;
     _cpTl.msg = esito + avviso;
     cpTlRender();
+    // Timeline chiusa («✎ Sistema giornata» dal Controllo Produzione): l'esito della rilettura
+    // va mostrato lì, altrimenti non lo vede nessuno
+    if (!_cpTl.aperto && attesa) {
+      const t = (oreMsg || avviso).trim();
+      if (t) {
+        undoToast(nome + ': ' + t);
+        const st = document.getElementById('cp-status');
+        if (st) st.textContent = nome + ': ' + t;
+      }
+    }
     _cpTlWlCoda();
     if (k !== _cpaKey(pwAnno, pwWeek)) _cpTlAutoLettura();   // si è passati a un'altra settimana
   }
