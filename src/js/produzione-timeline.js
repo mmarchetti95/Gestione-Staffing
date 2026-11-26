@@ -11,10 +11,12 @@
      "🔄 Sincronizza da Jira" (stesso dato dell'infografica su "Ore Jira"). Un operatore su
      più commesse lo stesso giorno ha più righe, e a ogni riga la sincronizzazione dà TUTTI i
      worklog della giornata: qui si uniscono per ticket, senza contarli due volte;
-   - letti da jira-sync-worklogs (sola lettura) per tutti gli operatori in Griglia, anche
-     quelli senza giorni compilati: in automatico all'apertura della settimana se non ci sono
-     o hanno più di CPTL_LETTURA_VECCHIA_MIN minuti (_cpTl.autoLette) e con "↻ Rileggi da
-     Jira". Tenuti solo in memoria (_cpTl.letture), non aggiornano controllo_produzione.
+   - letti da jira-sync-worklogs (sola lettura): in automatico all'apertura della settimana
+     se non ci sono o hanno più di CPTL_LETTURA_VECCHIA_MIN minuti (_cpTl.autoLette) e con
+     "↻ Rileggi da Jira". Senza filtri si leggono tutti gli operatori in Griglia, anche quelli
+     senza giorni compilati; con un filtro attivo solo quelli visibili (v18.324.0,
+     _cpTlNomiDaLeggere), uniti alla lettura esistente. Tenuti solo in memoria
+     (_cpTl.letture), non aggiornano controllo_produzione.
      Finché la lettura non finisce si vedono i salvati.
    La scelta è per operatore (v18.250.0): chi è stato letto da Jira (lettura.verificati) usa
    la lettura, gli altri i salvati. Così dopo una correzione si rilegge solo l'operatore
@@ -50,8 +52,8 @@ let _cpTl = {
   soloControllo: false,
   letture: {},                // 'anno|week' -> { worklog, verificati, avvisi, ts, tsOp } letti da Jira
                               //   ts: lettura di tutta la settimana (null = solo alcuni operatori)
-                              //   tsOp: nome -> riletto da solo dopo, a seguito di una correzione
-  autoLette: {},              // 'anno|week' -> ms dell'ultima lettura automatica
+                              //   tsOp: nome -> riletto dopo, da solo (correzione) o con un filtro attivo
+  autoLette: {},              // 'anno|week' -> { '*': ms lettura automatica di tutti, nome: ms di quell'operatore }
   coda: [],                   // operatori corretti durante un'altra lettura, da rileggere dopo
   inCorso: false,
   msg: '',
@@ -97,17 +99,43 @@ function cpTlDaRiga(ev, tr) {
 
 /* All'apertura della settimana legge da Jira da sola, così compaiono anche i worklog che
    la sincronizzazione del Controllo Produzione non salva (giorni non pianificati, operatori
-   in Griglia senza giorni compilati, ticket di commesse fuori dashboard). Rilegge tutta la
-   settimana se non è mai stata letta tutta o se la lettura ha più di CPTL_LETTURA_VECCHIA_MIN
-   minuti: le riletture di un solo operatore dopo una correzione non contano. Al massimo un
-   tentativo automatico ogni CPTL_LETTURA_VECCHIA_MIN minuti per settimana, anche se fallisce. */
+   in Griglia senza giorni compilati, ticket di commesse fuori dashboard). Legge gli stessi
+   operatori di «↻ Rileggi da Jira» (tutti, o solo i visibili con un filtro attivo, per esempio
+   aprendo dal click destro su una riga), saltando chi è stato letto negli ultimi
+   CPTL_LETTURA_VECCHIA_MIN minuti. Al massimo un tentativo automatico ogni
+   CPTL_LETTURA_VECCHIA_MIN minuti per settimana e operatore, anche se fallisce. */
 function _cpTlAutoLettura() {
-  const k = _cpaKey(pwAnno, pwWeek), lett = _cpTl.letture[k];
-  const limite = Date.now() - CPTL_LETTURA_VECCHIA_MIN * 60000;
-  if (!_cpTl.aperto || _cpTl.inCorso || (lett && lett.ts && lett.ts.getTime() > limite) || (_cpTl.autoLette[k] || 0) > limite) return;
+  if (!_cpTl.aperto || _cpTl.inCorso) return;
   if (!_sbClient || !_sbUser || !_cpaCelleSettimana().operatori.size) return;
-  _cpTl.autoLette[k] = Date.now();
-  cpTlRileggi();
+  cpTlRileggi(true);
+}
+
+/* Letto da Jira negli ultimi CPTL_LETTURA_VECCHIA_MIN minuti (lettura di tutti o da solo) */
+function _cpTlLettoDiRecente(lett, nome, limite) {
+  if (!lett) return false;
+  return !!((lett.ts && lett.ts.getTime() > limite && lett.verificati.includes(nome)) ||
+    (lett.tsOp && lett.tsOp[nome] && lett.tsOp[nome].getTime() > limite));
+}
+
+/* Operatori da rileggere (v18.324.0): senza filtri tutti quelli in Griglia (anche senza giorni
+   compilati: la lettura trova i worklog dei giorni non pianificati); con un filtro attivo
+   (commessa, squadra, ricerca, «solo da controllare») solo quelli che il filtro mostra in un
+   giorno qualsiasi della settimana — la scheda del giorno non conta: si legge sempre la settimana.
+   { nomi, tutti } — tutti = nessun filtro. */
+function _cpTlNomiDaLeggere(V) {
+  const tutti = [..._cpaCelleSettimana().operatori];
+  if (!(_cpTl.commessa || _cpTl.squadra || _cpTl.cerca.trim() || _cpTl.soloControllo)) return { nomi: tutti, tutti: true };
+  V = V || _cpTlVista();
+  const visti = new Set(), conRighe = new Set();
+  V.incluse.forEach(x => { conRighe.add(x.nome); if (_cpTlPassa(x)) visti.add(x.nome); });
+  // in Griglia ma senza righe (nessun giorno compilato né worklog salvati): come una riga vuota
+  const inGriglia = _cpTlInGriglia();
+  tutti.forEach(nome => {
+    if (conRighe.has(nome)) return;
+    const vuota = { nome, pianificato: false, inGriglia: inGriglia[nome] || [], fuori: [], interventi: [], avvisi: [], cantieri: [] };
+    if (_cpTlPassa(vuota)) visti.add(nome);
+  });
+  return { nomi: tutti.filter(n => visti.has(n)), tutti: false };
 }
 
 function cpTlChiudi() {
@@ -146,7 +174,10 @@ function cpTlSet(campo, v) {
 function cpTlCerca(el) {
   _cpTl.cerca = el.value;
   const body = document.getElementById('cptl-body');
-  if (body) body.innerHTML = _cpTlCorpo(_cpTlVista());
+  const V = _cpTlVista();
+  if (body) body.innerHTML = _cpTlCorpo(V);
+  const btn = document.getElementById('cptl-rileggi');
+  if (btn) btn.outerHTML = _cpTlBottoneRileggi(V);   // il numero di operatori da rileggere cambia
 }
 
 /* ---------- Dati ---------- */
@@ -383,7 +414,7 @@ function _cpTlVista() {
 
   const ora = cpOraRoma();
   return {
-    d, oggi, righe, gruppi, commesse, squadre, coloreCommessa, nFuori,
+    d, oggi, righe, gruppi, commesse, squadre, coloreCommessa, nFuori, incluse,
     asse: { da, a }, adesso: ora ? ora.min : null,
     lettura: _cpTl.letture[_cpaKey(pwAnno, pwWeek)] || null,
     nOperatori: gruppi.length,
@@ -433,18 +464,48 @@ async function _cpTlLeggiWorklog(nomi, date, opz) {
   return { worklog, verificati, avvisi };
 }
 
-async function cpTlRileggi() {
+/* auto = lettura automatica all'apertura: salta chi è stato letto (o tentato in automatico)
+   negli ultimi CPTL_LETTURA_VECCHIA_MIN minuti. Senza filtri legge tutti e la lettura vale per
+   la settimana intera (ts); con un filtro legge solo gli operatori visibili e li unisce alla
+   lettura esistente (tsOp), gli altri restano come sono. */
+async function cpTlRileggi(auto) {
   if (_cpTl.inCorso) return;
-  if (!_sbClient || !_sbUser) { showAlertModal('Per leggere i worklog da Jira bisogna essere collegati.'); return; }
+  if (!_sbClient || !_sbUser) { if (!auto) showAlertModal('Per leggere i worklog da Jira bisogna essere collegati.'); return; }
   const d = _cpaDateSettimana(), k = _cpaKey(pwAnno, pwWeek);
-  const nomi = [..._cpaCelleSettimana().operatori];
-  if (!nomi.length) { showAlertModal('Nessun operatore in Griglia questa settimana.'); return; }
+  const sel = _cpTlNomiDaLeggere();
+  let nomi = sel.nomi;
+  if (auto) {
+    const limite = Date.now() - CPTL_LETTURA_VECCHIA_MIN * 60000, lett = _cpTl.letture[k];
+    const tentati = _cpTl.autoLette[k] || (_cpTl.autoLette[k] = {});
+    const fresco = n => _cpTlLettoDiRecente(lett, n, limite) || (tentati['*'] || 0) > limite || (tentati[n] || 0) > limite;
+    if (sel.tutti) {
+      if (nomi.every(fresco)) return;
+      tentati['*'] = Date.now();
+    } else {
+      nomi = nomi.filter(n => !fresco(n));
+      nomi.forEach(n => { tentati[n] = Date.now(); });
+    }
+  }
+  if (!nomi.length) {
+    if (!auto) showAlertModal(sel.tutti ? 'Nessun operatore in Griglia questa settimana.' : 'Con i filtri attuali non si vede nessun operatore da rileggere.');
+    return;
+  }
   _cpTl.inCorso = true;
   try {
     const r = await _cpTlLeggiWorklog(nomi, d);
-    r.ts = new Date();
-    r.tsOp = {};
-    _cpTl.letture[k] = r;
+    const ora = new Date();
+    if (sel.tutti) {
+      r.ts = ora;
+      r.tsOp = {};
+      _cpTl.letture[k] = r;
+    } else {
+      const lett = _cpTl.letture[k] || (_cpTl.letture[k] = { worklog: {}, verificati: [], avvisi: [], ts: null, tsOp: {} });
+      r.verificati.forEach(n => {
+        lett.worklog[n] = r.worklog[n] || {};
+        if (!lett.verificati.includes(n)) lett.verificati.push(n);
+        lett.tsOp[n] = ora;
+      });
+    }
     _cpTl.msg = r.avvisi.length ? '⚠ ' + r.avvisi.join(' ') : '';
   } catch (e) {
     _cpTl.msg = '⚠ Lettura da Jira non riuscita: ' + (e && e.message ? e.message : e);
@@ -487,7 +548,7 @@ function _cpTlFonteLettura(lett, quando) {
   const nomi = Object.keys(lett.tsOp || {});
   const riletti = nomi.slice(0, 3).map(n => n + ' alle ' + hhmm(lett.tsOp[n])).join(', ') +
     (nomi.length > 3 ? ' e altri ' + (nomi.length - 3) : '');
-  if (lett.ts) return 'Worklog letti da Jira ' + quando(lett.ts) + (nomi.length ? ' · riletti dopo una correzione: ' + riletti : '');
+  if (lett.ts) return 'Worklog letti da Jira ' + quando(lett.ts) + (nomi.length ? ' · riletti dopo: ' + riletti : '');
   return nomi.length ? 'Letti da Jira solo ' + riletti + ', gli altri dall\'ultima sincronizzazione del Controllo Produzione' : null;
 }
 
@@ -496,6 +557,18 @@ function _cpTlFonteTesto(V) {
   if (_cpTl.inCorso && !(V.lettura && V.lettura.ts)) return fonte || 'Intanto vedi i worklog dell\'ultima sincronizzazione del Controllo Produzione';
   if (V.lettura && V.lettura.ts) return fonte + ' (solo in questa finestra, non aggiornano il Controllo Produzione)';
   return (fonte || 'Worklog dell\'ultima sincronizzazione del Controllo Produzione') + ': per vederli aggiornati usa «↻ Rileggi da Jira»';
+}
+
+/* Con un filtro attivo il bottone dice quanti operatori rilegge (solo quelli visibili) */
+function _cpTlBottoneRileggi(V) {
+  const sel = _cpTlNomiDaLeggere(V);
+  const testo = sel.tutti ? '↻ Rileggi da Jira' : '↻ Rileggi da Jira (' + sel.nomi.length + ' op.)';
+  const title = sel.tutti ? 'Rilegge da Jira, in sola lettura, i worklog della settimana di tutti gli operatori in Griglia'
+    : 'Rilegge da Jira, in sola lettura, i worklog della settimana solo degli operatori visibili con i filtri attuali' +
+      (sel.nomi.length && sel.nomi.length <= 8 ? ': ' + sel.nomi.join(', ') : '') + '. Togli i filtri per rileggerli tutti.';
+  const off = _cpTl.inCorso || !sel.nomi.length;
+  return '<button type="button" id="cptl-rileggi" onclick="cpTlRileggi()" class="text-xs px-3 py-1 rounded font-semibold text-white" style="background:#0f766e;' +
+    (off ? 'opacity:.55;' : '') + '"' + (off ? ' disabled' : '') + ' title="' + esc(title) + '">' + testo + '</button>';
 }
 
 function _cpTlIntestazione(V) {
@@ -510,8 +583,7 @@ function _cpTlIntestazione(V) {
         '<div class="text-[11px] mt-0.5" style="color:' + (V.lettura && V.lettura.ts ? '#0f766e' : '#64748b') + ';">' + esc(_cpTlFonteTesto(V)) + '</div>' +
       '</div>' +
       '<div class="flex-1"></div>' +
-      '<button type="button" onclick="cpTlRileggi()" class="text-xs px-3 py-1 rounded font-semibold text-white" style="background:#0f766e;' +
-        (_cpTl.inCorso ? 'opacity:.55;' : '') + '"' + (_cpTl.inCorso ? ' disabled' : '') + ' title="Rilegge i worklog della settimana da Jira, in sola lettura">↻ Rileggi da Jira</button>' +
+      _cpTlBottoneRileggi(V) +
       '<button type="button" onclick="cpTlEsportaPdf()" class="' + btn + '" style="color:#be123c;border-color:#fda4af;" title="Scarica la vista attuale in PDF">📄 Esporta PDF</button>' +
       '<button type="button" onclick="cpTlChiudi()" class="' + btn + '">Chiudi</button>' +
     '</div>' +

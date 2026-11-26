@@ -29675,10 +29675,12 @@ function cpaEsportaPdf() {
      "🔄 Sincronizza da Jira" (stesso dato dell'infografica su "Ore Jira"). Un operatore su
      più commesse lo stesso giorno ha più righe, e a ogni riga la sincronizzazione dà TUTTI i
      worklog della giornata: qui si uniscono per ticket, senza contarli due volte;
-   - letti da jira-sync-worklogs (sola lettura) per tutti gli operatori in Griglia, anche
-     quelli senza giorni compilati: in automatico all'apertura della settimana se non ci sono
-     o hanno più di CPTL_LETTURA_VECCHIA_MIN minuti (_cpTl.autoLette) e con "↻ Rileggi da
-     Jira". Tenuti solo in memoria (_cpTl.letture), non aggiornano controllo_produzione.
+   - letti da jira-sync-worklogs (sola lettura): in automatico all'apertura della settimana
+     se non ci sono o hanno più di CPTL_LETTURA_VECCHIA_MIN minuti (_cpTl.autoLette) e con
+     "↻ Rileggi da Jira". Senza filtri si leggono tutti gli operatori in Griglia, anche quelli
+     senza giorni compilati; con un filtro attivo solo quelli visibili (v18.324.0,
+     _cpTlNomiDaLeggere), uniti alla lettura esistente. Tenuti solo in memoria
+     (_cpTl.letture), non aggiornano controllo_produzione.
      Finché la lettura non finisce si vedono i salvati.
    La scelta è per operatore (v18.250.0): chi è stato letto da Jira (lettura.verificati) usa
    la lettura, gli altri i salvati. Così dopo una correzione si rilegge solo l'operatore
@@ -29714,8 +29716,8 @@ let _cpTl = {
   soloControllo: false,
   letture: {},                // 'anno|week' -> { worklog, verificati, avvisi, ts, tsOp } letti da Jira
                               //   ts: lettura di tutta la settimana (null = solo alcuni operatori)
-                              //   tsOp: nome -> riletto da solo dopo, a seguito di una correzione
-  autoLette: {},              // 'anno|week' -> ms dell'ultima lettura automatica
+                              //   tsOp: nome -> riletto dopo, da solo (correzione) o con un filtro attivo
+  autoLette: {},              // 'anno|week' -> { '*': ms lettura automatica di tutti, nome: ms di quell'operatore }
   coda: [],                   // operatori corretti durante un'altra lettura, da rileggere dopo
   inCorso: false,
   msg: '',
@@ -29761,17 +29763,43 @@ function cpTlDaRiga(ev, tr) {
 
 /* All'apertura della settimana legge da Jira da sola, così compaiono anche i worklog che
    la sincronizzazione del Controllo Produzione non salva (giorni non pianificati, operatori
-   in Griglia senza giorni compilati, ticket di commesse fuori dashboard). Rilegge tutta la
-   settimana se non è mai stata letta tutta o se la lettura ha più di CPTL_LETTURA_VECCHIA_MIN
-   minuti: le riletture di un solo operatore dopo una correzione non contano. Al massimo un
-   tentativo automatico ogni CPTL_LETTURA_VECCHIA_MIN minuti per settimana, anche se fallisce. */
+   in Griglia senza giorni compilati, ticket di commesse fuori dashboard). Legge gli stessi
+   operatori di «↻ Rileggi da Jira» (tutti, o solo i visibili con un filtro attivo, per esempio
+   aprendo dal click destro su una riga), saltando chi è stato letto negli ultimi
+   CPTL_LETTURA_VECCHIA_MIN minuti. Al massimo un tentativo automatico ogni
+   CPTL_LETTURA_VECCHIA_MIN minuti per settimana e operatore, anche se fallisce. */
 function _cpTlAutoLettura() {
-  const k = _cpaKey(pwAnno, pwWeek), lett = _cpTl.letture[k];
-  const limite = Date.now() - CPTL_LETTURA_VECCHIA_MIN * 60000;
-  if (!_cpTl.aperto || _cpTl.inCorso || (lett && lett.ts && lett.ts.getTime() > limite) || (_cpTl.autoLette[k] || 0) > limite) return;
+  if (!_cpTl.aperto || _cpTl.inCorso) return;
   if (!_sbClient || !_sbUser || !_cpaCelleSettimana().operatori.size) return;
-  _cpTl.autoLette[k] = Date.now();
-  cpTlRileggi();
+  cpTlRileggi(true);
+}
+
+/* Letto da Jira negli ultimi CPTL_LETTURA_VECCHIA_MIN minuti (lettura di tutti o da solo) */
+function _cpTlLettoDiRecente(lett, nome, limite) {
+  if (!lett) return false;
+  return !!((lett.ts && lett.ts.getTime() > limite && lett.verificati.includes(nome)) ||
+    (lett.tsOp && lett.tsOp[nome] && lett.tsOp[nome].getTime() > limite));
+}
+
+/* Operatori da rileggere (v18.324.0): senza filtri tutti quelli in Griglia (anche senza giorni
+   compilati: la lettura trova i worklog dei giorni non pianificati); con un filtro attivo
+   (commessa, squadra, ricerca, «solo da controllare») solo quelli che il filtro mostra in un
+   giorno qualsiasi della settimana — la scheda del giorno non conta: si legge sempre la settimana.
+   { nomi, tutti } — tutti = nessun filtro. */
+function _cpTlNomiDaLeggere(V) {
+  const tutti = [..._cpaCelleSettimana().operatori];
+  if (!(_cpTl.commessa || _cpTl.squadra || _cpTl.cerca.trim() || _cpTl.soloControllo)) return { nomi: tutti, tutti: true };
+  V = V || _cpTlVista();
+  const visti = new Set(), conRighe = new Set();
+  V.incluse.forEach(x => { conRighe.add(x.nome); if (_cpTlPassa(x)) visti.add(x.nome); });
+  // in Griglia ma senza righe (nessun giorno compilato né worklog salvati): come una riga vuota
+  const inGriglia = _cpTlInGriglia();
+  tutti.forEach(nome => {
+    if (conRighe.has(nome)) return;
+    const vuota = { nome, pianificato: false, inGriglia: inGriglia[nome] || [], fuori: [], interventi: [], avvisi: [], cantieri: [] };
+    if (_cpTlPassa(vuota)) visti.add(nome);
+  });
+  return { nomi: tutti.filter(n => visti.has(n)), tutti: false };
 }
 
 function cpTlChiudi() {
@@ -29810,7 +29838,10 @@ function cpTlSet(campo, v) {
 function cpTlCerca(el) {
   _cpTl.cerca = el.value;
   const body = document.getElementById('cptl-body');
-  if (body) body.innerHTML = _cpTlCorpo(_cpTlVista());
+  const V = _cpTlVista();
+  if (body) body.innerHTML = _cpTlCorpo(V);
+  const btn = document.getElementById('cptl-rileggi');
+  if (btn) btn.outerHTML = _cpTlBottoneRileggi(V);   // il numero di operatori da rileggere cambia
 }
 
 /* ---------- Dati ---------- */
@@ -30047,7 +30078,7 @@ function _cpTlVista() {
 
   const ora = cpOraRoma();
   return {
-    d, oggi, righe, gruppi, commesse, squadre, coloreCommessa, nFuori,
+    d, oggi, righe, gruppi, commesse, squadre, coloreCommessa, nFuori, incluse,
     asse: { da, a }, adesso: ora ? ora.min : null,
     lettura: _cpTl.letture[_cpaKey(pwAnno, pwWeek)] || null,
     nOperatori: gruppi.length,
@@ -30097,18 +30128,48 @@ async function _cpTlLeggiWorklog(nomi, date, opz) {
   return { worklog, verificati, avvisi };
 }
 
-async function cpTlRileggi() {
+/* auto = lettura automatica all'apertura: salta chi è stato letto (o tentato in automatico)
+   negli ultimi CPTL_LETTURA_VECCHIA_MIN minuti. Senza filtri legge tutti e la lettura vale per
+   la settimana intera (ts); con un filtro legge solo gli operatori visibili e li unisce alla
+   lettura esistente (tsOp), gli altri restano come sono. */
+async function cpTlRileggi(auto) {
   if (_cpTl.inCorso) return;
-  if (!_sbClient || !_sbUser) { showAlertModal('Per leggere i worklog da Jira bisogna essere collegati.'); return; }
+  if (!_sbClient || !_sbUser) { if (!auto) showAlertModal('Per leggere i worklog da Jira bisogna essere collegati.'); return; }
   const d = _cpaDateSettimana(), k = _cpaKey(pwAnno, pwWeek);
-  const nomi = [..._cpaCelleSettimana().operatori];
-  if (!nomi.length) { showAlertModal('Nessun operatore in Griglia questa settimana.'); return; }
+  const sel = _cpTlNomiDaLeggere();
+  let nomi = sel.nomi;
+  if (auto) {
+    const limite = Date.now() - CPTL_LETTURA_VECCHIA_MIN * 60000, lett = _cpTl.letture[k];
+    const tentati = _cpTl.autoLette[k] || (_cpTl.autoLette[k] = {});
+    const fresco = n => _cpTlLettoDiRecente(lett, n, limite) || (tentati['*'] || 0) > limite || (tentati[n] || 0) > limite;
+    if (sel.tutti) {
+      if (nomi.every(fresco)) return;
+      tentati['*'] = Date.now();
+    } else {
+      nomi = nomi.filter(n => !fresco(n));
+      nomi.forEach(n => { tentati[n] = Date.now(); });
+    }
+  }
+  if (!nomi.length) {
+    if (!auto) showAlertModal(sel.tutti ? 'Nessun operatore in Griglia questa settimana.' : 'Con i filtri attuali non si vede nessun operatore da rileggere.');
+    return;
+  }
   _cpTl.inCorso = true;
   try {
     const r = await _cpTlLeggiWorklog(nomi, d);
-    r.ts = new Date();
-    r.tsOp = {};
-    _cpTl.letture[k] = r;
+    const ora = new Date();
+    if (sel.tutti) {
+      r.ts = ora;
+      r.tsOp = {};
+      _cpTl.letture[k] = r;
+    } else {
+      const lett = _cpTl.letture[k] || (_cpTl.letture[k] = { worklog: {}, verificati: [], avvisi: [], ts: null, tsOp: {} });
+      r.verificati.forEach(n => {
+        lett.worklog[n] = r.worklog[n] || {};
+        if (!lett.verificati.includes(n)) lett.verificati.push(n);
+        lett.tsOp[n] = ora;
+      });
+    }
     _cpTl.msg = r.avvisi.length ? '⚠ ' + r.avvisi.join(' ') : '';
   } catch (e) {
     _cpTl.msg = '⚠ Lettura da Jira non riuscita: ' + (e && e.message ? e.message : e);
@@ -30151,7 +30212,7 @@ function _cpTlFonteLettura(lett, quando) {
   const nomi = Object.keys(lett.tsOp || {});
   const riletti = nomi.slice(0, 3).map(n => n + ' alle ' + hhmm(lett.tsOp[n])).join(', ') +
     (nomi.length > 3 ? ' e altri ' + (nomi.length - 3) : '');
-  if (lett.ts) return 'Worklog letti da Jira ' + quando(lett.ts) + (nomi.length ? ' · riletti dopo una correzione: ' + riletti : '');
+  if (lett.ts) return 'Worklog letti da Jira ' + quando(lett.ts) + (nomi.length ? ' · riletti dopo: ' + riletti : '');
   return nomi.length ? 'Letti da Jira solo ' + riletti + ', gli altri dall\'ultima sincronizzazione del Controllo Produzione' : null;
 }
 
@@ -30160,6 +30221,18 @@ function _cpTlFonteTesto(V) {
   if (_cpTl.inCorso && !(V.lettura && V.lettura.ts)) return fonte || 'Intanto vedi i worklog dell\'ultima sincronizzazione del Controllo Produzione';
   if (V.lettura && V.lettura.ts) return fonte + ' (solo in questa finestra, non aggiornano il Controllo Produzione)';
   return (fonte || 'Worklog dell\'ultima sincronizzazione del Controllo Produzione') + ': per vederli aggiornati usa «↻ Rileggi da Jira»';
+}
+
+/* Con un filtro attivo il bottone dice quanti operatori rilegge (solo quelli visibili) */
+function _cpTlBottoneRileggi(V) {
+  const sel = _cpTlNomiDaLeggere(V);
+  const testo = sel.tutti ? '↻ Rileggi da Jira' : '↻ Rileggi da Jira (' + sel.nomi.length + ' op.)';
+  const title = sel.tutti ? 'Rilegge da Jira, in sola lettura, i worklog della settimana di tutti gli operatori in Griglia'
+    : 'Rilegge da Jira, in sola lettura, i worklog della settimana solo degli operatori visibili con i filtri attuali' +
+      (sel.nomi.length && sel.nomi.length <= 8 ? ': ' + sel.nomi.join(', ') : '') + '. Togli i filtri per rileggerli tutti.';
+  const off = _cpTl.inCorso || !sel.nomi.length;
+  return '<button type="button" id="cptl-rileggi" onclick="cpTlRileggi()" class="text-xs px-3 py-1 rounded font-semibold text-white" style="background:#0f766e;' +
+    (off ? 'opacity:.55;' : '') + '"' + (off ? ' disabled' : '') + ' title="' + esc(title) + '">' + testo + '</button>';
 }
 
 function _cpTlIntestazione(V) {
@@ -30174,8 +30247,7 @@ function _cpTlIntestazione(V) {
         '<div class="text-[11px] mt-0.5" style="color:' + (V.lettura && V.lettura.ts ? '#0f766e' : '#64748b') + ';">' + esc(_cpTlFonteTesto(V)) + '</div>' +
       '</div>' +
       '<div class="flex-1"></div>' +
-      '<button type="button" onclick="cpTlRileggi()" class="text-xs px-3 py-1 rounded font-semibold text-white" style="background:#0f766e;' +
-        (_cpTl.inCorso ? 'opacity:.55;' : '') + '"' + (_cpTl.inCorso ? ' disabled' : '') + ' title="Rilegge i worklog della settimana da Jira, in sola lettura">↻ Rileggi da Jira</button>' +
+      _cpTlBottoneRileggi(V) +
       '<button type="button" onclick="cpTlEsportaPdf()" class="' + btn + '" style="color:#be123c;border-color:#fda4af;" title="Scarica la vista attuale in PDF">📄 Esporta PDF</button>' +
       '<button type="button" onclick="cpTlChiudi()" class="' + btn + '">Chiudi</button>' +
     '</div>' +
@@ -30605,8 +30677,11 @@ function cpTlEsportaPdf() {
    - Dopo ogni scrittura rilegge da Jira (sola lettura) i worklog della settimana del solo
      operatore, anche se la settimana non era mai stata letta tutta (v18.250.0), e ripete la
      lettura dei giorni toccati finché Jira mostra la modifica (v18.312.0, _cpTlWlVisibile).
-     Non aggiorna controllo_produzione: la colonna «Ore Jira» si aggiorna con «🔄 Sincronizza
-     da Jira», come per ogni correzione fatta direttamente su Jira.
+     Quando Jira mostra la modifica (v18.324.0, _cpTlWlAggiornaOreJira) scrive in
+     controllo_produzione «Ore Jira» e ticket di quell'operatore nei giorni toccati, come farebbe
+     «🔄 Sincronizza da Jira» per quelle righe; Km/Cad e invio della produzione restano a
+     «Sincronizza». Solo sulla settimana mostrata: se intanto si è cambiata settimana, serve
+     «Sincronizza». Le correzioni fatte direttamente su Jira richiedono sempre «Sincronizza».
    Modal #cptl-wl-modal (z-index 99995: sopra la timeline, sotto conferme e avvisi). */
 
 const CPTL_WL_FN = 'jira-worklog-edit';
@@ -30873,7 +30948,7 @@ async function _cpTlWlRileggiOperatore(nome, k, d, esito, attesa) {
   _cpTl.inCorso = true;
   _cpTl.msg = esito + ' ⏳ Rileggo da Jira i worklog di ' + nome + '…';
   cpTlRender();
-  let avviso = '';
+  let avviso = '', visto = false;
   const t0 = Date.now();
   try {
     for (let t = 0; t < (attesa ? CPTL_WL_TENTATIVI : 1); t++) {
@@ -30896,12 +30971,14 @@ async function _cpTlWlRileggiOperatore(nome, k, d, esito, attesa) {
       } else lett.worklog[nome] = r.worklog[nome] || {};
       if (!lett.verificati.includes(nome)) lett.verificati.push(nome);
       lett.tsOp[nome] = new Date();
-      if (!attesa || _cpTlWlVisibile(lett.worklog[nome], d, attesa)) break;
+      if (!attesa) break;
+      if (_cpTlWlVisibile(lett.worklog[nome], d, attesa)) { visto = true; break; }
       if (t === CPTL_WL_TENTATIVI - 1) {
         avviso = ' ⚠ Dopo ' + Math.round((Date.now() - t0) / 1000) + ' secondi Jira non mostra ancora la modifica: ' +
           'è scritta, ma per vederla usa «↻ Rileggi da Jira» tra qualche minuto.';
       } else cpTlRender();   // intanto si vede quello che Jira mostra già
     }
+    if (visto) avviso += await _cpTlWlAggiornaOreJira(nome, k, d, _cpTlWlGiorniAttesa(attesa));
   } catch (e) {
     avviso = ' ⚠ Rilettura non riuscita: ' + (e && e.message ? e.message : e) + '. Usa «↻ Rileggi da Jira».';
   } finally {
@@ -30911,6 +30988,53 @@ async function _cpTlWlRileggiOperatore(nome, k, d, esito, attesa) {
     _cpTlWlCoda();
     if (k !== _cpaKey(pwAnno, pwWeek)) _cpTlAutoLettura();   // si è passati a un'altra settimana
   }
+}
+
+/* «Ore Jira» nel Controllo Produzione dopo una correzione dalla timeline (v18.324.0).
+   Per ogni giorno toccato scrive, su tutte le righe dell'operatore quel giorno (una per
+   commessa/squadra pianificata, non in ferie: stesse righe e stessi valori di «🔄 Sincronizza da
+   Jira», che dà a ogni riga il totale e tutti i ticket della giornata), ore e ticket appena
+   letti da Jira. L'upsert manda solo chiavi, data/cantiere/attività e ore_jira/jira_tickets:
+   Km/Cad, note, report e storico delta della riga restano com'erano. Solo sulla settimana
+   mostrata (_cpData è di quella). Restituisce il testo da aggiungere al messaggio. */
+async function _cpTlWlAggiornaOreJira(nome, k, d, giorni) {
+  if (!giorni.length || !_sbClient || !_sbUser || !sbCanWrite()) return '';
+  if (k !== _cpaKey(pwAnno, pwWeek)) return ' Hai cambiato settimana: per aggiornare «Ore Jira» del Controllo Produzione usa «🔄 Sincronizza da Jira».';
+  const lett = _cpTl.letture[k];
+  const perGiorno = (lett && lett.worklog[nome]) || {};
+  const righe = [];
+  pwGetWeekData().forEach(bc => {
+    if (!bc.commessa) return;
+    (bc.squadre || []).forEach(sq => (sq.operatori || []).forEach(op => {
+      if ((op.nome || '').trim() !== nome) return;
+      giorni.forEach(g => {
+        const opG = (op.giorni && op.giorni[g]) || {};
+        const cantieri = pwCellCantieri(opG);
+        if (!cantieri.length || pwFerieTipoGiornata(op.nome, g)) return;
+        const w = perGiorno[g];
+        righe.push({
+          k: bc.commessa + '|||' + (sq.nome || 'Squadra') + '|||' + op.nome + '|||' + g,
+          rec: {
+            anno: pwAnno, week: pwWeek, commessa: bc.commessa, squadra: sq.nome || 'Squadra', operatore: op.nome, giorno: g,
+            data_giorno: d.iso[g], cantiere: cantieri.join(', '), attivita: opG.attivita || null,
+            ore_jira: w ? w.hours : 0, jira_tickets: w ? (w.tickets || []) : [],
+            updated_at: new Date().toISOString(), updated_by: _sbUser.email || null,
+          },
+        });
+      });
+    }));
+  });
+  if (!righe.length) return '';   // giorno non pianificato: nel Controllo Produzione non c'è una riga
+  const { error } = await _sbClient.from('controllo_produzione')
+    .upsert(righe.map(r => r.rec), { onConflict: 'anno,week,commessa,squadra,operatore,giorno' });
+  if (error) return ' ⚠ «Ore Jira» del Controllo Produzione non aggiornate (' + (error.message || error) + '): usa «🔄 Sincronizza da Jira».';
+  righe.forEach(r => {
+    const cell = _cpData[r.k] || (_cpData[r.k] = {});
+    cell.ore_jira = r.rec.ore_jira;
+    cell.jira_tickets = r.rec.jira_tickets;
+  });
+  try { pwControlloRender(); } catch (_) { /* tabella non aperta */ }
+  return ' «Ore Jira» aggiornate anche nel Controllo Produzione.';
 }
 
 /* Rilegge il prossimo operatore in coda (uno alla volta: ogni rilettura richiama la successiva) */
@@ -30955,7 +31079,7 @@ async function _cpTlWlEsegui(body, esito) {
       if (attesa && body.action === 'update' && g !== gOrig) attesa.tolti.push({ g: gOrig, id: wOrig.id });
     }
     await _cpTlWlRileggiOperatore(nome, k, d, '✓ ' + esito + autore + (res.avviso && !nonVisibile ? ' ⚠ ' + res.avviso : '') +
-      ' Per aggiornare «Ore Jira» del Controllo Produzione usa «🔄 Sincronizza da Jira».', attesa);
+      '', attesa);
   } finally {
     W.salvando = false;
     cpTlWlControlla();
@@ -31027,8 +31151,9 @@ async function cpTlWlElimina() {
      DONE scrive la produzione minima con cpProduzioneMinima). Lo stato dell'origine non torna
      indietro: un DONE non si riapre da qui.
    - Scrive SOLO con jira-worklog-edit (stato/create/delete) dopo una conferma. Dopo rilegge gli
-     operatori nella Timeline e lo stato della colonna Stato; non aggiorna controllo_produzione
-     («Ore Jira» con «🔄 Sincronizza da Jira»). I dipendenti fornitore sono esclusi: i loro
+     operatori nella Timeline e lo stato della colonna Stato; quando Jira mostra i worklog la
+     rilettura aggiorna «Ore Jira» e ticket in controllo_produzione (v18.324.0,
+     _cpTlWlAggiornaOreJira), non Km/Cad. I dipendenti fornitore sono esclusi: i loro
      worklog li gestisce «🏢 Worklog fornitori».
    Nascosta con la stessa chiave dell'editor («🧩 Funzioni», controllo:timeline-modifica).
    Modal #cptl-cp-modal (z-index 99995: sopra la timeline, sotto conferme e avvisi). */
@@ -31600,10 +31725,13 @@ async function cpTlCpApplica() {
     if (C.sposta && tuttoOk) _cpTlCp.appunti = null;
     cpStatoRefresh(true);
     const esito = (fatti.length ? '✓ Incollati su Jira ' + creati.size + ' worklog per ' + nome + (eliminati.size ? ', ' + eliminati.size + ' originali eliminati' : '') + '.' : '') +
-      (problemi.length ? ' ⚠ ' + problemi.length + ' da controllare.' : '') + ' Per aggiornare «Ore Jira» usa «🔄 Sincronizza da Jira».';
+      (problemi.length ? ' ⚠ ' + problemi.length + ' da controllare.' : '');
+    // «Ore Jira» si aggiornano da sole quando Jira mostra i worklog (v18.324.0), solo sulla settimana mostrata
+    const oreDaSole = fatti.length && k === _cpaKey(pwAnno, pwWeek);
     showAlertModal((fatti.length ? 'Fatto su Jira:\n\n• ' + fatti.join('\n• ') : 'Nessuna modifica fatta su Jira.') +
       (problemi.length ? '\n\n⚠ Da controllare:\n• ' + problemi.join('\n• ') : '') +
-      '\n\nPer aggiornare «Ore Jira» del Controllo Produzione usa «🔄 Sincronizza da Jira».');
+      (oreDaSole ? '\n\n«Ore Jira» del Controllo Produzione si aggiornano da sole appena Jira mostra i worklog (di solito pochi secondi).'
+        : fatti.length ? '\n\nPer aggiornare «Ore Jira» del Controllo Produzione usa «🔄 Sincronizza da Jira».' : ''));
     if (fatti.length && k === _cpaKey(pwAnno, pwWeek)) {
       // Rilegge finché Jira mostra le aggiunte e non mostra più gli originali eliminati (v18.312.0)
       const aggiunti = [...creati].map(r => ({ g: C.g, key: r.dst, inizio: r.inizio, fine: r.fine, id: '' }));
@@ -46412,8 +46540,8 @@ HELP_TEXTS['cpaEsportaPdf'] = 'Scarica un PDF in A4 orizzontale con le anomalie 
 // ↻ Ricontrolla (singola anomalia)
 HELP_TEXTS['cpaRicontrollaVoce'] = 'Rilegge da Jira, in sola lettura, le ore e gli Epic dei sottotask solo degli operatori di questa anomalia, poi ricalcola il controllo. Per «Ore diverse in squadra» rilegge tutta la squadra. Usalo dopo una correzione fatta su Jira, così non devi rileggere tutta la settimana.\n\nIn cima all\'elenco compare l\'esito: risolta, ancora aperta, oppure nuove anomalie per le stesse persone. Finché il ricontrollo è in corso, gli altri «↻» sono disattivati.';
 // Timeline worklog (src/js/produzione-timeline.js)
-HELP_TEXTS['#cptl-toggle'] = 'Apre la «Timeline worklog» della settimana mostrata in Controllo Produzione. Per ogni operatore impiegato disegna una barra oraria con un segmento per ogni worklog Jira, da quando è stato attivato a quando è stato chiuso. Accanto riporta prima ora, ultima ora, totale del giorno e pause. Cliccando un segmento si apre il ticket su Jira in un\'altra scheda; per admin e responsabili apre invece la correzione del worklog, «＋» sulla riga ne aggiunge uno, «⧉» copia i worklog della riga e «📋» li incolla su un altro sottotask (per esempio quando l\'operatore ha attivato il sottotask di un altro giorno, segnalato sulla riga).\n\nLa prima volta che apri una settimana, e quando la lettura ha più di 30 minuti, rilegge da sola i worklog da Jira, in sola lettura, per tutti gli operatori in Griglia, anche quelli senza giorni compilati. Intanto mostra quelli salvati dall\'ultimo «🔄 Sincronizza da Jira». I ticket di commesse che non sono in dashboard hanno il bordo rosso. Non modifica la Griglia; su Jira scrive solo quando correggi, aggiungi o elimini un worklog e confermi.\n\nScorciatoia: il click destro su una riga della tabella del Controllo Produzione apre la timeline direttamente sul giorno della riga, filtrata su quell\'operatore (sui campi, sui link e sui bottoni resta il loro click destro).';
-HELP_TEXTS['cpTlRileggi'] = 'Rilegge da Jira, in sola lettura, i worklog della settimana di tutti gli operatori in Griglia, anche quelli senza giorni compilati, e ridisegna la timeline. Lo fa da sola quando apri la settimana la prima volta e quando la lettura ha più di 30 minuti; usalo per aggiornare dopo una correzione fatta direttamente su Jira. Le correzioni fatte dalla timeline rileggono da sole solo l\'operatore corretto: l\'ora di quelle riletture compare sotto il titolo. Così vedi anche i worklog dei giorni non pianificati e quelli su commesse che non sono in dashboard.\n\nLa lettura vale solo per questa finestra finché la pagina resta aperta: non aggiorna la colonna «Ore Jira» del Controllo Produzione, per quella serve «🔄 Sincronizza da Jira». Chi non ha l\'email in anagrafica non viene letto. Bisogna essere collegati.';
+HELP_TEXTS['#cptl-toggle'] = 'Apre la «Timeline worklog» della settimana mostrata in Controllo Produzione. Per ogni operatore impiegato disegna una barra oraria con un segmento per ogni worklog Jira, da quando è stato attivato a quando è stato chiuso. Accanto riporta prima ora, ultima ora, totale del giorno e pause. Cliccando un segmento si apre il ticket su Jira in un\'altra scheda; per admin e responsabili apre invece la correzione del worklog, «＋» sulla riga ne aggiunge uno, «⧉» copia i worklog della riga e «📋» li incolla su un altro sottotask (per esempio quando l\'operatore ha attivato il sottotask di un altro giorno, segnalato sulla riga).\n\nLa prima volta che apri una settimana, e quando la lettura ha più di 30 minuti, rilegge da sola i worklog da Jira, in sola lettura, per tutti gli operatori in Griglia, anche quelli senza giorni compilati (se la apri già filtrata, per esempio con il click destro su una riga, solo per gli operatori visibili). Intanto mostra quelli salvati dall\'ultimo «🔄 Sincronizza da Jira». I ticket di commesse che non sono in dashboard hanno il bordo rosso. Non modifica la Griglia; su Jira scrive solo quando correggi, aggiungi o elimini un worklog e confermi.\n\nScorciatoia: il click destro su una riga della tabella del Controllo Produzione apre la timeline direttamente sul giorno della riga, filtrata su quell\'operatore (sui campi, sui link e sui bottoni resta il loro click destro).';
+HELP_TEXTS['cpTlRileggi'] = 'Rilegge da Jira, in sola lettura, i worklog della settimana e ridisegna la timeline. Senza filtri legge tutti gli operatori in Griglia, anche quelli senza giorni compilati; con un filtro attivo (commessa, squadra, ricerca, solo da controllare) legge solo gli operatori che vedi, ed è molto più veloce: il bottone dice quanti sono, gli altri restano come erano. La scheda del giorno non conta: di chi rilegge legge sempre tutta la settimana. Lo fa da sola quando apri la settimana la prima volta e quando la lettura ha più di 30 minuti; usalo per aggiornare dopo una correzione fatta direttamente su Jira. Le correzioni fatte dalla timeline rileggono da sole solo l\'operatore corretto: l\'ora di quelle riletture compare sotto il titolo. Così vedi anche i worklog dei giorni non pianificati e quelli su commesse che non sono in dashboard.\n\nLa lettura vale solo per questa finestra finché la pagina resta aperta: non aggiorna la colonna «Ore Jira» del Controllo Produzione, per quella serve «🔄 Sincronizza da Jira». Chi non ha l\'email in anagrafica non viene letto. Bisogna essere collegati.';
 HELP_TEXTS['cpTlWlApri'] = 'Apre la correzione di questo worklog Jira: puoi cambiare giorno, ora di inizio, ora di fine e commento, oppure eliminarlo. Serve quando l\'operatore non ha fatto bene le transizioni del sottotask e il worklog creato dall\'automazione ha orari o durata sbagliati.\n\nNiente viene scritto finché non premi «Salva su Jira» e confermi. Solo admin e responsabili; il segmento «in corso» (IN PROGRESS) non si corregge, non è ancora un worklog.';
 HELP_TEXTS['cpTlWlNuovo'] = 'Aggiunge un worklog Jira per questo operatore e questo giorno, per esempio quando il sottotask non è mai passato da IN PROGRESS e il worklog manca. Scegli il ticket (sono proposti i suoi sottotask della Griglia, prima quelli del giorno), inizio, fine e commento.\n\nNiente viene scritto finché non premi «Salva su Jira» e confermi. Se il ticket è assegnato a un altro, l\'app avvisa: il worklog non comparirebbe nella giornata dell\'operatore. Solo admin e responsabili.';
 HELP_TEXTS['cp-copia-worklog'] = 'Per quando un operatore ha lavorato con la squadra ma si è dimenticato di usare Jira: copia sui suoi sottotask i worklog che ha inserito un compagno quel giorno. La finestra legge da Jira i worklog del giorno di tutta la squadra e lo stato dei sottotask; scegli «Copia i worklog di» (chi li ha) e «sui sottotask di» (chi li ha dimenticati). Ogni worklog diventa una riga con il sottotask dell\'operatore proposto in base a cantiere e attività della Griglia (se non si trova, scrivi la chiave): orari e commento si possono cambiare, e un worklog già presente uguale parte deselezionato. La copia sostituisce, non somma: sotto la tabella ci sono i worklog che l\'operatore ha già quel giorno, spuntati per essere eliminati (così resta esattamente come il compagno); restano non spuntati quelli uguali a uno da copiare e quelli su un\'altra commessa. Togli la spunta a quelli da tenere. Se il sottotask del compagno è già IN PENDING o DONE propone di portare allo stesso stato quello dell\'operatore; per DONE, se su Jira manca la produzione, la mette a 1 (resta «👁 da verificare»: il report la sostituisce, non la somma).\n\nScrive su Jira solo dopo «Copia su Jira» e la conferma: prima produzione e stato, poi l\'eliminazione dei worklog spuntati, poi le copie, a nome dell\'assegnatario del sottotask. Durante la copia la finestra mostra passo per passo cosa sta facendo; alla fine controlla che i worklog si leggano da Jira e lancia da sola «🔄 Sincronizza squadra», così «Ore Jira» è subito aggiornata. I worklog del compagno non si toccano. Non si annulla con «Indietro». I dipendenti fornitore non compaiono come destinatari (li gestisce «🏢 Worklog fornitori»). Solo admin e responsabili.';
@@ -46424,7 +46552,7 @@ HELP_TEXTS['cpGsElimina'] = 'Segna questo worklog da eliminare su Jira (clic di 
 HELP_TEXTS['cpGsTogli'] = 'Toglie questo tratto nuovo dalla finestra: non è ancora su Jira.';
 HELP_TEXTS['cpGsVoluto'] = 'Stato in cui portare il sottotask: IN PROGRESS (al lavoro), IN PENDING (in pausa) o DONE (finito), oppure lasciarlo com\'è. Si va in avanti, più il ritorno da IN PENDING a IN PROGRESS (ripresa dopo la pausa); un DONE da qui non si riapre. Da IN PROGRESS Jira registra da solo il tempo da adesso a quando l\'operatore lo sposta: le ore fatte prima scrivile come tratti. Per DONE Jira vuole l\'Actual Production: se manca, sotto compare il campo per scriverla (di default 1), altrimenti si ferma in IN PENDING.';
 HELP_TEXTS['_cpGsLeggiProd'] = 'Rilegge da Jira l\'Actual Production del sottotask, il campo che Jira vuole maggiore di 0 per chiuderlo in DONE (anche sulle commesse che tengono la produzione su KPI_Quantità lavorata). Solo lettura.';
-HELP_TEXTS['cpTlWlSalva'] = 'Scrive su Jira il worklog con il giorno e gli orari indicati (ora italiana), dopo una conferma che mostra prima e dopo. La stima residua del ticket non cambia. Se nel frattempo qualcuno ha modificato lo stesso worklog su Jira, non tocca nulla e rilegge l\'operatore.\n\nPoi rilegge da Jira i worklog della settimana dell\'operatore e ridisegna la timeline. La colonna «Ore Jira» del Controllo Produzione si aggiorna con «🔄 Sincronizza da Jira». Ogni modifica resta nel log attività con chi l\'ha fatta.\n\nAutore su Jira: un worklog aggiunto risulta a nome dell\'assegnatario del sottotask; uno corretto tiene il suo autore, tranne quelli inseriti dall\'app a nome dell\'account di servizio, che passano all\'assegnatario (per sistemarne uno basta aprirlo e salvarlo senza cambiare nulla).';
+HELP_TEXTS['cpTlWlSalva'] = 'Scrive su Jira il worklog con il giorno e gli orari indicati (ora italiana), dopo una conferma che mostra prima e dopo. La stima residua del ticket non cambia. Se nel frattempo qualcuno ha modificato lo stesso worklog su Jira, non tocca nulla e rilegge l\'operatore.\n\nPoi rilegge da Jira i worklog della settimana dell\'operatore e ridisegna la timeline. Appena Jira mostra la modifica (di solito pochi secondi) aggiorna anche «Ore Jira» e i ticket di quell\'operatore nel Controllo Produzione, nei giorni toccati; Km/Cad e l\'invio della produzione restano a «🔄 Sincronizza da Jira», che serve anche se nel frattempo hai cambiato settimana. Ogni modifica resta nel log attività con chi l\'ha fatta.\n\nAutore su Jira: un worklog aggiunto risulta a nome dell\'assegnatario del sottotask; uno corretto tiene il suo autore, tranne quelli inseriti dall\'app a nome dell\'account di servizio, che passano all\'assegnatario (per sistemarne uno basta aprirlo e salvarlo senza cambiare nulla).';
 HELP_TEXTS['cpTlWlElimina'] = 'Elimina questo worklog da Jira, dopo una conferma: le sue ore spariscono dal ticket. Da qui non si può annullare; per rimetterlo bisogna aggiungerlo di nuovo con «＋». L\'eliminazione resta nel log attività con chi l\'ha fatta.';
 HELP_TEXTS['cpTlCpCopia'] = 'Copia negli appunti tutti i worklog Jira di questo operatore in questo giorno (orari, sottotask e commento), per incollarli con «📋» su un altro sottotask. Caso tipico: l\'operatore ha lavorato giovedì ma ha attivato il sottotask di venerdì; la riga lo segnala con «Sottotask di un altro giorno» e il segmento ha il bordo arancione tratteggiato.\n\nCopiare non scrive niente: gli appunti restano solo in questa finestra finché non li svuoti o ricarichi la pagina. Solo admin e responsabili; non per i dipendenti fornitore.';
 HELP_TEXTS['cpTlCpCopiaTicket'] = 'Copia negli appunti tutti i worklog di questo sottotask nel giorno della riga (non solo quello cliccato), per incollarli con «📋» su un altro sottotask. Non scrive niente su Jira.';
@@ -46433,7 +46561,7 @@ HELP_TEXTS['cpTlCpSvuota'] = 'Svuota gli appunti dei worklog copiati: spariscono
 HELP_TEXTS['cpTlCpSposta'] = 'Spuntato: dopo aver aggiunto i worklog sul sottotask di destinazione, elimina gli originali dal sottotask di origine (è lo spostamento: senza, le ore conterebbero due volte). Un originale viene eliminato solo se la sua copia è stata aggiunta. Se la giornata supererebbe le 12 ore che Tempo accetta per persona, gli originali vengono eliminati prima: se poi un\'aggiunta non riesce, gli orari restano negli appunti per rimetterli.\n\nNon spuntato: copia e basta, gli originali restano.';
 HELP_TEXTS['cpTlCpStato'] = 'Porta il sottotask di destinazione allo stesso stato di quello di origine (IN PENDING o DONE), solo in avanti, prima di aggiungere i worklog: così quelli che l\'automazione Jira crea al cambio di stato si riconoscono e si eliminano. Per DONE Jira vuole l\'Actual Production maggiore di 0: se manca la metto a 1, da verificare in Controllo Produzione.';
 HELP_TEXTS['cpTlCpCampo'] = 'Campo della riga da incollare: la casella la include o la esclude, «Incolla su» è il sottotask di destinazione (proposto dalla Griglia, puoi scrivere un\'altra chiave), poi inizio, fine e commento del worklog che verrà aggiunto.';
-HELP_TEXTS['cpTlCpApplica'] = 'Scrive su Jira, dopo una conferma che elenca ogni operazione: cambio di stato della destinazione (se scelto), aggiunta dei worklog sul sottotask di destinazione a nome del suo assegnatario, poi eliminazione degli originali (con «Sposta»). La finestra mostra ogni passo.\n\nPoi rilegge da Jira gli operatori nella timeline e lo stato dei sottotask. La colonna «Ore Jira» del Controllo Produzione si aggiorna con «🔄 Sincronizza da Jira». Ogni modifica resta nel log attività; da qui non si annulla con «Indietro».';
+HELP_TEXTS['cpTlCpApplica'] = 'Scrive su Jira, dopo una conferma che elenca ogni operazione: cambio di stato della destinazione (se scelto), aggiunta dei worklog sul sottotask di destinazione a nome del suo assegnatario, poi eliminazione degli originali (con «Sposta»). La finestra mostra ogni passo.\n\nPoi rilegge da Jira gli operatori nella timeline e lo stato dei sottotask. Appena Jira mostra la modifica (di solito pochi secondi) aggiorna anche «Ore Jira» e i ticket di quell\'operatore nel Controllo Produzione, nei giorni toccati; Km/Cad e l\'invio della produzione restano a «🔄 Sincronizza da Jira», che serve anche se nel frattempo hai cambiato settimana. Ogni modifica resta nel log attività; da qui non si annulla con «Indietro».';
 HELP_TEXTS['_cpTlCpCarica'] = 'Rilegge da Jira stato e worklog dei sottotask di origine e di destinazione, senza scrivere niente. Le scelte fatte nella finestra ripartono dalla proposta.';
 HELP_TEXTS['cpTlEsportaPdf'] = 'Scarica un PDF in A4 orizzontale con la vista attuale: il giorno o la settimana scelti, con i filtri applicati. Contiene le barre orarie con inizio, fine, totale e pause di ogni operatore. In fondo c\'è l\'elenco dei worklog con ticket, orari, durata e commento. Nel PDF segmenti e ticket sono cliccabili e aprono Jira; le commesse non in dashboard sono in rosso.\n\nNell\'intestazione indica da dove vengono i worklog e quando sono stati letti. Non invia nulla.';
 HELP_TEXTS['cpTlGiorno'] = 'Sceglie il giorno da mostrare: un operatore per riga, tutti sullo stesso asse orario, così si confrontano facilmente. Il giorno di oggi ha il bordo verde. «Settimana» mostra ogni operatore con una riga per giorno e il totale settimanale.\n\nCambiare giorno non rilegge Jira.';

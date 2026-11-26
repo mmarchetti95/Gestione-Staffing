@@ -20,8 +20,9 @@
      DONE scrive la produzione minima con cpProduzioneMinima). Lo stato dell'origine non torna
      indietro: un DONE non si riapre da qui.
    - Scrive SOLO con jira-worklog-edit (stato/create/delete) dopo una conferma. Dopo rilegge gli
-     operatori nella Timeline e lo stato della colonna Stato; non aggiorna controllo_produzione
-     («Ore Jira» con «🔄 Sincronizza da Jira»). I dipendenti fornitore sono esclusi: i loro
+     operatori nella Timeline e lo stato della colonna Stato; quando Jira mostra i worklog la
+     rilettura aggiorna «Ore Jira» e ticket in controllo_produzione (v18.324.0,
+     _cpTlWlAggiornaOreJira), non Km/Cad. I dipendenti fornitore sono esclusi: i loro
      worklog li gestisce «🏢 Worklog fornitori».
    Nascosta con la stessa chiave dell'editor («🧩 Funzioni», controllo:timeline-modifica).
    Modal #cptl-cp-modal (z-index 99995: sopra la timeline, sotto conferme e avvisi). */
@@ -593,10 +594,13 @@ async function cpTlCpApplica() {
     if (C.sposta && tuttoOk) _cpTlCp.appunti = null;
     cpStatoRefresh(true);
     const esito = (fatti.length ? '✓ Incollati su Jira ' + creati.size + ' worklog per ' + nome + (eliminati.size ? ', ' + eliminati.size + ' originali eliminati' : '') + '.' : '') +
-      (problemi.length ? ' ⚠ ' + problemi.length + ' da controllare.' : '') + ' Per aggiornare «Ore Jira» usa «🔄 Sincronizza da Jira».';
+      (problemi.length ? ' ⚠ ' + problemi.length + ' da controllare.' : '');
+    // «Ore Jira» si aggiornano da sole quando Jira mostra i worklog (v18.324.0), solo sulla settimana mostrata
+    const oreDaSole = fatti.length && k === _cpaKey(pwAnno, pwWeek);
     showAlertModal((fatti.length ? 'Fatto su Jira:\n\n• ' + fatti.join('\n• ') : 'Nessuna modifica fatta su Jira.') +
       (problemi.length ? '\n\n⚠ Da controllare:\n• ' + problemi.join('\n• ') : '') +
-      '\n\nPer aggiornare «Ore Jira» del Controllo Produzione usa «🔄 Sincronizza da Jira».');
+      (oreDaSole ? '\n\n«Ore Jira» del Controllo Produzione si aggiornano da sole appena Jira mostra i worklog (di solito pochi secondi).'
+        : fatti.length ? '\n\nPer aggiornare «Ore Jira» del Controllo Produzione usa «🔄 Sincronizza da Jira».' : ''));
     if (fatti.length && k === _cpaKey(pwAnno, pwWeek)) {
       // Rilegge finché Jira mostra le aggiunte e non mostra più gli originali eliminati (v18.312.0)
       const aggiunti = [...creati].map(r => ({ g: C.g, key: r.dst, inizio: r.inizio, fine: r.fine, id: '' }));

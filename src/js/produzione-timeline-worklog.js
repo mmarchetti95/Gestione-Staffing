@@ -15,8 +15,11 @@
    - Dopo ogni scrittura rilegge da Jira (sola lettura) i worklog della settimana del solo
      operatore, anche se la settimana non era mai stata letta tutta (v18.250.0), e ripete la
      lettura dei giorni toccati finché Jira mostra la modifica (v18.312.0, _cpTlWlVisibile).
-     Non aggiorna controllo_produzione: la colonna «Ore Jira» si aggiorna con «🔄 Sincronizza
-     da Jira», come per ogni correzione fatta direttamente su Jira.
+     Quando Jira mostra la modifica (v18.324.0, _cpTlWlAggiornaOreJira) scrive in
+     controllo_produzione «Ore Jira» e ticket di quell'operatore nei giorni toccati, come farebbe
+     «🔄 Sincronizza da Jira» per quelle righe; Km/Cad e invio della produzione restano a
+     «Sincronizza». Solo sulla settimana mostrata: se intanto si è cambiata settimana, serve
+     «Sincronizza». Le correzioni fatte direttamente su Jira richiedono sempre «Sincronizza».
    Modal #cptl-wl-modal (z-index 99995: sopra la timeline, sotto conferme e avvisi). */
 
 const CPTL_WL_FN = 'jira-worklog-edit';
@@ -283,7 +286,7 @@ async function _cpTlWlRileggiOperatore(nome, k, d, esito, attesa) {
   _cpTl.inCorso = true;
   _cpTl.msg = esito + ' ⏳ Rileggo da Jira i worklog di ' + nome + '…';
   cpTlRender();
-  let avviso = '';
+  let avviso = '', visto = false;
   const t0 = Date.now();
   try {
     for (let t = 0; t < (attesa ? CPTL_WL_TENTATIVI : 1); t++) {
@@ -306,12 +309,14 @@ async function _cpTlWlRileggiOperatore(nome, k, d, esito, attesa) {
       } else lett.worklog[nome] = r.worklog[nome] || {};
       if (!lett.verificati.includes(nome)) lett.verificati.push(nome);
       lett.tsOp[nome] = new Date();
-      if (!attesa || _cpTlWlVisibile(lett.worklog[nome], d, attesa)) break;
+      if (!attesa) break;
+      if (_cpTlWlVisibile(lett.worklog[nome], d, attesa)) { visto = true; break; }
       if (t === CPTL_WL_TENTATIVI - 1) {
         avviso = ' ⚠ Dopo ' + Math.round((Date.now() - t0) / 1000) + ' secondi Jira non mostra ancora la modifica: ' +
           'è scritta, ma per vederla usa «↻ Rileggi da Jira» tra qualche minuto.';
       } else cpTlRender();   // intanto si vede quello che Jira mostra già
     }
+    if (visto) avviso += await _cpTlWlAggiornaOreJira(nome, k, d, _cpTlWlGiorniAttesa(attesa));
   } catch (e) {
     avviso = ' ⚠ Rilettura non riuscita: ' + (e && e.message ? e.message : e) + '. Usa «↻ Rileggi da Jira».';
   } finally {
@@ -321,6 +326,53 @@ async function _cpTlWlRileggiOperatore(nome, k, d, esito, attesa) {
     _cpTlWlCoda();
     if (k !== _cpaKey(pwAnno, pwWeek)) _cpTlAutoLettura();   // si è passati a un'altra settimana
   }
+}
+
+/* «Ore Jira» nel Controllo Produzione dopo una correzione dalla timeline (v18.324.0).
+   Per ogni giorno toccato scrive, su tutte le righe dell'operatore quel giorno (una per
+   commessa/squadra pianificata, non in ferie: stesse righe e stessi valori di «🔄 Sincronizza da
+   Jira», che dà a ogni riga il totale e tutti i ticket della giornata), ore e ticket appena
+   letti da Jira. L'upsert manda solo chiavi, data/cantiere/attività e ore_jira/jira_tickets:
+   Km/Cad, note, report e storico delta della riga restano com'erano. Solo sulla settimana
+   mostrata (_cpData è di quella). Restituisce il testo da aggiungere al messaggio. */
+async function _cpTlWlAggiornaOreJira(nome, k, d, giorni) {
+  if (!giorni.length || !_sbClient || !_sbUser || !sbCanWrite()) return '';
+  if (k !== _cpaKey(pwAnno, pwWeek)) return ' Hai cambiato settimana: per aggiornare «Ore Jira» del Controllo Produzione usa «🔄 Sincronizza da Jira».';
+  const lett = _cpTl.letture[k];
+  const perGiorno = (lett && lett.worklog[nome]) || {};
+  const righe = [];
+  pwGetWeekData().forEach(bc => {
+    if (!bc.commessa) return;
+    (bc.squadre || []).forEach(sq => (sq.operatori || []).forEach(op => {
+      if ((op.nome || '').trim() !== nome) return;
+      giorni.forEach(g => {
+        const opG = (op.giorni && op.giorni[g]) || {};
+        const cantieri = pwCellCantieri(opG);
+        if (!cantieri.length || pwFerieTipoGiornata(op.nome, g)) return;
+        const w = perGiorno[g];
+        righe.push({
+          k: bc.commessa + '|||' + (sq.nome || 'Squadra') + '|||' + op.nome + '|||' + g,
+          rec: {
+            anno: pwAnno, week: pwWeek, commessa: bc.commessa, squadra: sq.nome || 'Squadra', operatore: op.nome, giorno: g,
+            data_giorno: d.iso[g], cantiere: cantieri.join(', '), attivita: opG.attivita || null,
+            ore_jira: w ? w.hours : 0, jira_tickets: w ? (w.tickets || []) : [],
+            updated_at: new Date().toISOString(), updated_by: _sbUser.email || null,
+          },
+        });
+      });
+    }));
+  });
+  if (!righe.length) return '';   // giorno non pianificato: nel Controllo Produzione non c'è una riga
+  const { error } = await _sbClient.from('controllo_produzione')
+    .upsert(righe.map(r => r.rec), { onConflict: 'anno,week,commessa,squadra,operatore,giorno' });
+  if (error) return ' ⚠ «Ore Jira» del Controllo Produzione non aggiornate (' + (error.message || error) + '): usa «🔄 Sincronizza da Jira».';
+  righe.forEach(r => {
+    const cell = _cpData[r.k] || (_cpData[r.k] = {});
+    cell.ore_jira = r.rec.ore_jira;
+    cell.jira_tickets = r.rec.jira_tickets;
+  });
+  try { pwControlloRender(); } catch (_) { /* tabella non aperta */ }
+  return ' «Ore Jira» aggiornate anche nel Controllo Produzione.';
 }
 
 /* Rilegge il prossimo operatore in coda (uno alla volta: ogni rilettura richiama la successiva) */
@@ -365,7 +417,7 @@ async function _cpTlWlEsegui(body, esito) {
       if (attesa && body.action === 'update' && g !== gOrig) attesa.tolti.push({ g: gOrig, id: wOrig.id });
     }
     await _cpTlWlRileggiOperatore(nome, k, d, '✓ ' + esito + autore + (res.avviso && !nonVisibile ? ' ⚠ ' + res.avviso : '') +
-      ' Per aggiornare «Ore Jira» del Controllo Produzione usa «🔄 Sincronizza da Jira».', attesa);
+      '', attesa);
   } finally {
     W.salvando = false;
     cpTlWlControlla();
