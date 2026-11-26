@@ -2628,7 +2628,7 @@
       </span>
       <button id="btn-presentation" class="px-3 py-1.5 text-sm rounded hover:bg-white/10" style="border:1px solid var(--dark-border-strong);color:var(--dark-text);visibility:visible;">📊 Modalità presentazione</button>
       <div class="text-xs pl-2" style="border-left:1px solid var(--dark-border-strong);color:var(--dark-text-muted);">
-        <span id="app-version" class="font-medium" style="color:var(--accent);">v18.323.0</span> · Michele Marchetti
+        <span id="app-version" class="font-medium" style="color:var(--accent);">v18.324.0</span> · Michele Marchetti
         <span id="sb-role-badge" style="margin-left:8px;padding:1px 8px;border-radius:9999px;background:rgba(255,255,255,.1);color:var(--dark-text);font-weight:600;"></span>
       </div>
     </div>
@@ -33628,11 +33628,13 @@ const GEO_TIPI_FRAZIONE = ['hamlet', 'suburb', 'quarter', 'neighbourhood', 'isol
    Piemonte, «Ponte di Legnono» → Ponte (BN)); meglio «non trovato» e la ✏️. */
 const GEO_PAROLE_SERVIZIO = ['auto', 'post', 'pre', 'ip', 'pi', 'fogna', 'fognatura', 'fgn', 'acq', 'acquedotto', 'h2o',
                              'gas', 'bianca', 'nera', 'mms', 'pedestrian', 'ped', 'rilievo', 'rilievi', 'comune',
-                             'nord', 'sud', 'est', 'ovest', 'centro', 'zona', 'lotto', 'fase', 'bis', 'ter'];
+                             'nord', 'sud', 'est', 'ovest', 'centro', 'zona', 'lotto', 'fase', 'parte', 'bis', 'ter'];
+
+const GEO_PREFISSI_ATTACCATI = /^(Monte|Castel|Castello|Borgo|Villa|Ponte|Porto|Rocca|Torre|Pieve|Colle|Serra|Pozzo|Fonte|Casal|Val)([a-zà-ù]{3,}.*)$/i;
 
 function geoNorm(s) {
-  return String(s || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '')
-    .replace(/[''`´_.\-\/]/g, ' ').replace(/\s+/g, ' ').trim();
+  return String(s || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+    .replace(/['\u2019`\u00b4_.\-\/]/g, ' ').replace(/\s+/g, ' ').trim();
 }
 
 /* "Ivrea (TO)" / "Montefortino, FM" → sigla 'TO'/'FM'; altre note fra parentesi e i «?»
@@ -33658,6 +33660,12 @@ function geoTentativi(nome) {
   const servizio = p => { const n = geoNorm(p); return !n || /^\d+$/.test(n) || GEO_PAROLE_SERVIZIO.indexOf(n) >= 0; };
   while (k > 1 && servizio(parole[k - 1])) k--;
   if (k < parole.length) aggiungi(parole.slice(0, k).join(' '));
+  // «Montecavallo» → «Monte Cavallo», «Castelgoffredo» → «Castel Goffredo»: la ricerca
+  // non trova il comune con le parole attaccate (né viceversa)
+  tentativi.slice().forEach(t => {
+    const s = t.match(GEO_PREFISSI_ATTACCATI);
+    if (s) aggiungi(s[1] + ' ' + s[2]);
+  });
   return { sigla, tentativi };
 }
 
@@ -33670,12 +33678,74 @@ function _geoPunto(r) {
   return { lat: parseFloat(r.lat), lng: parseFloat(r.lon), label: r.display_name };
 }
 
-/* Fra i risultati di UNA ricerca: comuni e centri abitati soltanto. Ordine: nome
-   identico prima, poi comune prima di frazione, poi l'ordine di Nominatim. Con la
-   sigla restano i risultati di quella provincia (se ce ne sono). Nomi di 1-2 lettere
-   («Ne», «Re») solo se identici, altrimenti «p» o «da» trovano qualunque cosa. */
-function geoScegli(risultati, q, sigla) {
+/* ---------- contesto: provincia/regione della commessa, cantieri vicini ----------
+   Fra comuni omonimi (Castiglione, Laino, Santa Barbara, Serravalle…) Nominatim mette
+   prima il più «importante», che spesso non è quello giusto. Chi chiama può passare un
+   contesto `{ province: ['AR'], regioni: ['Toscana'], punti: [{lat,lng}] }`: provincia e
+   regione delle commesse che usano quel cantiere (campi della commessa) e la posizione
+   degli altri cantieri della stessa squadra nella stessa settimana. Livello di un
+   candidato: 0 = nella provincia (o, se nessuna provincia è nota, nella regione o entro
+   GEO_VICINO_KM da quei punti), 1 = nella regione o vicino (con provincia nota),
+   2 = fuori. Essere nella zona conta prima del nome identico: per una squadra in
+   Calabria vince Laino Borgo su Laino (CO); la provincia decide solo a parità di nome. Senza contesto la scelta è quella di prima. */
+const GEO_VICINO_KM = 80;
+const GEO_RIQUADRO_GRADI = 0.6;   // margine del riquadro di ricerca attorno ai cantieri vicini
+const GEO_RIQUADRO_MAX_GRADI = 5; // punti sparsi su più di così: niente ricerca nel riquadro
+
+function _geoRegNorm(s) {
+  return String(s || '').toLowerCase().normalize('NFD').replace(/[^a-z]/g, '');
+}
+
+function _geoKm(a, b) {
+  const r = Math.PI / 180;
+  const dl = (b.lat - a.lat) * r, dg = (b.lng - a.lng) * r;
+  const x = Math.sin(dl / 2) ** 2 + Math.cos(a.lat * r) * Math.cos(b.lat * r) * Math.sin(dg / 2) ** 2;
+  return 2 * 6371 * Math.asin(Math.sqrt(x));
+}
+
+/* Contesto ripulito, o null se non c'è nulla. */
+function _geoContesto(ctx) {
+  if (!ctx) return null;
+  if (ctx.pulito) return ctx;
+  const nomiRegioni = [...new Set((ctx.regioni || []).filter(r => _geoRegNorm(r).length >= 4))];
+  const regioni = nomiRegioni.map(_geoRegNorm);
+  const province = [...new Set((ctx.province || []).map(p => String(p || '').trim().toUpperCase()).filter(p => /^[A-Z]{2}$/.test(p)))];
+  const punti = (ctx.punti || []).filter(p => p && isFinite(p.lat) && isFinite(p.lng) && (p.lat || p.lng));
+  return regioni.length || province.length || punti.length ? { pulito: true, regioni, nomiRegioni, province, punti } : null;
+}
+
+function _geoLivello(r, c) {
+  if (!c) return { livello: 0, km: 0 };
+  const p = _geoPunto(r);
+  const km = c.punti.length ? Math.min.apply(null, c.punti.map(q => _geoKm(p, q))) : null;
+  const stato = _geoRegNorm(r.address && r.address.state);
+  const inRegione = !!stato && c.regioni.some(x => stato.startsWith(x) || x.startsWith(stato));
+  const zona = inRegione || (km != null && km <= GEO_VICINO_KM);
+  const iso = r.address && r.address['ISO3166-2-lvl6'];
+  const livello = c.province.length
+    ? (c.province.some(s => iso === 'IT-' + s) ? 0 : zona ? 1 : 2)
+    : (zona ? 0 : 2);
+  return { livello, km: km == null ? 0 : km };
+}
+
+/* Riquadro "lon1,lat1,lon2,lat2" attorno ai punti, o '' se troppo sparsi */
+function _geoRiquadro(punti) {
+  if (!punti.length) return '';
+  const lats = punti.map(p => p.lat), lngs = punti.map(p => p.lng);
+  const la1 = Math.min.apply(null, lats) - GEO_RIQUADRO_GRADI, la2 = Math.max.apply(null, lats) + GEO_RIQUADRO_GRADI;
+  const lo1 = Math.min.apply(null, lngs) - GEO_RIQUADRO_GRADI, lo2 = Math.max.apply(null, lngs) + GEO_RIQUADRO_GRADI;
+  if (la2 - la1 > GEO_RIQUADRO_MAX_GRADI || lo2 - lo1 > GEO_RIQUADRO_MAX_GRADI) return '';
+  return [lo1, la1, lo2, la2].map(v => v.toFixed(3)).join(',');
+}
+
+/* Fra i risultati di UNA ricerca: comuni e centri abitati soltanto. Ordine: fuori zona in
+   fondo, nome identico, provincia, comune prima di frazione, il più vicino ai cantieri
+   della squadra, l'ordine di Nominatim. Con la sigla restano i risultati di quella provincia
+   (se ce ne sono). Nomi di 1-2 lettere («Ne», «Re») solo se identici, altrimenti «p» o
+   «da» trovano qualunque cosa. → { punto: {lat,lng,label}, livello } | null */
+function geoScegli(risultati, q, sigla, ctx) {
   if (!Array.isArray(risultati) || !risultati.length) return null;
+  const c = _geoContesto(ctx);
   const qn = geoNorm(q);
   let cand = risultati;
   if (sigla) {
@@ -33689,25 +33759,51 @@ function geoScegli(risultati, q, sigla) {
     if (tipo < 0) return;
     const nome = _geoStessoNome(r, qn) ? 0 : 1;
     if (qn.length < 3 && nome) return;
-    valutati.push({ r, i, tipo, nome });
+    const lv = _geoLivello(r, c);
+    valutati.push({ r, i, tipo, nome, livello: lv.livello, km: lv.km });
   });
   if (!valutati.length) return null;
-  valutati.sort((a, b) => a.nome - b.nome || a.tipo - b.tipo || a.i - b.i);
-  return _geoPunto(valutati[0].r);
+  // fuori zona in fondo; nella zona il nome identico prima della provincia, così una
+  // frazione omonima nella provincia della commessa non batte il comune giusto in quella accanto
+  const fuori = x => x.livello === 2 ? 1 : 0;
+  valutati.sort((a, b) => fuori(a) - fuori(b) || a.nome - b.nome || a.livello - b.livello || a.tipo - b.tipo || a.km - b.km || a.i - b.i);
+  return { punto: _geoPunto(valutati[0].r), livello: valutati[0].livello };
 }
 
-/* → {lat,lng,label} | null (non trovato). `cerca(q)` = async, restituisce l'array di
-   risultati Nominatim per GEO_NOMINATIM_URL + q; un suo errore (rete) si propaga, così
-   chi chiama non scambia un guasto per un «non trovato». Nessun ripiego su strade,
-   ponti, esercizi: un cantiere è un comune, e un nome che non lo è («Viaggio» →
-   Punta Viaggio a Ponza) è meglio «non trovato» e corretto a mano con la ✏️. */
-async function geoCercaComune(nome, cerca) {
+/* → {lat,lng,label} | null (non trovato). `cerca(q, opz)` = async, restituisce l'array
+   di risultati Nominatim per GEO_NOMINATIM_URL + q (opz.viewbox = riquadro in cui
+   cercare soltanto); un suo errore (rete) si propaga, così chi chiama non scambia un
+   guasto per un «non trovato». Senza contesto vince il primo tentativo che trova un
+   luogo abitato. Con un contesto (vedi sopra) ci si ferma solo a un candidato di livello
+   0: altrimenti, per ogni tentativo che trova il nome altrove, si cerca ancora
+   «nome, Regione» e dentro il riquadro dei cantieri vicini, poi i tentativi successivi;
+   alla fine vale il candidato di livello migliore (il primo trovato a parità). Nessun
+   ripiego su strade, ponti, esercizi: un cantiere è un comune, e un nome che non lo è
+   («Viaggio» → Punta Viaggio a Ponza) è meglio «non trovato» e corretto a mano con la ✏️. */
+async function geoCercaComune(nome, cerca, ctx) {
   const { sigla, tentativi } = geoTentativi(nome);
-  for (let i = 0; i < tentativi.length; i++) {
-    const g = geoScegli(await cerca(tentativi[i]), tentativi[i], sigla);
-    if (g) return g;
+  const c = _geoContesto(ctx);
+  let migliore = null;
+  const prendi = g => {
+    if (g && (!migliore || g.livello < migliore.livello)) migliore = g;
+    return !!migliore && migliore.livello === 0;
+  };
+  for (const t of tentativi) {
+    const ris = await cerca(t);
+    const g = geoScegli(ris, t, sigla, c);
+    if (prendi(g)) return migliore.punto;
+    if (!c) continue;
+    if (!g) continue;              // il nome non è un luogo abitato da nessuna parte
+    let tutti = ris.slice();
+    const extra = c.nomiRegioni.slice(0, 2).map(reg => () => cerca(t + ', ' + reg));
+    const box = _geoRiquadro(c.punti);
+    if (box) extra.push(() => cerca(t, { viewbox: box }));
+    for (const f of extra) {
+      tutti = tutti.concat(await f());
+      if (prendi(geoScegli(tutti, t, sigla, c))) return migliore.punto;
+    }
   }
-  return null;
+  return migliore ? migliore.punto : null;
 }
 /* ==================== MAPPA LEAFLET + NOMINATIM ==================== */
 const MAP_COLORS = ['#0d9488','#6366f1','#f59e0b','#ef4444','#10b981','#8b5cf6','#ec4899','#0ea5e9','#f97316','#84cc16'];
@@ -33789,15 +33885,16 @@ async function _geoCacheSave() {
 /* Una ricerca Nominatim alla volta, almeno 1,1 s fra l'una e l'altra (regole d'uso del
    servizio). In coda unica perché geoCercaComune può fare più tentativi per un nome e
    più moduli (Mappa, meteo, regione) geocodificano insieme. → array di risultati;
-   un errore HTTP/rete viene rilanciato. */
+   un errore HTTP/rete viene rilanciato. `opz.viewbox` = cerca solo in quel riquadro. */
 let _geoNomCoda = Promise.resolve();
 let _geoNomUltima = 0;
-function geoNominatimCerca(q) {
+function geoNominatimCerca(q, opz) {
   const giro = _geoNomCoda.then(async () => {
     const attesa = _geoNomUltima + 1100 - Date.now();
     if (attesa > 0) await new Promise(r => setTimeout(r, attesa));
     _geoNomUltima = Date.now();
-    const res = await fetch(GEO_NOMINATIM_URL + encodeURIComponent(q), { headers: { 'Accept-Language': 'it' } });
+    const box = opz && opz.viewbox ? '&viewbox=' + encodeURIComponent(opz.viewbox) + '&bounded=1' : '';
+    const res = await fetch(GEO_NOMINATIM_URL + encodeURIComponent(q) + box, { headers: { 'Accept-Language': 'it' } });
     if (!res.ok) throw new Error('HTTP ' + res.status);
     const data = await res.json();
     return Array.isArray(data) ? data : [];
@@ -33806,15 +33903,58 @@ function geoNominatimCerca(q) {
   return giro;
 }
 
-/* Geocodifica singolo nome: comune italiano via geoCercaComune (geo-comune.js) */
-async function geocodifica(nome) {
+/* Contesto per scegliere fra comuni omonimi (vedi geo-comune.js): le commesse che usano
+   quel cantiere in Griglia (più `commesse` passate da chi chiama, es. la board della
+   Programmazione) → i loro campi regione e provincia; e la posizione già nota degli altri cantieri
+   della stessa squadra nelle settimane in cui compare. Letto da pwData a ogni chiamata:
+   si geocodifica solo un nome mai visto, quindi di rado. */
+const GEO_CONTESTO_MAX_PUNTI = 40;
+function geoContestoCantiere(nome, commesse) {
+  const key = String(nome || '').toLowerCase().trim().replace(/\s+/g, ' ');
+  const comm = new Set((commesse || []).filter(Boolean));
+  const vicini = new Set();
+  const pd = typeof pwData === 'object' && pwData ? pwData : {};
+  Object.keys(pd).forEach(anno => {
+    const sett = pd[anno];
+    if (!/^\d+$/.test(anno) || !sett || typeof sett !== 'object') return;
+    Object.keys(sett).forEach(w => {
+      const blocchi = sett[w];
+      if (!Array.isArray(blocchi)) return;
+      blocchi.forEach(bc => (bc && bc.squadre || []).forEach(sq => {
+        const nomi = [];
+        (sq.operatori || []).forEach(op => Object.values(op.giorni || {}).forEach(g => {
+          (g && g.cantieri || []).forEach(c => { if (c && String(c).trim()) nomi.push(String(c)); });
+        }));
+        const qui = nomi.map(c => c.toLowerCase().trim().replace(/\s+/g, ' '));
+        if (qui.indexOf(key) < 0) return;
+        if (bc.commessa) comm.add(bc.commessa);
+        qui.forEach(c => { if (c !== key) vicini.add(c); });
+      }));
+    });
+  });
+  const meta = (typeof state === 'object' && state && state.commesse_attive_meta) || {};
+  const regioni = [...new Set([...comm].map(c => meta[c] && meta[c].regione).filter(Boolean))];
+  const province = [...new Set([...comm].map(c => meta[c] && meta[c].provincia).filter(Boolean))];
+  const punti = [];
+  vicini.forEach(c => {
+    if (punti.length >= GEO_CONTESTO_MAX_PUNTI) return;
+    const g = meteoGeoFor(c);
+    if (g && g.lat >= 35.4 && g.lat <= 47.2 && g.lng >= 6.5 && g.lng <= 18.7) punti.push({ lat: g.lat, lng: g.lng });
+  });
+  return { regioni, province, punti };
+}
+
+/* Geocodifica singolo nome: comune italiano via geoCercaComune (geo-comune.js), fra gli
+   omonimi quello della regione della commessa / vicino agli altri cantieri della squadra.
+   `commesse` facoltativo: commesse note a chi chiama oltre a quelle trovate in Griglia. */
+async function geocodifica(nome, commesse) {
   const key = nome.toLowerCase().trim().replace(/\s+/g, ' ');
   if (!key) return null;
   if (key in _geoCache) return _geoCache[key]; // null = non trovato
   const statusEl = document.getElementById('pw-map-geocoding-status');
   if (statusEl) statusEl.textContent = 'Ricerca: ' + nome + '…';
   try {
-    const val = await geoCercaComune(nome, geoNominatimCerca);
+    const val = await geoCercaComune(nome, geoNominatimCerca, geoContestoCantiere(nome, commesse));
     _geoCache[key] = val;
     await _geoCacheSaveSingle(key, val);
     if (statusEl) statusEl.textContent = '';
@@ -34501,7 +34641,7 @@ async function pwMapGeoEditSubmit(inp) {
   } else {
     inp.disabled = true; inp.value = 'Ricerca…';
     try {
-      result = await geoCercaComune(query, geoNominatimCerca);
+      result = await geoCercaComune(query, geoNominatimCerca, geoContestoCantiere(cantiere));
       if (!result) {
         inp.disabled = false; inp.value = ''; inp.style.borderColor = '#ef4444';
         inp.placeholder = 'Non trovato, riprova…';
@@ -34865,7 +35005,7 @@ async function _pwSpostGeocodifica(nome) {
   }
   let g;
   try {
-    g = await geoCercaComune(nome, geoNominatimCerca);
+    g = await geoCercaComune(nome, geoNominatimCerca, geoContestoCantiere(nome));
   } catch (e) {
     return { geo: null, rete: true };
   }
@@ -48860,7 +49000,7 @@ async function mlGeocodificaGruppi(gruppi, vivo) {
   for (const g of gruppi) {
     if (!mlGeoPending(g.key)) continue;
     if (fatti >= ML_GEO_MAX_PER_RENDER || (vivo && !vivo())) { resto++; continue; }
-    await geocodifica(g.cantiere);
+    await geocodifica(g.cantiere, [...(g.commesse || [])]);
     if (!(g.key in _geoCache)) _mlGeoFailed.add(g.key);
     await new Promise(r => setTimeout(r, 300));
     fatti++;
@@ -49288,7 +49428,7 @@ async function mlGeoFixSubmit(cantiere, inp) {
     const precedente = inp.value;
     inp.value = 'Ricerca…';
     try {
-      result = await geoCercaComune(query, geoNominatimCerca);
+      result = await geoCercaComune(query, geoNominatimCerca, geoContestoCantiere(cantiere));
       inp.disabled = false;
       inp.value = precedente;
       if (!result) {
@@ -57403,7 +57543,7 @@ async function mlPrgGeoSfondo(gruppi) {
     for (const g of coda) {
       if (_mlFonte !== 'prg' || !mlIsActive()) break;
       if (mlGeoPending(g.key)) {
-        await geocodifica(g.cantiere);
+        await geocodifica(g.cantiere, [...(g.commesse || [])]);
         if (!(g.key in _geoCache)) _mlGeoFailed.add(g.key);
         nuovi++;
         await new Promise(r => setTimeout(r, 1000));

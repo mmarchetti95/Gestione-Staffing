@@ -1401,7 +1401,7 @@ async function mlGeocodificaGruppi(gruppi, vivo) {
   for (const g of gruppi) {
     if (!mlGeoPending(g.key)) continue;
     if (fatti >= ML_GEO_MAX_PER_RENDER || (vivo && !vivo())) { resto++; continue; }
-    await geocodifica(g.cantiere);
+    await geocodifica(g.cantiere, [...(g.commesse || [])]);
     if (!(g.key in _geoCache)) _mlGeoFailed.add(g.key);
     await new Promise(r => setTimeout(r, 300));
     fatti++;
@@ -1829,7 +1829,7 @@ async function mlGeoFixSubmit(cantiere, inp) {
     const precedente = inp.value;
     inp.value = 'Ricerca…';
     try {
-      result = await geoCercaComune(query, geoNominatimCerca);
+      result = await geoCercaComune(query, geoNominatimCerca, geoContestoCantiere(cantiere));
       inp.disabled = false;
       inp.value = precedente;
       if (!result) {

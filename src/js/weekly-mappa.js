@@ -78,15 +78,16 @@ async function _geoCacheSave() {
 /* Una ricerca Nominatim alla volta, almeno 1,1 s fra l'una e l'altra (regole d'uso del
    servizio). In coda unica perché geoCercaComune può fare più tentativi per un nome e
    più moduli (Mappa, meteo, regione) geocodificano insieme. → array di risultati;
-   un errore HTTP/rete viene rilanciato. */
+   un errore HTTP/rete viene rilanciato. `opz.viewbox` = cerca solo in quel riquadro. */
 let _geoNomCoda = Promise.resolve();
 let _geoNomUltima = 0;
-function geoNominatimCerca(q) {
+function geoNominatimCerca(q, opz) {
   const giro = _geoNomCoda.then(async () => {
     const attesa = _geoNomUltima + 1100 - Date.now();
     if (attesa > 0) await new Promise(r => setTimeout(r, attesa));
     _geoNomUltima = Date.now();
-    const res = await fetch(GEO_NOMINATIM_URL + encodeURIComponent(q), { headers: { 'Accept-Language': 'it' } });
+    const box = opz && opz.viewbox ? '&viewbox=' + encodeURIComponent(opz.viewbox) + '&bounded=1' : '';
+    const res = await fetch(GEO_NOMINATIM_URL + encodeURIComponent(q) + box, { headers: { 'Accept-Language': 'it' } });
     if (!res.ok) throw new Error('HTTP ' + res.status);
     const data = await res.json();
     return Array.isArray(data) ? data : [];
@@ -95,15 +96,58 @@ function geoNominatimCerca(q) {
   return giro;
 }
 
-/* Geocodifica singolo nome: comune italiano via geoCercaComune (geo-comune.js) */
-async function geocodifica(nome) {
+/* Contesto per scegliere fra comuni omonimi (vedi geo-comune.js): le commesse che usano
+   quel cantiere in Griglia (più `commesse` passate da chi chiama, es. la board della
+   Programmazione) → i loro campi regione e provincia; e la posizione già nota degli altri cantieri
+   della stessa squadra nelle settimane in cui compare. Letto da pwData a ogni chiamata:
+   si geocodifica solo un nome mai visto, quindi di rado. */
+const GEO_CONTESTO_MAX_PUNTI = 40;
+function geoContestoCantiere(nome, commesse) {
+  const key = String(nome || '').toLowerCase().trim().replace(/\s+/g, ' ');
+  const comm = new Set((commesse || []).filter(Boolean));
+  const vicini = new Set();
+  const pd = typeof pwData === 'object' && pwData ? pwData : {};
+  Object.keys(pd).forEach(anno => {
+    const sett = pd[anno];
+    if (!/^\d+$/.test(anno) || !sett || typeof sett !== 'object') return;
+    Object.keys(sett).forEach(w => {
+      const blocchi = sett[w];
+      if (!Array.isArray(blocchi)) return;
+      blocchi.forEach(bc => (bc && bc.squadre || []).forEach(sq => {
+        const nomi = [];
+        (sq.operatori || []).forEach(op => Object.values(op.giorni || {}).forEach(g => {
+          (g && g.cantieri || []).forEach(c => { if (c && String(c).trim()) nomi.push(String(c)); });
+        }));
+        const qui = nomi.map(c => c.toLowerCase().trim().replace(/\s+/g, ' '));
+        if (qui.indexOf(key) < 0) return;
+        if (bc.commessa) comm.add(bc.commessa);
+        qui.forEach(c => { if (c !== key) vicini.add(c); });
+      }));
+    });
+  });
+  const meta = (typeof state === 'object' && state && state.commesse_attive_meta) || {};
+  const regioni = [...new Set([...comm].map(c => meta[c] && meta[c].regione).filter(Boolean))];
+  const province = [...new Set([...comm].map(c => meta[c] && meta[c].provincia).filter(Boolean))];
+  const punti = [];
+  vicini.forEach(c => {
+    if (punti.length >= GEO_CONTESTO_MAX_PUNTI) return;
+    const g = meteoGeoFor(c);
+    if (g && g.lat >= 35.4 && g.lat <= 47.2 && g.lng >= 6.5 && g.lng <= 18.7) punti.push({ lat: g.lat, lng: g.lng });
+  });
+  return { regioni, province, punti };
+}
+
+/* Geocodifica singolo nome: comune italiano via geoCercaComune (geo-comune.js), fra gli
+   omonimi quello della regione della commessa / vicino agli altri cantieri della squadra.
+   `commesse` facoltativo: commesse note a chi chiama oltre a quelle trovate in Griglia. */
+async function geocodifica(nome, commesse) {
   const key = nome.toLowerCase().trim().replace(/\s+/g, ' ');
   if (!key) return null;
   if (key in _geoCache) return _geoCache[key]; // null = non trovato
   const statusEl = document.getElementById('pw-map-geocoding-status');
   if (statusEl) statusEl.textContent = 'Ricerca: ' + nome + '…';
   try {
-    const val = await geoCercaComune(nome, geoNominatimCerca);
+    const val = await geoCercaComune(nome, geoNominatimCerca, geoContestoCantiere(nome, commesse));
     _geoCache[key] = val;
     await _geoCacheSaveSingle(key, val);
     if (statusEl) statusEl.textContent = '';
@@ -790,7 +834,7 @@ async function pwMapGeoEditSubmit(inp) {
   } else {
     inp.disabled = true; inp.value = 'Ricerca…';
     try {
-      result = await geoCercaComune(query, geoNominatimCerca);
+      result = await geoCercaComune(query, geoNominatimCerca, geoContestoCantiere(cantiere));
       if (!result) {
         inp.disabled = false; inp.value = ''; inp.style.borderColor = '#ef4444';
         inp.placeholder = 'Non trovato, riprova…';

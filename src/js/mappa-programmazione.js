@@ -444,7 +444,7 @@ async function mlPrgGeoSfondo(gruppi) {
     for (const g of coda) {
       if (_mlFonte !== 'prg' || !mlIsActive()) break;
       if (mlGeoPending(g.key)) {
-        await geocodifica(g.cantiere);
+        await geocodifica(g.cantiere, [...(g.commesse || [])]);
         if (!(g.key in _geoCache)) _mlGeoFailed.add(g.key);
         nuovi++;
         await new Promise(r => setTimeout(r, 1000));

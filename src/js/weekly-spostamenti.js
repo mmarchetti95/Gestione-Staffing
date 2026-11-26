@@ -98,7 +98,7 @@ async function _pwSpostGeocodifica(nome) {
   }
   let g;
   try {
-    g = await geoCercaComune(nome, geoNominatimCerca);
+    g = await geoCercaComune(nome, geoNominatimCerca, geoContestoCantiere(nome));
   } catch (e) {
     return { geo: null, rete: true };
   }
